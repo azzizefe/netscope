@@ -14,6 +14,8 @@ Usage: netscope-tui [OPTIONS]
   -D, --list-interfaces      List available interfaces
       --headless             Plain text output to stdout
       --json                 JSON Lines output (implies --headless)
+      --list-blocked         List IPs blocked by netscope firewall rules
+      --unblock-all          Remove all netscope block rules and exit
   -h, --help                 Print help
 ```
 
@@ -97,9 +99,44 @@ Four panels:
 4. **Top Talkers**: split 50/50 — top 5 senders (left), top 5 receivers (right)
 
 ### 3. Connections View (`views/connections.rs`)
-Conversations grouped by flow (5-tuple). Columns: `#`, `Client`, `Server`,
-`Proto`, `Pkts`, `⇄` (per-direction packet counts), `Bytes`, `Duration`,
-`Last activity`. Endpoints show hostnames when known.
+Conversations grouped by flow (5-tuple). Columns: `#`, block-mark, `Client`,
+`Server`, `Proto`, `Pkts`, `⇄` (per-direction packet counts), `Bytes`,
+`Duration`, `Last activity`. Endpoints show hostnames when known.
+
+Interactive, unlike the other views:
+- `j`/`k` or `↑`/`↓` select a connection (highlighted row)
+- `b` blocks the selected connection's **remote host** (server IP) via an OS
+  firewall rule; `u` removes it
+- Blocked flows render red with a `⛔` mark; the title shows a blocked count
+
+See [Blocking](#blocking-firewall) below for how it works.
+
+### Blocking (firewall)
+
+netscope captures passively — libpcap/Npcap cannot drop packets inline — so
+blocking installs an **OS firewall rule** that stops future traffic to/from an
+IP. On Windows this is a pair of `netsh advfirewall` rules named
+`netscope-block-<ip>` (inbound + outbound, all profiles). Implemented in
+`core::firewall`:
+
+```rust
+firewall::block(ip)        // add block rules (needs elevation)
+firewall::unblock(ip)      // remove them
+firewall::blocked_ips()    // read current netscope rules from the OS
+firewall::unblock_all()    // remove every netscope rule
+firewall::is_elevated()    // can we install rules?
+```
+
+Design notes:
+- **Requires Administrator.** Non-elevated attempts fail with a clear message;
+  the status bar shows `⚠ not admin`. Detected via the High-Integrity SID
+  (`S-1-16-12288`), which is locale-independent.
+- **Rules are found by name, not by parsing localized output** — the rule name
+  embeds the IP, so `blocked_ips()` works identically on Turkish/English/any
+  Windows.
+- **Rules persist** across restarts. `blocked_ips()` is read at startup so the
+  UI reflects reality. Clean up with `u`, `--unblock-all`, or Windows Firewall.
+- On non-Windows builds the functions compile but return "Windows only".
 
 ### 4. DNS Log View (`views/dns_log.rs`)
 - Filters `app.packets` where `protocol == Dns`

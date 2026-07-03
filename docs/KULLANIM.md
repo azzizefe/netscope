@@ -216,6 +216,30 @@ ve dönüş trafiği tek satırda birleşir:
 | Duration | İlk ve son paket arasındaki süre |
 | Last activity | Son paketin özeti |
 
+**Bağlantı engelleme (firewall) ⛔** — Bu görünümde bir bağlantı seçip
+karşı tarafı (sunucu IP'sini) engelleyebilirsiniz:
+
+| Tuş | İşlem |
+|-----|-------|
+| `↑`/`↓` veya `j`/`k` | Bağlantı seç |
+| `b` | Seçili bağlantının uzak IP'sini engelle |
+| `u` | Engeli kaldır |
+
+Engelleme **gerçek** bir işlemdir: netscope, Windows Güvenlik Duvarı'na
+`netscope-block-<ip>` adında gelen+giden engelleme kuralları ekler. Bu yüzden:
+
+- **Yönetici (Administrator) yetkisi gerekir.** Yetki yoksa durum çubuğunda
+  `⚠ not admin` uyarısı görünür ve engelleme denemesi nazikçe reddedilir.
+  netscope'u yönetici olarak başlatın (sağ tık → "Yönetici olarak çalıştır").
+- Kurallar **kalıcıdır** — netscope kapansa bile durur. `u` ile, komut
+  satırından `--unblock-all` ile veya Windows Güvenlik Duvarı'ndan
+  kaldırabilirsiniz.
+- netscope pasif dinleme yapar; engelleme *o an uçuşan* paketi düşürmez,
+  o IP'ye **yeni** trafiği işletim sistemi seviyesinde durdurur.
+
+Engellenen bağlantılar listede kırmızı ve `⛔` işaretiyle görünür; durum
+çubuğunda toplam engel sayısı yazar.
+
 ### 4. DNS Log
 Tüm DNS sorgu ve yanıtları tek listede — hangi alan adlarına erişildiğini
 bir bakışta görürsünüz.
@@ -234,6 +258,8 @@ netscope-tui [SEÇENEKLER]
   -D, --list-interfaces      Kullanılabilir arayüzleri listele
       --headless             TUI olmadan düz metin çıktı (pipe dostu)
       --json                 Satır başına bir JSON nesnesi (--headless'ı ima eder)
+      --list-blocked         netscope tarafından engellenen IP'leri listele
+      --unblock-all          Tüm netscope engelleme kurallarını kaldır (admin)
   -h, --help                 Yardım
 ```
 

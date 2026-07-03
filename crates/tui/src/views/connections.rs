@@ -1,17 +1,26 @@
 use ratatui::layout::{Constraint, Rect};
 use ratatui::style::{Style, Stylize};
-use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table};
+use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::colors::{protocol_color, PANEL_BORDER};
+use crate::colors::{protocol_color, PANEL_BORDER, SELECTED_BG};
 use netscope_core::flows::Flow;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let flows = app.flows.flows();
 
+    let title = format!(
+        " Connections ({}){} ",
+        flows.len(),
+        if app.blocked.is_empty() {
+            String::new()
+        } else {
+            format!(" · {} blocked", app.blocked.len())
+        }
+    );
     let block = Block::default()
-        .title(format!(" Connections ({}) ", flows.len()))
+        .title(title)
         .borders(Borders::ALL)
         .border_style(Style::new().fg(PANEL_BORDER));
 
@@ -27,6 +36,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
 
     let header = [
         " # ",
+        " ",
         " Client ",
         " Server ",
         " Proto ",
@@ -38,8 +48,9 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     ];
     let constraints = [
         Constraint::Length(5),
-        Constraint::Length(22),
-        Constraint::Length(22),
+        Constraint::Length(3),
+        Constraint::Length(24),
+        Constraint::Length(24),
         Constraint::Length(7),
         Constraint::Length(7),
         Constraint::Length(9),
@@ -53,8 +64,11 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .enumerate()
         .map(|(i, flow)| {
             let color = protocol_color(&flow.app_protocol);
-            Row::new(vec![
+            let is_blocked = app.blocked.contains(&flow.server_addr);
+            let mark = if is_blocked { " ⛔" } else { "  " };
+            let row = Row::new(vec![
                 Cell::from(format!(" {:<3}", i + 1)),
+                Cell::from(mark),
                 Cell::from(format!(" {} ", endpoint(flow, true, app))),
                 Cell::from(format!(" {} ", endpoint(flow, false, app))),
                 Cell::from(format!(" {} ", flow.app_protocol)).style(Style::new().fg(color).bold()),
@@ -66,7 +80,12 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 Cell::from(format!(" {} ", format_bytes(flow.byte_count))),
                 Cell::from(format!(" {} ", format_duration(flow))),
                 Cell::from(format!(" {} ", flow.last_summary)),
-            ])
+            ]);
+            if is_blocked {
+                row.style(Style::new().fg(ratatui::style::Color::Rgb(0xF8, 0x71, 0x71)))
+            } else {
+                row
+            }
         })
         .collect();
 
@@ -76,9 +95,11 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .collect();
     let table = Table::new(rows, constraints)
         .header(Row::new(header_cells))
+        .row_highlight_style(Style::new().bg(SELECTED_BG))
         .block(block);
 
-    frame.render_widget(table, area);
+    let mut state = TableState::new().with_selected(Some(app.conn_selected.min(flows.len() - 1)));
+    frame.render_stateful_widget(table, area, &mut state);
 }
 
 fn endpoint(flow: &Flow, client: bool, app: &App) -> String {

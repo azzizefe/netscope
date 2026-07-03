@@ -98,6 +98,30 @@ netscope-tui --headless --json | jq 'select(.protocol == "DNS")'
 One JSON object per line (JSON Lines). Fields: `timestamp`, `src`, `dst`,
 `src_port`, `dst_port`, `protocol`, `length`, `summary`.
 
+### How do I block a connection?
+
+Switch to the **Connections** view (`Tab`), select a row with `j`/`k`, and
+press `b`. netscope adds a Windows Firewall rule blocking all traffic to/from
+that host; press `u` to remove it. This needs Administrator — launch netscope
+elevated, or you'll see `⚠ not admin` in the status bar.
+
+From the command line: `netscope-tui --list-blocked` shows what's blocked and
+`netscope-tui --unblock-all` clears every netscope rule.
+
+### Does blocking drop the packets I'm watching?
+
+No. netscope captures passively, so it can't drop a packet already on the
+wire. Blocking installs an OS firewall rule that stops **new** traffic to/from
+that IP — the current connection dies on its next packet, and nothing new
+reaches the host. The rules are named `netscope-block-<ip>` and persist until
+you remove them (so they keep working after netscope closes).
+
+### I blocked something by accident — how do I undo it?
+
+Any of: press `u` on it in the Connections view, run
+`netscope-tui --unblock-all`, or open **Windows Defender Firewall → Advanced
+→ Outbound/Inbound Rules** and delete the `netscope-block-*` rules.
+
 ### Can netscope decrypt HTTPS?
 
 No, and it won't. Decryption (SSLKEYLOGFILE etc.) is out of scope — see the

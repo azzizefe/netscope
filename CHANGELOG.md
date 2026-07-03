@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     states, ICMP ping/TTL/neighbor-discovery types, IGMP/GRE/ESP/OSPF names)
   - **Passive hostname resolution** (`names.rs`) — learns IP → domain from
     captured DNS responses; UI shows `github.com:443` instead of bare IPs
+  - **Traffic blocking** (`firewall.rs`) — block a remote host via OS firewall
+    rules (`netsh advfirewall` on Windows, named `netscope-block-<ip>`).
+    Locale-independent rule lookup, elevation-aware, fully reversible.
   - **Smart default interface selection** — scores devices by connection
     status and routable IPv4; skips loopback and virtual adapters
   - Real-time stats engine (bandwidth, top talkers, protocol distribution, DNS domains)
@@ -30,8 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Real-time dashboard with bandwidth graph and protocol distribution
   - DNS-specific filtered log view
   - Smart filter (free text matching on summary/protocol/address/hostname)
+  - Interactive Connections view — select a flow and block/unblock its remote
+    host with `b`/`u`; blocked flows render red with a `⛔` mark and count
   - Status bar shows the friendly adapter name ("Intel(R) Wi-Fi 6 AX201"),
-    not the raw `\Device\NPF_{...}` identifier
+    not the raw `\Device\NPF_{...}` identifier; warns when not elevated
   - Help overlay
   - Tab-based view switching
 
@@ -43,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Interface listing (`-D`)
   - Headless plain text output (`--headless`)
   - JSON Lines output (`--json`)
+  - Firewall inspection/cleanup (`--list-blocked`, `--unblock-all`)
 
 - **Documentation**
   - Documentation index (`docs/README.md`)
@@ -56,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Quality
 
-- 77 unit tests across all modules
+- 81 unit tests across all modules
 - Sample `.pcap` fixtures for offline testing
 - Fuzz test (1000 random garbage packets, zero panics)
 - Performance benchmark (10k packets at >2M pkt/s throughput)

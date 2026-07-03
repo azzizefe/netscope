@@ -53,6 +53,7 @@
 
 - **🧠 Human-readable summaries** — DNS domains, TLS SNI hostnames, HTTP paths. Not hex.
 - **🌐 Passive hostname resolution** — Watches DNS responses and shows `github.com:443` instead of a bare IP. No lookups of its own, zero added traffic.
+- **⛔ Block traffic, live** — See a connection you don't like? Select it and press `b`. netscope installs a real OS firewall rule to cut it off. Wireshark can't do that.
 - **🎯 Zero-config interface pick** — Skips loopback and virtual adapters (WAN Miniport, Hyper-V) and lands on your real Wi-Fi/Ethernet automatically.
 - **🎨 Beautiful TUI** — Protocol-colored rows, dark theme, smooth layout. Ships with taste.
 - **📊 Live dashboard** — Bandwidth, top talkers, protocol distribution. Updated in real time.
@@ -124,6 +125,8 @@ Usage: netscope-tui [OPTIONS]
   -D, --list-interfaces      List available interfaces
       --headless             Plain text output to stdout
       --json                 JSON Lines output (implies --headless)
+      --list-blocked         List IPs blocked by netscope firewall rules
+      --unblock-all          Remove all netscope block rules and exit
   -h, --help                 Print help
 ```
 
@@ -135,6 +138,7 @@ Usage: netscope-tui [OPTIONS]
 | `Enter` | Expand/collapse packet details |
 | `Tab` / `Shift+Tab` | Switch views |
 | *(any character)* | Filter packets (free text — type directly) |
+| `b` / `u` | *(Connections view)* Block / unblock the selected remote host |
 | `Space` | Pause / resume capture |
 | `h` | Toggle hex dump |
 | `?` | Help overlay |
@@ -147,7 +151,7 @@ Usage: netscope-tui [OPTIONS]
 |------|-------------|
 | **Packets** | Live packet stream with human-readable summaries |
 | **Dashboard** | Real-time stats, bandwidth, protocol distribution, top talkers |
-| **Connections** | Conversations grouped by flow — packets, bytes, direction, duration per connection |
+| **Connections** | Conversations grouped by flow — packets, bytes, direction, duration per connection. Select one and press `b` to **block** the remote host via an OS firewall rule (`u` to unblock). |
 | **DNS Log** | All DNS queries and responses in one place |
 
 ---

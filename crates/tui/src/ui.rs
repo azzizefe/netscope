@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
     render_status_bar(frame, layout[0], app);
     render_main_content(frame, layout[1], app);
-    render_keybinding_bar(frame, layout[2]);
+    render_keybinding_bar(frame, layout[2], app);
 
     if app.show_help {
         render_help_overlay(frame, area);
@@ -29,36 +29,68 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 }
 
 fn render_status_bar(frame: &mut Frame, area: Rect, app: &mut App) {
+    // A transient action message (block succeeded/failed) takes over the bar.
+    if let Some(msg) = app.active_status() {
+        let line = Line::from(format!(" {msg} "));
+        let block = Block::default().style(Style::new().bg(STATUS_BAR_BG).white());
+        frame.render_widget(block, area);
+        frame.render_widget(
+            Paragraph::new(line).style(Style::new().bg(STATUS_BAR_BG).white().bold()),
+            area,
+        );
+        return;
+    }
+
     let state_icon = if app.paused { "⏸" } else { "●" };
     let state_color = if app.paused { "Paused" } else { "Capturing" };
     let elapsed = app.elapsed_secs();
     let total = app.stats.snapshot().total_packets;
 
-    let text = Line::from(vec![
+    let mut spans = vec![
         format!(" netscope ▸ {} ", app.interface_name).into(),
         format!(" {} {} ", state_icon, state_color).into(),
         format!(" {} packets ", total).into(),
         format!(" {}s ", elapsed).into(),
-    ]);
+    ];
+    if !app.blocked.is_empty() {
+        spans.push(format!(" ⛔ {} blocked ", app.blocked.len()).into());
+    }
+    if !app.elevated {
+        spans.push(" ⚠ not admin (blocking disabled) ".into());
+    }
+
     let block = Block::default().style(Style::new().bg(STATUS_BAR_BG).white());
     frame.render_widget(block, area);
     frame.render_widget(
-        Paragraph::new(text).style(Style::new().bg(STATUS_BAR_BG).white()),
+        Paragraph::new(Line::from(spans)).style(Style::new().bg(STATUS_BAR_BG).white()),
         area,
     );
 }
 
-fn render_keybinding_bar(frame: &mut Frame, area: Rect) {
-    let binds = [
-        " ↑↓/jk navigate ",
-        " Enter expand ",
-        " Tab switch ",
-        " / filter ",
-        " Space pause ",
-        " h hex ",
-        " ? help ",
-        " q quit ",
-    ];
+fn render_keybinding_bar(frame: &mut Frame, area: Rect, app: &App) {
+    // In Connections, surface the block controls instead of hex/expand.
+    let binds: &[&str] = if app.view == crate::views::View::Connections {
+        &[
+            " ↑↓/jk select ",
+            " b block ",
+            " u unblock ",
+            " Tab switch ",
+            " Space pause ",
+            " ? help ",
+            " q quit ",
+        ]
+    } else {
+        &[
+            " ↑↓/jk navigate ",
+            " Enter expand ",
+            " Tab switch ",
+            " type to filter ",
+            " Space pause ",
+            " h hex ",
+            " ? help ",
+            " q quit ",
+        ]
+    };
     let text = Line::from(
         binds
             .iter()
@@ -100,6 +132,13 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
         Line::from("   Dashboard    Real-time stats & bandwidth"),
         Line::from("   Connections  Group packets by flow"),
         Line::from("   DNS Log      All DNS queries"),
+        Line::from(""),
+        Line::from(" In Connections:"),
+        Line::from("   j/k or ↑/↓         Select a connection"),
+        Line::from("   b                  Block the remote host (firewall)"),
+        Line::from("   u                  Unblock the remote host"),
+        Line::from(" Blocking needs Administrator. Rules are named"),
+        Line::from(" netscope-block-<ip> and persist until unblocked."),
     ];
 
     let block = Block::default()
@@ -107,7 +146,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
         .borders(Borders::ALL)
         .style(Style::new().white().on_blue());
 
-    let area = centered_rect(50, 20, area);
+    let area = centered_rect(58, 80, area);
     frame.render_widget(Clear, area);
     frame.render_widget(block.clone(), area);
     frame.render_widget(Paragraph::new(lines).block(block), area);

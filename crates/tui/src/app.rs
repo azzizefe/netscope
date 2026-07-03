@@ -1,4 +1,5 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
+use std::net::IpAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -36,6 +37,14 @@ pub struct App {
     pub packet_rx: Receiver<Packet>,
     pub interface_name: String,
     pub show_help: bool,
+    /// Row selected in the Connections view.
+    pub conn_selected: usize,
+    /// IPs blocked via OS firewall rules (mirrors `netscope-block-*` rules).
+    pub blocked: BTreeSet<IpAddr>,
+    /// Whether this process can install firewall rules.
+    pub elevated: bool,
+    /// Transient status line message with the time it was set.
+    pub status_msg: Option<(String, Instant)>,
 }
 
 impl App {
@@ -80,7 +89,60 @@ impl App {
             packet_rx,
             interface_name,
             show_help: false,
+            conn_selected: 0,
+            blocked: netscope_core::firewall::blocked_ips(),
+            elevated: netscope_core::firewall::is_elevated(),
+            status_msg: None,
         })
+    }
+
+    /// Set a transient message shown in the status bar for a few seconds.
+    fn notify(&mut self, msg: impl Into<String>) {
+        self.status_msg = Some((msg.into(), Instant::now()));
+    }
+
+    /// The most recent status message, if still fresh (< 5s old).
+    pub fn active_status(&self) -> Option<&str> {
+        self.status_msg.as_ref().and_then(|(msg, at)| {
+            if at.elapsed() < Duration::from_secs(5) {
+                Some(msg.as_str())
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Block or unblock the remote host of the selected connection.
+    fn toggle_block_selected(&mut self) {
+        let flows = self.flows.flows();
+        let Some(flow) = flows.get(self.conn_selected) else {
+            return;
+        };
+        // The "remote" side is the server (the address the client reached out to).
+        let ip = flow.server_addr;
+        let label = self
+            .names
+            .name_for(ip)
+            .map(|n| n.to_string())
+            .unwrap_or_else(|| ip.to_string());
+
+        if self.blocked.contains(&ip) {
+            match netscope_core::firewall::unblock(ip) {
+                Ok(()) => {
+                    self.blocked.remove(&ip);
+                    self.notify(format!("Unblocked {label}"));
+                }
+                Err(e) => self.notify(format!("Unblock failed: {e}")),
+            }
+        } else {
+            match netscope_core::firewall::block(ip) {
+                Ok(()) => {
+                    self.blocked.insert(ip);
+                    self.notify(format!("Blocked {label} ({ip})"));
+                }
+                Err(e) => self.notify(format!("Block failed: {e}")),
+            }
+        }
     }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
@@ -138,6 +200,29 @@ impl App {
                 self.show_help = false;
             }
             return Ok(true);
+        }
+
+        // The Connections view has its own navigation and block controls;
+        // handle those first so letter keys act as commands, not filter text.
+        if self.view == View::Connections {
+            match key.code {
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.conn_selected = self.conn_selected.saturating_sub(1);
+                    return Ok(true);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    let n = self.flows.len();
+                    if n > 0 && self.conn_selected + 1 < n {
+                        self.conn_selected += 1;
+                    }
+                    return Ok(true);
+                }
+                KeyCode::Char('b') | KeyCode::Char('u') => {
+                    self.toggle_block_selected();
+                    return Ok(true);
+                }
+                _ => {}
+            }
         }
 
         match key.code {

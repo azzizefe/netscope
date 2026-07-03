@@ -159,6 +159,35 @@ Key details:
 
 ---
 
+## Firewall (`firewall.rs`)
+
+OS-level traffic blocking by remote IP. Passive capture can't drop packets, so
+blocking installs firewall rules that stop future traffic.
+
+```rust
+pub fn block(ip: IpAddr) -> Result<()>       // add netscope-block-<ip> rules
+pub fn unblock(ip: IpAddr) -> Result<()>     // remove them
+pub fn blocked_ips() -> BTreeSet<IpAddr>     // read current rules from the OS
+pub fn unblock_all() -> Result<usize>        // remove every netscope rule
+pub fn is_elevated() -> bool                 // can we install rules?
+pub fn is_supported() -> bool                // true on Windows
+pub fn rule_name(ip: IpAddr) -> String       // "netscope-block-<ip>"
+```
+
+Key details:
+- **Windows**: two `netsh advfirewall` rules per IP (inbound + outbound, all
+  profiles). Requires Administrator; `block`/`unblock` return a descriptive
+  error otherwise.
+- **Locale-independent**: `blocked_ips()` finds rules by the IP embedded in the
+  rule name, never by parsing localized `netsh` output — works on any Windows
+  language.
+- **Elevation check** via the High-Integrity SID `S-1-16-12288` (constant
+  across languages), not by attempting a privileged call.
+- **Other platforms**: functions compile and return "Windows only"; `is_elevated`
+  treats uid-0 as elevated.
+
+---
+
 ## Stats Engine (`stats.rs`)
 
 ### `StatsEngine`

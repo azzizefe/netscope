@@ -30,6 +30,14 @@ struct Cli {
     #[arg(short = 'D', long = "list-interfaces")]
     list_interfaces: bool,
 
+    /// List IPs currently blocked by netscope firewall rules
+    #[arg(long = "list-blocked")]
+    list_blocked: bool,
+
+    /// Remove all netscope firewall block rules and exit
+    #[arg(long = "unblock-all")]
+    unblock_all: bool,
+
     /// Headless mode: output packets as plain text to stdout
     #[arg(long)]
     headless: bool,
@@ -44,6 +52,14 @@ fn main() -> Result<()> {
 
     if cli.list_interfaces {
         return list_interfaces();
+    }
+
+    if cli.list_blocked {
+        return list_blocked();
+    }
+
+    if cli.unblock_all {
+        return unblock_all();
     }
 
     let headless = cli.headless || cli.json;
@@ -67,6 +83,28 @@ fn run_tui(cli: Cli, terminal: ratatui::DefaultTerminal) -> Result<()> {
         cli.write.as_deref(),
     )?;
     app.run(terminal)
+}
+
+fn list_blocked() -> Result<()> {
+    let blocked = netscope_core::firewall::blocked_ips();
+    if blocked.is_empty() {
+        println!("No IPs are currently blocked by netscope.");
+    } else {
+        println!("Blocked by netscope ({}):", blocked.len());
+        for ip in &blocked {
+            println!("  {ip}");
+        }
+    }
+    Ok(())
+}
+
+fn unblock_all() -> Result<()> {
+    if !netscope_core::firewall::is_elevated() {
+        eprintln!("⚠ Not running as Administrator — removing rules may fail.");
+    }
+    let count = netscope_core::firewall::unblock_all()?;
+    println!("Removed {count} netscope block rule(s).");
+    Ok(())
 }
 
 fn list_interfaces() -> Result<()> {
