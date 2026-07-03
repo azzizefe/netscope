@@ -51,22 +51,11 @@ fn main() -> Result<()> {
         return headless::run(cli);
     }
 
-    // TUI mode
-    use ratatui::crossterm::terminal::{
-        disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-    };
-    use ratatui::crossterm::ExecutableCommand;
-    use std::io::stdout;
-
-    enable_raw_mode()?;
-    stdout().execute(EnterAlternateScreen)?;
+    // TUI mode — ratatui::init() handles raw mode + alternate screen itself;
+    // doubling those calls leaves conhost on a blank buffer.
     let terminal = ratatui::init();
-
     let result = run_tui(cli, terminal);
-
     ratatui::restore();
-    stdout().execute(LeaveAlternateScreen)?;
-    disable_raw_mode()?;
     result
 }
 
