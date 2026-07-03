@@ -3,6 +3,7 @@ use std::sync::Mutex;
 
 use netscope_core::capture::CaptureEngine;
 use netscope_core::models::Packet;
+use netscope_core::names::NameCache;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -10,6 +11,7 @@ struct CaptureState {
     engine: Option<CaptureEngine>,
     running: AtomicBool,
     packet_buffer: Vec<Packet>,
+    names: NameCache,
     _packet_count: u64,
 }
 
@@ -24,26 +26,124 @@ struct PacketInfo {
     timestamp: String,
     src_addr: Option<String>,
     dst_addr: Option<String>,
+    /// Hostname learned for the source IP, if any (passive DNS).
+    src_host: Option<String>,
+    dst_host: Option<String>,
     src_port: Option<u16>,
     dst_port: Option<u16>,
     protocol: String,
     length: usize,
     summary: String,
+    /// Plain-language one-liner about what this packet is doing.
+    explanation: String,
     raw: Vec<u8>,
 }
 
-fn packet_to_info(pkt: Packet) -> PacketInfo {
+/// Build the frontend packet view, resolving hostnames from the cache.
+fn packet_to_info(pkt: &Packet, names: &NameCache) -> PacketInfo {
+    let src_host = pkt
+        .src_addr
+        .and_then(|a| names.name_for(a).map(|s| s.to_string()));
+    let dst_host = pkt
+        .dst_addr
+        .and_then(|a| names.name_for(a).map(|s| s.to_string()));
     PacketInfo {
         raw: pkt.data.clone(),
         timestamp: pkt.timestamp.format("%H:%M:%S%.3f").to_string(),
         src_addr: pkt.src_addr.map(|a| a.to_string()),
         dst_addr: pkt.dst_addr.map(|a| a.to_string()),
+        src_host,
+        dst_host,
         src_port: pkt.src_port,
         dst_port: pkt.dst_port,
         protocol: pkt.protocol.to_string(),
         length: pkt.length,
-        summary: pkt.summary,
+        summary: pkt.summary.clone(),
+        explanation: netscope_core::education::explain_packet(pkt).to_string(),
     }
+}
+
+#[derive(Serialize, Clone)]
+struct LessonInfo {
+    protocol: String,
+    title: String,
+    summary: String,
+    body: String,
+    look_for: String,
+}
+
+#[derive(Serialize, Clone)]
+struct TermInfo {
+    term: String,
+    meaning: String,
+}
+
+#[tauri::command]
+fn get_lessons() -> Vec<LessonInfo> {
+    use netscope_core::models::Protocol;
+    let protos = [
+        ("DNS", Protocol::Dns),
+        ("TCP", Protocol::Tcp),
+        ("TLS", Protocol::Tls),
+        ("HTTP", Protocol::Http),
+        ("UDP", Protocol::Udp),
+        ("ICMP", Protocol::Icmp),
+        ("ARP", Protocol::Arp),
+        ("Unknown", Protocol::Unknown(String::new())),
+    ];
+    protos
+        .iter()
+        .map(|(name, p)| {
+            let l = netscope_core::education::lesson(p);
+            LessonInfo {
+                protocol: name.to_string(),
+                title: l.title.to_string(),
+                summary: l.summary.to_string(),
+                body: l.body.to_string(),
+                look_for: l.look_for.to_string(),
+            }
+        })
+        .collect()
+}
+
+#[tauri::command]
+fn get_glossary() -> Vec<TermInfo> {
+    netscope_core::education::glossary()
+        .iter()
+        .map(|t| TermInfo {
+            term: t.term.to_string(),
+            meaning: t.meaning.to_string(),
+        })
+        .collect()
+}
+
+#[tauri::command]
+fn is_elevated() -> bool {
+    netscope_core::firewall::is_elevated()
+}
+
+#[tauri::command]
+fn list_blocked() -> Vec<String> {
+    netscope_core::firewall::blocked_ips()
+        .into_iter()
+        .map(|ip| ip.to_string())
+        .collect()
+}
+
+#[tauri::command]
+fn block_ip(ip: String) -> Result<(), String> {
+    let addr = ip
+        .parse()
+        .map_err(|_| format!("'{ip}' is not a valid IP address"))?;
+    netscope_core::firewall::block(addr).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn unblock_ip(ip: String) -> Result<(), String> {
+    let addr = ip
+        .parse()
+        .map_err(|_| format!("'{ip}' is not a valid IP address"))?;
+    netscope_core::firewall::unblock(addr).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -84,15 +184,19 @@ fn start_capture(
     std::thread::spawn(move || loop {
         match packet_rx.recv_timeout(std::time::Duration::from_millis(50)) {
             Ok(pkt) => {
-                let info = packet_to_info(pkt.clone());
-                let _ = app_handle.emit("packet", info);
-                // Buffer for save_pcap
-                if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
+                let info = if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
+                    // Learn hostnames from DNS, then resolve this packet's addrs.
+                    g.names.observe(&pkt);
+                    let info = packet_to_info(&pkt, &g.names);
                     g.packet_buffer.push(pkt);
                     if g.packet_buffer.len() > 100_000 {
                         g.packet_buffer.drain(..50_000);
                     }
-                }
+                    info
+                } else {
+                    packet_to_info(&pkt, &NameCache::new())
+                };
+                let _ = app_handle.emit("packet", info);
             }
             Err(crossbeam_channel::RecvTimeoutError::Timeout) => continue,
             Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
@@ -131,15 +235,18 @@ fn open_pcap(
     let app_handle = app.clone();
     std::thread::spawn(move || {
         while let Ok(pkt) = packet_rx.recv() {
-            let info = packet_to_info(pkt.clone());
-            let _ = app_handle.emit("packet", info);
-            // Buffer for save_pcap
-            if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
+            let info = if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
+                g.names.observe(&pkt);
+                let info = packet_to_info(&pkt, &g.names);
                 g.packet_buffer.push(pkt);
                 if g.packet_buffer.len() > 100_000 {
                     g.packet_buffer.drain(..50_000);
                 }
-            }
+                info
+            } else {
+                packet_to_info(&pkt, &NameCache::new())
+            };
+            let _ = app_handle.emit("packet", info);
         }
         let _ = app_handle.emit("capture-finished", ());
     });
@@ -210,6 +317,7 @@ pub fn run() {
             engine: None,
             running: AtomicBool::new(false),
             packet_buffer: Vec::new(),
+            names: NameCache::new(),
             _packet_count: 0,
         }))
         .invoke_handler(tauri::generate_handler![
@@ -218,6 +326,12 @@ pub fn run() {
             stop_capture,
             open_pcap,
             save_pcap,
+            get_lessons,
+            get_glossary,
+            is_elevated,
+            list_blocked,
+            block_ip,
+            unblock_ip,
         ])
         .run(tauri::generate_context!())
         .expect("error while running netscope desktop");

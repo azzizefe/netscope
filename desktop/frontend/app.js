@@ -1,104 +1,77 @@
 // netscope Desktop — Frontend
-// Uses window.__TAURI__ for IPC (gracefully falls back when not in Tauri)
+// Talks to the Rust backend over Tauri IPC (window.__TAURI__).
 
 const PROTOCOL_COLORS = {
-  TCP: '#4a9ef5',
-  UDP: '#45d1c5',
-  DNS: '#a78bfa',
-  HTTP: '#34d399',
-  TLS: '#6ee7b7',
-  ICMP: '#fbbf24',
-  ARP: '#9ca3af',
+  TCP: '#4a9ef5', UDP: '#45d1c5', DNS: '#a78bfa', HTTP: '#34d399',
+  TLS: '#6ee7b7', ICMP: '#fbbf24', ARP: '#9ca3af',
 };
+const protoColor = (p) => PROTOCOL_COLORS[p] || '#f87171';
 
-const STATES = { IDLE: 'Idle', CAPTURING: 'Capturing', PAUSED: 'Paused' };
+const STATES = { IDLE: 'Idle', CAPTURING: 'Capturing' };
 
-let state = {
+const state = {
   view: 'packets',
   packets: [],
   filteredPackets: [],
   selectedIndex: -1,
-  detailExpanded: false,
   showHex: false,
   filterText: '',
   status: STATES.IDLE,
   packetCount: 0,
+  flows: new Map(),      // key -> flow aggregate
+  blocked: new Set(),    // blocked IP strings
+  elevated: false,
   stats: {
-    totalPackets: 0,
-    totalBytes: 0,
-    perProtocol: {},
-    bandwidth: 0,
-    topTalkersSent: [],
-    topTalkersReceived: [],
-    topDomains: [],
+    totalPackets: 0, totalBytes: 0, perProtocol: {},
+    topTalkersSent: [], topDomains: [],
   },
-  interfaces: [],
 };
 
-// ---- Tauri IPC helpers ----
-async function tauriInvoke(cmd, args = {}) {
-  try {
-    if (window.__TAURI__) {
-      return await window.__TAURI__.core.invoke(cmd, args);
-    }
-    console.warn(`[mock] invoke ${cmd}`, args);
-    return null;
-  } catch (e) {
-    console.error(`invoke ${cmd}:`, e);
-    throw e;
-  }
+// ---- Tauri IPC ----
+async function invoke(cmd, args = {}) {
+  if (window.__TAURI__) return window.__TAURI__.core.invoke(cmd, args);
+  console.warn(`[mock] invoke ${cmd}`, args);
+  return null;
+}
+async function listen(event, handler) {
+  if (window.__TAURI__) return window.__TAURI__.event.listen(event, handler);
+  console.warn(`[mock] listen ${event}`);
 }
 
-async function tauriListen(event, handler) {
-  try {
-    if (window.__TAURI__) {
-      return await window.__TAURI__.event.listen(event, handler);
-    }
-    console.warn(`[mock] listen ${event}`);
-  } catch (e) {
-    console.error(`listen ${event}:`, e);
-  }
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+const els = {};
+
+// ---- Helpers ----
+function formatBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1048576).toFixed(1)} MB`;
+}
+function endpointLabel(addr, host, port) {
+  if (!addr) return '?';
+  const name = host || addr;
+  const p = port != null ? `:${port}` : '';
+  // bracket IPv6 when no host name
+  const base = !host && addr.includes(':') ? `[${addr}]` : name;
+  return `${base}${p}`;
 }
 
-// ---- DOM refs ----
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
-
-const els = {
-  interfaceSelect: $('#interface-select'),
-  startBtn: $('#start-btn'),
-  stopBtn: $('#stop-btn'),
-  statusText: $('#status-text'),
-  packetCount: $('#packet-count'),
-  filterInput: $('#filter-input'),
-  packetList: $('#packet-list'),
-  detailPanel: $('#detail-panel'),
-  detailContent: $('#detail-content'),
-  detailClose: $('#detail-close'),
-  hexDump: $('#hex-dump'),
-  hexToggle: $('#hex-toggle'),
-  statTotalPackets: $('#stat-total-packets'),
-  statTotalBytes: $('#stat-total-bytes'),
-  statBandwidth: $('#stat-bandwidth'),
-  protoBars: $('#proto-bars'),
-  talkerList: $('#talker-list'),
-  dnsList: $('#dns-list'),
-};
-
-// ---- Interface listing ----
+// ---- Interfaces ----
 async function loadInterfaces() {
   try {
-    const ifaces = await tauriInvoke('list_interfaces');
-    if (ifaces && ifaces.length > 0) {
-      state.interfaces = ifaces;
+    const ifaces = await invoke('list_interfaces');
+    if (ifaces && ifaces.length) {
       els.interfaceSelect.innerHTML = ifaces
-        .map((d) => `<option value="${d.name}">${d.name} — ${d.description || ''}</option>`)
+        .map((d) => `<option value="${d.name}">${d.description || d.name}</option>`)
         .join('');
-      els.interfaceSelect.disabled = false;
+      // Prefer an interface that has a description (physical adapters usually do).
+      const best = ifaces.findIndex((d) => /wi-?fi|ethernet|wireless|realtek|intel/i.test(d.description || ''));
+      if (best >= 0) els.interfaceSelect.selectedIndex = best;
     } else {
-      els.interfaceSelect.innerHTML = '<option>No interfaces found</option>';
+      els.interfaceSelect.innerHTML = '<option>No interfaces — is Npcap installed?</option>';
     }
-  } catch (e) {
+  } catch {
     els.interfaceSelect.innerHTML = '<option>Error loading interfaces</option>';
   }
 }
@@ -108,360 +81,372 @@ async function startCapture() {
   const iface = els.interfaceSelect.value;
   const filter = els.filterInput.value || null;
   try {
-    await tauriInvoke('start_capture', { interface: iface, filter });
+    // reset session
+    state.packets = []; state.flows.clear(); state.packetCount = 0;
+    state.stats = { totalPackets: 0, totalBytes: 0, perProtocol: {}, topTalkersSent: [], topDomains: [] };
+    await invoke('start_capture', { interface: iface, filter });
     setStatus(STATES.CAPTURING);
     els.startBtn.disabled = true;
     els.stopBtn.disabled = false;
-    els.filterInput.disabled = true;
+    renderAll();
   } catch (e) {
-    console.error('Start capture failed:', e);
+    alert(`Could not start capture:\n${e}`);
   }
 }
-
 async function stopCapture() {
-  try {
-    await tauriInvoke('stop_capture');
-    setStatus(STATES.IDLE);
-    els.startBtn.disabled = false;
-    els.stopBtn.disabled = true;
-    els.filterInput.disabled = false;
-  } catch (e) {
-    console.error('Stop capture failed:', e);
-  }
+  try { await invoke('stop_capture'); } catch (e) { console.error(e); }
+  setStatus(STATES.IDLE);
+  els.startBtn.disabled = false;
+  els.stopBtn.disabled = true;
 }
-
 function setStatus(s) {
   state.status = s;
   els.statusText.textContent = `● ${s}`;
-  els.statusText.className = s === STATES.CAPTURING ? 'status-capturing' : s === STATES.PAUSED ? 'status-paused' : 'status-idle';
+  els.statusText.className = s === STATES.CAPTURING ? 'status-capturing' : 'status-idle';
 }
 
-// ---- Packet rendering ----
-function renderPacketRow(pkt, index) {
-  const protoColor = PROTOCOL_COLORS[pkt.protocol] || '#f87171';
-  const selected = index === state.selectedIndex ? ' selected' : '';
-  const dir = pkt.src_addr && pkt.dst_addr ? '\u2192' : '';
-
-  return `
-    <div class="packet-row${selected}" data-index="${index}" data-protocol="${pkt.protocol}">
-      <span class="col-num">${index + 1}</span>
-      <span class="col-time">${pkt.timestamp || ''}</span>
-      <span class="col-src">${pkt.src_addr || ''}</span>
-      <span class="col-dir" style="color:${protoColor}">${dir}</span>
-      <span class="col-dst">${pkt.dst_addr || ''}</span>
-      <span class="col-proto" style="color:${protoColor};font-weight:600">${pkt.protocol}</span>
-      <span class="col-len">${pkt.length}B</span>
-      <span class="col-info">${pkt.summary}</span>
-    </div>`;
-}
-
-function renderPacketList() {
-  const packets = state.filterText
-    ? state.packets.filter((p) => matchesFilter(p, state.filterText))
-    : state.packets;
-
-  state.filteredPackets = packets;
-
-  if (packets.length === 0) {
-    els.packetList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">No packets</div>';
-    return;
-  }
-
-  const start = Math.max(0, packets.length - 500);
-  const visible = packets.slice(start);
-
-  els.packetList.innerHTML = visible
-    .map((pkt, i) => renderPacketRow(pkt, start + i))
-    .join('');
-
-  // Highlight selected
-  if (state.selectedIndex >= 0) {
-    const sel = els.packetList.querySelector(`.packet-row[data-index="${state.selectedIndex}"]`);
-    if (sel) sel.scrollIntoView({ block: 'nearest' });
-  }
-}
-
-function matchesFilter(pkt, text) {
-  const lower = text.toLowerCase();
-  return (
-    pkt.summary.toLowerCase().includes(lower) ||
-    pkt.protocol.toLowerCase().includes(lower) ||
-    (pkt.src_addr && pkt.src_addr.includes(lower)) ||
-    (pkt.dst_addr && pkt.dst_addr.includes(lower))
-  );
-}
-
-// ---- Detail panel ----
-function showDetail(index) {
-  const pkt = state.filteredPackets[index];
-  if (!pkt) return;
-
-  state.selectedIndex = index;
-  state.detailExpanded = true;
-  els.detailPanel.classList.remove('hidden');
-
-  const protoColor = PROTOCOL_COLORS[pkt.protocol] || '#f87171';
-
-  els.detailContent.innerHTML = `
-    <div class="detail-field">
-      <span class="detail-label">Protocol:</span>
-      <span style="color:${protoColor};font-weight:600">${pkt.protocol}</span>
-    </div>
-    <div class="detail-field">
-      <span class="detail-label">Summary:</span>
-      <span style="font-weight:600">${pkt.summary}</span>
-    </div>
-    <div class="detail-field">
-      <span class="detail-label">Source:</span>
-      <span>${pkt.src_addr || '?'}${pkt.src_port ? ':' + pkt.src_port : ''}</span>
-    </div>
-    <div class="detail-field">
-      <span class="detail-label">Destination:</span>
-      <span>${pkt.dst_addr || '?'}${pkt.dst_port ? ':' + pkt.dst_port : ''}</span>
-    </div>
-    <div class="detail-field">
-      <span class="detail-label">Length:</span>
-      <span>${pkt.length} bytes</span>
-    </div>
-    <div class="detail-field">
-      <span class="detail-label">Timestamp:</span>
-      <span>${pkt.timestamp || ''}</span>
-    </div>
-  `;
-
-  // Hex dump
-  state.showHex = false;
-  els.hexDump.classList.add('hidden');
-  renderHexDump(pkt);
-}
-
-function hideDetail() {
-  state.detailExpanded = false;
-  state.selectedIndex = -1;
-  els.detailPanel.classList.add('hidden');
-}
-
-function renderHexDump(pkt) {
-  // We'd need raw data — for now, placeholder
-  if (state.showHex) {
-    els.hexDump.classList.remove('hidden');
-    // In a full implementation, the raw packet data would be sent from the backend
-    els.hexDump.textContent = '(Raw packet data not available in desktop app yet)';
-  } else {
-    els.hexDump.classList.add('hidden');
-  }
-}
-
-// ---- Stats rendering ----
-function renderStats() {
-  const s = state.stats;
-  els.statTotalPackets.textContent = s.totalPackets.toLocaleString();
-  els.statTotalBytes.textContent = formatBytes(s.totalBytes);
-  els.statBandwidth.textContent = `${(s.bandwidth / 1000).toFixed(1)} KB/s`;
-
-  // Protocol distribution
-  const protocols = Object.entries(s.perProtocol).sort((a, b) => b[1].total_packets - a[1].total_packets);
-  const maxPkts = protocols.length > 0 ? protocols[0][1].total_packets : 1;
-
-  els.protoBars.innerHTML = protocols
-    .map(([proto, stats]) => {
-      const color = PROTOCOL_COLORS[proto] || '#f87171';
-      const pct = s.totalPackets > 0 ? ((stats.total_packets / s.totalPackets) * 100).toFixed(1) : '0';
-      const barPct = (stats.total_packets / maxPkts) * 100;
-      return `
-        <div class="proto-bar-row">
-          <span class="proto-label" style="color:${color}">${proto}</span>
-          <div class="proto-bar-bg">
-            <div class="proto-bar-fill" style="width:${barPct}%;background:${color}"></div>
-          </div>
-          <span class="proto-pct">${pct}%</span>
-        </div>`;
-    })
-    .join('') || '<div style="color:var(--text-muted);font-size:12px">No data</div>';
-
-  // Top talkers (sent)
-  const talkers = s.topTalkersSent || [];
-  els.talkerList.innerHTML = talkers
-    .slice(0, 8)
-    .map(([ip, bytes]) => `
-      <div class="talker-item">
-        <span class="talker-ip">${ip}</span>
-        <span class="talker-bytes">${formatBytes(bytes)}</span>
-      </div>`)
-    .join('') || '<div style="color:var(--text-muted);font-size:12px">No data</div>';
-
-  // DNS domains
-  const domains = s.topDomains || [];
-  els.dnsList.innerHTML = domains
-    .slice(0, 10)
-    .map(([domain, count]) => `
-      <div class="dns-item">
-        <span class="dns-domain">${domain}</span>
-        <span class="dns-count">${count}</span>
-      </div>`)
-    .join('') || '<div style="color:var(--text-muted);font-size:12px">No domains</div>';
-}
-
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-// ---- Stats update from packet events ----
-function updateStats(pkt) {
-  const s = state.stats;
-  s.totalPackets++;
-  s.totalBytes += pkt.length;
-
-  if (!s.perProtocol[pkt.protocol]) {
-    s.perProtocol[pkt.protocol] = { total_packets: 0, total_bytes: 0 };
-  }
-  s.perProtocol[pkt.protocol].total_packets++;
-  s.perProtocol[pkt.protocol].total_bytes += pkt.length;
-
-  // Track sent bytes by IP
-  if (pkt.src_addr) {
-    const existing = s.topTalkersSent.find(([ip]) => ip === pkt.src_addr);
-    if (existing) existing[1] += pkt.length;
-    else s.topTalkersSent.push([pkt.src_addr, pkt.length]);
-  }
-
-  // Track DNS domains from summaries
-  if (pkt.protocol === 'DNS') {
-    const domain = extractDomain(pkt.summary);
-    if (domain) {
-      if (!s.topDomains.find(([d]) => d === domain)) {
-        s.topDomains.push([domain, 0]);
-      }
-      const entry = s.topDomains.find(([d]) => d === domain);
-      entry[1]++;
-    }
-  }
-
-  // Sort top talkers
-  s.topTalkersSent.sort((a, b) => b[1] - a[1]);
-  s.topTalkersSent = s.topTalkersSent.slice(0, 10);
-  s.topDomains.sort((a, b) => b[1] - a[1]);
-  s.topDomains = s.topDomains.slice(0, 10);
-}
-
-function extractDomain(summary) {
-  const m = summary.match(/DNS (?:Query|Response) — (\S+)/);
-  return m ? m[1] : null;
-}
-
-// ---- Packet event handler ----
+// ---- Packet ingest ----
 function onPacket(event) {
   const pkt = event.payload;
   state.packets.push(pkt);
   if (state.packets.length > 10000) state.packets.shift();
-
   state.packetCount++;
   els.packetCount.textContent = `${state.packetCount} packets`;
 
   updateStats(pkt);
-  renderPacketList();
-  renderStats();
+  updateFlow(pkt);
+
+  if (state.view === 'packets') renderPacketList();
+  else if (state.view === 'connections') renderConnections();
+  else if (state.view === 'dashboard') renderStats();
 }
 
-// ---- View switching ----
+// ---- Flow aggregation (Connections view) ----
+function transportOf(proto) {
+  if (['TCP', 'HTTP', 'TLS'].includes(proto)) return 'tcp';
+  if (['UDP', 'DNS'].includes(proto)) return 'udp';
+  if (proto === 'ICMP') return 'icmp';
+  if (proto === 'ARP') return 'arp';
+  return 'other';
+}
+function protoRank(proto) {
+  if (proto === 'HTTP') return 4;
+  if (proto === 'TLS' || proto === 'DNS') return 3;
+  return 1;
+}
+function updateFlow(pkt) {
+  if (!pkt.src_addr || !pkt.dst_addr) return;
+  const t = transportOf(pkt.protocol);
+  const a = `${pkt.src_addr}:${pkt.src_port ?? ''}`;
+  const b = `${pkt.dst_addr}:${pkt.dst_port ?? ''}`;
+  const key = (a <= b ? `${a}|${b}` : `${b}|${a}`) + `|${t}`;
+
+  let f = state.flows.get(key);
+  if (!f) {
+    f = {
+      clientAddr: pkt.src_addr, clientPort: pkt.src_port,
+      serverAddr: pkt.dst_addr, serverPort: pkt.dst_port,
+      serverHost: pkt.dst_host || null,
+      proto: pkt.protocol, rank: protoRank(pkt.protocol),
+      packets: 0, bytes: 0,
+    };
+    state.flows.set(key, f);
+  }
+  f.packets++;
+  f.bytes += pkt.length;
+  if (protoRank(pkt.protocol) > f.rank) { f.proto = pkt.protocol; f.rank = protoRank(pkt.protocol); }
+  // learn the server's hostname whenever it shows up
+  if (pkt.src_addr === f.serverAddr && pkt.src_host) f.serverHost = pkt.src_host;
+  if (pkt.dst_addr === f.serverAddr && pkt.dst_host) f.serverHost = pkt.dst_host;
+}
+
+function renderConnections() {
+  const flows = [...state.flows.values()].sort((a, b) => b.bytes - a.bytes);
+  els.connSummary.innerHTML = flows.length
+    ? `${flows.length} connections · <b>${state.blocked.size}</b> blocked` +
+      (state.elevated ? '' : ' · <span style="color:var(--warn)">run as Administrator to block</span>')
+    : 'No connections yet — start a capture.';
+
+  els.connList.innerHTML = flows.map((f) => {
+    const isBlocked = state.blocked.has(f.serverAddr);
+    const server = f.serverHost
+      ? `<span class="conn-host">${f.serverHost}</span> <span class="conn-ip mono">${f.serverAddr}${f.serverPort != null ? ':' + f.serverPort : ''}</span>`
+      : `<span class="conn-host mono">${endpointLabel(f.serverAddr, null, f.serverPort)}</span>`;
+    const client = endpointLabel(f.clientAddr, null, f.clientPort);
+    const btn = isBlocked
+      ? `<button class="btn btn-small btn-unblock" data-unblock="${f.serverAddr}">Unblock</button>`
+      : `<button class="btn btn-small btn-block" data-block="${f.serverAddr}" ${state.elevated ? '' : 'title="Needs Administrator"'}>⛔ Block</button>`;
+    return `
+      <div class="conn-row conn-row-grid${isBlocked ? ' blocked' : ''}">
+        <span class="mono">${client}</span>
+        <span class="conn-server">${server}</span>
+        <span class="conn-proto" style="color:${protoColor(f.proto)}">${f.proto}</span>
+        <span>${f.packets}</span>
+        <span>${formatBytes(f.bytes)}</span>
+        <span>${btn}</span>
+      </div>`;
+  }).join('');
+}
+
+async function doBlock(ip) {
+  try {
+    await invoke('block_ip', { ip });
+    state.blocked.add(ip);
+    renderConnections();
+    renderStats();
+  } catch (e) {
+    alert(`Could not block ${ip}:\n${e}`);
+  }
+}
+async function doUnblock(ip) {
+  try {
+    await invoke('unblock_ip', { ip });
+    state.blocked.delete(ip);
+    renderConnections();
+    renderStats();
+  } catch (e) {
+    alert(`Could not unblock ${ip}:\n${e}`);
+  }
+}
+
+// ---- Packets view ----
+function matchesFilter(pkt, text) {
+  const l = text.toLowerCase();
+  return (
+    pkt.summary.toLowerCase().includes(l) ||
+    pkt.protocol.toLowerCase().includes(l) ||
+    (pkt.src_addr && pkt.src_addr.includes(l)) ||
+    (pkt.dst_addr && pkt.dst_addr.includes(l)) ||
+    (pkt.src_host && pkt.src_host.toLowerCase().includes(l)) ||
+    (pkt.dst_host && pkt.dst_host.toLowerCase().includes(l))
+  );
+}
+function renderPacketList() {
+  const packets = state.filterText
+    ? state.packets.filter((p) => matchesFilter(p, state.filterText))
+    : state.packets;
+  state.filteredPackets = packets;
+
+  if (!packets.length) {
+    els.packetList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No packets yet</div>';
+    return;
+  }
+  const start = Math.max(0, packets.length - 500);
+  els.packetList.innerHTML = packets.slice(start).map((pkt, i) => {
+    const idx = start + i;
+    const c = protoColor(pkt.protocol);
+    const sel = idx === state.selectedIndex ? ' selected' : '';
+    const src = endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port);
+    const dst = endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port);
+    return `
+      <div class="packet-row${sel}" data-index="${idx}">
+        <span class="col-num">${idx + 1}</span>
+        <span class="col-time">${pkt.timestamp}</span>
+        <span class="col-src">${src}</span>
+        <span class="col-dir" style="color:${c}">→</span>
+        <span class="col-dst">${dst}</span>
+        <span class="col-proto" style="color:${c}">${pkt.protocol}</span>
+        <span class="col-len">${pkt.length}B</span>
+        <span class="col-info">${pkt.summary}</span>
+      </div>`;
+  }).join('');
+}
+
+function showDetail(index) {
+  const pkt = state.filteredPackets[index];
+  if (!pkt) return;
+  state.selectedIndex = index;
+  $('#view-packets').classList.add('with-detail');
+  els.detailPanel.classList.remove('hidden');
+  const c = protoColor(pkt.protocol);
+
+  els.detailContent.innerHTML = `
+    <div class="detail-field"><span class="detail-label">Protocol</span><span style="color:${c};font-weight:600">${pkt.protocol}</span></div>
+    <div class="detail-field"><span class="detail-label">Summary</span><span style="font-weight:600">${pkt.summary}</span></div>
+    <div class="detail-field"><span class="detail-label">Source</span><span>${endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port)}${pkt.src_host ? ` <span class="conn-ip mono">${pkt.src_addr}</span>` : ''}</span></div>
+    <div class="detail-field"><span class="detail-label">Destination</span><span>${endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port)}${pkt.dst_host ? ` <span class="conn-ip mono">${pkt.dst_addr}</span>` : ''}</span></div>
+    <div class="detail-field"><span class="detail-label">Length</span><span>${pkt.length} bytes</span></div>
+    <div class="detail-field"><span class="detail-label">Time</span><span>${pkt.timestamp}</span></div>
+    <div class="detail-explain">ℹ ${pkt.explanation || ''}</div>
+  `;
+  state.showHex = false;
+  els.hexDump.classList.add('hidden');
+  els.hexDump.textContent = hexDump(pkt.raw || []);
+}
+function hideDetail() {
+  state.selectedIndex = -1;
+  $('#view-packets').classList.remove('with-detail');
+  els.detailPanel.classList.add('hidden');
+  renderPacketList();
+}
+function hexDump(bytes) {
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 16) {
+    const chunk = bytes.slice(i, i + 16);
+    const hex = chunk.map((b) => b.toString(16).padStart(2, '0')).join(' ');
+    const ascii = chunk.map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.')).join('');
+    out += `${i.toString(16).padStart(4, '0')}  ${hex.padEnd(47)}  ${ascii}\n`;
+  }
+  return out || '(no data)';
+}
+
+// ---- Dashboard ----
+function updateStats(pkt) {
+  const s = state.stats;
+  s.totalPackets++; s.totalBytes += pkt.length;
+  if (!s.perProtocol[pkt.protocol]) s.perProtocol[pkt.protocol] = { total_packets: 0, total_bytes: 0 };
+  s.perProtocol[pkt.protocol].total_packets++;
+  s.perProtocol[pkt.protocol].total_bytes += pkt.length;
+
+  if (pkt.src_addr) {
+    const e = s.topTalkersSent.find(([ip]) => ip === (pkt.src_host || pkt.src_addr));
+    if (e) e[1] += pkt.length; else s.topTalkersSent.push([pkt.src_host || pkt.src_addr, pkt.length]);
+    s.topTalkersSent.sort((a, b) => b[1] - a[1]);
+    s.topTalkersSent = s.topTalkersSent.slice(0, 10);
+  }
+  if (pkt.protocol === 'DNS') {
+    const m = pkt.summary.match(/DNS (?:Query|Response) — (\S+)/);
+    if (m) {
+      const d = s.topDomains.find(([x]) => x === m[1]);
+      if (d) d[1]++; else s.topDomains.push([m[1], 1]);
+      s.topDomains.sort((a, b) => b[1] - a[1]);
+      s.topDomains = s.topDomains.slice(0, 12);
+    }
+  }
+}
+function renderStats() {
+  const s = state.stats;
+  els.statTotalPackets.textContent = s.totalPackets.toLocaleString();
+  els.statTotalBytes.textContent = formatBytes(s.totalBytes);
+  els.statBlocked.textContent = state.blocked.size;
+
+  const protos = Object.entries(s.perProtocol).sort((a, b) => b[1].total_packets - a[1].total_packets);
+  const max = protos.length ? protos[0][1].total_packets : 1;
+  els.protoBars.innerHTML = protos.map(([p, st]) => {
+    const c = protoColor(p);
+    const pct = s.totalPackets ? ((st.total_packets / s.totalPackets) * 100).toFixed(1) : '0';
+    return `<div class="proto-bar-row"><span class="proto-label" style="color:${c}">${p}</span>
+      <div class="proto-bar-bg"><div class="proto-bar-fill" style="width:${(st.total_packets / max) * 100}%;background:${c}"></div></div>
+      <span class="proto-pct">${pct}%</span></div>`;
+  }).join('') || '<div style="color:var(--text-muted);font-size:12px">No data</div>';
+
+  els.talkerList.innerHTML = s.topTalkersSent.slice(0, 8).map(([ip, b]) =>
+    `<div class="talker-item"><span class="talker-ip">${ip}</span><span class="talker-bytes">${formatBytes(b)}</span></div>`
+  ).join('') || '<div style="color:var(--text-muted);font-size:12px">No data</div>';
+
+  els.dnsList.innerHTML = s.topDomains.slice(0, 12).map(([d, n]) =>
+    `<div class="dns-item"><span class="dns-domain">${d}</span><span class="dns-count">${n}</span></div>`
+  ).join('') || '<div style="color:var(--text-muted);font-size:12px">No domains</div>';
+}
+
+// ---- Learn ----
+async function loadLearn() {
+  try {
+    const lessons = await invoke('get_lessons');
+    const glossary = await invoke('get_glossary');
+    if (lessons) {
+      els.lessonCards.innerHTML = lessons.map((l) => {
+        const c = protoColor(l.protocol);
+        return `<div class="lesson-card" style="border-left-color:${c}">
+          <h4 style="color:${c}">${l.title}</h4>
+          <div class="gist">${l.summary}</div>
+          <div class="body">${l.body}</div>
+          <div class="look">${l.look_for}</div>
+        </div>`;
+      }).join('');
+    }
+    if (glossary) {
+      els.glossaryList.innerHTML = glossary.map((t) =>
+        `<div class="glossary-item"><span class="term">${t.term}</span> — ${t.meaning}</div>`
+      ).join('');
+    }
+  } catch (e) { console.error('learn load', e); }
+}
+
+// ---- Views ----
 function switchView(view) {
   state.view = view;
   $$('.view').forEach((el) => el.classList.remove('active'));
-  const target = $(`#view-${view}`);
-  if (target) target.classList.add('active');
+  $$('.tab').forEach((el) => el.classList.toggle('active', el.dataset.view === view));
+  $(`#view-${view}`).classList.add('active');
+  renderAll();
+}
+function renderAll() {
+  if (state.view === 'packets') renderPacketList();
+  else if (state.view === 'connections') renderConnections();
+  else if (state.view === 'dashboard') renderStats();
 }
 
-// ---- Keyboard shortcuts ----
+// ---- Keyboard ----
 function handleKeydown(e) {
-  const key = e.key;
-
-  if (key === 'Tab') {
+  if (document.activeElement === els.filterInput) return;
+  if (e.key === 'Tab') {
     e.preventDefault();
-    const views = ['packets', 'dashboard'];
-    const idx = views.indexOf(state.view);
-    switchView(views[(idx + 1) % views.length]);
-    return;
-  }
-
-  if (state.view === 'packets') {
-    if (key === 'ArrowDown' || key === 'j') {
+    const views = ['packets', 'connections', 'dashboard', 'learn'];
+    switchView(views[(views.indexOf(state.view) + 1) % views.length]);
+  } else if (state.view === 'packets') {
+    if (e.key === 'ArrowDown' || e.key === 'j') {
       e.preventDefault();
-      const idx = Math.min(state.selectedIndex + 1, state.filteredPackets.length - 1);
-      showDetail(idx);
+      showDetail(Math.min(state.selectedIndex + 1, state.filteredPackets.length - 1));
       renderPacketList();
-    } else if (key === 'ArrowUp' || key === 'k') {
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
       e.preventDefault();
-      const idx = Math.max(state.selectedIndex - 1, 0);
-      showDetail(idx);
+      showDetail(Math.max(state.selectedIndex - 1, 0));
       renderPacketList();
-    } else if (key === 'Enter') {
-      e.preventDefault();
-      if (state.selectedIndex >= 0) {
-        if (state.detailExpanded && !els.detailPanel.classList.contains('hidden')) {
-          hideDetail();
-        } else {
-          showDetail(state.selectedIndex);
-        }
-      }
-    } else if (key === 'h') {
-      state.showHex = !state.showHex;
-      const pkt = state.filteredPackets[state.selectedIndex];
-      if (pkt) renderHexDump(pkt);
-    } else if (key === 'Escape') {
-      hideDetail();
-    }
-  }
-
-  if (key === '?' && !e.ctrlKey && !e.metaKey) {
-    // Simple help — could show a modal
+    } else if (e.key === 'Escape') hideDetail();
   }
 }
 
 // ---- Init ----
 async function init() {
-  await loadInterfaces();
-
-  // Listen for Tauri events
-  await tauriListen('packet', onPacket);
-  await tauriListen('capture-finished', () => {
-    setStatus(STATES.IDLE);
-    els.startBtn.disabled = false;
+  Object.assign(els, {
+    interfaceSelect: $('#interface-select'), startBtn: $('#start-btn'), stopBtn: $('#stop-btn'),
+    statusText: $('#status-text'), packetCount: $('#packet-count'), filterInput: $('#filter-input'),
+    elevationBadge: $('#elevation-badge'), packetList: $('#packet-list'), detailPanel: $('#detail-panel'),
+    detailContent: $('#detail-content'), detailClose: $('#detail-close'), hexDump: $('#hex-dump'),
+    hexToggle: $('#hex-toggle'), connSummary: $('#conn-summary'), connList: $('#conn-list'),
+    statTotalPackets: $('#stat-total-packets'), statTotalBytes: $('#stat-total-bytes'),
+    statBandwidth: $('#stat-bandwidth'), statBlocked: $('#stat-blocked'), protoBars: $('#proto-bars'),
+    talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
+    glossaryList: $('#glossary-list'),
   });
 
-  // Event listeners
+  await loadInterfaces();
+  await loadLearn();
+
+  // elevation + existing blocks
+  try {
+    state.elevated = await invoke('is_elevated');
+    if (!state.elevated) els.elevationBadge.classList.remove('hidden');
+    const blocked = await invoke('list_blocked');
+    if (blocked) blocked.forEach((ip) => state.blocked.add(ip));
+  } catch (e) { console.error(e); }
+
+  await listen('packet', onPacket);
+  await listen('capture-finished', () => { setStatus(STATES.IDLE); els.startBtn.disabled = false; els.stopBtn.disabled = true; });
+
   els.startBtn.addEventListener('click', startCapture);
   els.stopBtn.addEventListener('click', stopCapture);
-
-  els.filterInput.addEventListener('input', () => {
-    state.filterText = els.filterInput.value;
-    renderPacketList();
-  });
-
-  els.packetList.addEventListener('click', (e) => {
-    const row = e.target.closest('.packet-row');
-    if (row) {
-      const idx = parseInt(row.dataset.index);
-      showDetail(idx);
-      renderPacketList();
-    }
-  });
-
+  els.filterInput.addEventListener('input', () => { state.filterText = els.filterInput.value; renderPacketList(); });
   els.detailClose.addEventListener('click', hideDetail);
-
   els.hexToggle.addEventListener('click', () => {
     state.showHex = !state.showHex;
-    const pkt = state.filteredPackets[state.selectedIndex];
-    if (pkt) renderHexDump(pkt);
+    els.hexDump.classList.toggle('hidden', !state.showHex);
   });
-
-  // Keyboard shortcuts
+  els.packetList.addEventListener('click', (e) => {
+    const row = e.target.closest('.packet-row');
+    if (row) { showDetail(parseInt(row.dataset.index)); renderPacketList(); }
+  });
+  els.connList.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-block]');
+    const u = e.target.closest('[data-unblock]');
+    if (b) doBlock(b.dataset.block);
+    else if (u) doUnblock(u.dataset.unblock);
+  });
+  $$('.tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
   document.addEventListener('keydown', handleKeydown);
 
-  // Initial render
-  renderPacketList();
-  renderStats();
+  renderAll();
 }
 
 document.addEventListener('DOMContentLoaded', init);

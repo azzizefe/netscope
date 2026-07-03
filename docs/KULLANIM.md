@@ -293,21 +293,63 @@ BPF filtre sözdizimi Wireshark/tcpdump ile aynıdır:
 
 ---
 
-## Masaüstü uygulaması
+## Masaüstü uygulaması (terminal gerekmez)
 
-Terminal kullanmak istemeyenler için aynı motoru kullanan Tauri tabanlı GUI:
+Terminal kullanmak istemeyenler için aynı motoru kullanan **Tauri tabanlı
+kendi masaüstü uygulamamız**. Tek pencere, dört sekme: Packets, Connections,
+Dashboard ve 🎓 Learn.
+
+### Kullanmak için neler indirilmeli / kurulmalı?
+
+Uygulama bir **ağ yakalama** aracı olduğu için normal bir programdan biraz
+fazlasına ihtiyaç duyar. Sırasıyla:
+
+| # | Gerekli | Neden | Nasıl |
+|---|---------|-------|-------|
+| 1 | **Npcap** (Windows) | Herhangi bir uygulamanın ağ paketlerini okuyabilmesini sağlayan sürücü. Olmadan netscope hiç trafik göremez. | [npcap.com](https://npcap.com) → indir, kurarken **"WinPcap API-compatible mode"** kutusunu işaretle. Ücretsiz. |
+| 2 | **WebView2** (Windows) | Uygulamanın penceresini çizer. | Windows 10/11'de zaten yüklü. Yoksa: [Microsoft WebView2](https://developer.microsoft.com/microsoft-edge/webview2/). |
+| 3 | **Yönetici olarak çalıştır** | Hem paket yakalama hem de engelleme kuralları yönetici yetkisi ister. | Sağ tık → **Yönetici olarak çalıştır**. Yoksa yakalama boş gelebilir ve engelleme devre dışı kalır (`⚠ not admin` rozeti görünür). |
+
+Hepsi bu — hesap yok, ayar dosyası yok. **macOS/Linux'ta** Npcap gerekmez;
+macOS sürücüsüz çalışır (`sudo` veya BPF izni), Linux `libpcap` + `sudo` ya da
+`cap_net_raw` yeterlidir.
+
+### İndirme (yayınlandığında)
+
+[Releases sayfasından](https://github.com/azzizefe/netscope/releases) işletim
+sisteminize uygun kurulumu indirin:
+
+| İşletim sistemi | Dosya |
+|-----------------|-------|
+| Windows | `netscope_x.y.z_x64-setup.exe` (önce Npcap'i kurun) |
+| macOS | `netscope_x.y.z_universal.dmg` |
+| Linux | `.AppImage` veya `.deb` |
+
+### İlk çalıştırma
+
+1. netscope'u açın (Windows'ta yönetici olarak).
+2. Üstteki açılır menüden ağ arayüzünüzü seçin (varsayılan genelde Wi-Fi/Ethernet'inizdir).
+3. **▶ Start**'a basın — paketler anında akmaya başlar.
+4. **Connections** sekmesine geçip trafiğinizin nereye gittiğini görün; istediğinizi **⛔ Block** ile kesin.
+5. Ağ konusunda yeniyseniz **🎓 Learn** sekmesine bakın.
+
+### Kaynaktan çalıştırma / paket üretme
 
 ```bash
-# Geliştirme derlemesi
-cargo build -p netscope-desktop
-./target/debug/netscope-desktop
+# Doğrudan kaynaktan çalıştır (ön yüz statik, ek kurulum yok)
+cargo run -p netscope-desktop
+# Windows'ta yakalama+engelleme için exe'yi "yönetici olarak" başlatın:
+#   target/debug/netscope-desktop.exe
 
 # Dağıtılabilir kurulum paketi (NSIS .exe / .dmg / .AppImage)
-cargo tauri build
+cd desktop/src-tauri && cargo tauri build
 ```
 
-Özellikler: arayüz seçici, başlat/durdur, renkli paket tablosu, filtre çubuğu,
-pcap aç/kaydet (yerel dosya diyalogları).
+### Özellikler
+- **Packets** — renkli canlı paket akışı; kaynak/hedef alan adıyla (`github.com:443`), her pakette `ℹ` sade açıklama ve hex dökümü.
+- **Connections** — trafiğin nereye gittiği konuşma bazında; her satırda **Block/Unblock** düğmesi.
+- **Dashboard** — toplam paket/bayt, protokol dağılımı, top talkers, en çok alan adları, engellenen sayısı.
+- **Learn** — protokol dersleri + terim sözlüğü.
 
 ---
 

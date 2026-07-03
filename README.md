@@ -69,13 +69,32 @@
 
 ## Install
 
-### From source (recommended)
+netscope ships in two flavors: a **desktop app** (native window, no terminal)
+and a **terminal UI** (TUI). Both share the same engine.
+
+### 🖥️ Desktop app — what you need to run it
+
+1. **Npcap** (Windows) — the driver that lets any app read packets. Install from
+   [npcap.com](https://npcap.com) with **"WinPcap API-compatible mode"** ticked. *(macOS/Linux don't need this.)*
+2. **WebView2** (Windows) — pre-installed on Windows 10/11; renders the window.
+3. **Run as Administrator** — capturing packets and installing block rules both
+   need it. Right-click → *Run as administrator*. Without it you'll see a `⚠ not admin` badge.
+
+Then download the installer for your OS from [Releases](https://github.com/azzizefe/netscope/releases):
+
+| OS | File |
+|----|------|
+| **Windows** | `netscope_x.y.z_x64-setup.exe` |
+| **macOS** | `netscope_x.y.z_universal.dmg` |
+| **Linux** | `.AppImage` or `.deb` |
+
+Full details in the [Desktop Guide](docs/desktop.md).
+
+### ⌨️ Terminal UI
 
 ```bash
 cargo install netscope-tui
 ```
-
-### Prerequisites
 
 | Platform | Requirement |
 |----------|-------------|
@@ -89,7 +108,8 @@ cargo install netscope-tui
 git clone https://github.com/azzizefe/netscope.git
 cd netscope
 cargo build --release
-./target/release/netscope-tui
+./target/release/netscope-tui        # terminal UI
+cargo run -p netscope-desktop        # desktop app (run the exe "as admin" on Windows)
 ```
 
 ---

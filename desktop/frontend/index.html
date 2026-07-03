@@ -12,16 +12,24 @@
     <header id="title-bar">
       <span class="logo">netscope</span>
       <span class="separator">▸</span>
-      <select id="interface-select"></select>
-      <button id="start-btn" class="btn btn-primary">&#9654; Start</button>
-      <button id="stop-btn" class="btn btn-danger" disabled>&#9632; Stop</button>
+      <select id="interface-select" title="Network interface to capture on"></select>
+      <button id="start-btn" class="btn btn-primary">▶ Start</button>
+      <button id="stop-btn" class="btn btn-danger" disabled>■ Stop</button>
       <span class="separator">|</span>
       <span id="status-text" class="status-idle">● Idle</span>
       <span id="packet-count" class="packet-count">0 packets</span>
-      <span id="filter-container">
-        <input type="text" id="filter-input" placeholder="/ filter (IP, protocol, domain...)" disabled>
-      </span>
+      <input type="text" id="filter-input" placeholder="filter: IP, protocol, domain…">
+      <span class="spacer"></span>
+      <span id="elevation-badge" class="badge badge-warn hidden" title="Blocking needs Administrator">⚠ not admin</span>
     </header>
+
+    <!-- View Tabs -->
+    <nav id="tabs">
+      <button class="tab active" data-view="packets">Packets</button>
+      <button class="tab" data-view="connections">Connections</button>
+      <button class="tab" data-view="dashboard">Dashboard</button>
+      <button class="tab" data-view="learn">🎓 Learn</button>
+    </nav>
 
     <!-- Main Content -->
     <main id="main-content">
@@ -40,14 +48,32 @@
           </div>
           <div id="packet-list"></div>
         </div>
-        <div id="detail-panel" class="hidden">
+        <aside id="detail-panel" class="hidden">
           <div id="detail-header">
             <span id="detail-title">Packet Details</span>
-            <button id="detail-close" class="btn-icon">&times;</button>
+            <button id="detail-close" class="btn-icon">×</button>
           </div>
           <div id="detail-content"></div>
-          <div id="hex-dump" class="hidden"></div>
           <button id="hex-toggle" class="btn btn-small">Toggle Hex</button>
+          <pre id="hex-dump" class="hidden"></pre>
+        </aside>
+      </section>
+
+      <!-- Connections View -->
+      <section id="view-connections" class="view">
+        <div class="view-toolbar">
+          <span id="conn-summary">No connections yet — start a capture.</span>
+        </div>
+        <div id="conn-table">
+          <div class="table-header conn-row-grid">
+            <span>Client</span>
+            <span>Server (where traffic goes)</span>
+            <span>Proto</span>
+            <span>Pkts</span>
+            <span>Bytes</span>
+            <span>Action</span>
+          </div>
+          <div id="conn-list"></div>
         </div>
       </section>
 
@@ -59,34 +85,42 @@
             <div class="stat-row"><span>Total Packets</span><span id="stat-total-packets">0</span></div>
             <div class="stat-row"><span>Total Bytes</span><span id="stat-total-bytes">0 B</span></div>
             <div class="stat-row"><span>Bandwidth</span><span id="stat-bandwidth">0 KB/s</span></div>
+            <div class="stat-row"><span>Blocked hosts</span><span id="stat-blocked">0</span></div>
           </div>
           <div class="card" id="protocol-dist">
             <h3>Protocol Distribution</h3>
             <div id="proto-bars"></div>
           </div>
           <div class="card" id="top-talkers">
-            <h3>Top Talkers</h3>
+            <h3>Top Talkers (bytes sent)</h3>
             <div id="talker-list"></div>
           </div>
           <div class="card" id="dns-view">
-            <h3>DNS Log</h3>
+            <h3>Top Domains</h3>
             <div id="dns-list"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- Learn View -->
+      <section id="view-learn" class="view">
+        <div id="learn-content">
+          <div class="learn-intro">
+            <h2>What am I looking at?</h2>
+            <p>Every row in <b>Packets</b> is one small chunk of data your computer sent or
+            received. Below is what each protocol means — in plain words, no prior
+            networking knowledge needed.</p>
+          </div>
+          <div id="lesson-cards"></div>
+          <h2 class="learn-h2">Glossary</h2>
+          <div id="glossary-list"></div>
         </div>
       </section>
     </main>
 
     <!-- Status Bar -->
     <footer id="status-bar">
-      <span id="keybindings">
-        <kbd>↑↓</kbd> navigate &nbsp;
-        <kbd>Enter</kbd> details &nbsp;
-        <kbd>Tab</kbd> views &nbsp;
-        <kbd>Ctrl+F</kbd> filter &nbsp;
-        <kbd>Ctrl+O</kbd> open pcap &nbsp;
-        <kbd>Ctrl+S</kbd> save pcap &nbsp;
-        <kbd>?</kbd> help
-      </span>
+      <span id="hint-text">Tip: open the <b>Connections</b> tab to see where your traffic goes — and block anything with one click.</span>
     </footer>
   </div>
 

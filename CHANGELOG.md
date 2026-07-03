@@ -54,6 +54,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - JSON Lines output (`--json`)
   - Firewall inspection/cleanup (`--list-blocked`, `--unblock-all`)
 
+- **Desktop app** (`desktop/`, Tauri 2)
+  - Native window with four tabs: Packets, Connections, Dashboard, Learn
+  - Passive hostname resolution and per-packet `ℹ` explanations in the UI
+  - Connections tab shows where traffic goes and blocks a remote host with one
+    click (`block_ip`/`unblock_ip`/`list_blocked`/`is_elevated` commands)
+  - Learn tab served from `core::education`; `⚠ not admin` elevation badge
+  - Runs straight from source: `cargo run -p netscope-desktop`
+
 - **Documentation**
   - Documentation index (`docs/README.md`)
   - Architecture guide (`docs/architecture.md`)
