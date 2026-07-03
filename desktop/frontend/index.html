@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>netscope</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Title Bar -->
+    <header id="title-bar">
+      <span class="logo">netscope</span>
+      <span class="separator">▸</span>
+      <select id="interface-select"></select>
+      <button id="start-btn" class="btn btn-primary">&#9654; Start</button>
+      <button id="stop-btn" class="btn btn-danger" disabled>&#9632; Stop</button>
+      <span class="separator">|</span>
+      <span id="status-text" class="status-idle">● Idle</span>
+      <span id="packet-count" class="packet-count">0 packets</span>
+      <span id="filter-container">
+        <input type="text" id="filter-input" placeholder="/ filter (IP, protocol, domain...)" disabled>
+      </span>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content">
+      <!-- Packets View -->
+      <section id="view-packets" class="view active">
+        <div id="packet-table">
+          <div id="packet-header" class="table-header">
+            <span class="col-num">#</span>
+            <span class="col-time">Time</span>
+            <span class="col-src">Source</span>
+            <span class="col-dir"></span>
+            <span class="col-dst">Destination</span>
+            <span class="col-proto">Proto</span>
+            <span class="col-len">Len</span>
+            <span class="col-info">Info</span>
+          </div>
+          <div id="packet-list"></div>
+        </div>
+        <div id="detail-panel" class="hidden">
+          <div id="detail-header">
+            <span id="detail-title">Packet Details</span>
+            <button id="detail-close" class="btn-icon">&times;</button>
+          </div>
+          <div id="detail-content"></div>
+          <div id="hex-dump" class="hidden"></div>
+          <button id="hex-toggle" class="btn btn-small">Toggle Hex</button>
+        </div>
+      </section>
+
+      <!-- Dashboard View -->
+      <section id="view-dashboard" class="view">
+        <div class="dashboard-grid">
+          <div class="card" id="stats-overview">
+            <h3>Overview</h3>
+            <div class="stat-row"><span>Total Packets</span><span id="stat-total-packets">0</span></div>
+            <div class="stat-row"><span>Total Bytes</span><span id="stat-total-bytes">0 B</span></div>
+            <div class="stat-row"><span>Bandwidth</span><span id="stat-bandwidth">0 KB/s</span></div>
+          </div>
+          <div class="card" id="protocol-dist">
+            <h3>Protocol Distribution</h3>
+            <div id="proto-bars"></div>
+          </div>
+          <div class="card" id="top-talkers">
+            <h3>Top Talkers</h3>
+            <div id="talker-list"></div>
+          </div>
+          <div class="card" id="dns-view">
+            <h3>DNS Log</h3>
+            <div id="dns-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Status Bar -->
+    <footer id="status-bar">
+      <span id="keybindings">
+        <kbd>↑↓</kbd> navigate &nbsp;
+        <kbd>Enter</kbd> details &nbsp;
+        <kbd>Tab</kbd> views &nbsp;
+        <kbd>Ctrl+F</kbd> filter &nbsp;
+        <kbd>Ctrl+O</kbd> open pcap &nbsp;
+        <kbd>Ctrl+S</kbd> save pcap &nbsp;
+        <kbd>?</kbd> help
+      </span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

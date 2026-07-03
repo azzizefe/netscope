@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  tui:
+    name: TUI (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary: netscope
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary: netscope
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: netscope.exe
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install libpcap (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: Install Npcap SDK (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip" -UseBasicParsing
+          Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk" -Force
+          echo "LIBPCAP_LIBDIR=$env:TEMP\npcap-sdk\Lib\x64" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - run: cargo build -p netscope-tui --release --target ${{ matrix.target }}
+
+      - name: Upload TUI binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: netscope-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/${{ matrix.binary }}
+          if-no-files-found: error
+
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+            bundles: "deb,appimage"
+          - os: macos-latest
+            name: macOS
+            bundles: "dmg"
+          - os: windows-latest
+            name: Windows
+            bundles: "nsis"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev \
+            libpcap-dev
+
+      - name: Install Npcap SDK (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip" -UseBasicParsing
+          Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk" -Force
+          echo "LIBPCAP_LIBDIR=$env:TEMP\npcap-sdk\Lib\x64" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Install Tauri CLI
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tauri2
+
+      - name: Build desktop
+        run: cargo tauri build --ci --bundles "${{ matrix.bundles }}"
+        working-directory: desktop/src-tauri
+
+      - name: Upload desktop bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: netscope-desktop-${{ matrix.name }}
+          path: |
+            desktop/src-tauri/target/release/bundle/**
+          if-no-files-found: warn
+
+      - name: Find bundle fallback
+        if: failure()
+        shell: pwsh
+        run: |
+          Write-Host "Searching for bundle artifacts..."
+          Get-ChildItem -Path "${{ github.workspace }}" -Recurse -Include "*.deb","*.AppImage","*.dmg","*.exe","*.msi" -ErrorAction SilentlyContinue | Select-Object FullName, Length
+
+  release:
+    name: Create Release
+    needs: [tui, desktop]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - name: List downloaded artifacts
+        run: find . -type f
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            netscope-x86_64-unknown-linux-gnu/netscope
+            netscope-aarch64-apple-darwin/netscope
+            netscope-x86_64-pc-windows-msvc/netscope.exe
+            netscope-desktop-Linux/**
+            netscope-desktop-macOS/**
+            netscope-desktop-Windows/**
+          generate_release_notes: true
+          fail_on_unmatched_files: false

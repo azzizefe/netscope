@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core",
+    "crates/tui",
+    "desktop/src-tauri",
+    "tools/gen-fixtures",
+]

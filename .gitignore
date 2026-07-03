@@ -1,0 +1,6 @@
+/target
+*.pcap
+desktop/node_modules
+desktop/dist
+npcap-sdk/
+.cargo/
