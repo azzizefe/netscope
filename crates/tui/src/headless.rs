@@ -1,6 +1,7 @@
 use anyhow::Result;
 use netscope_core::capture::CaptureEngine;
 use netscope_core::models::Packet;
+use netscope_core::names::NameCache;
 
 use crate::Cli;
 
@@ -14,21 +15,23 @@ pub fn run(cli: Cli) -> Result<()> {
     } else if let Some(path) = cli.read.as_deref() {
         capture.start_offline(path, cli.filter.as_deref(), output_path, packet_tx)?;
     } else {
-        let devices = netscope_core::capture::list_interfaces()?;
-        let first = devices
-            .first()
-            .map(|d| d.name.clone())
-            .ok_or_else(|| anyhow::anyhow!("No network interfaces found"))?;
-        capture.start_live(&first, cli.filter.as_deref(), output_path, packet_tx)?;
+        let dev = netscope_core::capture::default_interface()?;
+        eprintln!(
+            "Capturing on: {}",
+            netscope_core::capture::friendly_name(&dev)
+        );
+        capture.start_live(&dev.name, cli.filter.as_deref(), output_path, packet_tx)?;
     }
 
     let use_json = cli.json;
+    let mut names = NameCache::new();
 
     while let Ok(pkt) = packet_rx.recv() {
+        names.observe(&pkt);
         if use_json {
             println!("{}", format_json(&pkt));
         } else {
-            println!("{}", format_plain(&pkt));
+            println!("{}", format_plain(&pkt, &names));
         }
     }
 
@@ -36,14 +39,14 @@ pub fn run(cli: Cli) -> Result<()> {
     Ok(())
 }
 
-fn format_plain(pkt: &Packet) -> String {
+fn format_plain(pkt: &Packet, names: &NameCache) -> String {
     let ts = pkt.timestamp.format("%Y-%m-%d %H:%M:%S%.3f");
     let src = match pkt.src_addr {
-        Some(ip) => netscope_core::models::format_endpoint(ip, pkt.src_port),
+        Some(ip) => names.display_endpoint(ip, pkt.src_port),
         None => "??".into(),
     };
     let dst = match pkt.dst_addr {
-        Some(ip) => netscope_core::models::format_endpoint(ip, pkt.dst_port),
+        Some(ip) => names.display_endpoint(ip, pkt.dst_port),
         None => "??".into(),
     };
     format!(

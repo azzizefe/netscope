@@ -52,6 +52,8 @@
 ## Features
 
 - **🧠 Human-readable summaries** — DNS domains, TLS SNI hostnames, HTTP paths. Not hex.
+- **🌐 Passive hostname resolution** — Watches DNS responses and shows `github.com:443` instead of a bare IP. No lookups of its own, zero added traffic.
+- **🎯 Zero-config interface pick** — Skips loopback and virtual adapters (WAN Miniport, Hyper-V) and lands on your real Wi-Fi/Ethernet automatically.
 - **🎨 Beautiful TUI** — Protocol-colored rows, dark theme, smooth layout. Ships with taste.
 - **📊 Live dashboard** — Bandwidth, top talkers, protocol distribution. Updated in real time.
 - **📋 DNS log view** — See every queried domain at a glance.
@@ -166,16 +168,20 @@ Usage: netscope-tui [OPTIONS]
 
 ## Docs
 
+Full index: [docs/README.md](docs/README.md)
+
 | Document | What it covers |
 |----------|---------------|
+| [Setup Guide](docs/setup.md) | Prerequisites, build instructions, troubleshooting |
+| [TUI Guide](docs/tui.md) | CLI flags, views, colors, keyboard shortcuts, headless mode |
+| [Filter Cookbook](docs/filters.md) | Ready-to-paste BPF filters for common tasks |
+| [FAQ & Troubleshooting](docs/faq.md) | Common problems and their fixes |
 | [Kullanım Kılavuzu (Türkçe)](docs/KULLANIM.md) | Kurulum, gereksinimler (Npcap vb.), tüm özellikler, sorun giderme |
 | [Architecture](docs/architecture.md) | Crate layout, data flow, dispatch chain, CI/CD |
-| [Core API](docs/core.md) | Packet, Protocol, CaptureEngine, StatsEngine, dissectors |
+| [Core API](docs/core.md) | Packet, Protocol, CaptureEngine, StatsEngine, NameCache, dissectors |
 | [Dissector Guide](docs/dissectors.md) | Summary conventions, dispatch logic, how to add |
-| [TUI Guide](docs/tui.md) | CLI flags, views, colors, keyboard shortcuts, headless mode |
 | [Desktop Guide](docs/desktop.md) | Tauri commands, frontend, build instructions, icons |
 | [CI/CD Guide](docs/ci-cd.md) | Pipeline details, release process, adding platforms |
-| [Setup Guide](docs/setup.md) | Prerequisites, build instructions, troubleshooting |
 
 ---
 

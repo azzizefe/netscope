@@ -129,6 +129,7 @@ Proje üç katmandan oluşur; tüm mantık **bir kez** yazılır, her arayüz on
 │      Ethernet → IPv4/IPv6 → TCP/UDP/ICMP(v6)/ARP     │
 │                → DNS, HTTP, TLS (SNI)                │
 │  • flows.rs     → bağlantı takibi (konuşma bazlı)    │
+│  • names.rs     → pasif DNS: IP → alan adı önbelleği │
 │  • stats.rs     → canlı istatistik (bant genişliği,  │
 │                   top talkers, protokol dağılımı)    │
 │  • models.rs    → Packet, Protocol, ConnectionInfo   │
@@ -148,6 +149,19 @@ istatistik motoruna, akış tablosuna ve ekrana işler.
 
 **Neden hızlı?** Rust-native; dissector zinciri saniyede 100.000+ paketi
 işleyebilir (test paketinde `bench_dissect_throughput` ile doğrulanır).
+
+**Alan adları nereden geliyor?** netscope yakaladığı DNS yanıtlarını izler ve
+hangi IP'nin hangi alan adına ait olduğunu öğrenir. Böylece paket listesinde
+`93.184.216.34:80` yerine `example.com:80` görürsünüz. Bu tamamen **pasiftir**:
+netscope kendi başına hiçbir DNS sorgusu göndermez, ağa tek bayt eklemez.
+(Yakalama başlamadan önce yapılmış sorguların IP'leri öğrenilemez — siteyi
+netscope açıkken ziyaret ederseniz isim görünür.)
+
+**Arayüz nasıl otomatik seçiliyor?** `-i` vermezseniz netscope tüm arayüzleri
+puanlar: bağlı (connected) olması, gerçek bir IPv4 adresi taşıması artı puan;
+loopback ve sanal bağdaştırıcılar (WAN Miniport, Hyper-V, Wi-Fi Direct) eksi
+puan alır. Böylece komut tek başına çalıştırıldığında gerçek Wi-Fi/Ethernet
+kartınıza düşer.
 
 ---
 

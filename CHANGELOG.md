@@ -12,9 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Core Engine** (`crates/core`)
   - Packet capture via `pcap` crate (live + offline)
   - BPF filter support
-  - Protocol dissectors: Ethernet, IPv4/IPv6, TCP, UDP, ICMP, ARP, DNS, HTTP, TLS
-  - Human-readable summaries (DNS domains, TLS SNI, HTTP paths, TCP handshake states)
+  - Protocol dissectors: Ethernet, IPv4/IPv6, TCP, UDP, ICMP/ICMPv6, ARP, DNS, HTTP, TLS
+  - Human-readable summaries (DNS domains, TLS SNI, HTTP paths, TCP handshake
+    states, ICMP ping/TTL/neighbor-discovery types, IGMP/GRE/ESP/OSPF names)
+  - **Passive hostname resolution** (`names.rs`) — learns IP → domain from
+    captured DNS responses; UI shows `github.com:443` instead of bare IPs
+  - **Smart default interface selection** — scores devices by connection
+    status and routable IPv4; skips loopback and virtual adapters
   - Real-time stats engine (bandwidth, top talkers, protocol distribution, DNS domains)
+  - IPv6 endpoints rendered in standard bracket form: `[2001:db8::1]:443`
 
 - **Terminal UI** (`crates/tui`)
   - Four-view layout: Packets, Dashboard, Connections, DNS Log
@@ -23,7 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Togglable hex dump
   - Real-time dashboard with bandwidth graph and protocol distribution
   - DNS-specific filtered log view
-  - Smart filter (free text matching on summary/protocol/address)
+  - Smart filter (free text matching on summary/protocol/address/hostname)
+  - Status bar shows the friendly adapter name ("Intel(R) Wi-Fi 6 AX201"),
+    not the raw `\Device\NPF_{...}` identifier
   - Help overlay
   - Tab-based view switching
 
@@ -37,14 +45,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - JSON Lines output (`--json`)
 
 - **Documentation**
+  - Documentation index (`docs/README.md`)
   - Architecture guide (`docs/architecture.md`)
   - Core API reference (`docs/core.md`)
   - Dissector guide (`docs/dissectors.md`)
   - Setup guide (`docs/setup.md`)
+  - BPF filter cookbook (`docs/filters.md`)
+  - FAQ & troubleshooting (`docs/faq.md`)
+  - Turkish user guide (`docs/KULLANIM.md`)
 
 ### Quality
 
-- 58 unit tests across all modules
+- 77 unit tests across all modules
 - Sample `.pcap` fixtures for offline testing
 - Fuzz test (1000 random garbage packets, zero panics)
 - Performance benchmark (10k packets at >2M pkt/s throughput)

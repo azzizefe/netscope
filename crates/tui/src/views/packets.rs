@@ -42,7 +42,7 @@ fn render_packet_list(frame: &mut Frame, area: Rect, app: &App) {
     let constraints = [
         Constraint::Length(5),
         Constraint::Length(10),
-        Constraint::Length(34),
+        Constraint::Length(42),
         Constraint::Length(7),
         Constraint::Min(10),
     ];
@@ -64,11 +64,11 @@ fn render_packet_list(frame: &mut Frame, area: Rect, app: &App) {
             );
             let src = pkt
                 .src_addr
-                .map(|a| netscope_core::models::format_endpoint(a, pkt.src_port))
+                .map(|a| app.names.display_endpoint(a, pkt.src_port))
                 .unwrap_or_else(|| "?".into());
             let dst = pkt
                 .dst_addr
-                .map(|a| netscope_core::models::format_endpoint(a, pkt.dst_port))
+                .map(|a| app.names.display_endpoint(a, pkt.dst_port))
                 .unwrap_or_else(|| "?".into());
             let proto = Span::styled(
                 format!(" {} ", pkt.protocol),
@@ -117,6 +117,14 @@ fn render_packet_list(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_stateful_widget(table, area, &mut state);
 }
 
+/// `142.250.74.46 (google.com)` when the hostname is known, bare IP otherwise.
+fn addr_with_name(addr: std::net::IpAddr, app: &App) -> String {
+    match app.names.name_for(addr) {
+        Some(name) => format!("{addr} ({name})"),
+        None => addr.to_string(),
+    }
+}
+
 fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
     if app.packets.is_empty() || app.selected >= app.packets.len() {
         let block = Block::default()
@@ -142,13 +150,13 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
         Line::from(format!(
             " Source: {}",
             pkt.src_addr
-                .map(|a| a.to_string())
+                .map(|a| addr_with_name(a, app))
                 .unwrap_or_else(|| "?".into())
         )),
         Line::from(format!(
             " Destination: {}",
             pkt.dst_addr
-                .map(|a| a.to_string())
+                .map(|a| addr_with_name(a, app))
                 .unwrap_or_else(|| "?".into())
         )),
         Line::from(format!(

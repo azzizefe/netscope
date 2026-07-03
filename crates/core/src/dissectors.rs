@@ -131,7 +131,8 @@ pub(crate) mod test_helpers {
         };
         eth.write(&mut buf).unwrap();
 
-        let ip = Ipv4Header::new(0, 64, IpNumber::TCP, src_ip, dst_ip).unwrap();
+        let payload_len = (20 + payload.len()) as u16; // TCP header + payload
+        let ip = Ipv4Header::new(payload_len, 64, IpNumber::TCP, src_ip, dst_ip).unwrap();
         ip.write(&mut buf).unwrap();
 
         let mut tcp = TcpHeader::new(src_port, dst_port, 0, 65535);
@@ -162,7 +163,8 @@ pub(crate) mod test_helpers {
         };
         eth.write(&mut buf).unwrap();
 
-        let ip = Ipv4Header::new(0, 64, IpNumber::UDP, src_ip, dst_ip).unwrap();
+        let payload_len = (8 + payload.len()) as u16; // UDP header + payload
+        let ip = Ipv4Header::new(payload_len, 64, IpNumber::UDP, src_ip, dst_ip).unwrap();
         ip.write(&mut buf).unwrap();
 
         let udp = UdpHeader::without_ipv4_checksum(src_port, dst_port, payload.len()).unwrap();

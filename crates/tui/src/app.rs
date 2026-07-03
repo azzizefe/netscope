@@ -10,6 +10,7 @@ use crossbeam_channel::Receiver;
 use netscope_core::capture::CaptureEngine;
 use netscope_core::flows::FlowTable;
 use netscope_core::models::Packet;
+use netscope_core::names::NameCache;
 use netscope_core::stats::StatsEngine;
 use ratatui::crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::DefaultTerminal;
@@ -29,6 +30,7 @@ pub struct App {
     pub filter_text: String,
     pub stats: StatsEngine,
     pub flows: FlowTable,
+    pub names: NameCache,
     pub start_time: DateTime<Utc>,
     pub running: Arc<AtomicBool>,
     pub packet_rx: Receiver<Packet>,
@@ -50,19 +52,15 @@ impl App {
 
         let interface_name = if let Some(iface) = interface {
             capture.start_live(iface, bpf_filter, output, packet_tx)?;
-            iface.to_string()
+            netscope_core::capture::friendly_name_of(iface)
         } else if let Some(path) = file {
             capture.start_offline(path, bpf_filter, output, packet_tx)?;
             path.to_string()
         } else {
-            let devices = netscope_core::capture::list_interfaces()?;
-            let first = devices
-                .first()
-                .map(|d| d.name.clone())
-                .ok_or_else(|| anyhow::anyhow!("No network interfaces found"))?;
-            let name = first.clone();
-            capture.start_live(&first, bpf_filter, output, packet_tx)?;
-            name
+            let dev = netscope_core::capture::default_interface()?;
+            let label = netscope_core::capture::friendly_name(&dev);
+            capture.start_live(&dev.name, bpf_filter, output, packet_tx)?;
+            label
         };
 
         Ok(Self {
@@ -76,6 +74,7 @@ impl App {
             filter_text: String::new(),
             stats: StatsEngine::new(),
             flows: FlowTable::new(),
+            names: NameCache::new(),
             start_time: Utc::now(),
             running,
             packet_rx,
@@ -120,6 +119,7 @@ impl App {
         }
         // Drain available packets
         while let Ok(pkt) = self.packet_rx.try_recv() {
+            self.names.observe(&pkt);
             self.stats.record_packet(&pkt);
             self.flows.record(&pkt);
             if self.packets.len() >= MAX_PACKETS {
@@ -201,6 +201,12 @@ impl App {
                     || p.protocol.to_string().to_lowercase().contains(&lower)
                     || p.src_addr.is_some_and(|a| a.to_string().contains(&lower))
                     || p.dst_addr.is_some_and(|a| a.to_string().contains(&lower))
+                    || p.src_addr
+                        .and_then(|a| self.names.name_for(a))
+                        .is_some_and(|n| n.to_lowercase().contains(&lower))
+                    || p.dst_addr
+                        .and_then(|a| self.names.name_for(a))
+                        .is_some_and(|n| n.to_lowercase().contains(&lower))
             })
             .collect()
     }

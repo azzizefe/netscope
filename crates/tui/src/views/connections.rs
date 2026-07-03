@@ -55,8 +55,8 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             let color = protocol_color(&flow.app_protocol);
             Row::new(vec![
                 Cell::from(format!(" {:<3}", i + 1)),
-                Cell::from(format!(" {} ", endpoint(flow, true))),
-                Cell::from(format!(" {} ", endpoint(flow, false))),
+                Cell::from(format!(" {} ", endpoint(flow, true, app))),
+                Cell::from(format!(" {} ", endpoint(flow, false, app))),
                 Cell::from(format!(" {} ", flow.app_protocol)).style(Style::new().fg(color).bold()),
                 Cell::from(format!(" {} ", flow.packet_count)),
                 Cell::from(format!(
@@ -81,13 +81,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(table, area);
 }
 
-fn endpoint(flow: &Flow, client: bool) -> String {
+fn endpoint(flow: &Flow, client: bool, app: &App) -> String {
     let (addr, port) = if client {
         (flow.client_addr, flow.client_port)
     } else {
         (flow.server_addr, flow.server_port)
     };
-    netscope_core::models::format_endpoint(addr, port)
+    app.names.display_endpoint(addr, port)
 }
 
 fn format_bytes(bytes: u64) -> String {
