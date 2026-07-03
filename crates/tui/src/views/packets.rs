@@ -173,6 +173,14 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
             " Timestamp: {}",
             pkt.timestamp.format("%H:%M:%S%.3f")
         )),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(" ℹ ", Style::new().fg(proto_color).bold()),
+            Span::styled(
+                netscope_core::education::explain_packet(pkt),
+                Style::new().italic(),
+            ),
+        ]),
     ];
 
     let block = Block::default()
@@ -180,7 +188,12 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
         .borders(Borders::ALL)
         .border_style(Style::new().fg(PANEL_BORDER));
 
-    frame.render_widget(Paragraph::new(lines).block(block), area);
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(block)
+            .wrap(ratatui::widgets::Wrap { trim: false }),
+        area,
+    );
 }
 
 fn render_hex_dump(frame: &mut Frame, area: Rect, app: &App) {

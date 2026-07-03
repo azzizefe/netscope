@@ -159,6 +159,26 @@ Key details:
 
 ---
 
+## Education (`education.rs`)
+
+Plain-language teaching content, so someone who's never used a packet analyzer
+can understand what they're seeing. UI-agnostic — just data and strings.
+
+```rust
+pub struct Lesson { title, summary, body, look_for }  // all &'static str
+pub fn lesson(proto: &Protocol) -> Lesson             // per-protocol primer
+pub fn all_lessons() -> Vec<Lesson>                    // teaching order
+pub struct Term { term, meaning }
+pub fn glossary() -> &'static [Term]                   // packet, port, TTL, SNI...
+pub fn explain_packet(pkt: &Packet) -> &'static str    // one-line, context-aware
+```
+
+`explain_packet` inspects the summary before the protocol, so a TCP handshake,
+a connection reset, a DNS query vs. response, or encrypted TLS each get a
+tailored sentence rather than a generic protocol description.
+
+---
+
 ## Firewall (`firewall.rs`)
 
 OS-level traffic blocking by remote IP. Passive capture can't drop packets, so

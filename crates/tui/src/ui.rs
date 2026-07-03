@@ -6,7 +6,7 @@ use ratatui::Frame;
 
 use crate::app::App;
 use crate::colors::{KEYBIND_BG, STATUS_BAR_BG};
-use crate::views::{connections, dashboard, dns_log, packets, View};
+use crate::views::{connections, dashboard, dns_log, learn, packets, View};
 
 pub fn render(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
@@ -79,6 +79,8 @@ fn render_keybinding_bar(frame: &mut Frame, area: Rect, app: &App) {
             " ? help ",
             " q quit ",
         ]
+    } else if app.view == crate::views::View::Learn {
+        &[" ↑↓/jk scroll ", " Tab switch ", " ? help ", " q quit "]
     } else {
         &[
             " ↑↓/jk navigate ",
@@ -111,6 +113,7 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &mut App) {
         View::Dashboard => dashboard::render(frame, area, app),
         View::Connections => connections::render(frame, area, app),
         View::DnsLog => dns_log::render(frame, area, app),
+        View::Learn => learn::render(frame, area, app),
     }
 }
 
@@ -132,6 +135,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
         Line::from("   Dashboard    Real-time stats & bandwidth"),
         Line::from("   Connections  Group packets by flow"),
         Line::from("   DNS Log      All DNS queries"),
+        Line::from("   Learn        Plain-language protocol guide + glossary"),
         Line::from(""),
         Line::from(" In Connections:"),
         Line::from("   j/k or ↑/↓         Select a connection"),

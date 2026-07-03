@@ -144,6 +144,19 @@ Design notes:
 - Query/Response detected via `summary.contains("Query")`
 - Static (no interactive selection)
 
+### 5. Learn View (`views/learn.rs`)
+- Beginner primer built from `core::education`: a plain-language lesson per
+  protocol (title, gist, explanation, "what you'll see in netscope") plus a
+  glossary of terms (packet, port, MAC, handshake, TTL, SNI, ...).
+- Scrollable with `j`/`k` or `↑`/`↓` (`app.learn_scroll`); the title shows a
+  position indicator.
+- Lessons are color-coded to match each protocol's row color.
+
+The Packets detail panel also shows a context-aware `ℹ` line via
+`education::explain_packet()` — e.g. selecting a SYN packet explains the
+handshake, a DNS query explains name lookup, encrypted TLS explains why the
+content isn't visible.
+
 ## Protocol Colors (`colors.rs`)
 
 | Protocol | Color | Hex |

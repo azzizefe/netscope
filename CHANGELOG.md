@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **Traffic blocking** (`firewall.rs`) — block a remote host via OS firewall
     rules (`netsh advfirewall` on Windows, named `netscope-block-<ip>`).
     Locale-independent rule lookup, elevation-aware, fully reversible.
+  - **Education content** (`education.rs`) — beginner-friendly per-protocol
+    lessons, a glossary, and context-aware one-line packet explanations.
   - **Smart default interface selection** — scores devices by connection
     status and routable IPv4; skips loopback and virtual adapters
   - Real-time stats engine (bandwidth, top talkers, protocol distribution, DNS domains)
@@ -35,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Smart filter (free text matching on summary/protocol/address/hostname)
   - Interactive Connections view — select a flow and block/unblock its remote
     host with `b`/`u`; blocked flows render red with a `⛔` mark and count
+  - **Learn view** — scrollable plain-language protocol guide + glossary for
+    people new to networking; detail panel shows an `ℹ` explanation per packet
   - Status bar shows the friendly adapter name ("Intel(R) Wi-Fi 6 AX201"),
     not the raw `\Device\NPF_{...}` identifier; warns when not elevated
   - Help overlay
@@ -62,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Quality
 
-- 81 unit tests across all modules
+- 88 unit tests across all modules
 - Sample `.pcap` fixtures for offline testing
 - Fuzz test (1000 random garbage packets, zero panics)
 - Performance benchmark (10k packets at >2M pkt/s throughput)

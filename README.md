@@ -54,6 +54,7 @@
 - **🧠 Human-readable summaries** — DNS domains, TLS SNI hostnames, HTTP paths. Not hex.
 - **🌐 Passive hostname resolution** — Watches DNS responses and shows `github.com:443` instead of a bare IP. No lookups of its own, zero added traffic.
 - **⛔ Block traffic, live** — See a connection you don't like? Select it and press `b`. netscope installs a real OS firewall rule to cut it off. Wireshark can't do that.
+- **🎓 Built-in Learn mode** — Never used a packet analyzer? A dedicated view explains every protocol in plain language, and each selected packet gets a one-line "what is this?". No prior networking knowledge needed.
 - **🎯 Zero-config interface pick** — Skips loopback and virtual adapters (WAN Miniport, Hyper-V) and lands on your real Wi-Fi/Ethernet automatically.
 - **🎨 Beautiful TUI** — Protocol-colored rows, dark theme, smooth layout. Ships with taste.
 - **📊 Live dashboard** — Bandwidth, top talkers, protocol distribution. Updated in real time.
@@ -153,6 +154,7 @@ Usage: netscope-tui [OPTIONS]
 | **Dashboard** | Real-time stats, bandwidth, protocol distribution, top talkers |
 | **Connections** | Conversations grouped by flow — packets, bytes, direction, duration per connection. Select one and press `b` to **block** the remote host via an OS firewall rule (`u` to unblock). |
 | **DNS Log** | All DNS queries and responses in one place |
+| **Learn** | Plain-language guide to every protocol netscope shows, plus a glossary — for people new to networking |
 
 ---
 

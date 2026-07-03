@@ -45,6 +45,8 @@ pub struct App {
     pub elevated: bool,
     /// Transient status line message with the time it was set.
     pub status_msg: Option<(String, Instant)>,
+    /// Vertical scroll offset in the Learn view.
+    pub learn_scroll: u16,
 }
 
 impl App {
@@ -93,6 +95,7 @@ impl App {
             blocked: netscope_core::firewall::blocked_ips(),
             elevated: netscope_core::firewall::is_elevated(),
             status_msg: None,
+            learn_scroll: 0,
         })
     }
 
@@ -200,6 +203,21 @@ impl App {
                 self.show_help = false;
             }
             return Ok(true);
+        }
+
+        // The Learn view scrolls with the arrow/vim keys.
+        if self.view == View::Learn {
+            match key.code {
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.learn_scroll = self.learn_scroll.saturating_sub(1);
+                    return Ok(true);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.learn_scroll = self.learn_scroll.saturating_add(1);
+                    return Ok(true);
+                }
+                _ => {}
+            }
         }
 
         // The Connections view has its own navigation and block controls;

@@ -244,6 +244,18 @@ Engellenen bağlantılar listede kırmızı ve `⛔` işaretiyle görünür; dur
 Tüm DNS sorgu ve yanıtları tek listede — hangi alan adlarına erişildiğini
 bir bakışta görürsünüz.
 
+### 5. Learn (Öğren) 🎓 — *ağ bilmeyenler için*
+Daha önce hiç paket analizi yapmadıysanız buradan başlayın. Her protokolün
+ne olduğunu **sade Türkçe/İngilizce** anlatır: DNS nedir, TCP el sıkışması
+ne demek, HTTPS neden şifreli, ARP yerel ağda ne yapar... Altında bir de
+**terim sözlüğü** var (paket, port, MAC adresi, TTL, SNI, handshake vb.).
+`j`/`k` veya `↑`/`↓` ile kaydırılır.
+
+Ayrıca **Packets** görünümünde bir paket seçtiğinizde, detay panelinin
+altında `ℹ` işaretiyle o paketin ne yaptığını anlatan tek satırlık bir
+açıklama çıkar — örneğin bir SYN paketinde "iki bilgisayar konuşmaya
+başlamak için anlaşıyor", bir TLS paketinde "içerik şifreli, okunamaz".
+
 ---
 
 ## Komut satırı seçenekleri
