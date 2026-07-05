@@ -120,16 +120,18 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .view { display: none; height: 100%; overflow: hidden; }
 .view.active { display: block; }
 
-/* ---- Packets ---- */
-#view-packets { display: none; grid-template-columns: 1fr; }
-#view-packets.active { display: grid; grid-template-columns: 1fr; }
-#view-packets.with-detail.active { grid-template-columns: 1fr 380px; }
+/* ---- Packets (Wireshark-style 3-pane) ---- */
+#view-packets { display: none; min-height: 0; }
+#view-packets.active { display: grid; grid-template-rows: 1fr; min-height: 0; }
+#view-packets.with-detail.active {
+  grid-template-rows: minmax(110px, 1.35fr) minmax(110px, 1fr) minmax(96px, 170px);
+}
 
-#packet-table { overflow-y: auto; height: 100%; }
+#packet-table { overflow: auto; min-height: 0; }
 .table-header {
   position: sticky; top: 0; z-index: 2;
   display: grid;
-  grid-template-columns: 48px 92px 1fr 24px 1fr 64px 60px 2fr;
+  grid-template-columns: 52px 100px 1fr 24px 1fr 64px 60px 2fr;
   gap: 8px;
   padding: 8px 12px;
   background: var(--bg-elev-2);
@@ -142,56 +144,90 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 }
 .packet-row {
   display: grid;
-  grid-template-columns: 48px 92px 1fr 24px 1fr 64px 60px 2fr;
+  grid-template-columns: 52px 100px 1fr 24px 1fr 64px 60px 2fr;
   gap: 8px;
-  padding: 5px 12px;
-  border-bottom: 1px solid rgba(42,53,71,.4);
+  padding: 4px 12px;
+  border-bottom: 1px solid rgba(42,53,71,.35);
   cursor: pointer;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  box-shadow: inset 3px 0 0 transparent;
 }
+/* Wireshark-like per-protocol row colorization */
+.packet-row.proto-TCP  { background: rgba(74,158,245,.07);  box-shadow: inset 3px 0 0 var(--tcp); }
+.packet-row.proto-UDP  { background: rgba(69,209,197,.07);  box-shadow: inset 3px 0 0 var(--udp); }
+.packet-row.proto-DNS  { background: rgba(167,139,250,.09); box-shadow: inset 3px 0 0 var(--dns); }
+.packet-row.proto-HTTP { background: rgba(52,211,153,.09);  box-shadow: inset 3px 0 0 var(--http); }
+.packet-row.proto-TLS  { background: rgba(110,231,183,.07); box-shadow: inset 3px 0 0 var(--tls); }
+.packet-row.proto-ICMP { background: rgba(251,191,36,.10);  box-shadow: inset 3px 0 0 var(--icmp); }
+.packet-row.proto-ARP  { background: rgba(156,163,175,.08); box-shadow: inset 3px 0 0 var(--arp); }
 .packet-row:hover { background: var(--bg-elev); }
-.packet-row.selected { background: #1e3a5f; }
+.packet-row.selected { background: #1e3a5f; box-shadow: inset 3px 0 0 var(--accent); }
 .packet-row span { overflow: hidden; text-overflow: ellipsis; }
 .col-num { color: var(--text-muted); }
 .col-time { color: var(--text-muted); }
 .col-proto { font-weight: 600; }
 
-#detail-panel {
-  background: var(--bg-elev);
-  border-left: 1px solid var(--border);
-  padding: 14px;
-  overflow-y: auto;
-  height: 100%;
-}
-#detail-panel.hidden { display: none; }
-#detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-#detail-title { font-weight: 700; }
-.detail-field { display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(42,53,71,.4); font-size: 13px; }
-.detail-label { color: var(--text-muted); min-width: 96px; }
-.detail-explain {
-  margin: 12px 0;
-  padding: 10px 12px;
-  background: rgba(74,158,245,.1);
-  border-left: 3px solid var(--accent);
-  border-radius: 4px;
-  font-style: italic;
-  line-height: 1.45;
-}
-#hex-dump {
-  margin-top: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 10px;
-  font-family: 'Cascadia Code', 'Consolas', monospace;
-  font-size: 11px;
-  line-height: 1.5;
-  white-space: pre;
-  overflow-x: auto;
+/* Display-filter validation glow (green = has hits, red = no match) */
+#filter-input.filter-hit  { border-color: var(--ok); }
+#filter-input.filter-miss { border-color: var(--danger); }
+
+/* Lower panes (detail tree + hex) — hidden until a packet is selected */
+.pane { display: none; flex-direction: column; min-height: 0; background: var(--bg-elev); border-top: 1px solid var(--border); }
+#view-packets.with-detail .pane { display: flex; }
+.pane-head {
+  flex: 0 0 auto;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 12px;
+  background: var(--bg-elev-2);
+  border-bottom: 1px solid var(--border);
   color: var(--text-muted);
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
 }
+.pane-head-meta { text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+
+/* Protocol detail tree */
+#detail-tree { overflow: auto; padding: 4px 0; min-height: 0; }
+.tnode { font-size: 13px; }
+.tnode-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 12px; cursor: pointer; user-select: none;
+  border-left: 3px solid transparent;
+}
+.tnode-head:hover { background: var(--bg-elev-2); }
+.tnode-head .twist { color: var(--text-muted); font-size: 10px; width: 10px; transition: transform .12s; }
+.tnode.collapsed .twist { transform: rotate(-90deg); }
+.tnode.collapsed .tbody { display: none; }
+.tlabel { font-weight: 600; }
+.tlabel .tlabel-sub { color: var(--text-muted); font-weight: 400; }
+.tbody { padding: 2px 0 6px 0; }
+.tfield {
+  display: grid; grid-template-columns: 168px 1fr; gap: 10px;
+  padding: 2px 12px 2px 31px;
+  line-height: 1.5;
+}
+.tfield:hover { background: rgba(74,158,245,.06); }
+.tkey { color: var(--text-muted); }
+.tval { color: var(--text); overflow-wrap: anywhere; }
+.tval.mono { font-family: 'Cascadia Code','Consolas',monospace; font-size: 12px; }
+.tnode-explain .tlabel { color: var(--accent); }
+.tnode-explain .tbody { padding: 4px 12px 8px 31px; font-style: italic; line-height: 1.5; color: var(--text); }
+
+/* Raw bytes / hex dump */
+#hex-panel pre {
+  margin: 0; flex: 1 1 auto; min-height: 0;
+  overflow: auto;
+  padding: 8px 12px;
+  background: var(--bg);
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 11.5px;
+  line-height: 1.55;
+  white-space: pre;
+}
+.hx-off { color: var(--text-muted); }
+.hx-hex { color: var(--tcp); }
+.hx-asc { color: var(--tls); }
 .hidden { display: none !important; }
 
 /* ---- Connections ---- */

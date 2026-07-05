@@ -14,7 +14,6 @@ const state = {
   packets: [],
   filteredPackets: [],
   selectedIndex: -1,
-  showHex: false,
   filterText: '',
   status: STATES.IDLE,
   packetCount: 0,
@@ -43,6 +42,11 @@ const $$ = (s) => document.querySelectorAll(s);
 const els = {};
 
 // ---- Helpers ----
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 function formatBytes(b) {
   if (b < 1024) return `${b} B`;
   if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`;
@@ -227,6 +231,10 @@ function renderPacketList() {
     : state.packets;
   state.filteredPackets = packets;
 
+  // Wireshark-style display-filter feedback (green = hits, red = no match)
+  els.filterInput.classList.toggle('filter-hit', !!state.filterText && packets.length > 0);
+  els.filterInput.classList.toggle('filter-miss', !!state.filterText && packets.length === 0);
+
   if (!packets.length) {
     els.packetList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No packets yet</div>';
     return;
@@ -236,20 +244,88 @@ function renderPacketList() {
     const idx = start + i;
     const c = protoColor(pkt.protocol);
     const sel = idx === state.selectedIndex ? ' selected' : '';
-    const src = endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port);
-    const dst = endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port);
+    const src = esc(endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port));
+    const dst = esc(endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port));
     return `
-      <div class="packet-row${sel}" data-index="${idx}">
+      <div class="packet-row proto-${esc(pkt.protocol)}${sel}" data-index="${idx}">
         <span class="col-num">${idx + 1}</span>
-        <span class="col-time">${pkt.timestamp}</span>
+        <span class="col-time">${esc(pkt.timestamp)}</span>
         <span class="col-src">${src}</span>
         <span class="col-dir" style="color:${c}">→</span>
         <span class="col-dst">${dst}</span>
-        <span class="col-proto" style="color:${c}">${pkt.protocol}</span>
+        <span class="col-proto" style="color:${c}">${esc(pkt.protocol)}</span>
         <span class="col-len">${pkt.length}B</span>
-        <span class="col-info">${pkt.summary}</span>
+        <span class="col-info">${esc(pkt.summary)}</span>
       </div>`;
   }).join('');
+}
+
+// Human transport-layer name for the packet's protocol.
+function transportName(proto) {
+  if (['TCP', 'HTTP', 'TLS'].includes(proto)) return 'TCP';
+  if (['UDP', 'DNS'].includes(proto)) return 'UDP';
+  if (proto === 'ICMP' || proto === 'ARP') return proto;
+  return null;
+}
+// One collapsible protocol layer for the detail tree.
+function treeNode(label, sub, fields, extraClass = '') {
+  const head = `<div class="tnode-head"><span class="twist">▾</span>` +
+    `<span class="tlabel">${esc(label)}${sub ? ` <span class="tlabel-sub">${esc(sub)}</span>` : ''}</span></div>`;
+  const body = `<div class="tbody">${fields.map(([k, v, mono]) =>
+    `<div class="tfield"><span class="tkey">${esc(k)}</span><span class="tval${mono ? ' mono' : ''}">${esc(v)}</span></div>`
+  ).join('')}</div>`;
+  return `<div class="tnode ${extraClass}">${head}${body}</div>`;
+}
+
+// Build the Wireshark-style layered protocol tree for one packet.
+function buildDetailTree(pkt, index) {
+  const nodes = [];
+  const ipVer = pkt.src_addr ? (pkt.src_addr.includes(':') ? 'IPv6' : 'IPv4') : null;
+  const transport = transportName(pkt.protocol);
+  const chain = ['Ethernet', ipVer, transport !== pkt.protocol ? transport : null, pkt.protocol]
+    .filter((x, i, a) => x && a.indexOf(x) === i);
+
+  // Frame layer
+  nodes.push(treeNode(`Frame ${index + 1}`, `${pkt.length} bytes on wire`, [
+    ['Arrival time', pkt.timestamp],
+    ['Frame length', `${pkt.length} bytes`],
+    ['Captured bytes', `${(pkt.raw || []).length} bytes`],
+    ['Protocols in frame', chain.join(' · ')],
+  ]));
+
+  // Network layer
+  if (pkt.src_addr || pkt.dst_addr) {
+    const net = [];
+    if (pkt.src_addr) net.push(['Source address', pkt.src_addr, true]);
+    if (pkt.src_host) net.push(['Source host', pkt.src_host]);
+    if (pkt.dst_addr) net.push(['Destination address', pkt.dst_addr, true]);
+    if (pkt.dst_host) net.push(['Destination host', pkt.dst_host]);
+    nodes.push(treeNode(`Internet Protocol ${ipVer ? `(${ipVer})` : ''}`.trim(),
+      pkt.src_addr && pkt.dst_addr ? `${pkt.src_addr} → ${pkt.dst_addr}` : '', net));
+  }
+
+  // Transport layer
+  if (transport && (pkt.src_port != null || pkt.dst_port != null)) {
+    const t = [['Transport', transport]];
+    if (pkt.src_port != null) t.push(['Source port', String(pkt.src_port), true]);
+    if (pkt.dst_port != null) t.push(['Destination port', String(pkt.dst_port), true]);
+    nodes.push(treeNode(transport,
+      `${pkt.src_port ?? '?'} → ${pkt.dst_port ?? '?'}`, t));
+  }
+
+  // Application / summary layer
+  nodes.push(treeNode(pkt.protocol, 'application data', [
+    ['Protocol', pkt.protocol],
+    ['Info', pkt.summary || '—'],
+  ]));
+
+  // netscope's plain-language explanation (its edge over Wireshark)
+  if (pkt.explanation) {
+    nodes.push(`<div class="tnode tnode-explain"><div class="tnode-head">` +
+      `<span class="twist">▾</span><span class="tlabel">ℹ What is this?</span></div>` +
+      `<div class="tbody">${esc(pkt.explanation)}</div></div>`);
+  }
+  return nodes.join('');
 }
 
 function showDetail(index) {
@@ -257,37 +333,27 @@ function showDetail(index) {
   if (!pkt) return;
   state.selectedIndex = index;
   $('#view-packets').classList.add('with-detail');
-  els.detailPanel.classList.remove('hidden');
-  const c = protoColor(pkt.protocol);
-
-  els.detailContent.innerHTML = `
-    <div class="detail-field"><span class="detail-label">Protocol</span><span style="color:${c};font-weight:600">${pkt.protocol}</span></div>
-    <div class="detail-field"><span class="detail-label">Summary</span><span style="font-weight:600">${pkt.summary}</span></div>
-    <div class="detail-field"><span class="detail-label">Source</span><span>${endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port)}${pkt.src_host ? ` <span class="conn-ip mono">${pkt.src_addr}</span>` : ''}</span></div>
-    <div class="detail-field"><span class="detail-label">Destination</span><span>${endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port)}${pkt.dst_host ? ` <span class="conn-ip mono">${pkt.dst_addr}</span>` : ''}</span></div>
-    <div class="detail-field"><span class="detail-label">Length</span><span>${pkt.length} bytes</span></div>
-    <div class="detail-field"><span class="detail-label">Time</span><span>${pkt.timestamp}</span></div>
-    <div class="detail-explain">ℹ ${pkt.explanation || ''}</div>
-  `;
-  state.showHex = false;
-  els.hexDump.classList.add('hidden');
-  els.hexDump.textContent = hexDump(pkt.raw || []);
+  els.detailTree.innerHTML = buildDetailTree(pkt, index);
+  els.hexDump.innerHTML = hexDump(pkt.raw || []);
+  els.hexLen.textContent = `${(pkt.raw || []).length} bytes`;
 }
 function hideDetail() {
   state.selectedIndex = -1;
   $('#view-packets').classList.remove('with-detail');
-  els.detailPanel.classList.add('hidden');
   renderPacketList();
 }
 function hexDump(bytes) {
+  if (!bytes.length) return '<span class="hx-off">(no data)</span>';
   let out = '';
   for (let i = 0; i < bytes.length; i += 16) {
     const chunk = bytes.slice(i, i + 16);
     const hex = chunk.map((b) => b.toString(16).padStart(2, '0')).join(' ');
     const ascii = chunk.map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.')).join('');
-    out += `${i.toString(16).padStart(4, '0')}  ${hex.padEnd(47)}  ${ascii}\n`;
+    out += `<span class="hx-off">${i.toString(16).padStart(4, '0')}</span>  ` +
+      `<span class="hx-hex">${hex.padEnd(47)}</span>  ` +
+      `<span class="hx-asc">${esc(ascii)}</span>\n`;
   }
-  return out || '(no data)';
+  return out;
 }
 
 // ---- Dashboard ----
@@ -402,9 +468,10 @@ async function init() {
   Object.assign(els, {
     interfaceSelect: $('#interface-select'), startBtn: $('#start-btn'), stopBtn: $('#stop-btn'),
     statusText: $('#status-text'), packetCount: $('#packet-count'), filterInput: $('#filter-input'),
-    elevationBadge: $('#elevation-badge'), packetList: $('#packet-list'), detailPanel: $('#detail-panel'),
-    detailContent: $('#detail-content'), detailClose: $('#detail-close'), hexDump: $('#hex-dump'),
-    hexToggle: $('#hex-toggle'), connSummary: $('#conn-summary'), connList: $('#conn-list'),
+    elevationBadge: $('#elevation-badge'), packetList: $('#packet-list'),
+    detailTree: $('#detail-tree'), detailClose: $('#detail-close'),
+    hexDump: $('#hex-dump'), hexLen: $('#hex-len'),
+    connSummary: $('#conn-summary'), connList: $('#conn-list'),
     statTotalPackets: $('#stat-total-packets'), statTotalBytes: $('#stat-total-bytes'),
     statBandwidth: $('#stat-bandwidth'), statBlocked: $('#stat-blocked'), protoBars: $('#proto-bars'),
     talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
@@ -429,9 +496,9 @@ async function init() {
   els.stopBtn.addEventListener('click', stopCapture);
   els.filterInput.addEventListener('input', () => { state.filterText = els.filterInput.value; renderPacketList(); });
   els.detailClose.addEventListener('click', hideDetail);
-  els.hexToggle.addEventListener('click', () => {
-    state.showHex = !state.showHex;
-    els.hexDump.classList.toggle('hidden', !state.showHex);
+  els.detailTree.addEventListener('click', (e) => {
+    const head = e.target.closest('.tnode-head');
+    if (head) head.parentElement.classList.toggle('collapsed');
   });
   els.packetList.addEventListener('click', (e) => {
     const row = e.target.closest('.packet-row');

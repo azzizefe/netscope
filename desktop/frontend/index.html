@@ -33,8 +33,9 @@
 
     <!-- Main Content -->
     <main id="main-content">
-      <!-- Packets View -->
+      <!-- Packets View — Wireshark-style 3-pane analyzer -->
       <section id="view-packets" class="view active">
+        <!-- Pane 1: packet list -->
         <div id="packet-table">
           <div id="packet-header" class="table-header">
             <span class="col-num">#</span>
@@ -48,15 +49,24 @@
           </div>
           <div id="packet-list"></div>
         </div>
-        <aside id="detail-panel" class="hidden">
-          <div id="detail-header">
-            <span id="detail-title">Packet Details</span>
-            <button id="detail-close" class="btn-icon">×</button>
+
+        <!-- Pane 2: protocol detail tree -->
+        <div id="detail-tree-panel" class="pane">
+          <div class="pane-head">
+            <span>Packet details</span>
+            <button id="detail-close" class="btn-icon" title="Close (Esc)">×</button>
           </div>
-          <div id="detail-content"></div>
-          <button id="hex-toggle" class="btn btn-small">Toggle Hex</button>
-          <pre id="hex-dump" class="hidden"></pre>
-        </aside>
+          <div id="detail-tree" class="tree"></div>
+        </div>
+
+        <!-- Pane 3: raw bytes -->
+        <div id="hex-panel" class="pane">
+          <div class="pane-head">
+            <span>Bytes</span>
+            <span id="hex-len" class="pane-head-meta"></span>
+          </div>
+          <pre id="hex-dump"></pre>
+        </div>
       </section>
 
       <!-- Connections View -->
