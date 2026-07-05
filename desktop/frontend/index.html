@@ -80,7 +80,10 @@
         <div id="detail-tree-panel" class="pane">
           <div class="pane-head">
             <span>Packet details</span>
-            <button id="detail-close" class="btn-icon" title="Close (Esc)">×</button>
+            <span class="pane-head-actions">
+              <button id="replay-open" class="btn btn-small" title="Resend this packet's payload to a target and see the response">↻ Replay</button>
+              <button id="detail-close" class="btn-icon" title="Close (Esc)">×</button>
+            </span>
           </div>
           <div id="detail-tree" class="tree"></div>
         </div>
@@ -192,6 +195,41 @@
         </div>
         <div id="stream-meta" class="modal-meta"></div>
         <div id="stream-body" class="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Replay / Repeater modal — resend a payload to a target and read the response -->
+    <div id="replay-modal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-head">
+          <span>↻ Replay to target</span>
+          <button id="replay-close" class="btn-icon" title="Close (Esc)">×</button>
+        </div>
+        <div class="modal-meta">
+          <span class="replay-warn">⚠ This sends real data onto the network to the target you specify — use only against systems you’re authorised to test.</span>
+        </div>
+        <div class="replay-form">
+          <label>Protocol
+            <select id="replay-proto">
+              <option value="tcp">TCP</option>
+              <option value="udp">UDP</option>
+            </select>
+          </label>
+          <label>Host / IP <input type="text" id="replay-host" placeholder="example.com"></label>
+          <label>Port <input type="text" id="replay-port" placeholder="443"></label>
+          <label>Timeout (ms) <input type="text" id="replay-timeout" value="3000"></label>
+          <button id="replay-send" class="btn btn-primary btn-small">▶ Send</button>
+        </div>
+        <div class="replay-io">
+          <div class="replay-col">
+            <div class="pane-head"><span>Payload to send (editable)</span></div>
+            <textarea id="replay-payload" spellcheck="false"></textarea>
+          </div>
+          <div class="replay-col">
+            <div class="pane-head"><span>Response</span><span id="replay-status" class="pane-head-meta"></span></div>
+            <pre id="replay-response"></pre>
+          </div>
+        </div>
       </div>
     </div>
 

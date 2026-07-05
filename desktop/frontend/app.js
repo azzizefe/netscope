@@ -340,6 +340,75 @@ function closeFollowStream() {
   els.streamModal.classList.add('hidden');
 }
 
+// ---- Replay / Repeater — resend a payload to a target and read the response ----
+// The application-layer replay (Burp Repeater / Packet Sender style): take the
+// selected packet's payload, let the user edit target + bytes, and send it over
+// a fresh socket via the backend. Deliberate, user-initiated — see replay_packet.
+function bytesToLatin1(bytes) {
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return s;
+}
+function latin1ToBytes(str) {
+  const out = new Array(str.length);
+  for (let i = 0; i < str.length; i++) out[i] = str.charCodeAt(i) & 0xff;
+  return out;
+}
+function renderReplayResponse(bytes, truncated) {
+  if (!bytes.length) return '';
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 16) {
+    const chunk = bytes.slice(i, i + 16);
+    const hex = chunk.map((b) => b.toString(16).padStart(2, '0')).join(' ');
+    const ascii = chunk.map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.')).join('');
+    out += `${i.toString(16).padStart(4, '0')}  ${hex.padEnd(47)}  ${esc(ascii)}\n`;
+  }
+  if (truncated) out += '\n… (response truncated at 64 KiB)';
+  return out;
+}
+
+function openReplay() {
+  const pkt = state.filteredPackets[state.selectedIndex];
+  if (!pkt) return;
+  const payload = extractPayload(pkt.raw || []);
+  els.replayProto.value = transportName(pkt.protocol) === 'UDP' ? 'udp' : 'tcp';
+  els.replayHost.value = pkt.dst_host || pkt.dst_addr || '';
+  els.replayPort.value = pkt.dst_port != null ? String(pkt.dst_port) : '';
+  els.replayPayload.value = payload ? bytesToLatin1(payload) : (pkt.summary || '');
+  els.replayResponse.textContent = '';
+  els.replayStatus.textContent = '';
+  els.replayModal.classList.remove('hidden');
+  els.replayHost.focus();
+}
+function closeReplay() {
+  els.replayModal.classList.add('hidden');
+}
+async function sendReplay() {
+  const host = els.replayHost.value.trim();
+  const port = parseInt(els.replayPort.value, 10);
+  const protocol = els.replayProto.value;
+  const timeout_ms = parseInt(els.replayTimeout.value, 10) || 3000;
+  if (!host) { els.replayStatus.textContent = 'Enter a host'; return; }
+  if (!(port >= 0 && port <= 65535)) { els.replayStatus.textContent = 'Invalid port'; return; }
+
+  const data = latin1ToBytes(els.replayPayload.value);
+  els.replaySend.disabled = true;
+  els.replayStatus.textContent = 'Sending…';
+  els.replayResponse.textContent = '';
+  try {
+    const r = await invoke('replay_packet', { host, port, protocol, data, timeoutMs: timeout_ms });
+    if (!r) { els.replayStatus.textContent = 'No backend (run inside the desktop app)'; return; }
+    const bytes = r.response || [];
+    els.replayStatus.textContent = `sent ${r.sent} B · got ${bytes.length} B · ${r.elapsed_ms} ms`;
+    els.replayResponse.textContent = bytes.length ? renderReplayResponse(bytes, r.truncated) : (r.note || '(no response)');
+  } catch (e) {
+    els.replayStatus.textContent = 'Failed';
+    els.replayResponse.textContent = `✖ ${e}`;
+  } finally {
+    els.replaySend.disabled = false;
+  }
+}
+
 // ---- Expert Info — plain-language flags for notable packets, from real dissector output only ----
 function expertInfo(pkt) {
   const s = pkt.summary || '';
@@ -702,6 +771,12 @@ const FEATURE_CARDS = [
     look: 'Switch to "Seconds Since Beginning" if you want to measure how long something took after capture started.',
   },
   {
+    icon: '↻', color: 'var(--danger)', title: 'Replay (Repeater)',
+    gist: 'Resend a packet to a target and see the response.',
+    body: 'Open a packet and press ↻ Replay to reload its payload into a small editor. Tweak it, pick the target host/port, and Send — netscope opens a fresh socket and shows you the response, so you don\'t need Packet Sender or Burp Repeater as a second tool.',
+    look: '⚠ This sends real traffic to the target you choose — only use it against systems you\'re authorised to test.',
+  },
+  {
     icon: '⚡', color: 'var(--http)', title: 'Script Console',
     gist: 'Analyze packets with JavaScript — no export needed.',
     body: 'Open the ⚡ Script tab to run code directly over the captured packets. No more exporting a .pcap and re-reading it with Python/Scapy — every packet is already there as a `packets` array. Flag anomalies, aggregate stats, or scan payloads, then press Ctrl+Enter.',
@@ -963,8 +1038,10 @@ function renderAll() {
 
 // ---- Keyboard ----
 function handleKeydown(e) {
+  if (e.key === 'Escape' && !els.replayModal.classList.contains('hidden')) { closeReplay(); return; }
   if (e.key === 'Escape' && !els.streamModal.classList.contains('hidden')) { closeFollowStream(); return; }
   if (document.activeElement === els.filterInput || document.activeElement === els.scriptEditor) return;
+  if (!els.replayModal.classList.contains('hidden')) return; // don't hijack keys while editing the replay form
   if (e.key === 'Tab') {
     e.preventDefault();
     const views = ['packets', 'connections', 'dashboard', 'script', 'learn'];
@@ -1000,6 +1077,10 @@ async function init() {
     scriptTime: $('#script-time'), scriptCount: $('#script-count'),
     streamModal: $('#stream-modal'), streamTitle: $('#stream-title'), streamMeta: $('#stream-meta'),
     streamBody: $('#stream-body'), streamClose: $('#stream-close'),
+    replayOpen: $('#replay-open'), replayModal: $('#replay-modal'), replayClose: $('#replay-close'),
+    replayProto: $('#replay-proto'), replayHost: $('#replay-host'), replayPort: $('#replay-port'),
+    replayTimeout: $('#replay-timeout'), replaySend: $('#replay-send'),
+    replayPayload: $('#replay-payload'), replayResponse: $('#replay-response'), replayStatus: $('#replay-status'),
     profileBtn: $('#profile-btn'), profileName: $('#profile-name'), profilePanel: $('#profile-panel'),
     profileList: $('#profile-list'), profileSaveBtn: $('#profile-save-btn'),
     timeFormatSelect: $('#time-format-select'), resolveNamesCheck: $('#resolve-names-check'),
@@ -1048,6 +1129,11 @@ async function init() {
   });
   els.streamClose.addEventListener('click', closeFollowStream);
   els.streamModal.addEventListener('click', (e) => { if (e.target === els.streamModal) closeFollowStream(); });
+
+  els.replayOpen.addEventListener('click', openReplay);
+  els.replayClose.addEventListener('click', closeReplay);
+  els.replayModal.addEventListener('click', (e) => { if (e.target === els.replayModal) closeReplay(); });
+  els.replaySend.addEventListener('click', sendReplay);
 
   els.profileBtn.addEventListener('click', (e) => {
     e.stopPropagation();

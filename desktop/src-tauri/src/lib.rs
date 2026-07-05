@@ -151,6 +151,101 @@ fn unblock_ip(ip: String) -> Result<(), String> {
     netscope_core::firewall::unblock(addr).map_err(|e| e.to_string())
 }
 
+#[derive(Serialize, Clone, Debug)]
+struct ReplayResult {
+    sent: usize,
+    response: Vec<u8>,
+    truncated: bool,
+    elapsed_ms: u64,
+    note: String,
+}
+
+/// Replay (resend) an application-layer payload to a target host, Repeater-style,
+/// and return whatever the target sends back. Opens a fresh TCP/UDP socket — this
+/// is a deliberate, user-initiated action that sends real data onto the network,
+/// the same thing Packet Sender or Burp Repeater do. Bounded by connect/read
+/// timeouts and a 64 KiB response cap so it can't hang or flood the UI.
+#[tauri::command]
+fn replay_packet(
+    host: String,
+    port: u16,
+    protocol: String,
+    data: Vec<u8>,
+    timeout_ms: Option<u64>,
+) -> Result<ReplayResult, String> {
+    use std::io::{Read, Write};
+    use std::net::{TcpStream, ToSocketAddrs, UdpSocket};
+    use std::time::{Duration, Instant};
+
+    const MAX_RESPONSE: usize = 64 * 1024;
+    let timeout = Duration::from_millis(timeout_ms.unwrap_or(3000).clamp(100, 30_000));
+
+    let addr = (host.as_str(), port)
+        .to_socket_addrs()
+        .map_err(|e| format!("Could not resolve {host}:{port} — {e}"))?
+        .next()
+        .ok_or_else(|| format!("No address found for {host}:{port}"))?;
+
+    let started = Instant::now();
+    let mut response = Vec::new();
+    let mut truncated = false;
+
+    match protocol.to_lowercase().as_str() {
+        "tcp" => {
+            let mut stream = TcpStream::connect_timeout(&addr, timeout)
+                .map_err(|e| format!("Connect failed: {e}"))?;
+            stream.set_write_timeout(Some(timeout)).ok();
+            stream.set_read_timeout(Some(timeout)).ok();
+            stream
+                .write_all(&data)
+                .map_err(|e| format!("Send failed: {e}"))?;
+            // Read until timeout, EOF, or cap.
+            let mut buf = [0u8; 8192];
+            loop {
+                match stream.read(&mut buf) {
+                    Ok(0) => break,
+                    Ok(n) => {
+                        if response.len() + n > MAX_RESPONSE {
+                            response.extend_from_slice(&buf[..MAX_RESPONSE - response.len()]);
+                            truncated = true;
+                            break;
+                        }
+                        response.extend_from_slice(&buf[..n]);
+                    }
+                    Err(_) => break, // timeout / connection reset ends the read
+                }
+            }
+        }
+        "udp" => {
+            let sock = UdpSocket::bind("0.0.0.0:0").map_err(|e| format!("Socket error: {e}"))?;
+            sock.set_read_timeout(Some(timeout)).ok();
+            sock.connect(addr)
+                .map_err(|e| format!("Connect failed: {e}"))?;
+            sock.send(&data).map_err(|e| format!("Send failed: {e}"))?;
+            let mut buf = [0u8; 65535];
+            if let Ok(n) = sock.recv(&mut buf) {
+                response.extend_from_slice(&buf[..n.min(MAX_RESPONSE)]);
+                truncated = n > MAX_RESPONSE;
+            }
+        }
+        other => return Err(format!("Unsupported protocol: {other}")),
+    }
+
+    let note = if response.is_empty() {
+        "Sent, but no response before timeout (normal for fire-and-forget or filtered targets)."
+            .into()
+    } else {
+        String::new()
+    };
+    Ok(ReplayResult {
+        sent: data.len(),
+        response,
+        truncated,
+        elapsed_ms: started.elapsed().as_millis() as u64,
+        note,
+    })
+}
+
 #[tauri::command]
 fn list_interfaces() -> Result<Vec<InterfaceInfo>, String> {
     let devices = netscope_core::capture::list_interfaces().map_err(|e| e.to_string())?;
@@ -337,7 +432,56 @@ pub fn run() {
             list_blocked,
             block_ip,
             unblock_ip,
+            replay_packet,
         ])
         .run(tauri::generate_context!())
         .expect("error while running netscope desktop");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::replay_packet;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    #[test]
+    fn replay_tcp_roundtrips_against_echo_server() {
+        // Local echo server: read a line, write it back, close.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            if let Ok((mut sock, _)) = listener.accept() {
+                let mut buf = [0u8; 64];
+                if let Ok(n) = sock.read(&mut buf) {
+                    let _ = sock.write_all(&buf[..n]);
+                }
+            }
+        });
+
+        let res = replay_packet(
+            "127.0.0.1".into(),
+            port,
+            "tcp".into(),
+            b"ping".to_vec(),
+            Some(1000),
+        )
+        .expect("replay should succeed");
+
+        assert_eq!(res.sent, 4);
+        assert_eq!(res.response, b"ping");
+        assert!(!res.truncated);
+    }
+
+    #[test]
+    fn replay_rejects_unknown_protocol() {
+        let err = replay_packet(
+            "127.0.0.1".into(),
+            80,
+            "icmp".into(),
+            vec![1, 2, 3],
+            Some(200),
+        )
+        .unwrap_err();
+        assert!(err.contains("Unsupported protocol"));
+    }
 }
