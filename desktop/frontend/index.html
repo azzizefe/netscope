@@ -128,6 +128,18 @@
       </section>
     </main>
 
+    <!-- Follow Stream modal — Wireshark's "Follow TCP/UDP Stream" -->
+    <div id="stream-modal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-head">
+          <span id="stream-title"></span>
+          <button id="stream-close" class="btn-icon" title="Close (Esc)">×</button>
+        </div>
+        <div id="stream-meta" class="modal-meta"></div>
+        <div id="stream-body" class="modal-body"></div>
+      </div>
+    </div>
+
     <!-- Status Bar -->
     <footer id="status-bar">
       <span id="hint-text">Tip: open the <b>Connections</b> tab to see where your traffic goes — and block anything with one click.</span>

@@ -138,6 +138,10 @@ function protoRank(proto) {
   if (proto === 'TLS' || proto === 'DNS') return 3;
   return 1;
 }
+// Cap how many packets we keep per flow for "Follow Stream" — bounds memory
+// on long-running captures without limiting the visible conversation in practice.
+const FLOW_STREAM_CAP = 4000;
+
 function updateFlow(pkt) {
   if (!pkt.src_addr || !pkt.dst_addr) return;
   const t = transportOf(pkt.protocol);
@@ -148,11 +152,13 @@ function updateFlow(pkt) {
   let f = state.flows.get(key);
   if (!f) {
     f = {
+      key,
       clientAddr: pkt.src_addr, clientPort: pkt.src_port,
       serverAddr: pkt.dst_addr, serverPort: pkt.dst_port,
       serverHost: pkt.dst_host || null,
       proto: pkt.protocol, rank: protoRank(pkt.protocol),
       packets: 0, bytes: 0,
+      pkts: [], // raw frames in order, for Follow Stream — see openFollowStream()
     };
     state.flows.set(key, f);
   }
@@ -162,6 +168,12 @@ function updateFlow(pkt) {
   // learn the server's hostname whenever it shows up
   if (pkt.src_addr === f.serverAddr && pkt.src_host) f.serverHost = pkt.src_host;
   if (pkt.dst_addr === f.serverAddr && pkt.dst_host) f.serverHost = pkt.dst_host;
+
+  if (t === 'tcp' || t === 'udp') {
+    if (f.pkts.length < FLOW_STREAM_CAP) {
+      f.pkts.push({ fromClient: pkt.src_addr === f.clientAddr && pkt.src_port === f.clientPort, raw: pkt.raw, ts: pkt.timestamp });
+    }
+  }
 }
 
 function renderConnections() {
@@ -174,22 +186,117 @@ function renderConnections() {
   els.connList.innerHTML = flows.map((f) => {
     const isBlocked = state.blocked.has(f.serverAddr);
     const server = f.serverHost
-      ? `<span class="conn-host">${f.serverHost}</span> <span class="conn-ip mono">${f.serverAddr}${f.serverPort != null ? ':' + f.serverPort : ''}</span>`
-      : `<span class="conn-host mono">${endpointLabel(f.serverAddr, null, f.serverPort)}</span>`;
-    const client = endpointLabel(f.clientAddr, null, f.clientPort);
+      ? `<span class="conn-host">${esc(f.serverHost)}</span> <span class="conn-ip mono">${esc(f.serverAddr)}${f.serverPort != null ? ':' + f.serverPort : ''}</span>`
+      : `<span class="conn-host mono">${esc(endpointLabel(f.serverAddr, null, f.serverPort))}</span>`;
+    const client = esc(endpointLabel(f.clientAddr, null, f.clientPort));
     const btn = isBlocked
-      ? `<button class="btn btn-small btn-unblock" data-unblock="${f.serverAddr}">Unblock</button>`
-      : `<button class="btn btn-small btn-block" data-block="${f.serverAddr}" ${state.elevated ? '' : 'title="Needs Administrator"'}>⛔ Block</button>`;
+      ? `<button class="btn btn-small btn-unblock" data-unblock="${esc(f.serverAddr)}">Unblock</button>`
+      : `<button class="btn btn-small btn-block" data-block="${esc(f.serverAddr)}" ${state.elevated ? '' : 'title="Needs Administrator"'}>⛔ Block</button>`;
+    const followBtn = f.pkts.length
+      ? `<button class="btn btn-small" data-follow="${esc(f.key)}" title="Read the full conversation as text">💬 Follow</button>`
+      : '';
     return `
       <div class="conn-row conn-row-grid${isBlocked ? ' blocked' : ''}">
         <span class="mono">${client}</span>
         <span class="conn-server">${server}</span>
-        <span class="conn-proto" style="color:${protoColor(f.proto)}">${f.proto}</span>
+        <span class="conn-proto" style="color:${protoColor(f.proto)}">${esc(f.proto)}</span>
         <span>${f.packets}</span>
         <span>${formatBytes(f.bytes)}</span>
-        <span>${btn}</span>
+        <span class="conn-actions">${followBtn}${btn}</span>
       </div>`;
   }).join('');
+}
+
+// ---- Follow Stream (Wireshark's "Follow TCP/UDP Stream") ----
+// Strips Ethernet + IP + TCP/UDP headers from a captured frame to get the
+// application payload. Best-effort: handles a single 802.1Q VLAN tag and
+// variable-length IPv4/TCP headers; does not walk IPv6 extension headers.
+function extractPayload(raw) {
+  if (!raw || raw.length < 14) return null;
+  let o = 14;
+  let etherType = (raw[12] << 8) | raw[13];
+  if (etherType === 0x8100) { // 802.1Q VLAN tag
+    if (raw.length < 18) return null;
+    etherType = (raw[16] << 8) | raw[17];
+    o = 18;
+  }
+  let proto;
+  if (etherType === 0x0800) { // IPv4
+    if (raw.length < o + 20) return null;
+    const ihl = (raw[o] & 0x0f) * 4;
+    proto = raw[o + 9];
+    o += Math.max(ihl, 20);
+  } else if (etherType === 0x86dd) { // IPv6 (fixed header only, extension headers not walked)
+    if (raw.length < o + 40) return null;
+    proto = raw[o + 6];
+    o += 40;
+  } else {
+    return null;
+  }
+  if (proto === 6) { // TCP
+    if (raw.length < o + 20) return null;
+    const doff = ((raw[o + 12] >> 4) & 0x0f) * 4;
+    o += Math.max(doff, 20);
+  } else if (proto === 17) { // UDP
+    if (raw.length < o + 8) return null;
+    o += 8;
+  } else {
+    return null;
+  }
+  return o <= raw.length ? raw.slice(o) : new Uint8Array(0);
+}
+
+// Render bytes as text the way Wireshark's stream view does: printable ASCII
+// and newlines kept as-is, everything else shown as a middle dot.
+function decodeStreamText(bytes) {
+  let out = '';
+  for (const b of bytes) {
+    if (b === 10 || b === 13 || b === 9) out += String.fromCharCode(b);
+    else if (b >= 32 && b < 127) out += String.fromCharCode(b);
+    else out += '·';
+  }
+  return out;
+}
+
+function openFollowStream(key) {
+  const f = state.flows.get(key);
+  if (!f || !f.pkts.length) return;
+  let clientBytes = 0, serverBytes = 0, clientPkts = 0, serverPkts = 0;
+  const chunks = [];
+  for (const p of f.pkts) {
+    const payload = extractPayload(p.raw);
+    if (!payload || !payload.length) continue;
+    if (p.fromClient) { clientBytes += payload.length; clientPkts++; } else { serverBytes += payload.length; serverPkts++; }
+    chunks.push({ fromClient: p.fromClient, text: decodeStreamText(payload) });
+  }
+
+  const client = endpointLabel(f.clientAddr, null, f.clientPort);
+  const server = endpointLabel(f.serverAddr, f.serverHost, f.serverPort);
+  els.streamTitle.innerHTML = `💬 Conversation — <span class="mono">${esc(client)}</span> ⇄ ${esc(server)}`;
+  els.streamMeta.textContent = chunks.length
+    ? `${client} sent ${formatBytes(clientBytes)} (${clientPkts} pkt) · ${server} sent ${formatBytes(serverBytes)} (${serverPkts} pkt)`
+    : 'No readable payload in this conversation (headers/handshake only, or encrypted binary data).';
+
+  els.streamBody.innerHTML = chunks.length
+    ? chunks.map((c) =>
+        `<div class="stream-chunk ${c.fromClient ? 'from-client' : 'from-server'}">` +
+        `<span class="stream-dir">${c.fromClient ? 'Client → Server' : 'Server → Client'}</span>` +
+        `<pre>${esc(c.text)}</pre></div>`
+      ).join('')
+    : '<div class="stream-empty">Nothing to show — this connection has no plain-text payload (common for TLS/HTTPS, which is encrypted by design).</div>';
+
+  els.streamModal.classList.remove('hidden');
+}
+function closeFollowStream() {
+  els.streamModal.classList.add('hidden');
+}
+
+// ---- Expert Info — plain-language flags for notable packets, from real dissector output only ----
+function expertInfo(pkt) {
+  const s = pkt.summary || '';
+  if (s.includes('Malformed')) return { icon: '⛔', label: 'Malformed packet', cls: 'expert-danger' };
+  if (s.includes('reset (RST)')) return { icon: '⚠', label: 'Connection reset', cls: 'expert-warn' };
+  return null;
 }
 
 async function doBlock(ip) {
@@ -246,6 +353,8 @@ function renderPacketList() {
     const sel = idx === state.selectedIndex ? ' selected' : '';
     const src = esc(endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port));
     const dst = esc(endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port));
+    const ei = expertInfo(pkt);
+    const badge = ei ? `<span class="expert-badge ${ei.cls}" title="${esc(ei.label)}">${ei.icon}</span> ` : '';
     return `
       <div class="packet-row proto-${esc(pkt.protocol)}${sel}" data-index="${idx}">
         <span class="col-num">${idx + 1}</span>
@@ -255,7 +364,7 @@ function renderPacketList() {
         <span class="col-dst">${dst}</span>
         <span class="col-proto" style="color:${c}">${esc(pkt.protocol)}</span>
         <span class="col-len">${pkt.length}B</span>
-        <span class="col-info">${esc(pkt.summary)}</span>
+        <span class="col-info">${badge}${esc(pkt.summary)}</span>
       </div>`;
   }).join('');
 }
@@ -328,6 +437,14 @@ function buildDetailTree(pkt, index) {
     ['Protocol', pkt.protocol],
     ['Info', pkt.summary || '—'],
   ]));
+
+  // Expert Info — only for real anomalies the dissector actually reported
+  const ei = expertInfo(pkt);
+  if (ei) {
+    nodes.push(`<div class="tnode tnode-expert ${ei.cls}"><div class="tnode-head">` +
+      `<span class="twist">▾</span><span class="tlabel">${ei.icon} Expert Info</span></div>` +
+      `<div class="tbody"><div class="tfield"><span class="tkey">Notice</span><span class="tval">${esc(ei.label)}</span></div></div></div>`);
+  }
 
   // netscope's plain-language explanation (its edge over Wireshark)
   if (pkt.explanation) {
@@ -534,6 +651,7 @@ function renderAll() {
 
 // ---- Keyboard ----
 function handleKeydown(e) {
+  if (e.key === 'Escape' && !els.streamModal.classList.contains('hidden')) { closeFollowStream(); return; }
   if (document.activeElement === els.filterInput) return;
   if (e.key === 'Tab') {
     e.preventDefault();
@@ -565,6 +683,8 @@ async function init() {
     statBandwidth: $('#stat-bandwidth'), statBlocked: $('#stat-blocked'), protoBars: $('#proto-bars'),
     talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
     glossaryList: $('#glossary-list'),
+    streamModal: $('#stream-modal'), streamTitle: $('#stream-title'), streamMeta: $('#stream-meta'),
+    streamBody: $('#stream-body'), streamClose: $('#stream-close'),
   });
 
   await loadInterfaces();
@@ -596,9 +716,13 @@ async function init() {
   els.connList.addEventListener('click', (e) => {
     const b = e.target.closest('[data-block]');
     const u = e.target.closest('[data-unblock]');
+    const f = e.target.closest('[data-follow]');
     if (b) doBlock(b.dataset.block);
     else if (u) doUnblock(u.dataset.unblock);
+    else if (f) openFollowStream(f.dataset.follow);
   });
+  els.streamClose.addEventListener('click', closeFollowStream);
+  els.streamModal.addEventListener('click', (e) => { if (e.target === els.streamModal) closeFollowStream(); });
   $$('.tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
   document.addEventListener('keydown', handleKeydown);
 

@@ -59,6 +59,8 @@
 - **🎯 Zero-config interface pick** — Skips loopback and virtual adapters (WAN Miniport, Hyper-V) and lands on your real Wi-Fi/Ethernet automatically.
 - **🔬 Wireshark-style inspector** — The desktop app has the classic three-pane layout: colorized packet list, an expandable protocol tree (Frame → IP → TCP → app layer), and a live hex/ASCII byte view — plus a plain-language "What is this?" for every packet.
 - **🌍 Where is it going?** — Click a packet and the inspector shows the remote host's **country (with flag), city, and owning organisation** (e.g. `🇺🇸 United States · Google LLC`). Looked up on demand only for the packet you open, and cached per IP — never for every packet in the background.
+- **💬 Follow Stream** — In the Connections view, press **Follow** on any TCP/UDP conversation to read it reassembled as plain text, color-coded by direction (client vs. server) — Wireshark's most-used feature, one click away.
+- **⚠ Expert Info** — Packets the dissector flags as a reset or malformed connection get a small warning badge in the packet list and detail view, in plain language (no "duplicate ACK" jargon).
 - **🎨 Beautiful TUI** — Protocol-colored rows, dark theme, smooth layout. Ships with taste.
 - **📊 Live dashboard** — Bandwidth, top talkers, protocol distribution. Updated in real time.
 - **📋 DNS log view** — See every queried domain at a glance.
@@ -175,7 +177,7 @@ Usage: netscope-tui [OPTIONS]
 |------|-------------|
 | **Packets** | Live packet stream with human-readable summaries |
 | **Dashboard** | Real-time stats, bandwidth, protocol distribution, top talkers |
-| **Connections** | Conversations grouped by flow — packets, bytes, direction, duration per connection. Select one and press `b` to **block** the remote host via an OS firewall rule (`u` to unblock). |
+| **Connections** | Conversations grouped by flow — packets, bytes, direction, duration per connection. Press **💬 Follow** to read the conversation as plain text, or `b` to **block** the remote host via an OS firewall rule (`u` to unblock). |
 | **DNS Log** | All DNS queries and responses in one place |
 | **Learn** | Plain-language guide to every protocol netscope shows, plus a glossary — for people new to networking |
 
