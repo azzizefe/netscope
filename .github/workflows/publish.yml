@@ -1,8 +1,9 @@
 name: Publish to crates.io
 
 # Publishes the library and TUI crates to crates.io when a version tag is pushed.
-# Requires a CARGO_REGISTRY_TOKEN repository secret (Settings → Secrets → Actions).
+# Requires a CARGO_REGISTRY_TOKEN repository secret (Settings -> Secrets -> Actions).
 # Get the token from https://crates.io/settings/tokens
+# If the secret is not set, the job skips cleanly instead of failing.
 on:
   push:
     tags:
@@ -11,26 +12,43 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Check for crates.io token
+        id: check
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CARGO_REGISTRY_TOKEN secret is not set — skipping crates.io publish."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.check.outputs.present == 'true'
       - uses: dtolnay/rust-toolchain@stable
+        if: steps.check.outputs.present == 'true'
       - uses: Swatinem/rust-cache@v2
+        if: steps.check.outputs.present == 'true'
 
       - name: Install libpcap
+        if: steps.check.outputs.present == 'true'
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
       # netscope-tui depends on netscope-core, so core must be published first.
-      # --no-verify skips the local rebuild; metadata is still validated by the registry.
       - name: Publish netscope-core
-        run: cargo publish -p netscope-core --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+        if: steps.check.outputs.present == 'true'
+        run: cargo publish -p netscope-core
 
       - name: Wait for crates.io index to update
+        if: steps.check.outputs.present == 'true'
         run: sleep 30
 
       - name: Publish netscope-tui
-        run: cargo publish -p netscope-tui --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+        if: steps.check.outputs.present == 'true'
+        run: cargo publish -p netscope-tui
