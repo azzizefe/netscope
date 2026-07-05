@@ -348,6 +348,48 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .talker-ip, .dns-domain { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
 .talker-bytes, .dns-count { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
+/* ---- Script console ---- */
+#view-script { min-height: 0; }
+#view-script.active { display: block; height: 100%; }
+#script-layout { display: grid; grid-template-columns: 1fr 1fr; height: 100%; min-height: 0; }
+#script-left { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+#script-right { display: flex; flex-direction: column; min-height: 0; }
+.script-bar {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; background: var(--bg-elev); border-bottom: 1px solid var(--border);
+}
+.script-count { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+#script-examples { font-size: 12px; padding: 4px 8px; max-width: 210px; }
+#script-editor {
+  flex: 1 1 auto; min-height: 0; resize: none;
+  background: var(--bg); color: var(--text); border: none; outline: none;
+  padding: 12px; tab-size: 2;
+  font-family: 'Cascadia Code','Consolas',monospace; font-size: 13px; line-height: 1.6;
+  white-space: pre; overflow: auto;
+}
+#script-output { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px 12px; }
+.script-empty { color: var(--text-muted); padding: 16px 4px; }
+.script-err {
+  color: var(--danger); background: rgba(248,113,113,.1); border-left: 3px solid var(--danger);
+  padding: 8px 10px; border-radius: 4px; margin-bottom: 10px;
+  font-family: 'Cascadia Code','Consolas',monospace; font-size: 12.5px; white-space: pre-wrap;
+}
+.script-block { margin-bottom: 12px; }
+.script-block-h { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; }
+.script-log, .script-ret {
+  margin: 0; padding: 8px 10px; background: var(--bg-elev-2); border-radius: 5px;
+  font-family: 'Cascadia Code','Consolas',monospace; font-size: 12.5px; line-height: 1.55;
+  white-space: pre-wrap; word-break: break-word;
+}
+.script-ret { border-left: 3px solid var(--ok); }
+.script-flag {
+  display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: baseline;
+  padding: 5px 8px; border-bottom: 1px solid rgba(42,53,71,.4); font-size: 13px;
+}
+.script-flag-proto { font-weight: 700; grid-row: span 2; }
+.script-flag-reason { color: var(--warn); grid-column: 2; font-size: 12px; }
+.script-more { color: var(--text-muted); font-size: 12px; padding: 6px 8px; }
+
 /* ---- Learn ---- */
 #view-learn { overflow-y: auto; }
 #learn-content { padding: 22px 28px; max-width: 1000px; margin: 0 auto; }

@@ -53,6 +53,7 @@
       <button class="tab active" data-view="packets">Packets</button>
       <button class="tab" data-view="connections">Connections</button>
       <button class="tab" data-view="dashboard">Dashboard</button>
+      <button class="tab" data-view="script">⚡ Script</button>
       <button class="tab" data-view="learn">🎓 Learn</button>
     </nav>
 
@@ -133,6 +134,33 @@
           <div class="card" id="dns-view">
             <h3>Top Domains</h3>
             <div id="dns-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Script View — in-app JavaScript console over the live packet stream -->
+      <section id="view-script" class="view">
+        <div id="script-layout">
+          <div id="script-left">
+            <div class="script-bar">
+              <button id="script-run" class="btn btn-primary btn-small">▶ Run (Ctrl+Enter)</button>
+              <button id="script-clear" class="btn btn-small">Clear</button>
+              <span id="script-count" class="script-count"></span>
+              <span class="spacer"></span>
+              <select id="script-examples" title="Load an example script">
+                <option value="">Load example…</option>
+                <option value="anomaly">🚨 Anomaly: connection resets</option>
+                <option value="talkers">📊 Top talkers by bytes</option>
+                <option value="plaintext">🔓 Unencrypted secrets (HTTP)</option>
+                <option value="domains">🌐 Suspicious DNS domains</option>
+                <option value="protos">🧮 Protocol breakdown</option>
+              </select>
+            </div>
+            <textarea id="script-editor" spellcheck="false" autocomplete="off"></textarea>
+          </div>
+          <div id="script-right">
+            <div class="pane-head"><span>Output</span><span id="script-time" class="pane-head-meta"></span></div>
+            <div id="script-output"></div>
           </div>
         </div>
       </section>

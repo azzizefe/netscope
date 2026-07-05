@@ -171,6 +171,7 @@ function onPacket(event) {
   if (state.view === 'packets') renderPacketList();
   else if (state.view === 'connections') renderConnections();
   else if (state.view === 'dashboard') renderStats();
+  else if (state.view === 'script') updateScriptCount();
 }
 
 // ---- Flow aggregation (Connections view) ----
@@ -701,6 +702,12 @@ const FEATURE_CARDS = [
     look: 'Switch to "Seconds Since Beginning" if you want to measure how long something took after capture started.',
   },
   {
+    icon: '⚡', color: 'var(--http)', title: 'Script Console',
+    gist: 'Analyze packets with JavaScript — no export needed.',
+    body: 'Open the ⚡ Script tab to run code directly over the captured packets. No more exporting a .pcap and re-reading it with Python/Scapy — every packet is already there as a `packets` array. Flag anomalies, aggregate stats, or scan payloads, then press Ctrl+Enter.',
+    look: 'Use the "Load example…" menu for ready-made scripts: connection-reset anomalies, top talkers, unencrypted-secret scanning, and more.',
+  },
+  {
     icon: '🏷', color: 'var(--icmp)', title: 'Name Resolution toggle',
     gist: 'Flip between hostnames and raw IPs.',
     body: 'Also in the 🗂 Profile menu: uncheck "Resolve hostnames" to see raw IP addresses everywhere instead of names like github.com — useful on very large captures, or when you want the literal address.',
@@ -787,6 +794,158 @@ function deleteProfile(name) {
   else renderProfilePanel();
 }
 
+// ---- Script console — run JavaScript directly over the captured packet stream ----
+// This is the "no more exporting to .pcap and re-reading with Scapy" feature:
+// every packet is already a plain JS object in state.packets, so user code can
+// filter, aggregate and flag anomalies in place. Runs in the renderer (the
+// user's own machine, their own code — like a devtools console scoped to packets).
+
+const SCRIPT_DEFAULT =
+`// 'packets' is an array of every captured packet.
+// Each packet: { timestamp, epoch_ms, src_addr, dst_addr, src_host,
+//   dst_host, src_port, dst_port, protocol, length, summary, raw }
+// Helpers: flag(pkt, reason)  print(...)  h.payloadText(pkt)  h.formatBytes(n)
+//
+// Return a value to display it, or use flag()/print(). Ctrl+Enter runs.
+
+let total = 0;
+for (const p of packets) total += p.length;
+print('Captured', packets.length, 'packets,', h.formatBytes(total), 'total');
+
+// Flag every connection reset as an anomaly:
+for (const p of packets) {
+  if (p.summary.includes('reset (RST)')) flag(p, 'TCP connection reset');
+}`;
+
+const SCRIPT_EXAMPLES = {
+  anomaly:
+`// Find hosts causing an unusual number of connection resets (RST).
+const resets = {};
+for (const p of packets) {
+  if (!p.summary.includes('reset (RST)')) continue;
+  const key = p.src_addr || '?';
+  resets[key] = (resets[key] || 0) + 1;
+}
+for (const [ip, n] of Object.entries(resets)) {
+  if (n >= 3) print('⚠', ip, 'sent', n, 'resets');
+}
+return Object.keys(resets).length ? resets : 'No connection resets seen.';`,
+
+  talkers:
+`// Top 10 destinations by bytes sent to them.
+const bytes = {};
+for (const p of packets) {
+  const key = p.dst_host || p.dst_addr;
+  if (!key) continue;
+  bytes[key] = (bytes[key] || 0) + p.length;
+}
+return Object.entries(bytes)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 10)
+  .map(([host, n]) => host + '  →  ' + h.formatBytes(n));`,
+
+  plaintext:
+`// Scan unencrypted HTTP payloads for anything that looks like a credential.
+const needles = ['password', 'passwd', 'pass=', 'token', 'authorization', 'api_key'];
+for (const p of packets) {
+  if (p.protocol !== 'HTTP') continue;
+  const text = h.payloadText(p).toLowerCase();
+  for (const n of needles) {
+    if (text.includes(n)) { flag(p, 'HTTP payload contains "' + n + '"'); break; }
+  }
+}
+return 'Scanned ' + packets.filter(p => p.protocol === 'HTTP').length + ' HTTP packets.';`,
+
+  domains:
+`// Flag DNS lookups to unusually long or high-entropy domains
+// (a rough heuristic for tunneling / DGA malware).
+for (const p of packets) {
+  if (p.protocol !== 'DNS') continue;
+  const m = p.summary.match(/DNS (?:Query|Response) [—-] (\\S+)/);
+  if (!m) continue;
+  const domain = m[1];
+  const label = domain.split('.')[0] || '';
+  const digits = (label.match(/[0-9]/g) || []).length;
+  if (label.length > 25 || digits > 8) flag(p, 'Suspicious domain: ' + domain);
+}
+return 'Checked DNS traffic.';`,
+
+  protos:
+`// Count packets and bytes per protocol.
+const byProto = {};
+for (const p of packets) {
+  const b = byProto[p.protocol] || (byProto[p.protocol] = { packets: 0, bytes: 0 });
+  b.packets++; b.bytes += p.length;
+}
+return Object.entries(byProto)
+  .sort((a, b) => b[1].packets - a[1].packets)
+  .map(([name, s]) => name.padEnd(8) + s.packets + ' pkts, ' + h.formatBytes(s.bytes));`,
+};
+
+function runScript() {
+  const code = els.scriptEditor.value;
+  const packets = state.packets;
+  const logs = [];
+  const flagged = [];
+  const print = (...a) => logs.push(a.map((x) => (x && typeof x === 'object') ? JSON.stringify(x) : String(x)).join(' '));
+  const flag = (pkt, reason) => flagged.push({ pkt, reason: reason == null ? '' : String(reason) });
+  const helpers = {
+    formatBytes,
+    payloadText: (pkt) => { const p = extractPayload((pkt && pkt.raw) || []); return p ? decodeStreamText(p) : ''; },
+    bytesToText: (bytes) => decodeStreamText(bytes || []),
+  };
+
+  let ret, err;
+  const t0 = performance.now();
+  try {
+    // eslint-disable-next-line no-new-func
+    const fn = new Function('packets', 'flag', 'print', 'h', `"use strict";\n${code}`);
+    ret = fn(packets, flag, print, helpers);
+  } catch (e) { err = e; }
+  const ms = (performance.now() - t0).toFixed(1);
+
+  renderScriptOutput({ logs, flagged, ret, err, ms, total: packets.length });
+}
+
+function renderScriptOutput({ logs, flagged, ret, err, ms, total }) {
+  els.scriptTime.textContent = `ran over ${total} packets · ${ms} ms`;
+  let html = '';
+  if (err) {
+    html += `<div class="script-err">✖ ${esc(err.name || 'Error')}: ${esc(err.message || String(err))}</div>`;
+  }
+  if (logs.length) {
+    html += `<div class="script-block"><div class="script-block-h">print()</div><pre class="script-log">${esc(logs.join('\n'))}</pre></div>`;
+  }
+  if (flagged.length) {
+    html += `<div class="script-block"><div class="script-block-h">🚩 Flagged (${flagged.length})</div>` +
+      flagged.slice(0, 200).map((f) => {
+        const p = f.pkt || {};
+        const c = protoColor(p.protocol);
+        const where = `${endpointLabel(p.src_addr, p.src_host, p.src_port)} → ${endpointLabel(p.dst_addr, p.dst_host, p.dst_port)}`;
+        return `<div class="script-flag">
+          <span class="script-flag-proto" style="color:${c}">${esc(p.protocol || '?')}</span>
+          <span class="mono">${esc(where)}</span>
+          <span class="script-flag-reason">${esc(f.reason)}</span>
+        </div>`;
+      }).join('') +
+      (flagged.length > 200 ? `<div class="script-more">…and ${flagged.length - 200} more</div>` : '') +
+      `</div>`;
+  }
+  if (ret !== undefined) {
+    let retText;
+    if (Array.isArray(ret)) retText = ret.map((r) => (r && typeof r === 'object') ? JSON.stringify(r) : String(r)).join('\n');
+    else if (ret && typeof ret === 'object') retText = JSON.stringify(ret, null, 2);
+    else retText = String(ret);
+    html += `<div class="script-block"><div class="script-block-h">return</div><pre class="script-ret">${esc(retText)}</pre></div>`;
+  }
+  if (!html) html = '<div class="script-empty">No output — return a value, or call print() / flag() in your script.</div>';
+  els.scriptOutput.innerHTML = html;
+}
+
+function updateScriptCount() {
+  if (els.scriptCount) els.scriptCount.textContent = `${state.packets.length} packets available`;
+}
+
 // ---- Views ----
 function switchView(view) {
   state.view = view;
@@ -799,15 +958,16 @@ function renderAll() {
   if (state.view === 'packets') renderPacketList();
   else if (state.view === 'connections') renderConnections();
   else if (state.view === 'dashboard') renderStats();
+  else if (state.view === 'script') updateScriptCount();
 }
 
 // ---- Keyboard ----
 function handleKeydown(e) {
   if (e.key === 'Escape' && !els.streamModal.classList.contains('hidden')) { closeFollowStream(); return; }
-  if (document.activeElement === els.filterInput) return;
+  if (document.activeElement === els.filterInput || document.activeElement === els.scriptEditor) return;
   if (e.key === 'Tab') {
     e.preventDefault();
-    const views = ['packets', 'connections', 'dashboard', 'learn'];
+    const views = ['packets', 'connections', 'dashboard', 'script', 'learn'];
     switchView(views[(views.indexOf(state.view) + 1) % views.length]);
   } else if (state.view === 'packets') {
     if (e.key === 'ArrowDown' || e.key === 'j') {
@@ -835,6 +995,9 @@ async function init() {
     statBandwidth: $('#stat-bandwidth'), statBlocked: $('#stat-blocked'), protoBars: $('#proto-bars'),
     talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
     glossaryList: $('#glossary-list'), featureCards: $('#feature-cards'),
+    scriptEditor: $('#script-editor'), scriptRun: $('#script-run'), scriptClear: $('#script-clear'),
+    scriptExamples: $('#script-examples'), scriptOutput: $('#script-output'),
+    scriptTime: $('#script-time'), scriptCount: $('#script-count'),
     streamModal: $('#stream-modal'), streamTitle: $('#stream-title'), streamMeta: $('#stream-meta'),
     streamBody: $('#stream-body'), streamClose: $('#stream-close'),
     profileBtn: $('#profile-btn'), profileName: $('#profile-name'), profilePanel: $('#profile-panel'),
@@ -848,6 +1011,9 @@ async function init() {
   // Restore the persisted profile (or fall back if it was deleted elsewhere)
   if (!allProfiles()[state.settings.profile]) state.settings.profile = Object.keys(BUILTIN_PROFILES)[0];
   applyProfile(state.settings.profile);
+
+  // Script console: restore last script or seed with the default
+  els.scriptEditor.value = loadJSON('netscope.script', SCRIPT_DEFAULT);
 
   // elevation + existing blocks
   try {
@@ -910,6 +1076,27 @@ async function init() {
     renderAll();
     if (state.selectedIndex >= 0) showDetail(state.selectedIndex);
   });
+  // Script console
+  els.scriptRun.addEventListener('click', runScript);
+  els.scriptClear.addEventListener('click', () => { els.scriptOutput.innerHTML = ''; els.scriptTime.textContent = ''; });
+  els.scriptEditor.addEventListener('input', () => saveJSON('netscope.script', els.scriptEditor.value));
+  els.scriptEditor.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runScript(); }
+    if (e.key === 'Tab') { // insert a tab instead of moving focus
+      e.preventDefault();
+      const el = els.scriptEditor, s = el.selectionStart, en = el.selectionEnd;
+      el.value = el.value.slice(0, s) + '  ' + el.value.slice(en);
+      el.selectionStart = el.selectionEnd = s + 2;
+      saveJSON('netscope.script', el.value);
+    }
+  });
+  els.scriptExamples.addEventListener('change', () => {
+    const ex = SCRIPT_EXAMPLES[els.scriptExamples.value];
+    if (ex) { els.scriptEditor.value = ex; saveJSON('netscope.script', ex); }
+    els.scriptExamples.value = '';
+    els.scriptEditor.focus();
+  });
+
   $$('.tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
   document.addEventListener('keydown', handleKeydown);
 
