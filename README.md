@@ -58,6 +58,7 @@
 - **🎓 Built-in Learn mode** — Never used a packet analyzer? A dedicated view explains every protocol in plain language, and each selected packet gets a one-line "what is this?". No prior networking knowledge needed.
 - **🎯 Zero-config interface pick** — Skips loopback and virtual adapters (WAN Miniport, Hyper-V) and lands on your real Wi-Fi/Ethernet automatically.
 - **🔬 Wireshark-style inspector** — The desktop app has the classic three-pane layout: colorized packet list, an expandable protocol tree (Frame → IP → TCP → app layer), and a live hex/ASCII byte view — plus a plain-language "What is this?" for every packet.
+- **🌍 Where is it going?** — Click a packet and the inspector shows the remote host's **country (with flag), city, and owning organisation** (e.g. `🇺🇸 United States · Google LLC`). Looked up on demand only for the packet you open, and cached per IP — never for every packet in the background.
 - **🎨 Beautiful TUI** — Protocol-colored rows, dark theme, smooth layout. Ships with taste.
 - **📊 Live dashboard** — Bandwidth, top talkers, protocol distribution. Updated in real time.
 - **📋 DNS log view** — See every queried domain at a glance.

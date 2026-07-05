@@ -211,6 +211,8 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .tkey { color: var(--text-muted); }
 .tval { color: var(--text); overflow-wrap: anywhere; }
 .tval.mono { font-family: 'Cascadia Code','Consolas',monospace; font-size: 12px; }
+.tnode-geo .tlabel { color: var(--udp); }
+.geo-status { color: var(--text-muted); font-style: italic; }
 .tnode-explain .tlabel { color: var(--accent); }
 .tnode-explain .tbody { padding: 4px 12px 8px 31px; font-style: italic; line-height: 1.5; color: var(--text); }
 

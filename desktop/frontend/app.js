@@ -304,6 +304,16 @@ function buildDetailTree(pkt, index) {
       pkt.src_addr && pkt.dst_addr ? `${pkt.src_addr} → ${pkt.dst_addr}` : '', net));
   }
 
+  // GeoIP placeholders — filled in asynchronously by enrichGeo() for public IPs.
+  for (const [role, ip] of [['Destination', pkt.dst_addr], ['Source', pkt.src_addr]]) {
+    if (!isPublicIp(ip)) continue;
+    nodes.push(`<div class="tnode tnode-geo geo-node" data-ip="${esc(ip)}" data-role="${role}">` +
+      `<div class="tnode-head"><span class="twist">▾</span>` +
+      `<span class="tlabel">🌍 ${role} location <span class="tlabel-sub">${esc(ip)}</span></span></div>` +
+      `<div class="tbody"><div class="tfield"><span class="tkey">Location</span>` +
+      `<span class="tval geo-status">Looking up…</span></div></div></div>`);
+  }
+
   // Transport layer
   if (transport && (pkt.src_port != null || pkt.dst_port != null)) {
     const t = [['Transport', transport]];
@@ -328,6 +338,84 @@ function buildDetailTree(pkt, index) {
   return nodes.join('');
 }
 
+// ---- GeoIP enrichment ----
+// Looked up on demand (only when a packet is opened), cached per IP, so we add
+// at most one request per unique remote host you actually inspect.
+const geoCache = new Map(); // ip -> { status: 'ok'|'failed', data? }
+
+function isPublicIp(ip) {
+  if (!ip) return false;
+  if (ip.includes(':')) {
+    const l = ip.toLowerCase();
+    if (l === '::1' || l.startsWith('fe80') || l.startsWith('fc') || l.startsWith('fd') || l === '::') return false;
+    return true;
+  }
+  const p = ip.split('.').map(Number);
+  if (p.length !== 4 || p.some(isNaN)) return false;
+  if (p[0] === 10 || p[0] === 127 || p[0] === 0 || p[0] >= 224) return false;
+  if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return false;
+  if (p[0] === 192 && p[1] === 168) return false;
+  if (p[0] === 169 && p[1] === 254) return false;
+  return true;
+}
+
+async function lookupGeo(ip) {
+  const cached = geoCache.get(ip);
+  if (cached && cached.status !== 'pending') return cached;
+  if (cached && cached.status === 'pending') return cached.promise;
+
+  const promise = (async () => {
+    try {
+      const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+      const j = await r.json();
+      if (j && j.success) {
+        const c = j.connection || {};
+        const entry = { status: 'ok', data: {
+          country: j.country, code: j.country_code, flag: j.flag && j.flag.emoji,
+          city: j.city, region: j.region,
+          isp: c.isp || c.org, org: c.org, asn: c.asn,
+        } };
+        geoCache.set(ip, entry);
+        return entry;
+      }
+    } catch { /* offline or blocked — fall through */ }
+    const failed = { status: 'failed' };
+    geoCache.set(ip, failed);
+    return failed;
+  })();
+  geoCache.set(ip, { status: 'pending', promise });
+  return promise;
+}
+
+function fillGeoNode(node, g) {
+  const body = node.querySelector('.tbody');
+  if (!body) return;
+  if (!g || g.status !== 'ok') {
+    body.innerHTML = `<div class="tfield"><span class="tkey">Location</span><span class="tval">Unknown (lookup unavailable)</span></div>`;
+    return;
+  }
+  const d = g.data;
+  const rows = [['Country', `${d.flag ? d.flag + ' ' : ''}${d.country || '—'}${d.code ? ` (${d.code})` : ''}`]];
+  const place = [d.city, d.region].filter(Boolean).join(', ');
+  if (place) rows.push(['City', place]);
+  if (d.isp) rows.push(['Service / owner', d.isp]);
+  if (d.org && d.org !== d.isp) rows.push(['Organisation', d.org]);
+  if (d.asn) rows.push(['Network', `AS${d.asn}`]);
+  body.innerHTML = rows.map(([k, v]) =>
+    `<div class="tfield"><span class="tkey">${esc(k)}</span><span class="tval">${esc(v)}</span></div>`).join('');
+}
+
+async function enrichGeo(pkt) {
+  for (const [role, ip] of [['Destination', pkt.dst_addr], ['Source', pkt.src_addr]]) {
+    if (!isPublicIp(ip)) continue;
+    const g = await lookupGeo(ip);
+    // Only apply if this packet is still the one on screen.
+    const sel = `.geo-node[data-ip="${ip}"][data-role="${role}"]`;
+    const node = els.detailTree.querySelector(sel);
+    if (node) fillGeoNode(node, g);
+  }
+}
+
 function showDetail(index) {
   const pkt = state.filteredPackets[index];
   if (!pkt) return;
@@ -336,6 +424,7 @@ function showDetail(index) {
   els.detailTree.innerHTML = buildDetailTree(pkt, index);
   els.hexDump.innerHTML = hexDump(pkt.raw || []);
   els.hexLen.textContent = `${(pkt.raw || []).length} bytes`;
+  enrichGeo(pkt);
 }
 function hideDetail() {
   state.selectedIndex = -1;
