@@ -19,9 +19,34 @@
       <span id="status-text" class="status-idle">● Idle</span>
       <span id="packet-count" class="packet-count">0 packets</span>
       <input type="text" id="filter-input" placeholder="filter: IP, protocol, domain…">
+      <button id="profile-btn" class="btn btn-small" title="Profiles &amp; display settings">🗂 <span id="profile-name">Default</span> ▾</button>
       <span class="spacer"></span>
       <span id="elevation-badge" class="badge badge-warn hidden" title="Blocking needs Administrator">⚠ not admin</span>
     </header>
+
+    <!-- Profiles / Time Display / Name Resolution — Wireshark: Edit > Configuration Profiles, View > Time Display Format, View > Name Resolution -->
+    <div id="profile-panel" class="popover hidden">
+      <div class="popover-section">
+        <div class="popover-label">Profile — task presets</div>
+        <div id="profile-list" class="profile-chip-row"></div>
+        <button id="profile-save-btn" class="btn btn-small">💾 Save current as…</button>
+      </div>
+      <div class="popover-section">
+        <div class="popover-label">Time Display Format</div>
+        <select id="time-format-select">
+          <option value="time">Time of Day (HH:MM:SS.mmm)</option>
+          <option value="datetime">Date and Time of Day</option>
+          <option value="relative">Seconds Since Beginning of Capture</option>
+        </select>
+      </div>
+      <div class="popover-section">
+        <label class="popover-checkbox">
+          <input type="checkbox" id="resolve-names-check" checked>
+          Resolve hostnames (passive DNS)
+        </label>
+        <div class="popover-hint">Turn off on very large captures for a small speed boost — falls back to raw IPs everywhere.</div>
+      </div>
+    </div>
 
     <!-- View Tabs -->
     <nav id="tabs">

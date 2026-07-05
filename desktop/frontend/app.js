@@ -9,6 +9,32 @@ const protoColor = (p) => PROTOCOL_COLORS[p] || '#f87171';
 
 const STATES = { IDLE: 'Idle', CAPTURING: 'Capturing' };
 
+// ---- Persisted settings & profiles (localStorage — survives app restarts) ----
+function loadJSON(key, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch { return fallback; }
+}
+function saveJSON(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable — settings just won't persist */ }
+}
+
+// Built-in task presets — mirrors Wireshark's Configuration Profiles, scoped to
+// what netscope actually supports (a starting filter, a starting view, and
+// display preferences), not per-protocol column layouts.
+const BUILTIN_PROFILES = {
+  'HTTP Analysis': {
+    filter: 'http or tls', view: 'packets', timeFormat: 'time', showHostnames: true,
+    hint: 'Filters to web traffic (HTTP + HTTPS/TLS) so requests and responses aren’t buried in noise.',
+  },
+  'VoIP': {
+    filter: 'udp', view: 'dashboard', timeFormat: 'time', showHostnames: true,
+    hint: 'VoIP calls (SIP/RTP) run over UDP, so this filters to UDP traffic. netscope doesn’t decode SIP/RTP call detail yet — this just narrows the noise.',
+  },
+  'Security Review': {
+    filter: '', view: 'connections', timeFormat: 'datetime', showHostnames: true,
+    hint: 'Shows every connection with full date + time stamps, for lining traffic up against an incident timeline.',
+  },
+};
+
 const state = {
   view: 'packets',
   packets: [],
@@ -24,6 +50,11 @@ const state = {
     totalPackets: 0, totalBytes: 0, perProtocol: {},
     topTalkersSent: [], topDomains: [],
   },
+  // Time Display Format: 'time' (HH:MM:SS.mmm), 'datetime' (date + time),
+  // 'relative' (seconds since the first packet of this capture session).
+  settings: Object.assign({ timeFormat: 'time', showHostnames: true, profile: 'HTTP Analysis' }, loadJSON('netscope.settings', {})),
+  customProfiles: loadJSON('netscope.profiles', {}),
+  captureStartEpoch: null,
 };
 
 // ---- Tauri IPC ----
@@ -54,11 +85,27 @@ function formatBytes(b) {
 }
 function endpointLabel(addr, host, port) {
   if (!addr) return '?';
-  const name = host || addr;
+  const useHost = state.settings.showHostnames && !!host;
+  const name = useHost ? host : addr;
   const p = port != null ? `:${port}` : '';
   // bracket IPv6 when no host name
-  const base = !host && addr.includes(':') ? `[${addr}]` : name;
+  const base = !useHost && addr.includes(':') ? `[${addr}]` : name;
   return `${base}${p}`;
+}
+
+// ---- Time Display Format (Wireshark: View > Time Display Format) ----
+function pad(n, len = 2) { return String(n).padStart(len, '0'); }
+function formatPacketTime(pkt) {
+  const fmt = state.settings.timeFormat;
+  if (fmt === 'time' || pkt.epoch_ms == null) return pkt.timestamp; // "HH:MM:SS.mmm", backend-formatted
+  if (fmt === 'relative') {
+    if (state.captureStartEpoch == null) state.captureStartEpoch = pkt.epoch_ms;
+    return `${((pkt.epoch_ms - state.captureStartEpoch) / 1000).toFixed(6)}s`;
+  }
+  // 'datetime' — full date + time, computed client-side from the raw epoch
+  const d = new Date(pkt.epoch_ms);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
 }
 
 // ---- Interfaces ----
@@ -88,6 +135,7 @@ async function startCapture() {
     // reset session
     state.packets = []; state.flows.clear(); state.packetCount = 0;
     state.stats = { totalPackets: 0, totalBytes: 0, perProtocol: {}, topTalkersSent: [], topDomains: [] };
+    state.captureStartEpoch = null; // "Seconds since beginning of capture" baseline resets each run
     await invoke('start_capture', { interface: iface, filter });
     setStatus(STATES.CAPTURING);
     els.startBtn.disabled = true;
@@ -185,7 +233,7 @@ function renderConnections() {
 
   els.connList.innerHTML = flows.map((f) => {
     const isBlocked = state.blocked.has(f.serverAddr);
-    const server = f.serverHost
+    const server = (state.settings.showHostnames && f.serverHost)
       ? `<span class="conn-host">${esc(f.serverHost)}</span> <span class="conn-ip mono">${esc(f.serverAddr)}${f.serverPort != null ? ':' + f.serverPort : ''}</span>`
       : `<span class="conn-host mono">${esc(endpointLabel(f.serverAddr, null, f.serverPort))}</span>`;
     const client = esc(endpointLabel(f.clientAddr, null, f.clientPort));
@@ -358,7 +406,7 @@ function renderPacketList() {
     return `
       <div class="packet-row proto-${esc(pkt.protocol)}${sel}" data-index="${idx}">
         <span class="col-num">${idx + 1}</span>
-        <span class="col-time">${esc(pkt.timestamp)}</span>
+        <span class="col-time" title="${esc(formatPacketTime(pkt))}">${esc(formatPacketTime(pkt))}</span>
         <span class="col-src">${src}</span>
         <span class="col-dir" style="color:${c}">→</span>
         <span class="col-dst">${dst}</span>
@@ -396,7 +444,7 @@ function buildDetailTree(pkt, index) {
 
   // Frame layer
   nodes.push(treeNode(`Frame ${index + 1}`, `${pkt.length} bytes on wire`, [
-    ['Arrival time', pkt.timestamp],
+    ['Arrival time', formatPacketTime(pkt)],
     ['Frame length', `${pkt.length} bytes`],
     ['Captured bytes', `${(pkt.raw || []).length} bytes`],
     ['Protocols in frame', chain.join(' · ')],
@@ -406,9 +454,9 @@ function buildDetailTree(pkt, index) {
   if (pkt.src_addr || pkt.dst_addr) {
     const net = [];
     if (pkt.src_addr) net.push(['Source address', pkt.src_addr, true]);
-    if (pkt.src_host) net.push(['Source host', pkt.src_host]);
+    if (state.settings.showHostnames && pkt.src_host) net.push(['Source host', pkt.src_host]);
     if (pkt.dst_addr) net.push(['Destination address', pkt.dst_addr, true]);
-    if (pkt.dst_host) net.push(['Destination host', pkt.dst_host]);
+    if (state.settings.showHostnames && pkt.dst_host) net.push(['Destination host', pkt.dst_host]);
     nodes.push(treeNode(`Internet Protocol ${ipVer ? `(${ipVer})` : ''}`.trim(),
       pkt.src_addr && pkt.dst_addr ? `${pkt.src_addr} → ${pkt.dst_addr}` : '', net));
   }
@@ -635,6 +683,55 @@ async function loadLearn() {
   } catch (e) { console.error('learn load', e); }
 }
 
+// ---- Configuration Profiles (Wireshark: Edit > Configuration Profiles) ----
+function allProfiles() { return Object.assign({}, BUILTIN_PROFILES, state.customProfiles); }
+
+function applyProfile(name) {
+  const p = allProfiles()[name];
+  if (!p) return;
+  state.settings.profile = name;
+  state.settings.timeFormat = p.timeFormat || 'time';
+  state.settings.showHostnames = p.showHostnames !== false;
+  state.filterText = p.filter || '';
+  els.filterInput.value = state.filterText;
+  saveJSON('netscope.settings', state.settings);
+  renderProfilePanel();
+  switchView(p.view || 'packets'); // also re-renders the active view
+}
+
+function renderProfilePanel() {
+  const all = allProfiles();
+  els.profileName.textContent = state.settings.profile;
+  els.profileList.innerHTML = Object.keys(all).map((name) => {
+    const isCustom = !!state.customProfiles[name];
+    const active = name === state.settings.profile ? ' active' : '';
+    const del = isCustom ? `<button class="profile-del" data-del-profile="${esc(name)}" title="Delete this profile">×</button>` : '';
+    return `<span class="profile-chip${active}" data-profile="${esc(name)}" title="${esc(all[name].hint || '')}">${esc(name)}${del}</span>`;
+  }).join('');
+  els.timeFormatSelect.value = state.settings.timeFormat;
+  els.resolveNamesCheck.checked = state.settings.showHostnames;
+}
+
+function saveCurrentAsProfile() {
+  const name = (prompt('Profile name (e.g. "DNS debugging"):') || '').trim();
+  if (!name) return;
+  state.customProfiles[name] = {
+    filter: state.filterText, view: state.view,
+    timeFormat: state.settings.timeFormat, showHostnames: state.settings.showHostnames,
+    hint: 'Custom profile',
+  };
+  saveJSON('netscope.profiles', state.customProfiles);
+  state.settings.profile = name;
+  saveJSON('netscope.settings', state.settings);
+  renderProfilePanel();
+}
+function deleteProfile(name) {
+  delete state.customProfiles[name];
+  saveJSON('netscope.profiles', state.customProfiles);
+  if (state.settings.profile === name) applyProfile(Object.keys(BUILTIN_PROFILES)[0]);
+  else renderProfilePanel();
+}
+
 // ---- Views ----
 function switchView(view) {
   state.view = view;
@@ -685,10 +782,17 @@ async function init() {
     glossaryList: $('#glossary-list'),
     streamModal: $('#stream-modal'), streamTitle: $('#stream-title'), streamMeta: $('#stream-meta'),
     streamBody: $('#stream-body'), streamClose: $('#stream-close'),
+    profileBtn: $('#profile-btn'), profileName: $('#profile-name'), profilePanel: $('#profile-panel'),
+    profileList: $('#profile-list'), profileSaveBtn: $('#profile-save-btn'),
+    timeFormatSelect: $('#time-format-select'), resolveNamesCheck: $('#resolve-names-check'),
   });
 
   await loadInterfaces();
   await loadLearn();
+
+  // Restore the persisted profile (or fall back if it was deleted elsewhere)
+  if (!allProfiles()[state.settings.profile]) state.settings.profile = Object.keys(BUILTIN_PROFILES)[0];
+  applyProfile(state.settings.profile);
 
   // elevation + existing blocks
   try {
@@ -723,6 +827,34 @@ async function init() {
   });
   els.streamClose.addEventListener('click', closeFollowStream);
   els.streamModal.addEventListener('click', (e) => { if (e.target === els.streamModal) closeFollowStream(); });
+
+  els.profileBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    els.profilePanel.classList.toggle('hidden');
+  });
+  document.addEventListener('click', (e) => {
+    if (els.profilePanel.classList.contains('hidden')) return;
+    if (!els.profilePanel.contains(e.target) && !els.profileBtn.contains(e.target)) els.profilePanel.classList.add('hidden');
+  });
+  els.profileList.addEventListener('click', (e) => {
+    const del = e.target.closest('[data-del-profile]');
+    if (del) { e.stopPropagation(); deleteProfile(del.dataset.delProfile); return; }
+    const chip = e.target.closest('[data-profile]');
+    if (chip) applyProfile(chip.dataset.profile);
+  });
+  els.profileSaveBtn.addEventListener('click', saveCurrentAsProfile);
+  els.timeFormatSelect.addEventListener('change', () => {
+    state.settings.timeFormat = els.timeFormatSelect.value;
+    saveJSON('netscope.settings', state.settings);
+    renderPacketList();
+    if (state.selectedIndex >= 0) showDetail(state.selectedIndex);
+  });
+  els.resolveNamesCheck.addEventListener('change', () => {
+    state.settings.showHostnames = els.resolveNamesCheck.checked;
+    saveJSON('netscope.settings', state.settings);
+    renderAll();
+    if (state.selectedIndex >= 0) showDetail(state.selectedIndex);
+  });
   $$('.tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
   document.addEventListener('keydown', handleKeydown);
 

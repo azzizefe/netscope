@@ -24,6 +24,10 @@ struct InterfaceInfo {
 #[derive(Serialize, Clone)]
 struct PacketInfo {
     timestamp: String,
+    /// Milliseconds since the Unix epoch (UTC) — lets the frontend offer
+    /// alternate time display formats (date+time, relative-to-capture-start)
+    /// without reformatting on the backend for each one.
+    epoch_ms: i64,
     src_addr: Option<String>,
     dst_addr: Option<String>,
     /// Hostname learned for the source IP, if any (passive DNS).
@@ -50,6 +54,7 @@ fn packet_to_info(pkt: &Packet, names: &NameCache) -> PacketInfo {
     PacketInfo {
         raw: pkt.data.clone(),
         timestamp: pkt.timestamp.format("%H:%M:%S%.3f").to_string(),
+        epoch_ms: pkt.timestamp.timestamp_millis(),
         src_addr: pkt.src_addr.map(|a| a.to_string()),
         dst_addr: pkt.dst_addr.map(|a| a.to_string()),
         src_host,

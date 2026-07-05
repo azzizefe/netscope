@@ -61,6 +61,9 @@
 - **🌍 Where is it going?** — Click a packet and the inspector shows the remote host's **country (with flag), city, and owning organisation** (e.g. `🇺🇸 United States · Google LLC`). Looked up on demand only for the packet you open, and cached per IP — never for every packet in the background.
 - **💬 Follow Stream** — In the Connections view, press **Follow** on any TCP/UDP conversation to read it reassembled as plain text, color-coded by direction (client vs. server) — Wireshark's most-used feature, one click away.
 - **⚠ Expert Info** — Packets the dissector flags as a reset or malformed connection get a small warning badge in the packet list and detail view, in plain language (no "duplicate ACK" jargon).
+- **🗂 Profiles** — The **🗂 Profile** button (top right) saves task presets — a filter, a starting view, and display settings — the way Wireshark's Configuration Profiles do. Ships with **HTTP Analysis**, **VoIP**, and **Security Review** presets, plus "Save current as…" for your own. Persists across restarts.
+- **🕐 Time Display Format** — Same menu: switch between `Time of Day`, full `Date and Time of Day`, or `Seconds Since Beginning of Capture` (relative to the first packet) — matches Wireshark's View > Time Display Format.
+- **🏷 Name Resolution toggle** — Turn passive hostname resolution off to see raw IPs everywhere (and shave a little rendering work on very large captures), or back on for `github.com` instead of `140.82.112.3`.
 - **🎨 Beautiful TUI** — Protocol-colored rows, dark theme, smooth layout. Ships with taste.
 - **📊 Live dashboard** — Bandwidth, top talkers, protocol distribution. Updated in real time.
 - **📋 DNS log view** — See every queried domain at a glance.

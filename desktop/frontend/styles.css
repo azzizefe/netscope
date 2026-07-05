@@ -47,6 +47,34 @@ html, body {
   border-bottom: 1px solid var(--border);
 }
 .logo { font-weight: 700; font-size: 16px; color: var(--accent); letter-spacing: .3px; }
+
+/* ---- Profile / display-settings popover ---- */
+/* position:fixed takes this out of #app's grid flow entirely, so toggling
+   .hidden never shifts the rest of the layout. */
+.popover {
+  position: fixed; top: 46px; right: 14px; z-index: 60;
+  width: 300px;
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45);
+  padding: 4px 0;
+}
+.popover-section { padding: 10px 14px; border-bottom: 1px solid rgba(42,53,71,.5); }
+.popover-section:last-child { border-bottom: none; }
+.popover-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 8px; }
+.popover-section select { width: 100%; }
+.popover-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.popover-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+.profile-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.profile-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px; border-radius: 12px; font-size: 12px; cursor: pointer;
+  background: var(--bg-elev-2); border: 1px solid var(--border); color: var(--text-muted);
+}
+.profile-chip:hover { color: var(--text); border-color: var(--accent); }
+.profile-chip.active { color: #06101f; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.profile-del { background: none; border: none; color: inherit; opacity: .7; cursor: pointer; font-size: 13px; line-height: 1; padding: 0; }
+.profile-del:hover { opacity: 1; }
+#profile-btn { white-space: nowrap; }
 .separator { color: var(--text-muted); }
 .spacer { flex: 1; }
 
@@ -131,7 +159,7 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .table-header {
   position: sticky; top: 0; z-index: 2;
   display: grid;
-  grid-template-columns: 52px 100px 1fr 24px 1fr 64px 60px 2fr;
+  grid-template-columns: 52px 132px 1fr 24px 1fr 64px 60px 2fr;
   gap: 8px;
   padding: 8px 12px;
   background: var(--bg-elev-2);
@@ -144,7 +172,7 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 }
 .packet-row {
   display: grid;
-  grid-template-columns: 52px 100px 1fr 24px 1fr 64px 60px 2fr;
+  grid-template-columns: 52px 132px 1fr 24px 1fr 64px 60px 2fr;
   gap: 8px;
   padding: 4px 12px;
   border-bottom: 1px solid rgba(42,53,71,.35);
