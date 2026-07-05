@@ -354,7 +354,7 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .learn-intro h2, .learn-h2 { font-size: 20px; margin-bottom: 8px; }
 .learn-h2 { margin-top: 24px; }
 .learn-intro p { color: var(--text-muted); line-height: 1.6; margin-bottom: 18px; max-width: 760px; }
-#lesson-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+#lesson-cards, #feature-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .lesson-card {
   background: var(--bg-elev);
   border: 1px solid var(--border);

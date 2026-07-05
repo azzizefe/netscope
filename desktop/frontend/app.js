@@ -660,10 +660,65 @@ function renderStats() {
 }
 
 // ---- Learn ----
+// Desktop-only capabilities (not shared with the TUI, so they live here
+// rather than in the Rust education module) — explained the same plain way
+// as the protocol lessons above.
+const FEATURE_CARDS = [
+  {
+    icon: '🔬', color: 'var(--tcp)', title: 'Wireshark-style Inspector',
+    gist: 'Click any row in Packets to open the full analyzer.',
+    body: 'A protocol tree (Frame → IP → TCP/UDP → app layer) and a live hex/ASCII byte view appear below the list — the same three-pane layout Wireshark uses, but each layer is one click to expand or collapse.',
+    look: 'Try it: click any packet row, then click a layer heading in the middle pane to fold it.',
+  },
+  {
+    icon: '🌍', color: 'var(--udp)', title: 'Where is it going?',
+    gist: 'See the remote host\'s country, city, and owner.',
+    body: 'Open a packet and look for the "🌍 Destination location" layer — it shows the country (with flag), city, and the company or ISP that owns the address (e.g. Google LLC, Cloudflare, Inc.).',
+    look: 'Looked up only for the packet you open, and cached per IP — never for every packet in the background.',
+  },
+  {
+    icon: '💬', color: 'var(--http)', title: 'Follow Stream',
+    gist: 'Read a whole conversation as plain text.',
+    body: 'In the Connections view, press 💬 Follow on any TCP/UDP row to see every packet in that conversation reassembled into readable text, color-coded by direction (client vs. server).',
+    look: 'Encrypted connections (TLS/HTTPS) will say there\'s no plain text to show — that\'s expected, it means the encryption is working.',
+  },
+  {
+    icon: '⚠', color: 'var(--warn)', title: 'Expert Info',
+    gist: 'A small warning badge for real problems.',
+    body: 'When a packet\'s connection was reset or its header couldn\'t be parsed, you\'ll see a small ⚠/⛔ badge next to it in the packet list, and an "Expert Info" layer in its detail view — in plain language, not jargon.',
+    look: 'Only flags what the dissector actually detected — no guessed-at anomalies.',
+  },
+  {
+    icon: '🗂', color: 'var(--dns)', title: 'Profiles',
+    gist: 'Save a filter + view as a named preset.',
+    body: 'Click 🗂 Profile (top right) to switch between task presets — HTTP Analysis, VoIP, Security Review — or save your own with "Save current as…". Your choice is remembered next time you open netscope.',
+    look: 'Try switching to Security Review — it flips to the Connections view and shows full timestamps automatically.',
+  },
+  {
+    icon: '🕐', color: 'var(--tls)', title: 'Time Display Format',
+    gist: 'Show times the way that\'s useful to you.',
+    body: 'In the same 🗂 Profile menu, choose Time of Day, full Date and Time of Day, or Seconds Since Beginning of Capture (relative to the first packet) — whichever makes the timeline easiest to read.',
+    look: 'Switch to "Seconds Since Beginning" if you want to measure how long something took after capture started.',
+  },
+  {
+    icon: '🏷', color: 'var(--icmp)', title: 'Name Resolution toggle',
+    gist: 'Flip between hostnames and raw IPs.',
+    body: 'Also in the 🗂 Profile menu: uncheck "Resolve hostnames" to see raw IP addresses everywhere instead of names like github.com — useful on very large captures, or when you want the literal address.',
+    look: 'This only affects display — netscope never makes active DNS lookups, it just reads DNS traffic that already crossed the wire.',
+  },
+];
+
 async function loadLearn() {
   try {
     const lessons = await invoke('get_lessons');
     const glossary = await invoke('get_glossary');
+    els.featureCards.innerHTML = FEATURE_CARDS.map((f) => `
+      <div class="lesson-card" style="border-left-color:${f.color}">
+        <h4 style="color:${f.color}">${f.icon} ${f.title}</h4>
+        <div class="gist">${f.gist}</div>
+        <div class="body">${f.body}</div>
+        <div class="look">${f.look}</div>
+      </div>`).join('');
     if (lessons) {
       els.lessonCards.innerHTML = lessons.map((l) => {
         const c = protoColor(l.protocol);
@@ -779,7 +834,7 @@ async function init() {
     statTotalPackets: $('#stat-total-packets'), statTotalBytes: $('#stat-total-bytes'),
     statBandwidth: $('#stat-bandwidth'), statBlocked: $('#stat-blocked'), protoBars: $('#proto-bars'),
     talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
-    glossaryList: $('#glossary-list'),
+    glossaryList: $('#glossary-list'), featureCards: $('#feature-cards'),
     streamModal: $('#stream-modal'), streamTitle: $('#stream-title'), streamMeta: $('#stream-meta'),
     streamBody: $('#stream-body'), streamClose: $('#stream-close'),
     profileBtn: $('#profile-btn'), profileName: $('#profile-name'), profilePanel: $('#profile-panel'),
