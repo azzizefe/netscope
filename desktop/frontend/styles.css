@@ -375,6 +375,35 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .talker-ip, .dns-domain { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
 .talker-bytes, .dns-count { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
+/* ---- Insights (security/privacy analysis) ---- */
+#view-insights { overflow-y: auto; }
+.insights-summary { color: var(--text-muted); font-size: 13px; }
+.insights-summary b { color: var(--text); }
+.sev-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.sev-dot.sev-high { background: var(--danger); }
+.sev-dot.sev-warn { background: var(--warn); }
+#insights-list { padding: 14px; display: flex; flex-direction: column; gap: 10px; max-width: 920px; }
+.insights-empty { color: var(--text-muted); padding: 20px 4px; }
+.finding {
+  background: var(--bg-elev); border: 1px solid var(--border); border-left: 4px solid var(--border);
+  border-radius: 8px; padding: 12px 14px;
+}
+.finding.sev-high { border-left-color: var(--danger); }
+.finding.sev-warn { border-left-color: var(--warn); }
+.finding.sev-info { border-left-color: var(--accent); }
+.finding.sev-ok { border-left-color: var(--ok); }
+.finding-head { display: flex; align-items: center; gap: 9px; margin-bottom: 5px; }
+.finding-icon { font-size: 16px; }
+.finding-title { font-weight: 700; flex: 1; }
+.finding-sev { font-size: 10px; font-weight: 700; letter-spacing: .5px; padding: 2px 7px; border-radius: 10px; color: var(--bg); }
+.sev-high .finding-sev { background: var(--danger); }
+.sev-warn .finding-sev { background: var(--warn); }
+.sev-info .finding-sev { background: var(--accent); }
+.sev-ok .finding-sev { background: var(--ok); }
+.finding-detail { color: var(--text-muted); line-height: 1.5; font-size: 13px; }
+.finding-evidence { margin: 8px 0 0 0; padding-left: 18px; }
+.finding-evidence li { font-size: 12px; color: var(--text); line-height: 1.6; }
+
 /* ---- Script console ---- */
 #view-script { min-height: 0; }
 #view-script.active { display: block; height: 100%; }

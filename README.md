@@ -61,6 +61,7 @@
 - **🌍 Where is it going?** — Click a packet and the inspector shows the remote host's **country (with flag), city, and owning organisation** (e.g. `🇺🇸 United States · Google LLC`). Looked up on demand only for the packet you open, and cached per IP — never for every packet in the background.
 - **💬 Follow Stream** — In the Connections view, press **Follow** on any TCP/UDP conversation to read it reassembled as plain text, color-coded by direction (client vs. server) — Wireshark's most-used feature, one click away.
 - **⚠ Expert Info** — Packets the dissector flags as a reset or malformed connection get a small warning badge in the packet list and detail view, in plain language (no "duplicate ACK" jargon).
+- **🛡 Insights — automatic security & privacy scan** — The thing Wireshark won't do: it shows you everything but interprets nothing. The **🛡 Insights** tab reads your capture and surfaces plain-language findings — cleartext passwords, unencrypted HTTP, possible port scans, connection-reset bursts, suspicious/DGA-looking domains, plaintext DNS exposure, and an encrypted-vs-cleartext ratio — each rated high / warning / info. No rules to write, no columns to configure.
 - **↻ Replay (Repeater)** — Open a packet and press **↻ Replay** to reload its payload into an editor, tweak it, point it at a host/port, and resend it over a fresh socket — the response comes back in the same window. No exporting to Packet Sender or Burp Repeater. *Sends real traffic — for authorised testing only.*
 - **⚡ Script console** — An in-app **⚡ Script** tab runs JavaScript directly over the captured packet stream. Instead of exporting a `.pcap` and re-reading it with Python/Scapy, every packet is already a `packets` array you can filter, aggregate, and flag anomalies on — with `Ctrl+Enter` to run and built-in examples (connection-reset anomalies, top talkers, unencrypted-secret scanning, suspicious DNS domains).
 - **🗂 Profiles** — The **🗂 Profile** button (top right) saves task presets — a filter, a starting view, and display settings — the way Wireshark's Configuration Profiles do. Ships with **HTTP Analysis**, **VoIP**, and **Security Review** presets, plus "Save current as…" for your own. Persists across restarts.
@@ -184,6 +185,7 @@ Usage: netscope-tui [OPTIONS]
 | **Dashboard** | Real-time stats, bandwidth, protocol distribution, top talkers |
 | **Connections** | Conversations grouped by flow — packets, bytes, direction, duration per connection. Press **💬 Follow** to read the conversation as plain text, or `b` to **block** the remote host via an OS firewall rule (`u` to unblock). |
 | **DNS Log** | All DNS queries and responses in one place |
+| **Insights** | *(desktop)* Automatic security & privacy analysis — plain-language findings (cleartext secrets, scans, errors, encryption ratio) rated by severity |
 | **Script** | *(desktop)* Write JavaScript over the captured packets — filter, aggregate, and flag anomalies without exporting to a file |
 | **Learn** | Plain-language guide to every protocol netscope shows, plus a glossary — for people new to networking |
 

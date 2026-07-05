@@ -53,6 +53,7 @@
       <button class="tab active" data-view="packets">Packets</button>
       <button class="tab" data-view="connections">Connections</button>
       <button class="tab" data-view="dashboard">Dashboard</button>
+      <button class="tab" data-view="insights">🛡 Insights</button>
       <button class="tab" data-view="script">⚡ Script</button>
       <button class="tab" data-view="learn">🎓 Learn</button>
     </nav>
@@ -139,6 +140,15 @@
             <div id="dns-list"></div>
           </div>
         </div>
+      </section>
+
+      <!-- Insights View — automatic plain-language security/privacy analysis -->
+      <section id="view-insights" class="view">
+        <div class="view-toolbar">
+          <button id="insights-rescan" class="btn btn-small btn-primary">🛡 Scan capture</button>
+          <span id="insights-summary" class="insights-summary"></span>
+        </div>
+        <div id="insights-list"></div>
       </section>
 
       <!-- Script View — in-app JavaScript console over the live packet stream -->

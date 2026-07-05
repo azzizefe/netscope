@@ -771,6 +771,12 @@ const FEATURE_CARDS = [
     look: 'Switch to "Seconds Since Beginning" if you want to measure how long something took after capture started.',
   },
   {
+    icon: '🛡', color: 'var(--ok)', title: 'Insights (auto security scan)',
+    gist: 'netscope reads your capture and tells you what matters.',
+    body: 'Open the 🛡 Insights tab and press Scan. Instead of leaving you to eyeball thousands of rows, netscope surfaces plain-language findings: cleartext passwords, unencrypted HTTP, possible port scans, connection errors, and how much of your traffic was actually encrypted — each rated high / warning / info.',
+    look: 'This is the thing Wireshark won\'t do: it shows everything but interprets nothing. Insights interprets.',
+  },
+  {
     icon: '↻', color: 'var(--danger)', title: 'Replay (Repeater)',
     gist: 'Resend a packet to a target and see the response.',
     body: 'Open a packet and press ↻ Replay to reload its payload into a small editor. Tweak it, pick the target host/port, and Send — netscope opens a fresh socket and shows you the response, so you don\'t need Packet Sender or Burp Repeater as a second tool.',
@@ -1021,6 +1027,162 @@ function updateScriptCount() {
   if (els.scriptCount) els.scriptCount.textContent = `${state.packets.length} packets available`;
 }
 
+// ---- Insights — automatic security & privacy analysis over the capture ----
+// Wireshark shows you everything but interprets nothing; this pass turns the
+// captured packets into plain-language findings. All heuristics run on data
+// already in state.packets — no extra capture, no network calls.
+const SEV_RANK = { high: 0, warn: 1, info: 2, ok: 3 };
+
+function analyzeCapture(pkts) {
+  const findings = [];
+  const add = (severity, icon, title, detail, evidence) =>
+    findings.push({ severity, icon, title, detail, evidence: evidence || [] });
+
+  // Byte accounting for the privacy headline.
+  let tlsBytes = 0, httpBytes = 0, totalBytes = 0;
+  const httpHosts = new Set();
+  const creds = [];
+  const credNeedles = ['password', 'passwd', 'pass=', 'pwd=', 'token', 'authorization:', 'api_key', 'apikey', 'secret'];
+  const dnsDomains = new Map();
+  const suspiciousDomains = [];
+  let resets = 0, malformed = 0;
+  const portsPerTarget = new Map(); // "src|dst" -> Set(dstPort)
+  const hostsPerSrc = new Map();     // src -> Set(dstAddr)
+
+  for (const p of pkts) {
+    totalBytes += p.length || 0;
+    if (p.protocol === 'TLS') tlsBytes += p.length || 0;
+
+    if (p.protocol === 'HTTP') {
+      httpBytes += p.length || 0;
+      if (p.dst_host || p.dst_addr) httpHosts.add(p.dst_host || p.dst_addr);
+      const text = (extractPayload(p.raw || []) ? decodeStreamText(extractPayload(p.raw || [])) : '').toLowerCase();
+      if (text) {
+        for (const n of credNeedles) {
+          if (text.includes(n)) { creds.push({ host: p.dst_host || p.dst_addr || '?', needle: n }); break; }
+        }
+      }
+    }
+
+    if (p.protocol === 'DNS') {
+      const m = (p.summary || '').match(/DNS (?:Query|Response) [—-] (\S+)/);
+      if (m) {
+        const d = m[1];
+        dnsDomains.set(d, (dnsDomains.get(d) || 0) + 1);
+        const label = d.split('.')[0] || '';
+        const digits = (label.match(/[0-9]/g) || []).length;
+        if (label.length > 25 || digits > 8) suspiciousDomains.push(d);
+      }
+    }
+
+    if ((p.summary || '').includes('reset (RST)')) resets++;
+    if ((p.summary || '').includes('Malformed')) malformed++;
+
+    if (p.src_addr && p.dst_addr) {
+      const pair = `${p.src_addr}|${p.dst_addr}`;
+      if (p.dst_port != null) {
+        if (!portsPerTarget.has(pair)) portsPerTarget.set(pair, new Set());
+        portsPerTarget.get(pair).add(p.dst_port);
+      }
+      if (!hostsPerSrc.has(p.src_addr)) hostsPerSrc.set(p.src_addr, new Set());
+      hostsPerSrc.get(p.src_addr).add(p.dst_addr);
+    }
+  }
+
+  // 1. Cleartext credentials — highest priority.
+  if (creds.length) {
+    const hosts = [...new Set(creds.map((c) => c.host))];
+    add('high', '🔓', `Possible credential sent in cleartext (${creds.length})`,
+      'Unencrypted HTTP payloads contained words like "password" or "token". Anyone between you and the server could read these. The site should be using HTTPS.',
+      hosts.slice(0, 5).map((h) => `to ${h}`));
+  }
+
+  // 2. Unencrypted HTTP traffic.
+  if (httpHosts.size) {
+    add('warn', '🌐', `Unencrypted HTTP to ${httpHosts.size} site${httpHosts.size > 1 ? 's' : ''}`,
+      'Plain HTTP is readable by anyone on the network path (your ISP, Wi-Fi operator, etc.). Prefer HTTPS.',
+      [...httpHosts].slice(0, 6));
+  }
+
+  // 3. Connection problems.
+  if (resets + malformed >= 5) {
+    add('warn', '⚠', `${resets} resets, ${malformed} malformed packets`,
+      'A burst of connection resets or malformed packets can mean an unstable link, a firewall cutting connections, or scanning activity.');
+  }
+
+  // 4. Possible port scan (one source probing many ports on one target).
+  for (const [pair, ports] of portsPerTarget) {
+    if (ports.size >= 15) {
+      const [src, dst] = pair.split('|');
+      add('high', '📡', `Possible port scan: ${src} → ${dst}`,
+        `${src} contacted ${ports.size} different ports on ${dst}. Hitting many ports on one host is a classic scan pattern.`);
+    }
+  }
+
+  // 5. High fan-out (one host reaching an unusually large number of destinations).
+  for (const [src, hosts] of hostsPerSrc) {
+    if (hosts.size >= 40) {
+      add('info', '🕸', `${src} contacted ${hosts.size} different hosts`,
+        'A single host reaching very many destinations can be normal (a browser, an updater) or can indicate scanning or malware beaconing. Worth a glance.');
+    }
+  }
+
+  // 6. Plaintext DNS exposure.
+  if (dnsDomains.size) {
+    const top = [...dnsDomains.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([d, n]) => `${d} (${n})`);
+    add('info', '🕵', `${dnsDomains.size} domain${dnsDomains.size > 1 ? 's' : ''} looked up in cleartext`,
+      'Standard DNS is unencrypted, so your network and ISP can see every domain you resolve — even for HTTPS sites. Consider DNS-over-HTTPS/TLS for privacy.',
+      top);
+  }
+  if (suspiciousDomains.length) {
+    add('warn', '🧬', `${suspiciousDomains.length} unusual domain name${suspiciousDomains.length > 1 ? 's' : ''}`,
+      'Very long or high-digit domain labels can indicate DNS tunneling or algorithmically-generated malware domains.',
+      [...new Set(suspiciousDomains)].slice(0, 5));
+  }
+
+  // 7. Privacy headline (encrypted vs cleartext web traffic).
+  const webBytes = tlsBytes + httpBytes;
+  if (webBytes > 0) {
+    const enc = Math.round((tlsBytes / webBytes) * 100);
+    if (httpBytes === 0) {
+      add('ok', '🔒', 'All web traffic was encrypted', 'Every web (HTTP/TLS) byte in this capture used HTTPS. Good — its contents are private in transit.');
+    } else {
+      add(enc >= 80 ? 'info' : 'warn', '🔐', `${enc}% of web traffic was encrypted`,
+        `${formatBytes(tlsBytes)} went over HTTPS and ${formatBytes(httpBytes)} over plain HTTP. The plain part is readable in transit.`);
+    }
+  }
+
+  findings.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity]);
+  return findings;
+}
+
+function renderInsights() {
+  const pkts = state.packets;
+  if (!pkts.length) {
+    els.insightsSummary.textContent = '';
+    els.insightsList.innerHTML = '<div class="insights-empty">No packets captured yet. Start a capture (or open a .pcap), then scan.</div>';
+    return;
+  }
+  const findings = analyzeCapture(pkts);
+  const highs = findings.filter((f) => f.severity === 'high').length;
+  const warns = findings.filter((f) => f.severity === 'warn').length;
+  els.insightsSummary.innerHTML = `Scanned <b>${pkts.length}</b> packets · ` +
+    `${highs ? `<span class="sev-dot sev-high"></span><b>${highs}</b> high · ` : ''}` +
+    `${warns ? `<span class="sev-dot sev-warn"></span><b>${warns}</b> warnings · ` : ''}` +
+    `${findings.length} finding${findings.length === 1 ? '' : 's'}`;
+
+  els.insightsList.innerHTML = findings.map((f) => `
+    <div class="finding sev-${f.severity}">
+      <div class="finding-head">
+        <span class="finding-icon">${f.icon}</span>
+        <span class="finding-title">${esc(f.title)}</span>
+        <span class="finding-sev">${f.severity.toUpperCase()}</span>
+      </div>
+      <div class="finding-detail">${esc(f.detail)}</div>
+      ${f.evidence.length ? `<ul class="finding-evidence">${f.evidence.map((e) => `<li class="mono">${esc(e)}</li>`).join('')}</ul>` : ''}
+    </div>`).join('') || '<div class="insights-empty">Nothing notable found — no cleartext secrets, scans, or errors in this capture.</div>';
+}
+
 // ---- Views ----
 function switchView(view) {
   state.view = view;
@@ -1034,6 +1196,7 @@ function renderAll() {
   else if (state.view === 'connections') renderConnections();
   else if (state.view === 'dashboard') renderStats();
   else if (state.view === 'script') updateScriptCount();
+  else if (state.view === 'insights') renderInsights();
 }
 
 // ---- Keyboard ----
@@ -1044,7 +1207,7 @@ function handleKeydown(e) {
   if (!els.replayModal.classList.contains('hidden')) return; // don't hijack keys while editing the replay form
   if (e.key === 'Tab') {
     e.preventDefault();
-    const views = ['packets', 'connections', 'dashboard', 'script', 'learn'];
+    const views = ['packets', 'connections', 'dashboard', 'insights', 'script', 'learn'];
     switchView(views[(views.indexOf(state.view) + 1) % views.length]);
   } else if (state.view === 'packets') {
     if (e.key === 'ArrowDown' || e.key === 'j') {
@@ -1075,6 +1238,7 @@ async function init() {
     scriptEditor: $('#script-editor'), scriptRun: $('#script-run'), scriptClear: $('#script-clear'),
     scriptExamples: $('#script-examples'), scriptOutput: $('#script-output'),
     scriptTime: $('#script-time'), scriptCount: $('#script-count'),
+    insightsRescan: $('#insights-rescan'), insightsSummary: $('#insights-summary'), insightsList: $('#insights-list'),
     streamModal: $('#stream-modal'), streamTitle: $('#stream-title'), streamMeta: $('#stream-meta'),
     streamBody: $('#stream-body'), streamClose: $('#stream-close'),
     replayOpen: $('#replay-open'), replayModal: $('#replay-modal'), replayClose: $('#replay-close'),
@@ -1129,6 +1293,8 @@ async function init() {
   });
   els.streamClose.addEventListener('click', closeFollowStream);
   els.streamModal.addEventListener('click', (e) => { if (e.target === els.streamModal) closeFollowStream(); });
+
+  els.insightsRescan.addEventListener('click', renderInsights);
 
   els.replayOpen.addEventListener('click', openReplay);
   els.replayClose.addEventListener('click', closeReplay);
