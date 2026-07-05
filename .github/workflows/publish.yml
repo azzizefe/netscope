@@ -1,0 +1,36 @@
+name: Publish to crates.io
+
+# Publishes the library and TUI crates to crates.io when a version tag is pushed.
+# Requires a CARGO_REGISTRY_TOKEN repository secret (Settings → Secrets → Actions).
+# Get the token from https://crates.io/settings/tokens
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install libpcap
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      # netscope-tui depends on netscope-core, so core must be published first.
+      # --no-verify skips the local rebuild; metadata is still validated by the registry.
+      - name: Publish netscope-core
+        run: cargo publish -p netscope-core --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+
+      - name: Wait for crates.io index to update
+        run: sleep 30
+
+      - name: Publish netscope-tui
+        run: cargo publish -p netscope-tui --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"

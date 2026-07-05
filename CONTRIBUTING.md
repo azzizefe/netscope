@@ -96,4 +96,4 @@ tools/                — Utility crates (fixture generator)
 
 ## Questions?
 
-Open a [Discussion](https://github.com/yourusername/netscope/discussions) or join our community chat.
+Open a [Discussion](https://github.com/azzizefe/netscope/discussions) or join our community chat.

@@ -14,7 +14,8 @@
   <a href="#install"><img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-blue" alt="Platforms"></a>
   <img src="https://img.shields.io/badge/rust-1.95+-orange" alt="Rust">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/github/actions/workflow/status/yourusername/netscope/ci.yml?branch=main&label=ci" alt="CI">
+  <a href="https://github.com/azzizefe/netscope/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/azzizefe/netscope/ci.yml?branch=main&label=ci" alt="CI"></a>
+  <a href="https://crates.io/crates/netscope-tui"><img src="https://img.shields.io/crates/v/netscope-tui.svg" alt="crates.io"></a>
 </p>
 
 <p align="center">
@@ -256,7 +257,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 <p align="center">
   Built with ❤️ and 🦀
   <br>
-  <a href="https://github.com/yourusername/netscope">GitHub</a> •
+  <a href="https://github.com/azzizefe/netscope">GitHub</a> •
   <a href="https://crates.io/crates/netscope-tui">crates.io</a> •
   <a href="#netscope-">Back to top</a>
 </p>

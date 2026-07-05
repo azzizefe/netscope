@@ -17,13 +17,13 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary: netscope
+            binary: netscope-tui
           - os: macos-latest
             target: aarch64-apple-darwin
-            binary: netscope
+            binary: netscope-tui
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary: netscope.exe
+            binary: netscope-tui.exe
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -138,9 +138,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            netscope-x86_64-unknown-linux-gnu/netscope
-            netscope-aarch64-apple-darwin/netscope
-            netscope-x86_64-pc-windows-msvc/netscope.exe
+            netscope-x86_64-unknown-linux-gnu/netscope-tui
+            netscope-aarch64-apple-darwin/netscope-tui
+            netscope-x86_64-pc-windows-msvc/netscope-tui.exe
             netscope-desktop-Linux/**
             netscope-desktop-macOS/**
             netscope-desktop-Windows/**

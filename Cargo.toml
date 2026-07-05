@@ -6,3 +6,15 @@ members = [
     "desktop/src-tauri",
     "tools/gen-fixtures",
 ]
+
+# Shared metadata inherited by the publishable crates (see `*.workspace = true`).
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["azzizefe"]
+repository = "https://github.com/azzizefe/netscope"
+homepage = "https://github.com/azzizefe/netscope"
+readme = "README.md"
+keywords = ["network", "packet", "capture", "wireshark", "tui"]
+categories = ["network-programming", "command-line-utilities"]
