@@ -10,6 +10,151 @@ use crossbeam_channel::Sender;
 use crate::dissectors::{self, DissectedResult};
 use crate::models::Packet;
 
+/// Translate human-friendly protocol names in a filter expression into valid
+/// BPF syntax. Tokens that are already valid BPF (ports, hostnames, operators)
+/// are left untouched, so "http or tls" becomes "tcp port 80 or tcp port 443".
+pub fn translate_bpf_filter(raw: &str) -> String {
+    // Longer names first so "https" is matched before "http".
+    const MAP: &[(&str, &str)] = &[
+        // web
+        ("https",   "tcp port 443"),
+        ("http",    "tcp port 80"),
+        ("tls",     "tcp port 443"),
+        ("ssl",     "tcp port 443"),
+        // mail
+        ("smtps",   "tcp port 465"),
+        ("smtp",    "tcp port 25"),
+        ("imaps",   "tcp port 993"),
+        ("imap",    "tcp port 143"),
+        ("pop3s",   "tcp port 995"),
+        ("pop3",    "tcp port 110"),
+        // infrastructure
+        ("dns",     "udp port 53"),
+        ("dhcp",    "udp port 67 or udp port 68"),
+        ("bootp",   "udp port 67 or udp port 68"),
+        ("ntp",     "udp port 123"),
+        ("snmp",    "udp port 161"),
+        ("ssh",     "tcp port 22"),
+        ("ftp",     "tcp port 21"),
+        ("telnet",  "tcp port 23"),
+        ("rdp",     "tcp port 3389"),
+        ("ldaps",   "tcp port 636"),
+        ("ldap",    "tcp port 389"),
+        // databases
+        ("mysql",   "tcp port 3306"),
+        ("postgres","tcp port 5432"),
+        ("redis",   "tcp port 6379"),
+        ("mongodb", "tcp port 27017"),
+        // already-valid BPF tokens — pass through (listed only so
+        // sub-word matches like "icmp" inside "icmp6" are avoided)
+        ("icmp6",   "icmp6"),
+        ("icmp",    "icmp"),
+        ("arp",     "arp"),
+    ];
+
+    let mut result = String::with_capacity(raw.len() + 64);
+    let mut i = 0;
+    let bytes = raw.as_bytes();
+
+    while i < bytes.len() {
+        // Skip whitespace and parentheses verbatim.
+        if bytes[i].is_ascii_whitespace() || bytes[i] == b'(' || bytes[i] == b')' {
+            result.push(bytes[i] as char);
+            i += 1;
+            continue;
+        }
+
+        // Collect a token (letters, digits, underscore, dot, hyphen).
+        let start = i;
+        while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] == b'.' || bytes[i] == b'-') {
+            i += 1;
+        }
+        let token = &raw[start..i];
+
+        // Case-insensitive lookup, longer keys first (already ordered above).
+        let replacement = MAP.iter().find_map(|(k, v)| {
+            if token.len() == k.len() && token.eq_ignore_ascii_case(k) {
+                Some(*v)
+            } else {
+                None
+            }
+        });
+
+        match replacement {
+            Some(r) => result.push_str(r),
+            None => result.push_str(token),
+        }
+    }
+
+    result
+}
+
+#[cfg(test)]
+mod filter_tests {
+    use super::translate_bpf_filter;
+
+    #[test]
+    fn simple_http() {
+        assert_eq!(translate_bpf_filter("http"), "tcp port 80");
+        assert_eq!(translate_bpf_filter("HTTP"), "tcp port 80");
+    }
+
+    #[test]
+    fn http_or_tls() {
+        assert_eq!(
+            translate_bpf_filter("http or tls"),
+            "tcp port 80 or tcp port 443"
+        );
+    }
+
+    #[test]
+    fn compound_expression() {
+        assert_eq!(
+            translate_bpf_filter("http or tls or dns"),
+            "tcp port 80 or tcp port 443 or udp port 53"
+        );
+    }
+
+    #[test]
+    fn parenthesized() {
+        assert_eq!(
+            translate_bpf_filter("(http or tls) and host 1.2.3.4"),
+            "(tcp port 80 or tcp port 443) and host 1.2.3.4"
+        );
+    }
+
+    #[test]
+    fn already_valid_bpf_unchanged() {
+        let bpf = "tcp port 80 or udp port 53";
+        assert_eq!(translate_bpf_filter(bpf), bpf);
+    }
+
+    #[test]
+    fn icmp_arp_pass_through() {
+        assert_eq!(translate_bpf_filter("icmp or arp"), "icmp or arp");
+    }
+
+    #[test]
+    fn https_takes_precedence_over_http() {
+        // "https" must NOT become "tcp port 443s" (substring match bug).
+        assert_eq!(translate_bpf_filter("https"), "tcp port 443");
+    }
+
+    #[test]
+    fn mixed_ports_and_protocols() {
+        assert_eq!(
+            translate_bpf_filter("ssh or tcp port 8080"),
+            "tcp port 22 or tcp port 8080"
+        );
+    }
+
+    #[test]
+    fn empty_and_whitespace() {
+        assert_eq!(translate_bpf_filter(""), "");
+        assert_eq!(translate_bpf_filter("  "), "  ");
+    }
+}
+
 pub fn list_interfaces() -> Result<Vec<pcap::Device>> {
     pcap::Device::list().context("Failed to list network interfaces.\n  On Windows: Install Npcap from https://npcap.com\n  On Linux/macOS: Run with sudo or set CAP_NET_RAW capability")
 }
@@ -128,7 +273,8 @@ impl CaptureEngine {
             })?;
 
         if let Some(filter) = bpf_filter {
-            cap.filter(filter, true)
+            let translated = translate_bpf_filter(filter);
+            cap.filter(&translated, true)
                 .map_err(|e| anyhow::anyhow!("Invalid BPF filter '{filter}': {e}"))?;
         }
 
@@ -186,7 +332,8 @@ impl CaptureEngine {
             .map_err(|e| anyhow::anyhow!("Failed to open pcap file '{filepath}': {e}"))?;
 
         if let Some(filter) = bpf_filter {
-            cap.filter(filter, true)
+            let translated = translate_bpf_filter(filter);
+            cap.filter(&translated, true)
                 .map_err(|e| anyhow::anyhow!("Invalid BPF filter '{filter}': {e}"))?;
         }
 
