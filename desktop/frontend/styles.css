@@ -482,7 +482,9 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .spark { display: block; width: 100%; height: 30px; margin-top: 6px; }
 
 /* ---- Topology map ---- */
-#view-topology { display: flex; flex-direction: column; }
+/* Hidden by default (an ID selector would otherwise override `.view{display:none}`
+   and keep the topology graph visible on top of every other view). */
+#view-topology { display: none; flex-direction: column; }
 #view-topology.active { display: flex; }
 .topology-toolbar { display: flex; align-items: center; gap: 12px; }
 .topo-check { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); cursor: pointer; }

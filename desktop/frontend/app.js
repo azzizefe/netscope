@@ -16,6 +16,13 @@ function loadJSON(key, fallback) {
 function saveJSON(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable — settings just won't persist */ }
 }
+// Pick a sensible starting UI language from the browser locale, falling back to
+// English. The user's explicit choice (persisted in settings) always wins.
+function detectDefaultLang() {
+  const supported = ['en', 'de', 'fr', 'it', 'pt', 'ar', 'tr'];
+  const nav = ((typeof navigator !== 'undefined' && navigator.language) || 'en').slice(0, 2).toLowerCase();
+  return supported.includes(nav) ? nav : 'en';
+}
 
 // ---- Themes (customizable UX — VS Code-style and friends) ----
 // Each theme overrides the core CSS custom properties defined in styles.css.
@@ -89,7 +96,7 @@ const state = {
   },
   // Time Display Format: 'time' (HH:MM:SS.mmm), 'datetime' (date + time),
   // 'relative' (seconds since the first packet of this capture session).
-  settings: Object.assign({ timeFormat: 'time', showHostnames: true, profile: 'HTTP Analysis', theme: 'midnight', noiseFilter: false }, loadJSON('netscope.settings', {})),
+  settings: Object.assign({ timeFormat: 'time', showHostnames: true, profile: 'HTTP Analysis', theme: 'midnight', noiseFilter: false, lang: detectDefaultLang() }, loadJSON('netscope.settings', {})),
   customProfiles: loadJSON('netscope.profiles', {}),
   captureStartEpoch: null,
   // Live dashboard sampling (1 Hz): rolling history for the sparkline widgets.
@@ -205,7 +212,7 @@ async function stopCapture() {
 }
 function setStatus(s) {
   state.status = s;
-  els.statusText.textContent = `● ${s}`;
+  els.statusText.textContent = s === STATES.CAPTURING ? I18N.t('status.capturing') : I18N.t('status.idle');
   els.statusText.className = s === STATES.CAPTURING ? 'status-capturing' : 'status-idle';
 }
 
@@ -215,7 +222,7 @@ function onPacket(event) {
   state.packets.push(pkt);
   if (state.packets.length > 10000) state.packets.shift();
   state.packetCount++;
-  els.packetCount.textContent = `${state.packetCount} packets`;
+  els.packetCount.textContent = `${state.packetCount} ${I18N.t('unit.packets')}`;
 
   updateStats(pkt);
   updateFlow(pkt);
@@ -284,7 +291,7 @@ function renderConnections() {
   els.connSummary.innerHTML = flows.length
     ? `${flows.length} connections · <b>${state.blocked.size}</b> blocked` +
       (state.elevated ? '' : ' · <span style="color:var(--warn)">run as Administrator to block</span>')
-    : 'No connections yet — start a capture.';
+    : I18N.t('conn.empty');
 
   els.connList.innerHTML = flows.map((f) => {
     const isBlocked = state.blocked.has(f.serverAddr);
@@ -1850,7 +1857,7 @@ function renderTopology(force = false) {
   const graph = buildTopologyGraph();
   els.topologySummary.textContent = graph.nodes.length
     ? `${graph.nodes.length} hosts · ${graph.edges.length} conversations`
-    : 'No traffic yet — start a capture to see the map draw itself.';
+    : I18N.t('topo.empty');
   if (!graph.nodes.length) { svg.innerHTML = ''; els.topologyLegend.innerHTML = ''; return; }
 
   layoutTopology(graph);
@@ -2638,7 +2645,7 @@ async function init() {
     profileBtn: $('#profile-btn'), profileName: $('#profile-name'), profilePanel: $('#profile-panel'),
     profileList: $('#profile-list'), profileSaveBtn: $('#profile-save-btn'),
     timeFormatSelect: $('#time-format-select'), resolveNamesCheck: $('#resolve-names-check'),
-    themeSelect: $('#theme-select'),
+    themeSelect: $('#theme-select'), langSelect: $('#lang-select'),
     reportOpen: $('#report-open'), reportModal: $('#report-modal'), reportClose: $('#report-close'),
     reportCopy: $('#report-copy'), reportBody: $('#report-body'), reportStatus: $('#report-status'), reportScrub: $('#report-scrub'),
     topologySvg: $('#topology-svg'), topologySummary: $('#topology-summary'), topologyLegend: $('#topology-legend'),
@@ -2652,6 +2659,18 @@ async function init() {
     alertBtn: $('#alert-btn'), alertBadge: $('#alert-badge'), alertPanel: $('#alert-panel'), alertList: $('#alert-list'),
     triggerList: $('#trigger-list'), trigField: $('#trig-field'), trigOp: $('#trig-op'), trigValue: $('#trig-value'), trigAdd: $('#trig-add'),
   });
+
+  // Wire up view navigation FIRST, synchronously, before any await. Tab
+  // switching and keyboard shortcuts must never depend on IPC or event
+  // subscription succeeding — otherwise a slow/failed async step below would
+  // abort init() and leave the tabs unresponsive.
+  $$('.tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
+  document.addEventListener('keydown', handleKeydown);
+
+  // Translate all static UI chrome to the saved/detected language up front.
+  I18N.apply(state.settings.lang);
+  els.langSelect.value = state.settings.lang;
+  els.packetCount.textContent = `0 ${I18N.t('unit.packets')}`;
 
   await loadInterfaces();
   await loadLearn();
@@ -2671,8 +2690,10 @@ async function init() {
     if (blocked) blocked.forEach((ip) => state.blocked.add(ip));
   } catch (e) { console.error(e); }
 
-  await listen('packet', onPacket);
-  await listen('capture-finished', () => { setStatus(STATES.IDLE); els.startBtn.disabled = false; els.stopBtn.disabled = true; });
+  try {
+    await listen('packet', onPacket);
+    await listen('capture-finished', () => { setStatus(STATES.IDLE); els.startBtn.disabled = false; els.stopBtn.disabled = true; });
+  } catch (e) { console.error('event subscription failed', e); }
 
   els.startBtn.addEventListener('click', startCapture);
   els.stopBtn.addEventListener('click', stopCapture);
@@ -2755,6 +2776,17 @@ async function init() {
     saveJSON('netscope.settings', state.settings);
   });
 
+  // Language selector — translate the UI and persist the choice.
+  els.langSelect.addEventListener('change', () => {
+    state.settings.lang = els.langSelect.value;
+    I18N.apply(state.settings.lang);
+    saveJSON('netscope.settings', state.settings);
+    // Refresh the dynamic strings JS controls (static chrome is done by apply()).
+    setStatus(state.status);
+    els.packetCount.textContent = `${state.packetCount} ${I18N.t('unit.packets')}`;
+    renderAll();
+  });
+
   // Topology map controls
   els.topoFreeze.addEventListener('change', () => { state.topo.frozen = els.topoFreeze.checked; });
   els.topoFit.addEventListener('click', () => renderTopology(true));
@@ -2819,9 +2851,6 @@ async function init() {
     els.scriptExamples.value = '';
     els.scriptEditor.focus();
   });
-
-  $$('.tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
-  document.addEventListener('keydown', handleKeydown);
 
   renderAll();
 }
