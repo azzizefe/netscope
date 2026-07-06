@@ -1,5 +1,6 @@
 /target
 *.pcap
+node_modules/
 desktop/node_modules
 desktop/dist
 npcap-sdk/

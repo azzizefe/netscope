@@ -460,6 +460,61 @@ const I18N = (() => {
     },
   };
 
+  // Additional keys for dynamically-generated UI (empty states and short
+  // labels the render functions inject). Merged into the per-language tables.
+  const EXTRA = {
+    en: {
+      'empty.capture': 'No packets captured yet. Start a capture (or open a .pcap), then scan.',
+      'insights.nofindings': 'Nothing notable found — no cleartext secrets, scans, or errors in this capture.',
+      'privacy.nosites': 'No external sites in this capture.',
+      'script.empty': 'No output — return a value, or call print() / flag() in your script.',
+      'conn.admin': 'run as Administrator to block',
+    },
+    de: {
+      'empty.capture': 'Noch keine Pakete aufgezeichnet. Starten Sie eine Aufzeichnung (oder öffnen Sie eine .pcap), dann scannen.',
+      'insights.nofindings': 'Nichts Auffälliges gefunden — keine Klartext-Geheimnisse, Scans oder Fehler in dieser Aufzeichnung.',
+      'privacy.nosites': 'Keine externen Seiten in dieser Aufzeichnung.',
+      'script.empty': 'Keine Ausgabe — geben Sie einen Wert zurück oder rufen Sie print() / flag() im Skript auf.',
+      'conn.admin': 'als Administrator ausführen, um zu blockieren',
+    },
+    fr: {
+      'empty.capture': 'Aucun paquet capturé. Démarrez une capture (ou ouvrez un .pcap), puis analysez.',
+      'insights.nofindings': 'Rien de notable — aucun secret en clair, scan ou erreur dans cette capture.',
+      'privacy.nosites': 'Aucun site externe dans cette capture.',
+      'script.empty': 'Aucune sortie — renvoyez une valeur ou appelez print() / flag() dans votre script.',
+      'conn.admin': 'exécuter en tant qu’administrateur pour bloquer',
+    },
+    it: {
+      'empty.capture': 'Nessun pacchetto acquisito. Avvia un’acquisizione (o apri un .pcap), poi analizza.',
+      'insights.nofindings': 'Nulla di rilevante — nessun segreto in chiaro, scansione o errore in questa acquisizione.',
+      'privacy.nosites': 'Nessun sito esterno in questa acquisizione.',
+      'script.empty': 'Nessun output — restituisci un valore o chiama print() / flag() nello script.',
+      'conn.admin': 'esegui come amministratore per bloccare',
+    },
+    pt: {
+      'empty.capture': 'Nenhum pacote capturado. Inicie uma captura (ou abra um .pcap) e depois analise.',
+      'insights.nofindings': 'Nada notável — nenhum segredo em texto claro, varredura ou erro nesta captura.',
+      'privacy.nosites': 'Nenhum site externo nesta captura.',
+      'script.empty': 'Sem saída — retorne um valor ou chame print() / flag() no seu script.',
+      'conn.admin': 'execute como administrador para bloquear',
+    },
+    ar: {
+      'empty.capture': 'لم تُلتقط أي حزم بعد. ابدأ التقاطاً (أو افتح ملف ‎.pcap) ثم افحص.',
+      'insights.nofindings': 'لم يُعثر على شيء ملحوظ — لا أسرار بنص واضح ولا فحوصات ولا أخطاء في هذا الالتقاط.',
+      'privacy.nosites': 'لا مواقع خارجية في هذا الالتقاط.',
+      'script.empty': 'لا مخرجات — أعِد قيمة أو استدعِ print() / flag() في السكربت.',
+      'conn.admin': 'شغّله كمسؤول للحظر',
+    },
+    tr: {
+      'empty.capture': 'Henüz paket yakalanmadı. Bir yakalama başlatın (ya da bir .pcap açın), sonra tarayın.',
+      'insights.nofindings': 'Kayda değer bir şey bulunamadı — bu yakalamada açık metin sır, tarama veya hata yok.',
+      'privacy.nosites': 'Bu yakalamada dış site yok.',
+      'script.empty': 'Çıktı yok — bir değer döndürün ya da betikte print() / flag() çağırın.',
+      'conn.admin': 'engellemek için Yönetici olarak çalıştırın',
+    },
+  };
+  for (const l of Object.keys(DICT)) Object.assign(DICT[l], EXTRA[l] || {});
+
   let current = 'en';
 
   function t(key) {

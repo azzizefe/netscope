@@ -290,7 +290,7 @@ function renderConnections() {
   const flows = [...state.flows.values()].sort((a, b) => b.bytes - a.bytes);
   els.connSummary.innerHTML = flows.length
     ? `${flows.length} connections · <b>${state.blocked.size}</b> blocked` +
-      (state.elevated ? '' : ' · <span style="color:var(--warn)">run as Administrator to block</span>')
+      (state.elevated ? '' : ` · <span style="color:var(--warn)">${esc(I18N.t('conn.admin'))}</span>`)
     : I18N.t('conn.empty');
 
   els.connList.innerHTML = flows.map((f) => {
@@ -1477,7 +1477,7 @@ function renderScriptOutput({ logs, flagged, ret, err, ms, total }) {
     else retText = String(ret);
     html += `<div class="script-block"><div class="script-block-h">return</div><pre class="script-ret">${esc(retText)}</pre></div>`;
   }
-  if (!html) html = '<div class="script-empty">No output — return a value, or call print() / flag() in your script.</div>';
+  if (!html) html = `<div class="script-empty">${esc(I18N.t('script.empty'))}</div>`;
   els.scriptOutput.innerHTML = html;
 }
 
@@ -1699,7 +1699,7 @@ function renderInsights() {
   const pkts = state.packets;
   if (!pkts.length) {
     els.insightsSummary.textContent = '';
-    els.insightsList.innerHTML = '<div class="insights-empty">No packets captured yet. Start a capture (or open a .pcap), then scan.</div>';
+    els.insightsList.innerHTML = `<div class="insights-empty">${esc(I18N.t('empty.capture'))}</div>`;
     return;
   }
   const findings = analyzeCapture(pkts);
@@ -1720,7 +1720,7 @@ function renderInsights() {
       <div class="finding-detail">${esc(f.detail)}</div>
       ${f.evidence.length ? `<ul class="finding-evidence">${f.evidence.map((e) => `<li class="mono">${esc(e)}</li>`).join('')}</ul>` : ''}
       ${demoDetails(f.title)}
-    </div>`).join('') || '<div class="insights-empty">Nothing notable found — no cleartext secrets, scans, or errors in this capture.</div>';
+    </div>`).join('') || `<div class="insights-empty">${esc(I18N.t('insights.nofindings'))}</div>`;
 }
 
 // ---- Live dashboard sampling (1 Hz) — "Grafana-style" metric tiles ----
@@ -2514,7 +2514,7 @@ function renderPrivacy() {
   if (!pkts.length) {
     els.privacySummary.textContent = '';
     els.privacyCost.innerHTML = '';
-    els.privacyList.innerHTML = '<div class="insights-empty">No packets captured yet. Start a capture (or open a .pcap), then scan.</div>';
+    els.privacyList.innerHTML = `<div class="insights-empty">${esc(I18N.t('empty.capture'))}</div>`;
     return;
   }
   const sites = analyzePrivacy(pkts).slice(0, 40);
@@ -2572,7 +2572,7 @@ function renderPrivacy() {
         ${s.server ? `<div class="site-row"><span class="site-k">Server</span><span class="site-v mono">${esc(s.server)}</span></div>` : ''}
       </div>
     </div>`;
-  }).join('') || '<div class="insights-empty">No external sites in this capture.</div>';
+  }).join('') || `<div class="insights-empty">${esc(I18N.t('privacy.nosites'))}</div>`;
 }
 
 // ---- Views ----

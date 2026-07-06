@@ -1,0 +1,13 @@
+{
+  "name": "netscope-frontend-tests",
+  "private": true,
+  "type": "module",
+  "description": "Unit tests for the netscope desktop frontend analysis engine (desktop/frontend/app.js). Runs the real shipped source in a sandbox — no duplication.",
+  "scripts": {
+    "test": "vitest run",
+    "watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.9"
+  }
+}
