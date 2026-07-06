@@ -7,6 +7,7 @@ use ratatui::Frame;
 use crate::app::App;
 use crate::colors::{protocol_color, PANEL_BORDER};
 use netscope_core::models::Protocol;
+use netscope_core::stats::StatsSnapshot;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
     let layout = Layout::default()
@@ -19,15 +20,16 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
         ])
         .split(area);
 
-    render_stats_panel(frame, layout[0], app);
-    render_protocol_distribution(frame, layout[1], app);
-    render_bandwidth_panel(frame, layout[2], app);
-    render_top_talkers(frame, layout[3], app);
+    // One snapshot per frame keeps every panel consistent and avoids repeatedly
+    // rebuilding the (cloned) stats maps four times per render.
+    let snap = app.stats.snapshot();
+    render_stats_panel(frame, layout[0], &snap);
+    render_protocol_distribution(frame, layout[1], &snap);
+    render_bandwidth_panel(frame, layout[2], &snap);
+    render_top_talkers(frame, layout[3], &snap);
 }
 
-fn render_stats_panel(frame: &mut Frame, area: Rect, app: &mut App) {
-    let snap = app.stats.snapshot();
-
+fn render_stats_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
     let lines = vec![
         Line::from(vec![
             Span::raw(format!(" Total Packets: {}", snap.total_packets)),
@@ -59,8 +61,7 @@ fn render_stats_panel(frame: &mut Frame, area: Rect, app: &mut App) {
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn render_protocol_distribution(frame: &mut Frame, area: Rect, app: &mut App) {
-    let snap = app.stats.snapshot();
+fn render_protocol_distribution(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
     let total = snap.total_packets.max(1) as f64;
 
     let mut protocols: Vec<(&Protocol, &netscope_core::stats::ProtocolStats)> =
@@ -96,9 +97,7 @@ fn render_protocol_distribution(frame: &mut Frame, area: Rect, app: &mut App) {
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn render_bandwidth_panel(frame: &mut Frame, area: Rect, app: &mut App) {
-    let snap = app.stats.snapshot();
-
+fn render_bandwidth_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
     let bw_bps = snap.current_bandwidth;
     let bar_len = ((bw_bps / 10_000_000.0).min(1.0) * 50.0) as usize;
     let bar = "━".repeat(bar_len);
@@ -120,9 +119,7 @@ fn render_bandwidth_panel(frame: &mut Frame, area: Rect, app: &mut App) {
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn render_top_talkers(frame: &mut Frame, area: Rect, app: &mut App) {
-    let snap = app.stats.snapshot();
-
+fn render_top_talkers(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
     let layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])

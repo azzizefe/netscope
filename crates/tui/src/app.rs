@@ -182,6 +182,8 @@ impl App {
         if self.paused {
             return;
         }
+        // Advance the bandwidth sampler once per tick (it self-throttles to 1 Hz).
+        self.stats.tick();
         // Drain available packets
         while let Ok(pkt) = self.packet_rx.try_recv() {
             self.names.observe(&pkt);

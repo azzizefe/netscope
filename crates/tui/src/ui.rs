@@ -44,7 +44,7 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &mut App) {
     let state_icon = if app.paused { "⏸" } else { "●" };
     let state_color = if app.paused { "Paused" } else { "Capturing" };
     let elapsed = app.elapsed_secs();
-    let total = app.stats.snapshot().total_packets;
+    let total = app.stats.total_packets();
 
     let mut spans = vec![
         format!(" netscope ▸ {} ", app.interface_name).into(),

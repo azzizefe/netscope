@@ -391,7 +391,11 @@ fn save_pcap(state: State<'_, Mutex<CaptureState>>, path: String) -> Result<(), 
     for pkt in &guard.packet_buffer {
         let ts_sec = pkt.timestamp.timestamp() as u32;
         let ts_usec = pkt.timestamp.timestamp_subsec_micros();
-        let incl_len = pkt.length as u32;
+        // incl_len is the number of bytes actually stored in the file, which is
+        // the captured data — not the original on-wire length. When snaplen
+        // truncates a frame these differ, and writing pkt.length here would
+        // desync the reader (it would read past the stored bytes).
+        let incl_len = pkt.data.len() as u32;
         let orig_len = pkt.length as u32;
 
         let pkt_header = [

@@ -88,8 +88,11 @@ impl StatsEngine {
         }
     }
 
-    pub fn snapshot(&mut self) -> StatsSnapshot {
-        // Update bandwidth every call (tick)
+    /// Advance the per-second bandwidth sampler. Call this once per app tick;
+    /// it only records a sample when a full second has elapsed. Kept separate
+    /// from [`snapshot`] so rendering (which may call `snapshot` several times
+    /// per frame) never mutates the sampler.
+    pub fn tick(&mut self) {
         let elapsed = self.last_second_check.elapsed();
         if elapsed >= Duration::from_secs(1) {
             let bw = self.bytes_this_second as f64 / elapsed.as_secs_f64();
@@ -100,7 +103,14 @@ impl StatsEngine {
             self.bytes_this_second = 0;
             self.last_second_check = Instant::now();
         }
+    }
 
+    /// Total packets seen — a cheap read that avoids building a full snapshot.
+    pub fn total_packets(&self) -> u64 {
+        self.total_packets
+    }
+
+    pub fn snapshot(&self) -> StatsSnapshot {
         let current_bw = {
             let elapsed = self.last_second_check.elapsed().as_secs_f64().max(0.001);
             self.bytes_this_second as f64 / elapsed
@@ -282,7 +292,7 @@ mod tests {
 
     #[test]
     fn empty_stats() {
-        let mut engine = StatsEngine::new();
+        let engine = StatsEngine::new();
         let snap = engine.snapshot();
         assert_eq!(snap.total_packets, 0);
         assert_eq!(snap.total_bytes, 0);

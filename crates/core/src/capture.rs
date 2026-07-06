@@ -114,117 +114,6 @@ pub fn translate_bpf_filter(raw: &str) -> String {
     result
 }
 
-#[cfg(test)]
-mod filter_tests {
-    use super::translate_bpf_filter;
-
-    #[test]
-    fn simple_http() {
-        assert_eq!(translate_bpf_filter("http"), "tcp port 80");
-        assert_eq!(translate_bpf_filter("HTTP"), "tcp port 80");
-    }
-
-    #[test]
-    fn http_or_tls() {
-        assert_eq!(
-            translate_bpf_filter("http or tls"),
-            "tcp port 80 or tcp port 443"
-        );
-    }
-
-    #[test]
-    fn compound_expression() {
-        assert_eq!(
-            translate_bpf_filter("http or tls or dns"),
-            "tcp port 80 or tcp port 443 or udp port 53"
-        );
-    }
-
-    #[test]
-    fn parenthesized() {
-        assert_eq!(
-            translate_bpf_filter("(http or tls) and host 1.2.3.4"),
-            "(tcp port 80 or tcp port 443) and host 1.2.3.4"
-        );
-    }
-
-    #[test]
-    fn already_valid_bpf_unchanged() {
-        let bpf = "tcp port 80 or udp port 53";
-        assert_eq!(translate_bpf_filter(bpf), bpf);
-    }
-
-    #[test]
-    fn icmp_arp_pass_through() {
-        assert_eq!(translate_bpf_filter("icmp or arp"), "icmp or arp");
-    }
-
-    #[test]
-    fn https_takes_precedence_over_http() {
-        // "https" must NOT become "tcp port 443s" (substring match bug).
-        assert_eq!(translate_bpf_filter("https"), "tcp port 443");
-    }
-
-    #[test]
-    fn mixed_ports_and_protocols() {
-        assert_eq!(
-            translate_bpf_filter("ssh or tcp port 8080"),
-            "tcp port 22 or tcp port 8080"
-        );
-    }
-
-    #[test]
-    fn empty_and_whitespace() {
-        assert_eq!(translate_bpf_filter(""), "");
-        assert_eq!(translate_bpf_filter("  "), "  ");
-    }
-
-    #[test]
-    fn host_keyword_protects_hostname() {
-        // "host http" means a host named "http" — do not translate.
-        assert_eq!(translate_bpf_filter("host http"), "host http");
-        // Dotted hostname stays intact.
-        assert_eq!(
-            translate_bpf_filter("host http.example.com"),
-            "host http.example.com"
-        );
-    }
-
-    #[test]
-    fn host_keyword_then_protocol_elsewhere() {
-        // "host 1.2.3.4 and http" — only the second "http" is translated.
-        assert_eq!(
-            translate_bpf_filter("host 10.0.0.1 and http"),
-            "host 10.0.0.1 and tcp port 80"
-        );
-    }
-
-    #[test]
-    fn host_keyword_with_dns_hostname() {
-        assert_eq!(
-            translate_bpf_filter("host dns.google.com or dns"),
-            "host dns.google.com or udp port 53"
-        );
-    }
-
-    #[test]
-    fn multiple_host_keywords() {
-        assert_eq!(
-            translate_bpf_filter("host ssh-server and host tls.example"),
-            "host ssh-server and host tls.example"
-        );
-    }
-
-    #[test]
-    fn protocol_before_host_still_translated() {
-        // "tls" before "host" is a protocol, not a hostname.
-        assert_eq!(
-            translate_bpf_filter("tls and host example.com"),
-            "tcp port 443 and host example.com"
-        );
-    }
-}
-
 pub fn list_interfaces() -> Result<Vec<pcap::Device>> {
     pcap::Device::list().context("Failed to list network interfaces.\n  On Windows: Install Npcap from https://npcap.com\n  On Linux/macOS: Run with sudo or set CAP_NET_RAW capability")
 }
@@ -491,5 +380,116 @@ fn build_packet(pkt: pcap::Packet) -> Packet {
         length: pkt.header.len as usize,
         summary,
         data: pkt.data.to_vec(),
+    }
+}
+
+#[cfg(test)]
+mod filter_tests {
+    use super::translate_bpf_filter;
+
+    #[test]
+    fn simple_http() {
+        assert_eq!(translate_bpf_filter("http"), "tcp port 80");
+        assert_eq!(translate_bpf_filter("HTTP"), "tcp port 80");
+    }
+
+    #[test]
+    fn http_or_tls() {
+        assert_eq!(
+            translate_bpf_filter("http or tls"),
+            "tcp port 80 or tcp port 443"
+        );
+    }
+
+    #[test]
+    fn compound_expression() {
+        assert_eq!(
+            translate_bpf_filter("http or tls or dns"),
+            "tcp port 80 or tcp port 443 or udp port 53"
+        );
+    }
+
+    #[test]
+    fn parenthesized() {
+        assert_eq!(
+            translate_bpf_filter("(http or tls) and host 1.2.3.4"),
+            "(tcp port 80 or tcp port 443) and host 1.2.3.4"
+        );
+    }
+
+    #[test]
+    fn already_valid_bpf_unchanged() {
+        let bpf = "tcp port 80 or udp port 53";
+        assert_eq!(translate_bpf_filter(bpf), bpf);
+    }
+
+    #[test]
+    fn icmp_arp_pass_through() {
+        assert_eq!(translate_bpf_filter("icmp or arp"), "icmp or arp");
+    }
+
+    #[test]
+    fn https_takes_precedence_over_http() {
+        // "https" must NOT become "tcp port 443s" (substring match bug).
+        assert_eq!(translate_bpf_filter("https"), "tcp port 443");
+    }
+
+    #[test]
+    fn mixed_ports_and_protocols() {
+        assert_eq!(
+            translate_bpf_filter("ssh or tcp port 8080"),
+            "tcp port 22 or tcp port 8080"
+        );
+    }
+
+    #[test]
+    fn empty_and_whitespace() {
+        assert_eq!(translate_bpf_filter(""), "");
+        assert_eq!(translate_bpf_filter("  "), "  ");
+    }
+
+    #[test]
+    fn host_keyword_protects_hostname() {
+        // "host http" means a host named "http" — do not translate.
+        assert_eq!(translate_bpf_filter("host http"), "host http");
+        // Dotted hostname stays intact.
+        assert_eq!(
+            translate_bpf_filter("host http.example.com"),
+            "host http.example.com"
+        );
+    }
+
+    #[test]
+    fn host_keyword_then_protocol_elsewhere() {
+        // "host 1.2.3.4 and http" — only the second "http" is translated.
+        assert_eq!(
+            translate_bpf_filter("host 10.0.0.1 and http"),
+            "host 10.0.0.1 and tcp port 80"
+        );
+    }
+
+    #[test]
+    fn host_keyword_with_dns_hostname() {
+        assert_eq!(
+            translate_bpf_filter("host dns.google.com or dns"),
+            "host dns.google.com or udp port 53"
+        );
+    }
+
+    #[test]
+    fn multiple_host_keywords() {
+        assert_eq!(
+            translate_bpf_filter("host ssh-server and host tls.example"),
+            "host ssh-server and host tls.example"
+        );
+    }
+
+    #[test]
+    fn protocol_before_host_still_translated() {
+        // "tls" before "host" is a protocol, not a hostname.
+        assert_eq!(
+            translate_bpf_filter("tls and host example.com"),
+            "tcp port 443 and host example.com"
+        );
     }
 }
