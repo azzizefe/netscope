@@ -76,6 +76,47 @@
 - **⚡ Blazing fast** — Rust-native. 10k+ packets/sec without breaking a sweat.
 - **🖥️ Desktop app** — Same engine, native GUI via Tauri. Bundles for Windows/macOS/Linux.
 
+### 🖥️ Desktop analysis suite
+
+The desktop app layers a full analysis workbench on top of the capture engine — all of it running locally over the packets you already captured, no cloud, no extra traffic:
+
+**Visualise & monitor**
+- **🕸 Topology map** — A live force-directed graph of who talks to whom. Node size = traffic, green = local, blue = remote; Fit / Freeze controls.
+- **📊 Live "Grafana-style" dashboard** — Per-second tiles with 60-second sparklines: throughput, packets/sec, error rate, active hosts, plus top-10 talkers.
+- **📈 Predictive traffic modeling** — Projects bandwidth ~5 minutes ahead from the recent trend (least-squares), with a rising/steady/falling read.
+- **🔀 Traffic diff** — Snapshot A (baseline) vs. Snapshot B (later) and see the delta — which protocols and hosts appeared, grew, or vanished (`NEW`/`GONE`).
+
+**Understand a packet**
+- **🧩 Semantic parsing** — Translates a packet into business logic: *"Client asked example.com to GET /login"*, *"Request requires authentication (401)"*, *"Starting an encrypted session (TLS ClientHello)"*.
+- **✨ Payload beautifier** — JSON and XML bodies rendered as a syntax-coloured, collapsible tree.
+- **🔮 Protocol guesser** — For traffic the dissector can't name, guesses the protocol from port hints, byte magic, printable ratio and Shannon entropy — and shows its reasoning and a confidence score.
+- **🌐 Threat-intel pivots** — One-click reputation links (VirusTotal, AbuseIPDB, AlienVault OTX, Shodan) for any public IP. No silent calls to paid feeds.
+- **🧬 Hex → code** — Copy a payload's bytes as a C, Rust, or Python literal.
+
+**Privacy & site health**
+- **🔎 Privacy X-ray** — Groups traffic by site and answers *"what is this site taking from me, and what runs in the background?"* — what you send it (cookies, User-Agent, Referer, form data, email, location), the trackers/ad networks it calls behind your back (classified: Advertising / Analytics / Social / CDN), the cookies it sets on you (tracking cookies and weak `Secure`/`HttpOnly`/`SameSite` flags flagged), and how much of your data — up and down — it cost, with a meter for the share that went to trackers. HTTPS hides content, not this metadata.
+- **🛡 WAF detection** — Fingerprints the Web Application Firewall in front of a site (Cloudflare, Akamai, Imperva Incapsula, AWS, F5 BIG-IP, Sucuri, ModSecurity…) from response headers/cookies, with a labelled "likely" guess when only the fronting CDN is visible.
+- **🚫 HTTP error explainer** — Groups 4xx/5xx responses per site and says *why* in plain words (403 = permissions/geo/WAF block, 429 = rate limit, 502 = backend down…).
+- **⏰ Busiest period** — A Dashboard card showing when traffic peaked (and, for long captures, the busiest hour-of-day).
+- **🎯 Contextual risk score** — A transparent 0–100 exposure score per site (cleartext, credentials, trackers, weak cookies, errors).
+- **🐛 Service-CVE flags** — Matches cleartext `Server:` headers against a small set of known-vulnerable versions.
+- **📋 Quick summary** — A short plain-language TL;DR of the whole capture (top sites, trackers, WAF, errors, busiest time, top findings), separate from the full Markdown report.
+
+**Detect & hunt**
+- **🧷 Signature scan (YARA-lite)** — Payloads matched against readable IOC/attack signatures: Log4Shell, Shellshock, reverse shells, SQLi, directory traversal, scanner User-Agents, EICAR.
+- **📤 Data-exfiltration (DLP)** — Flags unusually large outbound transfers from a local host to a single external destination.
+- **📶 Threat-actor heuristics** — Beaconing (regular check-in intervals) and suspect-port detection — honest "worth a look" flags, not attribution.
+- **💡 One-click exploit demo** — Each exploitable finding gets a plain-language attack scenario **and** the fix. Educational.
+- **🔔 Smart alerts & triggers** — Proactive alerts on traffic spikes and error bursts, plus your own IFTTT-style rules (*host contains X → alert*), persisted.
+
+**Workflow & sharing**
+- **🧭 Workspace modes** — Self-configuring presets (Web Dev, Kernel / Driver Dev, IoT, Malware Analysis) that set filter + view + timestamps + noise filter in one click.
+- **🧹 Zero-touch noise filter** — Hide OS-update, telemetry and discovery chatter so the list shows what your app is actually doing.
+- **📄 Shareable report** — One-click Markdown summary (findings, protocol breakdown, talkers, domains, dependency map) with **🛡 secret scrubbing** and **🕶 IP anonymisation** for GDPR/KVKK-safe sharing.
+- **🗺 Dependency map** — Automatically groups the external services a host reaches (Google, AWS/CloudFront, Cloudflare, …).
+- **↻ Replay (Repeater)** — Resend a packet's payload to a target and read the response. *Sends real traffic — authorised testing only.*
+- **🎨 Themes** — Midnight, VS Code Dark+, Dracula, Nord, and a Daylight light mode.
+
 ---
 
 ## Install
@@ -181,13 +222,16 @@ Usage: netscope-tui [OPTIONS]
 
 | View | Description |
 |------|-------------|
-| **Packets** | Live packet stream with human-readable summaries |
-| **Dashboard** | Real-time stats, bandwidth, protocol distribution, top talkers |
+| **Packets** | Live packet stream with human-readable summaries. Selecting a packet opens the inspector: protocol tree, semantic "what happened", JSON/XML beautifier, protocol guess, threat-intel pivots, and hex→code |
+| **Dashboard** | *(desktop)* Live "Grafana-style" tiles (throughput, packets/sec, error rate, active hosts) with sparklines, bandwidth projection, protocol distribution, and top-10 talkers |
 | **Connections** | Conversations grouped by flow — packets, bytes, direction, duration per connection. Press **💬 Follow** to read the conversation as plain text, or `b` to **block** the remote host via an OS firewall rule (`u` to unblock). |
+| **Topology** | *(desktop)* Live node/edge map of who talks to whom — traffic-sized nodes, local vs. remote colouring |
 | **DNS Log** | All DNS queries and responses in one place |
-| **Insights** | *(desktop)* Automatic security & privacy analysis — plain-language findings (cleartext secrets, scans, errors, encryption ratio) rated by severity |
+| **Insights** | *(desktop)* Automatic security & privacy analysis — cleartext secrets, scans, signature matches, data-exfiltration, beaconing, encryption ratio — each rated by severity with a "how could this be exploited?" teaching expander |
+| **Privacy** | *(desktop)* Per-site X-ray — what each site collects from you, the trackers it calls in the background, the cookies it sets, and how much of your data it costs |
+| **Diff** | *(desktop)* Compare two capture snapshots and highlight the delta (what appeared, grew, or vanished) |
 | **Script** | *(desktop)* Write JavaScript over the captured packets — filter, aggregate, and flag anomalies without exporting to a file |
-| **Learn** | Plain-language guide to every protocol netscope shows, plus a glossary — for people new to networking |
+| **Learn** | Plain-language guide to every protocol netscope shows, plus a glossary and how-to cards for every feature — for people new to networking |
 
 ---
 
