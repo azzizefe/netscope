@@ -55,6 +55,9 @@ pub fn translate_bpf_filter(raw: &str) -> String {
     let mut result = String::with_capacity(raw.len() + 64);
     let mut i = 0;
     let bytes = raw.as_bytes();
+    // When true, the next token is a hostname / address — skip protocol
+    // translation. Set by the BPF keyword "host" and cleared after one token.
+    let mut next_is_host = false;
 
     while i < bytes.len() {
         // Skip whitespace and parentheses verbatim.
@@ -66,23 +69,45 @@ pub fn translate_bpf_filter(raw: &str) -> String {
 
         // Collect a token (letters, digits, underscore, dot, hyphen).
         let start = i;
-        while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] == b'.' || bytes[i] == b'-') {
+        while i < bytes.len()
+            && (bytes[i].is_ascii_alphanumeric()
+                || bytes[i] == b'_'
+                || bytes[i] == b'.'
+                || bytes[i] == b'-')
+        {
             i += 1;
         }
         let token = &raw[start..i];
 
-        // Case-insensitive lookup, longer keys first (already ordered above).
-        let replacement = MAP.iter().find_map(|(k, v)| {
-            if token.len() == k.len() && token.eq_ignore_ascii_case(k) {
-                Some(*v)
-            } else {
-                None
-            }
-        });
+        // If this token follows "host", it is a hostname — never
+        // translate it. "host http.example.com" stays untouched.
+        let replacement = if next_is_host {
+            next_is_host = false;
+            None
+        } else {
+            MAP.iter().find_map(|(k, v)| {
+                if token.len() == k.len() && token.eq_ignore_ascii_case(k) {
+                    Some(*v)
+                } else {
+                    None
+                }
+            })
+        };
 
         match replacement {
-            Some(r) => result.push_str(r),
-            None => result.push_str(token),
+            Some(r) => {
+                result.push_str(r);
+                // Replacement is valid BPF (e.g. "tcp port 80") — no
+                // host-keyword tracking needed inside it.
+            }
+            None => {
+                // Remember whether this token is the BPF "host" keyword
+                // so the NEXT token isn't translated.
+                if token.eq_ignore_ascii_case("host") {
+                    next_is_host = true;
+                }
+                result.push_str(token);
+            }
         }
     }
 
@@ -152,6 +177,51 @@ mod filter_tests {
     fn empty_and_whitespace() {
         assert_eq!(translate_bpf_filter(""), "");
         assert_eq!(translate_bpf_filter("  "), "  ");
+    }
+
+    #[test]
+    fn host_keyword_protects_hostname() {
+        // "host http" means a host named "http" — do not translate.
+        assert_eq!(translate_bpf_filter("host http"), "host http");
+        // Dotted hostname stays intact.
+        assert_eq!(
+            translate_bpf_filter("host http.example.com"),
+            "host http.example.com"
+        );
+    }
+
+    #[test]
+    fn host_keyword_then_protocol_elsewhere() {
+        // "host 1.2.3.4 and http" — only the second "http" is translated.
+        assert_eq!(
+            translate_bpf_filter("host 10.0.0.1 and http"),
+            "host 10.0.0.1 and tcp port 80"
+        );
+    }
+
+    #[test]
+    fn host_keyword_with_dns_hostname() {
+        assert_eq!(
+            translate_bpf_filter("host dns.google.com or dns"),
+            "host dns.google.com or udp port 53"
+        );
+    }
+
+    #[test]
+    fn multiple_host_keywords() {
+        assert_eq!(
+            translate_bpf_filter("host ssh-server and host tls.example"),
+            "host ssh-server and host tls.example"
+        );
+    }
+
+    #[test]
+    fn protocol_before_host_still_translated() {
+        // "tls" before "host" is a protocol, not a hostname.
+        assert_eq!(
+            translate_bpf_filter("tls and host example.com"),
+            "tcp port 443 and host example.com"
+        );
     }
 }
 
