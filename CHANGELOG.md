@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Byte-field highlighting** (desktop) — clicking a field in the packet-detail
+  tree (MAC addresses, EtherType, IP source/destination, TCP/UDP ports)
+  highlights exactly its bytes in the hex view, Wireshark-style. A new
+  `fieldRanges()` helper locates each field in the raw frame (walking VLAN tags
+  and the IPv4 IHL / IPv6 header); the hex dump now renders per-byte spans. A
+  dedicated **Ethernet II** layer with clickable MACs was added to the tree.
+  Unit-tested (6 vitest cases).
+
 - **Wireshark-style menu bar** (desktop) — a menu bar above the view tabs with
   File / Edit / View / Analyze / Statistics / Telephony / Wireless / Tools, all
   items wired to real actions (localised, EN + TR):

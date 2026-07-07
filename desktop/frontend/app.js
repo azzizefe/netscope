@@ -814,19 +814,67 @@ function transportName(proto) {
   if (proto === 'ICMP' || proto === 'ARP') return proto;
   return null;
 }
-// One collapsible protocol layer for the detail tree.
+const u16be = (raw, off) => ((raw[off] << 8) | raw[off + 1]) >>> 0;
+const macStr = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(':');
+
+// Byte ranges [start, end) of well-known header fields within a raw Ethernet
+// frame, so a detail-tree field can highlight its bytes in the hex view.
+// Walks VLAN tags and reads the IPv4 IHL / IPv6 fixed header to locate the
+// transport ports. Returns only the fields it can place within captured bytes.
+function fieldRanges(raw) {
+  const R = {};
+  if (!raw || raw.length < 14) return R;
+  R.ethDst = [0, 6];
+  R.ethSrc = [6, 12];
+  const VLAN = new Set([0x8100, 0x88a8, 0x9100]);
+  let p = 12;
+  let et = u16be(raw, p);
+  while (VLAN.has(et) && p + 6 <= raw.length) { p += 4; et = u16be(raw, p); }
+  R.ethType = [p, p + 2];
+  const l3 = p + 2;
+  if (et === 0x0800 && raw.length >= l3 + 20) { // IPv4
+    const ihl = (raw[l3] & 0x0f) * 4;
+    const proto = raw[l3 + 9];
+    R.ipProto = [l3 + 9, l3 + 10];
+    R.ipSrc = [l3 + 12, l3 + 16];
+    R.ipDst = [l3 + 16, l3 + 20];
+    const l4 = l3 + ihl;
+    if ((proto === 6 || proto === 17) && raw.length >= l4 + 4) {
+      R.srcPort = [l4, l4 + 2];
+      R.dstPort = [l4 + 2, l4 + 4];
+    }
+  } else if (et === 0x86dd && raw.length >= l3 + 40) { // IPv6
+    const nh = raw[l3 + 6];
+    R.ipSrc = [l3 + 8, l3 + 24];
+    R.ipDst = [l3 + 24, l3 + 40];
+    const l4 = l3 + 40;
+    if ((nh === 6 || nh === 17) && raw.length >= l4 + 4) {
+      R.srcPort = [l4, l4 + 2];
+      R.dstPort = [l4 + 2, l4 + 4];
+    }
+  }
+  return R;
+}
+
+// One collapsible protocol layer for the detail tree. Each field is
+// [key, value, mono?, range?]; when a byte range is given the row becomes
+// clickable to highlight those bytes in the hex view.
 function treeNode(label, sub, fields, extraClass = '') {
   const head = `<div class="tnode-head"><span class="twist">▾</span>` +
     `<span class="tlabel">${esc(label)}${sub ? ` <span class="tlabel-sub">${esc(sub)}</span>` : ''}</span></div>`;
-  const body = `<div class="tbody">${fields.map(([k, v, mono]) =>
-    `<div class="tfield"><span class="tkey">${esc(k)}</span><span class="tval${mono ? ' mono' : ''}">${esc(v)}</span></div>`
-  ).join('')}</div>`;
+  const body = `<div class="tbody">${fields.map(([k, v, mono, range]) => {
+    const attrs = range ? ` data-range="${range[0]},${range[1]}"` : '';
+    const cls = range ? 'tfield tfield-click' : 'tfield';
+    return `<div class="${cls}"${attrs}><span class="tkey">${esc(k)}</span><span class="tval${mono ? ' mono' : ''}">${esc(v)}</span></div>`;
+  }).join('')}</div>`;
   return `<div class="tnode ${extraClass}">${head}${body}</div>`;
 }
 
 // Build the Wireshark-style layered protocol tree for one packet.
 function buildDetailTree(pkt, index) {
   const nodes = [];
+  const raw = pkt.raw || [];
+  const R = fieldRanges(raw);
   const ipVer = pkt.src_addr ? (pkt.src_addr.includes(':') ? 'IPv6' : 'IPv4') : null;
   const transport = transportName(pkt.protocol);
   const chain = ['Ethernet', ipVer, transport !== pkt.protocol ? transport : null, pkt.protocol]
@@ -836,16 +884,25 @@ function buildDetailTree(pkt, index) {
   nodes.push(treeNode(`Frame ${index + 1}`, `${pkt.length} bytes on wire`, [
     ['Arrival time', formatPacketTime(pkt)],
     ['Frame length', `${pkt.length} bytes`],
-    ['Captured bytes', `${(pkt.raw || []).length} bytes`],
+    ['Captured bytes', `${raw.length} bytes`],
     ['Protocols in frame', chain.join(' · ')],
   ]));
+
+  // Link layer (Ethernet) — click a MAC/EtherType to highlight its bytes.
+  if (R.ethDst && raw.length >= 14) {
+    nodes.push(treeNode('Ethernet II', '', [
+      ['Destination', macStr(raw.slice(R.ethDst[0], R.ethDst[1])), true, R.ethDst],
+      ['Source', macStr(raw.slice(R.ethSrc[0], R.ethSrc[1])), true, R.ethSrc],
+      ['EtherType', `0x${u16be(raw, R.ethType[0]).toString(16).padStart(4, '0')}`, true, R.ethType],
+    ]));
+  }
 
   // Network layer
   if (pkt.src_addr || pkt.dst_addr) {
     const net = [];
-    if (pkt.src_addr) net.push(['Source address', pkt.src_addr, true]);
+    if (pkt.src_addr) net.push(['Source address', pkt.src_addr, true, R.ipSrc]);
     if (state.settings.showHostnames && pkt.src_host) net.push(['Source host', pkt.src_host]);
-    if (pkt.dst_addr) net.push(['Destination address', pkt.dst_addr, true]);
+    if (pkt.dst_addr) net.push(['Destination address', pkt.dst_addr, true, R.ipDst]);
     if (state.settings.showHostnames && pkt.dst_host) net.push(['Destination host', pkt.dst_host]);
     nodes.push(treeNode(`Internet Protocol ${ipVer ? `(${ipVer})` : ''}`.trim(),
       pkt.src_addr && pkt.dst_addr ? `${pkt.src_addr} → ${pkt.dst_addr}` : '', net));
@@ -864,8 +921,8 @@ function buildDetailTree(pkt, index) {
   // Transport layer
   if (transport && (pkt.src_port != null || pkt.dst_port != null)) {
     const t = [['Transport', transport]];
-    if (pkt.src_port != null) t.push(['Source port', String(pkt.src_port), true]);
-    if (pkt.dst_port != null) t.push(['Destination port', String(pkt.dst_port), true]);
+    if (pkt.src_port != null) t.push(['Source port', String(pkt.src_port), true, R.srcPort]);
+    if (pkt.dst_port != null) t.push(['Destination port', String(pkt.dst_port), true, R.dstPort]);
     nodes.push(treeNode(transport,
       `${pkt.src_port ?? '?'} → ${pkt.dst_port ?? '?'}`, t));
   }
@@ -1040,13 +1097,45 @@ function hexDump(bytes) {
   let out = '';
   for (let i = 0; i < bytes.length; i += 16) {
     const chunk = bytes.slice(i, i + 16);
-    const hex = chunk.map((b) => b.toString(16).padStart(2, '0')).join(' ');
-    const ascii = chunk.map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.')).join('');
+    // Per-byte spans (tagged with their absolute offset) let a detail-tree
+    // field highlight exactly its bytes. Missing slots in the last row still
+    // emit two spaces so the ASCII column stays aligned (47-char hex column).
+    let hex = '';
+    for (let j = 0; j < 16; j++) {
+      if (j > 0) hex += ' ';
+      if (j < chunk.length) {
+        hex += `<span class="hb" data-i="${i + j}">${chunk[j].toString(16).padStart(2, '0')}</span>`;
+      } else {
+        hex += '  ';
+      }
+    }
+    let asc = '';
+    for (let j = 0; j < chunk.length; j++) {
+      const b = chunk[j];
+      const ch = (b >= 32 && b < 127) ? String.fromCharCode(b) : '.';
+      asc += `<span class="ha" data-i="${i + j}">${esc(ch)}</span>`;
+    }
     out += `<span class="hx-off">${i.toString(16).padStart(4, '0')}</span>  ` +
-      `<span class="hx-hex">${hex.padEnd(47)}</span>  ` +
-      `<span class="hx-asc">${esc(ascii)}</span>\n`;
+      `<span class="hx-hex">${hex}</span>  ` +
+      `<span class="hx-asc">${asc}</span>\n`;
   }
   return out;
+}
+
+// Highlight bytes [start, end) in the hex view (both hex and ASCII columns)
+// and scroll the first one into view. Called when a detail-tree field is clicked.
+function highlightBytes(start, end) {
+  const hd = els.hexDump;
+  if (!hd) return;
+  hd.querySelectorAll('.hl').forEach((el) => el.classList.remove('hl'));
+  let first = null;
+  for (let i = start; i < end; i++) {
+    hd.querySelectorAll(`[data-i="${i}"]`).forEach((el) => {
+      el.classList.add('hl');
+      if (!first) first = el;
+    });
+  }
+  if (first) first.scrollIntoView({ block: 'nearest' });
 }
 
 // ---- Dashboard ----
@@ -2959,6 +3048,16 @@ function initMenuBar() {
 
   // Capture-driver (Npcap) help.
   on('#npcap-badge', openNpcapHelp);
+
+  // Click a detail-tree field to highlight its bytes in the hex view.
+  if (els.detailTree) {
+    els.detailTree.addEventListener('click', (e) => {
+      const row = e.target.closest('.tfield-click');
+      if (!row || !row.dataset.range) return;
+      const [s, en] = row.dataset.range.split(',').map(Number);
+      highlightBytes(s, en);
+    });
+  }
 
   // Tool modal close wiring.
   on('#tool-close', closeToolModal);

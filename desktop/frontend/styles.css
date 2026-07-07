@@ -300,6 +300,12 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .hx-off { color: var(--text-muted); }
 .hx-hex { color: var(--tcp); }
 .hx-asc { color: var(--tls); }
+/* A detail-tree field that maps to bytes — click to highlight them. */
+.tfield-click { cursor: pointer; }
+.tfield-click .tval { color: var(--accent); }
+.tfield-click:hover { background: rgba(74,158,245,.12); }
+/* Highlighted bytes in the hex view (both hex and ASCII columns). */
+.hb.hl, .ha.hl { background: var(--accent); color: #06101f; border-radius: 2px; }
 .hidden { display: none !important; }
 
 /* ---- Connections ---- */
