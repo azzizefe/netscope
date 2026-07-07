@@ -18,7 +18,7 @@
       <span class="separator">|</span>
       <span id="status-text" class="status-idle" data-i18n="status.idle">● Idle</span>
       <span id="packet-count" class="packet-count">0 packets</span>
-      <input type="text" id="filter-input" data-i18n-ph="ph.filter" placeholder="filter: IP, port, http, tls, dns, ssh…">
+      <input type="text" id="filter-input" data-i18n-ph="ph.filter" placeholder="filter — e.g. ip.addr == 1.2.3.4, tcp.port == 443, dns">
       <button id="profile-btn" class="btn btn-small" data-i18n-title="title.profile" title="Profiles &amp; display settings">🗂 <span id="profile-name">Default</span> ▾</button>
       <button id="alert-btn" class="btn btn-small" data-i18n-title="title.alerts" title="Smart Alerts &amp; Triggers">🔔<span id="alert-badge" class="alert-badge hidden"></span></button>
       <span class="spacer"></span>
@@ -395,6 +395,7 @@
   </div>
 
   <script src="i18n.js"></script>
+  <script src="filter.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

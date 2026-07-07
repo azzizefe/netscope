@@ -1,6 +1,7 @@
 pub mod capture;
 pub mod dissectors;
 pub mod education;
+pub mod filter;
 pub mod firewall;
 pub mod flows;
 pub mod models;

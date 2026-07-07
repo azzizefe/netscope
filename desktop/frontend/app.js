@@ -730,9 +730,21 @@ function matchesFilter(pkt, text) {
   );
 }
 function renderPacketList() {
-  let packets = state.filterText
-    ? state.packets.filter((p) => matchesFilter(p, state.filterText))
-    : state.packets;
+  // Prefer the structured display-filter language (ip.addr == x, tcp.port ==
+  // 443, dns && frame.len > 1000). If the text isn't a valid filter
+  // expression, fall back to the free-text substring search so partial input
+  // and plain keywords still filter.
+  let packets;
+  if (state.filterText) {
+    const compiled = typeof NetscopeFilter !== 'undefined'
+      ? NetscopeFilter.compile(state.filterText)
+      : null;
+    packets = compiled
+      ? state.packets.filter((p) => compiled.matches(p))
+      : state.packets.filter((p) => matchesFilter(p, state.filterText));
+  } else {
+    packets = state.packets;
+  }
   if (state.settings.noiseFilter) packets = packets.filter((p) => !isNoise(p));
   state.filteredPackets = packets;
 

@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use anyhow::Result;
 use crossbeam_channel::Receiver;
 use netscope_core::capture::CaptureEngine;
+use netscope_core::filter::Filter;
 use netscope_core::flows::FlowTable;
 use netscope_core::models::Packet;
 use netscope_core::names::NameCache;
@@ -297,6 +298,13 @@ impl App {
     pub fn filtered_packets(&self) -> Vec<&Packet> {
         if self.filter_text.is_empty() {
             return self.packets.iter().collect();
+        }
+        // Try the structured display-filter language first (ip.addr == x,
+        // tcp.port == 443, dns && frame.len > 1000, …). If the text isn't a
+        // valid filter expression, fall back to the free-text substring search
+        // so partially-typed input and plain keywords still work.
+        if let Ok(filter) = Filter::parse(&self.filter_text) {
+            return self.packets.iter().filter(|p| filter.matches(p)).collect();
         }
         let lower = self.filter_text.to_lowercase();
         self.packets

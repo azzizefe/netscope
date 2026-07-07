@@ -14,7 +14,7 @@ const I18N = (() => {
     en: {
       'btn.start': '▶ Start', 'btn.stop': '■ Stop',
       'status.idle': '● Idle', 'status.capturing': '● Capturing', 'unit.packets': 'packets',
-      'ph.filter': 'filter: IP, port, http, tls, dns, ssh…',
+      'ph.filter': 'filter — e.g. ip.addr == 1.2.3.4, tcp.port == 443, dns',
       'title.interface': 'Network interface to capture on',
       'title.profile': 'Profiles & display settings', 'title.alerts': 'Smart Alerts & Triggers',
       'title.language': 'Language', 'badge.notadmin': '⚠ not admin', 'title.blocking': 'Blocking needs Administrator',
@@ -78,7 +78,7 @@ const I18N = (() => {
     de: {
       'btn.start': '▶ Start', 'btn.stop': '■ Stopp',
       'status.idle': '● Bereit', 'status.capturing': '● Aufzeichnung', 'unit.packets': 'Pakete',
-      'ph.filter': 'Filter: IP, Port, http, tls, dns, ssh…',
+      'ph.filter': 'Filter — z. B. ip.addr == 1.2.3.4, tcp.port == 443, dns',
       'title.interface': 'Netzwerkschnittstelle für die Aufzeichnung',
       'title.profile': 'Profile & Anzeigeeinstellungen', 'title.alerts': 'Intelligente Warnungen & Auslöser',
       'title.language': 'Sprache', 'badge.notadmin': '⚠ kein Admin', 'title.blocking': 'Blockieren erfordert Administratorrechte',
@@ -142,7 +142,7 @@ const I18N = (() => {
     fr: {
       'btn.start': '▶ Démarrer', 'btn.stop': '■ Arrêter',
       'status.idle': '● Inactif', 'status.capturing': '● Capture', 'unit.packets': 'paquets',
-      'ph.filter': 'filtre : IP, port, http, tls, dns, ssh…',
+      'ph.filter': 'filtre — p. ex. ip.addr == 1.2.3.4, tcp.port == 443, dns',
       'title.interface': 'Interface réseau à capturer',
       'title.profile': 'Profils et paramètres d’affichage', 'title.alerts': 'Alertes intelligentes et déclencheurs',
       'title.language': 'Langue', 'badge.notadmin': '⚠ pas admin', 'title.blocking': 'Le blocage nécessite l’administrateur',
@@ -206,7 +206,7 @@ const I18N = (() => {
     it: {
       'btn.start': '▶ Avvia', 'btn.stop': '■ Ferma',
       'status.idle': '● Inattivo', 'status.capturing': '● Acquisizione', 'unit.packets': 'pacchetti',
-      'ph.filter': 'filtro: IP, porta, http, tls, dns, ssh…',
+      'ph.filter': 'filtro — es. ip.addr == 1.2.3.4, tcp.port == 443, dns',
       'title.interface': 'Interfaccia di rete da acquisire',
       'title.profile': 'Profili e impostazioni di visualizzazione', 'title.alerts': 'Avvisi intelligenti e trigger',
       'title.language': 'Lingua', 'badge.notadmin': '⚠ non admin', 'title.blocking': 'Il blocco richiede l’amministratore',
@@ -270,7 +270,7 @@ const I18N = (() => {
     pt: {
       'btn.start': '▶ Iniciar', 'btn.stop': '■ Parar',
       'status.idle': '● Inativo', 'status.capturing': '● Capturando', 'unit.packets': 'pacotes',
-      'ph.filter': 'filtro: IP, porta, http, tls, dns, ssh…',
+      'ph.filter': 'filtro — ex. ip.addr == 1.2.3.4, tcp.port == 443, dns',
       'title.interface': 'Interface de rede para captura',
       'title.profile': 'Perfis e configurações de exibição', 'title.alerts': 'Alertas inteligentes e gatilhos',
       'title.language': 'Idioma', 'badge.notadmin': '⚠ sem admin', 'title.blocking': 'O bloqueio requer administrador',
@@ -334,7 +334,7 @@ const I18N = (() => {
     ar: {
       'btn.start': '▶ ابدأ', 'btn.stop': '■ إيقاف',
       'status.idle': '● خامل', 'status.capturing': '● يلتقط', 'unit.packets': 'حزم',
-      'ph.filter': 'تصفية: IP، منفذ، http، tls، dns، ssh…',
+      'ph.filter': 'تصفية — مثال: ip.addr == 1.2.3.4، tcp.port == 443، dns',
       'title.interface': 'واجهة الشبكة المراد التقاطها',
       'title.profile': 'الملفات وإعدادات العرض', 'title.alerts': 'تنبيهات ذكية ومشغّلات',
       'title.language': 'اللغة', 'badge.notadmin': '⚠ ليس مسؤولاً', 'title.blocking': 'يتطلب الحظر صلاحيات المسؤول',
@@ -398,7 +398,7 @@ const I18N = (() => {
     tr: {
       'btn.start': '▶ Başlat', 'btn.stop': '■ Durdur',
       'status.idle': '● Boşta', 'status.capturing': '● Yakalanıyor', 'unit.packets': 'paket',
-      'ph.filter': 'filtre: IP, port, http, tls, dns, ssh…',
+      'ph.filter': 'filtre — örn. ip.addr == 1.2.3.4, tcp.port == 443, dns',
       'title.interface': 'Yakalama yapılacak ağ arayüzü',
       'title.profile': 'Profiller ve görüntüleme ayarları', 'title.alerts': 'Akıllı Uyarılar ve Tetikleyiciler',
       'title.language': 'Dil', 'badge.notadmin': '⚠ yönetici değil', 'title.blocking': 'Engelleme yönetici gerektirir',

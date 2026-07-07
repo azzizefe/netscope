@@ -204,13 +204,33 @@ Usage: netscope-tui [OPTIONS]
 | `↑` / `↓` or `j` / `k` | Navigate packet list |
 | `Enter` | Expand/collapse packet details |
 | `Tab` / `Shift+Tab` | Switch views |
-| *(any character)* | Filter packets (free text — type directly) |
+| *(any character)* | Filter packets — display-filter syntax or free text (type directly) |
 | `b` / `u` | *(Connections view)* Block / unblock the selected remote host |
 | `Space` | Pause / resume capture |
 | `h` | Toggle hex dump |
 | `?` | Help overlay |
 | `Esc` | Clear filter / close help |
 | `q` | Quit |
+
+### Display Filters
+
+The filter box speaks a **Wireshark-style display-filter language** — and falls
+back to plain substring search when what you type isn't a filter expression, so
+you can always just type a keyword.
+
+```
+ip.addr == 1.2.3.4            # either endpoint is this IP
+ip.src == 10.0.0.5            # source only (also ip.dst)
+tcp.port == 443              # TCP on port 443 (also udp.port, port)
+frame.len > 1000             # packets larger than 1000 bytes (also len)
+dns                          # bare protocol name (tcp, udp, http, tls, dhcp, ntp, mdns, snmp, quic, sip…)
+http && ip.dst == 8.8.8.8    # combine with &&, ||, !  (and / or / not)
+tcp && (tls || dns)          # parentheses group
+ip.dst contains "142.250"    # substring match on a field
+```
+
+`tcp` matches TCP transport (so it also catches HTTP and TLS), just like
+Wireshark; `http` matches the HTTP application protocol specifically.
 
 ### Views
 

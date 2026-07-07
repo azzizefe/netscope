@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Display-filter language** (`crates/core/src/filter.rs`) — a Wireshark-style
+  filter grammar shared by the TUI and desktop:
+  - Fields: `ip.addr` / `ip.src` / `ip.dst`, `port` / `tcp.port` / `udp.port`,
+    `frame.len` (aliases `len`, `length`)
+  - Comparisons `== != > < >= <=` and `contains`; boolean `&&` `||` `!`
+    (and `and` / `or` / `not`) with parentheses
+  - Bare protocol predicates (`tcp`, `udp`, `dns`, `http`, `tls`, `dhcp`,
+    `ntp`, `mdns`, `snmp`, `quic`, `sip`, `ip`/`ipv4`/`ipv6`)
+  - Invalid expressions fall back to the existing substring search, so
+    free-text typing still works; wired into both the TUI filter box and the
+    desktop packet list, with a mirrored JS implementation and vitest coverage
+  - 23 Rust + 15 JS unit tests
+
 - **Deeper protocol dissection** (`crates/core`)
   - VLAN 802.1Q and QinQ (802.1ad) tag unwrapping — tagged frames now reach
     their inner IP/ARP dissector, with the VLAN id shown in the summary

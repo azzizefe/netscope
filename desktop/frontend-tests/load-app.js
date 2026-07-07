@@ -14,6 +14,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const filterSource = readFileSync(path.join(here, '..', 'frontend', 'filter.js'), 'utf8');
 const source = readFileSync(path.join(here, '..', 'frontend', 'app.js'), 'utf8');
 
 export function loadApp() {
@@ -44,8 +45,20 @@ export function loadApp() {
   ctx.globalThis = ctx;
 
   vm.createContext(ctx);
+  // filter.js must run first: app.js references the NetscopeFilter global it
+  // defines (exactly as index.html loads them in order).
+  vm.runInContext(filterSource, ctx, { filename: 'filter.js' });
   vm.runInContext(source, ctx, { filename: 'app.js' });
   return ctx;
+}
+
+/** Load just filter.js (no DOM/app needed) and return its NetscopeFilter. */
+export function loadFilter() {
+  const ctx = { console };
+  ctx.globalThis = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(filterSource, ctx, { filename: 'filter.js' });
+  return ctx.NetscopeFilter;
 }
 
 // ---- Test packet builders (raw Ethernet frames as byte arrays) ----
