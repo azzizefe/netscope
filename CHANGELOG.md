@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Wireshark-style menu bar** (desktop) — a menu bar above the view tabs with
+  File / Edit / View / Analyze / Statistics / Telephony / Wireless / Tools, all
+  items wired to real actions (localised, EN + TR):
+  - **File** — Open / Save capture (native file dialog), Export report, and
+    **Export packets as CSV / JSON**
+  - **Edit** — Find packet, Clear filter, Preferences
+  - **View** — jump to any view; time & display settings
+  - **Analyze** — apply selected packet as a filter, Follow stream, Expert
+    info, display-filter reference
+  - **Statistics** — **Protocol Hierarchy** and **Endpoints** tables,
+    Conversations, I/O graph
+  - **Telephony** — **VoIP calls** (SIP call log)
+  - **Wireless** — **WLAN traffic** (SSIDs seen) and a monitor-mode toggle
+  - **Tools** — **Firewall ACL rules** (netsh + iptables), **Credentials**
+    (cleartext-exposure list), Blocked IPs
+  - New pure compute helpers are unit-tested (9 vitest cases)
+
 - **802.11 (Wi-Fi) dissection** (`crates/core/src/dissectors/`)
   - Link-layer-aware capture: the dissector now branches on the pcap
     data-link type, so captures on Wi-Fi (`DLT_IEEE802_11` and radiotap

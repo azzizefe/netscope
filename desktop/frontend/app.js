@@ -2613,11 +2613,336 @@ function renderAll() {
   else if (state.view === 'insights') renderInsights();
 }
 
+// ==== Wireshark-style menu bar =========================================
+// Pure compute helpers (unit-tested) are kept side-effect free; the DOM
+// wiring below turns their output into a modal.
+
+/** Protocol breakdown: packets, bytes and share per protocol. */
+function computeProtocolHierarchy(packets) {
+  const map = new Map();
+  let total = 0;
+  for (const p of packets) {
+    const e = map.get(p.protocol) || { protocol: p.protocol, count: 0, bytes: 0 };
+    e.count += 1;
+    e.bytes += p.length || 0;
+    map.set(p.protocol, e);
+    total += 1;
+  }
+  return [...map.values()]
+    .map((e) => ({ ...e, pct: total ? (100 * e.count) / total : 0 }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/** Per-host endpoint stats: total/sent/received packets and bytes. */
+function computeEndpoints(packets) {
+  const map = new Map();
+  const touch = (addr) => {
+    if (!addr) return null;
+    let e = map.get(addr);
+    if (!e) { e = { addr, packets: 0, bytes: 0, tx: 0, rx: 0 }; map.set(addr, e); }
+    return e;
+  };
+  for (const p of packets) {
+    const s = touch(p.src_addr);
+    const d = touch(p.dst_addr);
+    if (s) { s.packets += 1; s.bytes += p.length || 0; s.tx += 1; }
+    if (d) { d.packets += 1; d.bytes += p.length || 0; d.rx += 1; }
+  }
+  return [...map.values()].sort((a, b) => b.bytes - a.bytes);
+}
+
+/** SIP signalling events, as a simple call log. */
+function computeVoipCalls(packets) {
+  return packets
+    .filter((p) => p.protocol === 'SIP')
+    .map((p) => ({
+      time: p.timestamp,
+      from: p.src_host || p.src_addr,
+      to: p.dst_host || p.dst_addr,
+      summary: p.summary,
+    }));
+}
+
+/** Cleartext-credential exposures — protocols that carry logins unencrypted. */
+function computeCredentials(packets) {
+  const rules = [
+    { proto: 'FTP', re: /\b(USER|PASS)\b/i },
+    { proto: 'POP3', re: /\b(USER|PASS)\b/i },
+    { proto: 'IMAP', re: /\bLOGIN\b/i },
+    { proto: 'SMTP', re: /\bAUTH\b/i },
+    { proto: 'HTTP', re: /Authorization|password|token/i },
+    { proto: 'Telnet', re: /./ },
+  ];
+  const out = [];
+  for (const p of packets) {
+    const rule = rules.find((r) => r.proto === p.protocol && r.re.test(p.summary || ''));
+    if (rule) {
+      out.push({
+        protocol: p.protocol,
+        from: p.src_host || p.src_addr,
+        to: p.dst_host || p.dst_addr,
+        summary: p.summary,
+      });
+    }
+  }
+  return out;
+}
+
+/** WLAN (802.11) SSIDs seen, with sighting counts. */
+function computeWlanTraffic(packets) {
+  const map = new Map();
+  for (const p of packets) {
+    if (p.protocol !== '802.11') continue;
+    const m = /"([^"]*)"|<hidden>/.exec(p.summary || '');
+    const ssid = m ? (m[1] !== undefined ? m[1] : '<hidden>') : null;
+    if (ssid === null) continue;
+    const key = ssid === '' ? '<hidden>' : ssid;
+    map.set(key, (map.get(key) || 0) + 1);
+  }
+  return [...map.entries()].map(([ssid, count]) => ({ ssid, count })).sort((a, b) => b.count - a.count);
+}
+
+const csvCell = (s) => {
+  s = String(s == null ? '' : s);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+};
+
+/** Packets → CSV, matching the packet-list columns. */
+function packetsToCSV(packets) {
+  const rows = ['No,Time,Source,Destination,Protocol,Length,Info'];
+  packets.forEach((p, i) => {
+    rows.push([
+      i + 1,
+      csvCell(p.timestamp),
+      csvCell(p.src_host || p.src_addr || ''),
+      csvCell(p.dst_host || p.dst_addr || ''),
+      csvCell(p.protocol),
+      p.length || 0,
+      csvCell(p.summary),
+    ].join(','));
+  });
+  return rows.join('\n');
+}
+
+/** Packets → pretty JSON. */
+function packetsToJSON(packets) {
+  return JSON.stringify(
+    packets.map((p) => ({
+      time: p.timestamp, src: p.src_addr, dst: p.dst_addr,
+      src_port: p.src_port, dst_port: p.dst_port,
+      protocol: p.protocol, length: p.length, info: p.summary,
+    })),
+    null,
+    2,
+  );
+}
+
+/** OS firewall rules (Windows netsh + Linux iptables) for a set of IPs. */
+function firewallRulesText(ips) {
+  if (!ips.length) return '# No IPs are currently blocked by netscope.';
+  const win = ips.map((ip) => `netsh advfirewall firewall add rule name="netscope-block-${ip}" dir=out action=block remoteip=${ip}`);
+  const nix = ips.map((ip) => `iptables -A OUTPUT -d ${ip} -j DROP`);
+  return `# Windows (run as Administrator)\n${win.join('\n')}\n\n# Linux (run as root)\n${nix.join('\n')}`;
+}
+
+// ---- Tool modal + table rendering ----
+function openToolModal(title, bodyHtml, copyText) {
+  const modal = $('#tool-modal');
+  $('#tool-title').textContent = title;
+  $('#tool-body').innerHTML = bodyHtml;
+  const copyBtn = $('#tool-copy');
+  copyBtn.classList.toggle('hidden', !copyText);
+  copyBtn.onclick = copyText
+    ? async () => { const ok = await copyText(); flashButton(copyBtn, ok ? '✓ Copied' : '✖ Failed'); }
+    : null;
+  modal.classList.remove('hidden');
+}
+function closeToolModal() { $('#tool-modal').classList.add('hidden'); }
+
+function toolTable(headers, rows) {
+  if (!rows.length) return `<div class="tool-empty">${esc(I18N.t('empty.capture') || 'Nothing to show yet.')}</div>`;
+  const head = headers.map((h) => `<th>${esc(h.label)}</th>`).join('');
+  const body = rows.map((r) => '<tr>' + headers.map((h) =>
+    `<td class="${h.num ? 'num' : ''}">${esc(String(r[h.key] == null ? '' : r[h.key]))}</td>`).join('') + '</tr>').join('');
+  return `<table class="tool-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+const fmtBytes = (n) => {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+};
+
+// ---- Menu action handlers ----
+function activePackets() {
+  return (state.filteredPackets && state.filteredPackets.length) ? state.filteredPackets : state.packets;
+}
+
+function showProtocolHierarchy() {
+  const rows = computeProtocolHierarchy(activePackets()).map((e) => ({
+    protocol: e.protocol, count: e.count, bytes: fmtBytes(e.bytes), pct: e.pct.toFixed(1) + '%',
+  }));
+  openToolModal('Protocol Hierarchy', toolTable([
+    { key: 'protocol', label: 'Protocol' }, { key: 'count', label: 'Packets', num: true },
+    { key: 'bytes', label: 'Bytes', num: true }, { key: 'pct', label: 'Share', num: true },
+  ], rows));
+}
+
+function showEndpoints() {
+  const rows = computeEndpoints(activePackets()).slice(0, 200).map((e) => ({
+    addr: e.addr, packets: e.packets, bytes: fmtBytes(e.bytes), tx: e.tx, rx: e.rx,
+  }));
+  openToolModal('Endpoints', toolTable([
+    { key: 'addr', label: 'Address' }, { key: 'packets', label: 'Packets', num: true },
+    { key: 'bytes', label: 'Bytes', num: true }, { key: 'tx', label: 'Tx', num: true }, { key: 'rx', label: 'Rx', num: true },
+  ], rows));
+}
+
+function showVoip() {
+  const rows = computeVoipCalls(activePackets());
+  openToolModal('VoIP Calls (SIP)', toolTable([
+    { key: 'time', label: 'Time' }, { key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'summary', label: 'Event' },
+  ], rows));
+}
+
+function showCredentials() {
+  const rows = computeCredentials(activePackets());
+  const note = '<div class="menu-hint">These credentials travel unencrypted — anyone on the path can read them. Passwords are masked here; the exposure is the point.</div>';
+  openToolModal('Credentials (cleartext)', note + toolTable([
+    { key: 'protocol', label: 'Protocol' }, { key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'summary', label: 'Detail' },
+  ], rows));
+}
+
+function showWlanTraffic() {
+  const rows = computeWlanTraffic(activePackets());
+  openToolModal('WLAN Traffic', toolTable([
+    { key: 'ssid', label: 'SSID' }, { key: 'count', label: 'Frames', num: true },
+  ], rows));
+}
+
+function showExportText(title, text) {
+  openToolModal(title, `<pre class="tool-pre">${esc(text)}</pre>`, () => copyText(text));
+}
+
+async function showFirewallRules() {
+  let ips = [];
+  try { ips = await invoke('list_blocked'); } catch { ips = []; }
+  const text = firewallRulesText(ips);
+  showExportText('Firewall ACL Rules', text);
+}
+
+async function showBlockedIps() {
+  let ips = [];
+  try { ips = await invoke('list_blocked'); } catch { ips = []; }
+  const rows = ips.map((ip) => ({ ip }));
+  openToolModal('Blocked IPs', toolTable([{ key: 'ip', label: 'IP address' }], rows));
+}
+
+function showFilterHelp() {
+  const help = [
+    'ip.addr == 1.2.3.4        either endpoint is this IP',
+    'ip.src == 10.0.0.5        source only (also ip.dst)',
+    'tcp.port == 443           TCP port (also udp.port, port)',
+    'frame.len > 1000          packet length (also len, length)',
+    'dns   http   tls   ssh    bare protocol name',
+    'wlan  wifi  802.11        Wi-Fi frames',
+    'http && ip.dst == 8.8.8.8 combine with && || !',
+    'tcp && (tls || dns)       parentheses group',
+    'ip.dst contains "142.250" substring on a field',
+  ].join('\n');
+  openToolModal('Display Filter Reference', `<pre class="tool-pre">${esc(help)}</pre>`);
+}
+
+function applySelectedAsFilter() {
+  const p = state.packets[state.selectedIndex];
+  if (!p || !p.dst_addr) { flashButton($('#filter-input'), 'Select a packet first'); return; }
+  els.filterInput.value = `ip.addr == ${p.dst_addr}`;
+  state.filterText = els.filterInput.value;
+  renderPacketList();
+}
+
+function initMenuBar() {
+  const menus = $$('.menu');
+  menus.forEach((m) => {
+    const title = m.querySelector('.menu-title');
+    title.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wasOpen = m.classList.contains('open');
+      menus.forEach((x) => x.classList.remove('open'));
+      if (!wasOpen) m.classList.add('open');
+    });
+  });
+  // Clicking anywhere else closes any open menu.
+  document.addEventListener('click', () => menus.forEach((x) => x.classList.remove('open')));
+  // Keep the menu open when interacting with its checkbox/hint.
+  $$('.menu-drop').forEach((d) => d.addEventListener('click', (e) => {
+    if (e.target.closest('.menu-check') || e.target.classList.contains('menu-hint')) e.stopPropagation();
+  }));
+
+  // View navigation items.
+  $$('[data-goview]').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.goview)));
+
+  const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
+  const dialog = () => (window.__TAURI__ && window.__TAURI__.dialog) || null;
+  const captureFilters = [{ name: 'Capture', extensions: ['pcap', 'pcapng', 'cap'] }];
+  // File
+  on('#mi-open', async () => {
+    const d = dialog();
+    if (!d) { flashButton($('#mi-open'), 'Dialog unavailable'); return; }
+    const path = await d.open({ multiple: false, filters: captureFilters });
+    if (path) invoke('open_pcap', { path }).catch((e) => console.error(e));
+  });
+  on('#mi-save', async () => {
+    const d = dialog();
+    if (!d) { flashButton($('#mi-save'), 'Dialog unavailable'); return; }
+    const path = await d.save({ filters: captureFilters, defaultPath: 'capture.pcap' });
+    if (path) invoke('save_pcap', { path }).catch((e) => console.error(e));
+  });
+  on('#mi-report', openReport);
+  on('#mi-csv', () => showExportText('Export — CSV', packetsToCSV(activePackets())));
+  on('#mi-json', () => showExportText('Export — JSON', packetsToJSON(activePackets())));
+  // Edit
+  on('#mi-find', () => { els.filterInput.focus(); els.filterInput.select(); });
+  on('#mi-clearfilter', () => { els.filterInput.value = ''; state.filterText = ''; renderPacketList(); });
+  on('#mi-prefs', () => els.profilePanel.classList.remove('hidden'));
+  on('#mi-timeprefs', () => els.profilePanel.classList.remove('hidden'));
+  // Analyze
+  on('#mi-applyfilter', applySelectedAsFilter);
+  on('#mi-follow', () => switchView('connections'));
+  on('#mi-expert', () => switchView('insights'));
+  on('#mi-filterhelp', showFilterHelp);
+  // Statistics
+  on('#mi-hierarchy', showProtocolHierarchy);
+  on('#mi-endpoints', showEndpoints);
+  // Telephony / Wireless / Tools
+  on('#mi-voip', showVoip);
+  on('#mi-wlan', showWlanTraffic);
+  on('#mi-firewall', showFirewallRules);
+  on('#mi-creds', showCredentials);
+  on('#mi-blocked', showBlockedIps);
+
+  // Monitor-mode toggle (applied on the next capture start).
+  const mon = $('#mi-monitor');
+  if (mon) {
+    mon.checked = !!state.settings.monitor;
+    mon.addEventListener('change', () => {
+      state.settings.monitor = mon.checked;
+      saveJSON('netscope.settings', state.settings);
+    });
+  }
+
+  // Tool modal close wiring.
+  on('#tool-close', closeToolModal);
+  $('#tool-modal').addEventListener('click', (e) => { if (e.target === $('#tool-modal')) closeToolModal(); });
+}
+
 // ---- Keyboard ----
 function handleKeydown(e) {
   if (e.key === 'Escape' && !els.replayModal.classList.contains('hidden')) { closeReplay(); return; }
   if (e.key === 'Escape' && !els.streamModal.classList.contains('hidden')) { closeFollowStream(); return; }
   if (e.key === 'Escape' && els.reportModal && !els.reportModal.classList.contains('hidden')) { closeReport(); return; }
+  const toolModal = $('#tool-modal');
+  if (e.key === 'Escape' && toolModal && !toolModal.classList.contains('hidden')) { closeToolModal(); return; }
   const ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
   if (!els.replayModal.classList.contains('hidden')) return; // don't hijack keys while editing the replay form
@@ -2685,6 +3010,7 @@ async function init() {
   // abort init() and leave the tabs unresponsive.
   $$('.tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
   document.addEventListener('keydown', handleKeydown);
+  initMenuBar();
 
   // Translate all static UI chrome to the saved/detected language up front.
   I18N.apply(state.settings.lang);

@@ -109,6 +109,97 @@
       </div>
     </div>
 
+    <!-- Wireshark-style menu bar -->
+    <nav id="menubar">
+      <div class="menu">
+        <button class="menu-title" data-i18n="menu.file">File</button>
+        <div class="menu-drop">
+          <button class="menu-item" id="mi-open" data-i18n="menu.file.open">📂 Open capture…</button>
+          <button class="menu-item" id="mi-save" data-i18n="menu.file.save">💾 Save capture as…</button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="mi-report" data-i18n="menu.file.report">📄 Export report…</button>
+          <button class="menu-item" id="mi-csv" data-i18n="menu.file.csv">Export packets as CSV…</button>
+          <button class="menu-item" id="mi-json" data-i18n="menu.file.json">Export packets as JSON…</button>
+        </div>
+      </div>
+      <div class="menu">
+        <button class="menu-title" data-i18n="menu.edit">Edit</button>
+        <div class="menu-drop">
+          <button class="menu-item" id="mi-find" data-i18n="menu.edit.find">🔍 Find packet…</button>
+          <button class="menu-item" id="mi-clearfilter" data-i18n="menu.edit.clearfilter">Clear filter</button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="mi-prefs" data-i18n="menu.edit.prefs">⚙ Preferences…</button>
+        </div>
+      </div>
+      <div class="menu">
+        <button class="menu-title" data-i18n="menu.view">View</button>
+        <div class="menu-drop">
+          <button class="menu-item" data-goview="packets" data-i18n="tab.packets">Packets</button>
+          <button class="menu-item" data-goview="connections" data-i18n="tab.connections">Connections</button>
+          <button class="menu-item" data-goview="dashboard" data-i18n="tab.dashboard">Dashboard</button>
+          <button class="menu-item" data-goview="topology" data-i18n="tab.topology">Topology</button>
+          <button class="menu-item" data-goview="learn" data-i18n="tab.learn">Learn</button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="mi-timeprefs" data-i18n="menu.view.time">🕐 Time &amp; display settings…</button>
+        </div>
+      </div>
+      <div class="menu">
+        <button class="menu-title" data-i18n="menu.analyze">Analyze</button>
+        <div class="menu-drop">
+          <button class="menu-item" id="mi-applyfilter" data-i18n="menu.analyze.apply">Apply selected as filter</button>
+          <button class="menu-item" id="mi-follow" data-i18n="menu.analyze.follow">💬 Follow stream…</button>
+          <button class="menu-item" id="mi-expert" data-i18n="menu.analyze.expert">🛡 Expert information</button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="mi-filterhelp" data-i18n="menu.analyze.help">Display filter reference…</button>
+        </div>
+      </div>
+      <div class="menu">
+        <button class="menu-title" data-i18n="menu.stats">Statistics</button>
+        <div class="menu-drop">
+          <button class="menu-item" id="mi-hierarchy" data-i18n="menu.stats.hierarchy">Protocol hierarchy…</button>
+          <button class="menu-item" id="mi-endpoints" data-i18n="menu.stats.endpoints">Endpoints…</button>
+          <button class="menu-item" data-goview="connections" data-i18n="menu.stats.conv">Conversations</button>
+          <button class="menu-item" data-goview="dashboard" data-i18n="menu.stats.io">I/O graph</button>
+        </div>
+      </div>
+      <div class="menu">
+        <button class="menu-title" data-i18n="menu.telephony">Telephony</button>
+        <div class="menu-drop">
+          <button class="menu-item" id="mi-voip" data-i18n="menu.telephony.voip">📞 VoIP calls (SIP)…</button>
+        </div>
+      </div>
+      <div class="menu">
+        <button class="menu-title" data-i18n="menu.wireless">Wireless</button>
+        <div class="menu-drop">
+          <button class="menu-item" id="mi-wlan" data-i18n="menu.wireless.wlan">📶 WLAN traffic…</button>
+          <label class="menu-check"><input type="checkbox" id="mi-monitor"> <span data-i18n="menu.wireless.monitor">Monitor mode (next capture)</span></label>
+          <div class="menu-hint" data-i18n="menu.wireless.hint">Monitor mode needs an adapter that supports it (Npcap on Windows). Wi-Fi frames also load from a monitor-mode .pcap.</div>
+        </div>
+      </div>
+      <div class="menu">
+        <button class="menu-title" data-i18n="menu.tools">Tools</button>
+        <div class="menu-drop">
+          <button class="menu-item" id="mi-firewall" data-i18n="menu.tools.firewall">🧱 Firewall ACL rules…</button>
+          <button class="menu-item" id="mi-creds" data-i18n="menu.tools.creds">🔑 Credentials…</button>
+          <button class="menu-item" id="mi-blocked" data-i18n="menu.tools.blocked">⛔ Blocked IPs…</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Generic tool/statistics modal (Protocol Hierarchy, Endpoints, VoIP, …) -->
+    <div id="tool-modal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-head">
+          <span id="tool-title">—</span>
+          <span class="modal-head-actions">
+            <button id="tool-copy" class="btn btn-small btn-primary hidden" data-i18n="report.copy">Copy to clipboard</button>
+            <button id="tool-close" class="btn-icon" data-i18n-title="title.close" title="Close (Esc)">×</button>
+          </span>
+        </div>
+        <div id="tool-body" class="modal-body"></div>
+      </div>
+    </div>
+
     <!-- View Tabs -->
     <nav id="tabs">
       <button class="tab active" data-view="packets" data-i18n="tab.packets">Packets</button>
