@@ -94,6 +94,12 @@ fn get_lessons() -> Vec<LessonInfo> {
         ("UDP", Protocol::Udp),
         ("ICMP", Protocol::Icmp),
         ("ARP", Protocol::Arp),
+        ("DHCP", Protocol::Dhcp),
+        ("NTP", Protocol::Ntp),
+        ("mDNS", Protocol::Mdns),
+        ("SNMP", Protocol::Snmp),
+        ("QUIC", Protocol::Quic),
+        ("SIP", Protocol::Sip),
         ("Unknown", Protocol::Unknown(String::new())),
     ];
     protos

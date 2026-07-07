@@ -25,7 +25,14 @@ impl Transport {
     pub fn from_protocol(proto: &Protocol) -> Self {
         match proto {
             Protocol::Tcp | Protocol::Http | Protocol::Tls => Transport::Tcp,
-            Protocol::Udp | Protocol::Dns => Transport::Udp,
+            Protocol::Udp
+            | Protocol::Dns
+            | Protocol::Dhcp
+            | Protocol::Ntp
+            | Protocol::Mdns
+            | Protocol::Snmp
+            | Protocol::Quic
+            | Protocol::Sip => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
             Protocol::Unknown(_) => Transport::Other,
@@ -99,8 +106,13 @@ impl Flow {
 fn protocol_rank(proto: &Protocol) -> u8 {
     match proto {
         Protocol::Http => 4,
-        Protocol::Tls => 3,
-        Protocol::Dns => 3,
+        Protocol::Tls | Protocol::Quic => 3,
+        Protocol::Dns
+        | Protocol::Mdns
+        | Protocol::Dhcp
+        | Protocol::Ntp
+        | Protocol::Snmp
+        | Protocol::Sip => 3,
         Protocol::Tcp | Protocol::Udp | Protocol::Icmp | Protocol::Arp => 1,
         Protocol::Unknown(_) => 0,
     }

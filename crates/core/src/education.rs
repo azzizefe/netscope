@@ -88,6 +88,61 @@ hardware address (MAC), not their IP. ARP is the little broadcast that asks \
 happens on your local network — you'll never see ARP for internet servers.",
             look_for: "\"ARP Request — Who has 192.168.1.1? Tell 192.168.1.5\" then a reply with the MAC address.",
         },
+        Protocol::Dhcp => Lesson {
+            title: "DHCP — how your device gets an IP address",
+            summary: "Hands out IP addresses automatically when a device joins the network.",
+            body: "When your phone or laptop joins a network it doesn't yet have an IP \
+address. DHCP is the automatic negotiation that gives it one: the device shouts \
+'Discover', a server 'Offers' an address, the device 'Requests' it, and the \
+server confirms with an 'ACK'. That's why you almost never have to type in \
+network settings by hand.",
+            look_for: "\"DHCP Discover\" → \"DHCP Offer — 192.168.1.50\" → \"DHCP Request\" → \"DHCP ACK\".",
+        },
+        Protocol::Ntp => Lesson {
+            title: "NTP — keeping the clock correct",
+            summary: "How devices sync their clocks with time servers, to the millisecond.",
+            body: "Computer clocks drift. NTP is the quiet background protocol that \
+corrects them by asking time servers 'what time is it?' and measuring the round \
+trip so the answer stays accurate. Correct time matters more than it sounds — \
+security certificates, logs and encryption all depend on it.",
+            look_for: "\"NTP v4 client\" (your device asking) and \"NTP v4 server (stratum 2)\" (the answer).",
+        },
+        Protocol::Mdns => Lesson {
+            title: "mDNS — finding devices on the local network",
+            summary: "How your laptop discovers the printer, speaker or TV nearby.",
+            body: "mDNS (also called Bonjour or 'Zeroconf') is DNS without a server: \
+devices announce themselves on the local network so others can find them by \
+name. It's how AirPrint finds printers and how a Chromecast shows up in your \
+cast menu — no configuration required.",
+            look_for: "\"mDNS — Query — _airplay._tcp.local\" and similar `.local` service names.",
+        },
+        Protocol::Snmp => Lesson {
+            title: "SNMP — monitoring network gear",
+            summary: "How admins read status and stats from routers, switches and printers.",
+            body: "SNMP is the language network equipment speaks to management tools: \
+'how much traffic have you handled?', 'is this port up?', 'how much toner is \
+left?'. Older versions (v1/v2c) send a plaintext 'community' string as a \
+password — worth noticing if you see it on the wire.",
+            look_for: "\"SNMPv2c — community 'public'\" — note the community string is not encrypted.",
+        },
+        Protocol::Quic => Lesson {
+            title: "QUIC — the modern, faster HTTPS",
+            summary: "Google-designed transport behind HTTP/3; encrypted, over UDP.",
+            body: "QUIC is what a lot of 'HTTPS' traffic actually uses now. It rolls \
+the connection setup and encryption into one and runs over UDP instead of TCP, \
+so pages start loading faster — especially on flaky mobile networks. Like TLS, \
+the content is encrypted; you can see the connection but not what's inside.",
+            look_for: "\"QUIC — Initial\" (starting a connection) and \"QUIC — 1-RTT\" (encrypted data).",
+        },
+        Protocol::Sip => Lesson {
+            title: "SIP — setting up voice and video calls",
+            summary: "The signalling behind VoIP: ringing, answering and hanging up.",
+            body: "SIP is how internet phone calls are arranged. It doesn't carry the \
+audio itself — it's the 'ringing' layer that invites the other party, negotiates \
+the call, and tears it down at the end. The actual voice usually flows in a \
+separate media stream once SIP has set things up.",
+            look_for: "\"SIP INVITE — sip:bob@example.com\" (calling) and \"SIP 200 OK\" (answered).",
+        },
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail — shown safely anyway.",
@@ -109,6 +164,12 @@ pub fn all_lessons() -> Vec<Lesson> {
         Protocol::Udp,
         Protocol::Icmp,
         Protocol::Arp,
+        Protocol::Dhcp,
+        Protocol::Ntp,
+        Protocol::Mdns,
+        Protocol::Snmp,
+        Protocol::Quic,
+        Protocol::Sip,
         Protocol::Unknown(String::new()),
     ]
     .iter()
@@ -185,6 +246,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Udp => "A fast, connectionless UDP message (no delivery guarantee).",
         Protocol::Icmp => "A network status/diagnostic message (ICMP).",
         Protocol::Arp => "A local-network lookup matching an IP to a hardware address.",
+        Protocol::Dhcp => {
+            "Your device is getting (or renewing) its IP address from the network's DHCP server."
+        }
+        Protocol::Ntp => "A clock-sync message — your device checking the time with a time server.",
+        Protocol::Mdns => {
+            "Local service discovery (mDNS/Bonjour) — devices finding printers, speakers, etc. on the LAN."
+        }
+        Protocol::Snmp => "A network-management query/response (SNMP) used to monitor devices.",
+        Protocol::Quic => {
+            "Encrypted QUIC traffic — the modern transport behind HTTP/3, carried over UDP."
+        }
+        Protocol::Sip => "VoIP call signalling (SIP) — setting up, ringing, or ending a voice call.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
 }
@@ -230,7 +303,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 8);
+        assert_eq!(all_lessons().len(), 14);
     }
 
     #[test]

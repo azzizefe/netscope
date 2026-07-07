@@ -11,6 +11,18 @@ pub enum Protocol {
     Tls,
     Icmp,
     Arp,
+    /// DHCP / BOOTP address assignment (UDP 67/68).
+    Dhcp,
+    /// Network Time Protocol (UDP 123).
+    Ntp,
+    /// Multicast DNS service discovery (UDP 5353).
+    Mdns,
+    /// Simple Network Management Protocol (UDP 161/162).
+    Snmp,
+    /// QUIC transport / HTTP-3 (UDP, usually 443).
+    Quic,
+    /// Session Initiation Protocol for VoIP signalling (UDP/TCP 5060/5061).
+    Sip,
     Unknown(String),
 }
 
@@ -24,6 +36,12 @@ impl std::fmt::Display for Protocol {
             Protocol::Tls => write!(f, "TLS"),
             Protocol::Icmp => write!(f, "ICMP"),
             Protocol::Arp => write!(f, "ARP"),
+            Protocol::Dhcp => write!(f, "DHCP"),
+            Protocol::Ntp => write!(f, "NTP"),
+            Protocol::Mdns => write!(f, "mDNS"),
+            Protocol::Snmp => write!(f, "SNMP"),
+            Protocol::Quic => write!(f, "QUIC"),
+            Protocol::Sip => write!(f, "SIP"),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
     }

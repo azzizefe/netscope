@@ -4,6 +4,8 @@
 const PROTOCOL_COLORS = {
   TCP: '#4a9ef5', UDP: '#45d1c5', DNS: '#a78bfa', HTTP: '#34d399',
   TLS: '#6ee7b7', ICMP: '#fbbf24', ARP: '#9ca3af',
+  DHCP: '#f9a825', NTP: '#38bdf8', mDNS: '#c084fc',
+  SNMP: '#facc15', QUIC: '#2dd4bf', SIP: '#818cf8',
 };
 const protoColor = (p) => PROTOCOL_COLORS[p] || '#f87171';
 
@@ -238,14 +240,14 @@ function onPacket(event) {
 // ---- Flow aggregation (Connections view) ----
 function transportOf(proto) {
   if (['TCP', 'HTTP', 'TLS'].includes(proto)) return 'tcp';
-  if (['UDP', 'DNS'].includes(proto)) return 'udp';
+  if (['UDP', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP'].includes(proto)) return 'udp';
   if (proto === 'ICMP') return 'icmp';
   if (proto === 'ARP') return 'arp';
   return 'other';
 }
 function protoRank(proto) {
   if (proto === 'HTTP') return 4;
-  if (proto === 'TLS' || proto === 'DNS') return 3;
+  if (['TLS', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP'].includes(proto)) return 3;
   return 1;
 }
 // Cap how many packets we keep per flow for "Follow Stream" — bounds memory

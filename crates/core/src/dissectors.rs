@@ -1,9 +1,13 @@
 pub mod arp;
+pub mod dhcp;
 pub mod dns;
 pub mod ethernet;
 pub mod http;
 pub mod icmp;
 pub mod ip;
+pub mod ntp;
+pub mod sip;
+pub mod snmp;
 pub mod tcp;
 pub mod tls;
 pub mod udp;
@@ -37,23 +41,58 @@ pub fn dissect(data: &[u8]) -> DissectedResult {
         }
     };
 
-    match eth.ethertype {
-        etherparse::EtherType::ARP => arp::dissect_arp(&eth.payload),
-        etherparse::EtherType::IPV4 => {
-            let (src_ip, dst_ip, proto, payload) = ip::dissect_ipv4(&eth.payload);
-            dispatch_transport((src_ip, dst_ip, proto), payload, eth.payload.len())
+    dispatch_l3(eth.ethertype.0, &eth.payload, 0)
+}
+
+// EtherType values handled below the Ethernet header. Named here so the VLAN
+// unwrapping stays readable.
+const ETHERTYPE_IPV4: u16 = 0x0800;
+const ETHERTYPE_ARP: u16 = 0x0806;
+const ETHERTYPE_IPV6: u16 = 0x86DD;
+const ETHERTYPE_VLAN: u16 = 0x8100; // 802.1Q
+const ETHERTYPE_QINQ_88A8: u16 = 0x88A8; // 802.1ad service tag
+const ETHERTYPE_QINQ_9100: u16 = 0x9100; // legacy double-tag
+
+/// Dispatch on the L3 EtherType. Recurses through VLAN (802.1Q / QinQ) tags,
+/// unwrapping each 4-byte tag and re-dispatching on the inner EtherType so a
+/// tagged frame still reaches its IP/ARP dissector. `vlan_depth` caps the
+/// recursion (2 tags is the practical maximum: QinQ).
+fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> DissectedResult {
+    match ethertype {
+        ETHERTYPE_ARP => arp::dissect_arp(payload),
+        ETHERTYPE_IPV4 => {
+            let (src_ip, dst_ip, proto, inner) = ip::dissect_ipv4(payload);
+            dispatch_transport((src_ip, dst_ip, proto), inner, payload.len())
         }
-        etherparse::EtherType::IPV6 => {
-            let (src_ip, dst_ip, proto, payload) = ip::dissect_ipv6(&eth.payload);
-            dispatch_transport((src_ip, dst_ip, proto), payload, eth.payload.len())
+        ETHERTYPE_IPV6 => {
+            let (src_ip, dst_ip, proto, inner) = ip::dissect_ipv6(payload);
+            dispatch_transport((src_ip, dst_ip, proto), inner, payload.len())
         }
-        _ => DissectedResult {
+        ETHERTYPE_VLAN | ETHERTYPE_QINQ_88A8 | ETHERTYPE_QINQ_9100 if vlan_depth < 2 => {
+            // 802.1Q tag: 2 bytes TCI (PCP/DEI/VID) + 2 bytes inner EtherType.
+            if payload.len() < 4 {
+                return DissectedResult {
+                    src_addr: None,
+                    dst_addr: None,
+                    src_port: None,
+                    dst_port: None,
+                    protocol: Protocol::Unknown("truncated VLAN tag".into()),
+                    summary: "Malformed VLAN tag (too short)".into(),
+                };
+            }
+            let vlan_id = u16::from_be_bytes([payload[0], payload[1]]) & 0x0FFF;
+            let inner_ethertype = u16::from_be_bytes([payload[2], payload[3]]);
+            let mut inner = dispatch_l3(inner_ethertype, &payload[4..], vlan_depth + 1);
+            inner.summary = format!("VLAN {vlan_id} · {}", inner.summary);
+            inner
+        }
+        other => DissectedResult {
             src_addr: None,
             dst_addr: None,
             src_port: None,
             dst_port: None,
-            protocol: Protocol::Unknown(format!("ethertype 0x{:04x}", eth.ethertype.0)),
-            summary: format!("Unknown L3 protocol (ethertype 0x{:04x})", eth.ethertype.0),
+            protocol: Protocol::Unknown(format!("ethertype 0x{other:04x}")),
+            summary: format!("Unknown L3 protocol (ethertype 0x{other:04x})"),
         },
     }
 }

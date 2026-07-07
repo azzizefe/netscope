@@ -10,6 +10,12 @@ pub fn protocol_color(protocol: &Protocol) -> Color {
         Protocol::Tls => Color::Rgb(0x6E, 0xE7, 0xB7),
         Protocol::Icmp => Color::Rgb(0xFB, 0xB2, 0x24),
         Protocol::Arp => Color::Rgb(0x9C, 0xA3, 0xAF),
+        Protocol::Dhcp => Color::Rgb(0xF9, 0xA8, 0x25),
+        Protocol::Ntp => Color::Rgb(0x38, 0xBD, 0xF8),
+        Protocol::Mdns => Color::Rgb(0xC0, 0x84, 0xFC),
+        Protocol::Snmp => Color::Rgb(0xFA, 0xCC, 0x15),
+        Protocol::Quic => Color::Rgb(0x2D, 0xD4, 0xBF),
+        Protocol::Sip => Color::Rgb(0x81, 0x8C, 0xF8),
         Protocol::Unknown(_) => Color::Rgb(0xF8, 0x71, 0x71),
     }
 }

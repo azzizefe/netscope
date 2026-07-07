@@ -5,6 +5,24 @@ All notable changes to netscope will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Deeper protocol dissection** (`crates/core`)
+  - VLAN 802.1Q and QinQ (802.1ad) tag unwrapping — tagged frames now reach
+    their inner IP/ARP dissector, with the VLAN id shown in the summary
+  - New UDP application-layer dissectors, each a first-class protocol with its
+    own colouring, flow labelling and Learn-tab lesson:
+    - **DHCP / BOOTP** (67/68) — message type (Discover/Offer/Request/ACK/…)
+      and the assigned address
+    - **NTP** (123) — version, mode (client/server/…), stratum
+    - **mDNS** (5353) — local service discovery, parsed via the DNS format
+    - **SNMP** (161/162) — version and (for v1/v2c) the plaintext community
+    - **QUIC** (443/80) — long/short header detection with handshake phase
+    - **SIP** (5060/5061) — VoIP request method / status line
+  - 16 new unit tests covering the added dissectors
+
 ## [0.1.0] — 2026-07-07
 
 ### Added
