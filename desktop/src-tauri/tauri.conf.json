@@ -11,12 +11,14 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "netscope",
+        "title": "netscope — Network Analyzer",
         "width": 1280,
         "height": 800,
         "resizable": true,
         "fullscreen": false,
-        "center": true
+        "center": true,
+        "minWidth": 900,
+        "minHeight": 600
       }
     ],
     "security": {
@@ -32,6 +34,7 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "licenseFile": "../../LICENSE"
   }
 }
