@@ -355,11 +355,12 @@ impl Drop for CaptureEngine {
 }
 
 fn build_packet(pkt: pcap::Packet) -> Packet {
-    let timestamp = chrono::DateTime::from_timestamp(
-        pkt.header.ts.tv_sec as i64,
-        pkt.header.ts.tv_usec as u32 * 1000,
-    )
-    .unwrap_or_default();
+    // tv_sec is i32 on Windows but already i64 on Linux/macOS, so the cast
+    // is platform-necessary even where clippy flags it as i64 -> i64.
+    #[allow(clippy::unnecessary_cast)]
+    let secs = pkt.header.ts.tv_sec as i64;
+    let timestamp = chrono::DateTime::from_timestamp(secs, pkt.header.ts.tv_usec as u32 * 1000)
+        .unwrap_or_default();
 
     let DissectedResult {
         src_addr,
