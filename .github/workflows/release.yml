@@ -100,7 +100,7 @@ jobs:
       - name: Install Tauri CLI
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-tauri2
+          tool: tauri-cli@2
 
       - name: Build desktop
         run: cargo tauri build --ci --bundles "${{ matrix.bundles }}"
