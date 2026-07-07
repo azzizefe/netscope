@@ -15,7 +15,6 @@
   <img src="https://img.shields.io/badge/rust-1.95+-orange" alt="Rust">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <a href="https://github.com/azzizefe/netscope/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/azzizefe/netscope/ci.yml?branch=main&label=ci" alt="CI"></a>
-  <a href="https://crates.io/crates/netscope-tui"><img src="https://img.shields.io/crates/v/netscope-tui.svg" alt="crates.io"></a>
 </p>
 
 <p align="center">
@@ -30,10 +29,6 @@
 
 <br>
 
-> **📺 Demo GIF here** — drag a 15-second screen recording showing live capture with colored packets, tab switching, and the dashboard.
-
-<br>
-
 ---
 
 ## Why netscope?
@@ -41,7 +36,7 @@
 | | netscope | Wireshark |
 |---|---|---|
 | **Readability** | ✅ Shows `google.com → 142.250.74.46` | ❌ Raw hex dumps, cryptic flags |
-| **Setup** | ✅ `cargo install netscope-tui` — done | ❌ 47 menus, 200 MB installer, 5 config dialogs |
+| **Setup** | ✅ One small binary — run it, it works | ❌ 47 menus, 200 MB installer, 5 config dialogs |
 | **Size** | ✅ ~5 MB single binary | ❌ ~200 MB installer + profiles + plugins |
 | **Focus** | ✅ Just the signal, no noise | ❌ Everything including kitchen sink |
 | **Speed** | ✅ 10k+ pkt/s, zero lag | ❌ Can freeze on large captures |
@@ -144,9 +139,8 @@ Full details in the [Desktop Guide](docs/desktop.md).
 
 ### ⌨️ Terminal UI
 
-```bash
-cargo install netscope-tui
-```
+Grab the prebuilt `netscope-tui` binary for your OS from
+[Releases](https://github.com/azzizefe/netscope/releases), or build from source (below).
 
 | Platform | Requirement |
 |----------|-------------|
@@ -235,20 +229,6 @@ Usage: netscope-tui [OPTIONS]
 
 ---
 
-## Screenshots
-
-> **📸 Insert screenshots here:**
-> 1. TUI packet list with colored rows
-> 2. Dashboard with bandwidth chart and protocol bar graph
-> 3. DNS log view
-> 4. Help overlay
-
-<p align="center">
-  <i>Screenshots coming soon. Run it yourself to see.</i>
-</p>
-
----
-
 ## Docs
 
 Full index: [docs/README.md](docs/README.md)
@@ -314,6 +294,6 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
   Built with ❤️ and 🦀
   <br>
   <a href="https://github.com/azzizefe/netscope">GitHub</a> •
-  <a href="https://crates.io/crates/netscope-tui">crates.io</a> •
+  <a href="https://github.com/azzizefe/netscope/releases">Releases</a> •
   <a href="#netscope-">Back to top</a>
 </p>

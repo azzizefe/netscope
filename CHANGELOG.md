@@ -5,7 +5,7 @@ All notable changes to netscope will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] — Unreleased
+## [0.1.0] — 2026-07-07
 
 ### Added
 
@@ -55,11 +55,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Firewall inspection/cleanup (`--list-blocked`, `--unblock-all`)
 
 - **Desktop app** (`desktop/`, Tauri 2)
-  - Native window with four tabs: Packets, Connections, Dashboard, Learn
-  - Passive hostname resolution and per-packet `ℹ` explanations in the UI
-  - Connections tab shows where traffic goes and blocks a remote host with one
-    click (`block_ip`/`unblock_ip`/`list_blocked`/`is_elevated` commands)
-  - Learn tab served from `core::education`; `⚠ not admin` elevation badge
+  - Native window with ten views: Packets, Connections, Dashboard, Topology,
+    DNS Log, Insights, Privacy, Diff, Script, Learn
+  - Wireshark-style three-pane inspector: protocol tree, hex/ASCII view,
+    plain-language "what is this?" per packet
+  - Follow Stream, Expert Info badges, payload beautifier (JSON/XML),
+    protocol guesser, hex → C/Rust/Python literals
+  - 🛡 Insights security & privacy scan (cleartext secrets, port scans,
+    signature matches, exfiltration, beaconing, encryption ratio)
+  - 🔎 Privacy X-ray: per-site trackers, cookies, data cost
+  - Traffic diff, live "Grafana-style" dashboard with sparklines and
+    bandwidth projection, force-directed topology map
+  - JavaScript script console over the captured packet stream
+  - Profiles, workspace modes, noise filter, themes, shareable Markdown
+    report with secret scrubbing and IP anonymisation
+  - Replay (repeater) for resending a payload to a host/port
+  - 7-language UI (EN, DE, FR, IT, PT, AR, TR)
+  - Opt-in GeoIP lookup (off by default — no external calls unless enabled)
+  - Connections tab blocks a remote host with one click
+    (`block_ip`/`unblock_ip`/`list_blocked`/`is_elevated` commands);
+    Windows build embeds a `requireAdministrator` manifest so blocking works
   - Runs straight from source: `cargo run -p netscope-desktop`
 
 - **Documentation**
@@ -85,4 +100,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Windows builds require Npcap (WinPcap-compatible mode)
 - Linux requires `CAP_NET_RAW` capability or root for live capture
-- Desktop app (Tauri) coming in a future release
