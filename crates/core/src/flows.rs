@@ -44,7 +44,7 @@ impl Transport {
             | Protocol::Sip => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
-            Protocol::Unknown(_) => Transport::Other,
+            Protocol::Wlan | Protocol::Unknown(_) => Transport::Other,
         }
     }
 }
@@ -129,7 +129,7 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Pop3
         | Protocol::Telnet
         | Protocol::Rdp => 3,
-        Protocol::Tcp | Protocol::Udp | Protocol::Icmp | Protocol::Arp => 1,
+        Protocol::Tcp | Protocol::Udp | Protocol::Icmp | Protocol::Arp | Protocol::Wlan => 1,
         Protocol::Unknown(_) => 0,
     }
 }

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **802.11 (Wi-Fi) dissection** (`crates/core/src/dissectors/`)
+  - Link-layer-aware capture: the dissector now branches on the pcap
+    data-link type, so captures on Wi-Fi (`DLT_IEEE802_11` and radiotap
+    `DLT_IEEE802_11_RADIO`) are decoded as 802.11 instead of Ethernet
+  - `radiotap.rs` — parses the monitor-mode radiotap header (length, signal
+    dBm, channel MHz)
+  - `wlan.rs` — 802.11 management/control/data frames, with SSID extraction
+    from beacons and probes (hidden SSIDs flagged) and BSSID display
+  - New first-class `802.11` protocol with colour, Learn lesson and
+    `wlan` / `wifi` / `802.11` display-filter predicates
+  - 11 new unit tests
+
 - **Display-filter language** (`crates/core/src/filter.rs`) — a Wireshark-style
   filter grammar shared by the TUI and desktop:
   - Fields: `ip.addr` / `ip.src` / `ip.dst`, `port` / `tcp.port` / `udp.port`,

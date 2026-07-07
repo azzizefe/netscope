@@ -107,6 +107,7 @@ fn get_lessons() -> Vec<LessonInfo> {
         ("POP3", Protocol::Pop3),
         ("Telnet", Protocol::Telnet),
         ("RDP", Protocol::Rdp),
+        ("802.11", Protocol::Wlan),
         ("Unknown", Protocol::Unknown(String::new())),
     ];
     protos

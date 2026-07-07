@@ -238,6 +238,9 @@ impl CaptureEngine {
         }
 
         let output_path = output_path.map(|s| s.to_string());
+        // Link-layer type decides how each frame is dissected (Ethernet vs.
+        // 802.11 / radiotap). Read it before `cap` moves into the thread.
+        let linktype = cap.get_datalink().0;
 
         let handle = thread::Builder::new()
             .name("capture".into())
@@ -257,7 +260,7 @@ impl CaptureEngine {
                             if let Some(ref mut sf) = savefile {
                                 sf.write(&pkt);
                             }
-                            let packet = build_packet(pkt);
+                            let packet = build_packet(pkt, linktype);
                             if packet_tx.send(packet).is_err() {
                                 break;
                             }
@@ -297,6 +300,8 @@ impl CaptureEngine {
         }
 
         let output_path = output_path.map(|s| s.to_string());
+        // Link-layer type of the saved capture (Ethernet, 802.11, radiotap…).
+        let linktype = cap.get_datalink().0;
 
         let handle = thread::Builder::new()
             .name("capture".into())
@@ -316,7 +321,7 @@ impl CaptureEngine {
                             if let Some(ref mut sf) = savefile {
                                 sf.write(&pkt);
                             }
-                            let packet = build_packet(pkt);
+                            let packet = build_packet(pkt, linktype);
                             if packet_tx.send(packet).is_err() {
                                 break;
                             }
@@ -354,7 +359,7 @@ impl Drop for CaptureEngine {
     }
 }
 
-fn build_packet(pkt: pcap::Packet) -> Packet {
+fn build_packet(pkt: pcap::Packet, linktype: i32) -> Packet {
     // tv_sec is i32 on Windows but already i64 on Linux/macOS, so the cast
     // is platform-necessary even where clippy flags it as i64 -> i64.
     #[allow(clippy::unnecessary_cast)]
@@ -369,7 +374,7 @@ fn build_packet(pkt: pcap::Packet) -> Packet {
         dst_port,
         protocol,
         summary,
-    } = dissectors::dissect(pkt.data);
+    } = dissectors::dissect_linktype(pkt.data, linktype);
 
     Packet {
         timestamp,

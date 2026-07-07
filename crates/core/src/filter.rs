@@ -10,7 +10,8 @@
 //!
 //! - **Protocol predicates** (bare words): `tcp`, `udp`, `icmp`, `arp`, `ip`,
 //!   `ipv4`, `ipv6`, `dns`, `http`, `tls`, `dhcp`, `ntp`, `mdns`, `snmp`,
-//!   `quic`, `sip`, `ssh`, `ftp`, `smtp`, `imap`, `pop3`, `telnet`, `rdp`.
+//!   `quic`, `sip`, `ssh`, `ftp`, `smtp`, `imap`, `pop3`, `telnet`, `rdp`,
+//!   `wlan` / `wifi` / `802.11`.
 //! - **Fields**: `ip.addr`, `ip.src`, `ip.dst`, `port`, `tcp.port`,
 //!   `udp.port`, `frame.len` (aliases: `len`, `length`).
 //! - **Comparisons**: `==` `!=` `>` `<` `>=` `<=`, plus `contains` (substring
@@ -25,7 +26,8 @@ use crate::models::Packet;
 /// Protocol tokens accepted as bare predicates (e.g. `tcp`, `dns`).
 const KNOWN_PROTOS: &[&str] = &[
     "ip", "ipv4", "ipv6", "tcp", "udp", "icmp", "arp", "dns", "http", "tls", "dhcp", "ntp", "mdns",
-    "snmp", "quic", "sip", "ssh", "ftp", "smtp", "imap", "pop3", "telnet", "rdp",
+    "snmp", "quic", "sip", "ssh", "ftp", "smtp", "imap", "pop3", "telnet", "rdp", "wlan", "wifi",
+    "802.11",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -133,6 +135,7 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "udp" => transport == Transport::Udp,
         "icmp" => transport == Transport::Icmp,
         "arp" => transport == Transport::Arp,
+        "wlan" | "wifi" => pkt.protocol.to_string() == "802.11",
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

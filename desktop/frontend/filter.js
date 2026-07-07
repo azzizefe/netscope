@@ -15,6 +15,7 @@ const NetscopeFilter = (() => {
     'ip', 'ipv4', 'ipv6', 'tcp', 'udp', 'icmp', 'arp', 'dns', 'http', 'tls',
     'dhcp', 'ntp', 'mdns', 'snmp', 'quic', 'sip',
     'ssh', 'ftp', 'smtp', 'imap', 'pop3', 'telnet', 'rdp',
+    'wlan', 'wifi', '802.11',
   ]);
 
   const FIELDS = {
@@ -163,6 +164,7 @@ const NetscopeFilter = (() => {
       case 'udp': return transport === 'udp';
       case 'icmp': return transport === 'icmp';
       case 'arp': return transport === 'arp';
+      case 'wlan': case 'wifi': return pkt.protocol === '802.11';
       default: return (pkt.protocol || '').toLowerCase() === name;
     }
   }

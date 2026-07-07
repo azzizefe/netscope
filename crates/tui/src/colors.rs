@@ -23,6 +23,7 @@ pub fn protocol_color(protocol: &Protocol) -> Color {
         Protocol::Pop3 => Color::Rgb(0xD9, 0x8A, 0xE8),
         Protocol::Telnet => Color::Rgb(0xF8, 0x71, 0x71),
         Protocol::Rdp => Color::Rgb(0x60, 0xA5, 0xFA),
+        Protocol::Wlan => Color::Rgb(0x22, 0xD3, 0xEE),
         Protocol::Unknown(_) => Color::Rgb(0xF8, 0x71, 0x71),
     }
 }

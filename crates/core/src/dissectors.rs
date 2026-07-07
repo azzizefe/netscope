@@ -9,6 +9,7 @@ pub mod imap;
 pub mod ip;
 pub mod ntp;
 pub mod pop3;
+pub mod radiotap;
 pub mod rdp;
 pub mod sip;
 pub mod smtp;
@@ -18,6 +19,7 @@ pub mod tcp;
 pub mod telnet;
 pub mod tls;
 pub mod udp;
+pub mod wlan;
 
 use std::net::IpAddr;
 
@@ -51,6 +53,24 @@ pub struct DissectedResult {
     pub dst_port: Option<u16>,
     pub protocol: Protocol,
     pub summary: String,
+}
+
+// libpcap data-link types (DLT_*) we branch on. Everything else is treated
+// as Ethernet, which is the overwhelmingly common case.
+const DLT_EN10MB: i32 = 1;
+const DLT_IEEE802_11: i32 = 105;
+const DLT_IEEE802_11_RADIO: i32 = 127;
+
+/// Entry point that respects the capture's link-layer type. Ethernet captures
+/// (the default) go through [`dissect`]; Wi-Fi captures — raw 802.11 or
+/// radiotap-prefixed (monitor mode) — go through the WLAN dissector.
+pub fn dissect_linktype(data: &[u8], linktype: i32) -> DissectedResult {
+    match linktype {
+        DLT_IEEE802_11_RADIO => wlan::dissect_radiotap(data),
+        DLT_IEEE802_11 => wlan::dissect_80211(data, None),
+        DLT_EN10MB => dissect(data),
+        _ => dissect(data),
+    }
 }
 
 pub fn dissect(data: &[u8]) -> DissectedResult {

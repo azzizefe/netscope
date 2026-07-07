@@ -206,6 +206,16 @@ can see that an RDP connection exists (and to where) but not the screen contents
 RDP exposed to the internet is a common attack target worth noticing.",
             look_for: "\"RDP (Remote Desktop)\" to or from TCP port 3389.",
         },
+        Protocol::Wlan => Lesson {
+            title: "802.11 — Wi-Fi at the radio layer",
+            summary: "The wireless frames beneath your network traffic — seen in monitor mode.",
+            body: "Everything else in netscope sits on top of a link layer; on Wi-Fi \
+that layer is 802.11. In monitor mode you can watch the radio itself: beacons \
+that access points broadcast to advertise a network, probe requests devices send \
+looking for known networks, and the management frames that join and leave. It's a \
+different view of the air around you, not the data inside encrypted connections.",
+            look_for: "\"802.11 Beacon — \\\"MyWiFi\\\"\" and \"802.11 Probe Request\" frames, often with a signal in dBm.",
+        },
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail — shown safely anyway.",
@@ -240,6 +250,7 @@ pub fn all_lessons() -> Vec<Lesson> {
         Protocol::Pop3,
         Protocol::Telnet,
         Protocol::Rdp,
+        Protocol::Wlan,
         Protocol::Unknown(String::new()),
     ]
     .iter()
@@ -335,6 +346,7 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Pop3 => "A mail client downloading messages from the server (POP3).",
         Protocol::Telnet => "An unencrypted remote terminal (Telnet) — everything, including passwords, is visible.",
         Protocol::Rdp => "A Windows Remote Desktop session (RDP).",
+        Protocol::Wlan => "A raw Wi-Fi (802.11) frame — the radio layer beneath your network traffic.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
 }
@@ -380,7 +392,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 21);
+        assert_eq!(all_lessons().len(), 22);
     }
 
     #[test]

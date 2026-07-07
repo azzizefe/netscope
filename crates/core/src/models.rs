@@ -37,6 +37,8 @@ pub enum Protocol {
     Telnet,
     /// Remote Desktop Protocol (TCP 3389).
     Rdp,
+    /// IEEE 802.11 (Wi-Fi) link-layer frame — management/control/data.
+    Wlan,
     Unknown(String),
 }
 
@@ -63,6 +65,7 @@ impl std::fmt::Display for Protocol {
             Protocol::Pop3 => write!(f, "POP3"),
             Protocol::Telnet => write!(f, "Telnet"),
             Protocol::Rdp => write!(f, "RDP"),
+            Protocol::Wlan => write!(f, "802.11"),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
     }

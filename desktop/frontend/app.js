@@ -7,7 +7,7 @@ const PROTOCOL_COLORS = {
   DHCP: '#f9a825', NTP: '#38bdf8', mDNS: '#c084fc',
   SNMP: '#facc15', QUIC: '#2dd4bf', SIP: '#818cf8',
   SSH: '#5eead4', FTP: '#fb923c', SMTP: '#f472b6', IMAP: '#e879f9',
-  POP3: '#d98ae8', Telnet: '#f87171', RDP: '#60a5fa',
+  POP3: '#d98ae8', Telnet: '#f87171', RDP: '#60a5fa', '802.11': '#22d3ee',
 };
 const protoColor = (p) => PROTOCOL_COLORS[p] || '#f87171';
 
