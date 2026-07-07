@@ -180,12 +180,38 @@ async function loadInterfaces() {
       // Prefer an interface that has a description (physical adapters usually do).
       const best = ifaces.findIndex((d) => /wi-?fi|ethernet|wireless|realtek|intel/i.test(d.description || ''));
       if (best >= 0) els.interfaceSelect.selectedIndex = best;
+      showNpcapWarning(false);
     } else {
-      els.interfaceSelect.innerHTML = '<option>No interfaces — is Npcap installed?</option>';
+      els.interfaceSelect.innerHTML = `<option>${esc(I18N.t('iface.none'))}</option>`;
+      showNpcapWarning(true);
     }
-  } catch {
-    els.interfaceSelect.innerHTML = '<option>Error loading interfaces</option>';
+  } catch (e) {
+    els.interfaceSelect.innerHTML = `<option>${esc(I18N.t('iface.error'))}</option>`;
+    showNpcapWarning(true, String(e && e.message ? e.message : e));
   }
+}
+
+const NPCAP_URL = 'https://npcap.com';
+
+/** Show/hide the "capture driver missing" badge. Clicking it opens setup help. */
+function showNpcapWarning(show, detail) {
+  const badge = $('#npcap-badge');
+  if (!badge) return;
+  badge.classList.toggle('hidden', !show);
+  badge._detail = detail || '';
+}
+
+function openNpcapHelp() {
+  const detail = ($('#npcap-badge') || {})._detail;
+  const body = `
+    <p>${esc(I18N.t('npcap.body'))}</p>
+    <ul>
+      <li><b>Windows:</b> ${esc(I18N.t('npcap.win'))} — <code>${NPCAP_URL}</code></li>
+      <li><b>Linux:</b> ${esc(I18N.t('npcap.linux'))}</li>
+      <li><b>macOS:</b> ${esc(I18N.t('npcap.mac'))}</li>
+    </ul>
+    ${detail ? `<pre class="tool-pre">${esc(detail)}</pre>` : ''}`;
+  openToolModal(I18N.t('npcap.title'), body, () => copyText(NPCAP_URL));
 }
 
 // ---- Capture control ----
@@ -2930,6 +2956,9 @@ function initMenuBar() {
       saveJSON('netscope.settings', state.settings);
     });
   }
+
+  // Capture-driver (Npcap) help.
+  on('#npcap-badge', openNpcapHelp);
 
   // Tool modal close wiring.
   on('#tool-close', closeToolModal);

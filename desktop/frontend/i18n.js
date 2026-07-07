@@ -546,8 +546,25 @@ const I18N = (() => {
       'menu.wireless.hint': 'Monitör modu, destekleyen bir adaptör gerektirir (Windows’ta Npcap). Wi-Fi çerçeveleri monitör-modu .pcap’tan da yüklenir.',
       'menu.tools.firewall': '🧱 Güvenlik duvarı ACL kuralları…', 'menu.tools.creds': '🔑 Kimlik bilgileri…',
       'menu.tools.blocked': '⛔ Engellenen IP’ler…',
+      'badge.npcap': '⚠ Npcap?', 'title.npcap': 'Yakalama sürücüsü bulunamadı — kurulum yardımı için tıklayın',
+      'iface.none': 'Arayüz yok — Npcap kurulu mu?', 'iface.error': 'Arayüzler yüklenemedi',
+      'npcap.title': 'Yakalama sürücüsü kurulumu',
+      'npcap.body': 'netscope paketleri yakalamak için bir sürücüye ihtiyaç duyar. Hiç ağ arayüzü bulunamadı — genellikle sürücü eksik ya da uygulama yeterli yetkiyle çalışmıyor demektir.',
+      'npcap.win': 'Npcap’i “WinPcap API uyumlu mod” işaretli kurun, sonra uygulamayı Yönetici olarak yeniden başlatın',
+      'npcap.linux': 'sudo ile çalıştırın ya da ikili dosyaya CAP_NET_RAW yetkisi verin',
+      'npcap.mac': 'ek kurulum gerekmez; gerekirse yükseltilmiş yetkiyle çalıştırın',
     },
   };
+  // English strings for the new keys (other languages fall back to these).
+  Object.assign(EXTRA.en, {
+    'badge.npcap': '⚠ Npcap?', 'title.npcap': 'No capture driver found — click for setup help',
+    'iface.none': 'No interfaces — is Npcap installed?', 'iface.error': 'Error loading interfaces',
+    'npcap.title': 'Capture driver setup',
+    'npcap.body': 'netscope needs a packet-capture driver. No network interfaces were found — usually the driver is missing, or the app isn’t running with enough privileges.',
+    'npcap.win': 'Install Npcap with “WinPcap API-compatible mode” ticked, then relaunch as Administrator',
+    'npcap.linux': 'run with sudo, or grant the binary CAP_NET_RAW',
+    'npcap.mac': 'no extra setup needed; run elevated if required',
+  });
   for (const l of Object.keys(DICT)) Object.assign(DICT[l], EXTRA[l] || {});
 
   let current = 'en';
