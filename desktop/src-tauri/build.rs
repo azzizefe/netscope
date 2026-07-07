@@ -1,3 +1,55 @@
 fn main() {
-    tauri_build::build()
+    let attributes = tauri_build::Attributes::new();
+
+    // On Windows release builds, embed an application manifest that requests
+    // Administrator rights. Windows then shows a UAC consent prompt on every
+    // launch, so the app always runs elevated — which is what its IP-blocking
+    // feature needs (installing firewall rules via `netsh` requires
+    // elevation). Without this the app runs as a normal user and blocking is
+    // disabled. Debug builds skip the manifest: an elevated binary can't be
+    // launched from a non-elevated `cargo test` / `cargo run` (os error 740).
+    #[cfg(windows)]
+    let attributes = if std::env::var("PROFILE").as_deref() != Ok("release") {
+        attributes
+    } else {
+        attributes.windows_attributes(
+        tauri_build::WindowsAttributes::new().app_manifest(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 / 11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+      <!-- Windows 8.1 -->
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}" />
+      <!-- Windows 8 -->
+      <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}" />
+      <!-- Windows 7 -->
+      <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}" />
+    </application>
+  </compatibility>
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+    </windowsSettings>
+  </application>
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*" />
+    </dependentAssembly>
+  </dependency>
+</assembly>"#,
+            ),
+        )
+    };
+
+    tauri_build::try_build(attributes).expect("failed to run tauri-build");
 }

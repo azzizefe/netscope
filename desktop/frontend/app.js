@@ -96,7 +96,7 @@ const state = {
   },
   // Time Display Format: 'time' (HH:MM:SS.mmm), 'datetime' (date + time),
   // 'relative' (seconds since the first packet of this capture session).
-  settings: Object.assign({ timeFormat: 'time', showHostnames: true, profile: 'HTTP Analysis', theme: 'midnight', noiseFilter: false, lang: detectDefaultLang() }, loadJSON('netscope.settings', {})),
+  settings: Object.assign({ timeFormat: 'time', showHostnames: true, profile: 'HTTP Analysis', theme: 'midnight', noiseFilter: false, lang: detectDefaultLang(), geoip: false }, loadJSON('netscope.settings', {})),
   customProfiles: loadJSON('netscope.profiles', {}),
   captureStartEpoch: null,
   // Live dashboard sampling (1 Hz): rolling history for the sparkline widgets.
@@ -816,7 +816,7 @@ function buildDetailTree(pkt, index) {
       `<div class="tnode-head"><span class="twist">▾</span>` +
       `<span class="tlabel">🌍 ${role} location <span class="tlabel-sub">${esc(ip)}</span></span></div>` +
       `<div class="tbody"><div class="tfield"><span class="tkey">Location</span>` +
-      `<span class="tval geo-status">Looking up…</span></div></div></div>`);
+      `<span class="tval geo-status">${state.settings.geoip ? 'Looking up…' : esc(I18N.t('geoip.off'))}</span></div></div></div>`);
   }
 
   // Transport layer
@@ -966,6 +966,8 @@ function threatIntelRow(ip) {
 }
 
 async function enrichGeo(pkt) {
+  // Opt-in only: netscope makes no external calls unless the user turns this on.
+  if (!state.settings.geoip) return;
   for (const [role, ip] of [['Destination', pkt.dst_addr], ['Source', pkt.src_addr]]) {
     if (!isPublicIp(ip)) continue;
     const g = await lookupGeo(ip);
@@ -1311,6 +1313,7 @@ function renderProfilePanel() {
   els.timeFormatSelect.value = state.settings.timeFormat;
   els.resolveNamesCheck.checked = state.settings.showHostnames;
   if (els.noiseFilterCheck) els.noiseFilterCheck.checked = !!state.settings.noiseFilter;
+  if (els.geoipCheck) els.geoipCheck.checked = !!state.settings.geoip;
 }
 
 function saveCurrentAsProfile() {
@@ -2655,7 +2658,7 @@ async function init() {
     privacyRescan: $('#privacy-rescan'), privacySummary: $('#privacy-summary'), privacyCost: $('#privacy-cost'), privacyList: $('#privacy-list'),
     summaryOpen: $('#summary-open'), busiestPeak: $('#busiest-peak'), busiestChart: $('#busiest-chart'), busiestHint: $('#busiest-hint'),
     hexPanel: $('#hex-panel'), statProjection: $('#stat-projection'),
-    noiseFilterCheck: $('#noise-filter-check'), reportAnon: $('#report-anon'),
+    noiseFilterCheck: $('#noise-filter-check'), geoipCheck: $('#geoip-check'), reportAnon: $('#report-anon'),
     alertBtn: $('#alert-btn'), alertBadge: $('#alert-badge'), alertPanel: $('#alert-panel'), alertList: $('#alert-list'),
     triggerList: $('#trigger-list'), trigField: $('#trig-field'), trigOp: $('#trig-op'), trigValue: $('#trig-value'), trigAdd: $('#trig-add'),
   });
@@ -2678,6 +2681,12 @@ async function init() {
   // Restore the persisted profile (or fall back if it was deleted elsewhere)
   if (!allProfiles()[state.settings.profile]) state.settings.profile = Object.keys(BUILTIN_PROFILES)[0];
   applyProfile(state.settings.profile);
+
+  // Start every launch with an empty display filter, even if the active profile
+  // defines one — the filter box should be clear when the app opens.
+  state.filterText = '';
+  els.filterInput.value = '';
+  if (state.view === 'packets') renderPacketList();
 
   // Script console: restore last script or seed with the default
   els.scriptEditor.value = loadJSON('netscope.script', SCRIPT_DEFAULT);
@@ -2737,6 +2746,14 @@ async function init() {
     state.settings.noiseFilter = els.noiseFilterCheck.checked;
     saveJSON('netscope.settings', state.settings);
     renderPacketList();
+  });
+
+  // GeoIP lookups (opt-in — the only external call netscope makes)
+  els.geoipCheck.addEventListener('change', () => {
+    state.settings.geoip = els.geoipCheck.checked;
+    saveJSON('netscope.settings', state.settings);
+    // Re-render the open packet so the location layer updates immediately.
+    if (state.selectedIndex >= 0) showDetail(state.selectedIndex);
   });
 
   // Report IP anonymisation

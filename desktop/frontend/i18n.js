@@ -469,6 +469,9 @@ const I18N = (() => {
       'privacy.nosites': 'No external sites in this capture.',
       'script.empty': 'No output — return a value, or call print() / flag() in your script.',
       'conn.admin': 'run as Administrator to block',
+      'geoip.label': 'Look up IP locations (external)',
+      'geoip.hint': 'Off by default. When on, opening a packet to a public IP queries ipwho.is for its country and owner — the only external call netscope makes.',
+      'geoip.off': 'Location lookup is off — enable it in the 🗂 Profile menu.',
     },
     de: {
       'empty.capture': 'Noch keine Pakete aufgezeichnet. Starten Sie eine Aufzeichnung (oder öffnen Sie eine .pcap), dann scannen.',
@@ -476,6 +479,9 @@ const I18N = (() => {
       'privacy.nosites': 'Keine externen Seiten in dieser Aufzeichnung.',
       'script.empty': 'Keine Ausgabe — geben Sie einen Wert zurück oder rufen Sie print() / flag() im Skript auf.',
       'conn.admin': 'als Administrator ausführen, um zu blockieren',
+      'geoip.label': 'IP-Standorte nachschlagen (extern)',
+      'geoip.hint': 'Standardmäßig aus. Wenn aktiv, fragt das Öffnen eines Pakets zu einer öffentlichen IP ipwho.is nach Land und Betreiber ab — der einzige externe Aufruf von netscope.',
+      'geoip.off': 'Standortsuche ist aus — im Menü 🗂 Profil aktivieren.',
     },
     fr: {
       'empty.capture': 'Aucun paquet capturé. Démarrez une capture (ou ouvrez un .pcap), puis analysez.',
@@ -483,6 +489,9 @@ const I18N = (() => {
       'privacy.nosites': 'Aucun site externe dans cette capture.',
       'script.empty': 'Aucune sortie — renvoyez une valeur ou appelez print() / flag() dans votre script.',
       'conn.admin': 'exécuter en tant qu’administrateur pour bloquer',
+      'geoip.label': 'Rechercher la localisation des IP (externe)',
+      'geoip.hint': 'Désactivé par défaut. Si activé, ouvrir un paquet vers une IP publique interroge ipwho.is pour son pays et son propriétaire — le seul appel externe de netscope.',
+      'geoip.off': 'La recherche de localisation est désactivée — activez-la dans le menu 🗂 Profil.',
     },
     it: {
       'empty.capture': 'Nessun pacchetto acquisito. Avvia un’acquisizione (o apri un .pcap), poi analizza.',
@@ -490,6 +499,9 @@ const I18N = (() => {
       'privacy.nosites': 'Nessun sito esterno in questa acquisizione.',
       'script.empty': 'Nessun output — restituisci un valore o chiama print() / flag() nello script.',
       'conn.admin': 'esegui come amministratore per bloccare',
+      'geoip.label': 'Cerca la posizione degli IP (esterno)',
+      'geoip.hint': 'Disattivato per impostazione predefinita. Se attivo, aprire un pacchetto verso un IP pubblico interroga ipwho.is per paese e proprietario — l’unica chiamata esterna di netscope.',
+      'geoip.off': 'La ricerca della posizione è disattivata — attivala nel menu 🗂 Profilo.',
     },
     pt: {
       'empty.capture': 'Nenhum pacote capturado. Inicie uma captura (ou abra um .pcap) e depois analise.',
@@ -497,6 +509,9 @@ const I18N = (() => {
       'privacy.nosites': 'Nenhum site externo nesta captura.',
       'script.empty': 'Sem saída — retorne um valor ou chame print() / flag() no seu script.',
       'conn.admin': 'execute como administrador para bloquear',
+      'geoip.label': 'Buscar localização dos IPs (externo)',
+      'geoip.hint': 'Desativado por padrão. Quando ativo, abrir um pacote para um IP público consulta o ipwho.is pelo país e proprietário — a única chamada externa do netscope.',
+      'geoip.off': 'A busca de localização está desativada — ative-a no menu 🗂 Perfil.',
     },
     ar: {
       'empty.capture': 'لم تُلتقط أي حزم بعد. ابدأ التقاطاً (أو افتح ملف ‎.pcap) ثم افحص.',
@@ -504,6 +519,9 @@ const I18N = (() => {
       'privacy.nosites': 'لا مواقع خارجية في هذا الالتقاط.',
       'script.empty': 'لا مخرجات — أعِد قيمة أو استدعِ print() / flag() في السكربت.',
       'conn.admin': 'شغّله كمسؤول للحظر',
+      'geoip.label': 'البحث عن مواقع عناوين IP (خارجي)',
+      'geoip.hint': 'مُعطّل افتراضياً. عند التفعيل، فتح حزمة إلى عنوان IP عام يستعلم من ipwho.is عن بلده ومالكه — وهو الاتصال الخارجي الوحيد الذي يجريه netscope.',
+      'geoip.off': 'البحث عن الموقع مُعطّل — فعّله من قائمة 🗂 الملف.',
     },
     tr: {
       'empty.capture': 'Henüz paket yakalanmadı. Bir yakalama başlatın (ya da bir .pcap açın), sonra tarayın.',
