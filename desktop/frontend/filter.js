@@ -14,6 +14,7 @@ const NetscopeFilter = (() => {
   const KNOWN_PROTOS = new Set([
     'ip', 'ipv4', 'ipv6', 'tcp', 'udp', 'icmp', 'arp', 'dns', 'http', 'tls',
     'dhcp', 'ntp', 'mdns', 'snmp', 'quic', 'sip',
+    'ssh', 'ftp', 'smtp', 'imap', 'pop3', 'telnet', 'rdp',
   ]);
 
   const FIELDS = {
@@ -145,7 +146,7 @@ const NetscopeFilter = (() => {
   // ---- Evaluator ----
   function transportOf(proto) {
     const p = (proto || '').toUpperCase();
-    if (['TCP', 'HTTP', 'TLS'].includes(p)) return 'tcp';
+    if (['TCP', 'HTTP', 'TLS', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'TELNET', 'RDP'].includes(p)) return 'tcp';
     if (['UDP', 'DNS', 'DHCP', 'NTP', 'MDNS', 'SNMP', 'QUIC', 'SIP'].includes(p)) return 'udp';
     if (p === 'ICMP') return 'icmp';
     if (p === 'ARP') return 'arp';

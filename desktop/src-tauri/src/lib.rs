@@ -100,6 +100,13 @@ fn get_lessons() -> Vec<LessonInfo> {
         ("SNMP", Protocol::Snmp),
         ("QUIC", Protocol::Quic),
         ("SIP", Protocol::Sip),
+        ("SSH", Protocol::Ssh),
+        ("FTP", Protocol::Ftp),
+        ("SMTP", Protocol::Smtp),
+        ("IMAP", Protocol::Imap),
+        ("POP3", Protocol::Pop3),
+        ("Telnet", Protocol::Telnet),
+        ("RDP", Protocol::Rdp),
         ("Unknown", Protocol::Unknown(String::new())),
     ];
     protos

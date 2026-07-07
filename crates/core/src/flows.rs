@@ -24,7 +24,16 @@ pub enum Transport {
 impl Transport {
     pub fn from_protocol(proto: &Protocol) -> Self {
         match proto {
-            Protocol::Tcp | Protocol::Http | Protocol::Tls => Transport::Tcp,
+            Protocol::Tcp
+            | Protocol::Http
+            | Protocol::Tls
+            | Protocol::Ssh
+            | Protocol::Ftp
+            | Protocol::Smtp
+            | Protocol::Imap
+            | Protocol::Pop3
+            | Protocol::Telnet
+            | Protocol::Rdp => Transport::Tcp,
             Protocol::Udp
             | Protocol::Dns
             | Protocol::Dhcp
@@ -112,7 +121,14 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Dhcp
         | Protocol::Ntp
         | Protocol::Snmp
-        | Protocol::Sip => 3,
+        | Protocol::Sip
+        | Protocol::Ssh
+        | Protocol::Ftp
+        | Protocol::Smtp
+        | Protocol::Imap
+        | Protocol::Pop3
+        | Protocol::Telnet
+        | Protocol::Rdp => 3,
         Protocol::Tcp | Protocol::Udp | Protocol::Icmp | Protocol::Arp => 1,
         Protocol::Unknown(_) => 0,
     }

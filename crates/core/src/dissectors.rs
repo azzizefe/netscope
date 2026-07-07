@@ -2,19 +2,46 @@ pub mod arp;
 pub mod dhcp;
 pub mod dns;
 pub mod ethernet;
+pub mod ftp;
 pub mod http;
 pub mod icmp;
+pub mod imap;
 pub mod ip;
 pub mod ntp;
+pub mod pop3;
+pub mod rdp;
 pub mod sip;
+pub mod smtp;
 pub mod snmp;
+pub mod ssh;
 pub mod tcp;
+pub mod telnet;
 pub mod tls;
 pub mod udp;
 
 use std::net::IpAddr;
 
 use crate::models::Protocol;
+
+/// First line of a text protocol payload (up to CR/LF), lossily decoded and
+/// trimmed. Shared by the line-oriented dissectors (FTP, SMTP, IMAP, POP3).
+pub(crate) fn first_text_line(payload: &[u8]) -> String {
+    let end = payload
+        .iter()
+        .position(|&b| b == b'\r' || b == b'\n')
+        .unwrap_or(payload.len());
+    String::from_utf8_lossy(&payload[..end]).trim().to_string()
+}
+
+/// Truncate a display string to `max` characters, adding an ellipsis when cut.
+pub(crate) fn truncate(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        s.to_string()
+    } else {
+        let cut: String = s.chars().take(max).collect();
+        format!("{cut}…")
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct DissectedResult {

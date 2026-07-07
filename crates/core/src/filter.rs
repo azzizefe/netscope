@@ -10,7 +10,7 @@
 //!
 //! - **Protocol predicates** (bare words): `tcp`, `udp`, `icmp`, `arp`, `ip`,
 //!   `ipv4`, `ipv6`, `dns`, `http`, `tls`, `dhcp`, `ntp`, `mdns`, `snmp`,
-//!   `quic`, `sip`.
+//!   `quic`, `sip`, `ssh`, `ftp`, `smtp`, `imap`, `pop3`, `telnet`, `rdp`.
 //! - **Fields**: `ip.addr`, `ip.src`, `ip.dst`, `port`, `tcp.port`,
 //!   `udp.port`, `frame.len` (aliases: `len`, `length`).
 //! - **Comparisons**: `==` `!=` `>` `<` `>=` `<=`, plus `contains` (substring
@@ -25,7 +25,7 @@ use crate::models::Packet;
 /// Protocol tokens accepted as bare predicates (e.g. `tcp`, `dns`).
 const KNOWN_PROTOS: &[&str] = &[
     "ip", "ipv4", "ipv6", "tcp", "udp", "icmp", "arp", "dns", "http", "tls", "dhcp", "ntp", "mdns",
-    "snmp", "quic", "sip",
+    "snmp", "quic", "sip", "ssh", "ftp", "smtp", "imap", "pop3", "telnet", "rdp",
 ];
 
 #[derive(Debug, Clone, PartialEq)]

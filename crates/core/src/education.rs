@@ -143,6 +143,69 @@ the call, and tears it down at the end. The actual voice usually flows in a \
 separate media stream once SIP has set things up.",
             look_for: "\"SIP INVITE — sip:bob@example.com\" (calling) and \"SIP 200 OK\" (answered).",
         },
+        Protocol::Ssh => Lesson {
+            title: "SSH — the encrypted remote shell",
+            summary: "How admins log into servers securely; encrypted end to end.",
+            body: "SSH is the standard way to get a command line on a remote machine \
+safely. After a brief plaintext banner exchange (which is why you can see the \
+software version), everything is encrypted — commands, output and passwords. \
+netscope can tell an SSH session is happening but not what's inside it.",
+            look_for: "\"SSH — SSH-2.0-OpenSSH_8.9\" (the banner) then \"SSH — encrypted\".",
+        },
+        Protocol::Ftp => Lesson {
+            title: "FTP — old-school file transfer",
+            summary: "Moves files, but sends commands and passwords in the clear.",
+            body: "FTP predates encryption on the web. The control channel carries \
+plain-text commands like USER and PASS, so anyone capturing can read the login. \
+That's why it's largely replaced by SFTP/FTPS today — but you'll still meet it on \
+legacy gear, and it's a classic thing to spot in a capture.",
+            look_for: "\"FTP USER alice\", \"FTP PASS …\", and numbered replies like \"FTP 230 login OK\".",
+        },
+        Protocol::Smtp => Lesson {
+            title: "SMTP — sending email between servers",
+            summary: "The protocol that carries mail from one server to the next.",
+            body: "SMTP is the delivery half of email: a sender announces who the mail \
+is from and who it's to, then hands over the message. Plain SMTP is unencrypted \
+(modern setups wrap it in TLS via STARTTLS), so on older links you can watch the \
+envelope of a message go by.",
+            look_for: "\"SMTP MAIL FROM:<a@b.com>\", \"SMTP RCPT TO:<c@d.com>\", and \"SMTP 250 OK\".",
+        },
+        Protocol::Imap => Lesson {
+            title: "IMAP — reading mail on the server",
+            summary: "How a mail app browses a mailbox that stays on the server.",
+            body: "IMAP lets your mail client read and organise messages that live on \
+the mail server, so the same mailbox looks the same on your phone and laptop. \
+Commands are tagged (a1, a2…) so replies can be matched to requests. Plain IMAP \
+is unencrypted; most clients use it over TLS.",
+            look_for: "\"IMAP LOGIN\", \"IMAP SELECT INBOX\", and \"* OK\" server replies.",
+        },
+        Protocol::Pop3 => Lesson {
+            title: "POP3 — downloading your mail",
+            summary: "An older mail protocol that pulls messages down and removes them.",
+            body: "POP3 is the simple, older way to fetch email: connect, download the \
+messages, and (classically) delete them from the server. It's mostly given way to \
+IMAP, which keeps mail on the server. Like the others, plain POP3 is unencrypted \
+and usually run over TLS today.",
+            look_for: "\"POP3 USER alice\", \"POP3 PASS …\", and \"+OK\" / \"-ERR\" replies.",
+        },
+        Protocol::Telnet => Lesson {
+            title: "Telnet — the unencrypted remote terminal",
+            summary: "A remote shell with no encryption — everything is in the clear.",
+            body: "Telnet was the original way to log into a remote machine, before \
+SSH. It has no encryption at all, so the username, password and every keystroke \
+are visible to anyone on the path. Seeing Telnet on a network today is usually a \
+red flag (or old lab/router gear) — it's a textbook example of why SSH exists.",
+            look_for: "\"Telnet — data\" carrying readable text, including logins.",
+        },
+        Protocol::Rdp => Lesson {
+            title: "RDP — Windows Remote Desktop",
+            summary: "The protocol behind 'Remote Desktop' to a Windows machine.",
+            body: "RDP is how you control a Windows desktop over the network — the \
+screen, keyboard and mouse of a remote PC. The session is encrypted, so netscope \
+can see that an RDP connection exists (and to where) but not the screen contents. \
+RDP exposed to the internet is a common attack target worth noticing.",
+            look_for: "\"RDP (Remote Desktop)\" to or from TCP port 3389.",
+        },
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail — shown safely anyway.",
@@ -170,6 +233,13 @@ pub fn all_lessons() -> Vec<Lesson> {
         Protocol::Snmp,
         Protocol::Quic,
         Protocol::Sip,
+        Protocol::Ssh,
+        Protocol::Ftp,
+        Protocol::Smtp,
+        Protocol::Imap,
+        Protocol::Pop3,
+        Protocol::Telnet,
+        Protocol::Rdp,
         Protocol::Unknown(String::new()),
     ]
     .iter()
@@ -258,6 +328,13 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
             "Encrypted QUIC traffic — the modern transport behind HTTP/3, carried over UDP."
         }
         Protocol::Sip => "VoIP call signalling (SIP) — setting up, ringing, or ending a voice call.",
+        Protocol::Ssh => "An encrypted remote-shell session (SSH) — you can see it happens, not what's typed.",
+        Protocol::Ftp => "An old-style file transfer (FTP) — commands and passwords travel in plain text.",
+        Protocol::Smtp => "Email being handed between mail servers (SMTP).",
+        Protocol::Imap => "A mail client reading a mailbox on the server (IMAP).",
+        Protocol::Pop3 => "A mail client downloading messages from the server (POP3).",
+        Protocol::Telnet => "An unencrypted remote terminal (Telnet) — everything, including passwords, is visible.",
+        Protocol::Rdp => "A Windows Remote Desktop session (RDP).",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
 }
@@ -303,7 +380,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 14);
+        assert_eq!(all_lessons().len(), 21);
     }
 
     #[test]

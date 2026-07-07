@@ -34,7 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     - **SNMP** (161/162) — version and (for v1/v2c) the plaintext community
     - **QUIC** (443/80) — long/short header detection with handshake phase
     - **SIP** (5060/5061) — VoIP request method / status line
-  - 16 new unit tests covering the added dissectors
+  - New TCP application-layer dissectors, likewise first-class:
+    - **SSH** (22) — version banner, then encrypted
+    - **FTP** (21) — commands / replies (`PASS` masked)
+    - **SMTP** (25/587) — commands / replies (`AUTH` masked)
+    - **IMAP** (143) — tagged commands (`LOGIN` masked)
+    - **POP3** (110) — commands / replies (`PASS` masked)
+    - **Telnet** (23) — option negotiation vs. cleartext terminal text
+    - **RDP** (3389) — Remote Desktop, with connection-request detection
+  - 35 new unit tests covering the added dissectors
 
 ## [0.1.0] — 2026-07-07
 

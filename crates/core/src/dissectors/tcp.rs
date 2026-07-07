@@ -2,7 +2,7 @@ use std::net::IpAddr;
 
 use crate::models::Protocol;
 
-use super::{http, tls, DissectedResult};
+use super::{ftp, http, imap, pop3, rdp, smtp, ssh, telnet, tls, DissectedResult};
 
 pub fn dissect_tcp(
     src_ip: Option<IpAddr>,
@@ -41,12 +41,34 @@ pub fn dissect_tcp(
     } else if rst {
         "TCP Connection reset (RST)".into()
     } else if !tcp_payload.is_empty() {
-        // Try application-layer dissection by port or payload inspection
-        if dst_port == 80 || src_port == 80 {
+        // Try application-layer dissection by well-known port.
+        let on = |p: u16| src_port == p || dst_port == p;
+        if on(80) {
             return http::dissect_http(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        if dst_port == 443 || src_port == 443 {
+        if on(443) {
             return tls::dissect_tls(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(22) {
+            return ssh::dissect_ssh(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(21) {
+            return ftp::dissect_ftp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(25) || on(587) {
+            return smtp::dissect_smtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(143) {
+            return imap::dissect_imap(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(110) {
+            return pop3::dissect_pop3(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(23) {
+            return telnet::dissect_telnet(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3389) {
+            return rdp::dissect_rdp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         format!("TCP — {} bytes of payload", tcp_payload.len())
     } else {

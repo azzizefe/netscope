@@ -223,7 +223,7 @@ ip.addr == 1.2.3.4            # either endpoint is this IP
 ip.src == 10.0.0.5            # source only (also ip.dst)
 tcp.port == 443              # TCP on port 443 (also udp.port, port)
 frame.len > 1000             # packets larger than 1000 bytes (also len)
-dns                          # bare protocol name (tcp, udp, http, tls, dhcp, ntp, mdns, snmp, quic, sip…)
+dns                          # bare protocol name (tcp, udp, http, tls, dhcp, ntp, mdns, snmp, quic, sip, ssh, ftp, smtp, imap, pop3, telnet, rdp…)
 http && ip.dst == 8.8.8.8    # combine with &&, ||, !  (and / or / not)
 tcp && (tls || dns)          # parentheses group
 ip.dst contains "142.250"    # substring match on a field

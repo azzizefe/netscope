@@ -23,6 +23,20 @@ pub enum Protocol {
     Quic,
     /// Session Initiation Protocol for VoIP signalling (UDP/TCP 5060/5061).
     Sip,
+    /// Secure Shell (TCP 22).
+    Ssh,
+    /// File Transfer Protocol control channel (TCP 21).
+    Ftp,
+    /// Simple Mail Transfer Protocol (TCP 25/587).
+    Smtp,
+    /// Internet Message Access Protocol (TCP 143).
+    Imap,
+    /// Post Office Protocol v3 (TCP 110).
+    Pop3,
+    /// Telnet remote terminal (TCP 23).
+    Telnet,
+    /// Remote Desktop Protocol (TCP 3389).
+    Rdp,
     Unknown(String),
 }
 
@@ -42,6 +56,13 @@ impl std::fmt::Display for Protocol {
             Protocol::Snmp => write!(f, "SNMP"),
             Protocol::Quic => write!(f, "QUIC"),
             Protocol::Sip => write!(f, "SIP"),
+            Protocol::Ssh => write!(f, "SSH"),
+            Protocol::Ftp => write!(f, "FTP"),
+            Protocol::Smtp => write!(f, "SMTP"),
+            Protocol::Imap => write!(f, "IMAP"),
+            Protocol::Pop3 => write!(f, "POP3"),
+            Protocol::Telnet => write!(f, "Telnet"),
+            Protocol::Rdp => write!(f, "RDP"),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
     }

@@ -16,6 +16,13 @@ pub fn protocol_color(protocol: &Protocol) -> Color {
         Protocol::Snmp => Color::Rgb(0xFA, 0xCC, 0x15),
         Protocol::Quic => Color::Rgb(0x2D, 0xD4, 0xBF),
         Protocol::Sip => Color::Rgb(0x81, 0x8C, 0xF8),
+        Protocol::Ssh => Color::Rgb(0x5E, 0xEA, 0xD4),
+        Protocol::Ftp => Color::Rgb(0xFB, 0x92, 0x3C),
+        Protocol::Smtp => Color::Rgb(0xF4, 0x72, 0xB6),
+        Protocol::Imap => Color::Rgb(0xE8, 0x79, 0xF9),
+        Protocol::Pop3 => Color::Rgb(0xD9, 0x8A, 0xE8),
+        Protocol::Telnet => Color::Rgb(0xF8, 0x71, 0x71),
+        Protocol::Rdp => Color::Rgb(0x60, 0xA5, 0xFA),
         Protocol::Unknown(_) => Color::Rgb(0xF8, 0x71, 0x71),
     }
 }

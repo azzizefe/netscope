@@ -6,6 +6,8 @@ const PROTOCOL_COLORS = {
   TLS: '#6ee7b7', ICMP: '#fbbf24', ARP: '#9ca3af',
   DHCP: '#f9a825', NTP: '#38bdf8', mDNS: '#c084fc',
   SNMP: '#facc15', QUIC: '#2dd4bf', SIP: '#818cf8',
+  SSH: '#5eead4', FTP: '#fb923c', SMTP: '#f472b6', IMAP: '#e879f9',
+  POP3: '#d98ae8', Telnet: '#f87171', RDP: '#60a5fa',
 };
 const protoColor = (p) => PROTOCOL_COLORS[p] || '#f87171';
 
@@ -239,7 +241,7 @@ function onPacket(event) {
 
 // ---- Flow aggregation (Connections view) ----
 function transportOf(proto) {
-  if (['TCP', 'HTTP', 'TLS'].includes(proto)) return 'tcp';
+  if (['TCP', 'HTTP', 'TLS', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'Telnet', 'RDP'].includes(proto)) return 'tcp';
   if (['UDP', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP'].includes(proto)) return 'udp';
   if (proto === 'ICMP') return 'icmp';
   if (proto === 'ARP') return 'arp';
@@ -247,7 +249,7 @@ function transportOf(proto) {
 }
 function protoRank(proto) {
   if (proto === 'HTTP') return 4;
-  if (['TLS', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP'].includes(proto)) return 3;
+  if (['TLS', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'Telnet', 'RDP'].includes(proto)) return 3;
   return 1;
 }
 // Cap how many packets we keep per flow for "Follow Stream" — bounds memory
