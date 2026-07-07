@@ -199,11 +199,12 @@ impl CaptureEngine {
         bpf_filter: Option<&str>,
         output_path: Option<&str>,
         packet_tx: Sender<Packet>,
+        monitor: bool,
     ) -> Result<()> {
         let running = self.running.clone();
         running.store(true, Ordering::SeqCst);
 
-        let mut cap = pcap::Capture::from_device(interface)
+        let inactive = pcap::Capture::from_device(interface)
             .map_err(|e| {
                 if cfg!(target_os = "windows") {
                     anyhow::anyhow!(
@@ -219,17 +220,35 @@ impl CaptureEngine {
             })?
             .promisc(true)
             .snaplen(65535)
-            .timeout(1000)
-            .open()
-            .map_err(|e| {
-                if cfg!(target_os = "windows") {
-                    anyhow::anyhow!(
-                        "Failed to open capture on '{interface}': {e}\n  Ensure Npcap is installed and WinPcap is not conflicting"
-                    )
-                } else {
-                    anyhow::anyhow!("Failed to open capture on '{interface}': {e}")
-                }
-            })?;
+            .timeout(1000);
+
+        // Monitor (rfmon) mode captures raw 802.11 frames instead of Ethernet.
+        // The `pcap` crate only exposes it on non-Windows platforms; on Windows,
+        // Npcap monitor mode needs a separate driver API we don't bind, so we
+        // fail clearly rather than silently capturing Ethernet.
+        #[cfg(not(windows))]
+        let inactive = inactive.rfmon(monitor);
+        #[cfg(windows)]
+        if monitor {
+            running.store(false, Ordering::SeqCst);
+            return Err(anyhow::anyhow!(
+                "Monitor mode (raw 802.11) isn't supported on Windows through netscope's capture backend.\n  Open a monitor-mode .pcap instead, or capture on Linux/macOS with a monitor-capable adapter."
+            ));
+        }
+
+        let mut cap = inactive.open().map_err(|e| {
+            if monitor {
+                anyhow::anyhow!(
+                    "Failed to open '{interface}' in monitor mode: {e}\n  This adapter/driver may not support monitor mode. Turn it off under Wireless, or use a monitor-capable adapter."
+                )
+            } else if cfg!(target_os = "windows") {
+                anyhow::anyhow!(
+                    "Failed to open capture on '{interface}': {e}\n  Ensure Npcap is installed and WinPcap is not conflicting"
+                )
+            } else {
+                anyhow::anyhow!("Failed to open capture on '{interface}': {e}")
+            }
+        })?;
 
         if let Some(filter) = bpf_filter {
             let translated = translate_bpf_filter(filter);

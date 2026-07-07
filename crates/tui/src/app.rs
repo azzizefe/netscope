@@ -56,6 +56,7 @@ impl App {
         file: Option<&str>,
         bpf_filter: Option<&str>,
         output: Option<&str>,
+        monitor: bool,
     ) -> Result<Self> {
         let running = Arc::new(AtomicBool::new(true));
         let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
@@ -63,7 +64,7 @@ impl App {
         let mut capture = CaptureEngine::new();
 
         let interface_name = if let Some(iface) = interface {
-            capture.start_live(iface, bpf_filter, output, packet_tx)?;
+            capture.start_live(iface, bpf_filter, output, packet_tx, monitor)?;
             netscope_core::capture::friendly_name_of(iface)
         } else if let Some(path) = file {
             capture.start_offline(path, bpf_filter, output, packet_tx)?;
@@ -71,7 +72,7 @@ impl App {
         } else {
             let dev = netscope_core::capture::default_interface()?;
             let label = netscope_core::capture::friendly_name(&dev);
-            capture.start_live(&dev.name, bpf_filter, output, packet_tx)?;
+            capture.start_live(&dev.name, bpf_filter, output, packet_tx, monitor)?;
             label
         };
 

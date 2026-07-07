@@ -26,6 +26,11 @@ struct Cli {
     #[arg(short = 'f', long)]
     filter: Option<String>,
 
+    /// Capture in monitor (rfmon) mode for raw 802.11 Wi-Fi frames
+    /// (requires a monitor-capable adapter/driver)
+    #[arg(long)]
+    monitor: bool,
+
     /// List available network interfaces
     #[arg(short = 'D', long = "list-interfaces")]
     list_interfaces: bool,
@@ -81,6 +86,7 @@ fn run_tui(cli: Cli, terminal: ratatui::DefaultTerminal) -> Result<()> {
         cli.read.as_deref(),
         cli.filter.as_deref(),
         cli.write.as_deref(),
+        cli.monitor,
     )?;
     app.run(terminal)
 }

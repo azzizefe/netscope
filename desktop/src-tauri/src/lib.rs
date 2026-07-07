@@ -279,6 +279,7 @@ fn start_capture(
     interface: String,
     filter: Option<String>,
     output_path: Option<String>,
+    monitor: Option<bool>,
 ) -> Result<(), String> {
     let mut capture = CaptureEngine::new();
     let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
@@ -286,7 +287,13 @@ fn start_capture(
     let output = output_path.as_deref();
 
     capture
-        .start_live(&interface, bpf_filter, output, packet_tx)
+        .start_live(
+            &interface,
+            bpf_filter,
+            output,
+            packet_tx,
+            monitor.unwrap_or(false),
+        )
         .map_err(|e| e.to_string())?;
 
     let mut guard = state.lock().map_err(|e| e.to_string())?;

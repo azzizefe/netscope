@@ -225,7 +225,7 @@ async function startCapture() {
     state.hostsSeen.clear();
     state.live.lastSample = null; state.live.throughput = []; state.live.pps = []; state.live.errRate = [];
     state.captureStartEpoch = null; // "Seconds since beginning of capture" baseline resets each run
-    await invoke('start_capture', { interface: iface, filter });
+    await invoke('start_capture', { interface: iface, filter, monitor: !!state.settings.monitor });
     setStatus(STATES.CAPTURING);
     els.startBtn.disabled = true;
     els.stopBtn.disabled = false;

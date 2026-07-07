@@ -11,7 +11,13 @@ pub fn run(cli: Cli) -> Result<()> {
     let output_path = cli.write.as_deref();
 
     if let Some(iface) = cli.interface.as_deref() {
-        capture.start_live(iface, cli.filter.as_deref(), output_path, packet_tx)?;
+        capture.start_live(
+            iface,
+            cli.filter.as_deref(),
+            output_path,
+            packet_tx,
+            cli.monitor,
+        )?;
     } else if let Some(path) = cli.read.as_deref() {
         capture.start_offline(path, cli.filter.as_deref(), output_path, packet_tx)?;
     } else {
@@ -20,7 +26,13 @@ pub fn run(cli: Cli) -> Result<()> {
             "Capturing on: {}",
             netscope_core::capture::friendly_name(&dev)
         );
-        capture.start_live(&dev.name, cli.filter.as_deref(), output_path, packet_tx)?;
+        capture.start_live(
+            &dev.name,
+            cli.filter.as_deref(),
+            output_path,
+            packet_tx,
+            cli.monitor,
+        )?;
     }
 
     let use_json = cli.json;

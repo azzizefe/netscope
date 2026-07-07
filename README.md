@@ -189,6 +189,8 @@ Usage: netscope-tui [OPTIONS]
   -r, --read <FILE>          Read from a pcap file
   -w, --write <FILE>         Save capture to pcap file
   -f, --filter <BPF>         BPF filter (e.g. "tcp port 443")
+      --monitor              Capture raw 802.11 Wi-Fi in monitor mode
+                             (needs a monitor-capable adapter; not on Windows)
   -D, --list-interfaces      List available interfaces
       --headless             Plain text output to stdout
       --json                 JSON Lines output (implies --headless)

@@ -26,6 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     (cleartext-exposure list), Blocked IPs
   - New pure compute helpers are unit-tested (9 vitest cases)
 
+- **Capture-driver detection** (desktop) — a clickable `⚠ Npcap?` badge with
+  per-OS setup help and a copyable npcap.com link when no interfaces are found.
+
+- **Monitor-mode (rfmon) capture** — opt-in raw 802.11 capture: `--monitor`
+  on the TUI and a Wireless-menu toggle in the desktop, threaded through
+  `start_live`. Enabled on Linux/macOS with a monitor-capable adapter; on
+  Windows it fails with a clear message (the `pcap` crate doesn't expose rfmon
+  there) — monitor-mode `.pcap` files still load and dissect on all platforms.
+
 - **802.11 (Wi-Fi) dissection** (`crates/core/src/dissectors/`)
   - Link-layer-aware capture: the dissector now branches on the pcap
     data-link type, so captures on Wi-Fi (`DLT_IEEE802_11` and radiotap
