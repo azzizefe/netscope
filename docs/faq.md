@@ -124,9 +124,9 @@ Any of: press `u` on it in the Connections view, run
 
 ### Can netscope decrypt HTTPS?
 
-No, and it won't. Decryption (SSLKEYLOGFILE etc.) is out of scope — see the
-project philosophy in [TODO.md](../TODO.md). Use the SNI hostname and traffic
-patterns instead; they answer most "what is this app talking to?" questions.
+No, and it won't. Decryption (SSLKEYLOGFILE etc.) is out of scope for the
+project. Use the SNI hostname and traffic patterns instead; they answer most
+"what is this app talking to?" questions.
 
 ### Does netscope work over SSH?
 
