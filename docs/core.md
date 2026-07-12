@@ -64,7 +64,10 @@ Human-readable device label: the description (`"Intel(R) Wi-Fi 6 AX201"`)
 when available, the raw name (`\Device\NPF_{...}`) otherwise.
 
 ### `CaptureEngine`
-Manages a background capture thread with `AtomicBool` stop flag.
+Manages a background capture thread with `AtomicBool` stop flag. Since the
+ROADMAP §2.1 rework, dissection no longer happens on the capture thread: raw
+frames flow through the parallel pipeline (below), and the `Sender<Packet>`
+receives finished packets in arrival order.
 
 ```rust
 impl Default for CaptureEngine  // new()
@@ -73,27 +76,138 @@ pub fn start_live(
     &mut self,
     interface: &str,
     bpf_filter: Option<&str>,
-    output_path: Option<&str>,     // NEW: simultaneous savefile
+    output_path: Option<&str>,     // simultaneous savefile
     packet_tx: Sender<Packet>,
+    monitor: bool,                 // rfmon / raw 802.11
 ) -> Result<()>
 pub fn start_offline(
     &mut self,
     filepath: &str,
     bpf_filter: Option<&str>,
-    output_path: Option<&str>,     // NEW: simultaneous savefile
+    output_path: Option<&str>,
     packet_tx: Sender<Packet>,
 ) -> Result<()>
 pub fn stop(&mut self)
 pub fn is_running(&self) -> bool
+pub fn pipeline_stats(&self) -> Option<pipeline::StatsSnapshot>  // received/dropped/dissected
 ```
 
 Key details:
 - Live: promiscuous mode, snaplen 65535, 1-second timeout
 - BPF filter compiles before capture starts; returns descriptive error on invalid filter
-- `output_path` (new in Phase 3) creates a `pcap::Savefile` — packets are written as they arrive
+- `output_path` creates a `pcap::Savefile` — packets are written as they arrive
 - Savefile errors are logged to stderr (not silently swallowed)
-- Thread is named `"capture"` for debugging
-- Drop calls `stop()` automatically
+- Threads are named `"capture"` / `"dissect"` for debugging
+- Drop calls `stop()` automatically; `stop()` drains the pipeline so no packet is lost
+
+### `AsyncCaptureEngine` (feature = `async`)
+Tokio-friendly facade for async consumers (the planned REST/WebSocket server
+mode). Same capture internals; packets arrive on a bounded
+`tokio::sync::mpsc::Receiver<Packet>` fed by a bridge thread.
+
+```rust
+// Cargo.toml: netscope-core = { version = "...", features = ["async"] }
+let (mut engine, mut rx) = AsyncCaptureEngine::start_offline("file.pcap", None, 1024)?;
+while let Some(pkt) = rx.recv().await { /* … */ }
+```
+
+---
+
+## Parallel Pipeline (`pipeline.rs`) — ROADMAP §2.1
+
+```text
+Capture thread ──▶ lock-free ring (crossbeam ArrayQueue) ──▶ rayon dissector pool ──▶ Sender<Packet>
+```
+
+- **`Pipeline::start(linktype, tx, running)`** spawns the dissector stage; it
+  drains the ring in batches of ≤512 and parses batches ≥32 frames with
+  `rayon` across all cores, preserving arrival order.
+- **`Producer::push_live`** never blocks: a full ring drops the frame and
+  counts it (`StatsSnapshot::dropped`) — the wire loop is never stalled.
+- **`Producer::push_blocking`** applies backpressure instead — used for file
+  reads where dropping would corrupt analysis.
+- **`Pipeline::stats()`** → `StatsSnapshot { received, dropped, dissected }`.
+- If the downstream receiver disconnects, the pipeline stores `false` into the
+  shared `running` flag so the capture loop winds down too.
+
+---
+
+## Lazy pcap Reader (`stream.rs`) — ROADMAP §2.2
+
+`LazyCapture` memory-maps a classic pcap (`memmap2`), scans only the 16-byte
+record headers into an index (~24 bytes/packet), and dissects packets on
+first access with a bounded LRU cache (4096 entries):
+
+```rust
+let cap = LazyCapture::open("big.pcap")?;
+cap.len();                       // packet count, no parsing done yet
+cap.raw(i);                      // zero-copy &[u8] into the map
+cap.packet(i);                   // dissect on demand, LRU-cached
+cap.packets_range(start, n);     // page for UI viewports, rayon-parallel
+cap.find_by_time(ts);            // binary search over timestamps
+```
+
+Handles both endiannesses and µs/ns timestamp resolutions; truncated final
+records are dropped like other readers do. pcapng is rejected with a clear
+error — callers fall back to the streaming `CaptureEngine` (libpcap handles
+pcapng), which is exactly what the desktop's *Open pcap* does.
+
+---
+
+## Protocol Plugins (`plugins.rs`) — ROADMAP §2.3
+
+Declarative dissector plugins: drop a TOML file into `~/.netscope/plugins/`
+and the protocol shows up in both UIs without recompiling.
+
+```toml
+# ~/.netscope/plugins/redis.toml
+name = "Redis"
+transport = "tcp"          # or "udp"
+ports = [6379]
+description = "Redis key-value store wire protocol (RESP)."
+
+[match]                    # optional payload heuristics — all must hold
+prefix = "*"               # payload starts with (text)
+# prefix_hex = "2a31"      # …or hex bytes (wins over prefix)
+# contains = "PING"        # payload contains
+
+[display]
+summary = "Redis — {first_line}"  # {name} {len} {src_port} {dst_port} {first_line}
+```
+
+- Plugins run **after** every built-in dissector and **before** the generic
+  `TCP/UDP — N bytes` fallback: they can claim unknown traffic, never shadow
+  a built-in protocol.
+- Matches become `Protocol::Plugin { name, transport }` — coloring, flows,
+  Learn mode and display filters (`redis` matches a plugin named "Redis")
+  work like for built-ins.
+- API: `plugins::load_dir(dir) -> LoadOutcome { loaded, errors }`,
+  `plugins::load_from_config(&Config)`, `plugins::installed()`,
+  `plugins::install(vec)` (registry is process-global; empty = disabled, and
+  the dissector hook is a single atomic load when no plugins are installed).
+
+---
+
+## Layered Configuration (`config.rs`) — ROADMAP §2.4
+
+One discoverable home for user settings, shared by TUI and desktop:
+
+```text
+~/.netscope/                  # or $NETSCOPE_CONFIG_DIR
+├── config.toml               # global settings
+├── profiles/<name>.toml      # partial overlays; only differences needed
+├── coloring-rules.toml       # user coloring rules (TOML or legacy line form)
+├── plugins/*.toml            # protocol plugins (above)
+└── geoip.mmdb                # offline GeoIP DB (auto-loaded by the desktop)
+```
+
+- `Config::load()` never fails: missing/broken files yield defaults.
+- Profiles deep-merge over `config.toml`; select one via `$NETSCOPE_PROFILE`,
+  the `general.profile` key, or `Config::load_profile(dir, name)`.
+- Path helpers resolve relative entries against the config dir:
+  `geoip_database_path()`, `coloring_rules_path()`, `plugins_dir()`.
+- `parse_coloring_rules(text)` reads both the `[[rule]]` TOML form and the
+  legacy `RRGGBB <filter>` line form (used by the TUI).
 
 ---
 
@@ -167,7 +281,7 @@ can understand what they're seeing. UI-agnostic — just data and strings.
 ```rust
 pub struct Lesson { title, summary, body, look_for }  // all &'static str
 pub fn lesson(proto: &Protocol) -> Lesson             // per-protocol primer
-pub fn all_lessons() -> Vec<Lesson>                    // teaching order
+pub fn all_lessons() -> Vec<(Protocol, Lesson)>        // teaching order
 pub struct Term { term, meaning }
 pub fn glossary() -> &'static [Term]                   // packet, port, TTL, SNI...
 pub fn explain_packet(pkt: &Packet) -> &'static str    // one-line, context-aware
@@ -246,7 +360,36 @@ Bandwidth tracking uses 1-second windows with a 60-sample rolling buffer. Top ta
 
 ## Testing & Benchmarks
 
-- **77 unit tests** covering all dissectors, models, stats, name cache, plus fuzz
-- **Benchmark**: `bench_dissect_throughput` — 10k synthetic packets, threshold >100k pkt/s
+- **314 unit tests** covering all dissectors, models, stats, name cache, plus fuzz
+- **Smoke benchmark**: `bench_dissect_throughput` — 10k synthetic packets, threshold >100k pkt/s (runs under `cargo test`)
 - **Fuzz test**: `dispatch_random_garbage_never_panics` — 1000 random garbage packets
 - **Fixtures**: 8 `.pcap` files in `fixtures/` generated by `tools/gen-fixtures`
+
+### Continuous benchmarks (`benches/`) — ROADMAP §4.4
+
+Criterion-based benchmarks live in `crates/core/benches/` and run in CI on
+every push (quick mode, numbers land in the job log):
+
+```bash
+cargo bench --bench parse_throughput   # dissect() pkt/s — 10k mixed + per-protocol
+cargo bench --bench filter_match       # 100k display-filter evaluations + per-filter cost
+cargo bench --bench mem_usage          # heap footprint of 1M dissected packets
+MEM_PACKETS=100000 cargo bench --bench mem_usage   # smaller run
+```
+
+Reference numbers (Windows x64, release):
+
+| Benchmark | Result |
+|---|---|
+| `dissect()` mixed traffic | ~3.1 M packets/s |
+| Display filter evaluation | ~32 M evals/s |
+| 1M packets held in memory | ~269 MiB (≈281 B/packet) |
+| Cloning 1M packets | +206 MiB — frame `Bytes` are shared, not copied (§4.2) |
+
+### Profiling
+
+```bash
+cargo install flamegraph
+# Flamegraph of the dissection hot path:
+cargo flamegraph --bench parse_throughput -- --bench --profile-time 10
+```

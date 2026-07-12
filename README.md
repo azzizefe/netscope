@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/social-preview.svg" alt="netscope" width="600">
-</p>
-
 <h1 align="center">netscope ⚡</h1>
 
 <p align="center">
@@ -53,7 +49,7 @@
 - **🎓 Built-in Learn mode** — Never used a packet analyzer? A dedicated view explains every protocol in plain language, and each selected packet gets a one-line "what is this?". No prior networking knowledge needed.
 - **🎯 Zero-config interface pick** — Skips loopback and virtual adapters (WAN Miniport, Hyper-V) and lands on your real Wi-Fi/Ethernet automatically.
 - **🔬 Wireshark-style inspector** — The desktop app has the classic three-pane layout: colorized packet list, an expandable protocol tree (Frame → IP → TCP → app layer), and a live hex/ASCII byte view — plus a plain-language "What is this?" for every packet.
-- **🌍 Where is it going?** — Click a packet and the inspector shows the remote host's **country (with flag), city, and owning organisation** (e.g. `🇺🇸 United States · Google LLC`). Looked up on demand only for the packet you open, and cached per IP — never for every packet in the background.
+- **🌍 Where is it going?** — Click a packet and the inspector shows the remote host's **country (with flag), city, and owning organisation** (e.g. `🇺🇸 United States · Google LLC`). Looked up on demand only for the packet you open, and cached per IP — never for every packet in the background. Point it at an **offline MaxMind database** (free GeoLite2 `.mmdb`) and lookups stay fully local — private, works offline; otherwise the opt-in ipwho.is web lookup answers.
 - **💬 Follow Stream** — In the Connections view, press **Follow** on any TCP/UDP conversation to read it reassembled as plain text, color-coded by direction (client vs. server) — Wireshark's most-used feature, one click away.
 - **⚠ Expert Info** — Packets the dissector flags as a reset or malformed connection get a small warning badge in the packet list and detail view, in plain language (no "duplicate ACK" jargon).
 - **🛡 Insights — automatic security & privacy scan** — The thing Wireshark won't do: it shows you everything but interprets nothing. The **🛡 Insights** tab reads your capture and surfaces plain-language findings — cleartext passwords, unencrypted HTTP, possible port scans, connection-reset bursts, suspicious/DGA-looking domains, plaintext DNS exposure, and an encrypted-vs-cleartext ratio — each rated high / warning / info. No rules to write, no columns to configure.
@@ -191,6 +187,7 @@ Usage: netscope-tui [OPTIONS]
   -f, --filter <BPF>         BPF filter (e.g. "tcp port 443")
       --monitor              Capture raw 802.11 Wi-Fi in monitor mode
                              (needs a monitor-capable adapter; not on Windows)
+      --colors <FILE>        Coloring rules file (see below)
   -D, --list-interfaces      List available interfaces
       --headless             Plain text output to stdout
       --json                 JSON Lines output (implies --headless)
@@ -225,7 +222,7 @@ ip.addr == 1.2.3.4            # either endpoint is this IP
 ip.src == 10.0.0.5            # source only (also ip.dst)
 tcp.port == 443              # TCP on port 443 (also udp.port, port)
 frame.len > 1000             # packets larger than 1000 bytes (also len)
-dns                          # bare protocol name (tcp, udp, http, tls, dhcp, ntp, mdns, snmp, quic, sip, ssh, ftp, smtp, imap, pop3, telnet, rdp…)
+dns                          # bare protocol name (tcp, udp, http, tls, dhcp, ntp, mdns, snmp, quic, sip, ssh, ftp, smtp, imap, pop3, telnet, rdp, websocket, http2, grpc, vxlan…)
 http && ip.dst == 8.8.8.8    # combine with &&, ||, !  (and / or / not)
 tcp && (tls || dns)          # parentheses group
 ip.dst contains "142.250"    # substring match on a field
@@ -233,6 +230,27 @@ ip.dst contains "142.250"    # substring match on a field
 
 `tcp` matches TCP transport (so it also catches HTTP and TLS), just like
 Wireshark; `http` matches the HTTP application protocol specifically.
+
+### Coloring Rules
+
+Both UIs tint packet rows with **display-filter driven coloring rules**
+(Wireshark's View > Coloring Rules), checked top-down — the first match wins:
+
+- **Desktop** — View > 🎨 Coloring rules…: add/edit/reorder rules in place;
+  they persist across sessions.
+- **TUI** — rules load from `~/.config/netscope/colors` (Linux/macOS) or
+  `%APPDATA%\netscope\colors` (Windows), or from `--colors <file>`. One rule
+  per line — a hex colour followed by any display filter:
+
+  ```
+  # first match wins; '#' starts a comment
+  ef4444 tcp.flags.rst == 1 || info contains "Malformed"
+  f97316 http.response.code >= 400
+  22d3ee ip.addr == 192.168.1.42
+  ```
+
+Without a file, both UIs ship the same defaults: bad TCP red, HTTP errors
+orange, handshakes grey, DNS purple, ICMP amber, ARP grey.
 
 ### Views
 

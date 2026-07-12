@@ -2,7 +2,7 @@ use std::net::IpAddr;
 
 use crate::models::Protocol;
 
-use super::DissectedResult;
+use super::{http2, websocket, DissectedResult};
 
 #[derive(Debug)]
 pub struct HttpRequest {
@@ -25,8 +25,18 @@ pub fn dissect_http(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let body = match std::str::from_utf8(payload) {
+    // Only the request/status line and headers shape the summary — the body
+    // can be megabytes of binary. Decode just the head (first 2 KiB), taking
+    // the longest valid UTF-8 prefix so a text header followed by a binary
+    // body still parses (ROADMAP §4.1: don't UTF-8-scan whole payloads).
+    let head_bytes = &payload[..payload.len().min(2048)];
+    let body = match std::str::from_utf8(head_bytes) {
         Ok(s) => s,
+        // Text head, binary tail: keep the valid prefix (headers end well
+        // before the first invalid byte in any real HTTP message).
+        Err(e) if e.valid_up_to() > 0 => {
+            std::str::from_utf8(&head_bytes[..e.valid_up_to()]).expect("prefix just validated")
+        }
         Err(_) => {
             return DissectedResult {
                 src_addr: src_ip,
@@ -41,6 +51,13 @@ pub fn dissect_http(
 
     let body = body.trim_start_matches('\0');
 
+    // A WebSocket or h2c upgrade is still HTTP on the wire — flag it in the
+    // summary so the handshake is recognisable next to the frames that follow.
+    let ws_note = websocket::upgrade_note(body)
+        .or_else(|| http2::upgrade_note(body))
+        .map(|n| format!(" — {n}"))
+        .unwrap_or_default();
+
     if let Some(req) = parse_request(body) {
         DissectedResult {
             src_addr: src_ip,
@@ -48,7 +65,10 @@ pub fn dissect_http(
             src_port: Some(src_port),
             dst_port: Some(dst_port),
             protocol: Protocol::Http,
-            summary: format!("HTTP {} {} ({})", req.method, req.path, req.version),
+            summary: format!(
+                "HTTP {} {} ({}){ws_note}",
+                req.method, req.path, req.version
+            ),
         }
     } else if let Some(resp) = parse_response(body) {
         DissectedResult {
@@ -58,7 +78,7 @@ pub fn dissect_http(
             dst_port: Some(dst_port),
             protocol: Protocol::Http,
             summary: format!(
-                "HTTP {} {} ({} bytes)",
+                "HTTP {} {} ({} bytes){ws_note}",
                 resp.status_code,
                 resp.reason,
                 payload.len()
@@ -142,6 +162,17 @@ mod tests {
     fn http_non_utf8() {
         let result = dissect_http(None, None, 80, 12345, &[0xff, 0xfe, 0x00]);
         assert_eq!(result.summary, "HTTP — non-UTF8 payload");
+    }
+
+    #[test]
+    fn http_text_head_with_binary_body_still_parses() {
+        // A response whose body is binary (image, gzip…) must still yield the
+        // status line — only the head is decoded, not the whole payload.
+        let mut resp = b"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\n\r\n".to_vec();
+        resp.extend_from_slice(&[0x89, 0x50, 0x4e, 0x47, 0xff, 0xfe, 0x00, 0x81]);
+        let len = resp.len();
+        let result = dissect_http(None, None, 80, 12345, &resp);
+        assert_eq!(result.summary, format!("HTTP 200 OK ({len} bytes)"));
     }
 
     #[test]

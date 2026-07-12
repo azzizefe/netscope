@@ -1,24 +1,52 @@
 pub mod arp;
+pub mod bacnet;
+pub mod bgp;
+pub mod cassandra;
+pub mod coap;
 pub mod dhcp;
+pub mod dnp3;
 pub mod dns;
+pub mod enip;
 pub mod ethernet;
 pub mod ftp;
 pub mod http;
+pub mod http2;
 pub mod icmp;
 pub mod imap;
 pub mod ip;
+pub mod ipsec;
+pub mod kerberos;
+pub mod lacp;
+pub mod ldap;
+pub mod lldp;
+pub mod modbus;
+pub mod mongodb;
+pub mod mpls;
+pub mod mqtt;
+pub mod mysql;
 pub mod ntp;
+pub mod opcua;
+pub mod openvpn;
+pub mod ospf;
 pub mod pop3;
+pub mod postgres;
 pub mod radiotap;
+pub mod radius;
 pub mod rdp;
+pub mod redis;
+pub mod rtp;
 pub mod sip;
 pub mod smtp;
 pub mod snmp;
 pub mod ssh;
+pub mod stp;
 pub mod tcp;
 pub mod telnet;
 pub mod tls;
 pub mod udp;
+pub mod vxlan;
+pub mod websocket;
+pub mod wireguard;
 pub mod wlan;
 
 use std::net::IpAddr;
@@ -27,12 +55,23 @@ use crate::models::Protocol;
 
 /// First line of a text protocol payload (up to CR/LF), lossily decoded and
 /// trimmed. Shared by the line-oriented dissectors (FTP, SMTP, IMAP, POP3).
+/// Uses SIMD-accelerated `memchr` for the line-end scan (ROADMAP §4.1).
 pub(crate) fn first_text_line(payload: &[u8]) -> String {
-    let end = payload
-        .iter()
-        .position(|&b| b == b'\r' || b == b'\n')
-        .unwrap_or(payload.len());
+    let end = memchr::memchr2(b'\r', b'\n', payload).unwrap_or(payload.len());
     String::from_utf8_lossy(&payload[..end]).trim().to_string()
+}
+
+/// First `max` bytes of `s`, backed off to a char boundary so the slice is
+/// always valid. Used to cap header scans without risking a mid-char panic.
+pub(crate) fn head_str(s: &str, max: usize) -> &str {
+    if s.len() <= max {
+        return s;
+    }
+    let mut end = max;
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
 }
 
 /// Truncate a display string to `max` characters, adding an ellipsis when cut.
@@ -99,6 +138,12 @@ const ETHERTYPE_IPV6: u16 = 0x86DD;
 const ETHERTYPE_VLAN: u16 = 0x8100; // 802.1Q
 const ETHERTYPE_QINQ_88A8: u16 = 0x88A8; // 802.1ad service tag
 const ETHERTYPE_QINQ_9100: u16 = 0x9100; // legacy double-tag
+const ETHERTYPE_LLDP: u16 = 0x88CC; // Link Layer Discovery Protocol
+const ETHERTYPE_SLOW: u16 = 0x8809; // 802.3 slow protocols (LACP/Marker/OAM)
+const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
+const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
+                                          // EtherType values at or below this are actually 802.3 length fields (LLC).
+const ETHERTYPE_MAX_LENGTH: u16 = 0x05DC; // 1500
 
 /// Dispatch on the L3 EtherType. Recurses through VLAN (802.1Q / QinQ) tags,
 /// unwrapping each 4-byte tag and re-dispatching on the inner EtherType so a
@@ -115,6 +160,12 @@ fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> DissectedResul
             let (src_ip, dst_ip, proto, inner) = ip::dissect_ipv6(payload);
             dispatch_transport((src_ip, dst_ip, proto), inner, payload.len())
         }
+        ETHERTYPE_LLDP => lldp::dissect_lldp(payload),
+        ETHERTYPE_SLOW => lacp::dissect_slow(payload),
+        ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
+        // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
+        // we recognise there (DSAP/SSAP 0x42).
+        et if et <= ETHERTYPE_MAX_LENGTH && stp::is_stp(payload) => stp::dissect_stp(payload),
         ETHERTYPE_VLAN | ETHERTYPE_QINQ_88A8 | ETHERTYPE_QINQ_9100 if vlan_depth < 2 => {
             // 802.1Q tag: 2 bytes TCI (PCP/DEI/VID) + 2 bytes inner EtherType.
             if payload.len() < 4 {
@@ -144,6 +195,58 @@ fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> DissectedResul
     }
 }
 
+/// Unwrap an MPLS label stack and dissect the inner packet, relabelling the
+/// result as MPLS with the top label. Only IP payloads are unwrapped further;
+/// other inner protocols (e.g. Ethernet pseudowires) are reported generically.
+fn dissect_mpls(payload: &[u8], vlan_depth: u8) -> DissectedResult {
+    let malformed = || DissectedResult {
+        src_addr: None,
+        dst_addr: None,
+        src_port: None,
+        dst_port: None,
+        protocol: Protocol::Unknown("truncated MPLS".into()),
+        summary: "Malformed MPLS label stack".into(),
+    };
+    let stack = match mpls::parse(payload) {
+        Some(s) => s,
+        None => return malformed(),
+    };
+    let inner = &payload[stack.inner_offset..];
+    let label_note = if stack.label_count > 1 {
+        format!(
+            "MPLS label {} (+{} more, TTL {})",
+            stack.top_label,
+            stack.label_count - 1,
+            stack.top_ttl
+        )
+    } else {
+        format!("MPLS label {} (TTL {})", stack.top_label, stack.top_ttl)
+    };
+    // Peek the inner IP version and recurse; keep the inner addresses/ports but
+    // present it under the MPLS protocol with the label prefixed.
+    let inner_ethertype = match inner.first().map(|b| b >> 4) {
+        Some(4) => Some(ETHERTYPE_IPV4),
+        Some(6) => Some(ETHERTYPE_IPV6),
+        _ => None,
+    };
+    match inner_ethertype {
+        Some(et) => {
+            let mut r = dispatch_l3(et, inner, vlan_depth);
+            r.protocol = Protocol::Mpls;
+            r.summary = format!("{label_note} · {}", r.summary);
+            r
+        }
+        None => DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Mpls,
+            summary: format!("{label_note} · {} bytes payload", inner.len()),
+        },
+    }
+}
+
 /// Human-readable names for IP protocol numbers we don't dissect further.
 fn ip_protocol_name(p: u8) -> String {
     match p {
@@ -168,6 +271,11 @@ fn dispatch_transport(
         Some(17) => udp::dissect_udp(src_ip, dst_ip, &payload),
         Some(1) => icmp::dissect_icmp(src_ip, dst_ip, &payload, false),
         Some(58) => icmp::dissect_icmp(src_ip, dst_ip, &payload, true),
+        // IPsec ESP/AH carry an SPI in the clear (ROADMAP §3.7).
+        Some(50) => ipsec::dissect_esp(src_ip, dst_ip, &payload),
+        Some(51) => ipsec::dissect_ah(src_ip, dst_ip, &payload),
+        // OSPF interior routing (ROADMAP §3.3).
+        Some(89) => ospf::dissect_ospf(src_ip, dst_ip, &payload),
         Some(p) => {
             let name = ip_protocol_name(p);
             DissectedResult {
@@ -441,6 +549,118 @@ mod tests {
             result.dst_addr,
             Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 2)))
         );
+    }
+
+    /// Build a bare Ethernet II frame with a chosen EtherType and payload.
+    fn build_eth_frame(ethertype: u16, payload: &[u8]) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[0x01, 0x80, 0xc2, 0x00, 0x00, 0x00]); // dst (multicast)
+        buf.extend_from_slice(&[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]); // src
+        buf.extend_from_slice(&ethertype.to_be_bytes());
+        buf.extend_from_slice(payload);
+        buf
+    }
+
+    #[test]
+    fn end_to_end_lldp_via_dissect() {
+        // Chassis ID + Port ID + TTL + System Name TLVs behind EtherType 0x88CC.
+        let mut tlvs = Vec::new();
+        tlvs.extend_from_slice(&[0x02, 0x07, 0x04, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]); // chassis
+        tlvs.extend_from_slice(&[0x04, 0x06, 0x05, b'G', b'i', b'0', b'/', b'1']); // port
+        tlvs.extend_from_slice(&[0x06, 0x02, 0x00, 0x78]); // TTL
+        tlvs.extend_from_slice(&[0x0a, 0x06, b's', b'w', b'-', b'c', b'o', b'r']); // system name
+        let frame = build_eth_frame(0x88CC, &tlvs);
+        let r = dissect(&frame);
+        assert_eq!(r.protocol, Protocol::Lldp);
+        assert!(r.summary.starts_with("LLDP — sw-cor port Gi0/1"));
+    }
+
+    #[test]
+    fn end_to_end_mpls_unwraps_inner_ip() {
+        // MPLS label 16 (bottom-of-stack), TTL 64, wrapping an IPv4/UDP DNS query.
+        let dns = build_dns_query("example.com", 0x1234);
+        let udp_pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 5000, 53, &dns);
+        let inner_ip = &udp_pkt[14..]; // strip the inner packet's own Ethernet header
+        let mut mpls = vec![0x00, 0x01, 0x01, 0x40]; // label 16, S=1, TTL 64
+        mpls.extend_from_slice(inner_ip);
+        let frame = build_eth_frame(0x8847, &mpls);
+        let r = dissect(&frame);
+        assert_eq!(r.protocol, Protocol::Mpls);
+        assert!(r.summary.starts_with("MPLS label 16 (TTL 64) · "));
+        assert!(r.summary.contains("example.com"));
+    }
+
+    #[test]
+    fn end_to_end_bgp_via_dissect() {
+        // BGP KEEPALIVE (marker + length 19 + type 4) to TCP 179.
+        let mut bgp = vec![0xff; 16];
+        bgp.extend_from_slice(&19u16.to_be_bytes());
+        bgp.push(4);
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            50000,
+            179,
+            false,
+            true,
+            false,
+            false,
+            &bgp,
+        );
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Bgp);
+        assert_eq!(r.summary, "BGP KEEPALIVE");
+    }
+
+    #[test]
+    fn end_to_end_modbus_via_dissect() {
+        // Modbus Read Holding Registers to TCP 502.
+        let mut mb = Vec::new();
+        mb.extend_from_slice(&1u16.to_be_bytes()); // transaction
+        mb.extend_from_slice(&0u16.to_be_bytes()); // protocol id
+        mb.extend_from_slice(&6u16.to_be_bytes()); // length
+        mb.push(1); // unit
+        mb.push(3); // function: read holding registers
+        mb.extend_from_slice(&[0x00, 0x00, 0x00, 0x0a]);
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            50000,
+            502,
+            false,
+            true,
+            false,
+            false,
+            &mb,
+        );
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Modbus);
+        assert!(r.summary.contains("Read Holding Registers"));
+    }
+
+    #[test]
+    fn end_to_end_ospf_via_dissect() {
+        // OSPF Hello (IP protocol 89) built on an IPv4 packet.
+        let mut ospf = vec![2, 1, 0x00, 0x2c]; // v2, Hello, length
+        ospf.extend_from_slice(&[10, 0, 0, 1]); // router id
+        ospf.extend_from_slice(&[0, 0, 0, 0]); // area id
+        ospf.extend_from_slice(&[0u8; 12]);
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+        buf.extend_from_slice(&[0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb]);
+        buf.extend_from_slice(&0x0800u16.to_be_bytes());
+        // Minimal IPv4 header (20 bytes), protocol 89 (OSPF).
+        let total_len = (20 + ospf.len()) as u16;
+        let mut ip = vec![0x45, 0x00];
+        ip.extend_from_slice(&total_len.to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00, 0x00, 0x00, 0x40, 89, 0x00, 0x00]);
+        ip.extend_from_slice(&[10, 0, 0, 1]);
+        ip.extend_from_slice(&[224, 0, 0, 5]);
+        buf.extend_from_slice(&ip);
+        buf.extend_from_slice(&ospf);
+        let r = dissect(&buf);
+        assert_eq!(r.protocol, Protocol::Ospf);
+        assert!(r.summary.starts_with("OSPFv2 Hello — router 10.0.0.1"));
     }
 
     #[test]

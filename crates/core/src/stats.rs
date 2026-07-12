@@ -179,7 +179,7 @@ mod tests {
             protocol,
             length: len,
             summary: summary.into(),
-            data: vec![0u8; len],
+            data: vec![0u8; len].into(),
         }
     }
 

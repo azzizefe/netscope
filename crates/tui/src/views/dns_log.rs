@@ -4,7 +4,7 @@ use ratatui::widgets::{Block, Borders, Cell, Row, Table};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::colors::{protocol_color, PANEL_BORDER};
+use crate::colors::protocol_color;
 use netscope_core::models::Protocol;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
@@ -48,7 +48,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
         .title(" DNS Log ")
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(app.theme().border));
 
     let header_cells: Vec<Cell> = header
         .iter()

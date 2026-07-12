@@ -206,6 +206,331 @@ can see that an RDP connection exists (and to where) but not the screen contents
 RDP exposed to the internet is a common attack target worth noticing.",
             look_for: "\"RDP (Remote Desktop)\" to or from TCP port 3389.",
         },
+        Protocol::WebSocket => Lesson {
+            title: "WebSocket — the browser's two-way channel",
+            summary: "A persistent connection where server and browser both push messages.",
+            body: "Normal HTTP is request-then-reply. WebSocket upgrades that \
+connection into a permanent two-way pipe: chat apps, live dashboards, games \
+and dev-server hot-reload all use it to push updates instantly. It starts as \
+an ordinary HTTP request with an 'Upgrade: websocket' header; after the \
+server's '101 Switching Protocols' answer, the same connection carries \
+WebSocket frames instead of HTTP.",
+            look_for: "An \"HTTP GET … — WebSocket handshake\" pair, then \"WebSocket Text\" / \"WebSocket Binary\" frames flowing both ways.",
+        },
+        Protocol::Http2 => Lesson {
+            title: "HTTP/2 — the multiplexed web",
+            summary: "A binary, faster HTTP where many requests share one connection.",
+            body: "HTTP/2 replaces HTTP/1.1's one-request-at-a-time text protocol \
+with binary 'frames': many requests and responses are interleaved on a single \
+connection (multiplexing), so pages with dozens of resources load faster. On \
+the open internet it's almost always wrapped in TLS, where netscope sees only \
+the encryption — what you can watch here is its cleartext form (h2c), common \
+between services inside data centres.",
+            look_for: "\"HTTP/2 connection preface\" starting a connection, then \"HTTP/2 HEADERS\" (a request or response) and \"HTTP/2 DATA\" frames on numbered streams.",
+        },
+        Protocol::Grpc => Lesson {
+            title: "gRPC — services calling each other",
+            summary: "A remote-procedure-call protocol microservices use, built on HTTP/2.",
+            body: "gRPC is how modern backend services talk to each other: instead \
+of hand-written REST endpoints, one service calls a function on another, and \
+gRPC ships the call as compact binary (protobuf) messages inside HTTP/2 \
+frames. Seeing gRPC in a capture usually means microservices, Kubernetes or \
+mobile apps talking to their backends. Like HTTP/2 it's normally TLS-wrapped; \
+netscope spots the cleartext form by its content-type and message framing.",
+            look_for: "\"gRPC headers (application/grpc)\" starting a call, then \"gRPC message — 42 bytes\" frames carrying the protobuf payload.",
+        },
+        Protocol::Vxlan => Lesson {
+            title: "VXLAN — networks inside networks",
+            summary: "A tunnel that carries one network's traffic inside another's.",
+            body: "Cloud platforms and Kubernetes clusters run many virtual \
+networks on the same physical one. VXLAN wraps a complete Ethernet frame \
+inside a UDP packet and labels it with a VNI (network number), so traffic for \
+virtual network 5000 stays separate from 5001 even on shared cables. netscope \
+unwraps the tunnel and shows you what's really travelling inside.",
+            look_for: "\"VXLAN VNI 5000 → DNS Query — …\" — the part after the arrow is the inner, real conversation.",
+        },
+        Protocol::Postgres => Lesson {
+            title: "PostgreSQL — talking to the database",
+            summary: "The wire protocol a PostgreSQL client uses to run SQL queries.",
+            body: "When an app stores or reads data in PostgreSQL, it opens a TCP \
+connection (port 5432) and speaks Postgres' own message protocol: a startup \
+handshake, then messages like 'Query' carrying SQL text and 'DataRow' carrying \
+results. Plain connections send the SQL — and sometimes the password — in clear \
+text, which is why production databases are usually behind TLS.",
+            look_for: "\"PostgreSQL Query — SELECT …\" (a query going out) and \"PostgreSQL DataRow\" / \"PostgreSQL ReadyForQuery\" (results coming back).",
+        },
+        Protocol::Mysql => Lesson {
+            title: "MySQL — the other popular database",
+            summary: "How MySQL/MariaDB clients send queries and get results.",
+            body: "MySQL (and its fork MariaDB) runs on TCP 3306. The server opens \
+with a handshake that reveals its version, the client logs in, then sends \
+commands — most commonly COM_QUERY carrying the SQL text. As with any \
+unencrypted database link, the queries and login are visible on the wire unless \
+the connection is wrapped in TLS.",
+            look_for: "\"MySQL Server handshake — 8.0.32\" at the start, then \"MySQL Query — SELECT …\".",
+        },
+        Protocol::Mongodb => Lesson {
+            title: "MongoDB — the document database",
+            summary: "The binary protocol behind MongoDB reads and writes.",
+            body: "MongoDB stores JSON-like documents and talks a compact binary \
+protocol on TCP 27017. Modern drivers send everything as 'OP_MSG' messages that \
+wrap a BSON command — 'find', 'insert', 'update' and so on. netscope reads the \
+message header and the command name without decoding the whole document.",
+            look_for: "\"MongoDB OP_MSG — find\" or \"MongoDB OP_MSG — insert\" — the word after the dash is the command.",
+        },
+        Protocol::Redis => Lesson {
+            title: "Redis — the in-memory data store",
+            summary: "A fast key-value store with a simple, almost human-readable protocol.",
+            body: "Redis keeps data in memory for speed and is used as a cache, queue \
+or session store. Its protocol (RESP, on TCP 6379) is refreshingly simple: a \
+command is just an array of strings like GET, SET or PUBLISH, and replies are \
+prefixed by a single character (+ ok, - error, : number). You can almost read it \
+straight off the wire.",
+            look_for: "\"Redis command — GET foo\" / \"Redis command — SET key value\" and \"Redis reply — +OK\".",
+        },
+        Protocol::Cassandra => Lesson {
+            title: "Cassandra — the distributed database",
+            summary: "The CQL binary protocol used by Apache Cassandra clusters.",
+            body: "Cassandra spreads data across many nodes for scale and resilience. \
+Clients speak the CQL native protocol on TCP 9042: a STARTUP handshake, then \
+QUERY frames carrying CQL (a SQL-like language) and RESULT frames coming back. \
+Each frame is tagged with a stream id so many requests can share the connection.",
+            look_for: "\"CQL STARTUP\" opening a session, then \"CQL QUERY — SELECT …\" and \"CQL RESULT\".",
+        },
+        Protocol::Modbus => Lesson {
+            title: "Modbus — talking to industrial machines",
+            summary: "The simple, decades-old protocol that controls PLCs and factory gear.",
+            body: "Modbus is how control systems read sensors and flip switches on \
+industrial equipment — 'read these registers', 'write this coil'. It was designed \
+in 1979 with no authentication or encryption, so anyone who can reach TCP 502 can \
+issue commands. That's why spotting Modbus on a network — especially crossing into \
+IT segments — matters for OT security.",
+            look_for: "\"Modbus Read Holding Registers (fn 3)\" (a read) and \"Modbus Write Single Coil (fn 5)\" (a command); \"Modbus Exception\" when the device refuses.",
+        },
+        Protocol::Dnp3 => Lesson {
+            title: "DNP3 — the grid's control protocol",
+            summary: "Used by electric utilities and water systems to run remote equipment.",
+            body: "DNP3 connects a control-room 'master' to remote 'outstations' across \
+power and water infrastructure. Frames start with a fixed 0x0564 sync and address \
+a specific station. Like Modbus it grew up without security; a modern secure \
+variant exists, but plenty of legacy DNP3 still runs in the clear — worth flagging \
+in any utility capture.",
+            look_for: "\"DNP3 UNCONFIRMED_USER_DATA — 1 → 1024\" (master to outstation) and \"DNP3 LINK_STATUS\" replies; the numbers are station addresses.",
+        },
+        Protocol::Bacnet => Lesson {
+            title: "BACnet — the building's nervous system",
+            summary: "Runs HVAC, lighting and access control in commercial buildings.",
+            body: "BACnet is how the thermostats, air handlers and door controllers in \
+a building talk to their management system. Devices announce themselves with a \
+'Who-Is' broadcast and answer with 'I-Am', then read and write properties on each \
+other. It usually lives on UDP 47808 — and, like other building/OT protocols, \
+assumes the network itself is trusted.",
+            look_for: "\"BACnet Who-Is\" / \"BACnet I-Am\" discovery, then \"BACnet ReadProperty\" and \"BACnet WriteProperty\".",
+        },
+        Protocol::Enip => Lesson {
+            title: "EtherNet/IP — Rockwell PLC networking",
+            summary: "Carries CIP commands to Allen-Bradley and other industrial controllers.",
+            body: "EtherNet/IP (the 'IP' is Industrial Protocol, not Internet Protocol) \
+is the CIP object model over Ethernet, common on Rockwell/Allen-Bradley plants. A \
+client registers a session, then sends explicit-messaging requests to read and \
+write tags on a controller. Seeing it reach a PLC from an unexpected host is a \
+classic OT red flag.",
+            look_for: "\"EtherNet/IP RegisterSession\" opening a session, then \"EtherNet/IP SendRRData\" carrying the CIP request.",
+        },
+        Protocol::OpcUa => Lesson {
+            title: "OPC UA — the Industry 4.0 data bus",
+            summary: "The modern, secure-capable protocol linking factory equipment to IT.",
+            body: "OPC UA is the standard that finally brought security and structure to \
+industrial data — it can authenticate and encrypt, and it models equipment as \
+browsable objects. Connections open with a Hello/Acknowledge handshake, then a \
+secure channel, then service messages. It's the bridge between the plant floor \
+and the cloud in most new IIoT deployments.",
+            look_for: "\"OPC UA Hello\" / \"OPC UA Acknowledge\" to start, \"OPC UA OpenSecureChannel\", then \"OPC UA Message\" service calls.",
+        },
+        Protocol::Rtp => Lesson {
+            title: "RTP — the voice and video itself",
+            summary: "The actual audio/video stream of a call, once SIP has set it up.",
+            body: "If SIP is the ringing, RTP is the conversation. Once a call is \
+agreed, each side sends a steady stream of small UDP packets carrying encoded \
+audio or video — dozens per second, each stamped with a sequence number and \
+timestamp so the receiver can reorder them and measure jitter. There's no fixed \
+port; it's negotiated per call, which is why netscope recognises RTP by its shape \
+rather than a port number.",
+            look_for: "\"RTP PCMU/8000 — seq 1234\" streaming steadily one way, with a matching stream coming back — that's a live call's audio.",
+        },
+        Protocol::Rtcp => Lesson {
+            title: "RTCP — how a call reports its own quality",
+            summary: "Control messages that ride alongside RTP to track loss and jitter.",
+            body: "RTCP is RTP's companion: every few seconds each participant sends a \
+report saying how many packets it sent or received, how much was lost, and how \
+much the timing jittered. Phones and conferencing apps use these to adapt — \
+switching codecs or bitrate when a call degrades. It's where the 'call quality' \
+numbers come from.",
+            look_for: "\"RTCP Sender Report\" and \"RTCP Receiver Report\" appearing periodically next to an RTP stream.",
+        },
+        Protocol::Kerberos => Lesson {
+            title: "Kerberos — the enterprise login ticket",
+            summary: "How Windows domains prove who you are without sending passwords around.",
+            body: "Kerberos is the authentication system behind Active Directory. Instead \
+of sending your password to every service, you prove yourself once to a central \
+authority and get a time-limited 'ticket' you present elsewhere. The AS-REQ/AS-REP \
+pair gets your first ticket; TGS-REQ/TGS-REP get tickets for specific services. \
+Attackers watch these too — which is why the exchange is worth recognising.",
+            look_for: "\"Kerberos AS-REQ\" (asking for a ticket) and \"Kerberos AS-REP\" (getting one), then \"Kerberos TGS-REQ\" for services.",
+        },
+        Protocol::Ldap => Lesson {
+            title: "LDAP — the corporate directory",
+            summary: "The protocol apps use to look up users and groups in a directory.",
+            body: "LDAP is how software queries the central directory of an organisation \
+— 'is this user valid?', 'what groups are they in?'. It also handles logins via a \
+'bind'. A plain (unencrypted) simple bind sends the username and password in clear \
+text, so seeing one on the wire is a real credential-exposure finding; production \
+directories use LDAPS (LDAP over TLS) instead.",
+            look_for: "\"LDAP bindRequest — cn=admin,…\" (a login) and \"LDAP searchRequest\" (a lookup).",
+        },
+        Protocol::Radius => Lesson {
+            title: "RADIUS — who gets onto the network",
+            summary: "Authenticates Wi-Fi, VPN and 802.1X access from a central server.",
+            body: "When you join corporate Wi-Fi or dial a VPN, a RADIUS server usually \
+decides whether to let you in. The access device sends an Access-Request with your \
+credentials; the server replies Access-Accept, Access-Reject, or Access-Challenge \
+for another round. A matching identifier ties each reply to its request. It also \
+does accounting — logging when sessions start and stop.",
+            look_for: "\"RADIUS Access-Request (id 7)\" then \"RADIUS Access-Accept (id 7)\" — the id pairs them up.",
+        },
+        Protocol::OpenVpn => Lesson {
+            title: "OpenVPN — the classic open-source VPN",
+            summary: "A widely used VPN that tunnels traffic over a single UDP or TCP port.",
+            body: "OpenVPN builds an encrypted tunnel and runs everything — a TLS control \
+channel and the bulk data channel — over one port (usually UDP 1194). netscope \
+can't see inside the encryption, but the first byte of each packet reveals its \
+type, so you can watch a tunnel negotiate (the hard-reset and control packets) and \
+then carry data.",
+            look_for: "\"OpenVPN P_CONTROL_HARD_RESET_CLIENT_V2\" starting a tunnel, then \"OpenVPN P_DATA_V2\" carrying traffic.",
+        },
+        Protocol::WireGuard => Lesson {
+            title: "WireGuard — the modern minimalist VPN",
+            summary: "A fast, lean VPN built into modern kernels; tiny, fixed-format packets.",
+            body: "WireGuard is the newer VPN that trades OpenVPN's flexibility for speed \
+and simplicity. A connection is just a four-message handshake (initiation, \
+response) followed by transport-data packets — all over UDP, all encrypted. The \
+message type is in the clear, so you can see a tunnel come up and then move data, \
+even though the contents stay hidden.",
+            look_for: "\"WireGuard Handshake Initiation\" / \"Handshake Response\" to start, then \"WireGuard Transport Data\".",
+        },
+        Protocol::Esp => Lesson {
+            title: "ESP — the encrypted half of IPsec",
+            summary: "The IPsec payload that encrypts VPN traffic at the IP layer.",
+            body: "ESP (Encapsulating Security Payload) is what most IPsec VPNs use to \
+encrypt traffic. Unlike TCP or UDP it rides directly on IP, identified only by a \
+number called the SPI that names which tunnel (security association) it belongs to, \
+plus a sequence number. Everything after that is ciphertext — but the SPI lets you \
+tell one tunnel from another.",
+            look_for: "\"ESP (IPsec) — SPI 0xdeadbeef, seq 42\" — the SPI stays constant for one tunnel.",
+        },
+        Protocol::Ah => Lesson {
+            title: "AH — IPsec integrity without secrecy",
+            summary: "An IPsec header that proves a packet wasn't tampered with, but doesn't hide it.",
+            body: "AH (Authentication Header) is the other IPsec mode: it authenticates \
+a packet — proving it came from the right peer and wasn't altered — without \
+encrypting the contents. It's used less than ESP today, since it breaks with NAT, \
+but you'll still meet it. Like ESP it carries an SPI and sequence number, and it \
+names the protocol it's protecting.",
+            look_for: "\"AH (IPsec) — SPI 0x…, seq 7, protects TCP\".",
+        },
+        Protocol::Mqtt => Lesson {
+            title: "MQTT — the language of IoT",
+            summary: "How sensors and smart devices publish readings and receive commands.",
+            body: "MQTT is the messaging protocol most of the Internet of Things runs on. \
+Devices don't talk to each other directly — they connect to a broker, PUBLISH \
+messages to named 'topics' (like sensors/livingroom/temp), and SUBSCRIBE to the \
+topics they care about. It's deliberately tiny so it works on battery-powered \
+gadgets. Plain MQTT on port 1883 is unencrypted, so topics and payloads are \
+readable on the wire.",
+            look_for: "\"MQTT CONNECT — client device01\" joining the broker, then \"MQTT PUBLISH — sensors/temp\" carrying a reading.",
+        },
+        Protocol::Coap => Lesson {
+            title: "CoAP — HTTP shrunk for tiny devices",
+            summary: "A REST-like request/response protocol for constrained IoT sensors.",
+            body: "CoAP brings the familiar web model — GET, POST, PUT, DELETE on URLs — \
+to devices too small for full HTTP. It runs over UDP to stay lightweight, with a \
+4-byte header and compact binary options, and even supports multicast discovery. \
+If MQTT is publish/subscribe messaging, CoAP is the request/response half of IoT — \
+you can almost read it as HTTP.",
+            look_for: "\"CoAP CON GET /sensors/temp\" (a request) and \"CoAP ACK 2.05\" (a Content response).",
+        },
+        Protocol::Bgp => Lesson {
+            title: "BGP — the routes that hold the internet together",
+            summary: "How independent networks tell each other which addresses they can reach.",
+            body: "The internet is tens of thousands of separate networks (autonomous \
+systems), and BGP is how they exchange 'reachability' — 'to get to these IP \
+ranges, come through me'. A pair of routers OPEN a session, exchange UPDATE \
+messages advertising or withdrawing routes, and send KEEPALIVEs to hold it. A bad \
+BGP UPDATE can misdirect a chunk of the internet, which is why it's worth \
+understanding.",
+            look_for: "\"BGP OPEN — AS 65001\" starting a session, then \"BGP UPDATE\" (route changes) and periodic \"BGP KEEPALIVE\".",
+        },
+        Protocol::Ospf => Lesson {
+            title: "OSPF — routing inside one network",
+            summary: "How routers within an organisation learn the best paths to everywhere.",
+            body: "Where BGP connects networks to each other, OSPF works inside a single \
+organisation's network. Routers flood each other with 'link-state' information — \
+who's connected to whom and at what cost — and each independently computes the \
+shortest path to every destination. It starts with Hello packets discovering \
+neighbours, then a database-sync exchange keeps everyone's map identical.",
+            look_for: "\"OSPFv2 Hello — router 10.0.0.1\" finding neighbours, then \"OSPFv2 Link State Update\" sharing the map.",
+        },
+        Protocol::Lldp => Lesson {
+            title: "LLDP — how the network maps itself",
+            summary: "Switches announcing 'I'm this device, on this port' to their neighbours.",
+            body: "LLDP is how network gear introduces itself to whatever is plugged in \
+next to it — its name, the specific port, its capabilities. Network-management \
+tools collect these announcements to draw an accurate topology map without anyone \
+documenting the wiring by hand. It never leaves the local link; each switch only \
+hears its direct neighbours.",
+            look_for: "\"LLDP — switch-core port Gi0/1\" — the device name and the exact port you're connected to.",
+        },
+        Protocol::Lacp => Lesson {
+            title: "LACP — bundling links into one",
+            summary: "How two switches agree to treat several cables as a single fat link.",
+            body: "When you want more bandwidth (or a backup) between two switches, you \
+run several cables and bond them into one logical link. LACP is the conversation \
+that sets that up and keeps it healthy — both ends continuously confirm the bundle \
+is still valid. It's one of the 802.3 'slow protocols', sent a couple of times a \
+second on the link itself.",
+            look_for: "\"LACP v1 — link aggregation\" exchanged periodically between two switches forming a bundle.",
+        },
+        Protocol::Stp => Lesson {
+            title: "STP — stopping network loops",
+            summary: "The protocol that keeps redundant switch links from melting the network.",
+            body: "If you wire switches in a loop (often for redundancy), broadcasts would \
+circle forever and bring the network down. Spanning Tree Protocol prevents that: \
+the switches elect a 'root bridge' and mathematically disable just enough links to \
+break every loop, re-enabling them if an active link fails. The BPDUs you see are \
+that election happening and being maintained.",
+            look_for: "\"STP Configuration BPDU — root 32768/00:11:22:33:44:55\" — the elected root bridge everyone agrees on.",
+        },
+        Protocol::Mpls => Lesson {
+            title: "MPLS — forwarding by label, not address",
+            summary: "How carrier backbones move traffic fast using short labels.",
+            body: "Instead of every router doing a full IP-address lookup, MPLS tags each \
+packet with a short 'label' at the edge of the network; core routers then forward \
+purely on that label — faster, and flexible enough to build VPNs and engineer \
+traffic paths. Labels can stack (an outer one for the tunnel, an inner one for the \
+service). netscope unwraps the labels and shows the real packet inside.",
+            look_for: "\"MPLS label 16 (TTL 64) · IPv4 …\" — the part after the dot is the actual packet being carried.",
+        },
+        Protocol::Plugin(_) => Lesson {
+            title: "Custom protocol (plugin)",
+            summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
+            body: "netscope lets you teach it new protocols without recompiling: a \
+small text file in your config directory maps a port (and optionally a \
+signature in the first bytes) to a name and a one-line summary. When a packet \
+matches, it's labelled with the plugin's name instead of a generic 'TCP/UDP \
+payload'. This is how you get a protocol netscope doesn't ship a dissector for \
+— a house database, an IoT gadget, a game server — to show up by name.",
+            look_for: "A protocol name you configured yourself (e.g. \"Redis\", \"Modbus\") in the protocol column, with the summary your plugin defined.",
+        },
         Protocol::Wlan => Lesson {
             title: "802.11 — Wi-Fi at the radio layer",
             summary: "The wireless frames beneath your network traffic — seen in monitor mode.",
@@ -227,8 +552,9 @@ number) and moves on. This includes things like IGMP, GRE tunnels, or IPsec.",
     }
 }
 
-/// Every protocol lesson, in a sensible teaching order.
-pub fn all_lessons() -> Vec<Lesson> {
+/// Every protocol lesson, in a sensible teaching order, paired with its
+/// protocol so callers can colour or group them.
+pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
     [
         Protocol::Dns,
         Protocol::Tcp,
@@ -250,11 +576,45 @@ pub fn all_lessons() -> Vec<Lesson> {
         Protocol::Pop3,
         Protocol::Telnet,
         Protocol::Rdp,
+        Protocol::WebSocket,
+        Protocol::Http2,
+        Protocol::Grpc,
+        Protocol::Vxlan,
+        Protocol::Postgres,
+        Protocol::Mysql,
+        Protocol::Mongodb,
+        Protocol::Redis,
+        Protocol::Cassandra,
+        Protocol::Modbus,
+        Protocol::Dnp3,
+        Protocol::Bacnet,
+        Protocol::Enip,
+        Protocol::OpcUa,
+        Protocol::Rtp,
+        Protocol::Rtcp,
+        Protocol::Kerberos,
+        Protocol::Ldap,
+        Protocol::Radius,
+        Protocol::OpenVpn,
+        Protocol::WireGuard,
+        Protocol::Esp,
+        Protocol::Ah,
+        Protocol::Mqtt,
+        Protocol::Coap,
+        Protocol::Bgp,
+        Protocol::Ospf,
+        Protocol::Lldp,
+        Protocol::Lacp,
+        Protocol::Stp,
+        Protocol::Mpls,
         Protocol::Wlan,
         Protocol::Unknown(String::new()),
     ]
-    .iter()
-    .map(lesson)
+    .into_iter()
+    .map(|p| {
+        let l = lesson(&p);
+        (p, l)
+    })
     .collect()
 }
 
@@ -346,7 +706,47 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Pop3 => "A mail client downloading messages from the server (POP3).",
         Protocol::Telnet => "An unencrypted remote terminal (Telnet) — everything, including passwords, is visible.",
         Protocol::Rdp => "A Windows Remote Desktop session (RDP).",
+        Protocol::WebSocket => {
+            "A live two-way message on an upgraded web connection (WebSocket) — used by chat, live feeds and dev tools."
+        }
+        Protocol::Http2 => {
+            "Binary web traffic (HTTP/2) — many requests multiplexed as frames on one connection."
+        }
+        Protocol::Grpc => {
+            "One service calling another (gRPC) — a binary remote-procedure call riding on HTTP/2."
+        }
+        Protocol::Vxlan => {
+            "Tunnelled overlay-network traffic (VXLAN) — another network's frames carried inside UDP; the summary shows what's inside."
+        }
+        Protocol::Postgres => "A PostgreSQL database conversation — SQL queries and their results over TCP 5432.",
+        Protocol::Mysql => "A MySQL/MariaDB database conversation — queries and results over TCP 3306.",
+        Protocol::Mongodb => "A MongoDB database conversation — document commands (find/insert/update) over TCP 27017.",
+        Protocol::Redis => "A Redis command or reply — the in-memory key-value store on TCP 6379.",
+        Protocol::Cassandra => "A Cassandra CQL conversation — distributed-database queries over TCP 9042.",
+        Protocol::Modbus => "An industrial-control command (Modbus) — reading or writing PLC registers over TCP 502.",
+        Protocol::Dnp3 => "A utility SCADA message (DNP3) — grid/water control between a master and remote stations.",
+        Protocol::Bacnet => "A building-automation message (BACnet) — HVAC, lighting or access control on UDP 47808.",
+        Protocol::Enip => "An industrial-control message (EtherNet/IP) — CIP commands to a PLC over TCP/UDP 44818.",
+        Protocol::OpcUa => "An Industry 4.0 data-exchange message (OPC UA) — factory equipment talking to IT systems.",
+        Protocol::Rtp => "The live audio/video of a call (RTP) — the media stream SIP set up, carried over UDP.",
+        Protocol::Rtcp => "A call-quality report (RTCP) — loss and jitter statistics riding alongside an RTP stream.",
+        Protocol::Kerberos => "An enterprise authentication message (Kerberos) — requesting or presenting a login ticket.",
+        Protocol::Ldap => "A directory query or login (LDAP) — looking up users/groups, or binding with credentials.",
+        Protocol::Radius => "A network-access authentication message (RADIUS) — allowing or denying Wi-Fi/VPN logins.",
+        Protocol::OpenVpn => "An OpenVPN tunnel packet — encrypted VPN traffic; the type shows handshake vs. data.",
+        Protocol::WireGuard => "A WireGuard tunnel packet — a modern encrypted VPN; the type shows handshake vs. data.",
+        Protocol::Esp => "Encrypted IPsec traffic (ESP) — a VPN payload identified only by its SPI tunnel number.",
+        Protocol::Ah => "An authenticated IPsec packet (AH) — integrity-protected but not encrypted.",
+        Protocol::Mqtt => "An IoT messaging packet (MQTT) — a device publishing to or subscribing on a broker topic.",
+        Protocol::Coap => "A constrained-device request/response (CoAP) — HTTP-like IoT traffic over UDP.",
+        Protocol::Bgp => "An internet routing message (BGP) — networks telling each other which addresses they reach.",
+        Protocol::Ospf => "An interior routing message (OSPF) — routers inside one network sharing link-state maps.",
+        Protocol::Lldp => "A neighbour announcement (LLDP) — a switch advertising its identity and port for topology maps.",
+        Protocol::Lacp => "A link-aggregation message (LACP) — two switches bonding several cables into one link.",
+        Protocol::Stp => "A Spanning Tree message (STP) — switches electing a root bridge to keep the network loop-free.",
+        Protocol::Mpls => "A label-switched packet (MPLS) — carrier/backbone forwarding; the inner packet is shown after the label.",
         Protocol::Wlan => "A raw Wi-Fi (802.11) frame — the radio layer beneath your network traffic.",
+        Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
 }
@@ -366,7 +766,7 @@ mod tests {
             protocol: proto,
             length: 0,
             summary: summary.into(),
-            data: Vec::new(),
+            data: bytes::Bytes::new(),
         }
     }
 
@@ -392,7 +792,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 22);
+        assert_eq!(all_lessons().len(), 53);
     }
 
     #[test]

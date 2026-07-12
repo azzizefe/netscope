@@ -4,8 +4,9 @@
 //! which domain. This is what lets netscope show `google.com → 142.250.74.46`
 //! instead of two bare IPs — no extra lookups, no network traffic of its own.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
+use std::sync::Arc;
 
 use crate::models::{Packet, Protocol};
 
@@ -15,7 +16,11 @@ const MAX_ENTRIES: usize = 50_000;
 
 #[derive(Debug, Default)]
 pub struct NameCache {
-    map: HashMap<IpAddr, String>,
+    map: HashMap<IpAddr, Arc<str>>,
+    /// Intern pool — one shared allocation per distinct hostname, however
+    /// many IPs resolve to it (ROADMAP §4.2: CDN fan-out makes duplicates
+    /// the common case).
+    names: HashSet<Arc<str>>,
 }
 
 impl NameCache {
@@ -44,22 +49,35 @@ impl NameCache {
         if self.map.len() >= MAX_ENTRIES {
             return;
         }
+        let domain = self.intern(&domain);
         for answer in &dns.answers {
             match answer.data {
                 dns_parser::RData::A(ip) => {
-                    self.map.insert(IpAddr::V4(ip.0), domain.clone());
+                    self.map.insert(IpAddr::V4(ip.0), Arc::clone(&domain));
                 }
                 dns_parser::RData::AAAA(ip) => {
-                    self.map.insert(IpAddr::V6(ip.0), domain.clone());
+                    self.map.insert(IpAddr::V6(ip.0), Arc::clone(&domain));
                 }
                 _ => {}
             }
         }
     }
 
+    /// The pool's shared allocation for `name`, created on first sight.
+    fn intern(&mut self, name: &str) -> Arc<str> {
+        match self.names.get(name) {
+            Some(existing) => Arc::clone(existing),
+            None => {
+                let arc: Arc<str> = Arc::from(name);
+                self.names.insert(Arc::clone(&arc));
+                arc
+            }
+        }
+    }
+
     /// The hostname learned for this IP, if any.
     pub fn name_for(&self, ip: IpAddr) -> Option<&str> {
-        self.map.get(&ip).map(|s| s.as_str())
+        self.map.get(&ip).map(|s| &**s)
     }
 
     /// Display form for an address: the hostname when known, the IP otherwise.
@@ -114,7 +132,7 @@ mod tests {
             protocol: Protocol::Dns,
             length: frame.len(),
             summary: String::new(),
-            data: frame,
+            data: frame.into(),
         }
     }
 

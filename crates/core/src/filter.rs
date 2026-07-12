@@ -11,9 +11,14 @@
 //! - **Protocol predicates** (bare words): `tcp`, `udp`, `icmp`, `arp`, `ip`,
 //!   `ipv4`, `ipv6`, `dns`, `http`, `tls`, `dhcp`, `ntp`, `mdns`, `snmp`,
 //!   `quic`, `sip`, `ssh`, `ftp`, `smtp`, `imap`, `pop3`, `telnet`, `rdp`,
-//!   `wlan` / `wifi` / `802.11`.
+//!   `wlan` / `wifi` / `802.11`, `websocket` / `ws`, `vxlan`, `http2`, `grpc`.
 //! - **Fields**: `ip.addr`, `ip.src`, `ip.dst`, `port`, `tcp.port`,
 //!   `udp.port`, `frame.len` (aliases: `len`, `length`).
+//! - **Protocol fields** (parsed from the captured frame bytes):
+//!   `tcp.flags.syn` / `.ack` / `.fin` / `.rst` / `.psh` (compare to `1`/`0`),
+//!   `http.request.method`, `http.request.uri`, `http.host`,
+//!   `http.response.code`, `dns.qry.name`, and `info` (the summary column).
+//!   Text fields compare case-insensitively.
 //! - **Comparisons**: `==` `!=` `>` `<` `>=` `<=`, plus `contains` (substring
 //!   over the field's text form).
 //! - **Logic**: `&&`/`and`, `||`/`or`, `!`/`not`, and parentheses.
@@ -21,13 +26,41 @@
 use std::net::IpAddr;
 
 use crate::flows::Transport;
-use crate::models::Packet;
+use crate::models::{Packet, Protocol};
 
 /// Protocol tokens accepted as bare predicates (e.g. `tcp`, `dns`).
 const KNOWN_PROTOS: &[&str] = &[
-    "ip", "ipv4", "ipv6", "tcp", "udp", "icmp", "arp", "dns", "http", "tls", "dhcp", "ntp", "mdns",
-    "snmp", "quic", "sip", "ssh", "ftp", "smtp", "imap", "pop3", "telnet", "rdp", "wlan", "wifi",
+    "ip",
+    "ipv4",
+    "ipv6",
+    "tcp",
+    "udp",
+    "icmp",
+    "arp",
+    "dns",
+    "http",
+    "tls",
+    "dhcp",
+    "ntp",
+    "mdns",
+    "snmp",
+    "quic",
+    "sip",
+    "ssh",
+    "ftp",
+    "smtp",
+    "imap",
+    "pop3",
+    "telnet",
+    "rdp",
+    "wlan",
+    "wifi",
     "802.11",
+    "websocket",
+    "ws",
+    "vxlan",
+    "http2",
+    "grpc",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -92,7 +125,23 @@ enum Field {
     TcpPort,
     UdpPort,
     FrameLen,
+    /// One TCP flag bit (SYN/ACK/FIN/RST/PSH); evaluates to `1` or `0`.
+    TcpFlag(u8),
+    HttpMethod,
+    HttpUri,
+    HttpHost,
+    HttpRespCode,
+    DnsQryName,
+    /// The human-readable summary ("Info" column).
+    Info,
 }
+
+// TCP flag bit masks (RFC 9293, byte 13 of the TCP header).
+const TCP_FIN: u8 = 0x01;
+const TCP_SYN: u8 = 0x02;
+const TCP_RST: u8 = 0x04;
+const TCP_PSH: u8 = 0x08;
+const TCP_ACK: u8 = 0x10;
 
 #[derive(Debug, Clone, PartialEq)]
 enum Value {
@@ -136,6 +185,12 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "icmp" => transport == Transport::Icmp,
         "arp" => transport == Transport::Arp,
         "wlan" | "wifi" => pkt.protocol.to_string() == "802.11",
+        "ws" => pkt.protocol == Protocol::WebSocket,
+        // Display is "HTTP/2", which the lexer can't produce as a bare word.
+        "http2" => pkt.protocol == Protocol::Http2,
+        // Short aliases for protocols whose display name is longer/branded.
+        "postgres" | "psql" | "pgsql" => pkt.protocol == Protocol::Postgres,
+        "mongo" => pkt.protocol == Protocol::Mongodb,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }
@@ -156,6 +211,199 @@ fn eval_cmp(pkt: &Packet, field: Field, op: CmpOp, value: &Value) -> bool {
         Field::TcpPort => cmp_port_any(pkt, Some(Transport::Tcp), op, value),
         Field::UdpPort => cmp_port_any(pkt, Some(Transport::Udp), op, value),
         Field::FrameLen => cmp_num(Some(pkt.length as u64), op, value),
+        Field::TcpFlag(mask) => cmp_num(tcp_flag_value(pkt, mask), op, value),
+        Field::HttpMethod => cmp_text(
+            http_request_parts(pkt).map(|(m, _)| m).as_deref(),
+            op,
+            value,
+        ),
+        Field::HttpUri => cmp_text(
+            http_request_parts(pkt).map(|(_, u)| u).as_deref(),
+            op,
+            value,
+        ),
+        Field::HttpHost => cmp_text(http_host(pkt).as_deref(), op, value),
+        Field::HttpRespCode => cmp_num(http_response_code(pkt), op, value),
+        Field::DnsQryName => cmp_text(dns_qry_name(pkt).as_deref(), op, value),
+        Field::Info => cmp_text(Some(&pkt.summary), op, value),
+    }
+}
+
+// ---- Frame-derived fields ------------------------------------------------
+//
+// These fields read the captured frame bytes ([`Packet::data`]) directly:
+// Ethernet (+ optional VLAN tags) → IPv4/IPv6 → TCP/UDP → payload. Packets
+// whose bytes don't reach the requested layer simply don't have the field,
+// and any comparison on a missing field is false — same as Wireshark.
+
+struct FrameMeta<'a> {
+    ip_proto: u8,
+    tcp_flags: Option<u8>,
+    payload: &'a [u8],
+}
+
+fn frame_meta(data: &[u8]) -> Option<FrameMeta<'_>> {
+    if data.len() < 14 {
+        return None;
+    }
+    let mut off = 12;
+    let mut ethertype = u16::from_be_bytes([data[off], data[off + 1]]);
+    while matches!(ethertype, 0x8100 | 0x88a8 | 0x9100) {
+        off += 4;
+        ethertype = u16::from_be_bytes([*data.get(off)?, *data.get(off + 1)?]);
+    }
+    let l3 = off + 2;
+    let (ip_proto, l4) = match ethertype {
+        0x0800 => {
+            let ihl = ((*data.get(l3)? & 0x0f) as usize) * 4;
+            if ihl < 20 {
+                return None;
+            }
+            (*data.get(l3 + 9)?, l3 + ihl)
+        }
+        // IPv6 fixed header only; extension headers are not walked.
+        0x86dd => (*data.get(l3 + 6)?, l3 + 40),
+        _ => return None,
+    };
+    match ip_proto {
+        6 => {
+            let doff = ((*data.get(l4 + 12)? >> 4) as usize) * 4;
+            if doff < 20 {
+                return None;
+            }
+            Some(FrameMeta {
+                ip_proto,
+                tcp_flags: Some(*data.get(l4 + 13)?),
+                payload: data.get(l4 + doff..).unwrap_or(&[]),
+            })
+        }
+        17 => Some(FrameMeta {
+            ip_proto,
+            tcp_flags: None,
+            payload: data.get(l4 + 8..).unwrap_or(&[]),
+        }),
+        _ => Some(FrameMeta {
+            ip_proto,
+            tcp_flags: None,
+            payload: &[],
+        }),
+    }
+}
+
+fn tcp_flag_value(pkt: &Packet, mask: u8) -> Option<u64> {
+    let flags = frame_meta(&pkt.data)?.tcp_flags?;
+    Some(u64::from(flags & mask != 0))
+}
+
+const HTTP_METHODS: &[&str] = &[
+    "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH", "CONNECT", "TRACE",
+];
+
+/// First ~2 KiB of the TCP payload as text — enough for any request/status
+/// line and headers without copying large bodies around. Borrows straight
+/// from the frame bytes when they're valid UTF-8 (the common case), so a
+/// filter evaluation allocates nothing here (ROADMAP §4.2).
+fn http_head(pkt: &Packet) -> Option<std::borrow::Cow<'_, str>> {
+    let m = frame_meta(&pkt.data)?;
+    if m.ip_proto != 6 || m.payload.is_empty() {
+        return None;
+    }
+    let head = &m.payload[..m.payload.len().min(2048)];
+    Some(String::from_utf8_lossy(head))
+}
+
+/// `(method, uri)` when the payload starts with an HTTP request line.
+fn http_request_parts(pkt: &Packet) -> Option<(String, String)> {
+    let head = http_head(pkt)?;
+    let line = head.lines().next()?;
+    let mut it = line.split_whitespace();
+    let method = it.next()?;
+    let uri = it.next()?;
+    if !it.next()?.starts_with("HTTP/") || !HTTP_METHODS.contains(&method) {
+        return None;
+    }
+    Some((method.to_string(), uri.to_string()))
+}
+
+fn http_response_code(pkt: &Packet) -> Option<u64> {
+    let head = http_head(pkt)?;
+    let line = head.lines().next()?;
+    let mut it = line.split_whitespace();
+    if !it.next()?.starts_with("HTTP/") {
+        return None;
+    }
+    it.next()?.parse().ok()
+}
+
+fn http_host(pkt: &Packet) -> Option<String> {
+    http_request_parts(pkt)?; // Host is a request-side field
+    let head = http_head(pkt)?;
+    for line in head.lines().skip(1) {
+        if line.is_empty() {
+            break; // blank line ends the headers
+        }
+        if let Some((name, val)) = line.split_once(':') {
+            if name.eq_ignore_ascii_case("host") {
+                return Some(val.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+/// First question name of a DNS/mDNS message, dotted (`example.com`).
+fn dns_qry_name(pkt: &Packet) -> Option<String> {
+    if !matches!(pkt.protocol, Protocol::Dns | Protocol::Mdns) {
+        return None;
+    }
+    let m = frame_meta(&pkt.data)?;
+    if m.ip_proto != 17 {
+        return None;
+    }
+    parse_dns_qname(m.payload)
+}
+
+fn parse_dns_qname(p: &[u8]) -> Option<String> {
+    let qdcount = u16::from_be_bytes([*p.get(4)?, *p.get(5)?]);
+    if qdcount == 0 {
+        return None;
+    }
+    let mut i = 12;
+    let mut out = String::new();
+    loop {
+        let len = *p.get(i)? as usize;
+        if len == 0 {
+            break;
+        }
+        if len & 0xc0 != 0 {
+            return None; // compression pointer — QNAMEs in questions are literal
+        }
+        i += 1;
+        let label = p.get(i..i + len)?;
+        if !out.is_empty() {
+            out.push('.');
+        }
+        out.push_str(&String::from_utf8_lossy(label));
+        i += len;
+        if out.len() > 255 {
+            return None;
+        }
+    }
+    (!out.is_empty()).then_some(out)
+}
+
+/// Case-insensitive text comparison for protocol string fields. Equality
+/// compares in place; only `contains` needs lowercased copies.
+fn cmp_text(field: Option<&str>, op: CmpOp, value: &Value) -> bool {
+    let Some(field) = field else { return false };
+    let target = value_text(value);
+    match op {
+        CmpOp::Eq => field.eq_ignore_ascii_case(&target),
+        CmpOp::Ne => !field.eq_ignore_ascii_case(&target),
+        CmpOp::Contains => field
+            .to_ascii_lowercase()
+            .contains(&target.to_ascii_lowercase()),
+        _ => false, // ordering on text is undefined
     }
 }
 
@@ -170,7 +418,7 @@ fn value_ip(value: &Value) -> Option<IpAddr> {
 fn cmp_addr_one(addr: Option<IpAddr>, op: CmpOp, value: &Value) -> bool {
     let Some(addr) = addr else { return false };
     if op == CmpOp::Contains {
-        return addr.to_string().contains(&value_text(value));
+        return addr.to_string().contains(value_text(value).as_ref());
     }
     let Some(target) = value_ip(value) else {
         return false;
@@ -208,7 +456,7 @@ fn cmp_port_any(pkt: &Packet, want: Option<Transport>, op: CmpOp, value: &Value)
 fn cmp_num(field: Option<u64>, op: CmpOp, value: &Value) -> bool {
     let Some(field) = field else { return false };
     if op == CmpOp::Contains {
-        return field.to_string().contains(&value_text(value));
+        return field.to_string().contains(value_text(value).as_ref());
     }
     let Value::Num(v) = value else { return false };
     match op {
@@ -222,11 +470,11 @@ fn cmp_num(field: Option<u64>, op: CmpOp, value: &Value) -> bool {
     }
 }
 
-fn value_text(value: &Value) -> String {
+fn value_text(value: &Value) -> std::borrow::Cow<'_, str> {
     match value {
-        Value::Num(n) => n.to_string(),
-        Value::Ip(ip) => ip.to_string(),
-        Value::Text(t) => t.clone(),
+        Value::Num(n) => n.to_string().into(),
+        Value::Ip(ip) => ip.to_string().into(),
+        Value::Text(t) => t.as_str().into(),
     }
 }
 
@@ -471,6 +719,17 @@ fn field_from_word(word: &str) -> Option<Field> {
         "tcp.port" => Some(Field::TcpPort),
         "udp.port" => Some(Field::UdpPort),
         "frame.len" | "len" | "length" => Some(Field::FrameLen),
+        "tcp.flags.syn" => Some(Field::TcpFlag(TCP_SYN)),
+        "tcp.flags.ack" => Some(Field::TcpFlag(TCP_ACK)),
+        "tcp.flags.fin" => Some(Field::TcpFlag(TCP_FIN)),
+        "tcp.flags.rst" | "tcp.flags.reset" => Some(Field::TcpFlag(TCP_RST)),
+        "tcp.flags.psh" | "tcp.flags.push" => Some(Field::TcpFlag(TCP_PSH)),
+        "http.request.method" | "http.method" => Some(Field::HttpMethod),
+        "http.request.uri" | "http.request.path" | "http.uri" | "http.path" => Some(Field::HttpUri),
+        "http.host" => Some(Field::HttpHost),
+        "http.response.code" | "http.response.status" | "http.status" => Some(Field::HttpRespCode),
+        "dns.qry.name" | "dns.query.name" | "dns.name" => Some(Field::DnsQryName),
+        "info" | "frame.info" | "summary" => Some(Field::Info),
         _ => None,
     }
 }
@@ -499,7 +758,7 @@ mod tests {
             protocol: proto,
             length: len,
             summary: summary.into(),
-            data: Vec::new(),
+            data: bytes::Bytes::new(),
         }
     }
 
@@ -608,6 +867,185 @@ mod tests {
         assert!(Filter::parse("(tcp").is_err());
         assert!(Filter::parse("unknownfield == 5").is_err());
         assert!(Filter::parse("tcp &&").is_err());
+    }
+
+    // ---- Raw-frame builders for the protocol-field tests ----
+
+    /// Ethernet + IPv4 + TCP frame with the given flags byte and payload.
+    fn tcp_frame(flags: u8, payload: &[u8]) -> Vec<u8> {
+        let mut f = vec![0u8; 14];
+        f[12] = 0x08; // EtherType IPv4
+        let mut ip = vec![0u8; 20];
+        ip[0] = 0x45; // v4, IHL 5
+        ip[9] = 6; // TCP
+        let mut tcp = vec![0u8; 20];
+        tcp[12] = 0x50; // data offset 5
+        tcp[13] = flags;
+        f.extend(ip);
+        f.extend(tcp);
+        f.extend(payload);
+        f
+    }
+
+    /// Ethernet + IPv4 + UDP frame with the given payload.
+    fn udp_frame(payload: &[u8]) -> Vec<u8> {
+        let mut f = vec![0u8; 14];
+        f[12] = 0x08;
+        let mut ip = vec![0u8; 20];
+        ip[0] = 0x45;
+        ip[9] = 17; // UDP
+        f.extend(ip);
+        f.extend(vec![0u8; 8]); // UDP header
+        f.extend(payload);
+        f
+    }
+
+    /// A DNS message with one question for the given dotted name.
+    fn dns_question(name: &str) -> Vec<u8> {
+        let mut m = vec![0u8; 12];
+        m[5] = 1; // QDCOUNT = 1
+        for label in name.split('.') {
+            m.push(label.len() as u8);
+            m.extend(label.as_bytes());
+        }
+        m.push(0);
+        m.extend([0, 1, 0, 1]); // QTYPE A, QCLASS IN
+        m
+    }
+
+    fn with_data(mut p: Packet, data: Vec<u8>) -> Packet {
+        p.data = data.into();
+        p
+    }
+
+    #[test]
+    fn tcp_flag_fields() {
+        let syn = with_data(tcp443(), tcp_frame(0x02, &[]));
+        assert!(matches("tcp.flags.syn == 1", &syn));
+        assert!(matches("tcp.flags.ack == 0", &syn));
+        assert!(!matches("tcp.flags.rst == 1", &syn));
+
+        let rst_ack = with_data(tcp443(), tcp_frame(0x14, &[]));
+        assert!(matches(
+            "tcp.flags.rst == 1 && tcp.flags.ack == 1",
+            &rst_ack
+        ));
+        assert!(!matches("tcp.flags.syn == 1", &rst_ack));
+
+        // A UDP packet has no TCP flags — every comparison is false.
+        let udp = with_data(dns(), udp_frame(&[]));
+        assert!(!matches("tcp.flags.syn == 1", &udp));
+        assert!(!matches("tcp.flags.syn == 0", &udp));
+    }
+
+    #[test]
+    fn http_request_fields() {
+        let req = b"POST /api/login HTTP/1.1\r\nHost: example.com\r\nContent-Length: 2\r\n\r\nhi";
+        let p = with_data(
+            pkt(
+                Protocol::Http,
+                "10.0.0.1",
+                "10.0.0.2",
+                Some(50000),
+                Some(80),
+                200,
+                "HTTP POST",
+            ),
+            tcp_frame(0x18, req),
+        );
+        assert!(matches("http.request.method == \"POST\"", &p));
+        assert!(matches("http.request.method == post", &p)); // case-insensitive
+        assert!(!matches("http.request.method == GET", &p));
+        assert!(matches("http.request.uri contains \"/api\"", &p));
+        assert!(matches("http.host == example.com", &p));
+        assert!(!matches("http.response.code == 200", &p)); // it's a request
+    }
+
+    #[test]
+    fn http_response_code_field() {
+        let resp = b"HTTP/1.1 404 Not Found\r\nServer: x\r\n\r\n";
+        let p = with_data(
+            pkt(
+                Protocol::Http,
+                "10.0.0.2",
+                "10.0.0.1",
+                Some(80),
+                Some(50000),
+                120,
+                "HTTP 404",
+            ),
+            tcp_frame(0x18, resp),
+        );
+        assert!(matches("http.response.code == 404", &p));
+        assert!(matches("http.response.code >= 400", &p));
+        assert!(!matches("http.request.method == GET", &p)); // it's a response
+    }
+
+    #[test]
+    fn dns_query_name_field() {
+        let p = with_data(dns(), udp_frame(&dns_question("example.com")));
+        assert!(matches("dns.qry.name == example.com", &p));
+        assert!(matches("dns.qry.name contains \"example\"", &p));
+        assert!(!matches("dns.qry.name == other.org", &p));
+        // Non-DNS packets never match the field.
+        let t = with_data(tcp443(), tcp_frame(0x10, &[]));
+        assert!(!matches("dns.qry.name contains \"example\"", &t));
+    }
+
+    #[test]
+    fn websocket_predicate_and_alias() {
+        let p = pkt(
+            Protocol::WebSocket,
+            "10.0.0.1",
+            "10.0.0.2",
+            Some(50000),
+            Some(8080),
+            64,
+            "WebSocket Text — \"hi\"",
+        );
+        assert!(matches("websocket", &p));
+        assert!(matches("ws", &p));
+        assert!(matches("tcp", &p)); // rides on TCP
+        assert!(!matches("websocket", &tcp443()));
+        assert!(!matches("ws", &dns()));
+    }
+
+    #[test]
+    fn http2_and_grpc_predicates() {
+        let h2 = pkt(
+            Protocol::Http2,
+            "10.0.0.1",
+            "10.0.0.2",
+            Some(50000),
+            Some(8080),
+            64,
+            "HTTP/2 SETTINGS — 2 parameters",
+        );
+        assert!(matches("http2", &h2));
+        assert!(matches("tcp", &h2)); // rides on TCP
+        assert!(!matches("http", &h2)); // HTTP/1.x is a different predicate
+        assert!(!matches("grpc", &h2));
+
+        let g = pkt(
+            Protocol::Grpc,
+            "10.0.0.1",
+            "10.0.0.2",
+            Some(50000),
+            Some(50051),
+            120,
+            "gRPC message — 42 bytes (uncompressed) on stream 1",
+        );
+        assert!(matches("grpc", &g));
+        assert!(matches("tcp", &g));
+        assert!(!matches("http2", &g)); // labelled by the more specific protocol
+    }
+
+    #[test]
+    fn info_field_over_summary() {
+        let p = tcp443(); // summary: "TLS — google.com (HTTPS)"
+        assert!(matches("info contains google", &p));
+        assert!(matches("info contains \"HTTPS\"", &p));
+        assert!(!matches("info contains yahoo", &p));
     }
 
     #[test]
