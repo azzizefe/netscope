@@ -7,8 +7,8 @@ use std::thread;
 use anyhow::{Context, Result};
 use crossbeam_channel::Sender;
 
-use crate::dissectors::{self, DissectedResult};
 use crate::models::Packet;
+use crate::pipeline::{Pipeline, RawFrame, StatsSnapshot};
 
 /// Translate human-friendly protocol names in a filter expression into valid
 /// BPF syntax. Tokens that are already valid BPF (ports, hostnames, operators)
@@ -174,9 +174,14 @@ pub fn friendly_name_of(raw_name: &str) -> String {
         .unwrap_or_else(|| raw_name.to_string())
 }
 
+/// Capture engine built on the parallel pipeline (ROADMAP §2.1): a capture
+/// thread feeds raw frames into a lock-free ring, a rayon-backed dissector
+/// stage parses them across cores, and finished [`Packet`]s arrive on the
+/// `Sender` given to `start_live`/`start_offline` in arrival order.
 pub struct CaptureEngine {
     running: Arc<AtomicBool>,
     handle: Option<thread::JoinHandle<()>>,
+    pipeline: Option<Pipeline>,
 }
 
 impl Default for CaptureEngine {
@@ -190,6 +195,7 @@ impl CaptureEngine {
         Self {
             running: Arc::new(AtomicBool::new(false)),
             handle: None,
+            pipeline: None,
         }
     }
 
@@ -261,6 +267,11 @@ impl CaptureEngine {
         // 802.11 / radiotap). Read it before `cap` moves into the thread.
         let linktype = cap.get_datalink().0;
 
+        // Dissection happens off the capture thread: frames go into the
+        // lock-free ring, the pipeline's rayon stage parses them.
+        let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
+        let producer = pipeline.producer();
+
         let handle = thread::Builder::new()
             .name("capture".into())
             .spawn(move || {
@@ -279,10 +290,9 @@ impl CaptureEngine {
                             if let Some(ref mut sf) = savefile {
                                 sf.write(&pkt);
                             }
-                            let packet = build_packet(pkt, linktype);
-                            if packet_tx.send(packet).is_err() {
-                                break;
-                            }
+                            // Live capture must never stall the wire loop:
+                            // a full ring drops the frame (counted in stats).
+                            producer.push_live(raw_frame(pkt));
                         }
                         Err(pcap::Error::TimeoutExpired) => continue,
                         Err(pcap::Error::NoMorePackets) => break,
@@ -292,10 +302,12 @@ impl CaptureEngine {
                         }
                     }
                 }
+                producer.finish();
             })
             .context("Failed to spawn capture thread")?;
 
         self.handle = Some(handle);
+        self.pipeline = Some(pipeline);
         Ok(())
     }
 
@@ -322,6 +334,9 @@ impl CaptureEngine {
         // Link-layer type of the saved capture (Ethernet, 802.11, radiotap…).
         let linktype = cap.get_datalink().0;
 
+        let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
+        let producer = pipeline.producer();
+
         let handle = thread::Builder::new()
             .name("capture".into())
             .spawn(move || {
@@ -340,8 +355,10 @@ impl CaptureEngine {
                             if let Some(ref mut sf) = savefile {
                                 sf.write(&pkt);
                             }
-                            let packet = build_packet(pkt, linktype);
-                            if packet_tx.send(packet).is_err() {
+                            // Reading a file: block for ring space instead of
+                            // dropping — losing packets from a pcap would
+                            // silently skew analysis.
+                            if !producer.push_blocking(raw_frame(pkt), &running) {
                                 break;
                             }
                         }
@@ -353,10 +370,12 @@ impl CaptureEngine {
                         }
                     }
                 }
+                producer.finish();
             })
             .context("Failed to spawn capture thread")?;
 
         self.handle = Some(handle);
+        self.pipeline = Some(pipeline);
         Ok(())
     }
 
@@ -365,10 +384,22 @@ impl CaptureEngine {
         if let Some(handle) = self.handle.take() {
             let _ = handle.join();
         }
+        // The capture thread has declared the stream finished; wait for the
+        // dissector stage to drain the ring so no packet is lost on stop.
+        // The pipeline object stays around so its final stats remain readable.
+        if let Some(pipeline) = self.pipeline.as_mut() {
+            pipeline.join();
+        }
     }
 
     pub fn is_running(&self) -> bool {
         self.running.load(Ordering::SeqCst)
+    }
+
+    /// Pipeline counters (frames received / dropped / dissected) for the
+    /// running or just-stopped capture. `None` before the first start.
+    pub fn pipeline_stats(&self) -> Option<StatsSnapshot> {
+        self.pipeline.as_ref().map(|p| p.stats())
     }
 }
 
@@ -378,33 +409,160 @@ impl Drop for CaptureEngine {
     }
 }
 
-fn build_packet(pkt: pcap::Packet, linktype: i32) -> Packet {
+/// Convert a libpcap packet into the pipeline's raw-frame form. This is all
+/// the capture thread does per packet — dissection happens downstream.
+fn raw_frame(pkt: pcap::Packet) -> RawFrame {
     // tv_sec is i32 on Windows but already i64 on Linux/macOS, so the cast
     // is platform-necessary even where clippy flags it as i64 -> i64.
     #[allow(clippy::unnecessary_cast)]
-    let secs = pkt.header.ts.tv_sec as i64;
-    let timestamp = chrono::DateTime::from_timestamp(secs, pkt.header.ts.tv_usec as u32 * 1000)
-        .unwrap_or_default();
-
-    let DissectedResult {
-        src_addr,
-        dst_addr,
-        src_port,
-        dst_port,
-        protocol,
-        summary,
-    } = dissectors::dissect_linktype(pkt.data, linktype);
-
-    Packet {
-        timestamp,
-        src_addr,
-        dst_addr,
-        src_port,
-        dst_port,
-        protocol,
-        length: pkt.header.len as usize,
-        summary,
+    let ts_sec = pkt.header.ts.tv_sec as i64;
+    RawFrame {
+        ts_sec,
+        ts_nanos: pkt.header.ts.tv_usec as u32 * 1000,
+        orig_len: pkt.header.len,
         data: pkt.data.to_vec(),
+    }
+}
+
+// ---- Async facade (feature = "async") --------------------------------------
+
+/// Tokio-friendly wrapper around [`CaptureEngine`] for async consumers (the
+/// planned REST/WebSocket server mode). The blocking pcap read loop and the
+/// dissector stage stay on their dedicated OS threads — the roadmap's
+/// zero-copy async I/O (AF_XDP) is a separate, Linux-only future step — and a
+/// bridge thread forwards finished packets into a bounded tokio channel.
+#[cfg(feature = "async")]
+pub struct AsyncCaptureEngine {
+    inner: CaptureEngine,
+}
+
+#[cfg(feature = "async")]
+impl AsyncCaptureEngine {
+    /// Start a live capture; packets arrive on the returned tokio receiver.
+    /// `buffer` caps in-flight packets between the pipeline and the async
+    /// consumer (lagging consumers apply backpressure to the bridge, never to
+    /// the wire loop — the ring's drop policy handles overload there).
+    pub fn start_live(
+        interface: &str,
+        bpf_filter: Option<&str>,
+        output_path: Option<&str>,
+        monitor: bool,
+        buffer: usize,
+    ) -> Result<(Self, tokio::sync::mpsc::Receiver<Packet>)> {
+        let (std_tx, std_rx) = crossbeam_channel::unbounded();
+        let mut inner = CaptureEngine::new();
+        inner.start_live(interface, bpf_filter, output_path, std_tx, monitor)?;
+        Ok((Self { inner }, bridge(std_rx, buffer)))
+    }
+
+    /// Read a capture file; packets arrive on the returned tokio receiver,
+    /// and the channel closes after the last one.
+    pub fn start_offline(
+        filepath: &str,
+        bpf_filter: Option<&str>,
+        buffer: usize,
+    ) -> Result<(Self, tokio::sync::mpsc::Receiver<Packet>)> {
+        let (std_tx, std_rx) = crossbeam_channel::unbounded();
+        let mut inner = CaptureEngine::new();
+        inner.start_offline(filepath, bpf_filter, None, std_tx)?;
+        Ok((Self { inner }, bridge(std_rx, buffer)))
+    }
+
+    /// Stop the capture and drain the pipeline. Blocks briefly (thread
+    /// joins); call via `spawn_blocking` on latency-sensitive runtimes.
+    pub fn stop(&mut self) {
+        self.inner.stop();
+    }
+
+    /// See [`CaptureEngine::pipeline_stats`].
+    pub fn pipeline_stats(&self) -> Option<StatsSnapshot> {
+        self.inner.pipeline_stats()
+    }
+}
+
+/// Forward packets from the pipeline's crossbeam channel into a bounded tokio
+/// channel. Ends (and closes the tokio side) when the source disconnects.
+#[cfg(feature = "async")]
+fn bridge(
+    std_rx: crossbeam_channel::Receiver<Packet>,
+    buffer: usize,
+) -> tokio::sync::mpsc::Receiver<Packet> {
+    let (tx, rx) = tokio::sync::mpsc::channel(buffer.max(1));
+    thread::Builder::new()
+        .name("async-bridge".into())
+        .spawn(move || {
+            while let Ok(pkt) = std_rx.recv() {
+                if tx.blocking_send(pkt).is_err() {
+                    break;
+                }
+            }
+        })
+        .expect("failed to spawn async bridge thread");
+    rx
+}
+
+#[cfg(all(test, feature = "async"))]
+mod async_tests {
+    use super::*;
+    use crate::dissectors::test_helpers::build_tcp_packet;
+    use crate::models::Protocol;
+
+    /// Write a minimal little-endian classic pcap with `n` HTTP frames.
+    fn write_test_pcap(n: usize) -> std::path::PathBuf {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&0xa1b2c3d4u32.to_le_bytes());
+        buf.extend_from_slice(&2u16.to_le_bytes());
+        buf.extend_from_slice(&4u16.to_le_bytes());
+        buf.extend_from_slice(&0u32.to_le_bytes()); // thiszone
+        buf.extend_from_slice(&0u32.to_le_bytes()); // sigfigs
+        buf.extend_from_slice(&65535u32.to_le_bytes()); // snaplen
+        buf.extend_from_slice(&1u32.to_le_bytes()); // Ethernet
+        for i in 0..n {
+            let frame = build_tcp_packet(
+                [10, 0, 0, 1],
+                [10, 0, 0, 2],
+                12345,
+                80,
+                false,
+                true,
+                false,
+                false,
+                b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+            );
+            buf.extend_from_slice(&(1_700_000_000u32 + i as u32).to_le_bytes());
+            buf.extend_from_slice(&0u32.to_le_bytes());
+            buf.extend_from_slice(&(frame.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&(frame.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&frame);
+        }
+        let path = std::env::temp_dir().join(format!(
+            "netscope-async-capture-{}.pcap",
+            std::process::id()
+        ));
+        std::fs::write(&path, buf).unwrap();
+        path
+    }
+
+    #[test]
+    fn async_offline_delivers_all_packets_then_closes() {
+        let path = write_test_pcap(5);
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        rt.block_on(async {
+            let (mut engine, mut rx) =
+                AsyncCaptureEngine::start_offline(path.to_str().unwrap(), None, 4).unwrap();
+            let mut count = 0;
+            while let Some(pkt) = rx.recv().await {
+                assert_eq!(pkt.protocol, Protocol::Http);
+                count += 1;
+            }
+            assert_eq!(count, 5);
+            engine.stop();
+            let stats = engine.pipeline_stats().unwrap();
+            assert_eq!(stats.dissected, 5);
+            assert_eq!(stats.dropped, 0);
+        });
     }
 }
 

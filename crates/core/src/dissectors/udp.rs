@@ -2,7 +2,10 @@ use std::net::IpAddr;
 
 use crate::models::Protocol;
 
-use super::{dhcp, dns, ntp, sip, snmp, DissectedResult};
+use super::{
+    bacnet, coap, dhcp, dnp3, dns, enip, kerberos, ntp, openvpn, radius, rtp, sip, snmp, vxlan,
+    wireguard, DissectedResult,
+};
 
 pub fn dissect_udp(
     src_ip: Option<IpAddr>,
@@ -51,8 +54,60 @@ pub fn dissect_udp(
     if on(5060) || on(5061) {
         return sip::dissect_sip(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
+    // Industrial / OT protocols carried over UDP (ROADMAP §3.5).
+    if on(47808) {
+        return bacnet::dissect_bacnet(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(20000) {
+        return dnp3::dissect_dnp3(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(2222) || on(44818) {
+        return enip::dissect_enip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Security / auth / VPN protocols (ROADMAP §3.7).
+    if on(88) {
+        return kerberos::dissect_kerberos(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1812) || on(1813) || on(1645) || on(1646) {
+        return radius::dissect_radius(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1194) {
+        return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, udp_payload, false);
+    }
+    if on(51820) {
+        return wireguard::dissect_wireguard(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // IoT messaging (ROADMAP §3.8).
+    if on(5683) {
+        return coap::dissect_coap(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // VXLAN overlay tunnels (Kubernetes, OpenStack, DC fabrics). Falls through
+    // to the generic UDP summary when the header doesn't validate.
+    if vxlan::VXLAN_PORTS.iter().any(|&p| on(p)) {
+        if let Some(r) = vxlan::dissect_vxlan(src_ip, dst_ip, src_port, dst_port, udp_payload) {
+            return r;
+        }
+    }
+    // User-defined plugins claim what no built-in dissector recognised
+    // (see crate::plugins) — they never shadow the protocols above.
+    if let Some(p) = crate::plugins::try_dissect(
+        crate::plugins::TransportKind::Udp,
+        src_ip,
+        dst_ip,
+        src_port,
+        dst_port,
+        udp_payload,
+    ) {
+        return p;
+    }
+    // RTP/RTCP media rides dynamically negotiated ports, so it has no well-known
+    // port to key on — recognise it structurally, after user plugins have had
+    // their say (ROADMAP §3.6).
+    if let Some(r) = rtp::try_dissect(src_ip, dst_ip, src_port, dst_port, udp_payload) {
+        return r;
     }
 
     DissectedResult {

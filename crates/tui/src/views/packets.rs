@@ -5,7 +5,9 @@ use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::colors::{protocol_color, PANEL_BORDER, SELECTED_BG};
+use crate::colors::protocol_color;
+use crate::columns::Column;
+use crate::detail::build_tree;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
     let layout = Layout::default()
@@ -25,70 +27,90 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
     if app.show_hex {
         render_hex_dump(frame, detail_area, app);
     } else {
-        render_detail_panel(frame, detail_area, app);
+        render_detail_tree(frame, detail_area, app);
     }
 }
 
-fn render_packet_list(frame: &mut Frame, area: Rect, app: &App) {
-    let packets = app.filtered_packets();
+/// The dynamic column layout for the packet list, honouring `app.columns`.
+/// Info is always last and always present.
+fn column_spec(app: &App) -> (Vec<Constraint>, Vec<&'static str>, Vec<Column>) {
+    let mut constraints = Vec::new();
+    let mut headers = Vec::new();
+    let mut cols = Vec::new();
+    for col in Column::ALL {
+        if !app.columns.is_on(col) {
+            continue;
+        }
+        let (width, header) = match col {
+            Column::Num => (Constraint::Length(5), " # "),
+            Column::Time => (Constraint::Length(10), " Time "),
+            Column::Source => (Constraint::Length(24), " Source "),
+            Column::Destination => (Constraint::Length(24), " Destination "),
+            Column::Protocol => (Constraint::Length(9), " Proto "),
+            Column::Length => (Constraint::Length(8), " Len "),
+        };
+        constraints.push(width);
+        headers.push(header);
+        cols.push(col);
+    }
+    constraints.push(Constraint::Min(10));
+    headers.push(" Info ");
+    (constraints, headers, cols)
+}
 
-    let header = [
-        " # ",
-        " Time ",
-        " Source → Destination ",
-        " Proto ",
-        " Info ",
-    ];
-    let constraints = [
-        Constraint::Length(5),
-        Constraint::Length(10),
-        Constraint::Length(42),
-        Constraint::Length(7),
-        Constraint::Min(10),
-    ];
+fn render_packet_list(frame: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme();
+    let packets = app.filtered_packets();
+    let (constraints, headers, cols) = column_spec(app);
 
     let rows: Vec<Row> = packets
         .iter()
         .enumerate()
         .map(|(i, pkt)| {
             let is_selected = i == app.selected;
-            let proto_color = protocol_color(&pkt.protocol);
+            // Coloring rules: the first matching rule tints the whole row
+            // (selection wins); otherwise the protocol keeps its colour.
+            let rule_color = app.color_rules.color_for(pkt);
+            let proto_color = rule_color.unwrap_or_else(|| protocol_color(&pkt.protocol));
 
-            let num = Span::raw(format!(" {:>3}", i + 1));
-            let elapsed = format!(
-                " {:.3}s",
-                (pkt.timestamp - app.start_time)
-                    .to_std()
-                    .unwrap_or_default()
-                    .as_secs_f64()
-            );
-            let src = pkt
-                .src_addr
-                .map(|a| app.names.display_endpoint(a, pkt.src_port))
-                .unwrap_or_else(|| "?".into());
-            let dst = pkt
-                .dst_addr
-                .map(|a| app.names.display_endpoint(a, pkt.dst_port))
-                .unwrap_or_else(|| "?".into());
-            let proto = Span::styled(
-                format!(" {} ", pkt.protocol),
-                Style::new().fg(proto_color).bold(),
-            );
-            let summary = Span::raw(format!(" {} ", pkt.summary));
-
-            let src_dst = format!(" {} → {} ", src, dst);
-
-            let cells = vec![
-                Cell::from(num),
-                Cell::from(elapsed),
-                Cell::from(src_dst),
-                Cell::from(proto),
-                Cell::from(summary),
-            ];
+            let mut cells: Vec<Cell> = Vec::with_capacity(cols.len() + 1);
+            for col in &cols {
+                let cell = match col {
+                    Column::Num => Cell::from(format!(" {:>3}", i + 1)),
+                    Column::Time => Cell::from(format!(
+                        " {:.3}s",
+                        (pkt.timestamp - app.start_time)
+                            .to_std()
+                            .unwrap_or_default()
+                            .as_secs_f64()
+                    )),
+                    Column::Source => Cell::from(format!(
+                        " {} ",
+                        pkt.src_addr
+                            .map(|a| app.names.display_endpoint(a, pkt.src_port))
+                            .unwrap_or_else(|| "?".into())
+                    )),
+                    Column::Destination => Cell::from(format!(
+                        " {} ",
+                        pkt.dst_addr
+                            .map(|a| app.names.display_endpoint(a, pkt.dst_port))
+                            .unwrap_or_else(|| "?".into())
+                    )),
+                    Column::Protocol => Cell::from(Span::styled(
+                        format!(" {} ", pkt.protocol),
+                        Style::new().fg(proto_color).bold(),
+                    )),
+                    Column::Length => Cell::from(format!(" {} ", pkt.length)),
+                };
+                cells.push(cell);
+            }
+            cells.push(Cell::from(format!(" {} ", pkt.summary)));
 
             let row = Row::new(cells);
             if is_selected {
-                row.style(Style::new().bg(SELECTED_BG))
+                row.style(Style::new().bg(theme.selected_bg))
+            } else if let Some(color) = rule_color {
+                row.style(Style::new().fg(color))
             } else {
                 row
             }
@@ -98,18 +120,30 @@ fn render_packet_list(frame: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
         .title(" Packets ")
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(theme.border));
+
+    // Keep the selected row on screen and remember the scroll offset + row area
+    // so a mouse click can map a screen row back to a packet index.
+    let visible = area.height.saturating_sub(3) as usize; // borders + header
+    let offset = if visible > 0 && app.selected >= visible {
+        app.selected - visible + 1
+    } else {
+        0
+    };
+    app.list_offset = offset;
+    app.list_inner = Rect {
+        x: area.x + 1,
+        y: area.y + 2,
+        width: area.width.saturating_sub(2),
+        height: visible as u16,
+    };
 
     let mut state = TableState::new()
-        .with_offset(app.selected.saturating_sub(if area.height > 5 {
-            area.height as usize - 5
-        } else {
-            0
-        }))
+        .with_offset(offset)
         .with_selected(Some(app.selected));
 
     let table = Table::new(rows, constraints)
-        .header(Row::new(header.iter().map(|h| {
+        .header(Row::new(headers.iter().map(|h| {
             Cell::from(Span::styled(*h, Style::new().bold().white()))
         })))
         .block(block);
@@ -117,76 +151,69 @@ fn render_packet_list(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_stateful_widget(table, area, &mut state);
 }
 
-/// `142.250.74.46 (google.com)` when the hostname is known, bare IP otherwise.
-fn addr_with_name(addr: std::net::IpAddr, app: &App) -> String {
-    match app.names.name_for(addr) {
-        Some(name) => format!("{addr} ({name})"),
-        None => addr.to_string(),
-    }
-}
+/// Wireshark-style expandable protocol tree (ROADMAP §6.1). Each layer is a
+/// collapsible node; `Enter` focuses the tree and the focused layer is
+/// highlighted, with `←/→` collapsing/expanding it.
+fn render_detail_tree(frame: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme();
+    let block = Block::default()
+        .title(if app.detail_focus {
+            " Details · tree focus (Esc to leave) "
+        } else {
+            " Details (Enter to explore) "
+        })
+        .borders(Borders::ALL)
+        .border_style(Style::new().fg(if app.detail_focus {
+            theme.accent
+        } else {
+            theme.border
+        }));
 
-fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
     if app.packets.is_empty() || app.selected >= app.packets.len() {
-        let block = Block::default()
-            .title(" Details ")
-            .borders(Borders::ALL)
-            .border_style(Style::new().fg(PANEL_BORDER));
         frame.render_widget(block, area);
         return;
     }
 
     let pkt = &app.packets[app.selected];
-    let proto_color = protocol_color(&pkt.protocol);
-    let lines = vec![
-        Line::from(vec![
-            Span::styled(
-                format!(" {} ", pkt.protocol),
-                Style::new().fg(proto_color).bold(),
-            ),
-            Span::raw(" "),
-            Span::styled(&pkt.summary, Style::new().bold()),
-        ]),
-        Line::from(""),
-        Line::from(format!(
-            " Source: {}",
-            pkt.src_addr
-                .map(|a| addr_with_name(a, app))
-                .unwrap_or_else(|| "?".into())
-        )),
-        Line::from(format!(
-            " Destination: {}",
-            pkt.dst_addr
-                .map(|a| addr_with_name(a, app))
-                .unwrap_or_else(|| "?".into())
-        )),
-        Line::from(format!(
-            " Ports: {} → {}",
-            pkt.src_port
-                .map(|p| p.to_string())
-                .unwrap_or_else(|| "-".into()),
-            pkt.dst_port
-                .map(|p| p.to_string())
-                .unwrap_or_else(|| "-".into())
-        )),
-        Line::from(format!(" Length: {} bytes", pkt.length)),
-        Line::from(format!(
-            " Timestamp: {}",
-            pkt.timestamp.format("%H:%M:%S%.3f")
-        )),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(" ℹ ", Style::new().fg(proto_color).bold()),
-            Span::styled(
-                netscope_core::education::explain_packet(pkt),
-                Style::new().italic(),
-            ),
-        ]),
-    ];
+    let nodes = build_tree(pkt, app.selected);
+    // Clamp the focused layer to the available nodes.
+    app.detail_sel = app.detail_sel.min(nodes.len().saturating_sub(1));
 
-    let block = Block::default()
-        .title(" Details ")
-        .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+    let mut lines: Vec<Line> = Vec::new();
+    for (i, node) in nodes.iter().enumerate() {
+        let collapsed = app.detail_collapsed.contains(&i);
+        let focused = app.detail_focus && i == app.detail_sel;
+        let twist = if collapsed { "▸" } else { "▾" };
+        let head_style = if focused {
+            Style::new().fg(theme.accent).bold()
+        } else {
+            Style::new().fg(theme.accent)
+        };
+        let mut head = vec![
+            Span::styled(format!("{twist} "), head_style),
+            Span::styled(node.title.clone(), head_style),
+        ];
+        if !node.subtitle.is_empty() {
+            head.push(Span::styled(
+                format!("  {}", node.subtitle),
+                Style::new().dim(),
+            ));
+        }
+        let head_line = Line::from(head);
+        lines.push(if focused {
+            head_line.style(Style::new().bg(theme.selected_bg))
+        } else {
+            head_line
+        });
+        if !collapsed {
+            for (key, value) in &node.fields {
+                lines.push(Line::from(vec![
+                    Span::styled(format!("    {key}: "), Style::new().dim()),
+                    Span::raw(value.clone()),
+                ]));
+            }
+        }
+    }
 
     frame.render_widget(
         Paragraph::new(lines)
@@ -197,7 +224,13 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_hex_dump(frame: &mut Frame, area: Rect, app: &App) {
+    let theme = app.theme();
     if app.packets.is_empty() || app.selected >= app.packets.len() {
+        let block = Block::default()
+            .title(" Hex Dump ")
+            .borders(Borders::ALL)
+            .border_style(Style::new().fg(theme.border));
+        frame.render_widget(block, area);
         return;
     }
 
@@ -230,7 +263,7 @@ fn render_hex_dump(frame: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
         .title(" Hex Dump ")
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(theme.border));
 
     frame.render_widget(Paragraph::new(hex_lines.join("\n")).block(block), area);
 }

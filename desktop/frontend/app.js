@@ -8,8 +8,24 @@ const PROTOCOL_COLORS = {
   SNMP: '#facc15', QUIC: '#2dd4bf', SIP: '#818cf8',
   SSH: '#5eead4', FTP: '#fb923c', SMTP: '#f472b6', IMAP: '#e879f9',
   POP3: '#d98ae8', Telnet: '#f87171', RDP: '#60a5fa', '802.11': '#22d3ee',
+  WebSocket: '#a3e635', VXLAN: '#7dd3fc', 'HTTP/2': '#4ade80', gRPC: '#f9a8d4',
+  PostgreSQL: '#336791', MySQL: '#00758f', MongoDB: '#4db33d', Redis: '#dc382d', Cassandra: '#1ba1e2',
+  Modbus: '#f27a1a', DNP3: '#eab308', BACnet: '#c08a2b', 'EtherNet/IP': '#e15a3b', 'OPC UA': '#339999',
+  RTP: '#f09e54', RTCP: '#d4843e',
+  Kerberos: '#b45cf5', LDAP: '#8b7ad6', RADIUS: '#f47b9c', OpenVPN: '#ea7a3c', WireGuard: '#88171a',
+  ESP: '#9ca3af', AH: '#848b98', MQTT: '#660066', CoAP: '#f59e0b',
+  BGP: '#f97316', OSPF: '#2dd4bf', LLDP: '#93c5fd', LACP: '#64748b', STP: '#a8a29e', MPLS: '#cbd5e1',
 };
-const protoColor = (p) => PROTOCOL_COLORS[p] || '#f87171';
+// Colour-blind-safe protocol palette (ROADMAP §6.3) — Okabe–Ito hues chosen to
+// stay distinct under deuteranopia/protanopia. Only the common protocols are
+// remapped; the rest keep their default colour when CVD mode is on.
+const CVD_COLORS = {
+  TCP: '#0072b2', UDP: '#56b4e9', DNS: '#cc79a7', HTTP: '#009e73', TLS: '#e69f00',
+  ICMP: '#d55e00', ARP: '#999999', QUIC: '#f0e442', 'HTTP/2': '#009e73', DHCP: '#e69f00',
+};
+const protoColor = (p) =>
+  ((typeof state !== 'undefined' && state.settings && state.settings.cvd && CVD_COLORS[p]) ||
+    PROTOCOL_COLORS[p] || '#f87171');
 
 const STATES = { IDLE: 'Idle', CAPTURING: 'Capturing' };
 
@@ -38,12 +54,36 @@ const THEMES = {
   dracula:  { '--bg': '#282a36', '--bg-elev': '#2f3140', '--bg-elev-2': '#383a4a', '--border': '#44475a', '--text': '#f8f8f2', '--text-muted': '#9aa0b5', '--accent': '#bd93f9' },
   nord:     { '--bg': '#2e3440', '--bg-elev': '#3b4252', '--bg-elev-2': '#434c5e', '--border': '#4c566a', '--text': '#eceff4', '--text-muted': '#9aa5b8', '--accent': '#88c0d0' },
   light:    { '--bg': '#f4f6fa', '--bg-elev': '#ffffff', '--bg-elev-2': '#eef1f6', '--border': '#d3d9e3', '--text': '#1c2430', '--text-muted': '#5c6675', '--accent': '#2563eb' },
+  // High-contrast (ROADMAP §6.3) — WCAG AA: pure black/white with a strong
+  // border and a high-luminance accent for focus.
+  contrast: { '--bg': '#000000', '--bg-elev': '#0a0a0a', '--bg-elev-2': '#161616', '--border': '#ffffff', '--text': '#ffffff', '--text-muted': '#e6e6e6', '--accent': '#ffd400' },
 };
 function applyTheme(name) {
   const t = THEMES[name] || THEMES.midnight;
   const root = document.documentElement;
   for (const [k, v] of Object.entries(t)) root.style.setProperty(k, v);
   root.dataset.theme = name;
+}
+
+// ---- Accessibility (ROADMAP §6.3) ----
+// Interface/text scaling via CSS zoom — scales the whole UI uniformly, so the
+// px-based layout and the virtual scroller's row math (both in layout pixels)
+// stay consistent while everything gets larger/smaller.
+function applyTextScale(scale) {
+  const s = Number(scale) || 1;
+  document.documentElement.style.zoom = s === 1 ? '' : String(s);
+}
+
+// Swap the protocol accent CSS custom properties to the colour-blind-safe
+// palette (and back). protoColor() already prefers CVD_COLORS when enabled;
+// this keeps the CSS-driven row stripes in sync.
+const PROTO_VARS_DEFAULT = { '--tcp': '#4a9ef5', '--udp': '#45d1c5', '--dns': '#a78bfa', '--http': '#34d399', '--tls': '#6ee7b7', '--icmp': '#fbbf24', '--arp': '#9ca3af', '--unknown': '#f87171' };
+const PROTO_VARS_CVD = { '--tcp': '#0072b2', '--udp': '#56b4e9', '--dns': '#cc79a7', '--http': '#009e73', '--tls': '#e69f00', '--icmp': '#d55e00', '--arp': '#999999', '--unknown': '#d55e00' };
+function applyCvd(on) {
+  const root = document.documentElement;
+  const vars = on ? PROTO_VARS_CVD : PROTO_VARS_DEFAULT;
+  for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
+  root.dataset.cvd = on ? 'on' : 'off';
 }
 
 // Built-in task presets — mirrors Wireshark's Configuration Profiles, scoped to
@@ -83,6 +123,19 @@ const BUILTIN_PROFILES = {
   },
 };
 
+// ---- Coloring rules (Wireshark: View > Coloring Rules) ----
+// Each rule is { name, filter, color, enabled }; rules match top-down and the
+// first hit tints the packet row. Filters use the display-filter language, so
+// anything you can type in the filter box can drive a colour.
+const DEFAULT_COLOR_RULES = [
+  { name: 'Bad TCP (reset / malformed)', filter: 'tcp.flags.rst == 1 || info contains "Malformed"', color: '#ef4444', enabled: true },
+  { name: 'HTTP error response', filter: 'http.response.code >= 400', color: '#f97316', enabled: true },
+  { name: 'TCP handshake (SYN / FIN)', filter: 'tcp.flags.syn == 1 || tcp.flags.fin == 1', color: '#94a3b8', enabled: true },
+  { name: 'DNS', filter: 'dns || mdns', color: '#a78bfa', enabled: true },
+  { name: 'ICMP', filter: 'icmp', color: '#fbbf24', enabled: true },
+  { name: 'ARP', filter: 'arp', color: '#9ca3af', enabled: true },
+];
+
 const state = {
   view: 'packets',
   packets: [],
@@ -100,7 +153,7 @@ const state = {
   },
   // Time Display Format: 'time' (HH:MM:SS.mmm), 'datetime' (date + time),
   // 'relative' (seconds since the first packet of this capture session).
-  settings: Object.assign({ timeFormat: 'time', showHostnames: true, profile: 'HTTP Analysis', theme: 'midnight', noiseFilter: false, lang: detectDefaultLang(), geoip: false }, loadJSON('netscope.settings', {})),
+  settings: Object.assign({ timeFormat: 'time', showHostnames: true, profile: 'HTTP Analysis', theme: 'midnight', noiseFilter: false, lang: detectDefaultLang(), geoip: false, geoipDb: '', textScale: 1, cvd: false }, loadJSON('netscope.settings', {})),
   customProfiles: loadJSON('netscope.profiles', {}),
   captureStartEpoch: null,
   // Live dashboard sampling (1 Hz): rolling history for the sparkline widgets.
@@ -111,9 +164,15 @@ const state = {
   },
   hostsSeen: new Set(),               // distinct IPs, for "active hosts" + topology
   topo: { layout: new Map(), frozen: false, lastBuilt: 0, view: null },
+  // I/O graph samples — packed typed arrays (time, size, error flag) so a
+  // whole capture can stream straight into a WebGL buffer (ROADMAP §4.3).
+  io: { base: null, t: null, len: null, err: null, n: 0, tMax: 0, lenMax: 0, lastDraw: 0, uploaded: 0 },
   diff: { a: null, b: null },
   alerts: [], alertsSeen: 0,          // Smart Alerts feed
   triggers: loadJSON('netscope.triggers', []), // Event triggers (IFTTT)
+  coloring: loadJSON('netscope.coloring', null) || DEFAULT_COLOR_RULES.map((r) => ({ ...r })),
+  _colorMatchers: null, // compiled coloring rules, rebuilt lazily after edits
+  geoDb: null,          // loaded offline GeoIP database info ({ path, db_type, build_epoch })
   reportRaw: '',
 };
 const LIVE_HISTORY = 60; // seconds of sparkline history
@@ -225,6 +284,7 @@ async function startCapture() {
     state.hostsSeen.clear();
     state.live.lastSample = null; state.live.throughput = []; state.live.pps = []; state.live.errRate = [];
     state.captureStartEpoch = null; // "Seconds since beginning of capture" baseline resets each run
+    ioReset();
     await invoke('start_capture', { interface: iface, filter, monitor: !!state.settings.monitor });
     setStatus(STATES.CAPTURING);
     els.startBtn.disabled = true;
@@ -247,16 +307,21 @@ function setStatus(s) {
 }
 
 // ---- Packet ingest ----
-function onPacket(event) {
-  const pkt = event.payload;
+// Bookkeeping for one packet, no rendering — rendering happens once per
+// event (single packet or batch), not once per packet.
+function ingestPacket(pkt) {
   state.packets.push(pkt);
   if (state.packets.length > 10000) state.packets.shift();
   state.packetCount++;
-  els.packetCount.textContent = `${state.packetCount} ${I18N.t('unit.packets')}`;
 
   updateStats(pkt);
   updateFlow(pkt);
+  ioRecord(pkt);
   if (state.triggers.length) evaluateTriggers(pkt);
+}
+
+function refreshAfterIngest() {
+  els.packetCount.textContent = `${state.packetCount} ${I18N.t('unit.packets')}`;
 
   if (state.view === 'packets') renderPacketList();
   else if (state.view === 'connections') renderConnections();
@@ -265,17 +330,35 @@ function onPacket(event) {
   else if (state.view === 'script') updateScriptCount();
 }
 
+function onPacket(event) {
+  ingestPacket(event.payload);
+  refreshAfterIngest();
+}
+
+// Batched delivery — the backend sends `packets-batch` arrays when opening
+// capture files, so a million-packet pcap costs ~a thousand IPC events and
+// one render per batch instead of a million of each.
+function onPacketBatch(event) {
+  const batch = event.payload || [];
+  for (const pkt of batch) ingestPacket(pkt);
+  if (batch.length) refreshAfterIngest();
+  updateLoadProgress(batch.length);
+}
+
 // ---- Flow aggregation (Connections view) ----
 function transportOf(proto) {
-  if (['TCP', 'HTTP', 'TLS', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'Telnet', 'RDP'].includes(proto)) return 'tcp';
-  if (['UDP', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP'].includes(proto)) return 'udp';
+  if (['TCP', 'HTTP', 'TLS', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'Telnet', 'RDP', 'WebSocket', 'HTTP/2', 'gRPC', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Cassandra', 'Modbus', 'DNP3', 'EtherNet/IP', 'OPC UA', 'LDAP', 'MQTT', 'BGP'].includes(proto)) return 'tcp';
+  if (['UDP', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP', 'VXLAN', 'BACnet', 'RTP', 'RTCP', 'Kerberos', 'RADIUS', 'OpenVPN', 'WireGuard', 'CoAP'].includes(proto)) return 'udp';
   if (proto === 'ICMP') return 'icmp';
   if (proto === 'ARP') return 'arp';
   return 'other';
 }
 function protoRank(proto) {
-  if (proto === 'HTTP') return 4;
-  if (['TLS', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'Telnet', 'RDP'].includes(proto)) return 3;
+  // WebSocket outranks HTTP (after the upgrade the whole flow is WebSocket);
+  // likewise gRPC outranks the HTTP/2 frames it rides on.
+  if (proto === 'WebSocket' || proto === 'gRPC') return 5;
+  if (proto === 'HTTP' || proto === 'HTTP/2') return 4;
+  if (['TLS', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'Telnet', 'RDP', 'VXLAN', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Cassandra', 'Modbus', 'DNP3', 'BACnet', 'EtherNet/IP', 'OPC UA', 'RTP', 'RTCP', 'Kerberos', 'LDAP', 'RADIUS', 'OpenVPN', 'WireGuard', 'ESP', 'AH', 'MQTT', 'CoAP', 'BGP', 'OSPF', 'LLDP', 'LACP', 'STP', 'MPLS'].includes(proto)) return 3;
   return 1;
 }
 // Cap how many packets we keep per flow for "Follow Stream" — bounds memory
@@ -311,7 +394,9 @@ function updateFlow(pkt) {
 
   if (t === 'tcp' || t === 'udp') {
     if (f.pkts.length < FLOW_STREAM_CAP) {
-      f.pkts.push({ fromClient: pkt.src_addr === f.clientAddr && pkt.src_port === f.clientPort, raw: pkt.raw, ts: pkt.timestamp });
+      // `epoch` (ms) drives the RTT / flow-graph timing charts (ROADMAP §6.4);
+      // `len` lets the flow graph label segment sizes.
+      f.pkts.push({ fromClient: pkt.src_addr === f.clientAddr && pkt.src_port === f.clientPort, raw: pkt.raw, ts: pkt.timestamp, epoch: pkt.epoch_ms, len: pkt.length });
     }
   }
 }
@@ -429,6 +514,86 @@ function openFollowStream(key) {
 }
 function closeFollowStream() {
   els.streamModal.classList.add('hidden');
+}
+
+// Flow key for a packet — must mirror updateFlow()'s key computation exactly,
+// so a packet can be traced back to its conversation.
+function flowKeyOf(pkt) {
+  if (!pkt.src_addr || !pkt.dst_addr) return null;
+  const t = transportOf(pkt.protocol);
+  const a = `${pkt.src_addr}:${pkt.src_port ?? ''}`;
+  const b = `${pkt.dst_addr}:${pkt.dst_port ?? ''}`;
+  return (a <= b ? `${a}|${b}` : `${b}|${a}`) + `|${t}`;
+}
+
+/** Wireshark's right-click → "Follow TCP Stream", from a single packet. */
+function followStreamForPacket(pkt) {
+  const key = flowKeyOf(pkt);
+  const f = key && state.flows.get(key);
+  if (!f || !f.pkts.length) return false;
+  openFollowStream(key);
+  return true;
+}
+
+// ---- Packet context menu (right-click on a packet row) ----
+function hideCtxMenu() {
+  const m = $('#ctx-menu');
+  if (m) m.classList.add('hidden');
+}
+
+function showPacketContextMenu(ev, idx) {
+  const pkt = state.filteredPackets[idx];
+  const menu = $('#ctx-menu');
+  if (!pkt || !menu) return;
+
+  const t = transportOf(pkt.protocol);
+  const items = [];
+  if (t === 'tcp' || t === 'udp') {
+    const key = flowKeyOf(pkt);
+    const f = key && state.flows.get(key);
+    const enabled = !!(f && f.pkts.length);
+    items.push({ id: 'follow', label: `💬 Follow ${t.toUpperCase()} Stream`, enabled,
+      title: enabled ? '' : 'No captured conversation for this packet' });
+    items.push({ sep: true });
+  }
+  if (pkt.src_addr) items.push({ id: 'filter-src', label: `Filter: ip.addr == ${pkt.src_addr}`, enabled: true });
+  if (pkt.dst_addr) items.push({ id: 'filter-dst', label: `Filter: ip.addr == ${pkt.dst_addr}`, enabled: true });
+  items.push({ id: 'filter-proto', label: `Filter: protocol ${pkt.protocol}`, enabled: true });
+  items.push({ sep: true });
+  items.push({ id: 'copy-summary', label: '📋 Copy summary', enabled: true });
+  if (packetToCurl(pkt)) items.push({ id: 'copy-curl', label: '📋 Copy as cURL', enabled: true });
+
+  menu.innerHTML = items.map((it) => it.sep
+    ? '<div class="ctx-sep"></div>'
+    : `<button class="ctx-item" data-ctx="${it.id}" ${it.enabled ? '' : 'disabled'}${it.title ? ` title="${esc(it.title)}"` : ''}>${esc(it.label)}</button>`
+  ).join('');
+  menu.dataset.index = String(idx);
+
+  // Place at the cursor, clamped to the viewport.
+  menu.classList.remove('hidden');
+  const pad = 6;
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.left = `${Math.min(ev.clientX, window.innerWidth - w - pad)}px`;
+  menu.style.top = `${Math.min(ev.clientY, window.innerHeight - h - pad)}px`;
+}
+
+async function onCtxMenuAction(action, idx) {
+  const pkt = state.filteredPackets[idx];
+  hideCtxMenu();
+  if (!pkt) return;
+  const applyFilter = (text) => {
+    els.filterInput.value = text;
+    state.filterText = text;
+    renderPacketList();
+  };
+  switch (action) {
+    case 'follow': followStreamForPacket(pkt); break;
+    case 'filter-src': applyFilter(`ip.addr == ${pkt.src_addr}`); break;
+    case 'filter-dst': applyFilter(`ip.addr == ${pkt.dst_addr}`); break;
+    case 'filter-proto': applyFilter(pkt.protocol.toLowerCase()); break;
+    case 'copy-summary': await copyText(pkt.summary || ''); break;
+    case 'copy-curl': { const c = packetToCurl(pkt); if (c) await copyText(c); break; }
+  }
 }
 
 // ---- Replay / Repeater — resend a payload to a target and read the response ----
@@ -716,6 +881,62 @@ async function copyReport() {
   flashButton(els.reportCopy, ok ? '✓ Copied' : '✖ Failed');
 }
 
+// ---- Coloring rules engine + editor ----
+let colorRuleGen = 0; // bumped on every rule change to invalidate per-packet caches
+
+function compileColorRules() {
+  colorRuleGen++;
+  state._colorMatchers = state.coloring.map((r) => {
+    if (!r.enabled || !r.filter || typeof NetscopeFilter === 'undefined') return null;
+    const c = NetscopeFilter.compile(r.filter);
+    return c ? { color: r.color, matches: c.matches } : null;
+  });
+}
+
+/** First enabled coloring rule that matches `pkt`, or null. Memoized per
+ * packet (field extraction parses frame bytes) until the rules change. */
+function colorRuleFor(pkt) {
+  if (!state._colorMatchers) compileColorRules();
+  if (pkt._crGen === colorRuleGen) return pkt._crHit;
+  let hit = null;
+  for (const m of state._colorMatchers) {
+    if (m && m.matches(pkt)) { hit = m; break; }
+  }
+  pkt._crGen = colorRuleGen;
+  pkt._crHit = hit;
+  return hit;
+}
+
+function saveColoring() {
+  saveJSON('netscope.coloring', state.coloring);
+  state._colorMatchers = null; // recompile on next render
+  renderPacketList();
+}
+
+const colorRuleValid = (filter) =>
+  !!filter && typeof NetscopeFilter !== 'undefined' && !!NetscopeFilter.compile(filter);
+
+function renderColoringRules() {
+  const list = $('#coloring-list');
+  if (!list) return;
+  list.innerHTML = state.coloring.map((r, i) => `
+    <div class="color-rule" data-i="${i}">
+      <input type="checkbox" data-cr="enabled" ${r.enabled ? 'checked' : ''} title="Enable / disable this rule">
+      <input type="text" class="cr-name" data-cr="name" value="${esc(r.name)}" placeholder="Rule name">
+      <input type="text" class="cr-filter mono${colorRuleValid(r.filter) ? '' : ' cr-invalid'}" data-cr="filter"
+             value="${esc(r.filter)}" placeholder='display filter — e.g. tcp.flags.rst == 1' spellcheck="false">
+      <input type="color" data-cr="color" value="${esc(r.color)}" title="Row colour">
+      <button class="btn-icon" data-cr="up" title="Move up — rules match top-down, first hit wins">↑</button>
+      <button class="btn-icon" data-cr="del" title="Delete rule">✖</button>
+    </div>`).join('') || '<div class="tool-empty">No rules — click “+ Add rule”.</div>';
+}
+
+function openColoring() {
+  renderColoringRules();
+  $('#coloring-modal').classList.remove('hidden');
+}
+function closeColoring() { $('#coloring-modal').classList.add('hidden'); }
+
 // ---- Expert Info — plain-language flags for notable packets, from real dissector output only ----
 function expertInfo(pkt) {
   const s = pkt.summary || '';
@@ -757,6 +978,56 @@ function matchesFilter(pkt, text) {
     (pkt.dst_host && pkt.dst_host.toLowerCase().includes(l))
   );
 }
+// ---- Virtual scrolling (ROADMAP §2.2) ----
+// Only the rows inside the viewport (plus overscan) exist in the DOM; a
+// spacer gives the list its true height, so a 100k-packet capture scrolls as
+// smoothly as a 100-packet one. ROW_H must match .packet-row in styles.css.
+const ROW_H = 24;
+const VSCROLL_OVERSCAN = 12;
+
+function packetRowHtml(pkt, idx) {
+  const c = protoColor(pkt.protocol);
+  const isSel = idx === state.selectedIndex;
+  const sel = isSel ? ' selected' : '';
+  // Coloring rules: the first matching rule tints the row (selection wins).
+  const cr = isSel ? null : colorRuleFor(pkt);
+  const ruleStyle = cr ? ` style="background:${esc(cr.color)}2b;box-shadow:inset 3px 0 0 ${esc(cr.color)}"` : '';
+  const src = esc(endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port));
+  const dst = esc(endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port));
+  const ei = expertInfo(pkt);
+  const badge = ei ? `<span class="expert-badge ${ei.cls}" title="${esc(ei.label)}">${ei.icon}</span> ` : '';
+  return `
+    <div class="packet-row proto-${esc(pkt.protocol)}${sel}" data-index="${idx}"${ruleStyle}>
+      <span class="col-num">${idx + 1}</span>
+      <span class="col-time" title="${esc(formatPacketTime(pkt))}">${esc(formatPacketTime(pkt))}</span>
+      <span class="col-src">${src}</span>
+      <span class="col-dir" style="color:${c}">→</span>
+      <span class="col-dst">${dst}</span>
+      <span class="col-proto" style="color:${c}">${esc(pkt.protocol)}</span>
+      <span class="col-len">${pkt.length}B</span>
+      <span class="col-info">${badge}${esc(pkt.summary)}</span>
+    </div>`;
+}
+
+// Re-render just the visible window of the already-filtered list. Called on
+// scroll — no filtering, no full-list DOM work.
+function renderPacketRows() {
+  const packets = state.filteredPackets;
+  const scroller = els.packetTable || els.packetList.parentElement;
+  const total = packets.length;
+  const headerH = els.packetHeader ? els.packetHeader.offsetHeight : 0;
+  const viewTop = Math.max(0, scroller.scrollTop - headerH);
+  const first = Math.max(0, Math.floor(viewTop / ROW_H) - VSCROLL_OVERSCAN);
+  const count = Math.ceil((scroller.clientHeight || 600) / ROW_H) + 2 * VSCROLL_OVERSCAN;
+  const last = Math.min(total, first + count);
+  const rows = [];
+  for (let i = first; i < last; i++) rows.push(packetRowHtml(packets[i], i));
+  els.packetList.style.position = 'relative';
+  els.packetList.style.height = `${total * ROW_H}px`;
+  els.packetList.innerHTML =
+    `<div style="position:absolute;top:${first * ROW_H}px;left:0;right:0">${rows.join('')}</div>`;
+}
+
 function renderPacketList() {
   // Prefer the structured display-filter language (ip.addr == x, tcp.port ==
   // 443, dns && frame.len > 1000). If the text isn't a valid filter
@@ -776,41 +1047,27 @@ function renderPacketList() {
   if (state.settings.noiseFilter) packets = packets.filter((p) => !isNoise(p));
   state.filteredPackets = packets;
 
-  // Wireshark-style display-filter feedback (green = hits, red = no match)
-  els.filterInput.classList.toggle('filter-hit', !!state.filterText && packets.length > 0);
-  els.filterInput.classList.toggle('filter-miss', !!state.filterText && packets.length === 0);
+  updateFilterFeedback();
 
   if (!packets.length) {
+    els.packetList.style.height = 'auto';
     els.packetList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No packets yet</div>';
     return;
   }
-  const start = Math.max(0, packets.length - 500);
-  els.packetList.innerHTML = packets.slice(start).map((pkt, i) => {
-    const idx = start + i;
-    const c = protoColor(pkt.protocol);
-    const sel = idx === state.selectedIndex ? ' selected' : '';
-    const src = esc(endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port));
-    const dst = esc(endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port));
-    const ei = expertInfo(pkt);
-    const badge = ei ? `<span class="expert-badge ${ei.cls}" title="${esc(ei.label)}">${ei.icon}</span> ` : '';
-    return `
-      <div class="packet-row proto-${esc(pkt.protocol)}${sel}" data-index="${idx}">
-        <span class="col-num">${idx + 1}</span>
-        <span class="col-time" title="${esc(formatPacketTime(pkt))}">${esc(formatPacketTime(pkt))}</span>
-        <span class="col-src">${src}</span>
-        <span class="col-dir" style="color:${c}">→</span>
-        <span class="col-dst">${dst}</span>
-        <span class="col-proto" style="color:${c}">${esc(pkt.protocol)}</span>
-        <span class="col-len">${pkt.length}B</span>
-        <span class="col-info">${badge}${esc(pkt.summary)}</span>
-      </div>`;
-  }).join('');
+
+  // Follow the tail (as the old tail-slice view did) unless the user has
+  // scrolled up to read something.
+  const scroller = els.packetTable || els.packetList.parentElement;
+  const nearBottom =
+    scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 3 * ROW_H;
+  renderPacketRows();
+  if (nearBottom) scroller.scrollTop = scroller.scrollHeight;
 }
 
 // Human transport-layer name for the packet's protocol.
 function transportName(proto) {
-  if (['TCP', 'HTTP', 'TLS'].includes(proto)) return 'TCP';
-  if (['UDP', 'DNS'].includes(proto)) return 'UDP';
+  if (['TCP', 'HTTP', 'TLS', 'WebSocket', 'HTTP/2', 'gRPC', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Cassandra', 'Modbus', 'DNP3', 'EtherNet/IP', 'OPC UA', 'LDAP', 'MQTT', 'BGP'].includes(proto)) return 'TCP';
+  if (['UDP', 'DNS', 'BACnet', 'RTP', 'RTCP', 'Kerberos', 'RADIUS', 'OpenVPN', 'WireGuard', 'CoAP'].includes(proto)) return 'UDP';
   if (proto === 'ICMP' || proto === 'ARP') return proto;
   return null;
 }
@@ -915,7 +1172,7 @@ function buildDetailTree(pkt, index) {
       `<div class="tnode-head"><span class="twist">▾</span>` +
       `<span class="tlabel">🌍 ${role} location <span class="tlabel-sub">${esc(ip)}</span></span></div>` +
       `<div class="tbody"><div class="tfield"><span class="tkey">Location</span>` +
-      `<span class="tval geo-status">${state.settings.geoip ? 'Looking up…' : esc(I18N.t('geoip.off'))}</span></div></div></div>`);
+      `<span class="tval geo-status">${(state.settings.geoip || state.geoDb) ? 'Looking up…' : esc(I18N.t('geoip.off'))}</span></div></div></div>`);
   }
 
   // Transport layer
@@ -999,32 +1256,97 @@ function isPublicIp(ip) {
   return true;
 }
 
+// Flag emoji from a two-letter ISO country code (regional indicators).
+function flagEmoji(code) {
+  if (!code || code.length !== 2) return '';
+  return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+}
+
 async function lookupGeo(ip) {
   const cached = geoCache.get(ip);
   if (cached && cached.status !== 'pending') return cached;
   if (cached && cached.status === 'pending') return cached.promise;
 
   const promise = (async () => {
-    try {
-      const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
-      const j = await r.json();
-      if (j && j.success) {
-        const c = j.connection || {};
-        const entry = { status: 'ok', data: {
-          country: j.country, code: j.country_code, flag: j.flag && j.flag.emoji,
-          city: j.city, region: j.region,
-          isp: c.isp || c.org, org: c.org, asn: c.asn,
-        } };
-        geoCache.set(ip, entry);
-        return entry;
-      }
-    } catch { /* offline or blocked — fall through */ }
+    // 1) Offline MMDB via the backend — private, no network, so it takes
+    //    precedence over the web lookup whenever a database is loaded.
+    if (state.geoDb) {
+      try {
+        const d = await invoke('geoip_lookup', { ip });
+        if (d && (d.country || d.city || d.asn || d.org)) {
+          const entry = { status: 'ok', data: {
+            country: d.country, code: d.code, flag: flagEmoji(d.code),
+            city: d.city, region: d.region,
+            isp: d.org, org: d.org, asn: d.asn,
+          } };
+          geoCache.set(ip, entry);
+          return entry;
+        }
+      } catch { /* unreadable db or bad ip — fall through */ }
+    }
+    // 2) Online lookup (ipwho.is) — only when the user opted in.
+    if (state.settings.geoip) {
+      try {
+        const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+        const j = await r.json();
+        if (j && j.success) {
+          const c = j.connection || {};
+          const entry = { status: 'ok', data: {
+            country: j.country, code: j.country_code, flag: j.flag && j.flag.emoji,
+            city: j.city, region: j.region,
+            isp: c.isp || c.org, org: c.org, asn: c.asn,
+          } };
+          geoCache.set(ip, entry);
+          return entry;
+        }
+      } catch { /* offline or blocked — fall through */ }
+    }
     const failed = { status: 'failed' };
     geoCache.set(ip, failed);
     return failed;
   })();
   geoCache.set(ip, { status: 'pending', promise });
   return promise;
+}
+
+// ---- Offline GeoIP database (MMDB) ----
+// A local MaxMind .mmdb file (e.g. the free GeoLite2-City) resolves locations
+// without any network call; the path persists in settings and reloads on start.
+function renderGeoDbStatus() {
+  if (!els.geoipDbStatus) return;
+  if (state.geoDb) {
+    const built = new Date(state.geoDb.build_epoch * 1000).toISOString().slice(0, 10);
+    els.geoipDbStatus.textContent = `${state.geoDb.db_type} · ${built}`;
+    els.geoipDbClear.classList.remove('hidden');
+  } else {
+    els.geoipDbStatus.textContent = I18N.t('geoip.db.none');
+    els.geoipDbClear.classList.add('hidden');
+  }
+}
+
+async function loadGeoDb(path, { quiet = false } = {}) {
+  try {
+    state.geoDb = await invoke('geoip_load_db', { path });
+    state.settings.geoipDb = path;
+  } catch (e) {
+    state.geoDb = null;
+    state.settings.geoipDb = '';
+    if (!quiet && els.geoipDbStatus) els.geoipDbStatus.textContent = String(e);
+  }
+  saveJSON('netscope.settings', state.settings);
+  geoCache.clear(); // stale entries may predate the database switch
+  if (state.geoDb || quiet) renderGeoDbStatus();
+  if (state.selectedIndex >= 0) showDetail(state.selectedIndex);
+}
+
+async function clearGeoDb() {
+  state.geoDb = null;
+  state.settings.geoipDb = '';
+  saveJSON('netscope.settings', state.settings);
+  geoCache.clear();
+  renderGeoDbStatus();
+  try { await invoke('geoip_unload_db'); } catch { /* backend unavailable */ }
+  if (state.selectedIndex >= 0) showDetail(state.selectedIndex);
 }
 
 function fillGeoNode(node, g) {
@@ -1065,8 +1387,9 @@ function threatIntelRow(ip) {
 }
 
 async function enrichGeo(pkt) {
-  // Opt-in only: netscope makes no external calls unless the user turns this on.
-  if (!state.settings.geoip) return;
+  // Works when an offline database is loaded (private, no network) or the
+  // user opted in to the online lookup — otherwise netscope calls nothing.
+  if (!state.settings.geoip && !state.geoDb) return;
   for (const [role, ip] of [['Destination', pkt.dst_addr], ['Source', pkt.src_addr]]) {
     if (!isPublicIp(ip)) continue;
     const g = await lookupGeo(ip);
@@ -1197,6 +1520,11 @@ function renderStats() {
   ).join('') || '<div style="color:var(--text-muted);font-size:12px">No domains</div>';
 
   renderBusiest();
+  renderIoGraph();
+  renderRttGraph();
+  renderWindowGraph();
+  renderHeatmap();
+  renderFlowGraph();
 }
 
 function renderBusiest() {
@@ -1214,6 +1542,168 @@ function renderBusiest() {
   els.busiestHint.textContent = b.longEnough
     ? `Busiest hour-of-day: ${pad(b.peakHour)}:00 (capture spans ${(b.spanMs / 3600000).toFixed(1)} h)`
     : 'Capture a few hours+ to reveal daily/weekly patterns.';
+}
+
+// ---- Data visualisation (ROADMAP §6.4) ----
+// Small SVG/HTML charts computed from the packet ring and flow table: TCP
+// round-trip time, TCP window size, a host↔host heatmap and a flow-graph ladder
+// for the busiest conversation. All read-only; no backend changes needed.
+const TCP_SYN = 0x02, TCP_ACK = 0x10;
+
+// Decode the TCP header fields we chart, from a raw Ethernet frame. Returns
+// null for non-TCP frames or ones too short to reach the transport header.
+function tcpHeader(raw) {
+  if (!raw || raw.length < 34) return null;
+  const R = fieldRanges(raw);
+  if (!R.srcPort) return null; // srcPort[0] is the transport-header offset (l4)
+  const l4 = R.srcPort[0];
+  if (raw.length < l4 + 20) return null;
+  const dataOff = ((raw[l4 + 12] >> 4) & 0x0f) * 4;
+  if (dataOff < 20) return null;
+  return { flags: raw[l4 + 13], window: (raw[l4 + 14] << 8) | raw[l4 + 15], hdrLen: dataOff, l4 };
+}
+
+function chartEmpty(svg, hint, msg) { svg.innerHTML = ''; if (hint) hint.textContent = msg; }
+
+// TCP handshake RTT per connection: time(SYN→SYN-ACK). One point per flow.
+function renderRttGraph() {
+  const svg = $('#rtt-chart'), hint = $('#rtt-hint');
+  if (!svg) return;
+  const pts = [];
+  for (const f of state.flows.values()) {
+    if (transportOf(f.proto) !== 'tcp') continue;
+    let synT = null;
+    for (const p of f.pkts) {
+      const h = tcpHeader(p.raw);
+      if (!h || p.epoch == null) continue;
+      if (synT == null && p.fromClient && (h.flags & TCP_SYN) && !(h.flags & TCP_ACK)) synT = p.epoch;
+      else if (synT != null && !p.fromClient && (h.flags & TCP_SYN) && (h.flags & TCP_ACK)) {
+        const rtt = p.epoch - synT;
+        if (rtt >= 0 && rtt < 60000) pts.push({ t: synT, rtt });
+        break;
+      }
+    }
+  }
+  if (!pts.length) return chartEmpty(svg, hint, 'No completed TCP handshakes yet — RTT needs a SYN → SYN-ACK pair.');
+  const W = 300, H = 120, pad = 4;
+  const tMin = Math.min(...pts.map((p) => p.t)), tMax = Math.max(...pts.map((p) => p.t));
+  const rMax = Math.max(...pts.map((p) => p.rtt), 1);
+  const x = (t) => pad + (tMax > tMin ? (t - tMin) / (tMax - tMin) : 0.5) * (W - 2 * pad);
+  const y = (r) => H - pad - (r / rMax) * (H - 2 * pad);
+  const dots = pts.map((p) =>
+    `<circle cx="${x(p.t).toFixed(1)}" cy="${y(p.rtt).toFixed(1)}" r="2.5" fill="var(--accent)"><title>${p.rtt} ms</title></circle>`).join('');
+  const median = pts.map((p) => p.rtt).sort((a, b) => a - b)[Math.floor(pts.length / 2)];
+  svg.innerHTML = dots;
+  hint.textContent = `${pts.length} connection${pts.length === 1 ? '' : 's'} · median setup RTT ${median} ms · max ${rMax} ms`;
+}
+
+// TCP advertised window size over time (spots zero-windows / scaling behaviour).
+function renderWindowGraph() {
+  const svg = $('#window-chart'), hint = $('#window-hint');
+  if (!svg) return;
+  const pts = [];
+  for (const p of state.packets) {
+    if (transportOf(p.protocol) !== 'tcp' || p.epoch_ms == null) continue;
+    const h = tcpHeader(p.raw);
+    if (!h) continue;
+    pts.push({ t: p.epoch_ms, win: h.window });
+    if (pts.length >= 4000) break;
+  }
+  if (!pts.length) return chartEmpty(svg, hint, 'No TCP packets yet.');
+  const W = 300, H = 120, pad = 4;
+  const tMin = Math.min(...pts.map((p) => p.t)), tMax = Math.max(...pts.map((p) => p.t));
+  const wMax = Math.max(...pts.map((p) => p.win), 1);
+  const x = (t) => pad + (tMax > tMin ? (t - tMin) / (tMax - tMin) : 0.5) * (W - 2 * pad);
+  const y = (w) => H - pad - (w / wMax) * (H - 2 * pad);
+  const dots = pts.map((p) => {
+    const zero = p.win === 0;
+    return `<circle cx="${x(p.t).toFixed(1)}" cy="${y(p.win).toFixed(1)}" r="${zero ? 3 : 1.6}" fill="${zero ? 'var(--danger)' : 'var(--tcp)'}" opacity="${zero ? 1 : 0.55}"/>`;
+  }).join('');
+  const zeros = pts.filter((p) => p.win === 0).length;
+  svg.innerHTML = dots;
+  hint.textContent = `${pts.length} segments · max window ${wMax.toLocaleString()} B${zeros ? ` · ⚠ ${zeros} zero-window` : ''}`;
+}
+
+// Host ↔ host communication-intensity heatmap over the top talkers.
+function renderHeatmap() {
+  const grid = $('#heatmap-grid'), hint = $('#heatmap-hint');
+  if (!grid) return;
+  const bytesByHost = new Map();
+  const pair = new Map(); // "a|b" -> bytes (a,b sorted)
+  for (const f of state.flows.values()) {
+    const a = f.clientAddr, b = f.serverAddr;
+    if (!a || !b) continue;
+    bytesByHost.set(a, (bytesByHost.get(a) || 0) + f.bytes);
+    bytesByHost.set(b, (bytesByHost.get(b) || 0) + f.bytes);
+    const key = a <= b ? `${a}|${b}` : `${b}|${a}`;
+    pair.set(key, (pair.get(key) || 0) + f.bytes);
+  }
+  const hosts = [...bytesByHost.entries()].sort((x, y) => y[1] - x[1]).slice(0, 8).map((e) => e[0]);
+  if (hosts.length < 2) { grid.innerHTML = ''; if (hint) hint.textContent = 'Need at least two hosts talking.'; return; }
+  let max = 1;
+  for (const key of pair.keys()) { const [a, b] = key.split('|'); if (hosts.includes(a) && hosts.includes(b)) max = Math.max(max, pair.get(key)); }
+  const short = (ip) => ip.length > 15 ? ip.slice(0, 13) + '…' : ip;
+  const cell = (a, b) => {
+    if (a === b) return '<div class="hm-cell hm-diag"></div>';
+    const key = a <= b ? `${a}|${b}` : `${b}|${a}`;
+    const v = pair.get(key) || 0;
+    const intensity = v ? 0.12 + 0.88 * (Math.log(v + 1) / Math.log(max + 1)) : 0;
+    return `<div class="hm-cell" style="background:rgba(74,158,245,${intensity.toFixed(2)})" title="${esc(a)} ↔ ${esc(b)}: ${formatBytes(v)}"></div>`;
+  };
+  // Header row + one row per host.
+  const header = `<div class="hm-cell hm-corner"></div>` + hosts.map((h) => `<div class="hm-label hm-col" title="${esc(h)}">${esc(short(h))}</div>`).join('');
+  const rows = hosts.map((r) => `<div class="hm-label hm-row" title="${esc(r)}">${esc(short(r))}</div>` + hosts.map((c) => cell(r, c)).join('')).join('');
+  grid.style.gridTemplateColumns = `120px repeat(${hosts.length}, 1fr)`;
+  grid.innerHTML = header + rows;
+  if (hint) hint.textContent = `Top ${hosts.length} hosts · darker = more bytes exchanged`;
+}
+
+// Flow-graph ladder (Wireshark's Flow Graph) for the busiest conversation.
+function renderFlowGraph() {
+  const svg = $('#flowgraph-svg'), hint = $('#flowgraph-hint');
+  if (!svg) return;
+  let best = null;
+  for (const f of state.flows.values()) {
+    if ((transportOf(f.proto) === 'tcp' || transportOf(f.proto) === 'udp') && f.pkts.length && (!best || f.bytes > best.bytes)) best = f;
+  }
+  if (!best) { svg.innerHTML = ''; if (hint) hint.textContent = 'No TCP/UDP conversation yet.'; return; }
+  // Sample down to at most 40 packets so the ladder stays readable.
+  let pkts = best.pkts;
+  if (pkts.length > 40) { const step = pkts.length / 40; pkts = Array.from({ length: 40 }, (_, i) => pkts[Math.floor(i * step)]); }
+  const W = 300, rowH = 18, top = 26, H = top + pkts.length * rowH + 8;
+  const xC = 60, xS = W - 60;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const t0 = pkts[0].epoch;
+  let out = '';
+  out += `<line x1="${xC}" y1="20" x2="${xC}" y2="${H - 4}" stroke="var(--border)"/>`;
+  out += `<line x1="${xS}" y1="20" x2="${xS}" y2="${H - 4}" stroke="var(--border)"/>`;
+  out += `<text x="${xC}" y="14" fill="var(--text-muted)" font-size="9" text-anchor="middle">client</text>`;
+  out += `<text x="${xS}" y="14" fill="var(--text-muted)" font-size="9" text-anchor="middle">server</text>`;
+  pkts.forEach((p, i) => {
+    const y = top + i * rowH;
+    const h = tcpHeader(p.raw);
+    const label = h ? tcpFlagLabel(h.flags) : `${p.len}B`;
+    const dt = p.epoch != null && t0 != null ? `+${((p.epoch - t0)).toFixed(0)}ms` : '';
+    const x1 = p.fromClient ? xC : xS, x2 = p.fromClient ? xS : xC;
+    const color = p.fromClient ? 'var(--accent)' : 'var(--http)';
+    out += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="1.3" marker-end="url(#fg-arrow)"><title>${esc(label)} ${dt}</title></line>`;
+    out += `<text x="${(xC + xS) / 2}" y="${y - 2}" fill="var(--text-muted)" font-size="8" text-anchor="middle">${esc(label)}</text>`;
+  });
+  const arrow = `<defs><marker id="fg-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--text-muted)"/></marker></defs>`;
+  svg.innerHTML = arrow + out;
+  const client = endpointLabel(best.clientAddr, null, best.clientPort);
+  const server = endpointLabel(best.serverAddr, best.serverHost, best.serverPort);
+  if (hint) hint.textContent = `${client} ⇄ ${server} · ${best.pkts.length} pkt shown${best.pkts.length > 40 ? ' (sampled)' : ''}`;
+}
+
+function tcpFlagLabel(flags) {
+  const names = [];
+  if (flags & 0x02) names.push('SYN');
+  if (flags & 0x10) names.push('ACK');
+  if (flags & 0x01) names.push('FIN');
+  if (flags & 0x04) names.push('RST');
+  if (flags & 0x08) names.push('PSH');
+  return names.join(' ') || 'data';
 }
 
 // ---- Learn ----
@@ -1445,6 +1935,7 @@ function renderProfilePanel() {
   els.resolveNamesCheck.checked = state.settings.showHostnames;
   if (els.noiseFilterCheck) els.noiseFilterCheck.checked = !!state.settings.noiseFilter;
   if (els.geoipCheck) els.geoipCheck.checked = !!state.settings.geoip;
+  renderGeoDbStatus();
 }
 
 function saveCurrentAsProfile() {
@@ -1857,6 +2348,218 @@ function renderInsights() {
     </div>`).join('') || `<div class="insights-empty">${esc(I18N.t('insights.nofindings'))}</div>`;
 }
 
+// ---- GPU rendering (WebGL) — ROADMAP §4.3 --------------------------------
+// Shared helpers for the I/O graph scatter and the large-graph topology
+// renderer. Both fall back to the existing DOM/SVG paths when WebGL is
+// unavailable (software rasterisers, remote desktops).
+
+function glContext(canvas) {
+  if (!canvas) return null;
+  if (canvas._gl) return canvas._gl;
+  if (canvas._glFailed) return null;
+  const gl = canvas.getContext('webgl', { antialias: true, alpha: true, premultipliedAlpha: false });
+  if (gl) canvas._gl = gl; else canvas._glFailed = true;
+  return gl;
+}
+function glProgram(gl, key, vsSrc, fsSrc) {
+  gl._progs = gl._progs || {};
+  if (gl._progs[key]) return gl._progs[key];
+  const sh = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) || 'shader compile error');
+    return s;
+  };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, vsSrc));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fsSrc));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p) || 'shader link error');
+  gl._progs[key] = p;
+  return p;
+}
+// CSS var (e.g. '--tcp') → [r,g,b] in 0..1, so shaders follow the active theme.
+function cssRgb(varName) {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  let m = raw.match(/^#([0-9a-f]{6})$/i);
+  if (m) { const v = parseInt(m[1], 16); return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255]; }
+  m = raw.match(/^#([0-9a-f]{3})$/i);
+  if (m) return [...m[1]].map((c) => parseInt(c + c, 16) / 255);
+  m = raw.match(/rgba?\(([^)]+)\)/);
+  if (m) { const [r, g, b] = m[1].split(',').map(parseFloat); return [r / 255, g / 255, b / 255]; }
+  return [0.5, 0.6, 0.7];
+}
+// Size the drawing buffer to CSS pixels × devicePixelRatio; false if hidden.
+function glFit(canvas) {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return false;
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  return true;
+}
+
+// ---- I/O graph — every packet as a GPU point (time × size) ---------------
+// One point per packet: x = time, y = packet size (log scale), red = error
+// (RST / malformed). A bucketed packets-per-second line runs on top. Points
+// live in a GPU buffer that grows incrementally, so redrawing a
+// million-packet capture is two draw calls, not a million DOM nodes.
+
+function ioReset() {
+  state.io = { base: null, t: null, len: null, err: null, n: 0, tMax: 0, lenMax: 0, lastDraw: 0, uploaded: 0 };
+  const gl = els.ioGl && els.ioGl._gl;
+  if (gl && gl._io) gl._io.cap = 0; // force a fresh upload on the next draw
+}
+function ioRecord(pkt) {
+  if (pkt.epoch_ms == null) return;
+  const io = state.io;
+  if (io.base == null) io.base = pkt.epoch_ms;
+  if (!io.t) { io.t = new Float32Array(8192); io.len = new Float32Array(8192); io.err = new Uint8Array(8192); }
+  if (io.n === io.t.length) {
+    const grow = (a, C) => { const b = new C(a.length * 2); b.set(a); return b; };
+    io.t = grow(io.t, Float32Array); io.len = grow(io.len, Float32Array); io.err = grow(io.err, Uint8Array);
+  }
+  const t = (pkt.epoch_ms - io.base) / 1000;
+  io.t[io.n] = t;
+  io.len[io.n] = pkt.length;
+  io.err[io.n] = pkt.summary.includes('reset (RST)') || pkt.summary.includes('Malformed') ? 1 : 0;
+  io.n++;
+  if (t > io.tMax) io.tMax = t;
+  if (pkt.length > io.lenMax) io.lenMax = pkt.length;
+}
+
+const IO_VS = `
+attribute vec3 a_p;          // x: seconds, y: bytes, z: error flag
+uniform vec2 u_t;            // tMin, tSpan
+uniform float u_lenMax;
+uniform float u_ps;
+varying float v_err;
+void main() {
+  float x = (a_p.x - u_t.x) / u_t.y * 1.94 - 0.97;
+  float y = log(1.0 + a_p.y) / log(1.0 + u_lenMax) * 1.8 - 0.94;
+  gl_Position = vec4(x, y, 0.0, 1.0);
+  gl_PointSize = u_ps;
+  v_err = a_p.z;
+}`;
+const IO_FS = `
+precision mediump float;
+varying float v_err;
+uniform vec3 u_cNorm;
+uniform vec3 u_cErr;
+uniform float u_alpha;
+void main() {
+  vec2 d = gl_PointCoord - vec2(0.5);
+  if (dot(d, d) > 0.25) discard;
+  gl_FragColor = vec4(mix(u_cNorm, u_cErr, v_err), u_alpha);
+}`;
+const LINE_VS = `
+attribute vec2 a_p;          // already in clip space
+void main() { gl_Position = vec4(a_p, 0.0, 1.0); }`;
+const LINE_FS = `
+precision mediump float;
+uniform vec4 u_color;
+void main() { gl_FragColor = u_color; }`;
+
+function renderIoGraph(force = false) {
+  const canvas = els.ioGl;
+  if (!canvas || state.view !== 'dashboard') return;
+  const now = performance.now();
+  if (!force && now - state.io.lastDraw < 400) return; // ~2 fps is plenty for a dashboard
+  state.io.lastDraw = now;
+
+  const io = state.io;
+  const gl = glContext(canvas);
+  if (!gl) {
+    canvas.style.display = 'none';
+    if (els.ioHint) els.ioHint.textContent = I18N.t('io.nogl');
+    return;
+  }
+  if (!glFit(canvas)) return;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  const bg = cssRgb('--bg');
+  gl.clearColor(bg[0], bg[1], bg[2], 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  if (!io.n) {
+    if (els.ioHint) els.ioHint.textContent = I18N.t('io.empty');
+    return;
+  }
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  // Scatter — packed [t, len, err] per point. The GPU buffer grows by
+  // doubling; new points are appended with bufferSubData, so a steady live
+  // capture uploads only its delta each frame.
+  const prog = glProgram(gl, 'io', IO_VS, IO_FS);
+  gl.useProgram(prog);
+  gl._io = gl._io || { buf: gl.createBuffer(), cap: 0 };
+  const st = gl._io;
+  gl.bindBuffer(gl.ARRAY_BUFFER, st.buf);
+  const pack = (from, to) => {
+    const out = new Float32Array((to - from) * 3);
+    for (let i = from, j = 0; i < to; i++, j += 3) { out[j] = io.t[i]; out[j + 1] = io.len[i]; out[j + 2] = io.err[i]; }
+    return out;
+  };
+  if (io.n > st.cap || io.uploaded > io.n) {
+    st.cap = Math.max(8192, 1 << Math.ceil(Math.log2(io.n)));
+    gl.bufferData(gl.ARRAY_BUFFER, st.cap * 12, gl.DYNAMIC_DRAW);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, pack(0, io.n));
+  } else if (io.n > io.uploaded) {
+    gl.bufferSubData(gl.ARRAY_BUFFER, io.uploaded * 12, pack(io.uploaded, io.n));
+  }
+  io.uploaded = io.n;
+
+  const aP = gl.getAttribLocation(prog, 'a_p');
+  gl.enableVertexAttribArray(aP);
+  gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 0, 0);
+  const span = Math.max(io.tMax, 0.001);
+  gl.uniform2f(gl.getUniformLocation(prog, 'u_t'), 0, span);
+  gl.uniform1f(gl.getUniformLocation(prog, 'u_lenMax'), Math.max(io.lenMax, 64));
+  const dpr = window.devicePixelRatio || 1;
+  gl.uniform1f(gl.getUniformLocation(prog, 'u_ps'), (io.n > 200000 ? 1.6 : io.n > 20000 ? 2.2 : 3) * dpr);
+  gl.uniform3fv(gl.getUniformLocation(prog, 'u_cNorm'), cssRgb('--tcp'));
+  gl.uniform3fv(gl.getUniformLocation(prog, 'u_cErr'), [0.973, 0.443, 0.443]); // #f87171
+  gl.uniform1f(gl.getUniformLocation(prog, 'u_alpha'), io.n > 50000 ? 0.35 : 0.75);
+  gl.drawArrays(gl.POINTS, 0, io.n);
+
+  // Packets-per-second line — aggregated on the CPU (one pass over the
+  // typed array), drawn as a GPU line strip over the scatter.
+  const buckets = Math.max(8, Math.min(360, Math.ceil(span)));
+  const counts = new Float32Array(buckets);
+  for (let i = 0; i < io.n; i++) {
+    let b = Math.floor((io.t[i] / span) * buckets);
+    if (b >= buckets) b = buckets - 1;
+    counts[b]++;
+  }
+  const perSec = buckets / span; // bucket count → pps factor
+  let peak = 0;
+  for (let i = 0; i < buckets; i++) { counts[i] *= perSec; if (counts[i] > peak) peak = counts[i]; }
+  if (peak > 0) {
+    const line = new Float32Array(buckets * 2);
+    for (let i = 0; i < buckets; i++) {
+      line[i * 2] = ((i + 0.5) / buckets) * 1.94 - 0.97;
+      line[i * 2 + 1] = (counts[i] / peak) * 1.8 - 0.94;
+    }
+    const lprog = glProgram(gl, 'line', LINE_VS, LINE_FS);
+    gl.useProgram(lprog);
+    gl._ioLine = gl._ioLine || gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl._ioLine);
+    gl.bufferData(gl.ARRAY_BUFFER, line, gl.DYNAMIC_DRAW);
+    const aL = gl.getAttribLocation(lprog, 'a_p');
+    gl.enableVertexAttribArray(aL);
+    gl.vertexAttribPointer(aL, 2, gl.FLOAT, false, 0, 0);
+    const ac = cssRgb('--ok');
+    gl.uniform4f(gl.getUniformLocation(lprog, 'u_color'), ac[0], ac[1], ac[2], 0.9);
+    gl.drawArrays(gl.LINE_STRIP, 0, buckets);
+  }
+
+  if (els.ioHint) {
+    els.ioHint.textContent =
+      `${io.n.toLocaleString()} packets · ${span.toFixed(1)}s · peak ${Math.round(peak)} pps · ` +
+      `dots = packets (y: size, log) · line = pps · GPU`;
+  }
+}
+
 // ---- Live dashboard sampling (1 Hz) — "Grafana-style" metric tiles ----
 // Sampled every second regardless of the active view so the sparkline history
 // stays continuous; the DOM is only redrawn while the Dashboard is on screen.
@@ -1905,14 +2608,17 @@ function renderLive() {
   sparkline($('#spark-throughput'), L.throughput, '#4a9ef5');
   sparkline($('#spark-pps'), L.pps, '#45d1c5');
   sparkline($('#spark-err'), L.errRate, '#f87171');
+  renderIoGraph();
 }
 
 // ---- Topology map — live node/edge graph of who talks to whom ----
 // A small force-directed layout over the connection flows. Node size ~ traffic,
 // colour = local (private) vs. remote (public). Positions persist between rebuilds
 // so the graph settles instead of jumping every second.
-const TOPO_MAX_NODES = 60;
-function buildTopologyGraph() {
+const TOPO_MAX_NODES = 60;        // SVG path — labels + tooltips stay readable
+const TOPO_GL_THRESHOLD = 150;    // above this many hosts, switch to WebGL (§4.3)
+const TOPO_MAX_NODES_GL = 1500;   // GPU path cap — busiest hosts, same rule as SVG
+function buildTopologyGraph(cap = TOPO_MAX_NODES) {
   const nodeBytes = new Map();     // addr -> total bytes
   const nodeHost = new Map();      // addr -> hostname (if known)
   const edges = new Map();         // "a|b" -> bytes
@@ -1925,7 +2631,7 @@ function buildTopologyGraph() {
     edges.set(key, (edges.get(key) || 0) + f.bytes);
   }
   // Keep the busiest nodes so the picture stays readable.
-  const keep = [...nodeBytes.entries()].sort((a, b) => b[1] - a[1]).slice(0, TOPO_MAX_NODES);
+  const keep = [...nodeBytes.entries()].sort((a, b) => b[1] - a[1]).slice(0, cap);
   const kept = new Set(keep.map(([a]) => a));
   const nodes = keep.map(([addr, bytes]) => ({ addr, bytes, host: nodeHost.get(addr) || null, local: !isPublicIp(addr) }));
   const edgeList = [];
@@ -1933,7 +2639,7 @@ function buildTopologyGraph() {
     const [a, b] = key.split('|');
     if (kept.has(a) && kept.has(b)) edgeList.push({ a, b, bytes });
   }
-  return { nodes, edges: edgeList };
+  return { nodes, edges: edgeList, total: nodeBytes.size };
 }
 function layoutTopology(graph) {
   const pos = state.topo.layout;
@@ -1947,20 +2653,54 @@ function layoutTopology(graph) {
     }
   });
   if (state.topo.frozen || graph.nodes.length < 2) return { W, H };
-  const ITER = 70, REP = 42000, SPRING = 0.012, IDEAL = 130;
+  const N = graph.nodes.length;
+  // Large graphs get fewer, cheaper iterations: repulsion via a spatial grid
+  // (only neighbouring cells interact) keeps relaxation ~O(n·k) instead of
+  // O(n²), so a 1500-node GPU-rendered graph still lays out interactively.
+  const ITER = N > 800 ? 14 : N > 250 ? 30 : 70;
+  const useGrid = N > 250;
+  const REP = 42000, SPRING = 0.012, IDEAL = 130, CELL = IDEAL * 1.2;
   for (let it = 0; it < ITER; it++) {
     for (const n of graph.nodes) { const p = pos.get(n.addr); p.fx = 0; p.fy = 0; }
-    // repulsion (all pairs)
-    for (let i = 0; i < graph.nodes.length; i++) {
-      const pi = pos.get(graph.nodes[i].addr);
-      for (let j = i + 1; j < graph.nodes.length; j++) {
-        const pj = pos.get(graph.nodes[j].addr);
-        let dx = pi.x - pj.x, dy = pi.y - pj.y;
-        let d2 = dx * dx + dy * dy || 0.01;
-        const f = REP / d2;
-        const d = Math.sqrt(d2);
-        const ux = dx / d, uy = dy / d;
-        pi.fx += ux * f; pi.fy += uy * f; pj.fx -= ux * f; pj.fy -= uy * f;
+    // repulsion
+    if (useGrid) {
+      const grid = new Map(); // "cx,cy" -> positions in that cell
+      for (const n of graph.nodes) {
+        const p = pos.get(n.addr);
+        const key = `${Math.floor(p.x / CELL)},${Math.floor(p.y / CELL)}`;
+        let cell = grid.get(key);
+        if (!cell) { cell = []; grid.set(key, cell); }
+        cell.push(p);
+      }
+      for (const n of graph.nodes) {
+        const pi = pos.get(n.addr);
+        const gx = Math.floor(pi.x / CELL), gy = Math.floor(pi.y / CELL);
+        for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
+          const cell = grid.get(`${gx + ox},${gy + oy}`);
+          if (!cell) continue;
+          for (const pj of cell) {
+            if (pj === pi) continue;
+            const dx = pi.x - pj.x, dy = pi.y - pj.y;
+            const d2 = dx * dx + dy * dy || 0.01;
+            const f = REP / d2;
+            const d = Math.sqrt(d2);
+            pi.fx += (dx / d) * f; pi.fy += (dy / d) * f;
+          }
+        }
+      }
+    } else {
+      // all pairs — exact, fine for small graphs
+      for (let i = 0; i < N; i++) {
+        const pi = pos.get(graph.nodes[i].addr);
+        for (let j = i + 1; j < N; j++) {
+          const pj = pos.get(graph.nodes[j].addr);
+          let dx = pi.x - pj.x, dy = pi.y - pj.y;
+          let d2 = dx * dx + dy * dy || 0.01;
+          const f = REP / d2;
+          const d = Math.sqrt(d2);
+          const ux = dx / d, uy = dy / d;
+          pi.fx += ux * f; pi.fy += uy * f; pj.fx -= ux * f; pj.fy -= uy * f;
+        }
       }
     }
     // attraction along edges
@@ -1988,13 +2728,28 @@ function renderTopology(force = false) {
   if (!force && !state.topo.frozen && now - state.topo.lastBuilt < 1100) return; // throttle rebuilds
   state.topo.lastBuilt = now;
 
-  const graph = buildTopologyGraph();
+  // Big graphs go to the WebGL layer (§4.3) — SVG DOM stops scaling past a
+  // few hundred nodes. Small graphs keep the SVG path: labels, hover
+  // tooltips and click-to-inspect stay intact there.
+  let graph = buildTopologyGraph(TOPO_MAX_NODES_GL);
+  const gl = graph.total > TOPO_GL_THRESHOLD ? glContext(els.topologyGl) : null;
+  if (!gl && graph.nodes.length > TOPO_MAX_NODES) {
+    // WebGL unavailable (or small graph): keep the readable SVG cap.
+    const keptNodes = graph.nodes.slice(0, TOPO_MAX_NODES);
+    const kept = new Set(keptNodes.map((n) => n.addr));
+    graph = { nodes: keptNodes, edges: graph.edges.filter((e) => kept.has(e.a) && kept.has(e.b)), total: graph.total };
+  }
+  if (els.topologyWrap) els.topologyWrap.classList.toggle('gl', !!gl);
+  if (!gl && els.topologyLabels) els.topologyLabels.innerHTML = '';
+
+  const ofTotal = graph.total > graph.nodes.length ? ` of ${graph.total}` : '';
   els.topologySummary.textContent = graph.nodes.length
-    ? `${graph.nodes.length} hosts · ${graph.edges.length} conversations`
+    ? `${graph.nodes.length}${ofTotal} hosts · ${graph.edges.length} conversations${gl ? ' · GPU' : ''}`
     : I18N.t('topo.empty');
   if (!graph.nodes.length) { svg.innerHTML = ''; els.topologyLegend.innerHTML = ''; return; }
 
   layoutTopology(graph);
+  if (gl) { renderTopologyGL(gl, graph); return; }
   const pos = state.topo.layout;
   // Bounding box → viewBox (auto-fit)
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -2030,6 +2785,125 @@ function renderTopology(force = false) {
     `<span><i style="background:var(--ok)"></i> Local (your network)</span>` +
     `<span><i style="background:var(--tcp)"></i> Remote host</span>` +
     `<span class="topo-hint">circle size = traffic · line = a conversation</span>`;
+}
+
+// WebGL topology renderer — edges as GL lines, hosts as round point sprites.
+// Handles thousands of nodes at full frame rate where the SVG DOM would
+// spend seconds per rebuild (ROADMAP §4.3). Labels for the busiest hosts are
+// overlaid as positioned HTML so the map keeps its bearings.
+const TOPO_VS = `
+attribute vec2 a_pos;    // clip space
+attribute float a_size;  // point diameter in device px
+attribute float a_loc;   // 1 = local network host
+uniform vec3 u_cLocal;
+uniform vec3 u_cRemote;
+varying vec3 v_color;
+void main() {
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+  gl_PointSize = a_size;
+  v_color = mix(u_cRemote, u_cLocal, a_loc);
+}`;
+const TOPO_FS = `
+precision mediump float;
+varying vec3 v_color;
+void main() {
+  vec2 d = gl_PointCoord - vec2(0.5);
+  float r2 = dot(d, d);
+  if (r2 > 0.25) discard;
+  float rim = smoothstep(0.15, 0.25, r2);
+  gl_FragColor = vec4(mix(v_color, v_color * 0.35, rim), 0.92);
+}`;
+
+function renderTopologyGL(gl, graph) {
+  const canvas = els.topologyGl;
+  if (!glFit(canvas)) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.width, H = canvas.height;
+  gl.viewport(0, 0, W, H);
+  gl.clearColor(0, 0, 0, 0); // transparent — the wrap's gradient shows through
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  // Fit the layout's bounding box into the canvas (the GL equivalent of the
+  // SVG path's auto viewBox).
+  const pos = state.topo.layout;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of graph.nodes) {
+    const p = pos.get(n.addr);
+    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+  }
+  const pad = 40 * dpr;
+  const bw = Math.max(maxX - minX, 1), bh = Math.max(maxY - minY, 1);
+  const s = Math.min((W - 2 * pad) / bw, (H - 2 * pad) / bh);
+  const ox = (W - s * bw) / 2, oy = (H - s * bh) / 2;
+  const toPx = (p) => [ox + (p.x - minX) * s, oy + (p.y - minY) * s];
+  const toClip = (x, y) => [(x / W) * 2 - 1, 1 - (y / H) * 2];
+
+  // Edges — one GL_LINES draw for every conversation.
+  const ePos = new Float32Array(graph.edges.length * 4);
+  graph.edges.forEach((e, i) => {
+    const [x1, y1] = toPx(pos.get(e.a));
+    const [x2, y2] = toPx(pos.get(e.b));
+    const c1 = toClip(x1, y1), c2 = toClip(x2, y2);
+    ePos[i * 4] = c1[0]; ePos[i * 4 + 1] = c1[1]; ePos[i * 4 + 2] = c2[0]; ePos[i * 4 + 3] = c2[1];
+  });
+  const lprog = glProgram(gl, 'line', LINE_VS, LINE_FS);
+  gl.useProgram(lprog);
+  gl._topoEdges = gl._topoEdges || gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl._topoEdges);
+  gl.bufferData(gl.ARRAY_BUFFER, ePos, gl.DYNAMIC_DRAW);
+  const aL = gl.getAttribLocation(lprog, 'a_p');
+  gl.enableVertexAttribArray(aL);
+  gl.vertexAttribPointer(aL, 2, gl.FLOAT, false, 0, 0);
+  const bc = cssRgb('--border');
+  gl.uniform4f(gl.getUniformLocation(lprog, 'u_color'), bc[0], bc[1], bc[2], 0.45);
+  gl.drawArrays(gl.LINES, 0, graph.edges.length * 2);
+
+  // Nodes — point sprites, interleaved [x, y, diameter, isLocal].
+  let maxBytes = 1;
+  for (const n of graph.nodes) if (n.bytes > maxBytes) maxBytes = n.bytes;
+  const nPos = new Float32Array(graph.nodes.length * 4);
+  graph.nodes.forEach((n, i) => {
+    const [x, y] = toPx(pos.get(n.addr));
+    const c = toClip(x, y);
+    const r = (4 + Math.sqrt(n.bytes / maxBytes) * 14) * dpr;
+    nPos[i * 4] = c[0]; nPos[i * 4 + 1] = c[1]; nPos[i * 4 + 2] = r * 2; nPos[i * 4 + 3] = n.local ? 1 : 0;
+  });
+  const nprog = glProgram(gl, 'topo', TOPO_VS, TOPO_FS);
+  gl.useProgram(nprog);
+  gl._topoNodes = gl._topoNodes || gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl._topoNodes);
+  gl.bufferData(gl.ARRAY_BUFFER, nPos, gl.DYNAMIC_DRAW);
+  const aPos = gl.getAttribLocation(nprog, 'a_pos');
+  const aSize = gl.getAttribLocation(nprog, 'a_size');
+  const aLoc = gl.getAttribLocation(nprog, 'a_loc');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 16, 0);
+  gl.enableVertexAttribArray(aSize);
+  gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, 16, 8);
+  gl.enableVertexAttribArray(aLoc);
+  gl.vertexAttribPointer(aLoc, 1, gl.FLOAT, false, 16, 12);
+  gl.uniform3fv(gl.getUniformLocation(nprog, 'u_cLocal'), cssRgb('--ok'));
+  gl.uniform3fv(gl.getUniformLocation(nprog, 'u_cRemote'), cssRgb('--tcp'));
+  gl.drawArrays(gl.POINTS, 0, graph.nodes.length);
+
+  // Busiest hosts keep a text label (positioned HTML — cheap at 12 nodes).
+  if (els.topologyLabels) {
+    els.topologyLabels.innerHTML = graph.nodes.slice(0, 12).map((n) => {
+      const [x, y] = toPx(pos.get(n.addr));
+      const r = 4 + Math.sqrt(n.bytes / maxBytes) * 14;
+      const label = n.host || n.addr;
+      return `<span class="topo-gl-label" style="left:${(x / dpr).toFixed(0)}px;top:${(y / dpr + r + 4).toFixed(0)}px">` +
+        `${esc(label.length > 26 ? label.slice(0, 24) + '…' : label)}</span>`;
+    }).join('');
+  }
+
+  els.topologyLegend.innerHTML =
+    `<span><i style="background:var(--ok)"></i> Local (your network)</span>` +
+    `<span><i style="background:var(--tcp)"></i> Remote host</span>` +
+    `<span class="topo-hint">⚡ GPU rendering — busiest ${graph.nodes.length} of ${graph.total} hosts</span>`;
 }
 
 // ---- Traffic Diff — compare two capture snapshots (delta) ----
@@ -2713,7 +3587,11 @@ function renderPrivacy() {
 function switchView(view) {
   state.view = view;
   $$('.view').forEach((el) => el.classList.remove('active'));
-  $$('.tab').forEach((el) => el.classList.toggle('active', el.dataset.view === view));
+  $$('.tab').forEach((el) => {
+    const on = el.dataset.view === view;
+    el.classList.toggle('active', on);
+    el.setAttribute('aria-selected', on ? 'true' : 'false'); // a11y (ROADMAP §6.3)
+  });
   $(`#view-${view}`).classList.add('active');
   renderAll();
 }
@@ -2960,10 +3838,19 @@ function showFilterHelp() {
     'tcp.port == 443           TCP port (also udp.port, port)',
     'frame.len > 1000          packet length (also len, length)',
     'dns   http   tls   ssh    bare protocol name',
+    'websocket (or ws)         WebSocket frames on any port',
+    'http2   grpc              HTTP/2 (h2c) frames, gRPC calls',
     'wlan  wifi  802.11        Wi-Fi frames',
     'http && ip.dst == 8.8.8.8 combine with && || !',
     'tcp && (tls || dns)       parentheses group',
     'ip.dst contains "142.250" substring on a field',
+    '',
+    '— protocol fields (read from the packet bytes) —',
+    'http.request.method == "POST"   also http.request.uri, http.host',
+    'http.response.code >= 400       status code, with < > comparisons',
+    'tcp.flags.syn == 1              also .ack .fin .rst .psh (1 or 0)',
+    'dns.qry.name contains "google"  DNS question name',
+    'info contains "reset"           search the Info column text',
   ].join('\n');
   openToolModal('Display Filter Reference', `<pre class="tool-pre">${esc(help)}</pre>`);
 }
@@ -3005,7 +3892,7 @@ function initMenuBar() {
     const d = dialog();
     if (!d) { flashButton($('#mi-open'), 'Dialog unavailable'); return; }
     const path = await d.open({ multiple: false, filters: captureFilters });
-    if (path) invoke('open_pcap', { path }).catch((e) => console.error(e));
+    if (path) { showLoadProgress(0); invoke('open_pcap', { path }).catch((e) => { console.error(e); finishLoadProgress(); }); }
   });
   on('#mi-save', async () => {
     const d = dialog();
@@ -3021,9 +3908,67 @@ function initMenuBar() {
   on('#mi-clearfilter', () => { els.filterInput.value = ''; state.filterText = ''; renderPacketList(); });
   on('#mi-prefs', () => els.profilePanel.classList.remove('hidden'));
   on('#mi-timeprefs', () => els.profilePanel.classList.remove('hidden'));
+  // View > Columns… — open the column chooser popover.
+  on('#mi-columns', () => {
+    renderColumnsPanel();
+    const p = $('#columns-panel');
+    p.classList.toggle('hidden');
+  });
+  // View > Coloring rules…
+  on('#mi-coloring', openColoring);
+  on('#coloring-close', closeColoring);
+  on('#coloring-add', () => {
+    state.coloring.unshift({ name: 'New rule', filter: '', color: '#4a9ef5', enabled: true });
+    saveColoring();
+    renderColoringRules();
+  });
+  on('#coloring-reset', () => {
+    state.coloring = DEFAULT_COLOR_RULES.map((r) => ({ ...r }));
+    saveColoring();
+    renderColoringRules();
+  });
+  const coloringModal = $('#coloring-modal');
+  const coloringList = $('#coloring-list');
+  if (coloringModal) {
+    coloringModal.addEventListener('click', (e) => { if (e.target === coloringModal) closeColoring(); });
+  }
+  if (coloringList) {
+    // Text/checkbox/colour edits — update the rule in place and re-tint the list.
+    coloringList.addEventListener('input', (e) => {
+      const row = e.target.closest('.color-rule');
+      const rule = row && state.coloring[+row.dataset.i];
+      if (!rule) return;
+      switch (e.target.dataset.cr) {
+        case 'enabled': rule.enabled = e.target.checked; break;
+        case 'name': rule.name = e.target.value; break;
+        case 'filter':
+          rule.filter = e.target.value;
+          e.target.classList.toggle('cr-invalid', !colorRuleValid(rule.filter));
+          break;
+        case 'color': rule.color = e.target.value; break;
+        default: return;
+      }
+      saveColoring();
+    });
+    // Structural edits (reorder / delete) re-render the editor list.
+    coloringList.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-cr="del"],[data-cr="up"]');
+      if (!btn) return;
+      const i = +btn.closest('.color-rule').dataset.i;
+      if (btn.dataset.cr === 'del') state.coloring.splice(i, 1);
+      else if (i > 0) state.coloring.splice(i - 1, 0, state.coloring.splice(i, 1)[0]);
+      saveColoring();
+      renderColoringRules();
+    });
+  }
   // Analyze
   on('#mi-applyfilter', applySelectedAsFilter);
-  on('#mi-follow', () => switchView('connections'));
+  on('#mi-follow', () => {
+    // Follow the selected packet's conversation directly; without a usable
+    // selection, fall back to the Connections list (every flow has a button).
+    const p = state.filteredPackets[state.selectedIndex];
+    if (!p || !followStreamForPacket(p)) switchView('connections');
+  });
   on('#mi-expert', () => switchView('insights'));
   on('#mi-filterhelp', showFilterHelp);
   // Statistics
@@ -3066,11 +4011,14 @@ function initMenuBar() {
 
 // ---- Keyboard ----
 function handleKeydown(e) {
+  if (e.key === 'Escape') hideCtxMenu();
   if (e.key === 'Escape' && !els.replayModal.classList.contains('hidden')) { closeReplay(); return; }
   if (e.key === 'Escape' && !els.streamModal.classList.contains('hidden')) { closeFollowStream(); return; }
   if (e.key === 'Escape' && els.reportModal && !els.reportModal.classList.contains('hidden')) { closeReport(); return; }
   const toolModal = $('#tool-modal');
   if (e.key === 'Escape' && toolModal && !toolModal.classList.contains('hidden')) { closeToolModal(); return; }
+  const coloringModal = $('#coloring-modal');
+  if (e.key === 'Escape' && coloringModal && !coloringModal.classList.contains('hidden')) { closeColoring(); return; }
   const ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
   if (!els.replayModal.classList.contains('hidden')) return; // don't hijack keys while editing the replay form
@@ -3091,12 +4039,253 @@ function handleKeydown(e) {
   }
 }
 
+// ---- Display-filter feedback + autocomplete (ROADMAP §6.2) ----
+// The filter box glows by syntax state: green = a valid display filter, red =
+// invalid filter syntax, amber = a plain keyword (searched as free text).
+function looksLikeFilter(text) {
+  // Comparison/boolean operators or a dotted field token → the user is writing
+  // a filter, not a plain keyword, so a parse failure is a real error.
+  return /(==|!=|>=|<=|>|<|\bcontains\b|&&|\|\||[()])/.test(text) || /[a-z0-9]+\.[a-z]/i.test(text);
+}
+
+function updateFilterFeedback() {
+  const el = els.filterInput;
+  const text = state.filterText.trim();
+  el.classList.remove('filter-valid', 'filter-error', 'filter-text', 'filter-miss');
+  if (!text) { el.title = ''; return; }
+  const compiled = typeof NetscopeFilter !== 'undefined' ? NetscopeFilter.compile(text) : null;
+  const n = state.filteredPackets.length;
+  if (compiled) {
+    el.classList.add(n > 0 ? 'filter-valid' : 'filter-miss');
+    el.title = n > 0 ? `Valid filter — ${n} packet${n === 1 ? '' : 's'} match` : 'Valid filter — no packets match';
+  } else if (looksLikeFilter(text)) {
+    el.classList.add('filter-error');
+    el.title = 'Invalid filter syntax';
+  } else {
+    el.classList.add('filter-text');
+    el.title = `Free-text search — ${n} match${n === 1 ? '' : 'es'}`;
+  }
+}
+
+const acState = { items: [], active: -1, start: 0 };
+
+function renderSuggestions() {
+  const box = $('#filter-suggest');
+  if (!box) return;
+  if (!acState.items.length) { hideSuggestions(); return; }
+  box.innerHTML = acState.items.map((it, i) =>
+    `<div class="suggest-item${i === acState.active ? ' active' : ''}" role="option" data-i="${i}" aria-selected="${i === acState.active}">` +
+    `<span class="suggest-val">${esc(it.value)}</span><span class="suggest-kind">${esc(it.kind)}</span></div>`
+  ).join('');
+  // Anchor the popup under the filter input.
+  const r = els.filterInput.getBoundingClientRect();
+  box.style.left = `${Math.round(r.left)}px`;
+  box.style.top = `${Math.round(r.bottom + 2)}px`;
+  box.style.minWidth = `${Math.round(r.width)}px`;
+  box.classList.remove('hidden');
+  els.filterInput.setAttribute('aria-expanded', 'true');
+}
+
+function hideSuggestions() {
+  const box = $('#filter-suggest');
+  if (box) box.classList.add('hidden');
+  acState.items = []; acState.active = -1;
+  els.filterInput.setAttribute('aria-expanded', 'false');
+}
+
+function refreshSuggestions() {
+  if (typeof NetscopeFilter === 'undefined' || !NetscopeFilter.suggest) return;
+  const text = els.filterInput.value;
+  const caretAtEnd = els.filterInput.selectionStart === text.length;
+  if (!text || !caretAtEnd) { hideSuggestions(); return; }
+  const { start, items } = NetscopeFilter.suggest(text);
+  acState.items = items; acState.start = start;
+  acState.active = items.length ? 0 : -1;
+  renderSuggestions();
+}
+
+function acceptSuggestion(index) {
+  const it = acState.items[index];
+  if (!it) return;
+  const text = els.filterInput.value;
+  const before = text.slice(0, acState.start);
+  els.filterInput.value = `${before}${it.value} `;
+  state.filterText = els.filterInput.value;
+  els.filterInput.focus();
+  els.filterInput.setSelectionRange(els.filterInput.value.length, els.filterInput.value.length);
+  renderPacketList();
+  refreshSuggestions();
+}
+
+// Keyboard within the filter box while suggestions are open.
+function filterKeydown(e) {
+  const open = acState.items.length && !$('#filter-suggest').classList.contains('hidden');
+  if (!open) {
+    if (e.key === 'Escape' && state.filterText) { els.filterInput.value = ''; state.filterText = ''; renderPacketList(); }
+    return;
+  }
+  if (e.key === 'ArrowDown') { e.preventDefault(); acState.active = (acState.active + 1) % acState.items.length; renderSuggestions(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acState.active = (acState.active - 1 + acState.items.length) % acState.items.length; renderSuggestions(); }
+  else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); acceptSuggestion(acState.active); }
+  else if (e.key === 'Escape') { e.preventDefault(); hideSuggestions(); }
+}
+
+// ---- Large-capture load progress (ROADMAP §6.2) ----
+// The backend streams packets in batches; when it can report a total (the
+// memory-mapped fast path) the bar is determinate, otherwise it pulses.
+const loadProgress = { active: false, total: 0, done: 0 };
+
+function showLoadProgress(total) {
+  loadProgress.active = true;
+  loadProgress.total = total || 0;
+  loadProgress.done = 0;
+  const el = $('#load-progress');
+  el.classList.remove('hidden');
+  el.classList.toggle('indeterminate', !total);
+  updateLoadProgress(0);
+}
+
+function updateLoadProgress(addDone) {
+  if (!loadProgress.active) return;
+  loadProgress.done += addDone;
+  const bar = $('#load-bar');
+  const label = $('#load-label');
+  const el = $('#load-progress');
+  if (loadProgress.total > 0) {
+    const pct = Math.min(100, Math.round((loadProgress.done / loadProgress.total) * 100));
+    bar.style.width = `${pct}%`;
+    el.setAttribute('aria-valuenow', String(pct));
+    label.textContent = `Loading capture… ${loadProgress.done.toLocaleString()} / ${loadProgress.total.toLocaleString()} (${pct}%)`;
+  } else {
+    label.textContent = `Loading capture… ${loadProgress.done.toLocaleString()} packets`;
+  }
+}
+
+function finishLoadProgress() {
+  loadProgress.active = false;
+  const el = $('#load-progress');
+  el.classList.add('hidden');
+  el.classList.remove('indeterminate');
+  $('#load-bar').style.width = '0%';
+}
+
+// ---- Customizable packet-list columns (ROADMAP §6.2) ----
+// Each entry maps a grid track to a header/cell class. `dir` (the arrow) and
+// `info` are always shown; everything else can be toggled and reordered.
+const COLUMN_DEFS = {
+  num:   { track: '52px',  label: 'No.',         cell: 'col-num',   header: 0, always: false },
+  time:  { track: '132px', label: 'Time',        cell: 'col-time',  header: 1, always: false },
+  src:   { track: '1fr',   label: 'Source',      cell: 'col-src',   header: 2, always: false },
+  dst:   { track: '1fr',   label: 'Destination', cell: 'col-dst',   header: 4, always: false },
+  proto: { track: '64px',  label: 'Proto',       cell: 'col-proto', header: 5, always: false },
+  len:   { track: '60px',  label: 'Len',         cell: 'col-len',   header: 6, always: false },
+};
+const DEFAULT_COLUMN_ORDER = ['num', 'time', 'src', 'dst', 'proto', 'len'];
+
+function columnConfig() {
+  const cfg = state.settings.columns || {};
+  const order = (cfg.order && cfg.order.filter((k) => COLUMN_DEFS[k])) || DEFAULT_COLUMN_ORDER.slice();
+  // Any column missing from a saved order (e.g. after an upgrade) is appended.
+  for (const k of DEFAULT_COLUMN_ORDER) if (!order.includes(k)) order.push(k);
+  const hidden = new Set(cfg.hidden || []);
+  return { order, hidden };
+}
+
+// Rebuild the grid template + cell order/visibility with one injected stylesheet
+// so the header and every virtual row stay perfectly aligned.
+function applyColumns() {
+  const { order, hidden } = columnConfig();
+  // The real column order in the DOM: num,time,src,dir,dst,proto,len,info.
+  // We drive layout by (1) a grid-template that lists only visible tracks in
+  // the chosen order and (2) a CSS `order` on each cell to match.
+  const visible = order.filter((k) => !hidden.has(k));
+  // Build the track list: place src/dst around the always-on dir arrow.
+  const tracks = [];
+  const orderRules = [];
+  let pos = 0;
+  const push = (cell, track) => { tracks.push(track); orderRules.push(`.${cell} { order: ${pos}; display: revert; }`); pos++; };
+  for (const k of visible) {
+    const def = COLUMN_DEFS[k];
+    push(def.cell, def.track);
+    if (k === 'src') { push('col-dir', '24px'); } // keep the arrow next to Source
+  }
+  if (!visible.includes('src')) push('col-dir', '24px');
+  push('col-info', '2fr');
+  // Hidden columns: remove from the grid entirely.
+  for (const k of Object.keys(COLUMN_DEFS)) {
+    if (hidden.has(k)) orderRules.push(`.${COLUMN_DEFS[k].cell} { display: none; }`);
+  }
+  const css = `.table-header, .packet-row { grid-template-columns: ${tracks.join(' ')} !important; }\n${orderRules.join('\n')}`;
+  let styleEl = document.getElementById('column-style');
+  if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'column-style'; document.head.appendChild(styleEl); }
+  styleEl.textContent = css;
+}
+
+function renderColumnsPanel() {
+  const list = $('#columns-list');
+  if (!list) return;
+  const { order, hidden } = columnConfig();
+  list.innerHTML = order.map((k, i) => {
+    const def = COLUMN_DEFS[k];
+    const on = !hidden.has(k);
+    return `<div class="column-row" data-col="${k}">` +
+      `<label class="popover-checkbox"><input type="checkbox" data-col-toggle="${k}"${on ? ' checked' : ''}> <span>${esc(def.label)}</span></label>` +
+      `<span class="column-move">` +
+      `<button class="btn-icon" data-col-up="${k}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">▲</button>` +
+      `<button class="btn-icon" data-col-down="${k}" ${i === order.length - 1 ? 'disabled' : ''} aria-label="Move down">▼</button>` +
+      `</span></div>`;
+  }).join('');
+}
+
+function saveColumns(order, hidden) {
+  state.settings.columns = { order, hidden: [...hidden] };
+  saveJSON('netscope.settings', state.settings);
+  applyColumns();
+  renderColumnsPanel();
+}
+
+function toggleColumn(key) {
+  const { order, hidden } = columnConfig();
+  if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
+  saveColumns(order, hidden);
+}
+
+function moveColumn(key, delta) {
+  const { order, hidden } = columnConfig();
+  const i = order.indexOf(key);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= order.length) return;
+  [order[i], order[j]] = [order[j], order[i]];
+  saveColumns(order, hidden);
+}
+
+// ---- Tab pinning (ROADMAP §6.2) — right-click a tab to keep it marked ----
+function pinnedTabs() { return new Set(state.settings.pinnedTabs || []); }
+
+function applyTabPins() {
+  const pins = pinnedTabs();
+  $$('.tab').forEach((t) => {
+    const isPinned = pins.has(t.dataset.view);
+    t.classList.toggle('pinned', isPinned);
+    t.setAttribute('aria-label', isPinned ? `${t.textContent.trim()} (pinned)` : t.textContent.trim());
+  });
+}
+
+function toggleTabPin(view) {
+  const pins = pinnedTabs();
+  if (pins.has(view)) pins.delete(view); else pins.add(view);
+  state.settings.pinnedTabs = [...pins];
+  saveJSON('netscope.settings', state.settings);
+  applyTabPins();
+}
+
 // ---- Init ----
 async function init() {
   Object.assign(els, {
     interfaceSelect: $('#interface-select'), startBtn: $('#start-btn'), stopBtn: $('#stop-btn'),
     statusText: $('#status-text'), packetCount: $('#packet-count'), filterInput: $('#filter-input'),
     elevationBadge: $('#elevation-badge'), packetList: $('#packet-list'),
+    packetTable: $('#packet-table'), packetHeader: $('#packet-header'),
     detailTree: $('#detail-tree'), detailClose: $('#detail-close'),
     hexDump: $('#hex-dump'), hexLen: $('#hex-len'),
     connSummary: $('#conn-summary'), connList: $('#conn-list'),
@@ -3122,12 +4311,15 @@ async function init() {
     reportCopy: $('#report-copy'), reportBody: $('#report-body'), reportStatus: $('#report-status'), reportScrub: $('#report-scrub'),
     topologySvg: $('#topology-svg'), topologySummary: $('#topology-summary'), topologyLegend: $('#topology-legend'),
     topoFreeze: $('#topo-freeze'), topoFit: $('#topo-fit'),
+    topologyWrap: $('#topology-canvas-wrap'), topologyGl: $('#topology-gl'), topologyLabels: $('#topology-labels'),
+    ioGl: $('#io-gl'), ioHint: $('#io-hint'),
     diffSnapA: $('#diff-snap-a'), diffSnapB: $('#diff-snap-b'), diffALabel: $('#diff-a-label'),
     diffBLabel: $('#diff-b-label'), diffRun: $('#diff-run'), diffBody: $('#diff-body'),
     privacyRescan: $('#privacy-rescan'), privacySummary: $('#privacy-summary'), privacyCost: $('#privacy-cost'), privacyList: $('#privacy-list'),
     summaryOpen: $('#summary-open'), busiestPeak: $('#busiest-peak'), busiestChart: $('#busiest-chart'), busiestHint: $('#busiest-hint'),
     hexPanel: $('#hex-panel'), statProjection: $('#stat-projection'),
     noiseFilterCheck: $('#noise-filter-check'), geoipCheck: $('#geoip-check'), reportAnon: $('#report-anon'),
+    geoipDbChoose: $('#geoip-db-choose'), geoipDbClear: $('#geoip-db-clear'), geoipDbStatus: $('#geoip-db-status'),
     alertBtn: $('#alert-btn'), alertBadge: $('#alert-badge'), alertPanel: $('#alert-panel'), alertList: $('#alert-list'),
     triggerList: $('#trigger-list'), trigField: $('#trig-field'), trigOp: $('#trig-op'), trigValue: $('#trig-value'), trigAdd: $('#trig-add'),
   });
@@ -3137,6 +4329,17 @@ async function init() {
   // subscription succeeding — otherwise a slow/failed async step below would
   // abort init() and leave the tabs unresponsive.
   $$('.tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
+  // Arrow-key navigation within the tablist (a11y, ROADMAP §6.3).
+  $('#tabs').addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const tabs = [...$$('.tab')];
+    const i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    e.preventDefault();
+    const j = (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[j].focus();
+    switchView(tabs[j].dataset.view);
+  });
   document.addEventListener('keydown', handleKeydown);
   initMenuBar();
 
@@ -3147,6 +4350,10 @@ async function init() {
 
   await loadInterfaces();
   await loadLearn();
+
+  // Restore the offline GeoIP database, if one was configured. Not awaited —
+  // location enrichment can come online a moment after the UI does.
+  if (state.settings.geoipDb) loadGeoDb(state.settings.geoipDb, { quiet: true });
 
   // Restore the persisted profile (or fall back if it was deleted elsewhere)
   if (!allProfiles()[state.settings.profile]) state.settings.profile = Object.keys(BUILTIN_PROFILES)[0];
@@ -3171,12 +4378,66 @@ async function init() {
 
   try {
     await listen('packet', onPacket);
-    await listen('capture-finished', () => { setStatus(STATES.IDLE); els.startBtn.disabled = false; els.stopBtn.disabled = true; });
+    await listen('packets-batch', onPacketBatch);
+    // Total packet count for a file open (memory-mapped fast path) → a
+    // determinate progress bar; without it the bar just pulses.
+    await listen('capture-total', (e) => { if (loadProgress.active) showLoadProgress(e.payload || 0); });
+    await listen('capture-finished', () => { setStatus(STATES.IDLE); els.startBtn.disabled = false; els.stopBtn.disabled = true; finishLoadProgress(); });
   } catch (e) { console.error('event subscription failed', e); }
+
+  // Layered config (~/.netscope): surface what the backend loaded at startup
+  // — an auto-loaded offline GeoIP DB and any protocol-plugin errors.
+  try {
+    const appCfg = await invoke('get_app_config');
+    if (appCfg) {
+      state.appConfig = appCfg;
+      if (appCfg.geoip_db && !state.geoDb) {
+        state.geoDb = appCfg.geoip_db;
+        renderGeoDbStatus();
+      }
+      for (const err of appCfg.plugin_errors || []) console.warn('netscope plugin:', err);
+      if (appCfg.plugins_loaded) console.info(`netscope: ${appCfg.plugins_loaded} protocol plugin(s) loaded from ${appCfg.plugins_dir}`);
+    }
+  } catch (e) { /* command missing in older backends — ignore */ }
 
   els.startBtn.addEventListener('click', startCapture);
   els.stopBtn.addEventListener('click', stopCapture);
-  els.filterInput.addEventListener('input', () => { state.filterText = els.filterInput.value; renderPacketList(); });
+  els.filterInput.addEventListener('input', () => { state.filterText = els.filterInput.value; renderPacketList(); refreshSuggestions(); });
+  els.filterInput.addEventListener('keydown', filterKeydown);
+  els.filterInput.addEventListener('blur', () => setTimeout(hideSuggestions, 120));
+  // Click a suggestion to accept it (mousedown so it fires before blur hides).
+  $('#filter-suggest').addEventListener('mousedown', (e) => {
+    const item = e.target.closest('[data-i]');
+    if (item) { e.preventDefault(); acceptSuggestion(+item.dataset.i); }
+  });
+
+  // Column chooser: toggle visibility / reorder, persisted in settings.
+  applyColumns();
+  const columnsList = $('#columns-list');
+  if (columnsList) {
+    columnsList.addEventListener('change', (e) => {
+      const key = e.target.dataset.colToggle;
+      if (key) toggleColumn(key);
+    });
+    columnsList.addEventListener('click', (e) => {
+      const up = e.target.closest('[data-col-up]');
+      const down = e.target.closest('[data-col-down]');
+      if (up) moveColumn(up.dataset.colUp, -1);
+      else if (down) moveColumn(down.dataset.colDown, 1);
+    });
+  }
+  const columnsPanel = $('#columns-panel');
+  document.addEventListener('click', (e) => {
+    if (columnsPanel.classList.contains('hidden')) return;
+    if (!columnsPanel.contains(e.target) && !e.target.closest('#mi-columns')) columnsPanel.classList.add('hidden');
+  });
+
+  // Tab pinning: right-click a tab to mark it; pins persist across restarts.
+  applyTabPins();
+  $$('.tab').forEach((t) => t.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    toggleTabPin(t.dataset.view);
+  }));
   els.detailClose.addEventListener('click', hideDetail);
   els.detailTree.addEventListener('click', (e) => {
     const jt = e.target.closest('.jt-toggle');
@@ -3226,12 +4487,57 @@ async function init() {
     if (state.selectedIndex >= 0) showDetail(state.selectedIndex);
   });
 
+  // Offline GeoIP database — pick a .mmdb file; lookups then stay local.
+  if (els.geoipDbChoose) {
+    els.geoipDbChoose.addEventListener('click', async () => {
+      const d = (window.__TAURI__ && window.__TAURI__.dialog) || null;
+      if (!d) return;
+      const path = await d.open({
+        multiple: false,
+        filters: [{ name: 'MaxMind DB', extensions: ['mmdb'] }],
+      });
+      if (path) loadGeoDb(path);
+    });
+    els.geoipDbClear.addEventListener('click', clearGeoDb);
+  }
+
   // Report IP anonymisation
   els.reportAnon.addEventListener('change', renderReportBody);
   els.packetList.addEventListener('click', (e) => {
     const row = e.target.closest('.packet-row');
     if (row) { showDetail(parseInt(row.dataset.index)); renderPacketList(); }
   });
+  // Virtual scrolling: re-render the visible window on scroll (rAF-throttled).
+  if (els.packetTable) {
+    let vsPending = false;
+    els.packetTable.addEventListener('scroll', () => {
+      if (state.view !== 'packets' || !state.filteredPackets.length || vsPending) return;
+      vsPending = true;
+      requestAnimationFrame(() => { vsPending = false; renderPacketRows(); });
+    });
+  }
+  // Right-click a packet row → Wireshark-style context menu (Follow Stream…).
+  els.packetList.addEventListener('contextmenu', (e) => {
+    const row = e.target.closest('.packet-row');
+    if (!row) return;
+    e.preventDefault();
+    const idx = parseInt(row.dataset.index);
+    showDetail(idx);
+    renderPacketList();
+    showPacketContextMenu(e, idx);
+  });
+  const ctxMenu = $('#ctx-menu');
+  if (ctxMenu) {
+    ctxMenu.addEventListener('click', (e) => {
+      const item = e.target.closest('[data-ctx]');
+      if (item && !item.disabled) onCtxMenuAction(item.dataset.ctx, parseInt(ctxMenu.dataset.index));
+    });
+  }
+  document.addEventListener('click', hideCtxMenu);
+  document.addEventListener('contextmenu', (e) => {
+    if (!e.target.closest('.packet-row') && !e.target.closest('#ctx-menu')) hideCtxMenu();
+  });
+  window.addEventListener('blur', hideCtxMenu);
   els.connList.addEventListener('click', (e) => {
     const b = e.target.closest('[data-block]');
     const u = e.target.closest('[data-unblock]');
@@ -3262,6 +4568,29 @@ async function init() {
     applyTheme(state.settings.theme);
     saveJSON('netscope.settings', state.settings);
   });
+
+  // Accessibility: interface/text scale + colour-blind-safe palette.
+  applyTextScale(state.settings.textScale);
+  applyCvd(state.settings.cvd);
+  const textSizeSel = $('#text-size-select');
+  if (textSizeSel) {
+    textSizeSel.value = String(state.settings.textScale || 1);
+    textSizeSel.addEventListener('change', () => {
+      state.settings.textScale = Number(textSizeSel.value) || 1;
+      applyTextScale(state.settings.textScale);
+      saveJSON('netscope.settings', state.settings);
+    });
+  }
+  const cvdCheck = $('#cvd-check');
+  if (cvdCheck) {
+    cvdCheck.checked = !!state.settings.cvd;
+    cvdCheck.addEventListener('change', () => {
+      state.settings.cvd = cvdCheck.checked;
+      applyCvd(state.settings.cvd);
+      saveJSON('netscope.settings', state.settings);
+      renderAll(); // re-render so protoColor-driven inline colours update
+    });
+  }
 
   // Language selector — translate the UI and persist the choice.
   els.langSelect.addEventListener('change', () => {
@@ -3343,3 +4672,12 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ---- Test hooks ----
+// The vitest suite loads this file in a Node vm sandbox. Top-level `function`
+// declarations attach to the sandbox global, but `const`s (state, els) do
+// not — hand them over explicitly so render functions can be unit-tested.
+// Inert in the real app: nothing reads __netscopeTest there.
+if (typeof globalThis !== 'undefined') {
+  globalThis.__netscopeTest = { state, els };
+}

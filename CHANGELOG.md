@@ -9,6 +9,168 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **UI/UX polish across both frontends** (ROADMAP §6). **TUI (§6.1):** an
+  expandable protocol detail tree (`crates/tui/src/detail.rs`, `Enter` focuses
+  it, `←/→` collapse/expand) built from the frame bytes; Follow Stream
+  (`stream.rs`, `F`) reconstructing a conversation as two-directional text; an
+  Insights view (`insights.rs`) porting the desktop security/privacy findings;
+  mouse support (crossterm capture — click rows/tabs, wheel scrolls) with a new
+  clickable tab strip; a theme system (`theme.rs`, `T` to cycle or
+  `$NETSCOPE_THEME`) with dark/light/solarized/dracula/monokai; and
+  user-selectable packet-list columns (`columns.rs`, `C`). **Desktop (§6.2):**
+  the filter box now signals syntax by colour (green = valid + hits, amber =
+  valid/free-text, red = invalid); grammar-aware filter autocomplete
+  (`NetscopeFilter.suggest` — fields → operators → values, keyboard + click); a
+  large-capture load progress bar (determinate via a new `capture-total` IPC
+  event, indeterminate otherwise); a View ▸ Columns… chooser (show/hide +
+  ▲▼ reorder, persisted); and right-click tab pinning. **Accessibility (§6.3):**
+  ARIA landmarks/roles (`banner`, `tablist`/`tab`, `contentinfo`), an
+  `aria-live` capture-status region, arrow-key tab navigation and a visible
+  `:focus-visible` ring, a WCAG-AA high-contrast theme, interface/text scaling
+  (90–130 %), an Okabe–Ito colour-blind-safe protocol palette, and
+  `prefers-reduced-motion` support. **Data viz (§6.4):** four new dashboard
+  cards — TCP handshake round-trip-time scatter, TCP window-size-over-time
+  (zero-windows flagged), a host↔host byte-intensity heatmap, and a flow-graph
+  ladder for the busiest conversation. TUI: 14 new unit tests; desktop: 5 new
+  filter-suggest tests (72 frontend tests green).
+
+- **GPU-accelerated visualisation** (desktop, ROADMAP §4.3) — the Topology map
+  switches to a WebGL renderer above 150 hosts: edges as GL lines, hosts as
+  round point sprites, busiest-host labels overlaid as HTML. The cap rises
+  from 60 (SVG) to the 1500 busiest hosts, and the force layout swaps its
+  all-pairs repulsion for a spatial grid on big graphs (~O(n·k) per iteration
+  — 1500 hosts lay out and draw in ~130 ms). Small graphs keep the SVG path
+  with labels, tooltips and hover intact; no WebGL means a clean fallback.
+  New **I/O Graph** dashboard card: every packet drawn as a GPU point
+  (time × size, log scale; RST/malformed in red) under a bucketed
+  packets-per-second line — point data streams into a growing GPU buffer, so
+  a million-packet capture redraws with two draw calls.
+
+- **Benchmark & profiling infrastructure** (`crates/core/benches/`, ROADMAP
+  §4.4) — three criterion/allocator benchmarks run in CI on every push:
+  `parse_throughput` (mixed-traffic `dissect()`, ~3.1 M pkt/s), `filter_match`
+  (100k display-filter evaluations, ~32 M evals/s, plus per-filter costs) and
+  `mem_usage` (a counting global allocator measures the real heap of 1M
+  dissected packets — ~269 MiB — and proves cloned packets share frame bytes).
+  Flamegraph instructions in `docs/core.md`.
+
+
+- **22 new protocol dissectors — databases, OT, VoIP media, security/VPN, IoT,
+  operator/routing** (ROADMAP §3.3–3.8). Each is wired end to end: well-known
+  port (or EtherType / IP-protocol) dispatch, its own `Protocol` variant with a
+  display name and colour in both UIs, flow grouping and ranking, a
+  beginner-friendly Learn-mode lesson, and unit + end-to-end dispatch tests.
+  - **Databases** (`§3.4`): PostgreSQL (`postgres.rs`, TCP 5432 — startup/SSL,
+    Simple Query SQL, ErrorResponse), MySQL/MariaDB (`mysql.rs`, 3306 —
+    handshake, COM_QUERY, ERR), MongoDB (`mongodb.rs`, 27017 — OP_MSG/OP_QUERY
+    command & collection), Redis (`redis.rs`, 6379 — RESP array/inline commands
+    & replies), Cassandra (`cassandra.rs`, 9042 — CQL frames + QUERY text).
+    Filter aliases `postgres`/`psql`/`pgsql`/`mongo`.
+  - **Industrial / OT** (`§3.5`): Modbus/TCP (`modbus.rs`, 502 — function codes
+    + exceptions), DNP3 (`dnp3.rs`, 20000 — link function + addresses), BACnet/IP
+    (`bacnet.rs`, UDP 47808 — Who-Is/I-Am/ReadProperty), EtherNet/IP
+    (`enip.rs`, 44818 — encapsulation commands + session), OPC UA (`opcua.rs`,
+    4840 — HEL/ACK/OPN/MSG).
+  - **Media / VoIP** (`§3.6`): RTP + RTCP (`rtp.rs`) — structural heuristic on
+    dynamically negotiated UDP ports (version + payload-type sanity), payload
+    type/codec, sequence, SSRC; RTCP SR/RR/SDES/BYE/APP.
+  - **Security / VPN** (`§3.7`): Kerberos (`kerberos.rs`, TCP/UDP 88 —
+    AS/TGS/AP-REQ/REP, TCP & UDP framing), LDAP (`ldap.rs`, 389 — BER parse,
+    bindRequest DN, searchRequest), RADIUS (`radius.rs`, UDP 1812/1813 — codes +
+    id), OpenVPN (`openvpn.rs`, 1194 — opcode/key, UDP+TCP), WireGuard
+    (`wireguard.rs`, UDP 51820 — handshake/transport), IPsec ESP/AH
+    (`ipsec.rs`, IP proto 50/51 — SPI + sequence tracking).
+  - **IoT** (`§3.8`): MQTT (`mqtt.rs`, TCP 1883 — CONNECT client-id, PUBLISH
+    topic, all message types), CoAP (`coap.rs`, UDP 5683 — type/code + Uri-Path
+    reconstruction). BLE/Zigbee/CAN deferred (need a non-Ethernet capture path).
+  - **Operator / routing** (`§3.3`): BGP (`bgp.rs`, TCP 179 — OPEN/UPDATE/
+    NOTIFICATION/KEEPALIVE + AS), full OSPF (`ospf.rs`, IP proto 89 —
+    Hello/DD/LSR/LSU/LSAck + router/area), LLDP (`lldp.rs`, EtherType 0x88CC —
+    system name/port from TLVs), LACP/slow protocols (`lacp.rs`, 0x8809),
+    STP/RSTP/MSTP (`stp.rs`, 802.3 LLC BPDU + root bridge), MPLS (`mpls.rs`,
+    0x8847/0x8848 — unwraps the label stack and dissects the inner IP packet).
+
+- **Parallel capture pipeline** (`crates/core/src/pipeline.rs`, ROADMAP §2.1) —
+  dissection moved off the capture thread: raw frames now flow through a
+  lock-free ring buffer (`crossbeam` `ArrayQueue`) into a rayon-backed
+  dissector stage that parses batches across all cores while preserving
+  arrival order. Live capture never blocks the wire loop — a full ring drops
+  the frame and counts it; file reads apply backpressure instead so nothing
+  is lost. New `CaptureEngine::pipeline_stats()` (and a `get_capture_stats`
+  Tauri command) expose received / dropped / dissected counters. An optional
+  `async` cargo feature adds `AsyncCaptureEngine`, a tokio-channel facade for
+  the planned headless/REST server mode. 5 new unit tests, including an
+  order-preservation test and a full-pipeline throughput floor.
+
+- **Lazy pcap reader — mmap + packet index + LRU** (`crates/core/src/stream.rs`,
+  ROADMAP §2.2) — `LazyCapture` memory-maps classic pcaps, indexes only the
+  16-byte record headers (~24 bytes per packet instead of a parsed `Packet`),
+  and dissects on first access with a bounded LRU cache; `packets_range()`
+  dissects cold pages in parallel with rayon and `find_by_time()` binary
+  searches the timestamp index. Both endiannesses and µs/ns resolutions are
+  handled; truncated tails are tolerated; pcapng falls back to the streaming
+  libpcap reader. The desktop's *Open pcap* now uses it and emits packets in
+  `packets-batch` IPC events (~1000× fewer events on big files). 9 new unit
+  tests.
+
+- **Declarative protocol plugins** (`crates/core/src/plugins.rs`, ROADMAP §2.3) —
+  recognise new protocols without touching Rust: drop a TOML file into
+  `~/.netscope/plugins/` naming the protocol, its transport and ports, plus
+  optional payload heuristics (`prefix`, `prefix_hex`, `contains`) and a
+  summary template. Plugins run after every built-in dissector and before the
+  generic TCP/UDP fallback, so they can claim unknown traffic but never shadow
+  a built-in. Matches surface as their own protocol everywhere — packet list,
+  colours, flows, Learn mode, display filters (`redis` matches a plugin named
+  "Redis") — in both UIs. Desktop gains `list_plugins` / `reload_plugins`
+  commands; the TUI loads plugins at startup. 9 new unit tests.
+
+- **Layered configuration** (`crates/core/src/config.rs`, ROADMAP §2.4) — one
+  discoverable home for user settings, shared by TUI and desktop:
+  `~/.netscope/` (override with `$NETSCOPE_CONFIG_DIR`) holding `config.toml`,
+  `profiles/*.toml` (partial overlays deep-merged over the global file;
+  selected via `$NETSCOPE_PROFILE` or `general.profile`), `coloring-rules.toml`
+  (new `[[rule]]` TOML form *and* the legacy line form both parse — the TUI
+  reads this location before the legacy per-OS path), `plugins/` and
+  `geoip.mmdb` — which the desktop now auto-loads at startup, no clicking
+  through the Profile menu needed. Loading never fails: broken or missing
+  files yield defaults. New `get_app_config` Tauri command surfaces the loaded
+  config to the frontend. 13 new unit tests.
+
+- **Virtual scrolling in the desktop packet list** (ROADMAP §2.2) — the list
+  now renders only the rows inside the viewport (plus overscan) over a
+  full-height spacer, replacing the old "last 500 rows" cap: every captured
+  packet is reachable by scrolling, and a 100k-row capture scrolls as smoothly
+  as a 100-row one. Live captures still follow the tail until you scroll up.
+  4 new vitest cases.
+
+- **HTTP/2 + gRPC dissection** (`crates/core/src/dissectors/http2.rs`) —
+  cleartext HTTP/2 (h2c) on any TCP port, recognised by the client connection
+  preface or a strictly-validated frame chain (per-type flag/length/stream-id
+  rules, reserved bits): SETTINGS, HEADERS, DATA, PING, GOAWAY (with error
+  names), WINDOW_UPDATE and friends. gRPC calls riding on those frames are
+  labelled as their own protocol, spotted by `content-type: application/grpc`
+  in a HEADERS block (matched raw *and* in its HPACK-Huffman byte form — no
+  Huffman decoder needed, a fixed string encodes to fixed bytes) or by DATA
+  frames carrying exact gRPC length-prefixed messages. HTTP/1.1 `Upgrade: h2c`
+  handshakes get a summary note like WebSocket upgrades. New `http2` / `grpc`
+  display-filter predicates (Rust + JS), colours, Learn lessons and per-packet
+  explanations in both UIs. 16 new unit tests.
+
+- **User-defined coloring rules in the TUI** (`crates/tui/src/colors.rs`) —
+  the terminal UI now matches the desktop's View > Coloring rules: rules load
+  from `~/.config/netscope/colors` (or `%APPDATA%\netscope\colors`, or
+  `--colors <file>`), one `<hex-color> <display filter>` per line, checked
+  top-down — the first match tints the packet row, everything else keeps its
+  protocol colour. Ships the same defaults as the desktop (bad TCP red, HTTP
+  errors orange, handshakes grey…) when no file exists. 4 new unit tests.
+
+- **Offline GeoIP database** (desktop) — the Profile menu can now load a
+  MaxMind `.mmdb` file (e.g. the free GeoLite2-City/Country/ASN): IP locations
+  then resolve locally via a new `geoip_lookup` Tauri command — private, no
+  network calls, works offline, and takes precedence over the opt-in ipwho.is
+  web lookup. The database path persists and reloads on start; localised UI in
+  all 7 languages (Turkish also gained the previously-missing GeoIP strings).
+
 - **Byte-field highlighting** (desktop) — clicking a field in the packet-detail
   tree (MAC addresses, EtherType, IP source/destination, TCP/UDP ports)
   highlights exactly its bytes in the hex view, Wireshark-style. A new
@@ -89,6 +251,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     - **Telnet** (23) — option negotiation vs. cleartext terminal text
     - **RDP** (3389) — Remote Desktop, with connection-request detection
   - 35 new unit tests covering the added dissectors
+
+### Changed
+
+- **SIMD-accelerated parsing hot paths** (ROADMAP §4.1) — byte scans now use
+  the `memchr` crate (SSE2/AVX2/NEON): first-line extraction shared by the
+  line-oriented dissectors, plugin `contains` payload matching (previously an
+  O(n·m) `windows()` scan), and C-string scans in the PostgreSQL / MySQL /
+  MongoDB dissectors. The HTTP dissector no longer UTF-8-validates entire
+  payloads — it decodes only the ~2 KiB header block, so responses with
+  binary bodies (images, gzip) now parse their status line instead of
+  reporting "non-UTF8 payload"; the TCP upgrade-handshake probe applies the
+  same cap. Also fixes a latent panic when a 2048-byte header slice landed
+  mid-way through a multi-byte UTF-8 character.
+
+- **Memory footprint** (ROADMAP §4.2) — `Packet.data` is now `bytes::Bytes`:
+  cloning a packet (flow tracking, the lazy-reader LRU cache, UI copies)
+  bumps a refcount instead of reallocating the frame. Hostnames learned by
+  passive DNS are interned (`Arc<str>`), so a CDN name resolving to dozens of
+  IPs costs one allocation. Display-filter evaluation dropped its per-packet
+  allocations (borrowed HTTP heads, allocation-free case-insensitive
+  equality). IP addresses were already `std::net::IpAddr`.
+
+- **`CaptureEngine` internals** — both `start_live` and `start_offline` now
+  route through the parallel pipeline (ROADMAP §2.1); public signatures are
+  unchanged. `stop()` drains the dissector stage before returning, so the
+  last packets of a capture are never lost.
+- One `unsafe` block entered the workspace (the `memmap2::Mmap::map` call in
+  `stream.rs`, with a documented safety contract) — the previous
+  zero-`unsafe` note in AUDIT.md is updated accordingly.
+
+### Fixed
+
+- **TUI Learn view now shows every lesson** — it was zipping the lesson list
+  against a stale 8-protocol colour table, silently truncating the other
+  lessons. `education::all_lessons()` now returns `(Protocol, Lesson)` pairs,
+  so new lessons appear automatically with their protocol colour. WebSocket
+  and VXLAN lessons were also added to the Learn views of both UIs.
 
 ## [0.1.0] — 2026-07-07
 

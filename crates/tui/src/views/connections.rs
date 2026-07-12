@@ -4,10 +4,11 @@ use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::colors::{protocol_color, PANEL_BORDER, SELECTED_BG};
+use crate::colors::protocol_color;
 use netscope_core::flows::Flow;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
+    let theme = app.theme();
     let flows = app.flows.flows();
 
     let title = format!(
@@ -22,7 +23,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(theme.border));
 
     if flows.is_empty() {
         let inner = block.inner(area);
@@ -95,7 +96,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .collect();
     let table = Table::new(rows, constraints)
         .header(Row::new(header_cells))
-        .row_highlight_style(Style::new().bg(SELECTED_BG))
+        .row_highlight_style(Style::new().bg(theme.selected_bg))
         .block(block);
 
     let mut state = TableState::new().with_selected(Some(app.conn_selected.min(flows.len() - 1)));

@@ -7,7 +7,7 @@ use std::net::IpAddr;
 
 use chrono::{DateTime, Utc};
 
-use crate::models::{Packet, Protocol};
+use crate::models::{Packet, PluginTransport, Protocol};
 
 /// Transport class used to group packets into flows. The application
 /// protocol (HTTP, DNS, TLS...) may differ per packet, but the flow is
@@ -33,7 +33,37 @@ impl Transport {
             | Protocol::Imap
             | Protocol::Pop3
             | Protocol::Telnet
-            | Protocol::Rdp => Transport::Tcp,
+            | Protocol::Rdp
+            | Protocol::WebSocket
+            | Protocol::Http2
+            | Protocol::Grpc
+            | Protocol::Postgres
+            | Protocol::Mysql
+            | Protocol::Mongodb
+            | Protocol::Redis
+            | Protocol::Cassandra
+            | Protocol::Modbus
+            | Protocol::Dnp3
+            | Protocol::Enip
+            | Protocol::OpcUa
+            | Protocol::Ldap
+            | Protocol::Mqtt
+            | Protocol::Bgp => Transport::Tcp,
+            Protocol::Bacnet
+            | Protocol::Kerberos
+            | Protocol::Radius
+            | Protocol::OpenVpn
+            | Protocol::WireGuard
+            | Protocol::Coap => Transport::Udp,
+            // IPsec ESP/AH ride directly on IP; OSPF is IP protocol 89; and the
+            // link-/operator-layer protocols aren't TCP/UDP at all.
+            Protocol::Esp
+            | Protocol::Ah
+            | Protocol::Ospf
+            | Protocol::Lldp
+            | Protocol::Lacp
+            | Protocol::Stp
+            | Protocol::Mpls => Transport::Other,
             Protocol::Udp
             | Protocol::Dns
             | Protocol::Dhcp
@@ -41,9 +71,18 @@ impl Transport {
             | Protocol::Mdns
             | Protocol::Snmp
             | Protocol::Quic
-            | Protocol::Sip => Transport::Udp,
+            | Protocol::Sip
+            | Protocol::Vxlan
+            | Protocol::Rtp
+            | Protocol::Rtcp => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
+            // A plugin-recognised protocol groups by the transport it declared,
+            // so its packets share a flow with the plain TCP/UDP ones around it.
+            Protocol::Plugin(p) => match p.transport {
+                PluginTransport::Tcp => Transport::Tcp,
+                PluginTransport::Udp => Transport::Udp,
+            },
             Protocol::Wlan | Protocol::Unknown(_) => Transport::Other,
         }
     }
@@ -114,7 +153,12 @@ impl Flow {
 /// How specific a protocol is; higher wins when labeling a flow.
 fn protocol_rank(proto: &Protocol) -> u8 {
     match proto {
-        Protocol::Http => 4,
+        // WebSocket outranks HTTP: after the Upgrade handshake the whole
+        // conversation is WebSocket, so that's the truer label for the flow.
+        // Likewise gRPC outranks HTTP/2: the frames are HTTP/2 either way,
+        // but a gRPC hit is the more specific truth about the conversation.
+        Protocol::WebSocket | Protocol::Grpc => 5,
+        Protocol::Http | Protocol::Http2 => 4,
         Protocol::Tls | Protocol::Quic => 3,
         Protocol::Dns
         | Protocol::Mdns
@@ -128,7 +172,38 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Imap
         | Protocol::Pop3
         | Protocol::Telnet
-        | Protocol::Rdp => 3,
+        | Protocol::Rdp
+        | Protocol::Vxlan
+        | Protocol::Postgres
+        | Protocol::Mysql
+        | Protocol::Mongodb
+        | Protocol::Redis
+        | Protocol::Cassandra
+        | Protocol::Modbus
+        | Protocol::Dnp3
+        | Protocol::Bacnet
+        | Protocol::Enip
+        | Protocol::OpcUa
+        | Protocol::Rtp
+        | Protocol::Rtcp
+        | Protocol::Kerberos
+        | Protocol::Ldap
+        | Protocol::Radius
+        | Protocol::OpenVpn
+        | Protocol::WireGuard
+        | Protocol::Esp
+        | Protocol::Ah
+        | Protocol::Mqtt
+        | Protocol::Coap
+        | Protocol::Bgp
+        | Protocol::Ospf
+        | Protocol::Lldp
+        | Protocol::Lacp
+        | Protocol::Stp
+        | Protocol::Mpls => 3,
+        // A plugin naming the traffic is more specific than bare TCP/UDP, so
+        // it wins the flow label — but yields to a built-in app protocol.
+        Protocol::Plugin(_) => 4,
         Protocol::Tcp | Protocol::Udp | Protocol::Icmp | Protocol::Arp | Protocol::Wlan => 1,
         Protocol::Unknown(_) => 0,
     }
@@ -238,7 +313,7 @@ mod tests {
             protocol: proto,
             length: len,
             summary: format!("{src}:{src_port} → {dst}:{dst_port}"),
-            data: Vec::new(),
+            data: bytes::Bytes::new(),
         }
     }
 

@@ -1,4 +1,6 @@
 pub mod capture;
+pub mod config;
+pub mod crypto;
 pub mod dissectors;
 pub mod education;
 pub mod filter;
@@ -6,4 +8,7 @@ pub mod firewall;
 pub mod flows;
 pub mod models;
 pub mod names;
+pub mod pipeline;
+pub mod plugins;
 pub mod stats;
+pub mod stream;

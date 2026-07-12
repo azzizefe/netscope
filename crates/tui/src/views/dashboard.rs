@@ -1,15 +1,16 @@
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::style::{Style, Stylize};
+use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::colors::{protocol_color, PANEL_BORDER};
+use crate::colors::protocol_color;
 use netscope_core::models::Protocol;
 use netscope_core::stats::StatsSnapshot;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
+    let border = app.theme().border;
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -23,13 +24,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
     // One snapshot per frame keeps every panel consistent and avoids repeatedly
     // rebuilding the (cloned) stats maps four times per render.
     let snap = app.stats.snapshot();
-    render_stats_panel(frame, layout[0], &snap);
-    render_protocol_distribution(frame, layout[1], &snap);
-    render_bandwidth_panel(frame, layout[2], &snap);
-    render_top_talkers(frame, layout[3], &snap);
+    render_stats_panel(frame, layout[0], &snap, border);
+    render_protocol_distribution(frame, layout[1], &snap, border);
+    render_bandwidth_panel(frame, layout[2], &snap, border);
+    render_top_talkers(frame, layout[3], &snap, border);
 }
 
-fn render_stats_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
+fn render_stats_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
     let lines = vec![
         Line::from(vec![
             Span::raw(format!(" Total Packets: {}", snap.total_packets)),
@@ -56,12 +57,17 @@ fn render_stats_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
     let block = Block::default()
         .title(" Stats ")
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(border));
 
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn render_protocol_distribution(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
+fn render_protocol_distribution(
+    frame: &mut Frame,
+    area: Rect,
+    snap: &StatsSnapshot,
+    border: Color,
+) {
     let total = snap.total_packets.max(1) as f64;
 
     let mut protocols: Vec<(&Protocol, &netscope_core::stats::ProtocolStats)> =
@@ -92,12 +98,12 @@ fn render_protocol_distribution(frame: &mut Frame, area: Rect, snap: &StatsSnaps
     let block = Block::default()
         .title(" Protocol Distribution ")
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(border));
 
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn render_bandwidth_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
+fn render_bandwidth_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
     let bw_bps = snap.current_bandwidth;
     let bar_len = ((bw_bps / 10_000_000.0).min(1.0) * 50.0) as usize;
     let bar = "━".repeat(bar_len);
@@ -114,12 +120,12 @@ fn render_bandwidth_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
     let block = Block::default()
         .title(" Bandwidth ")
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(border));
 
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn render_top_talkers(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
+fn render_top_talkers(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
     let layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -143,7 +149,7 @@ fn render_top_talkers(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
     let sent_block = Block::default()
         .title(" Top Senders ")
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(border));
     frame.render_widget(
         Paragraph::new(if sent_lines.is_empty() {
             vec![Line::from(" (no data)")]
@@ -172,7 +178,7 @@ fn render_top_talkers(frame: &mut Frame, area: Rect, snap: &StatsSnapshot) {
     let recv_block = Block::default()
         .title(" Top Receivers ")
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(border));
     frame.render_widget(
         Paragraph::new(if recv_lines.is_empty() {
             vec![Line::from(" (no data)")]

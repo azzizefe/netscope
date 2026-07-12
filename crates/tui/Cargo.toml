@@ -19,3 +19,8 @@ anyhow = "1"
 crossbeam-channel = "0.5"
 chrono = "0.4"
 netscope-core = { path = "../core", version = "0.1.0" }
+
+[dev-dependencies]
+# Frame-byte fixtures in the detail-tree / stream / insights unit tests build
+# `Packet.data`, which is a `bytes::Bytes`.
+bytes = "1"

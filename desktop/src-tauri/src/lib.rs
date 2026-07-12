@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use netscope_core::capture::CaptureEngine;
+use netscope_core::config::Config;
 use netscope_core::models::Packet;
 use netscope_core::names::NameCache;
 use serde::Serialize;
@@ -52,7 +53,7 @@ fn packet_to_info(pkt: &Packet, names: &NameCache) -> PacketInfo {
         .dst_addr
         .and_then(|a| names.name_for(a).map(|s| s.to_string()));
     PacketInfo {
-        raw: pkt.data.clone(),
+        raw: pkt.data.to_vec(),
         timestamp: pkt.timestamp.format("%H:%M:%S%.3f").to_string(),
         epoch_ms: pkt.timestamp.timestamp_millis(),
         src_addr: pkt.src_addr.map(|a| a.to_string()),
@@ -107,6 +108,37 @@ fn get_lessons() -> Vec<LessonInfo> {
         ("POP3", Protocol::Pop3),
         ("Telnet", Protocol::Telnet),
         ("RDP", Protocol::Rdp),
+        ("WebSocket", Protocol::WebSocket),
+        ("HTTP/2", Protocol::Http2),
+        ("gRPC", Protocol::Grpc),
+        ("VXLAN", Protocol::Vxlan),
+        ("PostgreSQL", Protocol::Postgres),
+        ("MySQL", Protocol::Mysql),
+        ("MongoDB", Protocol::Mongodb),
+        ("Redis", Protocol::Redis),
+        ("Cassandra", Protocol::Cassandra),
+        ("Modbus", Protocol::Modbus),
+        ("DNP3", Protocol::Dnp3),
+        ("BACnet", Protocol::Bacnet),
+        ("EtherNet/IP", Protocol::Enip),
+        ("OPC UA", Protocol::OpcUa),
+        ("RTP", Protocol::Rtp),
+        ("RTCP", Protocol::Rtcp),
+        ("Kerberos", Protocol::Kerberos),
+        ("LDAP", Protocol::Ldap),
+        ("RADIUS", Protocol::Radius),
+        ("OpenVPN", Protocol::OpenVpn),
+        ("WireGuard", Protocol::WireGuard),
+        ("ESP", Protocol::Esp),
+        ("AH", Protocol::Ah),
+        ("MQTT", Protocol::Mqtt),
+        ("CoAP", Protocol::Coap),
+        ("BGP", Protocol::Bgp),
+        ("OSPF", Protocol::Ospf),
+        ("LLDP", Protocol::Lldp),
+        ("LACP", Protocol::Lacp),
+        ("STP", Protocol::Stp),
+        ("MPLS", Protocol::Mpls),
         ("802.11", Protocol::Wlan),
         ("Unknown", Protocol::Unknown(String::new())),
     ];
@@ -134,6 +166,230 @@ fn get_glossary() -> Vec<TermInfo> {
             meaning: t.meaning.to_string(),
         })
         .collect()
+}
+
+// ---- GeoIP (offline MMDB) --------------------------------------------------
+//
+// An offline MaxMind database (.mmdb — e.g. the free GeoLite2-City) resolves
+// IP locations locally, with no network calls. When one is loaded the
+// frontend prefers it over the opt-in ipwho.is web lookup, so locations work
+// offline and stay private.
+
+#[derive(Default)]
+struct GeoDbState {
+    reader: Option<maxminddb::Reader<Vec<u8>>>,
+    path: String,
+}
+
+#[derive(Serialize, Clone)]
+struct GeoDbInfo {
+    path: String,
+    /// e.g. "GeoLite2-City", "GeoLite2-Country", "GeoLite2-ASN".
+    db_type: String,
+    /// Database build time, seconds since the Unix epoch.
+    build_epoch: u64,
+}
+
+#[tauri::command]
+fn geoip_load_db(path: String, state: State<'_, Mutex<GeoDbState>>) -> Result<GeoDbInfo, String> {
+    let reader = maxminddb::Reader::open_readfile(&path)
+        .map_err(|e| format!("Cannot open GeoIP database: {e}"))?;
+    let info = GeoDbInfo {
+        path: path.clone(),
+        db_type: reader.metadata.database_type.clone(),
+        build_epoch: reader.metadata.build_epoch,
+    };
+    let mut guard = state.lock().unwrap();
+    guard.reader = Some(reader);
+    guard.path = path;
+    Ok(info)
+}
+
+#[tauri::command]
+fn geoip_unload_db(state: State<'_, Mutex<GeoDbState>>) {
+    let mut guard = state.lock().unwrap();
+    guard.reader = None;
+    guard.path.clear();
+}
+
+#[derive(Serialize, Clone, Default)]
+struct GeoLookup {
+    country: Option<String>,
+    code: Option<String>,
+    city: Option<String>,
+    region: Option<String>,
+    asn: Option<u32>,
+    org: Option<String>,
+}
+
+/// English name from an MMDB localized-names map (any locale as fallback).
+fn english_name(names: &Option<std::collections::BTreeMap<&str, &str>>) -> Option<String> {
+    let names = names.as_ref()?;
+    names
+        .get("en")
+        .copied()
+        .or_else(|| names.values().next().copied())
+        .map(str::to_string)
+}
+
+#[tauri::command]
+fn geoip_lookup(
+    ip: String,
+    state: State<'_, Mutex<GeoDbState>>,
+) -> Result<Option<GeoLookup>, String> {
+    use maxminddb::geoip2;
+    let addr: std::net::IpAddr = ip.parse().map_err(|e| format!("Invalid IP: {e}"))?;
+    let guard = state.lock().unwrap();
+    let Some(reader) = guard.reader.as_ref() else {
+        return Ok(None);
+    };
+    // ASN databases carry network-owner fields instead of places.
+    if reader.metadata.database_type.contains("ASN") {
+        return match reader.lookup::<geoip2::Asn>(addr) {
+            Ok(a) => Ok(Some(GeoLookup {
+                asn: a.autonomous_system_number,
+                org: a.autonomous_system_organization.map(str::to_string),
+                ..Default::default()
+            })),
+            Err(maxminddb::MaxMindDBError::AddressNotFoundError(_)) => Ok(None),
+            Err(e) => Err(format!("GeoIP lookup failed: {e}")),
+        };
+    }
+    // The City struct also decodes from Country databases — the city and
+    // subdivision fields just come back empty.
+    match reader.lookup::<geoip2::City>(addr) {
+        Ok(c) => {
+            let country = c.country.as_ref();
+            Ok(Some(GeoLookup {
+                country: country.and_then(|c| english_name(&c.names)),
+                code: country.and_then(|c| c.iso_code.map(str::to_string)),
+                city: c.city.as_ref().and_then(|c| english_name(&c.names)),
+                region: c
+                    .subdivisions
+                    .as_ref()
+                    .and_then(|s| s.first())
+                    .and_then(|s| english_name(&s.names)),
+                ..Default::default()
+            }))
+        }
+        Err(maxminddb::MaxMindDBError::AddressNotFoundError(_)) => Ok(None),
+        Err(e) => Err(format!("GeoIP lookup failed: {e}")),
+    }
+}
+
+// ---- Layered configuration & plugins (ROADMAP §2.3 / §2.4) -----------------
+//
+// ~/.netscope/config.toml (plus optional profiles) is loaded once at startup:
+// it can point at an offline GeoIP database, enable the plugins directory and
+// name the active profile. Declarative protocol plugins (*.toml) are loaded
+// into netscope-core's registry so the dissectors pick them up.
+
+struct ConfigState {
+    config: Config,
+    plugins_loaded: usize,
+    plugin_errors: Vec<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct AppConfigInfo {
+    /// The config directory (~/.netscope or $NETSCOPE_CONFIG_DIR).
+    dir: String,
+    active_profile: Option<String>,
+    profiles: Vec<String>,
+    plugins_enabled: bool,
+    plugins_dir: String,
+    plugins_loaded: usize,
+    plugin_errors: Vec<String>,
+    /// Offline GeoIP database auto-loaded from the config, if any.
+    geoip_db: Option<GeoDbInfo>,
+}
+
+fn config_info(cfg: &ConfigState, geo: &GeoDbState) -> AppConfigInfo {
+    AppConfigInfo {
+        dir: cfg.config.dir().display().to_string(),
+        active_profile: cfg.config.active_profile().map(str::to_string),
+        profiles: cfg.config.profiles(),
+        plugins_enabled: cfg.config.plugins.enabled,
+        plugins_dir: cfg.config.plugins_dir().display().to_string(),
+        plugins_loaded: cfg.plugins_loaded,
+        plugin_errors: cfg.plugin_errors.clone(),
+        geoip_db: geo.reader.as_ref().map(|r| GeoDbInfo {
+            path: geo.path.clone(),
+            db_type: r.metadata.database_type.clone(),
+            build_epoch: r.metadata.build_epoch,
+        }),
+    }
+}
+
+#[tauri::command]
+fn get_app_config(
+    cfg: State<'_, Mutex<ConfigState>>,
+    geo: State<'_, Mutex<GeoDbState>>,
+) -> AppConfigInfo {
+    let cfg = cfg.lock().unwrap();
+    let geo = geo.lock().unwrap();
+    config_info(&cfg, &geo)
+}
+
+#[derive(Serialize, Clone)]
+struct PluginInfo {
+    name: String,
+    transport: String,
+    ports: Vec<u16>,
+    description: String,
+}
+
+#[tauri::command]
+fn list_plugins() -> Vec<PluginInfo> {
+    netscope_core::plugins::installed()
+        .into_iter()
+        .map(|p| PluginInfo {
+            name: p.name,
+            transport: match p.transport {
+                netscope_core::plugins::TransportKind::Tcp => "tcp".into(),
+                netscope_core::plugins::TransportKind::Udp => "udp".into(),
+            },
+            ports: p.ports,
+            description: p.description,
+        })
+        .collect()
+}
+
+/// Re-read config.toml and the plugins directory, so edits apply without an
+/// app restart. Returns the refreshed config summary.
+#[tauri::command]
+fn reload_plugins(
+    cfg: State<'_, Mutex<ConfigState>>,
+    geo: State<'_, Mutex<GeoDbState>>,
+) -> AppConfigInfo {
+    let mut cfg = cfg.lock().unwrap();
+    cfg.config = Config::load();
+    let outcome = netscope_core::plugins::load_from_config(&cfg.config);
+    cfg.plugins_loaded = outcome.loaded;
+    cfg.plugin_errors = outcome.errors;
+    let geo = geo.lock().unwrap();
+    config_info(&cfg, &geo)
+}
+
+/// Capture-pipeline counters (ROADMAP §2.1): frames received off the wire,
+/// dropped because the ring was full, and dissected. `None` when no capture
+/// has been started.
+#[derive(Serialize, Clone, Copy)]
+struct CaptureStats {
+    received: u64,
+    dropped: u64,
+    dissected: u64,
+}
+
+#[tauri::command]
+fn get_capture_stats(state: State<'_, Mutex<CaptureState>>) -> Option<CaptureStats> {
+    let guard = state.lock().ok()?;
+    let stats = guard.engine.as_ref()?.pipeline_stats()?;
+    Some(CaptureStats {
+        received: stats.received,
+        dropped: stats.dropped,
+        dissected: stats.dissected,
+    })
 }
 
 #[tauri::command]
@@ -337,12 +593,95 @@ fn stop_capture(state: State<'_, Mutex<CaptureState>>) -> Result<(), String> {
     Ok(())
 }
 
+/// Packets per `packets-batch` IPC event. Batching turns a million tiny
+/// events into ~a thousand list-sized ones — the difference between minutes
+/// and seconds on big files.
+const OPEN_PCAP_BATCH: usize = 1024;
+
+/// Ingest a batch: learn hostnames, build the frontend views, stash the raw
+/// packets in the shared buffer, and emit one `packets-batch` event.
+fn ingest_batch(app: &AppHandle, batch: Vec<Packet>) {
+    if batch.is_empty() {
+        return;
+    }
+    let infos: Vec<PacketInfo> = if let Ok(mut g) = app.state::<Mutex<CaptureState>>().lock() {
+        for pkt in &batch {
+            g.names.observe(pkt);
+        }
+        let infos = batch.iter().map(|p| packet_to_info(p, &g.names)).collect();
+        g.packet_buffer.extend(batch);
+        if g.packet_buffer.len() > 100_000 {
+            let excess = g.packet_buffer.len() - 50_000;
+            g.packet_buffer.drain(..excess);
+        }
+        infos
+    } else {
+        let names = NameCache::new();
+        batch.iter().map(|p| packet_to_info(p, &names)).collect()
+    };
+    let _ = app.emit("packets-batch", infos);
+}
+
 #[tauri::command]
 fn open_pcap(
     app: AppHandle,
     state: State<'_, Mutex<CaptureState>>,
     path: String,
 ) -> Result<(), String> {
+    run_open(app, &state, path, None)
+}
+
+/// Shared open logic for [`open_pcap`] and [`open_pcap_encrypted`]. When
+/// `cleanup` is set (an encrypted open's staged plaintext), the file is
+/// removed once the whole capture has been ingested.
+fn run_open(
+    app: AppHandle,
+    state: &State<'_, Mutex<CaptureState>>,
+    path: String,
+    cleanup: Option<std::path::PathBuf>,
+) -> Result<(), String> {
+    // Fast path (ROADMAP §2.2): memory-map classic pcaps — no up-front load,
+    // page-by-page parallel dissection, batched IPC. pcapng and anything the
+    // mapper rejects falls back to the streaming libpcap reader below.
+    match netscope_core::stream::LazyCapture::open(&path) {
+        Ok(cap) => {
+            {
+                let mut guard = state.lock().map_err(|e| e.to_string())?;
+                // Opening a file replaces (and stops) any running capture.
+                guard.engine = None;
+            }
+            let app_handle = app.clone();
+            std::thread::spawn(move || {
+                let total = cap.len();
+                // Tell the UI the packet count up front so it can show a
+                // determinate load progress bar (ROADMAP §6.2).
+                let _ = app_handle.emit("capture-total", total);
+                let mut start = 0;
+                while start < total {
+                    let page = cap.packets_range(start, OPEN_PCAP_BATCH);
+                    start += OPEN_PCAP_BATCH;
+                    ingest_batch(&app_handle, page);
+                }
+                drop(cap); // release the mmap before deleting the staged file
+                if let Some(tmp) = cleanup {
+                    let _ = std::fs::remove_file(tmp);
+                }
+                let _ = app_handle.emit("capture-finished", ());
+            });
+            return Ok(());
+        }
+        Err(e) => {
+            // Only pcapng (or other still-readable formats) should fall
+            // through; a plain unreadable file fails loudly right here.
+            if !std::path::Path::new(&path).exists() {
+                if let Some(tmp) = &cleanup {
+                    let _ = std::fs::remove_file(tmp);
+                }
+                return Err(format!("Cannot open '{path}': {e}"));
+            }
+        }
+    }
+
     let mut capture = CaptureEngine::new();
     let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
 
@@ -355,19 +694,27 @@ fn open_pcap(
 
     let app_handle = app.clone();
     std::thread::spawn(move || {
-        while let Ok(pkt) = packet_rx.recv() {
-            let info = if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
-                g.names.observe(&pkt);
-                let info = packet_to_info(&pkt, &g.names);
-                g.packet_buffer.push(pkt);
-                if g.packet_buffer.len() > 100_000 {
-                    g.packet_buffer.drain(..50_000);
+        let mut batch: Vec<Packet> = Vec::with_capacity(OPEN_PCAP_BATCH);
+        loop {
+            match packet_rx.recv_timeout(std::time::Duration::from_millis(100)) {
+                Ok(pkt) => {
+                    batch.push(pkt);
+                    if batch.len() >= OPEN_PCAP_BATCH {
+                        ingest_batch(&app_handle, std::mem::take(&mut batch));
+                    }
                 }
-                info
-            } else {
-                packet_to_info(&pkt, &NameCache::new())
-            };
-            let _ = app_handle.emit("packet", info);
+                Err(crossbeam_channel::RecvTimeoutError::Timeout) => {
+                    // Flush what's queued so the UI stays live on slow reads.
+                    ingest_batch(&app_handle, std::mem::take(&mut batch));
+                }
+                Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
+                    ingest_batch(&app_handle, std::mem::take(&mut batch));
+                    break;
+                }
+            }
+        }
+        if let Some(tmp) = cleanup {
+            let _ = std::fs::remove_file(tmp);
         }
         let _ = app_handle.emit("capture-finished", ());
     });
@@ -375,67 +722,130 @@ fn open_pcap(
     Ok(())
 }
 
+/// Serialize the captured packets into an in-memory classic pcap (Ethernet,
+/// microsecond timestamps). Shared by plain and encrypted saving.
+fn build_pcap_bytes(packets: &[Packet]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(24 + packets.len() * 64);
+    // Global header (24 bytes). Little-endian magic so the file is portable
+    // regardless of the host's endianness (the old code used native-endian).
+    out.extend_from_slice(&0xa1b2c3d4u32.to_le_bytes()); // magic, microseconds
+    out.extend_from_slice(&2u16.to_le_bytes()); // version major
+    out.extend_from_slice(&4u16.to_le_bytes()); // version minor
+    out.extend_from_slice(&0i32.to_le_bytes()); // thiszone (UTC)
+    out.extend_from_slice(&0u32.to_le_bytes()); // sigfigs
+    out.extend_from_slice(&65535u32.to_le_bytes()); // snaplen
+    out.extend_from_slice(&1u32.to_le_bytes()); // network = Ethernet
+
+    for pkt in packets {
+        let ts_sec = pkt.timestamp.timestamp() as u32;
+        let ts_usec = pkt.timestamp.timestamp_subsec_micros();
+        // incl_len is the number of bytes actually stored (captured data), not
+        // the original on-wire length; writing pkt.length would desync a reader.
+        out.extend_from_slice(&ts_sec.to_le_bytes());
+        out.extend_from_slice(&ts_usec.to_le_bytes());
+        out.extend_from_slice(&(pkt.data.len() as u32).to_le_bytes());
+        out.extend_from_slice(&(pkt.length as u32).to_le_bytes());
+        out.extend_from_slice(&pkt.data);
+    }
+    out
+}
+
 #[tauri::command]
 fn save_pcap(state: State<'_, Mutex<CaptureState>>, path: String) -> Result<(), String> {
-    use std::io::Write;
-
     let guard = state.lock().map_err(|e| e.to_string())?;
     if guard.packet_buffer.is_empty() {
         return Err("No captured packets to save.".to_string());
     }
+    let bytes = build_pcap_bytes(&guard.packet_buffer);
+    drop(guard);
+    std::fs::write(&path, bytes).map_err(|e| format!("Failed to write '{path}': {e}"))
+}
 
-    let mut file =
-        std::fs::File::create(&path).map_err(|e| format!("Failed to create '{path}': {e}"))?;
-
-    // Write pcap global header (24 bytes)
-    let magic: u32 = 0xa1b2c3d4; // microsecond resolution
-    let version_major: u16 = 2;
-    let version_minor: u16 = 4;
-    let thiszone: i32 = 0; // timezone offset (UTC)
-    let sigfigs: u32 = 0;
-    let snaplen: u32 = 65535;
-    let network: u32 = 1; // Ethernet
-
-    let global_header = [
-        &magic.to_ne_bytes()[..],
-        &version_major.to_ne_bytes()[..],
-        &version_minor.to_ne_bytes()[..],
-        &thiszone.to_ne_bytes()[..],
-        &sigfigs.to_ne_bytes()[..],
-        &snaplen.to_ne_bytes()[..],
-        &network.to_ne_bytes()[..],
-    ]
-    .concat();
-    file.write_all(&global_header)
-        .map_err(|e| format!("Failed to write pcap header: {e}"))?;
-
-    for pkt in &guard.packet_buffer {
-        let ts_sec = pkt.timestamp.timestamp() as u32;
-        let ts_usec = pkt.timestamp.timestamp_subsec_micros();
-        // incl_len is the number of bytes actually stored in the file, which is
-        // the captured data — not the original on-wire length. When snaplen
-        // truncates a frame these differ, and writing pkt.length here would
-        // desync the reader (it would read past the stored bytes).
-        let incl_len = pkt.data.len() as u32;
-        let orig_len = pkt.length as u32;
-
-        let pkt_header = [
-            &ts_sec.to_ne_bytes()[..],
-            &ts_usec.to_ne_bytes()[..],
-            &incl_len.to_ne_bytes()[..],
-            &orig_len.to_ne_bytes()[..],
-        ]
-        .concat();
-        file.write_all(&pkt_header)
-            .map_err(|e| format!("Failed to write packet header: {e}"))?;
-        file.write_all(&pkt.data)
-            .map_err(|e| format!("Failed to write packet data: {e}"))?;
+/// Save the capture as an encrypted `.pcap.enc` bundle (ROADMAP §5.4). The
+/// passphrase never leaves this process; the file is AES-256-GCM sealed with an
+/// Argon2id-derived key and is unreadable — and tamper-evident — without it.
+#[tauri::command]
+fn save_pcap_encrypted(
+    state: State<'_, Mutex<CaptureState>>,
+    path: String,
+    passphrase: String,
+) -> Result<(), String> {
+    if passphrase.is_empty() {
+        return Err("A passphrase is required to encrypt the capture.".to_string());
     }
+    let guard = state.lock().map_err(|e| e.to_string())?;
+    if guard.packet_buffer.is_empty() {
+        return Err("No captured packets to save.".to_string());
+    }
+    let bytes = build_pcap_bytes(&guard.packet_buffer);
+    drop(guard);
+    let sealed = netscope_core::crypto::encrypt(&bytes, &passphrase)
+        .map_err(|e| format!("Encryption failed: {e}"))?;
+    std::fs::write(&path, sealed).map_err(|e| format!("Failed to write '{path}': {e}"))
+}
 
-    Ok(())
+/// Open an encrypted `.pcap.enc` bundle: decrypt in memory, then feed the
+/// recovered pcap through the normal open path. The plaintext is written to a
+/// short-lived temp file (both core readers are file-backed) that is deleted
+/// as soon as the capture has been ingested.
+#[tauri::command]
+fn open_pcap_encrypted(
+    app: AppHandle,
+    state: State<'_, Mutex<CaptureState>>,
+    path: String,
+    passphrase: String,
+) -> Result<(), String> {
+    let sealed = std::fs::read(&path).map_err(|e| format!("Cannot read '{path}': {e}"))?;
+    if !netscope_core::crypto::is_encrypted(&sealed) {
+        return Err("This file is not a netscope encrypted capture (.pcap.enc).".to_string());
+    }
+    let plaintext = netscope_core::crypto::decrypt(&sealed, &passphrase)
+        .map_err(|e| format!("Cannot decrypt: {e}"))?;
+
+    // Unique temp path next to the system temp dir, cleaned up after ingest.
+    let mut temp = std::env::temp_dir();
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    temp.push(format!("netscope-dec-{stamp}-{}.pcap", std::process::id()));
+    std::fs::write(&temp, &plaintext)
+        .map_err(|e| format!("Cannot stage decrypted capture: {e}"))?;
+
+    run_open(app, &state, temp.to_string_lossy().into_owned(), Some(temp))
 }
 
 pub fn run() {
+    // Layered configuration (~/.netscope): load once, install the protocol
+    // plugins into the core registry, and pre-load an offline GeoIP database
+    // when the config names one (or a geoip.mmdb sits in the config dir).
+    let config = Config::load();
+    let outcome = netscope_core::plugins::load_from_config(&config);
+    for err in &outcome.errors {
+        eprintln!("Warning: plugin skipped — {err}");
+    }
+
+    let mut geo = GeoDbState::default();
+    let geoip_path = config
+        .geoip_database_path()
+        .filter(|p| p.exists())
+        .or_else(|| Some(config.dir().join("geoip.mmdb")).filter(|p| p.exists()));
+    if let Some(path) = geoip_path {
+        match maxminddb::Reader::open_readfile(&path) {
+            Ok(reader) => {
+                geo.path = path.display().to_string();
+                geo.reader = Some(reader);
+            }
+            Err(e) => eprintln!("Warning: cannot load GeoIP DB '{}': {e}", path.display()),
+        }
+    }
+
+    let config_state = ConfigState {
+        config,
+        plugins_loaded: outcome.loaded,
+        plugin_errors: outcome.errors,
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Mutex::new(CaptureState {
@@ -445,12 +855,16 @@ pub fn run() {
             names: NameCache::new(),
             _packet_count: 0,
         }))
+        .manage(Mutex::new(geo))
+        .manage(Mutex::new(config_state))
         .invoke_handler(tauri::generate_handler![
             list_interfaces,
             start_capture,
             stop_capture,
             open_pcap,
+            open_pcap_encrypted,
             save_pcap,
+            save_pcap_encrypted,
             get_lessons,
             get_glossary,
             is_elevated,
@@ -458,6 +872,13 @@ pub fn run() {
             block_ip,
             unblock_ip,
             replay_packet,
+            geoip_load_db,
+            geoip_unload_db,
+            geoip_lookup,
+            get_app_config,
+            list_plugins,
+            reload_plugins,
+            get_capture_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running netscope desktop");

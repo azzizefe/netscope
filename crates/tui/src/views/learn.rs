@@ -8,21 +8,8 @@ use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::colors::{protocol_color, PANEL_BORDER};
+use crate::colors::protocol_color;
 use netscope_core::education::{all_lessons, glossary};
-use netscope_core::models::Protocol;
-
-// Protocols in the same order as `all_lessons`, so each lesson gets its color.
-const LESSON_PROTOCOLS: [Protocol; 8] = [
-    Protocol::Dns,
-    Protocol::Tcp,
-    Protocol::Tls,
-    Protocol::Http,
-    Protocol::Udp,
-    Protocol::Icmp,
-    Protocol::Arp,
-    Protocol::Unknown(String::new()),
-];
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let mut lines: Vec<Line> = vec![
@@ -38,7 +25,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Line::from(""),
     ];
 
-    for (lesson, proto) in all_lessons().iter().zip(LESSON_PROTOCOLS.iter()) {
+    for (proto, lesson) in &all_lessons() {
         let color = protocol_color(proto);
         lines.push(Line::from(Span::styled(
             format!("▍ {}", lesson.title),
@@ -89,7 +76,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
         .title(hint)
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(PANEL_BORDER));
+        .border_style(Style::new().fg(app.theme().border));
 
     let paragraph = Paragraph::new(lines)
         .block(block)

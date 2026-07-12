@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeSet, HashSet, VecDeque};
 use std::net::IpAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -14,9 +14,14 @@ use netscope_core::flows::FlowTable;
 use netscope_core::models::Packet;
 use netscope_core::names::NameCache;
 use netscope_core::stats::StatsEngine;
-use ratatui::crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
+use ratatui::crossterm::event::{
+    KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+};
+use ratatui::layout::Rect;
 use ratatui::DefaultTerminal;
 
+use crate::columns::Columns;
+use crate::theme::{Theme, THEMES};
 use crate::views::View;
 
 const MAX_PACKETS: usize = 10_000;
@@ -48,6 +53,36 @@ pub struct App {
     pub status_msg: Option<(String, Instant)>,
     /// Vertical scroll offset in the Learn view.
     pub learn_scroll: u16,
+    /// Vertical scroll offset in the Insights view.
+    pub insights_scroll: u16,
+    /// User-defined coloring rules (first match tints the packet row).
+    pub color_rules: crate::colors::ColorRules,
+    /// Index into [`THEMES`] of the active chrome theme (cycled with `t`).
+    pub theme_idx: usize,
+    /// Which packet-list columns are shown (toggled in the Columns overlay).
+    pub columns: Columns,
+    /// Whether the Columns overlay is open.
+    pub show_columns: bool,
+    /// Whether the Follow-Stream overlay is open.
+    pub show_stream: bool,
+    /// Scroll offset within the Follow-Stream overlay.
+    pub stream_scroll: u16,
+    /// Whether keyboard focus is inside the detail tree (navigating layers)
+    /// rather than the packet list.
+    pub detail_focus: bool,
+    /// Selected layer index within the detail tree, when focused.
+    pub detail_sel: usize,
+    /// Detail-tree layer indices that are collapsed (hide their fields).
+    pub detail_collapsed: HashSet<usize>,
+    // ---- Mouse hit-test regions, refreshed each render ----
+    /// The terminal row the tab strip is drawn on.
+    pub tab_row: u16,
+    /// Per-tab `(x_start, x_end, view)` ranges on the tab strip.
+    pub tab_hits: Vec<(u16, u16, View)>,
+    /// Inner area of the packet-list rows (for click-to-select).
+    pub list_inner: Rect,
+    /// Index of the first packet row currently drawn (the table's scroll offset).
+    pub list_offset: usize,
 }
 
 impl App {
@@ -57,7 +92,9 @@ impl App {
         bpf_filter: Option<&str>,
         output: Option<&str>,
         monitor: bool,
+        colors: Option<&str>,
     ) -> Result<Self> {
+        let color_rules = crate::colors::ColorRules::load(colors.map(std::path::Path::new))?;
         let running = Arc::new(AtomicBool::new(true));
         let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
 
@@ -98,7 +135,37 @@ impl App {
             elevated: netscope_core::firewall::is_elevated(),
             status_msg: None,
             learn_scroll: 0,
+            insights_scroll: 0,
+            color_rules,
+            // Startup theme: honour $NETSCOPE_THEME (e.g. "dracula"), else dark.
+            theme_idx: std::env::var("NETSCOPE_THEME")
+                .ok()
+                .and_then(|n| Theme::index_by_name(&n))
+                .unwrap_or(0),
+            columns: Columns::default(),
+            show_columns: false,
+            show_stream: false,
+            stream_scroll: 0,
+            detail_focus: false,
+            detail_sel: 0,
+            detail_collapsed: HashSet::new(),
+            tab_row: 0,
+            tab_hits: Vec::new(),
+            list_inner: Rect::default(),
+            list_offset: 0,
         })
+    }
+
+    /// The active chrome theme.
+    pub fn theme(&self) -> Theme {
+        THEMES[self.theme_idx % THEMES.len()]
+    }
+
+    /// Advance to the next chrome theme and report its name for the status bar.
+    fn cycle_theme(&mut self) {
+        self.theme_idx = (self.theme_idx + 1) % THEMES.len();
+        let name = self.theme().name;
+        self.notify(format!("Theme: {name}"));
     }
 
     /// Set a transient message shown in the status bar for a few seconds.
@@ -168,10 +235,14 @@ impl App {
             }
 
             if crossterm::event::poll(Duration::from_millis(10))? {
-                if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
-                    if key.kind == KeyEventKind::Press && !self.handle_key(key)? {
-                        break;
+                match crossterm::event::read()? {
+                    crossterm::event::Event::Key(key) => {
+                        if key.kind == KeyEventKind::Press && !self.handle_key(key)? {
+                            break;
+                        }
                     }
+                    crossterm::event::Event::Mouse(m) => self.handle_mouse(m),
+                    _ => {}
                 }
             }
         }
@@ -201,11 +272,60 @@ impl App {
         }
     }
 
+    /// Move the packet-list selection, resetting the detail tree to the top of
+    /// the newly-selected packet.
+    fn select_packet(&mut self, next: usize) {
+        self.selected = next;
+        self.detail_sel = 0;
+        self.detail_collapsed.clear();
+    }
+
+    /// Collapse/expand the focused detail-tree layer.
+    fn toggle_detail_node(&mut self) {
+        if !self.detail_collapsed.remove(&self.detail_sel) {
+            self.detail_collapsed.insert(self.detail_sel);
+        }
+    }
+
     fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Result<bool> {
+        // ---- Overlays consume input first ----
+        if self.show_columns {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('C') | KeyCode::Char('c') => self.show_columns = false,
+                KeyCode::Char(d @ '1'..='6') => {
+                    self.columns.toggle_index(d as usize - '0' as usize)
+                }
+                _ => {}
+            }
+            return Ok(true);
+        }
+        if self.show_stream {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('F') => {
+                    self.show_stream = false;
+                    self.stream_scroll = 0;
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.stream_scroll = self.stream_scroll.saturating_sub(1)
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.stream_scroll = self.stream_scroll.saturating_add(1)
+                }
+                _ => {}
+            }
+            return Ok(true);
+        }
         if self.show_help {
             if key.code == KeyCode::Char('?') || key.code == KeyCode::Esc {
                 self.show_help = false;
             }
+            return Ok(true);
+        }
+
+        // Theme cycling works in every view. Uppercase so it doesn't collide
+        // with lowercase filter text typed in the Packets view.
+        if key.code == KeyCode::Char('T') {
+            self.cycle_theme();
             return Ok(true);
         }
 
@@ -218,6 +338,21 @@ impl App {
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
                     self.learn_scroll = self.learn_scroll.saturating_add(1);
+                    return Ok(true);
+                }
+                _ => {}
+            }
+        }
+
+        // The Insights view scrolls with the arrow/vim keys too.
+        if self.view == View::Insights {
+            match key.code {
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.insights_scroll = self.insights_scroll.saturating_sub(1);
+                    return Ok(true);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.insights_scroll = self.insights_scroll.saturating_add(1);
                     return Ok(true);
                 }
                 _ => {}
@@ -247,22 +382,55 @@ impl App {
             }
         }
 
+        // Detail-tree focus (Packets view): navigation keys drive the tree,
+        // not the packet list, until Esc leaves focus.
+        if self.view == View::Packets && self.detail_focus {
+            match key.code {
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.detail_sel = self.detail_sel.saturating_sub(1);
+                    return Ok(true);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.detail_sel = self.detail_sel.saturating_add(1);
+                    return Ok(true);
+                }
+                KeyCode::Left | KeyCode::Char(' ') | KeyCode::Enter => {
+                    self.toggle_detail_node();
+                    return Ok(true);
+                }
+                KeyCode::Right => {
+                    self.detail_collapsed.remove(&self.detail_sel);
+                    return Ok(true);
+                }
+                KeyCode::Esc => {
+                    self.detail_focus = false;
+                    return Ok(true);
+                }
+                _ => {}
+            }
+        }
+
         match key.code {
             KeyCode::Char('q') => {
                 self.running.store(false, Ordering::Relaxed);
             }
             KeyCode::Up | KeyCode::Char('k') => {
                 if !self.packets.is_empty() {
-                    self.selected = self.selected.saturating_sub(1);
+                    self.select_packet(self.selected.saturating_sub(1));
                 }
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 if !self.packets.is_empty() && self.selected + 1 < self.packets.len() {
-                    self.selected += 1;
+                    self.select_packet(self.selected + 1);
                 }
             }
             KeyCode::Enter => {
-                self.detail_expanded = !self.detail_expanded;
+                // Enter focuses the detail tree (and reveals it if hex was up).
+                if self.view == View::Packets {
+                    self.show_hex = false;
+                    self.detail_expanded = true;
+                    self.detail_focus = true;
+                }
             }
             KeyCode::Tab => {
                 self.view = if key.modifiers.contains(KeyModifiers::SHIFT) {
@@ -270,18 +438,34 @@ impl App {
                 } else {
                     self.view.next()
                 };
+                self.detail_focus = false;
             }
             KeyCode::Char(' ') => {
                 self.paused = !self.paused;
             }
             KeyCode::Char('h') => {
                 self.show_hex = !self.show_hex;
+                if self.show_hex {
+                    self.detail_focus = false;
+                }
+            }
+            KeyCode::Char('F') => {
+                // Follow Stream for the selected conversation (Packets view).
+                if self.view == View::Packets && !self.packets.is_empty() {
+                    self.show_stream = true;
+                    self.stream_scroll = 0;
+                }
+            }
+            KeyCode::Char('C') => {
+                self.show_columns = true;
             }
             KeyCode::Char('?') => {
                 self.show_help = true;
             }
             KeyCode::Esc => {
-                if !self.filter_text.is_empty() {
+                if self.detail_focus {
+                    self.detail_focus = false;
+                } else if !self.filter_text.is_empty() {
                     self.filter_text.clear();
                 }
             }
@@ -294,6 +478,89 @@ impl App {
             _ => {}
         }
         Ok(true)
+    }
+
+    /// Mouse dispatch (ROADMAP §6.1): wheel scrolls the active list, a left
+    /// click on the tab strip switches views, and a click on a packet row
+    /// selects it.
+    fn handle_mouse(&mut self, m: MouseEvent) {
+        match m.kind {
+            MouseEventKind::ScrollDown => self.scroll(1),
+            MouseEventKind::ScrollUp => self.scroll(-1),
+            MouseEventKind::Down(MouseButton::Left) => self.click(m.column, m.row),
+            _ => {}
+        }
+    }
+
+    /// Scroll the focused list by `delta` rows (positive = down).
+    fn scroll(&mut self, delta: i32) {
+        let down = delta > 0;
+        if self.show_stream {
+            self.stream_scroll = step(self.stream_scroll, down);
+            return;
+        }
+        if self.view == View::Packets && self.detail_focus {
+            self.detail_sel = step_usize(self.detail_sel, down);
+            return;
+        }
+        match self.view {
+            View::Packets => {
+                if self.packets.is_empty() {
+                    return;
+                }
+                let next = if down {
+                    (self.selected + 1).min(self.packets.len() - 1)
+                } else {
+                    self.selected.saturating_sub(1)
+                };
+                self.select_packet(next);
+            }
+            View::Connections => {
+                let n = self.flows.len();
+                if down {
+                    if n > 0 && self.conn_selected + 1 < n {
+                        self.conn_selected += 1;
+                    }
+                } else {
+                    self.conn_selected = self.conn_selected.saturating_sub(1);
+                }
+            }
+            View::Learn => self.learn_scroll = step(self.learn_scroll, down),
+            View::Insights => self.insights_scroll = step(self.insights_scroll, down),
+            _ => {}
+        }
+    }
+
+    /// Handle a left click at terminal cell (`x`, `y`).
+    fn click(&mut self, x: u16, y: u16) {
+        // Tab strip: switch to the clicked tab.
+        if y == self.tab_row {
+            if let Some(view) = self
+                .tab_hits
+                .iter()
+                .find(|(start, end, _)| x >= *start && x < *end)
+                .map(|(_, _, v)| *v)
+            {
+                self.view = view;
+                self.detail_focus = false;
+            }
+            return;
+        }
+        // Packet list: click a row to select it.
+        if self.view == View::Packets
+            && !self.packets.is_empty()
+            && y >= self.list_inner.y
+            && y < self.list_inner.y + self.list_inner.height
+            && x >= self.list_inner.x
+            && x < self.list_inner.x + self.list_inner.width
+        {
+            let row = (y - self.list_inner.y) as usize;
+            let idx = self.list_offset + row;
+            let visible = self.filtered_packets().len();
+            if idx < visible {
+                self.select_packet(idx);
+            }
+        }
     }
 
     pub fn filtered_packets(&self) -> Vec<&Packet> {
@@ -327,5 +594,23 @@ impl App {
 
     pub fn elapsed_secs(&self) -> i64 {
         (Utc::now() - self.start_time).num_seconds()
+    }
+}
+
+/// Nudge a `u16` scroll offset by one row in the given direction.
+fn step(v: u16, down: bool) -> u16 {
+    if down {
+        v.saturating_add(1)
+    } else {
+        v.saturating_sub(1)
+    }
+}
+
+/// Nudge a `usize` index by one in the given direction.
+fn step_usize(v: usize, down: bool) -> usize {
+    if down {
+        v.saturating_add(1)
+    } else {
+        v.saturating_sub(1)
     }
 }

@@ -1,6 +1,11 @@
 mod app;
 mod colors;
+mod columns;
+mod detail;
 mod headless;
+mod insights;
+mod stream;
+mod theme;
 mod ui;
 mod views;
 
@@ -31,6 +36,12 @@ struct Cli {
     #[arg(long)]
     monitor: bool,
 
+    /// Coloring rules file: one "<hex-color> <display filter>" per line,
+    /// first match tints the packet row (default:
+    /// ~/.config/netscope/colors or %APPDATA%\netscope\colors)
+    #[arg(long)]
+    colors: Option<String>,
+
     /// List available network interfaces
     #[arg(short = 'D', long = "list-interfaces")]
     list_interfaces: bool,
@@ -55,6 +66,15 @@ struct Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    // Layered configuration (~/.netscope, ROADMAP §2.4): load once and
+    // install the declarative protocol plugins (§2.3) into the dissector
+    // registry — both the TUI and headless modes see them.
+    let config = netscope_core::config::Config::load();
+    let plugins = netscope_core::plugins::load_from_config(&config);
+    for err in &plugins.errors {
+        eprintln!("Warning: plugin skipped — {err}");
+    }
+
     if cli.list_interfaces {
         return list_interfaces();
     }
@@ -73,9 +93,18 @@ fn main() -> Result<()> {
     }
 
     // TUI mode — ratatui::init() handles raw mode + alternate screen itself;
-    // doubling those calls leaves conhost on a blank buffer.
+    // doubling those calls leaves conhost on a blank buffer. Mouse capture
+    // (ROADMAP §6.1) is opt-in on top: enable it here, disable it on restore.
     let terminal = ratatui::init();
+    let _ = ratatui::crossterm::execute!(
+        std::io::stdout(),
+        ratatui::crossterm::event::EnableMouseCapture
+    );
     let result = run_tui(cli, terminal);
+    let _ = ratatui::crossterm::execute!(
+        std::io::stdout(),
+        ratatui::crossterm::event::DisableMouseCapture
+    );
     ratatui::restore();
     result
 }
@@ -87,6 +116,7 @@ fn run_tui(cli: Cli, terminal: ratatui::DefaultTerminal) -> Result<()> {
         cli.filter.as_deref(),
         cli.write.as_deref(),
         cli.monitor,
+        cli.colors.as_deref(),
     )?;
     app.run(terminal)
 }
