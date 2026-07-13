@@ -541,6 +541,44 @@ looking for known networks, and the management frames that join and leave. It's 
 different view of the air around you, not the data inside encrypted connections.",
             look_for: "\"802.11 Beacon — \\\"MyWiFi\\\"\" and \"802.11 Probe Request\" frames, often with a signal in dBm.",
         },
+        Protocol::Usb => Lesson {
+            title: "USB — traffic on the wire to your devices",
+            summary: "Requests and data flowing between your PC and USB devices.",
+            body: "A USB capture (usbmon on Linux, USBPcap on Windows) shows the \
+conversation between the operating system and a device: the host submits a \
+request block (URB) to an endpoint on a device, and the device answers. \
+Keyboards and mice use tiny periodic Interrupt transfers, storage moves data \
+in Bulk transfers, and Control transfers carry setup and configuration.",
+            look_for: "\"USB 1.5.1 Bulk IN, 512 bytes\" — bus 1, device 5, endpoint 1; IN means data flows from the device to the PC.",
+        },
+        Protocol::Bluetooth => Lesson {
+            title: "Bluetooth HCI — host talking to the radio",
+            summary: "Commands, events and data between your OS and the Bluetooth chip.",
+            body: "HCI (Host Controller Interface) is the language every Bluetooth \
+stack speaks to its radio chip: the host sends Commands (scan, connect, \
+advertise), the controller answers with Events, and ACL packets carry the \
+actual data. On Linux, capturing on a bluetoothN interface shows this stream \
+— you'll see nearby devices advertising themselves (LE Advertising Reports) \
+without pairing to anything.",
+            look_for: "\"HCI Command: LE Set Scan Enable\" going out and \"HCI Event: LE Advertising Report\" coming back for every advertiser nearby.",
+        },
+        Protocol::Can => Lesson {
+            title: "CAN bus — the network inside vehicles and machines",
+            summary: "Tiny broadcast frames from a car or industrial controller bus.",
+            body: "CAN (Controller Area Network) is what a car's parts use to talk: \
+every frame is broadcast to the whole bus with an ID that says what it is \
+(engine RPM, wheel speed…) and up to 8 data bytes (64 for CAN FD). There are \
+no addresses and no connections — receivers just pick the IDs they care \
+about. On Linux, SocketCAN exposes canN/vcanN interfaces netscope can \
+capture like any NIC.",
+            look_for: "\"CAN 0x244 [8]  12 0A 00 F3 …\" — the ID, the byte count, and the raw data bytes.",
+        },
+        Protocol::Ntlm => Lesson {
+            title: "NTLM — Windows network authentication",
+            summary: "Microsoft's legacy authentication protocol used to log in to servers.",
+            body: "NTLM (NT LAN Manager) is a suite of security protocols used to authenticate, integrity-protect, and secure users in active directory environments. It uses a challenge-response mechanism to verify the identity of a client without sending the password over the network, though it is legacy and vulnerable to relay attacks.",
+            look_for: "\"NTLM Negotiate\" (client starts), \"NTLM Challenge\" (server challenges), or \"NTLM Authenticate\" (user credentials).",
+        },
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail — shown safely anyway.",
@@ -608,6 +646,9 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Stp,
         Protocol::Mpls,
         Protocol::Wlan,
+        Protocol::Usb,
+        Protocol::Bluetooth,
+        Protocol::Can,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -746,6 +787,10 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Stp => "A Spanning Tree message (STP) — switches electing a root bridge to keep the network loop-free.",
         Protocol::Mpls => "A label-switched packet (MPLS) — carrier/backbone forwarding; the inner packet is shown after the label.",
         Protocol::Wlan => "A raw Wi-Fi (802.11) frame — the radio layer beneath your network traffic.",
+        Protocol::Usb => "USB bus traffic — a request or data moving between your PC and a USB device.",
+        Protocol::Bluetooth => "A Bluetooth HCI packet — your OS talking to the Bluetooth radio (commands, events, data).",
+        Protocol::Can => "A CAN bus frame — broadcast data on a vehicle or industrial controller network.",
+        Protocol::Ntlm => "NTLM authentication handshake message.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -792,7 +837,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 53);
+        assert_eq!(all_lessons().len(), 56);
     }
 
     #[test]

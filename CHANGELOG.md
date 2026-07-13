@@ -47,6 +47,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Remote capture over SSH** (sshdump-style, `crates/core/src/remote.rs`).
+  `CaptureEngine::start_remote` runs `tcpdump -U -n -i <iface> -s 0 -w -` (or a
+  custom command) on a remote host over SSH and dissects the pcap stream it
+  sends back — no agent installed on the far side, just tcpdump and key/agent
+  SSH (`BatchMode=yes`, so a GUI process fails fast instead of hanging on a
+  password prompt). Friendly protocol names in the capture filter are
+  translated to BPF before shipping. TUI: `--remote-host` (plus
+  `--remote-user/-port/-identity/-interface/-command/-sudo`). Desktop:
+  **Capture ▸ Remote capture (SSH)…** with a remembered connection form; the
+  SSH client's own error (auth failed, host unreachable, tcpdump missing) is
+  surfaced verbatim.
+- **External / extcap-style pipe capture** (`crates/core/src/remote.rs`). A
+  streaming pcap **and** pcapng parser (`PcapStreamReader`) turns any command
+  that writes a capture to stdout into a live source. `CaptureEngine::start_pipe`
+  drives it; `start_read_stream` reads a capture from an already-open stream,
+  so the TUI's `-i -` ingests `ssh host "tcpdump -U -w -" | netscope -i -`.
+- **USB / Bluetooth / CAN capture** (`crates/core/src/dissectors/{usb,bluetooth,can}.rs`).
+  New link-layer dissectors: USB (Linux usbmon DLT 189/220 and Windows USBPcap
+  DLT 249), Bluetooth HCI H4 (DLT 187/201, with LE advertising/connect decode)
+  and CAN bus (SocketCAN DLT 227, classic + FD, EFF/RTR/ERR flags), plus Linux
+  cooked capture (SLL/SLL2, DLT 113/276) so remote `tcpdump -i any` dissects
+  fully. New `Protocol::{Usb, Bluetooth, Can}` variants thread through colours,
+  lessons, glossary and the `usb`/`bluetooth`/`can` display-filter predicates.
+  On Windows, USBPcap devices (`\\.\USBPcap1`) are auto-discovered and listed
+  as capture interfaces (badged `[USB]`); selecting one captures through
+  `USBPcapCMD.exe`. Interfaces are now classified (`InterfaceKind`) so the
+  desktop and `-D` listing badge USB/Bluetooth/CAN sources.
+- **Ring-buffer capture files** (Wireshark's `-b`, `crates/core/src/rotate.rs`).
+  `RingWriter` writes classic pcap and rotates to a new, timestamp-named file
+  when the current one crosses a size (`filesize:kB`) or age (`duration:S`)
+  limit, keeping at most `files:N` and deleting the oldest — capture for days
+  without filling the disk. TUI: `-b filesize:2048 -b files:10`. Desktop:
+  **Capture ▸ Options**.
+- **Autostop conditions** (Wireshark's `-a`, `crates/core/src/capture.rs`).
+  A capture stops itself once any configured limit is reached — `duration:S`,
+  `packets:N` or `filesize:kB` (captured bytes) — with counters shared across
+  every interface of a multi-interface capture, and a duration limit that
+  fires even on an idle interface. TUI: `-a duration:60 -a packets:10000`
+  (repeatable). Desktop: **Capture ▸ Options**; the UI returns to idle
+  automatically (new `capture-stopped` event) when a limit is hit.
 - **Simultaneous multi-interface capture** (`crates/core/src/capture.rs`,
   Wireshark-style). `CaptureEngine::start_live_multi` runs one capture thread
   and dissector pipeline per interface, all merged onto a single analysis

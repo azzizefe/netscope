@@ -8,38 +8,11 @@ use crate::Cli;
 pub fn run(cli: Cli) -> Result<()> {
     let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
     let mut capture = CaptureEngine::new();
-    let output_path = cli.write.as_deref();
 
-    if let Some(iface) = cli.interface.as_deref() {
-        // Comma-separated list captures on several interfaces at once.
-        let ifaces: Vec<&str> = iface
-            .split(',')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .collect();
-        capture.start_live_multi(
-            &ifaces,
-            cli.filter.as_deref(),
-            output_path,
-            packet_tx,
-            cli.monitor,
-        )?;
-    } else if let Some(path) = cli.read.as_deref() {
-        capture.start_offline(path, cli.filter.as_deref(), output_path, packet_tx)?;
-    } else {
-        let dev = netscope_core::capture::default_interface()?;
-        eprintln!(
-            "Capturing on: {}",
-            netscope_core::capture::friendly_name(&dev)
-        );
-        capture.start_live(
-            &dev.name,
-            cli.filter.as_deref(),
-            output_path,
-            packet_tx,
-            cli.monitor,
-        )?;
-    }
+    // Local interfaces, `-i -` (stdin stream), USBPcap devices or a remote
+    // host over SSH — plus autostop and ring-buffer options.
+    let label = crate::setup::start_capture(&cli, &mut capture, packet_tx)?;
+    eprintln!("Capturing on: {label}");
 
     let use_json = cli.json;
     let mut names = NameCache::new();

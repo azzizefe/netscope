@@ -58,6 +58,10 @@ pub fn protocol_color(protocol: &Protocol) -> Color {
         Protocol::Stp => Color::Rgb(0xA8, 0xA2, 0x9E),
         Protocol::Mpls => Color::Rgb(0xCB, 0xD5, 0xE1),
         Protocol::Wlan => Color::Rgb(0x22, 0xD3, 0xEE),
+        Protocol::Usb => Color::Rgb(0x94, 0xA3, 0xE8),
+        Protocol::Bluetooth => Color::Rgb(0x3B, 0x82, 0xF6),
+        Protocol::Can => Color::Rgb(0xD9, 0xA4, 0x42),
+        Protocol::Ntlm => Color::Rgb(0xA8, 0x55, 0xF7),
         Protocol::Plugin(_) => Color::Rgb(0xE2, 0xB0, 0x7A),
         Protocol::Unknown(_) => Color::Rgb(0xF8, 0x71, 0x71),
     }

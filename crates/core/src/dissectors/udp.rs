@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bacnet, coap, dhcp, dnp3, dns, enip, kerberos, ntp, openvpn, radius, rtp, sip, snmp, vxlan,
+    bacnet, coap, dhcp, dnp3, dns, enip, kerberos, ntp, openvpn, qpack, radius, rtp, sip, snmp, vxlan,
     wireguard, DissectedResult,
 };
 
@@ -142,7 +142,7 @@ fn quic_result(
     payload: &[u8],
 ) -> DissectedResult {
     let first = payload[0];
-    let phase = if first & 0x80 == 0 {
+    let mut phase = if first & 0x80 == 0 {
         "1-RTT".to_string()
     } else {
         // Long-header packet-type bits (0x30) name the handshake phase.
@@ -160,6 +160,12 @@ fn quic_result(
             format!("{kind} (v0x{version:08x})")
         }
     };
+
+    if let Some(headers) = qpack::decode_qpack(payload) {
+        let h_str: Vec<String> = headers.iter().map(|(n, v)| format!("{n}: {v}")).collect();
+        phase = format!("{phase} (HTTP/3 {})", h_str.join(", "));
+    }
+
     DissectedResult {
         src_addr: src_ip,
         dst_addr: dst_ip,
@@ -211,5 +217,20 @@ mod tests {
     fn udp_malformed() {
         let result = dissect_udp(None, None, &[0; 3]);
         assert_eq!(result.protocol, Protocol::Unknown("malformed UDP".into()));
+    }
+
+    #[test]
+    fn udp_quic_qpack() {
+        let payload = vec![0x40, 0x00, 0x00, 0x82];
+        let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 50000, 443, &payload);
+        let ip_data = &data[14..];
+        let (_src, _dst, _p, udp_data) = crate::dissectors::ip::dissect_ipv4(ip_data);
+        let result = dissect_udp(
+            Some("10.0.0.1".parse().unwrap()),
+            Some("10.0.0.2".parse().unwrap()),
+            &udp_data,
+        );
+        assert_eq!(result.protocol, Protocol::Quic);
+        assert!(result.summary.contains("HTTP/3 :method: GET"));
     }
 }

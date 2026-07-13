@@ -1,8 +1,24 @@
 use std::net::IpAddr;
-
 use crate::models::Protocol;
-
 use super::DissectedResult;
+use std::sync::OnceLock;
+use std::sync::Mutex;
+use std::collections::HashMap;
+
+struct RtpStreamState {
+    last_seq: u16,
+    last_ts: u32,
+    last_arrival: std::time::Instant,
+    jitter: f64,
+    max_seq: u16,
+    base_seq: u16,
+    received: u32,
+}
+
+fn get_rtp_state() -> &'static Mutex<HashMap<u32, RtpStreamState>> {
+    static STATE: OnceLock<Mutex<HashMap<u32, RtpStreamState>>> = OnceLock::new();
+    STATE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 /// Heuristically dissect RTP/RTCP media traffic over UDP (ROADMAP §3.6).
 ///
@@ -65,12 +81,64 @@ pub fn try_dissect(
     }
     let marker = pt_byte & 0x80 != 0;
     let seq = u16::from_be_bytes([payload[2], payload[3]]);
+    let rtp_ts = u32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]);
     let ssrc = u32::from_be_bytes([payload[8], payload[9], payload[10], payload[11]]);
     let codec = payload_type_name(payload_type);
     let mark = if marker { " [mark]" } else { "" };
+
+    // Stateful Jitter & MOS calculation
+    let mut state_guard = get_rtp_state().lock().unwrap();
+    let arrival = std::time::Instant::now();
+    let state = state_guard.entry(ssrc).or_insert_with(|| RtpStreamState {
+        last_seq: seq,
+        last_ts: rtp_ts,
+        last_arrival: arrival,
+        jitter: 0.0,
+        max_seq: seq,
+        base_seq: seq,
+        received: 0,
+    });
+
+    state.received += 1;
+    if seq > state.max_seq {
+        state.max_seq = seq;
+    }
+    let expected = (state.max_seq.wrapping_sub(state.base_seq) as u32) + 1;
+    let lost = expected.saturating_sub(state.received);
+    let loss_rate = if expected > 0 {
+        (lost as f64) / (expected as f64)
+    } else {
+        0.0
+    };
+
+    let ts_diff = (rtp_ts as i64).wrapping_sub(state.last_ts as i64).abs();
+    let arrival_diff_ms = arrival.duration_since(state.last_arrival).as_secs_f64() * 1000.0;
+    let ts_diff_ms = (ts_diff as f64) / 8.0; // Assume 8000Hz (8 ticks/ms)
+    let d = (arrival_diff_ms - ts_diff_ms).abs();
+    if state.received > 1 {
+        state.jitter += (d - state.jitter) / 16.0;
+    }
+
+    state.last_seq = seq;
+    state.last_ts = rtp_ts;
+    state.last_arrival = arrival;
+
+    let mut r = 93.2;
+    r -= loss_rate * 250.0;
+    let delay = state.jitter + 10.0;
+    r -= delay * 0.1;
+    let mos = if r < 0.0 {
+        1.0
+    } else if r > 100.0 {
+        4.5
+    } else {
+        1.0 + 0.035 * r + 7.0e-6 * r * (r - 60.0) * (100.0 - r)
+    };
+    let mos = mos.clamp(1.0, 4.5);
+
     Some(make(
         Protocol::Rtp,
-        format!("RTP {codec} — seq {seq}, SSRC 0x{ssrc:08x}{mark}"),
+        format!("RTP {codec} — seq {seq}, SSRC 0x{ssrc:08x}, Jitter {:.1}ms, MOS {:.1}{mark}", state.jitter, mos),
     ))
 }
 
@@ -125,7 +193,7 @@ mod tests {
         let p = rtp_packet(0, 1234, 0xdead_beef);
         let r = try_dissect(None, None, 40000, 40002, &p).unwrap();
         assert_eq!(r.protocol, Protocol::Rtp);
-        assert_eq!(r.summary, "RTP PCMU/8000 — seq 1234, SSRC 0xdeadbeef");
+        assert!(r.summary.starts_with("RTP PCMU/8000 — seq 1234, SSRC 0xdeadbeef"));
     }
 
     #[test]

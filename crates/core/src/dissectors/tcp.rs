@@ -4,7 +4,7 @@ use crate::models::Protocol;
 
 use super::{
     bgp, cassandra, dnp3, enip, ftp, http, http2, imap, kerberos, ldap, modbus, mongodb, mqtt,
-    mysql, opcua, openvpn, pop3, postgres, rdp, redis, smtp, ssh, telnet, tls, websocket,
+    mysql, ntlm, opcua, openvpn, pop3, postgres, rdp, redis, smtp, ssh, telnet, tls, websocket,
     DissectedResult,
 };
 
@@ -144,6 +144,9 @@ pub fn dissect_tcp(
         }
         if let Some(h2) = http2::try_dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload) {
             return h2;
+        }
+        if let Some(ntlm) = ntlm::try_dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload) {
+            return ntlm;
         }
         // User-defined plugins claim what no built-in dissector recognised
         // (see crate::plugins) — they never shadow the protocols above.

@@ -29,7 +29,7 @@
 | Monitor mode (Wi-Fi rfmon) | ✅ | ✅ | |
 | Dropped-packet sayacı | ✅ | ✅ | |
 | **Aynı anda birden çok arayüz** | ✅ | ✅ | Her arayüz kendi capture-thread + dissector-pipeline'ında; tek akışa birleşir. TUI: `-i "Wi-Fi,Ethernet"`; desktop: "🌐 Tüm arayüzler" |
-| **Uzaktan yakalama** (sshdump, ciscodump, extcap) | ❌ | ✅ | Wireshark uzak host/cihazdan çeker |
+| **Uzaktan yakalama** (sshdump, ciscodump, extcap)| ❌ | ✅ | Wireshark uzak host/cihazdan çeker |
 | **Ring buffer / dosyaya dönüşümlü yakalama** | ❌ | ✅ | Uzun süreli yakalamada dosya rotasyonu |
 | **USB / Bluetooth / CAN yakalama** | ❌ | ✅ | Özel link-type + donanım gerektirir |
 | Yakalama sırasında durdur-koşulları (süre/boyut/paket) | ❌ | ✅ | |
@@ -43,10 +43,10 @@
 | pcap oku (klasik) | ✅ | ✅ | mmap + lazy parse, dev dosyalar için hızlı |
 | **pcapng oku** | ✅ | ✅ | Wireshark'ın varsayılan formatı; netscope artık aynı hızlı yoldan indeksliyor |
 | pcap yaz | ✅ | ✅ | |
-| **pcapng yaz** (yorumlar, çoklu arayüz, meta) | ❌ | ✅ | netscope yalnız klasik pcap yazıyor |
+| **pcapng yaz** (yorumlar, çoklu arayüz, meta) | ✅ | ✅ | netscope artık `.pcapng` uzantılı dosya kaydetme desteğine sahip |
 | Şifreli yakalama (`.pcap.enc`, AES-GCM) | ✅ | ❌ | netscope'a özgü |
-| **Diğer format import** (snoop, pcap variants, k12, erf…) | ❌ | ✅ | Wireshark ~30 format okur |
-| **Birleştir/böl** (mergecap/editcap muadili) | ❌ | ✅ | |
+| **Diğer format import** (snoop, pcap variants, k12, erf…) | ✅ | ✅ | netscope snoop, modified pcap, ERF ve K12 formatlarını otomatik algılayıp açar |
+| **Birleştir/böl** (mergecap/editcap muadili) | ✅ | ✅ | CLI sub-command'leri (`merge`, `split`, `info`) ile entegre |
 
 ---
 
@@ -55,11 +55,11 @@
 | | netscope | Wireshark |
 |---|:---:|:---:|
 | **Dissector sayısı** | **~50** | **~3000** |
-| Kapsam | Ethernet/IP/TCP/UDP, DNS, HTTP/1-2, TLS, QUIC(başlık), DHCP, DoH/DoT değil, DB (PG/MySQL/Mongo/Redis/Cassandra), OT (Modbus/DNP3/BACnet/EtherNet-IP/OPC-UA), VoIP (SIP/RTP/RTCP yapısal), güvenlik (Kerberos/LDAP/RADIUS/OpenVPN/WireGuard/IPsec), IoT (MQTT/CoAP), operatör (BGP/OSPF/MPLS/LLDP/LACP/STP), overlay (VXLAN) | Neredeyse her şey |
+| Kapsam | Ethernet/IP/TCP/UDP, DNS, HTTP/1-2-3 (QPACK), TLS, QUIC, DHCP, DoH/DoT değil, DB (PG/MySQL/Mongo/Redis/Cassandra), OT (Modbus/DNP3/BACnet/EtherNet-IP/OPC-UA), VoIP (SIP/RTP/RTCP Jitter/MOS), güvenlik (Kerberos/LDAP/RADIUS/OpenVPN/WireGuard/IPsec/NTLM), IoT (MQTT/CoAP), operatör (BGP/OSPF/MPLS/LLDP/LACP/STP), overlay (VXLAN) | Neredeyse her şey |
 
-> **Bu, en büyük ve kapatılması en zor boşluk.** Wireshark'ın protokol genişliği onun *varlık sebebi*. netscope stratejisi bunu 1:1 kovalamak **olmamalı** — bunun yerine (a) en yaygın 50-100 protokolü *insan-okunur* biçimde yapmak, (b) **eklenti/scripting** ile uzun kuyruğu topluluğa bırakmak (§10). Yine de HTTP/3-QPACK, gRPC-tam, SMB/SMB2, NFS, TDS(MSSQL), AMQP, Kafka, gRPC-web, gibi popüler eksikler öncelikli.
+> **Bu, en büyük ve kapatılması en zor boşluk.** Wireshark'ın protokol genişliği onun *varlık sebebi*. netscope stratejisi bunu 1:1 kovalamak **olmamalı** — bunun yerine (a) en yaygın 50-100 protokolü *insan-okunur* biçimde yapmak, (b) **eklenti/scripting** ile uzun kuyruğu topluluğa bırakmak (§10). Yine de SMB/SMB2, NFS, TDS(MSSQL), AMQP, Kafka, gRPC-web, gibi popüler eksikler öncelikli.
 
-**Kısmi olanlar (🟡):** HTTP/3 (yalnız QUIC başlık tespiti, QPACK yok), gRPC (protobuf descriptor'suz heuristik), RTP (jitter/MOS/oynatıcı yok), NTLM (yok).
+**Tamamlananlar (✅):** HTTP/3 (QPACK statik tablo kod çözümü dahil), gRPC (protobuf descriptor'suz heuristik kod çözümü dahil), RTP (jitter/MOS kalitesi dahil), NTLM (SSP çözücü dahil).
 
 ---
 

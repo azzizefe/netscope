@@ -155,6 +155,16 @@ const state = {
   // 'relative' (seconds since the first packet of this capture session).
   settings: Object.assign({ timeFormat: 'time', showHostnames: true, profile: 'HTTP Analysis', theme: 'midnight', noiseFilter: false, lang: detectDefaultLang(), geoip: false, geoipDb: '', textScale: 1, cvd: false }, loadJSON('netscope.settings', {})),
   customProfiles: loadJSON('netscope.profiles', {}),
+  // Capture options (autostop limits, save-to-file + ring buffer) applied to
+  // the next capture; set in Capture > Options…. Persisted like settings.
+  captureOpts: Object.assign({
+    stopDurationSecs: '', stopPackets: '', stopFilesizeKb: '',
+    outputPath: '', ringFilesizeKb: '', ringDurationSecs: '', ringFiles: '',
+  }, loadJSON('netscope.captureopts', {})),
+  // Remote (SSH) capture connection details, remembered between sessions.
+  remote: Object.assign({
+    host: '', user: '', port: '', identity: '', iface: '', filter: '', command: '', sudo: false,
+  }, loadJSON('netscope.remote', {})),
   captureStartEpoch: null,
   // Live dashboard sampling (1 Hz): rolling history for the sparkline widgets.
   live: {
@@ -236,8 +246,11 @@ async function loadInterfaces() {
       // "All interfaces" (a sentinel value) captures on every listed interface
       // at once, Wireshark-style; individual interfaces follow.
       const allOpt = `<option value="__all__">${esc(I18N.t('iface.all'))}</option>`;
+      // Hardware-bus sources (USB / Bluetooth / CAN) get a badge so they're
+      // recognisable next to network adapters.
+      const badge = (k) => (k && k !== 'ethernet' && k !== 'loopback') ? `[${k.toUpperCase()}] ` : '';
       els.interfaceSelect.innerHTML = allOpt + ifaces
-        .map((d) => `<option value="${d.name}">${d.description || d.name}</option>`)
+        .map((d) => `<option value="${d.name}">${esc(badge(d.kind))}${d.description || d.name}</option>`)
         .join('');
       // Prefer an interface that has a description (physical adapters usually do).
       const best = ifaces.findIndex((d) => /wi-?fi|ethernet|wireless|realtek|intel/i.test(d.description || ''));
@@ -278,6 +291,41 @@ function openNpcapHelp() {
 }
 
 // ---- Capture control ----
+
+/** Reset per-session analysis state before a new capture starts. */
+function resetSession() {
+  state.packets = []; state.flows.clear(); state.packetCount = 0;
+  state.stats = { totalPackets: 0, totalBytes: 0, perProtocol: {}, topTalkersSent: [], topDomains: [], errorPackets: 0 };
+  state.hostsSeen.clear();
+  state.live.lastSample = null; state.live.throughput = []; state.live.pps = []; state.live.errRate = [];
+  state.captureStartEpoch = null; // "Seconds since beginning of capture" baseline resets each run
+  ioReset();
+}
+
+function markCapturing() {
+  setStatus(STATES.CAPTURING);
+  els.startBtn.disabled = true;
+  els.stopBtn.disabled = false;
+  renderAll();
+}
+
+/** The Capture>Options values as the backend's `options` argument (camelCase
+ *  keys match the Rust CaptureOptionsArg). Empty fields are omitted. */
+function buildCaptureOptions() {
+  const o = state.captureOpts;
+  const num = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) && n > 0 ? n : null; };
+  const opts = {
+    stopDurationSecs: num(o.stopDurationSecs),
+    stopPackets: num(o.stopPackets),
+    stopFilesizeKb: num(o.stopFilesizeKb),
+    outputPath: (o.outputPath || '').trim() || null,
+    ringFilesizeKb: num(o.ringFilesizeKb),
+    ringDurationSecs: num(o.ringDurationSecs),
+    ringFiles: num(o.ringFiles),
+  };
+  return Object.values(opts).some((v) => v != null) ? opts : null;
+}
+
 async function startCapture() {
   const sel = els.interfaceSelect.value;
   // "__all__" expands to every real interface; otherwise capture on the one
@@ -287,18 +335,13 @@ async function startCapture() {
     : [sel];
   const filter = els.filterInput.value || null;
   try {
-    // reset session
-    state.packets = []; state.flows.clear(); state.packetCount = 0;
-    state.stats = { totalPackets: 0, totalBytes: 0, perProtocol: {}, topTalkersSent: [], topDomains: [], errorPackets: 0 };
-    state.hostsSeen.clear();
-    state.live.lastSample = null; state.live.throughput = []; state.live.pps = []; state.live.errRate = [];
-    state.captureStartEpoch = null; // "Seconds since beginning of capture" baseline resets each run
-    ioReset();
-    await invoke('start_capture', { interfaces, filter, monitor: !!state.settings.monitor });
-    setStatus(STATES.CAPTURING);
-    els.startBtn.disabled = true;
-    els.stopBtn.disabled = false;
-    renderAll();
+    resetSession();
+    await invoke('start_capture', {
+      interfaces, filter,
+      monitor: !!state.settings.monitor,
+      options: buildCaptureOptions(),
+    });
+    markCapturing();
   } catch (e) {
     alert(`Could not start capture:\n${e}`);
   }
@@ -308,6 +351,129 @@ async function stopCapture() {
   setStatus(STATES.IDLE);
   els.startBtn.disabled = false;
   els.stopBtn.disabled = true;
+}
+
+// The backend emits `capture-stopped` when a capture ends on its own — an
+// autostop limit (duration/packets/size) was hit, or a remote/USB stream
+// ended. Flip the UI back to idle; harmless after a manual stop.
+function onCaptureStopped() {
+  if (state.status !== STATES.CAPTURING) return;
+  setStatus(STATES.IDLE);
+  els.startBtn.disabled = false;
+  els.stopBtn.disabled = true;
+}
+
+// ---- Capture > Options… (autostop + save file + ring buffer) ----
+function openCaptureOptions() {
+  const o = state.captureOpts;
+  const field = (id, label, value, ph) => `
+    <label class="capopt-row"><span>${esc(label)}</span>
+      <input type="text" id="${id}" value="${esc(String(value || ''))}" placeholder="${esc(ph || '')}" spellcheck="false">
+    </label>`;
+  const body = `
+    <p class="popover-hint">${esc(I18N.t('capopts.hint'))}</p>
+    <fieldset class="capopt-group"><legend>${esc(I18N.t('capopts.autostop'))}</legend>
+      ${field('co-stop-dur', I18N.t('capopts.stop.duration'), o.stopDurationSecs, '60')}
+      ${field('co-stop-pkts', I18N.t('capopts.stop.packets'), o.stopPackets, '10000')}
+      ${field('co-stop-size', I18N.t('capopts.stop.filesize'), o.stopFilesizeKb, '10240')}
+    </fieldset>
+    <fieldset class="capopt-group"><legend>${esc(I18N.t('capopts.file'))}</legend>
+      ${field('co-out', I18N.t('capopts.output'), o.outputPath, 'C:\\captures\\session.pcap')}
+      ${field('co-ring-size', I18N.t('capopts.ring.filesize'), o.ringFilesizeKb, '2048')}
+      ${field('co-ring-dur', I18N.t('capopts.ring.duration'), o.ringDurationSecs, '300')}
+      ${field('co-ring-files', I18N.t('capopts.ring.files'), o.ringFiles, '10')}
+      <div class="popover-hint">${esc(I18N.t('capopts.ring.hint'))}</div>
+    </fieldset>
+    <div class="modal-actions">
+      <button id="co-clear" class="btn btn-small">${esc(I18N.t('capopts.clear'))}</button>
+      <button id="co-apply" class="btn btn-primary">${esc(I18N.t('capopts.apply'))}</button>
+    </div>`;
+  openToolModal(I18N.t('capopts.title'), body);
+  $('#co-apply').addEventListener('click', () => {
+    state.captureOpts = {
+      stopDurationSecs: $('#co-stop-dur').value.trim(),
+      stopPackets: $('#co-stop-pkts').value.trim(),
+      stopFilesizeKb: $('#co-stop-size').value.trim(),
+      outputPath: $('#co-out').value.trim(),
+      ringFilesizeKb: $('#co-ring-size').value.trim(),
+      ringDurationSecs: $('#co-ring-dur').value.trim(),
+      ringFiles: $('#co-ring-files').value.trim(),
+    };
+    saveJSON('netscope.captureopts', state.captureOpts);
+    closeToolModal();
+  });
+  $('#co-clear').addEventListener('click', () => {
+    state.captureOpts = { stopDurationSecs: '', stopPackets: '', stopFilesizeKb: '', outputPath: '', ringFilesizeKb: '', ringDurationSecs: '', ringFiles: '' };
+    saveJSON('netscope.captureopts', state.captureOpts);
+    closeToolModal();
+  });
+}
+
+// ---- Capture > Remote capture (SSH)… — sshdump-style ----
+function openRemoteCapture() {
+  const r = state.remote;
+  const field = (id, label, value, ph) => `
+    <label class="capopt-row"><span>${esc(label)}</span>
+      <input type="text" id="${id}" value="${esc(String(value || ''))}" placeholder="${esc(ph || '')}" spellcheck="false">
+    </label>`;
+  const body = `
+    <p class="popover-hint">${esc(I18N.t('remote.hint'))}</p>
+    ${field('rc-host', I18N.t('remote.host'), r.host, '192.168.1.1')}
+    ${field('rc-user', I18N.t('remote.user'), r.user, 'root')}
+    ${field('rc-port', I18N.t('remote.port'), r.port, '22')}
+    ${field('rc-identity', I18N.t('remote.identity'), r.identity, '~/.ssh/id_ed25519')}
+    ${field('rc-iface', I18N.t('remote.iface'), r.iface, 'any')}
+    ${field('rc-filter', I18N.t('remote.filter'), r.filter, 'not tcp port 22')}
+    ${field('rc-command', I18N.t('remote.command'), r.command, I18N.t('remote.command.ph'))}
+    <label class="capopt-row capopt-check"><input type="checkbox" id="rc-sudo" ${r.sudo ? 'checked' : ''}> <span>${esc(I18N.t('remote.sudo'))}</span></label>
+    <div class="popover-hint">${esc(I18N.t('remote.auth.hint'))}</div>
+    <div class="modal-actions">
+      <button id="rc-start" class="btn btn-primary">${esc(I18N.t('remote.start'))}</button>
+    </div>`;
+  openToolModal(I18N.t('remote.title'), body);
+  $('#rc-start').addEventListener('click', startRemoteCapture);
+}
+
+async function startRemoteCapture() {
+  const r = {
+    host: $('#rc-host').value.trim(),
+    user: $('#rc-user').value.trim(),
+    port: $('#rc-port').value.trim(),
+    identity: $('#rc-identity').value.trim(),
+    iface: $('#rc-iface').value.trim(),
+    filter: $('#rc-filter').value.trim(),
+    command: $('#rc-command').value.trim(),
+    sudo: $('#rc-sudo').checked,
+  };
+  if (!r.host) { alert(I18N.t('remote.needhost')); return; }
+  state.remote = r;
+  saveJSON('netscope.remote', r);
+  const startBtn = $('#rc-start');
+  startBtn.disabled = true;
+  startBtn.textContent = I18N.t('remote.connecting');
+  try {
+    resetSession();
+    // Blocks until the SSH stream starts, so errors (auth, unreachable,
+    // tcpdump missing) come back here with the server's message.
+    const label = await invoke('start_remote_capture', {
+      host: r.host,
+      user: r.user || null,
+      port: r.port ? parseInt(r.port, 10) : null,
+      identityFile: r.identity || null,
+      remoteInterface: r.iface || null,
+      filter: r.filter || null,
+      remoteCommand: r.command || null,
+      useSudo: !!r.sudo,
+      options: buildCaptureOptions(),
+    });
+    closeToolModal();
+    markCapturing();
+    els.statusText.textContent = `${I18N.t('status.capturing')} — ${label}`;
+  } catch (e) {
+    alert(`${I18N.t('remote.failed')}\n${e}`);
+    startBtn.disabled = false;
+    startBtn.textContent = I18N.t('remote.start');
+  }
 }
 function setStatus(s) {
   state.status = s;
@@ -3893,6 +4059,9 @@ function initMenuBar() {
   on('#mi-report', openReport);
   on('#mi-csv', () => showExportText('Export — CSV', packetsToCSV(activePackets())));
   on('#mi-json', () => showExportText('Export — JSON', packetsToJSON(activePackets())));
+  // Capture
+  on('#mi-capopts', openCaptureOptions);
+  on('#mi-remote', openRemoteCapture);
   // Edit
   on('#mi-find', () => { els.filterInput.focus(); els.filterInput.select(); });
   on('#mi-clearfilter', () => { els.filterInput.value = ''; state.filterText = ''; renderPacketList(); });
@@ -4373,6 +4542,9 @@ async function init() {
     // determinate progress bar; without it the bar just pulses.
     await listen('capture-total', (e) => { if (loadProgress.active) showLoadProgress(e.payload || 0); });
     await listen('capture-finished', () => { setStatus(STATES.IDLE); els.startBtn.disabled = false; els.stopBtn.disabled = true; finishLoadProgress(); });
+    // A live capture that stops on its own (autostop limit reached, remote/USB
+    // stream ended) → return the UI to idle.
+    await listen('capture-stopped', onCaptureStopped);
   } catch (e) { console.error('event subscription failed', e); }
 
   // Layered config (~/.netscope): surface what the backend loaded at startup

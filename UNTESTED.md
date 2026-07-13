@@ -13,6 +13,27 @@
 > boşaltılmıyor" ve filtreli görünümde seçim taşması bug'ları düzeltildi.
 > Aşağıdaki liste tarihsel referans olarak korunuyor.
 
+> **Güncelleme (2026-07-14) — Uzaktan/USB/BT/CAN yakalama + durdurma
+> koşulları:** **378 core testi** geçiyor (yeni: 41 test). Yeni modüllerin
+> saf-mantık kısımları birim testli; **donanım/ortam bağımlı yollar birim
+> testiyle doğrulanamaz** ve gerçek donanımda elle test edilmelidir:
+>
+> | Alan | Testli (birim) | Elle doğrulanmalı (donanım/ortam) |
+> |---|---|---|
+> | **Ring buffer** (`rotate.rs`) | Boyut/dosya rotasyonu, budama, tek-büyük-paket, geçersiz yapılandırma | Uzun süreli canlı yakalamada disk davranışı |
+> | **Akış ayrıştırıcı** (`remote.rs` `PcapStreamReader`) | pcap LE/BE µs/ns, pcapng SHB/IDB/EPB/SPB, tsresol, kesik akış, çöp akış | — |
+> | **SSH komut kurma** (`RemoteSpec`) | Argüman/komut dizgisi, kabuk-alıntı, filtre çevirisi | **Gerçek SSH bağlantısı, tcpdump çıktısı, auth hataları** (`start_remote`) |
+> | **extcap pipe** (`spawn_pipe_source`) | extcap arayüz satırı ayrıştırma | **Alt-süreç yaşam döngüsü, stderr yakalama, kill-on-stop** |
+> | **USB** (`usb.rs`) | USBPcap + usbmon sözde-başlık çözme | **Gerçek USBPcapCMD.exe / usbmon yakalaması** |
+> | **Bluetooth HCI** (`bluetooth.rs`) | H4 komut/olay/ACL/LE, phdr yön | **Gerçek `bluetoothN` yakalaması** |
+> | **CAN** (`can.rs`) | Std/ext/RTR/ERR/FD çerçeve özeti | **Gerçek SocketCAN (`can0`) yakalaması** |
+> | **Durdurma koşulları** (`capture.rs`) | Paket/bayt limiti (stream ile), yapılandırma reddi | Süre limiti gerçek zamanlı canlı yakalamada |
+> | **Desktop komutları** | — | `start_remote_capture`, USBPcap seçimi, `capture-stopped` olayı elle doğrulandı (UI render + payload eşleme, IPC hariç) |
+>
+> `usbpcap_cmd_path`/`usbpcap_interfaces` yalnızca Windows'ta ve USBPcap kurulu
+> olduğunda anlamlı sonuç döndürür; kurulu değilse boş liste (test edilebilir
+> fallback).
+
 ---
 
 ## 📊 Yönetici Özeti
