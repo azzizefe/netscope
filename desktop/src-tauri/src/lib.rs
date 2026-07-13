@@ -222,13 +222,17 @@ struct GeoLookup {
     org: Option<String>,
 }
 
-/// English name from an MMDB localized-names map (any locale as fallback).
-fn english_name(names: &Option<std::collections::BTreeMap<&str, &str>>) -> Option<String> {
-    let names = names.as_ref()?;
+/// English name from an MMDB localized-names record (any locale as fallback).
+fn english_name(names: &maxminddb::geoip2::Names) -> Option<String> {
     names
-        .get("en")
-        .copied()
-        .or_else(|| names.values().next().copied())
+        .english
+        .or(names.german)
+        .or(names.spanish)
+        .or(names.french)
+        .or(names.japanese)
+        .or(names.brazilian_portuguese)
+        .or(names.russian)
+        .or(names.simplified_chinese)
         .map(str::to_string)
 }
 
@@ -243,38 +247,38 @@ fn geoip_lookup(
     let Some(reader) = guard.reader.as_ref() else {
         return Ok(None);
     };
+    let result = reader
+        .lookup(addr)
+        .map_err(|e| format!("GeoIP lookup failed: {e}"))?;
     // ASN databases carry network-owner fields instead of places.
     if reader.metadata.database_type.contains("ASN") {
-        return match reader.lookup::<geoip2::Asn>(addr) {
-            Ok(a) => Ok(Some(GeoLookup {
-                asn: a.autonomous_system_number,
-                org: a.autonomous_system_organization.map(str::to_string),
-                ..Default::default()
-            })),
-            Err(maxminddb::MaxMindDBError::AddressNotFoundError(_)) => Ok(None),
-            Err(e) => Err(format!("GeoIP lookup failed: {e}")),
+        let Some(a) = result
+            .decode::<geoip2::Asn>()
+            .map_err(|e| format!("GeoIP lookup failed: {e}"))?
+        else {
+            return Ok(None);
         };
+        return Ok(Some(GeoLookup {
+            asn: a.autonomous_system_number,
+            org: a.autonomous_system_organization.map(str::to_string),
+            ..Default::default()
+        }));
     }
     // The City struct also decodes from Country databases — the city and
     // subdivision fields just come back empty.
-    match reader.lookup::<geoip2::City>(addr) {
-        Ok(c) => {
-            let country = c.country.as_ref();
-            Ok(Some(GeoLookup {
-                country: country.and_then(|c| english_name(&c.names)),
-                code: country.and_then(|c| c.iso_code.map(str::to_string)),
-                city: c.city.as_ref().and_then(|c| english_name(&c.names)),
-                region: c
-                    .subdivisions
-                    .as_ref()
-                    .and_then(|s| s.first())
-                    .and_then(|s| english_name(&s.names)),
-                ..Default::default()
-            }))
-        }
-        Err(maxminddb::MaxMindDBError::AddressNotFoundError(_)) => Ok(None),
-        Err(e) => Err(format!("GeoIP lookup failed: {e}")),
-    }
+    let Some(c) = result
+        .decode::<geoip2::City>()
+        .map_err(|e| format!("GeoIP lookup failed: {e}"))?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(GeoLookup {
+        country: english_name(&c.country.names),
+        code: c.country.iso_code.map(str::to_string),
+        city: english_name(&c.city.names),
+        region: c.subdivisions.first().and_then(|s| english_name(&s.names)),
+        ..Default::default()
+    }))
 }
 
 // ---- Layered configuration & plugins (ROADMAP §2.3 / §2.4) -----------------
@@ -555,6 +559,8 @@ fn start_capture(
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     guard.engine = Some(capture);
     guard.running.store(true, Ordering::SeqCst);
+    guard.packet_buffer.clear();
+    guard.names.clear();
 
     // Spawn packet forwarder — exits when channel disconnects (capture stops)
     let app_handle = app.clone();
@@ -649,6 +655,8 @@ fn run_open(
                 let mut guard = state.lock().map_err(|e| e.to_string())?;
                 // Opening a file replaces (and stops) any running capture.
                 guard.engine = None;
+                guard.packet_buffer.clear();
+                guard.names.clear();
             }
             let app_handle = app.clone();
             std::thread::spawn(move || {
@@ -691,6 +699,8 @@ fn run_open(
 
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     guard.engine = Some(capture);
+    guard.packet_buffer.clear();
+    guard.names.clear();
 
     let app_handle = app.clone();
     std::thread::spawn(move || {

@@ -302,7 +302,7 @@ mod tests {
         roundtrip(b"");
         roundtrip(b"a");
         roundtrip(b"exactly sixty-four bytes of capture data padded out here ok!!!!!"); // 64
-        roundtrip(&vec![0xABu8; 200]); // several chunks at chunk_size 64
+        roundtrip(&[0xABu8; 200]); // several chunks at chunk_size 64
         roundtrip(&(0..=255u8).cycle().take(5000).collect::<Vec<_>>());
     }
 

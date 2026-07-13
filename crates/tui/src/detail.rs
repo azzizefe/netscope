@@ -287,10 +287,10 @@ mod tests {
         let nodes = build_tree(&pkt(), 0);
         let titles: Vec<&str> = nodes.iter().map(|n| n.title.as_str()).collect();
         assert_eq!(titles[0], "Frame 1");
-        assert!(titles.iter().any(|t| *t == "Ethernet II"));
+        assert!(titles.contains(&"Ethernet II"));
         assert!(titles.iter().any(|t| t.starts_with("Internet Protocol")));
-        assert!(titles.iter().any(|t| *t == "TCP"));
-        assert!(titles.iter().any(|t| *t == "What is this?"));
+        assert!(titles.contains(&"TCP"));
+        assert!(titles.contains(&"What is this?"));
     }
 
     #[test]

@@ -105,6 +105,12 @@ impl NameCache {
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
     }
+
+    /// Clear all learned hostname mappings and reset the intern pool.
+    pub fn clear(&mut self) {
+        self.map.clear();
+        self.names.clear();
+    }
 }
 
 /// Extract the UDP payload from a raw Ethernet frame.
@@ -187,5 +193,19 @@ mod tests {
         let mut cache = NameCache::new();
         cache.observe(&dns_packet(vec![0xff; 20]));
         assert!(cache.is_empty());
+    }
+
+    #[test]
+    fn clear_resets_cache() {
+        let payload = build_dns_response("github.com", 0x1234, [140, 82, 121, 4]);
+        let frame = build_udp_packet([10, 0, 0, 2], [10, 0, 0, 1], 53, 54321, &payload);
+        let mut cache = NameCache::new();
+        cache.observe(&dns_packet(frame));
+        assert!(!cache.is_empty());
+
+        cache.clear();
+        assert!(cache.is_empty());
+        let ip: IpAddr = "140.82.121.4".parse().unwrap();
+        assert_eq!(cache.name_for(ip), None);
     }
 }

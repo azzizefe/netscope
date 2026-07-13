@@ -177,7 +177,11 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &mut App) {
 
 /// Follow TCP/UDP Stream overlay (ROADMAP §6.1).
 fn render_stream_overlay(frame: &mut Frame, area: Rect, app: &App, theme: Theme) {
-    let stream = crate::stream::follow(&app.packets, app.selected);
+    // Resolve the filtered-list selection to its unfiltered position: the
+    // stream reconstruction scans the full capture for the conversation.
+    let stream = app
+        .selected_unfiltered_index()
+        .and_then(|idx| crate::stream::follow(&app.packets, idx));
     let area = centered_rect(80, 80, area);
     frame.render_widget(Clear, area);
 

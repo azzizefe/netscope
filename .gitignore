@@ -6,3 +6,4 @@ desktop/dist
 npcap-sdk/
 .cargo/
 .claude/
+/dist/
