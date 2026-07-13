@@ -11,8 +11,14 @@ pub fn run(cli: Cli) -> Result<()> {
     let output_path = cli.write.as_deref();
 
     if let Some(iface) = cli.interface.as_deref() {
-        capture.start_live(
-            iface,
+        // Comma-separated list captures on several interfaces at once.
+        let ifaces: Vec<&str> = iface
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .collect();
+        capture.start_live_multi(
+            &ifaces,
             cli.filter.as_deref(),
             output_path,
             packet_tx,

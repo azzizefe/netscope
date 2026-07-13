@@ -588,6 +588,7 @@ const I18N = (() => {
       'menu.tools.blocked': '⛔ Engellenen IP’ler…',
       'badge.npcap': '⚠ Npcap?', 'title.npcap': 'Yakalama sürücüsü bulunamadı — kurulum yardımı için tıklayın',
       'iface.none': 'Arayüz yok — Npcap kurulu mu?', 'iface.error': 'Arayüzler yüklenemedi',
+      'iface.all': '🌐 Tüm arayüzler (birleştir)',
       'npcap.title': 'Yakalama sürücüsü kurulumu',
       'npcap.body': 'netscope paketleri yakalamak için bir sürücüye ihtiyaç duyar. Hiç ağ arayüzü bulunamadı — genellikle sürücü eksik ya da uygulama yeterli yetkiyle çalışmıyor demektir.',
       'npcap.win': 'Npcap’i “WinPcap API uyumlu mod” işaretli kurun, sonra uygulamayı Yönetici olarak yeniden başlatın',
@@ -599,6 +600,7 @@ const I18N = (() => {
   Object.assign(EXTRA.en, {
     'badge.npcap': '⚠ Npcap?', 'title.npcap': 'No capture driver found — click for setup help',
     'iface.none': 'No interfaces — is Npcap installed?', 'iface.error': 'Error loading interfaces',
+    'iface.all': '🌐 All interfaces (merge)',
     'npcap.title': 'Capture driver setup',
     'npcap.body': 'netscope needs a packet-capture driver. No network interfaces were found — usually the driver is missing, or the app isn’t running with enough privileges.',
     'npcap.win': 'Install Npcap with “WinPcap API-compatible mode” ticked, then relaunch as Administrator',

@@ -174,14 +174,79 @@ pub fn friendly_name_of(raw_name: &str) -> String {
         .unwrap_or_else(|| raw_name.to_string())
 }
 
-/// Capture engine built on the parallel pipeline (ROADMAP §2.1): a capture
+/// Open a live capture handle on `interface`, apply the (protocol-translated)
+/// BPF filter, and return it with its link-layer type. Shared by single- and
+/// multi-interface capture so both open interfaces identically.
+fn open_live_capture(
+    interface: &str,
+    bpf_filter: Option<&str>,
+    monitor: bool,
+) -> Result<(pcap::Capture<pcap::Active>, i32)> {
+    let inactive = pcap::Capture::from_device(interface)
+        .map_err(|e| {
+            if cfg!(target_os = "windows") {
+                anyhow::anyhow!(
+                    "Failed to open interface '{interface}': {e}\n  Ensure Npcap is installed: https://npcap.com"
+                )
+            } else if cfg!(unix) {
+                anyhow::anyhow!(
+                    "Failed to open interface '{interface}': {e}\n  Run with sudo or set CAP_NET_RAW capability"
+                )
+            } else {
+                anyhow::anyhow!("Failed to open interface '{interface}': {e}")
+            }
+        })?
+        .promisc(true)
+        .snaplen(65535)
+        .timeout(1000);
+
+    // Monitor (rfmon) mode captures raw 802.11 frames instead of Ethernet.
+    // The `pcap` crate only exposes it on non-Windows platforms; on Windows,
+    // Npcap monitor mode needs a separate driver API we don't bind, so we
+    // fail clearly rather than silently capturing Ethernet.
+    #[cfg(not(windows))]
+    let inactive = inactive.rfmon(monitor);
+    #[cfg(windows)]
+    if monitor {
+        return Err(anyhow::anyhow!(
+            "Monitor mode (raw 802.11) isn't supported on Windows through netscope's capture backend.\n  Open a monitor-mode .pcap instead, or capture on Linux/macOS with a monitor-capable adapter."
+        ));
+    }
+
+    let mut cap = inactive.open().map_err(|e| {
+        if monitor {
+            anyhow::anyhow!(
+                "Failed to open '{interface}' in monitor mode: {e}\n  This adapter/driver may not support monitor mode. Turn it off under Wireless, or use a monitor-capable adapter."
+            )
+        } else if cfg!(target_os = "windows") {
+            anyhow::anyhow!(
+                "Failed to open capture on '{interface}': {e}\n  Ensure Npcap is installed and WinPcap is not conflicting"
+            )
+        } else {
+            anyhow::anyhow!("Failed to open capture on '{interface}': {e}")
+        }
+    })?;
+
+    if let Some(filter) = bpf_filter {
+        let translated = translate_bpf_filter(filter);
+        cap.filter(&translated, true)
+            .map_err(|e| anyhow::anyhow!("Invalid BPF filter '{filter}': {e}"))?;
+    }
+
+    let linktype = cap.get_datalink().0;
+    Ok((cap, linktype))
+}
+
+/// Capture engine built on the parallel pipeline (ROADMAP §2.1): each capture
 /// thread feeds raw frames into a lock-free ring, a rayon-backed dissector
 /// stage parses them across cores, and finished [`Packet`]s arrive on the
-/// `Sender` given to `start_live`/`start_offline` in arrival order.
+/// `Sender` given to `start_live`/`start_live_multi`/`start_offline`. Capturing
+/// on several interfaces at once runs one capture thread + pipeline per
+/// interface, all merged onto the one `Sender` (Wireshark-style).
 pub struct CaptureEngine {
     running: Arc<AtomicBool>,
-    handle: Option<thread::JoinHandle<()>>,
-    pipeline: Option<Pipeline>,
+    handles: Vec<thread::JoinHandle<()>>,
+    pipelines: Vec<Pipeline>,
 }
 
 impl Default for CaptureEngine {
@@ -194,8 +259,8 @@ impl CaptureEngine {
     pub fn new() -> Self {
         Self {
             running: Arc::new(AtomicBool::new(false)),
-            handle: None,
-            pipeline: None,
+            handles: Vec::new(),
+            pipelines: Vec::new(),
         }
     }
 
@@ -210,62 +275,15 @@ impl CaptureEngine {
         let running = self.running.clone();
         running.store(true, Ordering::SeqCst);
 
-        let inactive = pcap::Capture::from_device(interface)
-            .map_err(|e| {
-                if cfg!(target_os = "windows") {
-                    anyhow::anyhow!(
-                        "Failed to open interface '{interface}': {e}\n  Ensure Npcap is installed: https://npcap.com"
-                    )
-                } else if cfg!(unix) {
-                    anyhow::anyhow!(
-                        "Failed to open interface '{interface}': {e}\n  Run with sudo or set CAP_NET_RAW capability"
-                    )
-                } else {
-                    anyhow::anyhow!("Failed to open interface '{interface}': {e}")
-                }
-            })?
-            .promisc(true)
-            .snaplen(65535)
-            .timeout(1000);
-
-        // Monitor (rfmon) mode captures raw 802.11 frames instead of Ethernet.
-        // The `pcap` crate only exposes it on non-Windows platforms; on Windows,
-        // Npcap monitor mode needs a separate driver API we don't bind, so we
-        // fail clearly rather than silently capturing Ethernet.
-        #[cfg(not(windows))]
-        let inactive = inactive.rfmon(monitor);
-        #[cfg(windows)]
-        if monitor {
-            running.store(false, Ordering::SeqCst);
-            return Err(anyhow::anyhow!(
-                "Monitor mode (raw 802.11) isn't supported on Windows through netscope's capture backend.\n  Open a monitor-mode .pcap instead, or capture on Linux/macOS with a monitor-capable adapter."
-            ));
-        }
-
-        let mut cap = inactive.open().map_err(|e| {
-            if monitor {
-                anyhow::anyhow!(
-                    "Failed to open '{interface}' in monitor mode: {e}\n  This adapter/driver may not support monitor mode. Turn it off under Wireless, or use a monitor-capable adapter."
-                )
-            } else if cfg!(target_os = "windows") {
-                anyhow::anyhow!(
-                    "Failed to open capture on '{interface}': {e}\n  Ensure Npcap is installed and WinPcap is not conflicting"
-                )
-            } else {
-                anyhow::anyhow!("Failed to open capture on '{interface}': {e}")
+        let (mut cap, linktype) = match open_live_capture(interface, bpf_filter, monitor) {
+            Ok(v) => v,
+            Err(e) => {
+                running.store(false, Ordering::SeqCst);
+                return Err(e);
             }
-        })?;
-
-        if let Some(filter) = bpf_filter {
-            let translated = translate_bpf_filter(filter);
-            cap.filter(&translated, true)
-                .map_err(|e| anyhow::anyhow!("Invalid BPF filter '{filter}': {e}"))?;
-        }
+        };
 
         let output_path = output_path.map(|s| s.to_string());
-        // Link-layer type decides how each frame is dissected (Ethernet vs.
-        // 802.11 / radiotap). Read it before `cap` moves into the thread.
-        let linktype = cap.get_datalink().0;
 
         // Dissection happens off the capture thread: frames go into the
         // lock-free ring, the pipeline's rayon stage parses them.
@@ -306,8 +324,90 @@ impl CaptureEngine {
             })
             .context("Failed to spawn capture thread")?;
 
-        self.handle = Some(handle);
-        self.pipeline = Some(pipeline);
+        self.handles.push(handle);
+        self.pipelines.push(pipeline);
+        Ok(())
+    }
+
+    /// Capture on several interfaces at once, merged into the one `packet_tx`
+    /// (Wireshark-style multi-interface capture). Each interface gets its own
+    /// capture thread and dissector pipeline, so mixed link types (Ethernet +
+    /// Wi-Fi) are each dissected correctly. Interfaces that fail to open are
+    /// skipped with a warning; it's an error only if *none* opens.
+    ///
+    /// A single interface delegates to [`start_live`](Self::start_live) (which
+    /// also supports writing to a savefile). Writing to a file while capturing
+    /// on multiple interfaces is not supported — classic pcap has one global
+    /// link type — so `output_path` is ignored (with a warning) for >1.
+    pub fn start_live_multi(
+        &mut self,
+        interfaces: &[&str],
+        bpf_filter: Option<&str>,
+        output_path: Option<&str>,
+        packet_tx: Sender<Packet>,
+        monitor: bool,
+    ) -> Result<()> {
+        if interfaces.is_empty() {
+            anyhow::bail!("No capture interface specified.");
+        }
+        if interfaces.len() == 1 {
+            return self.start_live(interfaces[0], bpf_filter, output_path, packet_tx, monitor);
+        }
+        if output_path.is_some() {
+            eprintln!(
+                "Warning: saving to a file isn't supported when capturing on multiple interfaces — the capture will not be written to disk."
+            );
+        }
+
+        let running = self.running.clone();
+        running.store(true, Ordering::SeqCst);
+
+        // Open every interface up front. Keep the ones that open; collect the
+        // rest as warnings so one dead adapter doesn't sink the whole capture.
+        let mut opened = Vec::new();
+        let mut errors = Vec::new();
+        for &iface in interfaces {
+            match open_live_capture(iface, bpf_filter, monitor) {
+                Ok((cap, linktype)) => opened.push((iface.to_string(), cap, linktype)),
+                Err(e) => errors.push(format!("{e}")),
+            }
+        }
+        if opened.is_empty() {
+            running.store(false, Ordering::SeqCst);
+            anyhow::bail!(
+                "Could not open any of the requested interfaces:\n  {}",
+                errors.join("\n  ")
+            );
+        }
+        for e in &errors {
+            eprintln!("Warning: skipping interface — {e}");
+        }
+
+        for (iface, mut cap, linktype) in opened {
+            let tx = packet_tx.clone();
+            let pipeline = Pipeline::start(linktype, tx, running.clone());
+            let producer = pipeline.producer();
+            let run = running.clone();
+            let handle = thread::Builder::new()
+                .name(format!("capture:{iface}"))
+                .spawn(move || {
+                    while run.load(Ordering::SeqCst) {
+                        match cap.next_packet() {
+                            Ok(pkt) => producer.push_live(raw_frame(pkt)),
+                            Err(pcap::Error::TimeoutExpired) => continue,
+                            Err(pcap::Error::NoMorePackets) => break,
+                            Err(e) => {
+                                eprintln!("Capture error on '{iface}': {e}");
+                                break;
+                            }
+                        }
+                    }
+                    producer.finish();
+                })
+                .context("Failed to spawn capture thread")?;
+            self.handles.push(handle);
+            self.pipelines.push(pipeline);
+        }
         Ok(())
     }
 
@@ -374,20 +474,21 @@ impl CaptureEngine {
             })
             .context("Failed to spawn capture thread")?;
 
-        self.handle = Some(handle);
-        self.pipeline = Some(pipeline);
+        self.handles.push(handle);
+        self.pipelines.push(pipeline);
         Ok(())
     }
 
     pub fn stop(&mut self) {
         self.running.store(false, Ordering::SeqCst);
-        if let Some(handle) = self.handle.take() {
+        // Join every capture thread first so all producers have declared their
+        // streams finished…
+        for handle in self.handles.drain(..) {
             let _ = handle.join();
         }
-        // The capture thread has declared the stream finished; wait for the
-        // dissector stage to drain the ring so no packet is lost on stop.
-        // The pipeline object stays around so its final stats remain readable.
-        if let Some(pipeline) = self.pipeline.as_mut() {
+        // …then wait for each dissector stage to drain its ring so no packet is
+        // lost on stop. Pipelines stay around so their final stats remain readable.
+        for pipeline in self.pipelines.iter_mut() {
             pipeline.join();
         }
     }
@@ -396,10 +497,20 @@ impl CaptureEngine {
         self.running.load(Ordering::SeqCst)
     }
 
-    /// Pipeline counters (frames received / dropped / dissected) for the
-    /// running or just-stopped capture. `None` before the first start.
+    /// Pipeline counters (frames received / dropped / dissected) summed across
+    /// every active interface. `None` before the first start.
     pub fn pipeline_stats(&self) -> Option<StatsSnapshot> {
-        self.pipeline.as_ref().map(|p| p.stats())
+        if self.pipelines.is_empty() {
+            return None;
+        }
+        let mut agg = StatsSnapshot::default();
+        for p in &self.pipelines {
+            let s = p.stats();
+            agg.received += s.received;
+            agg.dropped += s.dropped;
+            agg.dissected += s.dissected;
+        }
+        Some(agg)
     }
 }
 
@@ -563,6 +674,40 @@ mod async_tests {
             assert_eq!(stats.dissected, 5);
             assert_eq!(stats.dropped, 0);
         });
+    }
+}
+
+#[cfg(test)]
+mod capture_tests {
+    use super::*;
+
+    #[test]
+    fn multi_requires_at_least_one_interface() {
+        let mut eng = CaptureEngine::new();
+        let (tx, _rx) = crossbeam_channel::unbounded();
+        let err = eng
+            .start_live_multi(&[], None, None, tx, false)
+            .unwrap_err();
+        assert!(err.to_string().contains("No capture interface"), "{err}");
+        assert!(!eng.is_running());
+    }
+
+    #[test]
+    fn multi_all_bogus_interfaces_errors_and_resets_running() {
+        let mut eng = CaptureEngine::new();
+        let (tx, _rx) = crossbeam_channel::unbounded();
+        // Names that cannot resolve to real devices — every open fails, so the
+        // whole call must error (and leave the engine stopped).
+        let res = eng.start_live_multi(
+            &["netscope-no-such-if-0", "netscope-no-such-if-1"],
+            None,
+            None,
+            tx,
+            false,
+        );
+        assert!(res.is_err());
+        assert!(!eng.is_running());
+        assert!(eng.pipeline_stats().is_none());
     }
 }
 

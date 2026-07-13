@@ -47,6 +47,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Simultaneous multi-interface capture** (`crates/core/src/capture.rs`,
+  Wireshark-style). `CaptureEngine::start_live_multi` runs one capture thread
+  and dissector pipeline per interface, all merged onto a single analysis
+  stream — mixed link types (Ethernet + Wi-Fi) are each dissected correctly,
+  and an interface that fails to open is skipped with a warning rather than
+  sinking the whole capture. The TUI takes a comma-separated list
+  (`-i "Wi-Fi,Ethernet"`); the desktop gains a "🌐 All interfaces (merge)"
+  option that captures on every listed interface at once. Verified live:
+  merged capture on two interfaces yields one interleaved packet stream.
 - **pcapng support in the memory-mapped reader** (`crates/core/src/stream.rs`).
   pcapng is Wireshark's *default* save format; until now the mmap fast path
   only handled classic `.pcap` and pcapng fell back to the slower streaming

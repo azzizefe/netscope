@@ -101,8 +101,18 @@ impl App {
         let mut capture = CaptureEngine::new();
 
         let interface_name = if let Some(iface) = interface {
-            capture.start_live(iface, bpf_filter, output, packet_tx, monitor)?;
-            netscope_core::capture::friendly_name_of(iface)
+            // A comma-separated list captures on several interfaces at once
+            // (Wireshark-style), e.g. `-i "Wi-Fi,Ethernet"`.
+            let ifaces: Vec<&str> = iface
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .collect();
+            capture.start_live_multi(&ifaces, bpf_filter, output, packet_tx, monitor)?;
+            match ifaces.as_slice() {
+                [one] => netscope_core::capture::friendly_name_of(one),
+                many => format!("{} interfaces", many.len()),
+            }
         } else if let Some(path) = file {
             capture.start_offline(path, bpf_filter, output, packet_tx)?;
             path.to_string()
