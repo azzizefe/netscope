@@ -1,11 +1,13 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
-use netscope_core::capture::CaptureEngine;
+use netscope_core::capture::{CaptureEngine, CaptureOptions, StopConditions};
 use netscope_core::config::Config;
 use netscope_core::models::Packet;
 use netscope_core::names::NameCache;
-use serde::Serialize;
+use netscope_core::remote::RemoteSpec;
+use netscope_core::rotate::RingBufferOptions;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 struct CaptureState {
@@ -20,6 +22,9 @@ struct CaptureState {
 struct InterfaceInfo {
     name: String,
     description: String,
+    /// "ethernet" | "loopback" | "usb" | "bluetooth" | "can" — lets the UI
+    /// badge hardware-bus capture sources.
+    kind: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -523,13 +528,132 @@ fn replay_packet(
 #[tauri::command]
 fn list_interfaces() -> Result<Vec<InterfaceInfo>, String> {
     let devices = netscope_core::capture::list_interfaces().map_err(|e| e.to_string())?;
-    Ok(devices
+    let mut out: Vec<InterfaceInfo> = devices
         .into_iter()
-        .map(|d| InterfaceInfo {
-            name: d.name,
-            description: d.desc.unwrap_or_default(),
+        .map(|d| {
+            let kind = netscope_core::capture::interface_kind(&d).as_str().to_string();
+            InterfaceInfo {
+                name: d.name,
+                description: d.desc.unwrap_or_default(),
+                kind,
+            }
         })
-        .collect())
+        .collect();
+    // Windows USB capture devices (USBPcap) aren't libpcap interfaces —
+    // append them so USB capture is one click like any adapter.
+    for (value, display) in netscope_core::remote::usbpcap_interfaces() {
+        out.push(InterfaceInfo {
+            name: value,
+            description: display,
+            kind: "usb".into(),
+        });
+    }
+    Ok(out)
+}
+
+/// Optional capture knobs sent from the frontend's Capture-options dialog.
+/// All fields default to off, so an older frontend (or a plain start) works
+/// unchanged.
+#[derive(Deserialize, Default, Clone)]
+#[serde(rename_all = "camelCase", default)]
+struct CaptureOptionsArg {
+    /// Autostop: stop after this many seconds / packets / captured kilobytes.
+    stop_duration_secs: Option<u64>,
+    stop_packets: Option<u64>,
+    stop_filesize_kb: Option<u64>,
+    /// Write the capture to this pcap file while it runs.
+    output_path: Option<String>,
+    /// Ring buffer for `output_path` (Wireshark -b): rotate by size/time,
+    /// keep at most `ring_files` files.
+    ring_filesize_kb: Option<u64>,
+    ring_duration_secs: Option<u64>,
+    ring_files: Option<usize>,
+}
+
+impl CaptureOptionsArg {
+    fn to_options(&self, filter: Option<String>, monitor: bool) -> Result<CaptureOptions, String> {
+        let ring = if self.ring_filesize_kb.is_some()
+            || self.ring_duration_secs.is_some()
+            || self.ring_files.is_some()
+        {
+            let ring = RingBufferOptions {
+                filesize_kb: self.ring_filesize_kb,
+                duration_secs: self.ring_duration_secs,
+                files: self.ring_files,
+            };
+            if !ring.rotates() {
+                return Err(
+                    "A ring buffer needs a file size or duration to rotate on.".to_string()
+                );
+            }
+            if self.output_path.is_none() {
+                return Err("A ring buffer needs an output file to write to.".to_string());
+            }
+            Some(ring)
+        } else {
+            None
+        };
+        Ok(CaptureOptions {
+            bpf_filter: filter,
+            output_path: self.output_path.clone(),
+            monitor,
+            stop: StopConditions {
+                duration_secs: self.stop_duration_secs,
+                packets: self.stop_packets,
+                bytes: self.stop_filesize_kb.map(|kb| kb.saturating_mul(1024)),
+            },
+            ring,
+        })
+    }
+}
+
+/// Store the started engine and spawn the packet forwarder. Emits
+/// `capture-stopped` when the stream ends on its own (autostop limit hit,
+/// remote side gone) so the UI can flip back to idle.
+fn adopt_capture(
+    app: &AppHandle,
+    state: &State<'_, Mutex<CaptureState>>,
+    capture: CaptureEngine,
+    packet_rx: crossbeam_channel::Receiver<Packet>,
+) -> Result<(), String> {
+    let mut guard = state.lock().map_err(|e| e.to_string())?;
+    guard.engine = Some(capture);
+    guard.running.store(true, Ordering::SeqCst);
+    guard.packet_buffer.clear();
+    guard.names.clear();
+    drop(guard);
+
+    let app_handle = app.clone();
+    std::thread::spawn(move || {
+        loop {
+            match packet_rx.recv_timeout(std::time::Duration::from_millis(50)) {
+                Ok(pkt) => {
+                    let info = if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
+                        // Learn hostnames from DNS, then resolve this packet's addrs.
+                        g.names.observe(&pkt);
+                        let info = packet_to_info(&pkt, &g.names);
+                        g.packet_buffer.push(pkt);
+                        if g.packet_buffer.len() > 100_000 {
+                            g.packet_buffer.drain(..50_000);
+                        }
+                        info
+                    } else {
+                        packet_to_info(&pkt, &NameCache::new())
+                    };
+                    let _ = app_handle.emit("packet", info);
+                }
+                Err(crossbeam_channel::RecvTimeoutError::Timeout) => continue,
+                Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
+            }
+        }
+        // The channel only disconnects when every capture pipeline has
+        // drained — either a manual stop or the engine stopping itself
+        // (autostop, stream end). Tell the UI either way; it ignores the
+        // event when it already knows the capture is over.
+        let _ = app_handle.emit("capture-stopped", ());
+    });
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -538,58 +662,90 @@ fn start_capture(
     state: State<'_, Mutex<CaptureState>>,
     interfaces: Vec<String>,
     filter: Option<String>,
-    output_path: Option<String>,
     monitor: Option<bool>,
+    options: Option<CaptureOptionsArg>,
 ) -> Result<(), String> {
+    let opts = options
+        .unwrap_or_default()
+        .to_options(filter, monitor.unwrap_or(false))?;
+
     let mut capture = CaptureEngine::new();
     let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
-    let bpf_filter = filter.as_deref();
-    let output = output_path.as_deref();
 
-    // Capture on one or several interfaces at once (Wireshark-style), all
-    // merged into a single analysis stream.
-    let iface_refs: Vec<&str> = interfaces.iter().map(String::as_str).collect();
-    capture
-        .start_live_multi(
-            &iface_refs,
-            bpf_filter,
-            output,
-            packet_tx,
-            monitor.unwrap_or(false),
-        )
-        .map_err(|e| e.to_string())?;
-
-    let mut guard = state.lock().map_err(|e| e.to_string())?;
-    guard.engine = Some(capture);
-    guard.running.store(true, Ordering::SeqCst);
-    guard.packet_buffer.clear();
-    guard.names.clear();
-
-    // Spawn packet forwarder — exits when channel disconnects (capture stops)
-    let app_handle = app.clone();
-    std::thread::spawn(move || loop {
-        match packet_rx.recv_timeout(std::time::Duration::from_millis(50)) {
-            Ok(pkt) => {
-                let info = if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
-                    // Learn hostnames from DNS, then resolve this packet's addrs.
-                    g.names.observe(&pkt);
-                    let info = packet_to_info(&pkt, &g.names);
-                    g.packet_buffer.push(pkt);
-                    if g.packet_buffer.len() > 100_000 {
-                        g.packet_buffer.drain(..50_000);
-                    }
-                    info
-                } else {
-                    packet_to_info(&pkt, &NameCache::new())
-                };
-                let _ = app_handle.emit("packet", info);
-            }
-            Err(crossbeam_channel::RecvTimeoutError::Timeout) => continue,
-            Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
+    // Windows USBPcap devices capture through USBPcapCMD, not libpcap.
+    let is_usbpcap = |name: &str| name.to_ascii_lowercase().starts_with(r"\\.\usbpcap");
+    if let Some(usb) = interfaces.iter().find(|i| is_usbpcap(i)) {
+        if interfaces.len() > 1 {
+            return Err(
+                "USB (USBPcap) devices can't be combined with network interfaces in one capture."
+                    .to_string(),
+            );
         }
-    });
+        let (program, args) =
+            netscope_core::remote::usbpcap_capture_command(usb).map_err(|e| e.to_string())?;
+        let opts = CaptureOptions {
+            bpf_filter: None, // BPF doesn't apply to the USB pseudo-link
+            ..opts
+        };
+        capture
+            .start_pipe(&program, &args, usb, &opts, packet_tx)
+            .map_err(|e| e.to_string())?;
+    } else {
+        // Capture on one or several interfaces at once (Wireshark-style),
+        // all merged into a single analysis stream.
+        let iface_refs: Vec<&str> = interfaces.iter().map(String::as_str).collect();
+        capture
+            .start_with(&iface_refs, &opts, packet_tx)
+            .map_err(|e| e.to_string())?;
+    }
 
-    Ok(())
+    adopt_capture(&app, &state, capture, packet_rx)
+}
+
+/// Remote capture over SSH (sshdump-style): run tcpdump (or a custom
+/// command) on `host` and dissect the pcap stream it sends back. Blocks
+/// until the stream starts, so auth/connection errors surface here.
+// Each parameter is a distinct IPC field from the frontend's remote-capture
+// form, so the argument list is intrinsic to the command.
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+fn start_remote_capture(
+    app: AppHandle,
+    state: State<'_, Mutex<CaptureState>>,
+    host: String,
+    user: Option<String>,
+    port: Option<u16>,
+    identity_file: Option<String>,
+    remote_interface: Option<String>,
+    filter: Option<String>,
+    remote_command: Option<String>,
+    use_sudo: Option<bool>,
+    options: Option<CaptureOptionsArg>,
+) -> Result<String, String> {
+    if host.trim().is_empty() {
+        return Err("A remote host is required.".to_string());
+    }
+    let spec = RemoteSpec {
+        host: host.trim().to_string(),
+        user: user.filter(|s| !s.trim().is_empty()),
+        port,
+        identity_file: identity_file.filter(|s| !s.trim().is_empty()),
+        interface: remote_interface.filter(|s| !s.trim().is_empty()),
+        capture_filter: filter.filter(|s| !s.trim().is_empty()),
+        remote_command: remote_command.filter(|s| !s.trim().is_empty()),
+        use_sudo: use_sudo.unwrap_or(false),
+    };
+    // The BPF filter runs on the remote side (inside the tcpdump command).
+    let opts = options.unwrap_or_default().to_options(None, false)?;
+
+    let mut capture = CaptureEngine::new();
+    let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
+    capture
+        .start_remote(&spec, &opts, packet_tx)
+        .map_err(|e| format!("{e:#}"))?;
+
+    adopt_capture(&app, &state, capture, packet_rx)?;
+    Ok(spec.describe())
 }
 
 #[tauri::command]
@@ -764,13 +920,43 @@ fn build_pcap_bytes(packets: &[Packet]) -> Vec<u8> {
     out
 }
 
+fn build_pcapng_bytes(packets: &[Packet]) -> Result<Vec<u8>, String> {
+    let mut buf = Vec::new();
+    let mut writer = netscope_core::pcapng::PcapngWriter::new(
+        &mut buf,
+        netscope_core::pcapng::SectionMeta {
+            application: Some(concat!("netscope ", env!("CARGO_PKG_VERSION")).to_string()),
+            ..Default::default()
+        },
+        &[netscope_core::pcapng::InterfaceMeta {
+            linktype: 1, // Ethernet
+            snaplen: 65535,
+            name: Some("eth0".to_string()),
+            description: Some("netscope captured interface".to_string()),
+        }],
+    ).map_err(|e| e.to_string())?;
+
+    for pkt in packets {
+        let ts_sec = pkt.timestamp.timestamp();
+        let ts_nanos = pkt.timestamp.timestamp_subsec_nanos();
+        writer.write_packet(0, ts_sec, ts_nanos, pkt.length as u32, &pkt.data, None)
+            .map_err(|e| e.to_string())?;
+    }
+    writer.finish().map_err(|e| e.to_string())?;
+    Ok(buf)
+}
+
 #[tauri::command]
 fn save_pcap(state: State<'_, Mutex<CaptureState>>, path: String) -> Result<(), String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     if guard.packet_buffer.is_empty() {
         return Err("No captured packets to save.".to_string());
     }
-    let bytes = build_pcap_bytes(&guard.packet_buffer);
+    let bytes = if path.to_lowercase().ends_with(".pcapng") {
+        build_pcapng_bytes(&guard.packet_buffer)?
+    } else {
+        build_pcap_bytes(&guard.packet_buffer)
+    };
     drop(guard);
     std::fs::write(&path, bytes).map_err(|e| format!("Failed to write '{path}': {e}"))
 }
@@ -791,7 +977,11 @@ fn save_pcap_encrypted(
     if guard.packet_buffer.is_empty() {
         return Err("No captured packets to save.".to_string());
     }
-    let bytes = build_pcap_bytes(&guard.packet_buffer);
+    let bytes = if path.to_lowercase().ends_with(".pcapng.enc") {
+        build_pcapng_bytes(&guard.packet_buffer)?
+    } else {
+        build_pcap_bytes(&guard.packet_buffer)
+    };
     drop(guard);
     let sealed = netscope_core::crypto::encrypt(&bytes, &passphrase)
         .map_err(|e| format!("Encryption failed: {e}"))?;
@@ -874,6 +1064,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_interfaces,
             start_capture,
+            start_remote_capture,
             stop_capture,
             open_pcap,
             open_pcap_encrypted,

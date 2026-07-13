@@ -1,6 +1,8 @@
 pub mod arp;
 pub mod bacnet;
 pub mod bgp;
+pub mod bluetooth;
+pub mod can;
 pub mod cassandra;
 pub mod coap;
 pub mod dhcp;
@@ -27,6 +29,8 @@ pub mod mysql;
 pub mod ntp;
 pub mod opcua;
 pub mod openvpn;
+pub mod ntlm;
+pub mod qpack;
 pub mod ospf;
 pub mod pop3;
 pub mod postgres;
@@ -36,6 +40,7 @@ pub mod rdp;
 pub mod redis;
 pub mod rtp;
 pub mod sip;
+pub mod sll;
 pub mod smtp;
 pub mod snmp;
 pub mod ssh;
@@ -44,6 +49,7 @@ pub mod tcp;
 pub mod telnet;
 pub mod tls;
 pub mod udp;
+pub mod usb;
 pub mod vxlan;
 pub mod websocket;
 pub mod wireguard;
@@ -99,14 +105,30 @@ pub struct DissectedResult {
 const DLT_EN10MB: i32 = 1;
 const DLT_IEEE802_11: i32 = 105;
 const DLT_IEEE802_11_RADIO: i32 = 127;
+const DLT_LINUX_SLL: i32 = 113; // Linux cooked capture (tcpdump -i any)
+const DLT_LINUX_SLL2: i32 = 276;
+const DLT_BT_HCI_H4: i32 = 187; // Bluetooth HCI UART transport
+const DLT_BT_HCI_H4_WITH_PHDR: i32 = 201; // …with a direction pseudo-header
+const DLT_USB_LINUX: i32 = 189; // usbmon, 48-byte header
+const DLT_USB_LINUX_MMAPPED: i32 = 220; // usbmon, 64-byte header
+const DLT_CAN_SOCKETCAN: i32 = 227; // SocketCAN (can0/vcan0)
+const DLT_USBPCAP: i32 = 249; // Windows USBPcap
 
 /// Entry point that respects the capture's link-layer type. Ethernet captures
-/// (the default) go through [`dissect`]; Wi-Fi captures — raw 802.11 or
-/// radiotap-prefixed (monitor mode) — go through the WLAN dissector.
+/// (the default) go through [`dissect`]; Wi-Fi, Linux-cooked (remote
+/// `-i any`), USB, Bluetooth-HCI and CAN captures each take their own
+/// link-layer path.
 pub fn dissect_linktype(data: &[u8], linktype: i32) -> DissectedResult {
     match linktype {
         DLT_IEEE802_11_RADIO => wlan::dissect_radiotap(data),
         DLT_IEEE802_11 => wlan::dissect_80211(data, None),
+        DLT_LINUX_SLL => sll::dissect_sll(data),
+        DLT_LINUX_SLL2 => sll::dissect_sll2(data),
+        DLT_BT_HCI_H4 => bluetooth::dissect_hci_h4(data),
+        DLT_BT_HCI_H4_WITH_PHDR => bluetooth::dissect_hci_with_phdr(data),
+        DLT_USB_LINUX | DLT_USB_LINUX_MMAPPED => usb::dissect_usb_linux(data),
+        DLT_USBPCAP => usb::dissect_usbpcap(data),
+        DLT_CAN_SOCKETCAN => can::dissect_can(data),
         DLT_EN10MB => dissect(data),
         _ => dissect(data),
     }
@@ -149,7 +171,7 @@ const ETHERTYPE_MAX_LENGTH: u16 = 0x05DC; // 1500
 /// unwrapping each 4-byte tag and re-dispatching on the inner EtherType so a
 /// tagged frame still reaches its IP/ARP dissector. `vlan_depth` caps the
 /// recursion (2 tags is the practical maximum: QinQ).
-fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> DissectedResult {
+pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> DissectedResult {
     match ethertype {
         ETHERTYPE_ARP => arp::dissect_arp(payload),
         ETHERTYPE_IPV4 => {

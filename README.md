@@ -49,6 +49,11 @@
 - **🎓 Built-in Learn mode** — Never used a packet analyzer? A dedicated view explains every protocol in plain language, and each selected packet gets a one-line "what is this?". No prior networking knowledge needed.
 - **🎯 Zero-config interface pick** — Skips loopback and virtual adapters (WAN Miniport, Hyper-V) and lands on your real Wi-Fi/Ethernet automatically.
 - **🌐 Multi-interface capture** — Capture on several interfaces at once, merged into one stream (Wireshark-style). Pick **🌐 All interfaces** in the desktop, or pass a comma-separated list to the TUI (`-i "Wi-Fi,Ethernet"`). Each interface is dissected on its own core, so mixed link types (Ethernet + Wi-Fi) just work.
+- **🖧 Remote capture over SSH** — Capture from another machine without installing anything on it: netscope runs `tcpdump` on the remote host over SSH and streams the packets back live (Wireshark's *sshdump*). Desktop: **Capture ▸ Remote capture (SSH)…**; TUI: `--remote-host 192.168.1.1 --remote-user root`. Key/agent auth only — no passwords typed into the app.
+- **🧩 External & piped sources (extcap-style)** — Any tool that writes pcap/pcapng to stdout is a capture source. The TUI reads a live stream from stdin (`ssh host "tcpdump -U -w -" | netscope-tui -i -`), and both classic pcap and pcapng streams are parsed incrementally.
+- **🔌 USB · Bluetooth · CAN capture** — Beyond the network stack: dissects USB traffic (Linux *usbmon*, Windows **USBPcap** — auto-listed as `\\.\USBPcap1`), Bluetooth **HCI** (commands/events, LE advertising & connects) and **CAN bus** (SocketCAN, classic + CAN FD). Hardware-bus interfaces are badged `[USB]`/`[BT]`/`[CAN]` in the picker, and `usb`/`bluetooth`/`can` are display-filter predicates.
+- **⏱ Autostop conditions** — Stop a capture automatically at a limit: duration, packet count, or captured size. Desktop: **Capture ▸ Options**; TUI: `-a duration:60 -a packets:10000` (repeatable, Wireshark's `-a`). Works across every interface of a multi-interface capture.
+- **♻️ Ring-buffer capture files** — Long-running capture without filling the disk: rotate the save file by size or time and keep only the last *N* files (Wireshark's `-b`). Desktop: **Capture ▸ Options**; TUI: `-b filesize:2048 -b files:10`. Files are timestamp-named so a set sorts chronologically.
 - **🔬 Wireshark-style inspector** — The desktop app has the classic three-pane layout: colorized packet list, an expandable protocol tree (Frame → IP → TCP → app layer), and a live hex/ASCII byte view — plus a plain-language "What is this?" for every packet.
 - **🌍 Where is it going?** — Click a packet and the inspector shows the remote host's **country (with flag), city, and owning organisation** (e.g. `🇺🇸 United States · Google LLC`). Point it at an **offline MaxMind database** (free GeoLite2 `.mmdb`) and lookups resolve **entirely on your machine** — private, offline, no network calls. Looked up on demand only for the packet you open, and cached per IP.
 - **💬 Follow Stream** — In the Connections view, press **Follow** on any TCP/UDP conversation to read it reassembled as plain text, color-coded by direction (client vs. server) — Wireshark's most-used feature, one click away.
@@ -183,12 +188,26 @@ netscope-tui -i eth0 --headless --json | jq '.summary'
 ```
 Usage: netscope-tui [OPTIONS]
 
-  -i, --interface <IFACE>    Interface to capture on
+  -i, --interface <IFACE>    Interface(s) to capture on — comma-separated for
+                             several; "-" reads a pcap stream from stdin;
+                             "\\.\USBPcap1" captures USB (Windows)
   -r, --read <FILE>          Read from a pcap file
   -w, --write <FILE>         Save capture to pcap file
   -f, --filter <BPF>         BPF filter (e.g. "tcp port 443")
       --monitor              Capture raw 802.11 Wi-Fi in monitor mode
                              (needs a monitor-capable adapter; not on Windows)
+  -a, --autostop <COND>      Stop automatically (repeatable): duration:SECONDS,
+                             packets:COUNT or filesize:kB
+  -b, --ring <COND>          Ring-buffer the -w file (repeatable): filesize:kB,
+                             duration:SECONDS, files:COUNT
+      --remote-host <HOST>   Capture on a remote host over SSH (runs tcpdump
+                             there, streams the pcap back — sshdump-style)
+      --remote-user <USER>   SSH user for --remote-host
+      --remote-port <PORT>   SSH port for --remote-host
+      --remote-identity <F>  SSH private-key file for --remote-host
+      --remote-interface <I> Remote interface to capture on (default: any)
+      --remote-command <CMD> Remote command override (must write pcap to stdout)
+      --remote-sudo          Run the remote capture command with sudo
       --colors <FILE>        Coloring rules file (see below)
   -D, --list-interfaces      List available interfaces
       --headless             Plain text output to stdout
@@ -196,6 +215,22 @@ Usage: netscope-tui [OPTIONS]
       --list-blocked         List IPs blocked by netscope firewall rules
       --unblock-all          Remove all netscope block rules and exit
   -h, --help                 Print help
+```
+
+**Examples**
+
+```bash
+# Stop after 60 seconds OR 10k packets, whichever comes first
+netscope-tui -i eth0 -a duration:60 -a packets:10000
+
+# Long capture, rotating: 2 MB files, keep the last 10
+netscope-tui -i eth0 -w rolling.pcap -b filesize:2048 -b files:10
+
+# Capture from a remote host over SSH (needs key/agent auth + tcpdump there)
+netscope-tui --remote-host 192.168.1.1 --remote-user root -f "not port 22"
+
+# Pipe any extcap-style source in via stdin
+ssh gw "tcpdump -U -w -" | netscope-tui -i - --headless
 ```
 
 ### Keyboard Shortcuts

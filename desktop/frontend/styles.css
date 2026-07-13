@@ -122,6 +122,16 @@ html, body {
 .popover-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
 .geoip-db-row { display: flex; align-items: center; gap: 8px; }
 .geoip-db-row .popover-hint { margin-top: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Capture options / remote capture dialogs (rendered inside the tool modal) */
+.capopt-group { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+.capopt-group legend { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); padding: 0 6px; }
+.capopt-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 7px 0; font-size: 13px; }
+.capopt-row > span { color: var(--text-muted); flex: 0 0 auto; }
+.capopt-row input[type="text"] { flex: 1 1 auto; min-width: 0; max-width: 60%; }
+.capopt-check { justify-content: flex-start; }
+.capopt-check input { flex: 0 0 auto; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .profile-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .profile-chip {
   display: inline-flex; align-items: center; gap: 5px;

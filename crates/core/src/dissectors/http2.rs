@@ -338,9 +338,19 @@ pub fn try_dissect(
         } else {
             "message".into()
         };
+        // Try decoding the first message heuristically
+        let proto_desc = frames
+            .iter()
+            .filter(|f| f.typ == FT_DATA && f.complete)
+            .find_map(|f| decode_grpc_payload(f.payload));
+        let details = if let Some(p) = proto_desc {
+            p
+        } else {
+            format!("{} bytes ({comp})", m.bytes)
+        };
         (
             Protocol::Grpc,
-            format!("gRPC {count} — {} bytes ({comp}) on stream {sid}", m.bytes),
+            format!("gRPC {count} — {details} on stream {sid}"),
         )
     } else if preface {
         let first = frames.first().map(describe);
@@ -368,6 +378,104 @@ pub fn try_dissect(
         protocol,
         summary,
     })
+}
+
+fn to_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn decode_protobuf_heuristic(mut bytes: &[u8]) -> Option<String> {
+    let mut fields = Vec::new();
+    
+    fn read_varint(bytes: &mut &[u8]) -> Option<u64> {
+        let mut val = 0u64;
+        let mut shift = 0;
+        loop {
+            if bytes.is_empty() { return None; }
+            let b = bytes[0];
+            *bytes = &bytes[1..];
+            val |= ((b & 0x7f) as u64) << shift;
+            if b & 0x80 == 0 {
+                break;
+            }
+            shift += 7;
+            if shift >= 64 { return None; }
+        }
+        Some(val)
+    }
+
+    while !bytes.is_empty() {
+        let tag = read_varint(&mut bytes)?;
+        let wire_type = tag & 0x7;
+        let field_num = tag >> 3;
+        if field_num == 0 {
+            return None;
+        }
+
+        match wire_type {
+            0 => {
+                let val = read_varint(&mut bytes)?;
+                fields.push(format!("{field_num}: {val}"));
+            }
+            1 => {
+                if bytes.len() < 8 { return None; }
+                let val = u64::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]]);
+                bytes = &bytes[8..];
+                fields.push(format!("{field_num}: 0x{val:016x}"));
+            }
+            2 => {
+                let len = read_varint(&mut bytes)? as usize;
+                if bytes.len() < len { return None; }
+                let sub = &bytes[..len];
+                bytes = &bytes[len..];
+                // Check if it's printable ASCII
+                if sub.iter().all(|&b| b.is_ascii_graphic() || b.is_ascii_whitespace()) {
+                    if let Ok(s) = std::str::from_utf8(sub) {
+                        let display_str = if s.len() > 30 {
+                            format!("\"{}...\"", &s[..27])
+                        } else {
+                            format!("\"{s}\"")
+                        };
+                        fields.push(format!("{field_num}: {display_str}"));
+                        continue;
+                    }
+                }
+                // Try recursively
+                if let Some(nested) = decode_protobuf_heuristic(sub) {
+                    fields.push(format!("{field_num}: {nested}"));
+                } else {
+                    let hex = if sub.len() > 8 {
+                        format!("{}...", to_hex(&sub[..8]))
+                    } else {
+                        to_hex(sub)
+                    };
+                    fields.push(format!("{field_num}: bytes(0x{hex})"));
+                }
+            }
+            5 => {
+                if bytes.len() < 4 { return None; }
+                let val = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+                bytes = &bytes[4..];
+                fields.push(format!("{field_num}: 0x{val:08x}"));
+            }
+            _ => return None,
+        }
+    }
+    
+    Some(format!("{{{}}}", fields.join(", ")))
+}
+
+fn decode_grpc_payload(data: &[u8]) -> Option<String> {
+    if data.len() < 5 { return None; }
+    let compressed = data[0] == 1;
+    let len = u32::from_be_bytes([data[1], data[2], data[3], data[4]]) as usize;
+    if data.len() < 5 + len { return None; }
+    let msg_bytes = &data[5..5 + len];
+    if compressed {
+        None
+    } else {
+        decode_protobuf_heuristic(msg_bytes)
+    }
 }
 
 /// Note appended to HTTP summaries when the message is an h2c upgrade: a
@@ -504,6 +612,18 @@ mod tests {
         assert_eq!(
             r.summary,
             "gRPC message — 4 bytes (uncompressed) on stream 1"
+        );
+
+        // One complete uncompressed message with valid protobuf: tag 1, length-delimited string "grpc"
+        // 10 = (1 << 3) | 2
+        let mut msg2 = vec![0u8, 0, 0, 0, 6];
+        msg2.extend([10, 4, b'g', b'r', b'p', b'c']);
+        let b2 = frame(FT_DATA, F_END_STREAM, 1, &msg2, None);
+        let r2 = dissect(&b2).unwrap();
+        assert_eq!(r2.protocol, Protocol::Grpc);
+        assert_eq!(
+            r2.summary,
+            "gRPC message — {1: \"grpc\"} on stream 1"
         );
     }
 

@@ -58,6 +58,10 @@ const KNOWN_PROTOS: &[&str] = &[
     "wlan",
     "wifi",
     "802.11",
+    "usb",
+    "bluetooth",
+    "hci",
+    "can",
     "websocket",
     "ws",
     "vxlan",
@@ -193,6 +197,10 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "icmp" => transport == Transport::Icmp,
         "arp" => transport == Transport::Arp,
         "wlan" | "wifi" => pkt.protocol.to_string() == "802.11",
+        // Hardware-bus captures: display names differ from the bare tokens.
+        "usb" => pkt.protocol == Protocol::Usb,
+        "bluetooth" | "hci" => pkt.protocol == Protocol::Bluetooth,
+        "can" => pkt.protocol == Protocol::Can,
         "ws" => pkt.protocol == Protocol::WebSocket,
         // Display is "HTTP/2", which the lexer can't produce as a bare word.
         "http2" => pkt.protocol == Protocol::Http2,

@@ -48,7 +48,8 @@ impl Transport {
             | Protocol::OpcUa
             | Protocol::Ldap
             | Protocol::Mqtt
-            | Protocol::Bgp => Transport::Tcp,
+            | Protocol::Bgp
+            | Protocol::Ntlm => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -83,7 +84,13 @@ impl Transport {
                 PluginTransport::Tcp => Transport::Tcp,
                 PluginTransport::Udp => Transport::Udp,
             },
-            Protocol::Wlan | Protocol::Unknown(_) => Transport::Other,
+            // Hardware-bus captures (USB / Bluetooth HCI / CAN) have no
+            // IP transport at all.
+            Protocol::Wlan
+            | Protocol::Usb
+            | Protocol::Bluetooth
+            | Protocol::Can
+            | Protocol::Unknown(_) => Transport::Other,
         }
     }
 }
@@ -200,11 +207,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Lldp
         | Protocol::Lacp
         | Protocol::Stp
-        | Protocol::Mpls => 3,
+        | Protocol::Mpls
+        | Protocol::Ntlm => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,
-        Protocol::Tcp | Protocol::Udp | Protocol::Icmp | Protocol::Arp | Protocol::Wlan => 1,
+        Protocol::Tcp
+        | Protocol::Udp
+        | Protocol::Icmp
+        | Protocol::Arp
+        | Protocol::Wlan
+        | Protocol::Usb
+        | Protocol::Bluetooth
+        | Protocol::Can => 1,
         Protocol::Unknown(_) => 0,
     }
 }

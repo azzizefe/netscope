@@ -1,14 +1,18 @@
+use std::io::Read;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
     Arc,
 };
 use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use crossbeam_channel::Sender;
 
 use crate::models::Packet;
-use crate::pipeline::{Pipeline, RawFrame, StatsSnapshot};
+use crate::pipeline::{Pipeline, Producer, RawFrame, StatsSnapshot};
+use crate::remote::{spawn_pipe_source, PcapStreamReader, PipeSource, RemoteSpec};
+use crate::rotate::{RingBufferOptions, RingWriter};
 
 /// Translate human-friendly protocol names in a filter expression into valid
 /// BPF syntax. Tokens that are already valid BPF (ports, hostnames, operators)
@@ -160,6 +164,62 @@ fn interface_score(dev: &pcap::Device) -> i32 {
     score
 }
 
+/// Broad class of a capture interface. Network adapters are `Regular`;
+/// the special classes cover Linux's usbmon / Bluetooth-HCI / SocketCAN
+/// devices and Windows' USBPcap filter devices, so UIs can group and badge
+/// hardware-bus capture sources.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InterfaceKind {
+    Regular,
+    Loopback,
+    Usb,
+    Bluetooth,
+    Can,
+}
+
+impl InterfaceKind {
+    /// Stable lowercase tag for serialization ("ethernet", "usb", …).
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            InterfaceKind::Regular => "ethernet",
+            InterfaceKind::Loopback => "loopback",
+            InterfaceKind::Usb => "usb",
+            InterfaceKind::Bluetooth => "bluetooth",
+            InterfaceKind::Can => "can",
+        }
+    }
+}
+
+/// Classify a libpcap device by its flags and name.
+pub fn interface_kind(dev: &pcap::Device) -> InterfaceKind {
+    if dev.flags.is_loopback() {
+        return InterfaceKind::Loopback;
+    }
+    interface_kind_of_name(&dev.name)
+}
+
+/// Classify a capture source by name alone. Recognises Linux's `usbmonN`,
+/// `bluetoothN` / `bluetooth-monitor`, SocketCAN (`canN`/`vcanN`/`slcanN`)
+/// devices and Windows' `\\.\USBPcapN` filter devices.
+pub fn interface_kind_of_name(name: &str) -> InterfaceKind {
+    let lower = name.to_ascii_lowercase();
+    if lower.starts_with(r"\\.\usbpcap") || lower.starts_with("usbmon") {
+        return InterfaceKind::Usb;
+    }
+    if lower.starts_with("bluetooth") {
+        return InterfaceKind::Bluetooth;
+    }
+    let is_num_suffix = |rest: &str| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit());
+    for prefix in ["vcan", "slcan", "can"] {
+        if let Some(rest) = lower.strip_prefix(prefix) {
+            if is_num_suffix(rest) {
+                return InterfaceKind::Can;
+            }
+        }
+    }
+    InterfaceKind::Regular
+}
+
 /// Human-friendly label for a device: its description when available
 /// (e.g. "Intel(R) Wi-Fi 6 AX201"), otherwise the raw name.
 pub fn friendly_name(dev: &pcap::Device) -> String {
@@ -237,16 +297,106 @@ fn open_live_capture(
     Ok((cap, linktype))
 }
 
+/// Autostop conditions — Wireshark's `-a`: the capture stops itself as soon
+/// as **any** configured limit is reached. Counters are shared across every
+/// interface of a multi-interface capture.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct StopConditions {
+    /// Stop after this many seconds of capturing.
+    pub duration_secs: Option<u64>,
+    /// Stop after this many packets.
+    pub packets: Option<u64>,
+    /// Stop after this many captured bytes (sum of stored frame sizes).
+    pub bytes: Option<u64>,
+}
+
+impl StopConditions {
+    /// True when no limit is configured (capture runs until stopped).
+    pub fn is_unlimited(&self) -> bool {
+        self.duration_secs.is_none() && self.packets.is_none() && self.bytes.is_none()
+    }
+}
+
+/// Runtime side of [`StopConditions`]: lock-free counters shared by all
+/// capture threads of one engine run.
+struct StopTracker {
+    deadline: Option<Instant>,
+    max_packets: Option<u64>,
+    max_bytes: Option<u64>,
+    packets: AtomicU64,
+    bytes: AtomicU64,
+}
+
+impl StopTracker {
+    /// `None` when there is nothing to track — the loops then skip the
+    /// per-packet checks entirely.
+    fn new(c: &StopConditions) -> Option<Arc<Self>> {
+        if c.is_unlimited() {
+            return None;
+        }
+        Some(Arc::new(Self {
+            deadline: c
+                .duration_secs
+                .map(|s| Instant::now() + Duration::from_secs(s)),
+            max_packets: c.packets,
+            max_bytes: c.bytes,
+            packets: AtomicU64::new(0),
+            bytes: AtomicU64::new(0),
+        }))
+    }
+
+    /// Count one captured frame; true once any limit is reached.
+    fn record(&self, frame_bytes: u64) -> bool {
+        let p = self.packets.fetch_add(1, Ordering::Relaxed) + 1;
+        let b = self.bytes.fetch_add(frame_bytes, Ordering::Relaxed) + frame_bytes;
+        self.max_packets.is_some_and(|m| p >= m)
+            || self.max_bytes.is_some_and(|m| b >= m)
+            || self.expired()
+    }
+
+    /// Duration check alone — polled on idle read timeouts so a quiet
+    /// interface still stops on schedule.
+    fn expired(&self) -> bool {
+        self.deadline.is_some_and(|d| Instant::now() >= d)
+    }
+}
+
+/// Everything configurable about a capture start, so new options don't keep
+/// growing the `start_*` parameter lists.
+#[derive(Debug, Clone, Default)]
+pub struct CaptureOptions {
+    /// BPF capture filter (friendly protocol names are translated).
+    pub bpf_filter: Option<String>,
+    /// Write captured packets to this pcap file.
+    pub output_path: Option<String>,
+    /// Monitor (rfmon) mode for raw 802.11 capture.
+    pub monitor: bool,
+    /// Autostop limits (duration / packets / bytes).
+    pub stop: StopConditions,
+    /// Ring-buffer rotation for `output_path` (Wireshark `-b`).
+    pub ring: Option<RingBufferOptions>,
+}
+
 /// Capture engine built on the parallel pipeline (ROADMAP §2.1): each capture
 /// thread feeds raw frames into a lock-free ring, a rayon-backed dissector
 /// stage parses them across cores, and finished [`Packet`]s arrive on the
 /// `Sender` given to `start_live`/`start_live_multi`/`start_offline`. Capturing
 /// on several interfaces at once runs one capture thread + pipeline per
 /// interface, all merged onto the one `Sender` (Wireshark-style).
+///
+/// Beyond local interfaces the engine can also consume *streamed* captures:
+/// [`start_remote`](Self::start_remote) (sshdump-style over SSH),
+/// [`start_pipe`](Self::start_pipe) (any extcap-style command writing pcap to
+/// stdout — USBPcapCMD, ciscodump, custom scripts) and
+/// [`start_read_stream`](Self::start_read_stream) (an already-open byte
+/// stream, e.g. stdin).
 pub struct CaptureEngine {
     running: Arc<AtomicBool>,
     handles: Vec<thread::JoinHandle<()>>,
     pipelines: Vec<Pipeline>,
+    /// External capture processes (ssh, USBPcapCMD…) killed on stop so a
+    /// reader blocked on the pipe wakes up.
+    pipes: Vec<PipeSource>,
 }
 
 impl Default for CaptureEngine {
@@ -261,9 +411,12 @@ impl CaptureEngine {
             running: Arc::new(AtomicBool::new(false)),
             handles: Vec::new(),
             pipelines: Vec::new(),
+            pipes: Vec::new(),
         }
     }
 
+    /// Back-compat wrapper: single-interface live capture. See
+    /// [`start_with`](Self::start_with) for the full-featured entry point.
     pub fn start_live(
         &mut self,
         interface: &str,
@@ -272,73 +425,17 @@ impl CaptureEngine {
         packet_tx: Sender<Packet>,
         monitor: bool,
     ) -> Result<()> {
-        let running = self.running.clone();
-        running.store(true, Ordering::SeqCst);
-
-        let (mut cap, linktype) = match open_live_capture(interface, bpf_filter, monitor) {
-            Ok(v) => v,
-            Err(e) => {
-                running.store(false, Ordering::SeqCst);
-                return Err(e);
-            }
+        let opts = CaptureOptions {
+            bpf_filter: bpf_filter.map(str::to_string),
+            output_path: output_path.map(str::to_string),
+            monitor,
+            ..Default::default()
         };
-
-        let output_path = output_path.map(|s| s.to_string());
-
-        // Dissection happens off the capture thread: frames go into the
-        // lock-free ring, the pipeline's rayon stage parses them.
-        let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
-        let producer = pipeline.producer();
-
-        let handle = thread::Builder::new()
-            .name("capture".into())
-            .spawn(move || {
-                let mut savefile = output_path
-                    .as_ref()
-                    .and_then(|path| match cap.savefile(path) {
-                        Ok(sf) => Some(sf),
-                        Err(e) => {
-                            eprintln!("Warning: Failed to create savefile '{}': {}", path, e);
-                            None
-                        }
-                    });
-                while running.load(Ordering::SeqCst) {
-                    match cap.next_packet() {
-                        Ok(pkt) => {
-                            if let Some(ref mut sf) = savefile {
-                                sf.write(&pkt);
-                            }
-                            // Live capture must never stall the wire loop:
-                            // a full ring drops the frame (counted in stats).
-                            producer.push_live(raw_frame(pkt));
-                        }
-                        Err(pcap::Error::TimeoutExpired) => continue,
-                        Err(pcap::Error::NoMorePackets) => break,
-                        Err(e) => {
-                            eprintln!("Capture error: {e}");
-                            break;
-                        }
-                    }
-                }
-                producer.finish();
-            })
-            .context("Failed to spawn capture thread")?;
-
-        self.handles.push(handle);
-        self.pipelines.push(pipeline);
-        Ok(())
+        self.start_with(&[interface], &opts, packet_tx)
     }
 
-    /// Capture on several interfaces at once, merged into the one `packet_tx`
-    /// (Wireshark-style multi-interface capture). Each interface gets its own
-    /// capture thread and dissector pipeline, so mixed link types (Ethernet +
-    /// Wi-Fi) are each dissected correctly. Interfaces that fail to open are
-    /// skipped with a warning; it's an error only if *none* opens.
-    ///
-    /// A single interface delegates to [`start_live`](Self::start_live) (which
-    /// also supports writing to a savefile). Writing to a file while capturing
-    /// on multiple interfaces is not supported — classic pcap has one global
-    /// link type — so `output_path` is ignored (with a warning) for >1.
+    /// Back-compat wrapper: multi-interface live capture. See
+    /// [`start_with`](Self::start_with) for the full-featured entry point.
     pub fn start_live_multi(
         &mut self,
         interfaces: &[&str],
@@ -347,16 +444,33 @@ impl CaptureEngine {
         packet_tx: Sender<Packet>,
         monitor: bool,
     ) -> Result<()> {
+        let opts = CaptureOptions {
+            bpf_filter: bpf_filter.map(str::to_string),
+            output_path: output_path.map(str::to_string),
+            monitor,
+            ..Default::default()
+        };
+        self.start_with(interfaces, &opts, packet_tx)
+    }
+
+    /// Live capture on one or several interfaces with the full option set:
+    /// BPF filter, save-to-file (with optional ring-buffer rotation) and
+    /// autostop conditions. Each interface gets its own capture thread and
+    /// dissector pipeline, so mixed link types (Ethernet + Wi-Fi) are each
+    /// dissected correctly; interfaces that fail to open are skipped with a
+    /// warning, and it's an error only if *none* opens.
+    ///
+    /// Writing to a file while capturing on multiple interfaces is not
+    /// supported — classic pcap has one global link type — so the output
+    /// path is ignored (with a warning) for >1 interface.
+    pub fn start_with(
+        &mut self,
+        interfaces: &[&str],
+        opts: &CaptureOptions,
+        packet_tx: Sender<Packet>,
+    ) -> Result<()> {
         if interfaces.is_empty() {
             anyhow::bail!("No capture interface specified.");
-        }
-        if interfaces.len() == 1 {
-            return self.start_live(interfaces[0], bpf_filter, output_path, packet_tx, monitor);
-        }
-        if output_path.is_some() {
-            eprintln!(
-                "Warning: saving to a file isn't supported when capturing on multiple interfaces — the capture will not be written to disk."
-            );
         }
 
         let running = self.running.clone();
@@ -367,7 +481,7 @@ impl CaptureEngine {
         let mut opened = Vec::new();
         let mut errors = Vec::new();
         for &iface in interfaces {
-            match open_live_capture(iface, bpf_filter, monitor) {
+            match open_live_capture(iface, opts.bpf_filter.as_deref(), opts.monitor) {
                 Ok((cap, linktype)) => opened.push((iface.to_string(), cap, linktype)),
                 Err(e) => errors.push(format!("{e}")),
             }
@@ -383,31 +497,209 @@ impl CaptureEngine {
             eprintln!("Warning: skipping interface — {e}");
         }
 
-        for (iface, mut cap, linktype) in opened {
+        // File writing (plain or ring-buffer) only works for one interface.
+        let multi = opened.len() > 1;
+        let mut writer = match build_file_writer(opts, opened[0].2, multi) {
+            Ok(w) => w,
+            Err(e) => {
+                running.store(false, Ordering::SeqCst);
+                return Err(e);
+            }
+        };
+
+        // One autostop tracker shared by every capture thread.
+        let tracker = StopTracker::new(&opts.stop);
+
+        for (iface, cap, linktype) in opened {
             let tx = packet_tx.clone();
             let pipeline = Pipeline::start(linktype, tx, running.clone());
             let producer = pipeline.producer();
             let run = running.clone();
+            let trk = tracker.clone();
+            let wtr = writer.take(); // only the first interface writes
             let handle = thread::Builder::new()
                 .name(format!("capture:{iface}"))
-                .spawn(move || {
-                    while run.load(Ordering::SeqCst) {
-                        match cap.next_packet() {
-                            Ok(pkt) => producer.push_live(raw_frame(pkt)),
-                            Err(pcap::Error::TimeoutExpired) => continue,
-                            Err(pcap::Error::NoMorePackets) => break,
-                            Err(e) => {
-                                eprintln!("Capture error on '{iface}': {e}");
-                                break;
-                            }
-                        }
-                    }
-                    producer.finish();
-                })
+                .spawn(move || capture_loop(cap, &iface, producer, run, trk, wtr))
                 .context("Failed to spawn capture thread")?;
             self.handles.push(handle);
             self.pipelines.push(pipeline);
         }
+        Ok(())
+    }
+
+    /// Capture from a remote host over SSH, sshdump-style: runs
+    /// `tcpdump -U -w -` (or [`RemoteSpec::remote_command`]) on the remote
+    /// side and dissects the pcap stream it sends back. Blocks until the
+    /// stream header arrives, so connection and authentication errors
+    /// surface here with the SSH client's message attached.
+    pub fn start_remote(
+        &mut self,
+        spec: &RemoteSpec,
+        opts: &CaptureOptions,
+        packet_tx: Sender<Packet>,
+    ) -> Result<()> {
+        let (program, args) = spec.command();
+        self.start_pipe(&program, &args, &spec.describe(), opts, packet_tx)
+    }
+
+    /// Capture from any local command that writes a pcap/pcapng stream to
+    /// its stdout — the extcap model. This is how Windows USB capture runs
+    /// (`USBPcapCMD.exe -d \\.\USBPcap1 -o -`) and how tools like ciscodump
+    /// or androiddump can be plugged in without netscope knowing them.
+    ///
+    /// `opts.bpf_filter` is ignored (filtering happens in the producing
+    /// command); output/ring and autostop options apply normally.
+    pub fn start_pipe(
+        &mut self,
+        program: &str,
+        args: &[String],
+        label: &str,
+        opts: &CaptureOptions,
+        packet_tx: Sender<Packet>,
+    ) -> Result<()> {
+        let running = self.running.clone();
+        running.store(true, Ordering::SeqCst);
+
+        let mut pipe = match spawn_pipe_source(program, args, label) {
+            Ok(p) => p,
+            Err(e) => {
+                running.store(false, Ordering::SeqCst);
+                return Err(e);
+            }
+        };
+        let stdout = pipe
+            .take_stdout()
+            .context("capture command has no stdout pipe")?;
+
+        // Blocks until the pcap header arrives — this is where a failed SSH
+        // login or a mistyped remote command comes back to the caller.
+        let reader = match PcapStreamReader::new(stdout) {
+            Ok(r) => r,
+            Err(e) => {
+                pipe.kill();
+                running.store(false, Ordering::SeqCst);
+                let stderr = pipe.stderr_excerpt();
+                if stderr.is_empty() {
+                    return Err(e.context(format!("'{label}' produced no capture stream")));
+                }
+                return Err(e.context(format!(
+                    "'{label}' produced no capture stream. The command reported:\n  {stderr}"
+                )));
+            }
+        };
+
+        let kill_child = pipe.child.clone();
+        self.pipes.push(pipe);
+        self.spawn_stream_thread(reader, label, opts, packet_tx, move || {
+            if let Ok(mut child) = kill_child.lock() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        })
+    }
+
+    /// Dissect a pcap/pcapng stream from an already-open byte source —
+    /// netscope's `-i -` (read a live capture from stdin, e.g.
+    /// `ssh host "tcpdump -U -w -" | netscope -i -`).
+    pub fn start_read_stream(
+        &mut self,
+        source: Box<dyn Read + Send>,
+        label: &str,
+        opts: &CaptureOptions,
+        packet_tx: Sender<Packet>,
+    ) -> Result<()> {
+        let running = self.running.clone();
+        running.store(true, Ordering::SeqCst);
+        let reader = match PcapStreamReader::new(source) {
+            Ok(r) => r,
+            Err(e) => {
+                running.store(false, Ordering::SeqCst);
+                return Err(e);
+            }
+        };
+        self.spawn_stream_thread(reader, label, opts, packet_tx, || {})
+    }
+
+    /// Shared tail of the stream-based starts: pipeline + reader thread.
+    /// `on_exit` runs when the stream ends (used to reap a child process).
+    fn spawn_stream_thread<R: Read + Send + 'static>(
+        &mut self,
+        mut reader: PcapStreamReader<R>,
+        label: &str,
+        opts: &CaptureOptions,
+        packet_tx: Sender<Packet>,
+        on_exit: impl FnOnce() + Send + 'static,
+    ) -> Result<()> {
+        let running = self.running.clone();
+        let linktype = reader.linktype();
+        let mut writer = match build_file_writer(opts, linktype, false) {
+            Ok(w) => w,
+            Err(e) => {
+                running.store(false, Ordering::SeqCst);
+                return Err(e);
+            }
+        };
+        let tracker = StopTracker::new(&opts.stop);
+
+        let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
+        let producer = pipeline.producer();
+        let run = running.clone();
+        let label = label.to_string();
+        let handle = thread::Builder::new()
+            .name(format!("stream:{label}"))
+            .spawn(move || {
+                while run.load(Ordering::SeqCst) {
+                    match reader.next_frame() {
+                        Ok(Some(frame)) => {
+                            let mut write_failed = false;
+                            if let Some(w) = writer.as_mut() {
+                                if let Err(e) = w.write(
+                                    frame.ts_sec as u32,
+                                    frame.ts_nanos / 1000,
+                                    frame.orig_len,
+                                    &frame.data,
+                                ) {
+                                    eprintln!("Warning: capture file write failed: {e} — file saving disabled");
+                                    write_failed = true;
+                                }
+                            }
+                            if write_failed {
+                                writer = None;
+                            }
+                            let hit = tracker
+                                .as_deref()
+                                .is_some_and(|t| t.record(frame.data.len() as u64));
+                            producer.push_live(frame);
+                            if hit {
+                                break;
+                            }
+                        }
+                        Ok(None) => break, // clean end of stream
+                        Err(e) => {
+                            // A killed child (user stop) also lands here —
+                            // only report when the capture was still running.
+                            if run.load(Ordering::SeqCst) {
+                                eprintln!("Capture stream '{label}' ended: {e:#}");
+                            }
+                            break;
+                        }
+                    }
+                }
+                if let Some(w) = writer {
+                    if let Err(e) = w.finish() {
+                        eprintln!("Warning: capture file flush failed: {e}");
+                    }
+                }
+                // One stream is the whole capture: mark the engine stopped and
+                // reap the producing process so nothing lingers.
+                run.store(false, Ordering::SeqCst);
+                on_exit();
+                producer.finish();
+            })
+            .context("Failed to spawn capture stream thread")?;
+
+        self.handles.push(handle);
+        self.pipelines.push(pipeline);
         Ok(())
     }
 
@@ -421,67 +713,131 @@ impl CaptureEngine {
         let running = self.running.clone();
         running.store(true, Ordering::SeqCst);
 
-        let mut cap = pcap::Capture::from_file(filepath)
-            .map_err(|e| anyhow::anyhow!("Failed to open pcap file '{filepath}': {e}"))?;
+        // Detect format (ROADMAP §2.2 / §2.5 support for other formats)
+        let format = crate::formats::detect(filepath).ok();
+        let is_native = format.is_some_and(|f| f.is_native_pcap());
 
-        if let Some(filter) = bpf_filter {
-            let translated = translate_bpf_filter(filter);
-            cap.filter(&translated, true)
-                .map_err(|e| anyhow::anyhow!("Invalid BPF filter '{filter}': {e}"))?;
-        }
+        if is_native {
+            let mut cap = pcap::Capture::from_file(filepath)
+                .map_err(|e| anyhow::anyhow!("Failed to open pcap file '{filepath}': {e}"))?;
 
-        let output_path = output_path.map(|s| s.to_string());
-        // Link-layer type of the saved capture (Ethernet, 802.11, radiotap…).
-        let linktype = cap.get_datalink().0;
+            if let Some(filter) = bpf_filter {
+                let translated = translate_bpf_filter(filter);
+                cap.filter(&translated, true)
+                    .map_err(|e| anyhow::anyhow!("Invalid BPF filter '{filter}': {e}"))?;
+            }
 
-        let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
-        let producer = pipeline.producer();
+            let output_path = output_path.map(|s| s.to_string());
+            // Link-layer type of the saved capture (Ethernet, 802.11, radiotap…).
+            let linktype = cap.get_datalink().0;
 
-        let handle = thread::Builder::new()
-            .name("capture".into())
-            .spawn(move || {
-                let mut savefile = output_path
-                    .as_ref()
-                    .and_then(|path| match cap.savefile(path) {
-                        Ok(sf) => Some(sf),
-                        Err(e) => {
-                            eprintln!("Warning: Failed to create savefile '{}': {}", path, e);
-                            None
-                        }
-                    });
-                while running.load(Ordering::SeqCst) {
-                    match cap.next_packet() {
-                        Ok(pkt) => {
-                            if let Some(ref mut sf) = savefile {
-                                sf.write(&pkt);
+            let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
+            let producer = pipeline.producer();
+
+            let handle = thread::Builder::new()
+                .name("capture".into())
+                .spawn(move || {
+                    let mut savefile = output_path
+                        .as_ref()
+                        .and_then(|path| match cap.savefile(path) {
+                            Ok(sf) => Some(sf),
+                            Err(e) => {
+                                eprintln!("Warning: Failed to create savefile '{}': {}", path, e);
+                                None
                             }
-                            // Reading a file: block for ring space instead of
-                            // dropping — losing packets from a pcap would
-                            // silently skew analysis.
-                            if !producer.push_blocking(raw_frame(pkt), &running) {
+                        });
+                    while running.load(Ordering::SeqCst) {
+                        match cap.next_packet() {
+                            Ok(pkt) => {
+                                if let Some(ref mut sf) = savefile {
+                                    sf.write(&pkt);
+                                }
+                                // Reading a file: block for ring space instead of
+                                // dropping — losing packets from a pcap would
+                                // silently skew analysis.
+                                if !producer.push_blocking(raw_frame(pkt), &running) {
+                                    break;
+                                }
+                            }
+                            Err(pcap::Error::TimeoutExpired) => continue,
+                            Err(pcap::Error::NoMorePackets) => break,
+                            Err(e) => {
+                                eprintln!("Capture error: {e}");
                                 break;
                             }
                         }
-                        Err(pcap::Error::TimeoutExpired) => continue,
-                        Err(pcap::Error::NoMorePackets) => break,
-                        Err(e) => {
-                            eprintln!("Capture error: {e}");
-                            break;
+                    }
+                    producer.finish();
+                })
+                .context("Failed to spawn capture thread")?;
+
+            self.handles.push(handle);
+            self.pipelines.push(pipeline);
+            Ok(())
+        } else {
+            let mut reader = crate::formats::RecordReader::open(filepath)?;
+            let linktype = reader.linktype();
+            let output_path = output_path.map(|s| s.to_string());
+
+            let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
+            let producer = pipeline.producer();
+
+            let handle = thread::Builder::new()
+                .name("capture".into())
+                .spawn(move || {
+                    let mut writer = output_path.as_ref().and_then(|path| {
+                        match RingWriter::create(path, linktype, RingBufferOptions::default()) {
+                            Ok(w) => Some(w),
+                            Err(e) => {
+                                eprintln!("Warning: Failed to create savefile '{}': {}", path, e);
+                                None
+                            }
+                        }
+                    });
+
+                    while running.load(Ordering::SeqCst) {
+                        match reader.next_frame() {
+                            Ok(Some(frame)) => {
+                                if let Some(ref mut w) = writer {
+                                    let _ = w.write(
+                                        frame.ts_sec as u32,
+                                        frame.ts_nanos / 1000,
+                                        frame.orig_len,
+                                        &frame.data,
+                                    );
+                                }
+                                if !producer.push_blocking(frame, &running) {
+                                    break;
+                                }
+                            }
+                            Ok(None) => break,
+                            Err(e) => {
+                                eprintln!("Capture error: {e}");
+                                break;
+                            }
                         }
                     }
-                }
-                producer.finish();
-            })
-            .context("Failed to spawn capture thread")?;
+                    if let Some(w) = writer {
+                        let _ = w.finish();
+                    }
+                    producer.finish();
+                })
+                .context("Failed to spawn capture thread")?;
 
-        self.handles.push(handle);
-        self.pipelines.push(pipeline);
-        Ok(())
+            self.handles.push(handle);
+            self.pipelines.push(pipeline);
+            Ok(())
+        }
     }
 
     pub fn stop(&mut self) {
         self.running.store(false, Ordering::SeqCst);
-        // Join every capture thread first so all producers have declared their
+        // Kill external capture processes first: a stream reader blocked on
+        // its pipe only wakes up when the writing side goes away.
+        for pipe in self.pipes.drain(..) {
+            pipe.kill();
+        }
+        // Join every capture thread so all producers have declared their
         // streams finished…
         for handle in self.handles.drain(..) {
             let _ = handle.join();
@@ -518,6 +874,97 @@ impl Drop for CaptureEngine {
     fn drop(&mut self) {
         self.stop();
     }
+}
+
+/// The live-capture wire loop: read packets until stopped, feed the
+/// pipeline, optionally write the capture file and check autostop limits.
+fn capture_loop(
+    mut cap: pcap::Capture<pcap::Active>,
+    iface: &str,
+    producer: Producer,
+    running: Arc<AtomicBool>,
+    tracker: Option<Arc<StopTracker>>,
+    mut writer: Option<RingWriter>,
+) {
+    while running.load(Ordering::SeqCst) {
+        match cap.next_packet() {
+            Ok(pkt) => {
+                let mut write_failed = false;
+                if let Some(w) = writer.as_mut() {
+                    // tv_sec is i32 on Windows but i64 on Linux/macOS.
+                    #[allow(clippy::unnecessary_cast)]
+                    let ts_sec = pkt.header.ts.tv_sec as u32;
+                    if let Err(e) =
+                        w.write(ts_sec, pkt.header.ts.tv_usec as u32, pkt.header.len, pkt.data)
+                    {
+                        eprintln!(
+                            "Warning: capture file write failed: {e} — file saving disabled"
+                        );
+                        write_failed = true;
+                    }
+                }
+                if write_failed {
+                    writer = None;
+                }
+                let hit = tracker
+                    .as_deref()
+                    .is_some_and(|t| t.record(pkt.header.caplen as u64));
+                // Live capture must never stall the wire loop: a full ring
+                // drops the frame (counted in stats).
+                producer.push_live(raw_frame(pkt));
+                if hit {
+                    // Autostop limit reached — stops every sibling thread too.
+                    running.store(false, Ordering::SeqCst);
+                    break;
+                }
+            }
+            Err(pcap::Error::TimeoutExpired) => {
+                // Idle tick: a duration limit must fire on quiet interfaces.
+                if tracker.as_deref().is_some_and(|t| t.expired()) {
+                    running.store(false, Ordering::SeqCst);
+                    break;
+                }
+            }
+            Err(pcap::Error::NoMorePackets) => break,
+            Err(e) => {
+                eprintln!("Capture error on '{iface}': {e}");
+                break;
+            }
+        }
+    }
+    if let Some(w) = writer {
+        if let Err(e) = w.finish() {
+            eprintln!("Warning: capture file flush failed: {e}");
+        }
+    }
+    producer.finish();
+}
+
+/// Build the capture-file writer for a live/stream capture. `None` when no
+/// output was requested (a ring-buffer config without an output file is an
+/// error — there would be nothing to rotate).
+fn build_file_writer(
+    opts: &CaptureOptions,
+    linktype: i32,
+    multi_interface: bool,
+) -> Result<Option<RingWriter>> {
+    let Some(path) = opts.output_path.as_deref() else {
+        if opts.ring.is_some() {
+            anyhow::bail!(
+                "a ring buffer needs an output file to write to (add -w / an output path)"
+            );
+        }
+        return Ok(None);
+    };
+    if multi_interface {
+        eprintln!(
+            "Warning: saving to a file isn't supported when capturing on multiple interfaces — the capture will not be written to disk."
+        );
+        return Ok(None);
+    }
+    let writer = RingWriter::create(path, linktype, opts.ring.unwrap_or_default())
+        .with_context(|| format!("cannot create capture file '{path}'"))?;
+    Ok(Some(writer))
 }
 
 /// Convert a libpcap packet into the pipeline's raw-frame form. This is all
@@ -680,6 +1127,149 @@ mod async_tests {
 #[cfg(test)]
 mod capture_tests {
     use super::*;
+    use crate::dissectors::test_helpers::build_tcp_packet;
+
+    /// In-memory little-endian classic pcap with `n` HTTP frames.
+    fn test_pcap_bytes(n: usize) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&0xa1b2c3d4u32.to_le_bytes());
+        buf.extend_from_slice(&2u16.to_le_bytes());
+        buf.extend_from_slice(&4u16.to_le_bytes());
+        buf.extend_from_slice(&0u32.to_le_bytes());
+        buf.extend_from_slice(&0u32.to_le_bytes());
+        buf.extend_from_slice(&65535u32.to_le_bytes());
+        buf.extend_from_slice(&1u32.to_le_bytes()); // Ethernet
+        for i in 0..n {
+            let frame = build_tcp_packet(
+                [10, 0, 0, 1],
+                [10, 0, 0, 2],
+                12345,
+                80,
+                false,
+                true,
+                false,
+                false,
+                b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+            );
+            buf.extend_from_slice(&(1_700_000_000u32 + i as u32).to_le_bytes());
+            buf.extend_from_slice(&0u32.to_le_bytes());
+            buf.extend_from_slice(&(frame.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&(frame.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&frame);
+        }
+        buf
+    }
+
+    #[test]
+    fn read_stream_delivers_packets_and_marks_engine_stopped() {
+        let mut eng = CaptureEngine::new();
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let stream = std::io::Cursor::new(test_pcap_bytes(5));
+        eng.start_read_stream(Box::new(stream), "test", &CaptureOptions::default(), tx)
+            .unwrap();
+        let packets: Vec<Packet> = rx.iter().collect(); // ends when pipeline closes tx
+        assert_eq!(packets.len(), 5);
+        assert_eq!(packets[0].protocol, crate::models::Protocol::Http);
+        assert!(!eng.is_running(), "stream end must mark the engine stopped");
+        eng.stop();
+        let stats = eng.pipeline_stats().unwrap();
+        assert_eq!(stats.dissected, 5);
+    }
+
+    #[test]
+    fn autostop_packet_limit_cuts_the_stream() {
+        let mut eng = CaptureEngine::new();
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let opts = CaptureOptions {
+            stop: StopConditions {
+                packets: Some(3),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let stream = std::io::Cursor::new(test_pcap_bytes(10));
+        eng.start_read_stream(Box::new(stream), "test", &opts, tx)
+            .unwrap();
+        let packets: Vec<Packet> = rx.iter().collect();
+        assert_eq!(packets.len(), 3, "must stop exactly at the packet limit");
+        assert!(!eng.is_running());
+    }
+
+    #[test]
+    fn autostop_byte_limit_cuts_the_stream() {
+        let mut eng = CaptureEngine::new();
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let opts = CaptureOptions {
+            stop: StopConditions {
+                bytes: Some(1), // first frame already exceeds this
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let stream = std::io::Cursor::new(test_pcap_bytes(10));
+        eng.start_read_stream(Box::new(stream), "test", &opts, tx)
+            .unwrap();
+        let packets: Vec<Packet> = rx.iter().collect();
+        assert_eq!(packets.len(), 1);
+    }
+
+    #[test]
+    fn stream_capture_writes_output_file() {
+        let dir = std::env::temp_dir().join(format!(
+            "netscope-stream-save-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let out = dir.join("saved.pcap");
+
+        let mut eng = CaptureEngine::new();
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let opts = CaptureOptions {
+            output_path: Some(out.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        let stream = std::io::Cursor::new(test_pcap_bytes(4));
+        eng.start_read_stream(Box::new(stream), "test", &opts, tx)
+            .unwrap();
+        let n = rx.iter().count();
+        eng.stop();
+        assert_eq!(n, 4);
+
+        // The saved file must itself be a readable capture with 4 packets.
+        let saved = std::fs::read(&out).unwrap();
+        assert_eq!(&saved[0..4], &0xa1b2c3d4u32.to_le_bytes());
+        let reader = crate::remote::PcapStreamReader::new(saved.as_slice());
+        let mut reader = reader.unwrap();
+        let mut count = 0;
+        while reader.next_frame().unwrap().is_some() {
+            count += 1;
+        }
+        assert_eq!(count, 4);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn ring_buffer_without_output_path_is_rejected() {
+        let mut eng = CaptureEngine::new();
+        let (tx, _rx) = crossbeam_channel::unbounded();
+        let opts = CaptureOptions {
+            ring: Some(RingBufferOptions {
+                filesize_kb: Some(100),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let stream = std::io::Cursor::new(test_pcap_bytes(1));
+        let err = eng
+            .start_read_stream(Box::new(stream), "test", &opts, tx)
+            .unwrap_err();
+        assert!(err.to_string().contains("output file"), "{err}");
+        assert!(!eng.is_running());
+    }
 
     #[test]
     fn multi_requires_at_least_one_interface() {

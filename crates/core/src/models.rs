@@ -102,6 +102,14 @@ pub enum Protocol {
     Mpls,
     /// IEEE 802.11 (Wi-Fi) link-layer frame — management/control/data.
     Wlan,
+    /// USB traffic captured on the bus (usbmon on Linux, USBPcap on Windows).
+    Usb,
+    /// Bluetooth HCI packet (command/event/ACL/SCO between host and controller).
+    Bluetooth,
+    /// CAN bus frame (SocketCAN capture — vehicle/industrial buses).
+    Can,
+    /// NT LAN Manager Security Support Provider (NTLMSSP).
+    Ntlm,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -180,6 +188,10 @@ impl std::fmt::Display for Protocol {
             Protocol::Stp => write!(f, "STP"),
             Protocol::Mpls => write!(f, "MPLS"),
             Protocol::Wlan => write!(f, "802.11"),
+            Protocol::Usb => write!(f, "USB"),
+            Protocol::Bluetooth => write!(f, "BT HCI"),
+            Protocol::Can => write!(f, "CAN"),
+            Protocol::Ntlm => write!(f, "NTLM"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
