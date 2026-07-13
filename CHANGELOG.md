@@ -66,6 +66,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   against threat-intel feeds even when the rest of the session is encrypted
   (ROADMAP §5.2) — something Wireshark needs a plugin for. Both hello parsers
   are fully bounds-checked (fuzzed over every truncation). 13 new tests.
+- **Display-filter fields for the TLS fingerprints**: `tls.ja3` / `ja3`,
+  `tls.ja4` / `ja4`, `tls.ja3s` / `ja3s`, recomputed from the handshake bytes
+  on demand (no change to the packet model). So the TUI/core filter box now
+  takes `ja3 == <hash>`, `ja4 contains "t13d"`, `ja3s == <hash>` alongside the
+  existing fields. Documented in `docs/filters.md`, which now also covers the
+  full Wireshark-style display-filter grammar the box already accepted.
 - **TUI unit tests** for the app event loop: packet-ring eviction and
   selection tracking in `tick()`, pause-drain and channel-discard behaviour,
   display-filter fallback logic, key handling, headless output formatting

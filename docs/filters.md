@@ -21,7 +21,47 @@ dns           → all DNS traffic
 handshake     → TCP handshakes
 ```
 
-Press `Esc` to clear. That's the whole syntax.
+Press `Esc` to clear. That's the whole syntax — for free-text search.
+
+## Display filters (the Wireshark-style one)
+
+The same box also understands a **Wireshark-style display-filter language**. If
+what you type parses as a filter expression, it's evaluated field-by-field; if
+it doesn't, it falls back to the free-text search above. So both styles live in
+one box — no mode switch.
+
+```
+tcp.port == 443 && tls          → TLS on 443
+ip.addr == 8.8.8.8              → to or from that IP
+http.request.method == POST     → HTTP POST requests
+http.response.code >= 400       → HTTP errors
+dns.qry.name contains "cdn"     → DNS lookups for *cdn* names
+frame.len > 1000 and !tls       → big, non-TLS packets
+```
+
+**Fields:** `ip.addr` / `ip.src` / `ip.dst`, `port` / `tcp.port` / `udp.port`,
+`frame.len` (`len`), `tcp.flags.syn` / `.ack` / `.fin` / `.rst` / `.psh`,
+`http.request.method` / `.uri` / `http.host` / `http.response.code`,
+`dns.qry.name`, and `info` (the summary column).
+**Operators:** `==` `!=` `>` `<` `>=` `<=` and `contains`.
+**Logic:** `&&`/`and`, `||`/`or`, `!`/`not`, and parentheses.
+
+### TLS fingerprints (JA3 / JA4 / JA3S)
+
+netscope computes TLS client and server fingerprints from the handshake and
+exposes them as filter fields — so you can hunt encrypted traffic by *how* the
+client or server speaks TLS, even though you can't read the content. This is
+threat-hunting territory Wireshark needs a plugin for.
+
+```
+ja3 == 6169fabc98e3e6c9690301eaf306d632     → a known JA3 (e.g. from a feed)
+ja4 contains "t13d"                          → TLS 1.3 clients with SNI
+ja3s == <hash>                               → a specific server fingerprint
+```
+
+Aliases: `tls.ja3` / `ja3`, `tls.ja4` / `ja4`, `tls.ja3s` / `ja3s`. The
+fingerprints also appear in each TLS handshake's summary line, so free-text
+search finds them too.
 
 ## BPF capture filters (`-f`)
 
