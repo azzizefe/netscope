@@ -50,15 +50,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   with zero-copy payloads — so opening a large Wireshark capture gets the same
   no-up-front-load, parallel, virtually-scrolled treatment as `.pcap`. The
   desktop "Open" path picks this up automatically. 5 new tests.
-- **JA3 TLS client fingerprinting** (`crates/core/src/dissectors/tls.rs`).
-  ClientHello dissection now parses the full offered cipher/extension/curve
-  lists and computes the JA3 fingerprint (MD5 over the RFC-8701 GREASE-filtered
-  `version,ciphers,extensions,curves,point-formats` string), surfaced in the
-  TLS summary (`TLS ClientHello — github.com · JA3 <hash>`) so it's searchable,
-  filterable, and matchable against threat-intel feeds even when the rest of
-  the session is encrypted (ROADMAP §5.2) — something Wireshark needs a plugin
-  for. The ClientHello parser is fully bounds-checked (fuzzed over every
-  truncation). 6 new tests.
+- **JA3, JA4 and JA3S TLS fingerprinting** (`crates/core/src/dissectors/tls.rs`).
+  Handshake dissection now parses the full ClientHello (ciphers, extensions,
+  curves, ALPN, supported-versions, signature-algorithms) and ServerHello, and
+  computes three fingerprints, all with RFC-8701 GREASE filtering:
+  - **JA3** — MD5 over `version,ciphers,extensions,curves,point-formats`.
+  - **JA4** (FoxIO) — the modern successor: `t{ver}{d/i}{#ciphers}{#exts}{alpn}`
+    plus SHA-256 truncations of the sorted cipher list and of the sorted
+    extensions (minus SNI/ALPN) with signature algorithms.
+  - **JA3S** — MD5 over the ServerHello `version,cipher,extensions`, pairing
+    with the client fingerprint for beacon/C2 detection.
+
+  They surface in the TLS summary (`TLS ClientHello — github.com · JA4 … · JA3 …`,
+  `TLS ServerHello · JA3S …`) so they are searchable, filterable, and matchable
+  against threat-intel feeds even when the rest of the session is encrypted
+  (ROADMAP §5.2) — something Wireshark needs a plugin for. Both hello parsers
+  are fully bounds-checked (fuzzed over every truncation). 13 new tests.
 - **TUI unit tests** for the app event loop: packet-ring eviction and
   selection tracking in `tick()`, pause-drain and channel-discard behaviour,
   display-filter fallback logic, key handling, headless output formatting
