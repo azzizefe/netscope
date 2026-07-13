@@ -17,8 +17,10 @@
 //! - **Protocol fields** (parsed from the captured frame bytes):
 //!   `tcp.flags.syn` / `.ack` / `.fin` / `.rst` / `.psh` (compare to `1`/`0`),
 //!   `http.request.method`, `http.request.uri`, `http.host`,
-//!   `http.response.code`, `dns.qry.name`, and `info` (the summary column).
-//!   Text fields compare case-insensitively.
+//!   `http.response.code`, `dns.qry.name`, the TLS fingerprints
+//!   `tls.ja3` / `ja3`, `tls.ja4` / `ja4`, `tls.ja3s` / `ja3s` (recomputed from
+//!   the handshake bytes), and `info` (the summary column). Text fields compare
+//!   case-insensitively.
 //! - **Comparisons**: `==` `!=` `>` `<` `>=` `<=`, plus `contains` (substring
 //!   over the field's text form).
 //! - **Logic**: `&&`/`and`, `||`/`or`, `!`/`not`, and parentheses.
@@ -132,6 +134,12 @@ enum Field {
     HttpHost,
     HttpRespCode,
     DnsQryName,
+    /// JA3 client fingerprint (MD5), recomputed from the TLS ClientHello.
+    TlsJa3,
+    /// JA4 client fingerprint (FoxIO), recomputed from the TLS ClientHello.
+    TlsJa4,
+    /// JA3S server fingerprint (MD5), recomputed from the TLS ServerHello.
+    TlsJa3s,
     /// The human-readable summary ("Info" column).
     Info,
 }
@@ -225,6 +233,9 @@ fn eval_cmp(pkt: &Packet, field: Field, op: CmpOp, value: &Value) -> bool {
         Field::HttpHost => cmp_text(http_host(pkt).as_deref(), op, value),
         Field::HttpRespCode => cmp_num(http_response_code(pkt), op, value),
         Field::DnsQryName => cmp_text(dns_qry_name(pkt).as_deref(), op, value),
+        Field::TlsJa3 => cmp_text(tls_ja3(pkt).as_deref(), op, value),
+        Field::TlsJa4 => cmp_text(tls_ja4(pkt).as_deref(), op, value),
+        Field::TlsJa3s => cmp_text(tls_ja3s(pkt).as_deref(), op, value),
         Field::Info => cmp_text(Some(&pkt.summary), op, value),
     }
 }
@@ -349,6 +360,39 @@ fn http_host(pkt: &Packet) -> Option<String> {
         }
     }
     None
+}
+
+/// The TLS record payload of a TCP packet dissected as TLS, for fingerprinting.
+fn tls_payload(pkt: &Packet) -> Option<&[u8]> {
+    if pkt.protocol != Protocol::Tls {
+        return None;
+    }
+    let m = frame_meta(&pkt.data)?;
+    if m.ip_proto != 6 {
+        return None;
+    }
+    Some(m.payload)
+}
+
+/// JA3 client fingerprint of a TLS ClientHello, recomputed from frame bytes.
+fn tls_ja3(pkt: &Packet) -> Option<String> {
+    use crate::dissectors::tls;
+    let h = tls::parse_client_hello(tls_payload(pkt)?)?;
+    Some(tls::ja3_hash(&h))
+}
+
+/// JA4 client fingerprint of a TLS ClientHello (TCP transport).
+fn tls_ja4(pkt: &Packet) -> Option<String> {
+    use crate::dissectors::tls;
+    let h = tls::parse_client_hello(tls_payload(pkt)?)?;
+    Some(tls::ja4(&h, 't'))
+}
+
+/// JA3S server fingerprint of a TLS ServerHello.
+fn tls_ja3s(pkt: &Packet) -> Option<String> {
+    use crate::dissectors::tls;
+    let s = tls::parse_server_hello(tls_payload(pkt)?)?;
+    Some(tls::ja3s_hash(&s))
 }
 
 /// First question name of a DNS/mDNS message, dotted (`example.com`).
@@ -729,6 +773,9 @@ fn field_from_word(word: &str) -> Option<Field> {
         "http.host" => Some(Field::HttpHost),
         "http.response.code" | "http.response.status" | "http.status" => Some(Field::HttpRespCode),
         "dns.qry.name" | "dns.query.name" | "dns.name" => Some(Field::DnsQryName),
+        "tls.ja3" | "ja3" => Some(Field::TlsJa3),
+        "tls.ja4" | "ja4" => Some(Field::TlsJa4),
+        "tls.ja3s" | "ja3s" => Some(Field::TlsJa3s),
         "info" | "frame.info" | "summary" => Some(Field::Info),
         _ => None,
     }
@@ -990,6 +1037,78 @@ mod tests {
         // Non-DNS packets never match the field.
         let t = with_data(tcp443(), tcp_frame(0x10, &[]));
         assert!(!matches("dns.qry.name contains \"example\"", &t));
+    }
+
+    /// A minimal TLS ClientHello record: one cipher (0x002f), no extensions.
+    fn client_hello_record() -> Vec<u8> {
+        let mut body = vec![0x03, 0x03]; // version
+        body.extend_from_slice(&[0u8; 32]); // random
+        body.push(0x00); // session id length
+        body.extend_from_slice(&[0x00, 0x02, 0x00, 0x2f]); // cipher suites
+        body.extend_from_slice(&[0x01, 0x00]); // compression
+        body.extend_from_slice(&[0x00, 0x00]); // extensions length = 0
+        let mut hs = vec![0x01]; // ClientHello
+        hs.extend_from_slice(&[
+            (body.len() >> 16) as u8,
+            (body.len() >> 8) as u8,
+            body.len() as u8,
+        ]);
+        hs.extend_from_slice(&body);
+        let mut rec = vec![0x16, 0x03, 0x03];
+        rec.extend_from_slice(&(hs.len() as u16).to_be_bytes());
+        rec.extend_from_slice(&hs);
+        rec
+    }
+
+    /// A minimal TLS ServerHello record: chosen cipher 0x002f, no extensions.
+    fn server_hello_record() -> Vec<u8> {
+        let mut body = vec![0x03, 0x03]; // version
+        body.extend_from_slice(&[0u8; 32]); // random
+        body.push(0x00); // session id length
+        body.extend_from_slice(&[0x00, 0x2f]); // chosen cipher
+        body.push(0x00); // compression method
+        body.extend_from_slice(&[0x00, 0x00]); // extensions length = 0
+        let mut hs = vec![0x02]; // ServerHello
+        hs.extend_from_slice(&[
+            (body.len() >> 16) as u8,
+            (body.len() >> 8) as u8,
+            body.len() as u8,
+        ]);
+        hs.extend_from_slice(&body);
+        let mut rec = vec![0x16, 0x03, 0x03];
+        rec.extend_from_slice(&(hs.len() as u16).to_be_bytes());
+        rec.extend_from_slice(&hs);
+        rec
+    }
+
+    #[test]
+    fn tls_fingerprint_fields() {
+        use crate::dissectors::tls;
+        let hello = client_hello_record();
+        let p = with_data(tcp443(), tcp_frame(0x18, &hello));
+
+        // The filter's ja3/ja4 must match the fingerprints recomputed directly.
+        let h = tls::parse_client_hello(&hello).unwrap();
+        let ja3 = tls::ja3_hash(&h);
+        let ja4 = tls::ja4(&h, 't');
+        assert!(matches(&format!("ja3 == {ja3}"), &p));
+        assert!(matches(&format!("tls.ja3 == {ja3}"), &p));
+        assert!(matches(&format!("ja4 == {ja4}"), &p));
+        assert!(matches("ja3 != 00000000000000000000000000000000", &p));
+        assert!(!matches("ja3 == deadbeefdeadbeefdeadbeefdeadbeef", &p));
+        // A ClientHello has no JA3S.
+        assert!(!matches("ja3s contains \"a\"", &p));
+
+        // ServerHello: JA3S resolves, JA3/JA4 do not.
+        let srv = server_hello_record();
+        let s = with_data(tcp443(), tcp_frame(0x18, &srv));
+        let ja3s = tls::ja3s_hash(&tls::parse_server_hello(&srv).unwrap());
+        assert!(matches(&format!("ja3s == {ja3s}"), &s));
+        assert!(!matches("ja3 contains \"a\"", &s));
+
+        // Non-TLS packets never match a fingerprint field.
+        let d = with_data(dns(), udp_frame(&dns_question("example.com")));
+        assert!(!matches(&format!("ja3 == {ja3}"), &d));
     }
 
     #[test]
