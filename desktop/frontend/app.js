@@ -233,12 +233,16 @@ async function loadInterfaces() {
   try {
     const ifaces = await invoke('list_interfaces');
     if (ifaces && ifaces.length) {
-      els.interfaceSelect.innerHTML = ifaces
+      // "All interfaces" (a sentinel value) captures on every listed interface
+      // at once, Wireshark-style; individual interfaces follow.
+      const allOpt = `<option value="__all__">${esc(I18N.t('iface.all'))}</option>`;
+      els.interfaceSelect.innerHTML = allOpt + ifaces
         .map((d) => `<option value="${d.name}">${d.description || d.name}</option>`)
         .join('');
       // Prefer an interface that has a description (physical adapters usually do).
       const best = ifaces.findIndex((d) => /wi-?fi|ethernet|wireless|realtek|intel/i.test(d.description || ''));
-      if (best >= 0) els.interfaceSelect.selectedIndex = best;
+      // +1 offsets the prepended "All interfaces" option.
+      els.interfaceSelect.selectedIndex = best >= 0 ? best + 1 : 1;
       showNpcapWarning(false);
     } else {
       els.interfaceSelect.innerHTML = `<option>${esc(I18N.t('iface.none'))}</option>`;
@@ -275,7 +279,12 @@ function openNpcapHelp() {
 
 // ---- Capture control ----
 async function startCapture() {
-  const iface = els.interfaceSelect.value;
+  const sel = els.interfaceSelect.value;
+  // "__all__" expands to every real interface; otherwise capture on the one
+  // chosen. The backend merges multiple interfaces into a single stream.
+  const interfaces = sel === '__all__'
+    ? [...els.interfaceSelect.options].map((o) => o.value).filter((v) => v && v !== '__all__')
+    : [sel];
   const filter = els.filterInput.value || null;
   try {
     // reset session
@@ -285,7 +294,7 @@ async function startCapture() {
     state.live.lastSample = null; state.live.throughput = []; state.live.pps = []; state.live.errRate = [];
     state.captureStartEpoch = null; // "Seconds since beginning of capture" baseline resets each run
     ioReset();
-    await invoke('start_capture', { interface: iface, filter, monitor: !!state.settings.monitor });
+    await invoke('start_capture', { interfaces, filter, monitor: !!state.settings.monitor });
     setStatus(STATES.CAPTURING);
     els.startBtn.disabled = true;
     els.stopBtn.disabled = false;

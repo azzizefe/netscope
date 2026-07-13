@@ -536,7 +536,7 @@ fn list_interfaces() -> Result<Vec<InterfaceInfo>, String> {
 fn start_capture(
     app: AppHandle,
     state: State<'_, Mutex<CaptureState>>,
-    interface: String,
+    interfaces: Vec<String>,
     filter: Option<String>,
     output_path: Option<String>,
     monitor: Option<bool>,
@@ -546,9 +546,12 @@ fn start_capture(
     let bpf_filter = filter.as_deref();
     let output = output_path.as_deref();
 
+    // Capture on one or several interfaces at once (Wireshark-style), all
+    // merged into a single analysis stream.
+    let iface_refs: Vec<&str> = interfaces.iter().map(String::as_str).collect();
     capture
-        .start_live(
-            &interface,
+        .start_live_multi(
+            &iface_refs,
             bpf_filter,
             output,
             packet_tx,

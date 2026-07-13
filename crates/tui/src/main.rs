@@ -15,7 +15,8 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(name = "netscope", about = "Terminal network packet analyzer")]
 struct Cli {
-    /// Interface to capture on
+    /// Interface(s) to capture on — comma-separated for several at once
+    /// (e.g. "Wi-Fi,Ethernet"), Wireshark-style
     #[arg(short = 'i', long)]
     interface: Option<String>,
 
