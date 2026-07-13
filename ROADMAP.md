@@ -117,7 +117,11 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 > soğuk sayfaları rayon ile paralel çözüyor. Desktop "Open pcap" artık bu
 > okuyucuyu kullanıp paketleri `packets-batch` IPC olaylarıyla toplu
 > gönderiyor; paket listesi gerçek virtual scrolling'e geçti (eski "son 500
-> satır" sınırı kalktı). pcapng, streaming libpcap okuyucusuna düşer.
+> satır" sınırı kalktı). **pcapng (Wireshark'ın varsayılan formatı) artık aynı
+> mmap hızlı yolundan indexleniyor** — SHB/IDB/EPB/SPB blok yapısı iki
+> byte-order'da yürünüyor, her arayüzün `if_tsresol` zaman çözünürlüğü
+> nanosaniyeye normalize ediliyor; yalnızca egzotik link-type'lar veya bozuk
+> başlıklar streaming libpcap okuyucusuna düşer.
 
 **Problem:** `CaptureEngine` tüm paketleri `Vec<Packet>` olarak belleğe alıyor. 1 GB'lık pcap ≈ 2-3 GB RAM. Ayrıca her paket parse ediliyor — oysa kullanıcı sadece ilk 1000'ini görüyor.
 
@@ -478,13 +482,24 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 
 ### 5.2 Offline Tehdit İstihbaratı
 
-| Özellik | Veri Kaynağı |
-|---|---|
-| **AbuseIPDB entegrasyonu** | IP'nin bilinen kötü amaçlı olup olmadığını sorgula |
-| **URLhaus / PhishTank** | URL'leri tehdit veritabanında kontrol et |
-| **MaxMind GeoIP offline** | `.mmdb` dosyasından offline GeoIP lookup |
-| **JA3/JA4 fingerprint** | TLS client hello'dan fingerprint hesapla, bilinen zararlı yazılım fingerprint'leriyle karşılaştır |
-| **Suricata/Snort rule import** | IDS kurallarını içe aktarıp paketleri eşleştir |
+> ✅ **Kısmen uygulandı** — **JA3 TLS client fingerprint** artık hesaplanıyor
+> (`dissectors/tls.rs`): ClientHello'nun tüm cipher/extension/curve listeleri
+> parse edilip RFC 8701 GREASE değerleri temizlenerek
+> `version,ciphers,extensions,curves,point-formats` string'inin MD5'i alınıyor
+> ve TLS özetinde gösteriliyor (`TLS ClientHello — github.com · JA3 <hash>`).
+> Böylece şifreli oturumlarda bile fingerprint aranabilir/filtrelenebilir ve
+> tehdit istihbaratı beslemeleriyle eşleştirilebilir. **MaxMind GeoIP offline**
+> zaten §2.4'te var. AbuseIPDB/URLhaus/Suricata beslemeleri ve JA4/JA3S hâlâ
+> gelecek işi.
+
+| Özellik | Veri Kaynağı | Durum |
+|---|---|---|
+| **JA3 fingerprint** | TLS ClientHello'dan MD5 fingerprint (RFC 8701 GREASE-filtreli) | ✅ |
+| **MaxMind GeoIP offline** | `.mmdb` dosyasından offline GeoIP lookup | ✅ (§2.4) |
+| **JA4 / JA3S fingerprint** | JA4 (client) ve JA3S (ServerHello) fingerprint | ⏳ |
+| **AbuseIPDB entegrasyonu** | IP'nin bilinen kötü amaçlı olup olmadığını sorgula | ⏳ |
+| **URLhaus / PhishTank** | URL'leri tehdit veritabanında kontrol et | ⏳ |
+| **Suricata/Snort rule import** | IDS kurallarını içe aktarıp paketleri eşleştir | ⏳ |
 
 ---
 
