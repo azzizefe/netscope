@@ -40,7 +40,7 @@ nobody in between can read or change it. netscope can't see inside encrypted \
 traffic (neither can Wireshark) — but at the very start, the browser announces \
 which site it wants in clear text (the 'SNI'), so you can still see WHERE the \
 traffic goes, just not WHAT is sent.",
-            look_for: "\"TLS ClientHello — github.com\" reveals the site (and a JA3 fingerprint of the client); \"TLS — 1360 bytes of encrypted data\" is content you can't read.",
+            look_for: "\"TLS ClientHello — github.com\" reveals the site (plus JA4/JA3 fingerprints of the client); \"TLS — 1360 bytes of encrypted data\" is content you can't read.",
         },
         Protocol::Http => Lesson {
             title: "HTTP — the (unencrypted) web",

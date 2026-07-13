@@ -482,21 +482,25 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 
 ### 5.2 Offline Tehdit İstihbaratı
 
-> ✅ **Kısmen uygulandı** — **JA3 TLS client fingerprint** artık hesaplanıyor
-> (`dissectors/tls.rs`): ClientHello'nun tüm cipher/extension/curve listeleri
-> parse edilip RFC 8701 GREASE değerleri temizlenerek
-> `version,ciphers,extensions,curves,point-formats` string'inin MD5'i alınıyor
-> ve TLS özetinde gösteriliyor (`TLS ClientHello — github.com · JA3 <hash>`).
-> Böylece şifreli oturumlarda bile fingerprint aranabilir/filtrelenebilir ve
-> tehdit istihbaratı beslemeleriyle eşleştirilebilir. **MaxMind GeoIP offline**
-> zaten §2.4'te var. AbuseIPDB/URLhaus/Suricata beslemeleri ve JA4/JA3S hâlâ
-> gelecek işi.
+> ✅ **Kısmen uygulandı** — **JA3, JA4 ve JA3S TLS fingerprint'leri** artık
+> hesaplanıyor (`dissectors/tls.rs`), hepsi RFC 8701 GREASE filtreli:
+> **JA3** = ClientHello'nun `version,ciphers,extensions,curves,point-formats`
+> string'inin MD5'i; **JA4** (FoxIO) = modern halefi —
+> `t{ver}{d/i}{#cipher}{#ext}{alpn}` öneki + sıralı cipher listesi ve
+> (SNI/ALPN çıkarılmış) sıralı extension + signature-algorithm listesinin
+> SHA-256 kısaltmaları; **JA3S** = ServerHello'nun `version,cipher,extensions`
+> MD5'i (istemci fingerprint'iyle eşleşince C2/beacon tespiti). Özetlerde
+> gösteriliyor (`TLS ClientHello — github.com · JA4 … · JA3 …`,
+> `TLS ServerHello · JA3S …`), aranabilir/filtrelenebilir. **MaxMind GeoIP
+> offline** zaten §2.4'te. AbuseIPDB/URLhaus/Suricata beslemeleri hâlâ gelecek
+> işi.
 
 | Özellik | Veri Kaynağı | Durum |
 |---|---|---|
-| **JA3 fingerprint** | TLS ClientHello'dan MD5 fingerprint (RFC 8701 GREASE-filtreli) | ✅ |
+| **JA3 fingerprint** | TLS ClientHello'dan MD5 (RFC 8701 GREASE-filtreli) | ✅ |
+| **JA4 fingerprint** | TLS ClientHello'dan FoxIO JA4 (MD5+SHA-256) | ✅ |
+| **JA3S fingerprint** | TLS ServerHello'dan MD5 | ✅ |
 | **MaxMind GeoIP offline** | `.mmdb` dosyasından offline GeoIP lookup | ✅ (§2.4) |
-| **JA4 / JA3S fingerprint** | JA4 (client) ve JA3S (ServerHello) fingerprint | ⏳ |
 | **AbuseIPDB entegrasyonu** | IP'nin bilinen kötü amaçlı olup olmadığını sorgula | ⏳ |
 | **URLhaus / PhishTank** | URL'leri tehdit veritabanında kontrol et | ⏳ |
 | **Suricata/Snort rule import** | IDS kurallarını içe aktarıp paketleri eşleştir | ⏳ |
