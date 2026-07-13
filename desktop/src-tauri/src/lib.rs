@@ -171,9 +171,9 @@ fn get_glossary() -> Vec<TermInfo> {
 // ---- GeoIP (offline MMDB) --------------------------------------------------
 //
 // An offline MaxMind database (.mmdb — e.g. the free GeoLite2-City) resolves
-// IP locations locally, with no network calls. When one is loaded the
-// frontend prefers it over the opt-in ipwho.is web lookup, so locations work
-// offline and stay private.
+// IP locations locally, with no network calls. This is the only GeoIP path:
+// netscope makes no outbound requests at all, so locations work offline and
+// stay private.
 
 #[derive(Default)]
 struct GeoDbState {

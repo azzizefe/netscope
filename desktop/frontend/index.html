@@ -125,20 +125,13 @@
         <div class="popover-hint" data-i18n="noise.hint">Filters out Windows/macOS update, telemetry and discovery chatter so the list shows what your app is actually doing.</div>
       </div>
       <div class="popover-section">
-        <label class="popover-checkbox">
-          <input type="checkbox" id="geoip-check">
-          <span data-i18n="geoip.label">Look up IP locations (external)</span>
-        </label>
-        <div class="popover-hint" data-i18n="geoip.hint">Off by default. When on, opening a packet to a public IP queries ipwho.is for its country and owner — the only external call netscope makes.</div>
-      </div>
-      <div class="popover-section">
         <div class="popover-label" data-i18n="geoip.db.label">Offline GeoIP database (MMDB)</div>
         <div class="geoip-db-row">
           <button id="geoip-db-choose" class="btn btn-small" data-i18n="geoip.db.choose">📂 Choose…</button>
           <button id="geoip-db-clear" class="btn btn-small hidden" data-i18n="geoip.db.clear">✕ Remove</button>
           <span id="geoip-db-status" class="popover-hint" data-i18n="geoip.db.none">No database loaded</span>
         </div>
-        <div class="popover-hint" data-i18n="geoip.db.hint">Point at a MaxMind .mmdb file (e.g. the free GeoLite2-City) and locations resolve locally — private, works offline, and takes precedence over the online lookup.</div>
+        <div class="popover-hint" data-i18n="geoip.db.hint">Point at a MaxMind .mmdb file (e.g. the free GeoLite2-City) and locations resolve locally — private and fully offline.</div>
       </div>
     </div>
 

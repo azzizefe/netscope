@@ -1172,7 +1172,7 @@ function buildDetailTree(pkt, index) {
       `<div class="tnode-head"><span class="twist">▾</span>` +
       `<span class="tlabel">🌍 ${role} location <span class="tlabel-sub">${esc(ip)}</span></span></div>` +
       `<div class="tbody"><div class="tfield"><span class="tkey">Location</span>` +
-      `<span class="tval geo-status">${(state.settings.geoip || state.geoDb) ? 'Looking up…' : esc(I18N.t('geoip.off'))}</span></div></div></div>`);
+      `<span class="tval geo-status">${state.geoDb ? 'Looking up…' : esc(I18N.t('geoip.off'))}</span></div></div></div>`);
   }
 
   // Transport layer
@@ -1268,8 +1268,7 @@ async function lookupGeo(ip) {
   if (cached && cached.status === 'pending') return cached.promise;
 
   const promise = (async () => {
-    // 1) Offline MMDB via the backend — private, no network, so it takes
-    //    precedence over the web lookup whenever a database is loaded.
+    // Offline MMDB via the backend — fully local, no network call ever.
     if (state.geoDb) {
       try {
         const d = await invoke('geoip_lookup', { ip });
@@ -1283,23 +1282,6 @@ async function lookupGeo(ip) {
           return entry;
         }
       } catch { /* unreadable db or bad ip — fall through */ }
-    }
-    // 2) Online lookup (ipwho.is) — only when the user opted in.
-    if (state.settings.geoip) {
-      try {
-        const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
-        const j = await r.json();
-        if (j && j.success) {
-          const c = j.connection || {};
-          const entry = { status: 'ok', data: {
-            country: j.country, code: j.country_code, flag: j.flag && j.flag.emoji,
-            city: j.city, region: j.region,
-            isp: c.isp || c.org, org: c.org, asn: c.asn,
-          } };
-          geoCache.set(ip, entry);
-          return entry;
-        }
-      } catch { /* offline or blocked — fall through */ }
     }
     const failed = { status: 'failed' };
     geoCache.set(ip, failed);
@@ -1387,9 +1369,9 @@ function threatIntelRow(ip) {
 }
 
 async function enrichGeo(pkt) {
-  // Works when an offline database is loaded (private, no network) or the
-  // user opted in to the online lookup — otherwise netscope calls nothing.
-  if (!state.settings.geoip && !state.geoDb) return;
+  // Works only when an offline GeoIP database is loaded — fully local, no
+  // network call. Without a database, locations simply stay unresolved.
+  if (!state.geoDb) return;
   for (const [role, ip] of [['Destination', pkt.dst_addr], ['Source', pkt.src_addr]]) {
     if (!isPublicIp(ip)) continue;
     const g = await lookupGeo(ip);
@@ -1934,7 +1916,6 @@ function renderProfilePanel() {
   els.timeFormatSelect.value = state.settings.timeFormat;
   els.resolveNamesCheck.checked = state.settings.showHostnames;
   if (els.noiseFilterCheck) els.noiseFilterCheck.checked = !!state.settings.noiseFilter;
-  if (els.geoipCheck) els.geoipCheck.checked = !!state.settings.geoip;
   renderGeoDbStatus();
 }
 
@@ -4318,7 +4299,7 @@ async function init() {
     privacyRescan: $('#privacy-rescan'), privacySummary: $('#privacy-summary'), privacyCost: $('#privacy-cost'), privacyList: $('#privacy-list'),
     summaryOpen: $('#summary-open'), busiestPeak: $('#busiest-peak'), busiestChart: $('#busiest-chart'), busiestHint: $('#busiest-hint'),
     hexPanel: $('#hex-panel'), statProjection: $('#stat-projection'),
-    noiseFilterCheck: $('#noise-filter-check'), geoipCheck: $('#geoip-check'), reportAnon: $('#report-anon'),
+    noiseFilterCheck: $('#noise-filter-check'), reportAnon: $('#report-anon'),
     geoipDbChoose: $('#geoip-db-choose'), geoipDbClear: $('#geoip-db-clear'), geoipDbStatus: $('#geoip-db-status'),
     alertBtn: $('#alert-btn'), alertBadge: $('#alert-badge'), alertPanel: $('#alert-panel'), alertList: $('#alert-list'),
     triggerList: $('#trigger-list'), trigField: $('#trig-field'), trigOp: $('#trig-op'), trigValue: $('#trig-value'), trigAdd: $('#trig-add'),
@@ -4477,14 +4458,6 @@ async function init() {
     state.settings.noiseFilter = els.noiseFilterCheck.checked;
     saveJSON('netscope.settings', state.settings);
     renderPacketList();
-  });
-
-  // GeoIP lookups (opt-in — the only external call netscope makes)
-  els.geoipCheck.addEventListener('change', () => {
-    state.settings.geoip = els.geoipCheck.checked;
-    saveJSON('netscope.settings', state.settings);
-    // Re-render the open packet so the location layer updates immediately.
-    if (state.selectedIndex >= 0) showDetail(state.selectedIndex);
   });
 
   // Offline GeoIP database — pick a .mmdb file; lookups then stay local.
