@@ -253,22 +253,55 @@ impl App {
 
     fn tick(&mut self) {
         if self.paused {
+            // Drain the channel to prevent memory leak / OOM
+            while self.packet_rx.try_recv().is_ok() {}
             return;
         }
         // Advance the bandwidth sampler once per tick (it self-throttles to 1 Hz).
         self.stats.tick();
-        // Drain available packets
+
+        // Resolve the current selection to a position in the unfiltered deque
+        // so it can be restored after the drain (which may evict old packets).
+        // Doing this once per tick keeps the drain loop O(1) per packet.
+        let selected_unfiltered = self.selected_unfiltered_index();
+
+        let mut evicted = 0usize;
+        let mut received = false;
         while let Ok(pkt) = self.packet_rx.try_recv() {
+            received = true;
             self.names.observe(&pkt);
             self.stats.record_packet(&pkt);
             self.flows.record(&pkt);
             if self.packets.len() >= MAX_PACKETS {
                 self.packets.pop_front();
-                if self.selected > 0 {
-                    self.selected -= 1;
-                }
+                evicted += 1;
             }
             self.packets.push_back(pkt);
+        }
+        if !received {
+            return;
+        }
+
+        // Restore the selection: follow the previously selected packet to its
+        // new position, clamping to the oldest packet if it was evicted.
+        match selected_unfiltered {
+            Some(idx) => {
+                let target_pkt = &self.packets[idx.saturating_sub(evicted)];
+                if let Some(new_idx) = self
+                    .filtered_packets()
+                    .iter()
+                    .position(|&p| std::ptr::eq(p, target_pkt))
+                {
+                    self.selected = new_idx;
+                } else {
+                    // The packet fell out of the filtered view; keep the old
+                    // slot but clamp to the current filtered length.
+                    self.selected = self
+                        .selected
+                        .min(self.filtered_packets().len().saturating_sub(1));
+                }
+            }
+            None => self.selected = 0,
         }
     }
 
@@ -415,12 +448,14 @@ impl App {
                 self.running.store(false, Ordering::Relaxed);
             }
             KeyCode::Up | KeyCode::Char('k') => {
-                if !self.packets.is_empty() {
-                    self.select_packet(self.selected.saturating_sub(1));
+                let visible = self.filtered_packets().len();
+                if visible > 0 {
+                    self.select_packet(self.selected.saturating_sub(1).min(visible - 1));
                 }
             }
             KeyCode::Down | KeyCode::Char('j') => {
-                if !self.packets.is_empty() && self.selected + 1 < self.packets.len() {
+                let visible = self.filtered_packets().len();
+                if visible > 0 && self.selected + 1 < visible {
                     self.select_packet(self.selected + 1);
                 }
             }
@@ -451,7 +486,7 @@ impl App {
             }
             KeyCode::Char('F') => {
                 // Follow Stream for the selected conversation (Packets view).
-                if self.view == View::Packets && !self.packets.is_empty() {
+                if self.view == View::Packets && !self.filtered_packets().is_empty() {
                     self.show_stream = true;
                     self.stream_scroll = 0;
                 }
@@ -505,11 +540,12 @@ impl App {
         }
         match self.view {
             View::Packets => {
-                if self.packets.is_empty() {
+                let visible = self.filtered_packets().len();
+                if visible == 0 {
                     return;
                 }
                 let next = if down {
-                    (self.selected + 1).min(self.packets.len() - 1)
+                    (self.selected + 1).min(visible - 1)
                 } else {
                     self.selected.saturating_sub(1)
                 };
@@ -563,6 +599,13 @@ impl App {
         }
     }
 
+    /// Position of the currently selected (filtered) packet within the
+    /// unfiltered deque, if a packet is selected.
+    pub fn selected_unfiltered_index(&self) -> Option<usize> {
+        let target = *self.filtered_packets().get(self.selected)?;
+        self.packets.iter().position(|p| std::ptr::eq(p, target))
+    }
+
     pub fn filtered_packets(&self) -> Vec<&Packet> {
         if self.filter_text.is_empty() {
             return self.packets.iter().collect();
@@ -612,5 +655,262 @@ fn step_usize(v: usize, down: bool) -> usize {
         v.saturating_add(1)
     } else {
         v.saturating_sub(1)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossbeam_channel::Sender;
+    use netscope_core::models::Protocol;
+    use ratatui::crossterm::event::{KeyEvent, KeyEventState};
+
+    /// An App wired to a test channel instead of a live capture.
+    fn test_app() -> (App, Sender<Packet>) {
+        let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
+        let app = App {
+            capture: CaptureEngine::new(),
+            packets: VecDeque::new(),
+            selected: 0,
+            paused: false,
+            view: View::Packets,
+            show_hex: false,
+            detail_expanded: false,
+            filter_text: String::new(),
+            stats: StatsEngine::new(),
+            flows: FlowTable::new(),
+            names: NameCache::new(),
+            start_time: Utc::now(),
+            running: Arc::new(AtomicBool::new(true)),
+            packet_rx,
+            interface_name: "test0".into(),
+            show_help: false,
+            conn_selected: 0,
+            blocked: BTreeSet::new(),
+            elevated: false,
+            status_msg: None,
+            learn_scroll: 0,
+            insights_scroll: 0,
+            color_rules: crate::colors::ColorRules::parse(""),
+            theme_idx: 0,
+            columns: Columns::default(),
+            show_columns: false,
+            show_stream: false,
+            stream_scroll: 0,
+            detail_focus: false,
+            detail_sel: 0,
+            detail_collapsed: HashSet::new(),
+            tab_row: 0,
+            tab_hits: Vec::new(),
+            list_inner: Rect::default(),
+            list_offset: 0,
+        };
+        (app, packet_tx)
+    }
+
+    fn pkt(n: usize, protocol: Protocol) -> Packet {
+        let port = match protocol {
+            Protocol::Udp => 53,
+            _ => 443,
+        };
+        Packet {
+            timestamp: Utc::now(),
+            src_addr: "10.0.0.1".parse().ok(),
+            dst_addr: "10.0.0.2".parse().ok(),
+            src_port: Some(50000),
+            dst_port: Some(port),
+            protocol,
+            length: 60,
+            summary: format!("packet-{n}"),
+            data: bytes::Bytes::from_static(&[0u8; 60]),
+        }
+    }
+
+    fn key(code: KeyCode) -> KeyEvent {
+        KeyEvent {
+            code,
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE,
+        }
+    }
+
+    #[test]
+    fn tick_drains_channel_and_evicts_at_cap() {
+        let (mut app, tx) = test_app();
+        for i in 0..MAX_PACKETS + 5 {
+            tx.send(pkt(i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        assert_eq!(app.packets.len(), MAX_PACKETS);
+        // The 5 oldest packets were evicted.
+        assert_eq!(app.packets.front().unwrap().summary, "packet-5");
+        assert_eq!(
+            app.packets.back().unwrap().summary,
+            format!("packet-{}", MAX_PACKETS + 4)
+        );
+    }
+
+    #[test]
+    fn tick_follows_selected_packet_through_eviction() {
+        let (mut app, tx) = test_app();
+        for i in 0..MAX_PACKETS {
+            tx.send(pkt(i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        app.selected = 100;
+        let summary = app.packets[100].summary.clone();
+
+        // 50 more packets arrive at the cap: 50 old ones fall off the front.
+        for i in 0..50 {
+            tx.send(pkt(MAX_PACKETS + i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        assert_eq!(app.selected, 50);
+        assert_eq!(app.packets[app.selected].summary, summary);
+    }
+
+    #[test]
+    fn tick_keeps_selection_while_buffer_grows() {
+        let (mut app, tx) = test_app();
+        for i in 0..10 {
+            tx.send(pkt(i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        app.selected = 5;
+        for i in 10..15 {
+            tx.send(pkt(i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        assert_eq!(app.selected, 5);
+        assert_eq!(app.packets[5].summary, "packet-5");
+    }
+
+    #[test]
+    fn tick_while_paused_discards_incoming_packets() {
+        let (mut app, tx) = test_app();
+        app.paused = true;
+        for i in 0..3 {
+            tx.send(pkt(i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        assert!(app.packets.is_empty());
+        // The channel was drained, not left to grow unbounded.
+        assert!(app.packet_rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn filtered_packets_structured_filter_and_freetext_fallback() {
+        let (mut app, _tx) = test_app();
+        app.packets.push_back(pkt(0, Protocol::Tcp));
+        app.packets.push_back(pkt(1, Protocol::Udp));
+        app.packets.push_back(pkt(2, Protocol::Tcp));
+
+        // No filter: everything is visible.
+        assert_eq!(app.filtered_packets().len(), 3);
+
+        // Structured protocol filter.
+        app.filter_text = "udp".into();
+        let udp_only = app.filtered_packets();
+        assert_eq!(udp_only.len(), 1);
+        assert_eq!(udp_only[0].summary, "packet-1");
+
+        // Free-text fallback on the summary.
+        app.filter_text = "packet-2".into();
+        let by_summary = app.filtered_packets();
+        assert_eq!(by_summary.len(), 1);
+        assert_eq!(by_summary[0].summary, "packet-2");
+
+        // No matches.
+        app.filter_text = "zzz-no-such-packet".into();
+        assert!(app.filtered_packets().is_empty());
+    }
+
+    #[test]
+    fn selection_is_clamped_to_the_filtered_view() {
+        let (mut app, _tx) = test_app();
+        for i in 0..5 {
+            app.packets.push_back(pkt(i, Protocol::Tcp));
+        }
+        app.packets.push_back(pkt(5, Protocol::Udp));
+
+        // Only one packet is visible under the filter.
+        app.filter_text = "udp".into();
+        assert_eq!(app.filtered_packets().len(), 1);
+
+        // Down must not walk past the end of the filtered list.
+        app.handle_key(key(KeyCode::Down)).unwrap();
+        app.handle_key(key(KeyCode::Down)).unwrap();
+        assert_eq!(app.selected, 0);
+
+        // A selection left stale by a filter change is pulled back in range.
+        app.selected = 4;
+        app.handle_key(key(KeyCode::Up)).unwrap();
+        assert_eq!(app.selected, 0);
+    }
+
+    #[test]
+    fn selected_unfiltered_index_maps_through_the_filter() {
+        let (mut app, _tx) = test_app();
+        app.packets.push_back(pkt(0, Protocol::Tcp));
+        app.packets.push_back(pkt(1, Protocol::Udp));
+        app.packets.push_back(pkt(2, Protocol::Tcp));
+
+        app.filter_text = "udp".into();
+        app.selected = 0; // first (and only) filtered row = packet-1
+        assert_eq!(app.selected_unfiltered_index(), Some(1));
+
+        app.filter_text = "zzz-no-such-packet".into();
+        assert_eq!(app.selected_unfiltered_index(), None);
+    }
+
+    #[test]
+    fn basic_keys_toggle_state() {
+        let (mut app, _tx) = test_app();
+        app.packets.push_back(pkt(0, Protocol::Tcp));
+
+        app.handle_key(key(KeyCode::Char(' '))).unwrap();
+        assert!(app.paused);
+        app.handle_key(key(KeyCode::Char(' '))).unwrap();
+        assert!(!app.paused);
+
+        app.handle_key(key(KeyCode::Char('h'))).unwrap();
+        assert!(app.show_hex);
+
+        app.handle_key(key(KeyCode::Char('?'))).unwrap();
+        assert!(app.show_help);
+        // While the help overlay is up, other keys are swallowed.
+        app.handle_key(key(KeyCode::Char(' '))).unwrap();
+        assert!(!app.paused);
+        app.handle_key(key(KeyCode::Esc)).unwrap();
+        assert!(!app.show_help);
+
+        // Typing builds the filter; Esc clears it.
+        app.handle_key(key(KeyCode::Char('d'))).unwrap();
+        app.handle_key(key(KeyCode::Char('n'))).unwrap();
+        app.handle_key(key(KeyCode::Char('s'))).unwrap();
+        assert_eq!(app.filter_text, "dns");
+        app.handle_key(key(KeyCode::Backspace)).unwrap();
+        assert_eq!(app.filter_text, "dn");
+        app.handle_key(key(KeyCode::Esc)).unwrap();
+        assert!(app.filter_text.is_empty());
+
+        // Tab cycles the view; 'q' requests shutdown.
+        let start = app.view;
+        app.handle_key(key(KeyCode::Tab)).unwrap();
+        assert_ne!(app.view, start);
+        app.handle_key(key(KeyCode::Char('q'))).unwrap();
+        assert!(!app.running.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn active_status_expires() {
+        let (mut app, _tx) = test_app();
+        assert_eq!(app.active_status(), None);
+        app.notify("hello");
+        assert_eq!(app.active_status(), Some("hello"));
+        // Backdate the message beyond the 5 s freshness window.
+        app.status_msg = Some(("old".into(), Instant::now() - Duration::from_secs(6)));
+        assert_eq!(app.active_status(), None);
     }
 }

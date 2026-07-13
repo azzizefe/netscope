@@ -55,6 +55,23 @@ jobs:
       - run: cargo build -p netscope-core -p netscope-tui
       - run: cargo test -p netscope-core -p netscope-tui
 
+  # Desktop frontend unit tests (vitest) — run the shipped app.js/filter.js
+  # sources in a sandbox, no build step required.
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/frontend-tests/package-lock.json
+      - run: npm ci
+        working-directory: desktop/frontend-tests
+      - run: npm test
+        working-directory: desktop/frontend-tests
+
   # Continuous benchmarks (ROADMAP §4.4). Quick mode keeps the job fast; the
   # numbers land in the job log so regressions are visible in review.
   bench:

@@ -169,12 +169,13 @@ fn render_detail_tree(frame: &mut Frame, area: Rect, app: &mut App) {
             theme.border
         }));
 
-    if app.packets.is_empty() || app.selected >= app.packets.len() {
+    let packets = app.filtered_packets();
+    if packets.is_empty() || app.selected >= packets.len() {
         frame.render_widget(block, area);
         return;
     }
 
-    let pkt = &app.packets[app.selected];
+    let pkt = packets[app.selected];
     let nodes = build_tree(pkt, app.selected);
     // Clamp the focused layer to the available nodes.
     app.detail_sel = app.detail_sel.min(nodes.len().saturating_sub(1));
@@ -225,7 +226,8 @@ fn render_detail_tree(frame: &mut Frame, area: Rect, app: &mut App) {
 
 fn render_hex_dump(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
-    if app.packets.is_empty() || app.selected >= app.packets.len() {
+    let packets = app.filtered_packets();
+    if packets.is_empty() || app.selected >= packets.len() {
         let block = Block::default()
             .title(" Hex Dump ")
             .borders(Borders::ALL)
@@ -234,7 +236,7 @@ fn render_hex_dump(frame: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
-    let pkt = &app.packets[app.selected];
+    let pkt = packets[app.selected];
     let data = &pkt.data;
     let hex_lines: Vec<String> = data
         .chunks(16)

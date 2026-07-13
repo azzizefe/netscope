@@ -7,7 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **TUI selection vs. display filter**: keyboard navigation (`↑/↓`, `j/k`),
+  mouse-wheel scrolling and Follow Stream (`F`) now operate on the *filtered*
+  packet list the screen shows. Previously they used the unfiltered buffer, so
+  with an active filter the cursor could walk past the last visible row
+  (blanking the detail/hex panes) and Follow Stream could open the wrong
+  conversation. The detail tree and hex dump likewise resolve the selected row
+  through the filter, and live capture keeps the same packet selected as old
+  frames are evicted from the 10 000-packet ring.
+- **Paused TUI capture no longer buffers unbounded packets**: while paused the
+  capture channel is drained and discarded instead of growing without limit.
+- **Restarting a desktop capture (or opening a file) clears stale state**: the
+  packet buffer and learned DNS hostname cache are reset so the new session
+  doesn't inherit rows or names from the previous one.
+
+### Security
+
+- Upgraded `maxminddb` 0.24 → 0.27 (RUSTSEC-2025-0132) and moved the GeoIP
+  code to the new `lookup`/`decode` API.
+- `cargo update`: `quick-xml` 0.39.4 → 0.41.0 (RUSTSEC-2026-0194/0195, via
+  Tauri 2.11.5) — `cargo audit` now reports zero vulnerabilities.
+
+### Changed
+
+- **Windows installer artifacts are no longer committed to the repository**
+  (`dist/` is gitignored) — downloads come from GitHub Releases, built by the
+  `release.yml` workflow on version tags.
+- CI now also runs the desktop frontend vitest suite (72 tests) on every
+  push/PR alongside the Rust jobs.
+
 ### Added
+
+- **TUI unit tests** for the app event loop: packet-ring eviction and
+  selection tracking in `tick()`, pause-drain and channel-discard behaviour,
+  display-filter fallback logic, key handling, headless output formatting
+  (plain + JSON) and the Connections view formatters — 30 tests in
+  `netscope-tui`, up from 14.
 
 - **UI/UX polish across both frontends** (ROADMAP §6). **TUI (§6.1):** an
   expandable protocol detail tree (`crates/tui/src/detail.rs`, `Enter` focuses

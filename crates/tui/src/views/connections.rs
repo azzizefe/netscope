@@ -132,3 +132,50 @@ fn format_duration(flow: &Flow) -> String {
         format!("{ms}ms")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+    use netscope_core::flows::Transport;
+    use netscope_core::models::Protocol;
+
+    #[test]
+    fn bytes_use_the_right_unit() {
+        assert_eq!(format_bytes(0), "0 B");
+        assert_eq!(format_bytes(999), "999 B");
+        assert_eq!(format_bytes(1_000), "1.0 KB");
+        assert_eq!(format_bytes(45_600), "45.6 KB");
+        assert_eq!(format_bytes(1_000_000), "1.0 MB");
+        assert_eq!(format_bytes(2_345_678), "2.3 MB");
+    }
+
+    fn flow_lasting(ms: i64) -> Flow {
+        let start = chrono::Utc.with_ymd_and_hms(2026, 1, 2, 3, 4, 5).unwrap();
+        Flow {
+            client_addr: "10.0.0.1".parse().unwrap(),
+            client_port: Some(50000),
+            server_addr: "10.0.0.2".parse().unwrap(),
+            server_port: Some(443),
+            transport: Transport::Tcp,
+            app_protocol: Protocol::Tls,
+            packet_count: 1,
+            byte_count: 60,
+            packets_to_server: 1,
+            packets_to_client: 0,
+            start_time: start,
+            end_time: start + chrono::Duration::milliseconds(ms),
+            last_summary: String::new(),
+        }
+    }
+
+    #[test]
+    fn durations_scale_from_ms_to_minutes() {
+        assert_eq!(format_duration(&flow_lasting(0)), "0ms");
+        assert_eq!(format_duration(&flow_lasting(999)), "999ms");
+        assert_eq!(format_duration(&flow_lasting(1_500)), "1.5s");
+        assert_eq!(format_duration(&flow_lasting(59_999)), "60.0s");
+        assert_eq!(format_duration(&flow_lasting(61_000)), "1m1s");
+        assert_eq!(format_duration(&flow_lasting(150_000)), "2m30s");
+    }
+}

@@ -3,6 +3,16 @@
 > **Oluşturma:** 2026-07-07 | **Test sonucu:** 213 test geçti, 0 başarısız  
 > **Amaç:** Testi olmayan kod yollarını, hata senaryolarını ve doğrulanmamış özellikleri listelemek
 
+> **Güncelleme (2026-07-13):** Bu rapordaki sayılar eskidi. Güncel durum:
+> **355 Rust testi** (core 322, TUI 30, desktop 2, doc-test 1) + **72 frontend
+> testi**, tamamı geçiyor. Rapordaki en kritik bulgu olan
+> "TUI sıfır test" kapatıldı: `app.rs` (tick/eviction/seçim takibi, tuş
+> yönetimi, filtre fallback), `headless.rs` (plain/JSON çıktı),
+> `views/connections.rs` (formatlayıcılar), `detail.rs`, `insights.rs`,
+> `stream.rs`, `colors.rs` artık test kapsamında. §1.2'deki "paused'da kanal
+> boşaltılmıyor" ve filtreli görünümde seçim taşması bug'ları düzeltildi.
+> Aşağıdaki liste tarihsel referans olarak korunuyor.
+
 ---
 
 ## 📊 Yönetici Özeti

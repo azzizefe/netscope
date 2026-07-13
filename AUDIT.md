@@ -3,6 +3,13 @@
 > **Oluşturma:** 2026-07-07 | **Araç:** cargo-clippy, cargo-audit, cargo-outdated, manuel inceleme  
 > **Kapsam:** Tüm workspace (core, tui, desktop, tools) — Rust + JavaScript frontend
 
+> **Güncelleme (2026-07-13):** §1.1'deki HIGH severity `quick-xml` açıkları
+> kapatıldı (`cargo update` → quick-xml 0.41.0, Tauri 2.11.5) ve
+> `maxminddb` 0.24 → 0.27'ye yükseltildi (RUSTSEC-2025-0132). `cargo audit`
+> artık **0 güvenlik açığı** raporluyor (kalan uyarılar Tauri'nin Linux-only
+> GTK3 zinciri). Clippy 0 uyarı, test sayısı 88 → 355 Rust + 72 frontend.
+> Aşağıdaki rapor tarihsel referans olarak korunuyor.
+
 ---
 
 ## 📊 Yönetici Özeti
