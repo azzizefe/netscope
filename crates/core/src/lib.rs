@@ -4,6 +4,7 @@ pub mod crypto;
 pub mod dissectors;
 pub mod editcap;
 pub mod education;
+pub mod expert;
 pub mod filter;
 pub mod firewall;
 pub mod flows;

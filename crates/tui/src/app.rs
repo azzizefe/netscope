@@ -83,6 +83,9 @@ pub struct App {
     pub list_inner: Rect,
     /// Index of the first packet row currently drawn (the table's scroll offset).
     pub list_offset: usize,
+    pub time_reference: Option<DateTime<Utc>>,
+    pub show_bookmarks: bool,
+    pub show_expert: bool,
 }
 
 impl App {
@@ -137,6 +140,9 @@ impl App {
             tab_hits: Vec::new(),
             list_inner: Rect::default(),
             list_offset: 0,
+            time_reference: None,
+            show_bookmarks: false,
+            show_expert: false,
         })
     }
 
@@ -306,6 +312,37 @@ impl App {
 
     fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Result<bool> {
         // ---- Overlays consume input first ----
+        if self.show_expert {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('E') | KeyCode::Char('e') => self.show_expert = false,
+                _ => {}
+            }
+            return Ok(true);
+        }
+        if self.show_bookmarks {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('B') | KeyCode::Char('b') => self.show_bookmarks = false,
+                KeyCode::Char(d @ '1'..='8') => {
+                    let idx = d as usize - '1' as usize;
+                    let bookmarks = &[
+                        "tcp.port == 443",
+                        "dns",
+                        "http2",
+                        "grpc",
+                        "rtp || rtcp",
+                        "ntlm",
+                        "tls.sni contains \"google\"",
+                        "frame.len > 1000",
+                    ];
+                    if let Some(&filter) = bookmarks.get(idx) {
+                        self.filter_text = filter.to_string();
+                    }
+                    self.show_bookmarks = false;
+                }
+                _ => {}
+            }
+            return Ok(true);
+        }
         if self.show_columns {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('C') | KeyCode::Char('c') => self.show_columns = false,
@@ -477,6 +514,25 @@ impl App {
             }
             KeyCode::Char('C') => {
                 self.show_columns = true;
+            }
+            KeyCode::Char('B') => {
+                self.show_bookmarks = true;
+            }
+            KeyCode::Char('E') => {
+                self.show_expert = true;
+            }
+            KeyCode::Char('R') => {
+                if self.view == View::Packets {
+                    if let Some(pkt) = self.filtered_packets().get(self.selected) {
+                        if self.time_reference == Some(pkt.timestamp) {
+                            self.time_reference = None;
+                            self.notify("Time reference cleared");
+                        } else {
+                            self.time_reference = Some(pkt.timestamp);
+                            self.notify("Time reference set");
+                        }
+                    }
+                }
             }
             KeyCode::Char('?') => {
                 self.show_help = true;
@@ -688,6 +744,9 @@ mod tests {
             tab_hits: Vec::new(),
             list_inner: Rect::default(),
             list_offset: 0,
+            time_reference: None,
+            show_bookmarks: false,
+            show_expert: false,
         };
         (app, packet_tx)
     }

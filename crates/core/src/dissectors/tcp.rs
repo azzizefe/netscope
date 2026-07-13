@@ -13,6 +13,52 @@ pub fn dissect_tcp(
     dst_ip: Option<IpAddr>,
     payload: &[u8],
 ) -> DissectedResult {
+    #[cfg(test)]
+    super::tcp_analysis::clear_tcp_states();
+
+    let mut result = dissect_tcp_inner(src_ip, dst_ip, payload);
+    if let Ok((tcp, rest)) = etherparse::TcpHeader::from_slice(payload) {
+        let mut flags_byte = 0u8;
+        if tcp.fin { flags_byte |= 0x01; }
+        if tcp.syn { flags_byte |= 0x02; }
+        if tcp.rst { flags_byte |= 0x04; }
+        if tcp.psh { flags_byte |= 0x08; }
+        if tcp.ack { flags_byte |= 0x10; }
+        if tcp.urg { flags_byte |= 0x20; }
+        if let Some(warning) = super::tcp_analysis::analyze_packet(
+            src_ip,
+            dst_ip,
+            tcp.source_port,
+            tcp.destination_port,
+            tcp.sequence_number,
+            tcp.acknowledgment_number,
+            flags_byte,
+            tcp.window_size,
+            rest.len(),
+        ) {
+            result.summary = format!("{warning} {}", result.summary);
+        }
+
+        if result.protocol == Protocol::Http {
+            if let Some(dur) = super::srt::record_http(
+                src_ip,
+                dst_ip,
+                tcp.source_port,
+                tcp.destination_port,
+                &result.summary,
+            ) {
+                result.summary = format!("{} [SRT: {:.1}ms]", result.summary, dur.as_secs_f64() * 1000.0);
+            }
+        }
+    }
+    result
+}
+
+fn dissect_tcp_inner(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    payload: &[u8],
+) -> DissectedResult {
     let header = match etherparse::TcpHeader::from_slice(payload) {
         Ok((h, rest)) => (h, rest),
         Err(_) => {

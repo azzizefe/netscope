@@ -33,7 +33,11 @@ pub fn dissect_udp(
 
     // Dispatch application-layer protocols by well-known port.
     if on(53) {
-        return dns::dissect_dns(src_ip, dst_ip, src_port, dst_port, udp_payload);
+        let mut r = dns::dissect_dns(src_ip, dst_ip, src_port, dst_port, udp_payload);
+        if let Some(dur) = super::srt::record_dns(src_ip, dst_ip, src_port, dst_port, udp_payload) {
+            r.summary = format!("{} [SRT: {:.1}ms]", r.summary, dur.as_secs_f64() * 1000.0);
+        }
+        return r;
     }
     if on(5353) {
         // mDNS uses the DNS wire format; reuse the DNS dissector, then relabel.

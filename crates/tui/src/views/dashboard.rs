@@ -15,17 +15,24 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(6),
-            Constraint::Min(4),
+            Constraint::Min(8),
             Constraint::Length(3),
             Constraint::Length(6),
         ])
         .split(area);
 
-    // One snapshot per frame keeps every panel consistent and avoids repeatedly
-    // rebuilding the (cloned) stats maps four times per render.
     let snap = app.stats.snapshot();
     render_stats_panel(frame, layout[0], &snap, border);
-    render_protocol_distribution(frame, layout[1], &snap, border);
+
+    // Split layout[1] horizontally for Protocol Hierarchy and Packet Lengths
+    let sub_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(layout[1]);
+
+    render_protocol_hierarchy(frame, sub_layout[0], &snap, border);
+    render_packet_lengths(frame, sub_layout[1], &snap, border);
+
     render_bandwidth_panel(frame, layout[2], &snap, border);
     render_top_talkers(frame, layout[3], &snap, border);
 }
@@ -62,44 +69,58 @@ fn render_stats_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, borde
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn render_protocol_distribution(
-    frame: &mut Frame,
-    area: Rect,
-    snap: &StatsSnapshot,
-    border: Color,
-) {
-    let total = snap.total_packets.max(1) as f64;
+fn render_protocol_hierarchy(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
+    let mut lines = vec![];
+    for (name, packets, bytes) in &snap.protocol_hierarchy {
+        let size_str = if *bytes > 1_000_000 {
+            format!("{:.1} MB", *bytes as f64 / 1_000_000.0)
+        } else {
+            format!("{:.1} KB", *bytes as f64 / 1000.0)
+        };
+        lines.push(Line::from(vec![
+            Span::raw(format!("{:<30}", name)),
+            Span::styled(format!(" {:>6} pkts", packets), Style::new().fg(Color::Cyan)),
+            Span::raw("  ·  "),
+            Span::styled(size_str, Style::new().fg(Color::Green)),
+        ]));
+    }
+    if lines.is_empty() {
+        lines.push(Line::from(" No protocols recorded"));
+    }
+    let block = Block::default()
+        .title(" Protocol Hierarchy Tree ")
+        .borders(Borders::ALL)
+        .border_style(Style::new().fg(border));
+    frame.render_widget(Paragraph::new(lines).block(block), area);
+}
 
-    let mut protocols: Vec<(&Protocol, &netscope_core::stats::ProtocolStats)> =
-        snap.per_protocol.iter().collect();
-    protocols.sort_by_key(|b| std::cmp::Reverse(b.1.total_packets));
+fn render_packet_lengths(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
+    let total = snap.total_packets.max(1) as f64;
+    let buckets = &[
+        ("0 - 79 B", snap.len_distribution[0]),
+        ("80 - 639 B", snap.len_distribution[1]),
+        ("640 - 1279 B", snap.len_distribution[2]),
+        ("1280 - 1500 B", snap.len_distribution[3]),
+        ("> 1500 B", snap.len_distribution[4]),
+    ];
 
     let mut lines = vec![];
-    for (proto, stats) in &protocols {
-        let pct = (stats.total_packets as f64 / total * 100.0) as u32;
-        let bar_len = (stats.total_packets as f64 / total * 30.0) as usize;
+    for &(label, count) in buckets {
+        let pct = (count as f64 / total * 100.0) as u32;
+        let bar_len = (count as f64 / total * 20.0) as usize;
         let bar = "█".repeat(bar_len);
-        let color = protocol_color(proto);
         lines.push(Line::from(vec![
-            Span::styled(
-                format!(" {:<8}", proto.to_string()),
-                Style::new().fg(color).bold(),
-            ),
-            Span::raw(format!(" {:>4}% ", pct)),
-            Span::styled(bar, Style::new().fg(color)),
-            Span::raw(format!(" ({} pkts)", stats.total_packets)),
+            Span::raw(format!(" {:<12} ", label)),
+            Span::styled(format!(" {:>6} pkts", count), Style::new().fg(Color::White).bold()),
+            Span::raw(format!(" ({:>3}%) ", pct)),
+            Span::styled(bar, Style::new().fg(Color::Yellow)),
         ]));
     }
 
-    if lines.is_empty() {
-        lines.push(Line::from(" No packets captured yet"));
-    }
-
     let block = Block::default()
-        .title(" Protocol Distribution ")
+        .title(" Packet Lengths Distribution ")
         .borders(Borders::ALL)
         .border_style(Style::new().fg(border));
-
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 

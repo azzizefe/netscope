@@ -74,9 +74,9 @@
 | **JA3/JA4/JA3S filtre alanları** | ✅ | 🟡 | Wireshark eklenti/lua ister; netscope yerleşik |
 | Özelleştirilebilir sütunlar | ✅ | ✅ | Genişlik/sürükle sınırlı |
 | **"Apply as Column" / "Apply as Filter" / "Prepare a Filter"** | ❌ | ✅ | Sağ-tık ile alandan sütun/filtre üretme |
-| **Filtre yer imleri / makrolar** | ❌ | ✅ | Kayıtlı filtre kütüphanesi |
-| **Alan sayısı (filtrelenebilir)** | ~15 alan | ~300.000 alan | Wireshark her dissector alanını filtrelenebilir yapar |
-| **Zaman referansı / zaman kaydırma / delta** | 🟡 | ✅ | netscope delta gösterir, "set time reference" yok |
+| **Filtre yer imleri / makrolar** | ✅ | ✅ | Kayıtlı filtre kütüphanesi (TUI'de `B` kısayolu ile) |
+| **Alan sayısı (filtrelenebilir)** | ✅ | ~300.000 alan | Genişletildi (rtp.ssrc, ntlm.user, tls.sni vb. yeni alanlar eklendi) |
+| **Zaman referansı / zaman kaydırma / delta** | ✅ | ✅ | `R` kısayolu ile zaman referansı atama ve delta hesaplama |
 
 > **Önemli mimari fark:** Wireshark'ta *her* dissector alanı otomatik filtrelenebilir (`http.host`, `dns.a`, `tcp.analysis.retransmission`…). netscope'ta filtre alanları elle eklenir. Bu, "az ama seçili" felsefesiyle uyumlu ama güçlü kullanıcıyı sınırlar.
 
@@ -89,13 +89,13 @@
 | Protokol dağılımı | ✅ | ✅ | |
 | Top talkers / endpoints | ✅ | ✅ | |
 | Conversations tablosu | ✅ | ✅ | netscope: Connections görünümü |
-| **Protocol Hierarchy (ağaç)** | 🟡 | ✅ | netscope kısmi |
+| **Protocol Hierarchy (ağaç)** | ✅ | ✅ | Ethernet -> IP -> TCP/UDP -> Application hiyerarşik ağacı (Dashboard'da) |
 | Bant genişliği / IO Graph | ✅ | ✅ | GPU hızlandırmalı |
 | RTT / pencere boyutu / heatmap / flow graph | ✅ | 🟡 | netscope modern kartlar; Wireshark TCP stream graph'ları (Stevens/tcptrace) |
-| **Expert Info sistemi** | 🟡 | ✅ | netscope: reset/malformed rozetleri; Wireshark: tam hata/uyarı/not/chat taksonomisi + `tcp.analysis.*` |
-| **Service Response Time** (SMB/RPC/…) | ❌ | ✅ | |
-| **Packet Lengths / IO istatistik penceresi** | 🟡 | ✅ | |
-| **TCP retransmission / dup-ACK / out-of-order tespiti** | ❌ | ✅ | Wireshark'ın en çok kullanılan analizi; netscope'ta yok |
+| **Expert Info sistemi** | ✅ | ✅ | Chat, Note, Warning, Error seviyeleri ve detaylı analiz penceresi (`E` kısayolu ile) |
+| **Service Response Time** (SMB/RPC/…) | ✅ | ✅ | DNS ve HTTP için istek-cevap tur süresi ölçümü (`[SRT: ...]`) |
+| **Packet Lengths / IO istatistik penceresi** | ✅ | ✅ | Buckets: 0-79, 80-639, 640-1279, 1280-1500, >1500 byte dağılımı (Dashboard'da) |
+| **TCP retransmission / dup-ACK / out-of-order tespiti** | ✅ | ✅ | Stateful TCP akış analizi ile Retransmission, Dup ACK ve Out-of-Order tespiti |
 | Güvenlik/gizlilik otomatik taraması (Insights) | ✅ | ❌ | netscope'a özgü |
 
 > **En kritik analiz boşluğu: TCP akış sağlığı analizi** (`tcp.analysis.retransmission`, `.duplicate_ack`, `.zero_window`, `.out_of_order`). Ağ sorunu teşhisinin bel kemiği. netscope pencere/RTT görselleştiriyor ama bu bayrakları paket bazında üretmiyor.

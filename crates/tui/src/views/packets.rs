@@ -77,13 +77,21 @@ fn render_packet_list(frame: &mut Frame, area: Rect, app: &mut App) {
             for col in &cols {
                 let cell = match col {
                     Column::Num => Cell::from(format!(" {:>3}", i + 1)),
-                    Column::Time => Cell::from(format!(
-                        " {:.3}s",
-                        (pkt.timestamp - app.start_time)
-                            .to_std()
-                            .unwrap_or_default()
-                            .as_secs_f64()
-                    )),
+                    Column::Time => {
+                        if let Some(ref_time) = app.time_reference {
+                            if pkt.timestamp == ref_time {
+                                Cell::from(Span::styled(" *REF* ", Style::new().fg(ratatui::style::Color::Yellow).bold()))
+                            } else {
+                                let diff = pkt.timestamp.signed_duration_since(ref_time);
+                                let secs = diff.num_milliseconds() as f64 / 1000.0;
+                                Cell::from(format!(" {:+.3}s", secs))
+                            }
+                        } else {
+                            let diff = pkt.timestamp.signed_duration_since(app.start_time);
+                            let secs = diff.num_milliseconds() as f64 / 1000.0;
+                            Cell::from(format!(" {:.3}s", secs))
+                        }
+                    }
                     Column::Source => Cell::from(format!(
                         " {} ",
                         pkt.src_addr
