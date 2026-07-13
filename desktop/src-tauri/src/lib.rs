@@ -646,9 +646,10 @@ fn run_open(
     path: String,
     cleanup: Option<std::path::PathBuf>,
 ) -> Result<(), String> {
-    // Fast path (ROADMAP §2.2): memory-map classic pcaps — no up-front load,
-    // page-by-page parallel dissection, batched IPC. pcapng and anything the
-    // mapper rejects falls back to the streaming libpcap reader below.
+    // Fast path (ROADMAP §2.2): memory-map classic pcap and pcapng files — no
+    // up-front load, page-by-page parallel dissection, batched IPC. Anything the
+    // mapper rejects (exotic link types, corrupt headers) falls back to the
+    // streaming libpcap reader below.
     match netscope_core::stream::LazyCapture::open(&path) {
         Ok(cap) => {
             {

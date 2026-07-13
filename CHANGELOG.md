@@ -40,6 +40,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **pcapng support in the memory-mapped reader** (`crates/core/src/stream.rs`).
+  pcapng is Wireshark's *default* save format; until now the mmap fast path
+  only handled classic `.pcap` and pcapng fell back to the slower streaming
+  libpcap reader. `LazyCapture` now walks pcapng block structure (Section
+  Header, Interface Description, Enhanced/Simple/legacy Packet Blocks) in
+  either byte order, honours each interface's `if_tsresol` timestamp
+  resolution (normalising to nanoseconds), and indexes ~24 bytes per packet
+  with zero-copy payloads — so opening a large Wireshark capture gets the same
+  no-up-front-load, parallel, virtually-scrolled treatment as `.pcap`. The
+  desktop "Open" path picks this up automatically. 5 new tests.
+- **JA3 TLS client fingerprinting** (`crates/core/src/dissectors/tls.rs`).
+  ClientHello dissection now parses the full offered cipher/extension/curve
+  lists and computes the JA3 fingerprint (MD5 over the RFC-8701 GREASE-filtered
+  `version,ciphers,extensions,curves,point-formats` string), surfaced in the
+  TLS summary (`TLS ClientHello — github.com · JA3 <hash>`) so it's searchable,
+  filterable, and matchable against threat-intel feeds even when the rest of
+  the session is encrypted (ROADMAP §5.2) — something Wireshark needs a plugin
+  for. The ClientHello parser is fully bounds-checked (fuzzed over every
+  truncation). 6 new tests.
 - **TUI unit tests** for the app event loop: packet-ring eviction and
   selection tracking in `tick()`, pause-drain and channel-discard behaviour,
   display-filter fallback logic, key handling, headless output formatting

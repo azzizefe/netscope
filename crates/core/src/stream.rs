@@ -17,10 +17,11 @@
 //! # anyhow::Ok(())
 //! ```
 //!
-//! Only the classic pcap format (`.pcap`) is mapped; pcapng files return a
-//! clear error so callers can fall back to the streaming
-//! [`CaptureEngine`](crate::capture::CaptureEngine) path, which handles them
-//! through libpcap.
+//! Both the classic pcap format (`.pcap`) and the modern pcapng format
+//! (`.pcapng`, Wireshark's default save format) are memory-mapped and indexed
+//! the same way. pcapng captures with multiple interfaces are dissected using
+//! the first interface's link type (the common single-interface case is exact);
+//! per-interface timestamp resolutions are honoured.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -37,8 +38,15 @@ const MAGIC_US: u32 = 0xa1b2_c3d4; // microsecond timestamps, writer-endian
 const MAGIC_NS: u32 = 0xa1b2_3c4d; // nanosecond timestamps, writer-endian
 const MAGIC_US_SWAPPED: u32 = 0xd4c3_b2a1;
 const MAGIC_NS_SWAPPED: u32 = 0x4d3c_b2a1;
-/// pcapng section header block type — recognised only to give a good error.
-const PCAPNG_MAGIC: u32 = 0x0a0d_0d0a;
+
+/// pcapng block types and the byte-order magic in its Section Header Block.
+const PCAPNG_MAGIC: u32 = 0x0a0d_0d0a; // Section Header Block type
+const PCAPNG_BYTE_ORDER: u32 = 0x1a2b_3c4d; // read little-endian when native
+const BLOCK_IDB: u32 = 0x0000_0001; // Interface Description Block
+const BLOCK_PACKET_OBSOLETE: u32 = 0x0000_0002; // legacy Packet Block
+const BLOCK_SPB: u32 = 0x0000_0003; // Simple Packet Block
+const BLOCK_EPB: u32 = 0x0000_0006; // Enhanced Packet Block
+const OPT_IF_TSRESOL: u16 = 0x0009; // interface timestamp-resolution option
 
 /// Records longer than this are treated as corruption, not data. Real
 /// snaplens top out at 256 KiB (D-Bus captures); 64 MiB is generous.
@@ -103,18 +111,27 @@ impl LazyCapture {
     fn from_mmap(map: memmap2::Mmap) -> Result<Self> {
         let bytes: &[u8] = &map;
         if bytes.len() < 24 {
-            anyhow::bail!("not a pcap file: shorter than the 24-byte global header");
+            anyhow::bail!("not a capture file: shorter than a 24-byte header");
         }
         let magic = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        match magic {
+            MAGIC_US | MAGIC_NS | MAGIC_US_SWAPPED | MAGIC_NS_SWAPPED => {
+                Self::index_pcap(map, magic)
+            }
+            PCAPNG_MAGIC => Self::index_pcapng(map),
+            other => anyhow::bail!("not a pcap/pcapng file (magic 0x{other:08x})"),
+        }
+    }
+
+    /// Index a classic pcap file: walk the 16-byte record headers only, never
+    /// touching payload.
+    fn index_pcap(map: memmap2::Mmap, magic: u32) -> Result<Self> {
+        let bytes: &[u8] = &map;
         let (swapped, nanos) = match magic {
             MAGIC_US => (false, false),
             MAGIC_NS => (false, true),
             MAGIC_US_SWAPPED => (true, false),
             MAGIC_NS_SWAPPED => (true, true),
-            PCAPNG_MAGIC => anyhow::bail!(
-                "pcapng format is not supported by the memory-mapped reader — \
-                 falling back to the streaming reader handles it"
-            ),
             other => anyhow::bail!("not a pcap file (magic 0x{other:08x})"),
         };
         let read_u32 = |off: usize| -> u32 {
@@ -127,7 +144,6 @@ impl LazyCapture {
         };
         let linktype = read_u32(20) as i32;
 
-        // Index pass: walk the 16-byte record headers, never touching payload.
         let mut index = Vec::new();
         let mut off: usize = 24;
         while off + 16 <= bytes.len() {
@@ -158,6 +174,132 @@ impl LazyCapture {
             index,
             linktype,
             nanos,
+            cache: Mutex::new(LruCache::new(CACHE_CAPACITY)),
+        })
+    }
+
+    /// Index a pcapng file by walking its block structure. Interface
+    /// Description Blocks define link type and timestamp resolution; Enhanced,
+    /// Simple and legacy Packet Blocks contribute packets. Timestamps are
+    /// normalised to nanoseconds at index time so the shared [`IndexEntry`]
+    /// layout (and `nanos = true`) serves the reader unchanged.
+    fn index_pcapng(map: memmap2::Mmap) -> Result<Self> {
+        let bytes: &[u8] = &map;
+        // The Section Header Block's byte-order magic fixes the endianness for
+        // the whole section; the SHB type itself is byte-order independent.
+        let bo_raw = u32::from_le_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]);
+        let swapped = match bo_raw {
+            PCAPNG_BYTE_ORDER => false,
+            b if b == PCAPNG_BYTE_ORDER.swap_bytes() => true,
+            other => anyhow::bail!("pcapng byte-order magic invalid (0x{other:08x})"),
+        };
+        let rd_u32 = |off: usize| -> u32 {
+            let raw = [bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]];
+            if swapped {
+                u32::from_be_bytes(raw)
+            } else {
+                u32::from_le_bytes(raw)
+            }
+        };
+        let rd_u16 = |off: usize| -> u16 {
+            let raw = [bytes[off], bytes[off + 1]];
+            if swapped {
+                u16::from_be_bytes(raw)
+            } else {
+                u16::from_le_bytes(raw)
+            }
+        };
+
+        let mut interfaces: Vec<Interface> = Vec::new();
+        let mut index = Vec::new();
+        let mut off = 0usize;
+        while off + 12 <= bytes.len() {
+            let block_type = rd_u32(off);
+            let block_len = rd_u32(off + 4) as usize;
+            // A block is at least a 12-byte header/trailer; a bogus length would
+            // stall or overflow the walk, so stop at the last good block.
+            if block_len < 12 || off + block_len > bytes.len() {
+                break;
+            }
+            let body = off + 8; // first byte past type+length
+            match block_type {
+                PCAPNG_MAGIC => interfaces.clear(), // new section restarts interface numbering
+                BLOCK_IDB => {
+                    let linktype = rd_u16(body) as i32;
+                    let tsresol =
+                        idb_tsresol(bytes, body + 8, off + block_len - 4, swapped).unwrap_or(6);
+                    interfaces.push(Interface { linktype, tsresol });
+                }
+                BLOCK_EPB => {
+                    let iface = rd_u32(body) as usize;
+                    let ts_high = rd_u32(body + 4) as u64;
+                    let ts_low = rd_u32(body + 8) as u64;
+                    let caplen = rd_u32(body + 12);
+                    let orig_len = rd_u32(body + 16);
+                    let data_start = body + 20;
+                    if caplen <= MAX_SANE_CAPLEN
+                        && data_start + caplen as usize <= off + block_len - 4
+                    {
+                        let tsresol = interfaces.get(iface).map(|i| i.tsresol).unwrap_or(6);
+                        let (ts_sec, ts_frac) = ticks_to_time((ts_high << 32) | ts_low, tsresol);
+                        index.push(IndexEntry {
+                            offset: data_start as u64,
+                            ts_sec,
+                            ts_frac,
+                            caplen,
+                            orig_len,
+                        });
+                    }
+                }
+                BLOCK_PACKET_OBSOLETE => {
+                    let iface = rd_u16(body) as usize;
+                    let ts_high = rd_u32(body + 4) as u64;
+                    let ts_low = rd_u32(body + 8) as u64;
+                    let caplen = rd_u32(body + 12);
+                    let orig_len = rd_u32(body + 16);
+                    let data_start = body + 20;
+                    if caplen <= MAX_SANE_CAPLEN
+                        && data_start + caplen as usize <= off + block_len - 4
+                    {
+                        let tsresol = interfaces.get(iface).map(|i| i.tsresol).unwrap_or(6);
+                        let (ts_sec, ts_frac) = ticks_to_time((ts_high << 32) | ts_low, tsresol);
+                        index.push(IndexEntry {
+                            offset: data_start as u64,
+                            ts_sec,
+                            ts_frac,
+                            caplen,
+                            orig_len,
+                        });
+                    }
+                }
+                BLOCK_SPB => {
+                    // Simple Packet Block: original length only, no timestamp;
+                    // the captured length is bounded by the block size.
+                    let orig_len = rd_u32(body);
+                    let data_start = body + 4;
+                    let avail = (off + block_len - 4).saturating_sub(data_start);
+                    let caplen = (orig_len as usize).min(avail) as u32;
+                    if caplen <= MAX_SANE_CAPLEN && data_start + caplen as usize <= bytes.len() {
+                        index.push(IndexEntry {
+                            offset: data_start as u64,
+                            ts_sec: 0,
+                            ts_frac: 0,
+                            caplen,
+                            orig_len,
+                        });
+                    }
+                }
+                _ => {} // name resolution, stats, custom — skipped via block_len
+            }
+            off += block_len;
+        }
+
+        let linktype = interfaces.first().map(|i| i.linktype).unwrap_or(1);
+        Ok(Self {
+            map,
+            index,
+            linktype,
+            nanos: true, // pcapng timestamps are normalised to nanoseconds above
             cache: Mutex::new(LruCache::new(CACHE_CAPACITY)),
         })
     }
@@ -267,6 +409,68 @@ impl LazyCapture {
             summary: d.summary,
             data: bytes::Bytes::copy_from_slice(data),
         })
+    }
+}
+
+/// A pcapng interface, from an Interface Description Block: its link type and
+/// the timestamp-resolution code (`if_tsresol`, default 6 = microseconds).
+struct Interface {
+    linktype: i32,
+    tsresol: u8,
+}
+
+/// Read an IDB's `if_tsresol` option, if present. Options follow the fixed IDB
+/// fields as `code(2) len(2) value(len, padded to 4)` records, terminated by
+/// `opt_endofopt` (code 0). `start` is the first option byte, `end` bounds the
+/// option area (block length minus the trailing 4-byte length).
+fn idb_tsresol(bytes: &[u8], start: usize, end: usize, swapped: bool) -> Option<u8> {
+    let rd_u16 = |off: usize| -> u16 {
+        let raw = [bytes[off], bytes[off + 1]];
+        if swapped {
+            u16::from_be_bytes(raw)
+        } else {
+            u16::from_le_bytes(raw)
+        }
+    };
+    let mut off = start;
+    while off + 4 <= end {
+        let code = rd_u16(off);
+        let len = rd_u16(off + 2) as usize;
+        let value = off + 4;
+        if code == 0 {
+            break; // opt_endofopt
+        }
+        if code == OPT_IF_TSRESOL && len >= 1 && value < bytes.len() {
+            return Some(bytes[value]);
+        }
+        // Options are padded to a 4-byte boundary.
+        off = value + len.div_ceil(4) * 4;
+    }
+    None
+}
+
+/// Convert a 64-bit pcapng tick count into `(seconds, nanoseconds)` using the
+/// interface's `if_tsresol` code. The top bit selects a base: clear = power of
+/// ten (`10^-value` s), set = power of two (`2^-(value & 0x7f)` s).
+fn ticks_to_time(ticks: u64, tsresol: u8) -> (u32, u32) {
+    if tsresol & 0x80 == 0 {
+        let exp = tsresol.min(18); // guard against absurd resolutions
+        let per_sec = 10u64.pow(exp as u32);
+        let sec = ticks / per_sec;
+        let frac = ticks % per_sec;
+        let nanos = if exp <= 9 {
+            frac * 10u64.pow(9 - exp as u32)
+        } else {
+            frac / 10u64.pow(exp as u32 - 9)
+        };
+        (sec as u32, nanos as u32)
+    } else {
+        let shift = (tsresol & 0x7f).min(63);
+        let per_sec = 1u64 << shift;
+        let sec = ticks >> shift;
+        let frac = ticks & (per_sec - 1);
+        let nanos = (frac as u128 * 1_000_000_000 / per_sec as u128) as u64;
+        (sec as u32, nanos as u32)
     }
 }
 
@@ -472,16 +676,151 @@ mod tests {
     }
 
     #[test]
-    fn rejects_pcapng_and_garbage() {
-        let mut ng = vec![0u8; 32];
-        ng[..4].copy_from_slice(&PCAPNG_MAGIC.to_le_bytes());
-        let err = open_bytes(&ng).unwrap_err().to_string();
-        assert!(err.contains("pcapng"), "{err}");
-
+    fn rejects_garbage() {
         let err = open_bytes(&[0xffu8; 64]).unwrap_err().to_string();
         assert!(err.contains("magic"), "{err}");
-
         assert!(open_bytes(&[1, 2, 3]).is_err());
+    }
+
+    /// Build a minimal little-endian pcapng: one SHB, one Ethernet IDB (with an
+    /// optional `if_tsresol`), and one Enhanced Packet Block per frame.
+    fn build_pcapng(frames: &[(u64, &[u8])], tsresol: Option<u8>) -> Vec<u8> {
+        build_pcapng_endian(frames, tsresol, false)
+    }
+
+    /// As [`build_pcapng`] but with a selectable byte order, so the swapped
+    /// (big-endian writer) code path can be exercised.
+    fn build_pcapng_endian(frames: &[(u64, &[u8])], tsresol: Option<u8>, be: bool) -> Vec<u8> {
+        let mut buf = Vec::new();
+        let p32 = |buf: &mut Vec<u8>, v: u32| {
+            buf.extend_from_slice(&if be { v.to_be_bytes() } else { v.to_le_bytes() })
+        };
+        let p16 = |buf: &mut Vec<u8>, v: u16| {
+            buf.extend_from_slice(&if be { v.to_be_bytes() } else { v.to_le_bytes() })
+        };
+
+        // Section Header Block. The byte-order magic is written in the section's
+        // own endianness so the reader can detect it.
+        p32(&mut buf, PCAPNG_MAGIC);
+        p32(&mut buf, 28);
+        p32(&mut buf, PCAPNG_BYTE_ORDER);
+        p16(&mut buf, 1); // major
+        p16(&mut buf, 0); // minor
+        buf.extend_from_slice(&if be {
+            (-1i64).to_be_bytes()
+        } else {
+            (-1i64).to_le_bytes()
+        }); // section length: unknown
+        p32(&mut buf, 28);
+
+        // Interface Description Block (linktype 1 = Ethernet).
+        let mut idb = Vec::new();
+        p16(&mut idb, 1); // linktype
+        p16(&mut idb, 0); // reserved
+        p32(&mut idb, 0); // snaplen: unlimited
+        if let Some(res) = tsresol {
+            p16(&mut idb, OPT_IF_TSRESOL);
+            p16(&mut idb, 1); // option length
+            idb.push(res);
+            idb.extend_from_slice(&[0, 0, 0]); // pad to 4 bytes
+            p16(&mut idb, 0); // opt_endofopt code
+            p16(&mut idb, 0); // opt_endofopt length
+        }
+        let idb_total = idb.len() + 12;
+        p32(&mut buf, BLOCK_IDB);
+        p32(&mut buf, idb_total as u32);
+        buf.extend_from_slice(&idb);
+        p32(&mut buf, idb_total as u32);
+
+        // Enhanced Packet Blocks.
+        for (ticks, data) in frames {
+            let pad = (4 - data.len() % 4) % 4;
+            let epb_total = 32 + data.len() + pad;
+            p32(&mut buf, BLOCK_EPB);
+            p32(&mut buf, epb_total as u32);
+            p32(&mut buf, 0); // interface id
+            p32(&mut buf, (ticks >> 32) as u32); // timestamp high
+            p32(&mut buf, *ticks as u32); // timestamp low
+            p32(&mut buf, data.len() as u32); // captured length
+            p32(&mut buf, data.len() as u32); // original length
+            buf.extend_from_slice(data);
+            buf.extend_from_slice(&vec![0u8; pad]);
+            p32(&mut buf, epb_total as u32);
+        }
+        buf
+    }
+
+    #[test]
+    fn indexes_pcapng_enhanced_packet_blocks() {
+        let frames = sample_frames();
+        // Microsecond ticks (default resolution): 1.7e9 s → ticks = s * 1e6.
+        let records: Vec<(u64, &[u8])> = frames
+            .iter()
+            .enumerate()
+            .map(|(i, f)| {
+                let secs = 1_700_000_000u64 + i as u64;
+                (secs * 1_000_000 + 250_000, f.as_slice())
+            })
+            .collect();
+        let cap = open_bytes(&build_pcapng(&records, None)).unwrap();
+
+        assert_eq!(cap.len(), 3);
+        assert_eq!(cap.linktype(), 1);
+        assert_eq!(cap.raw(1).unwrap(), frames[1].as_slice());
+        assert_eq!(cap.packet(0).unwrap().protocol, Protocol::Http);
+        let p1 = cap.packet(1).unwrap();
+        assert_eq!(p1.protocol, Protocol::Dns);
+        assert_eq!(p1.timestamp.timestamp(), 1_700_000_001);
+        assert_eq!(p1.timestamp.timestamp_subsec_millis(), 250);
+    }
+
+    #[test]
+    fn pcapng_nanosecond_tsresol_is_honoured() {
+        let frames = sample_frames();
+        // tsresol = 9 → nanosecond ticks. 5 s + 123456789 ns.
+        let ticks = 5u64 * 1_000_000_000 + 123_456_789;
+        let one = [(ticks, frames[0].as_slice())];
+        let cap = open_bytes(&build_pcapng(&one, Some(9))).unwrap();
+        let p = cap.packet(0).unwrap();
+        assert_eq!(p.timestamp.timestamp(), 5);
+        assert_eq!(p.timestamp.timestamp_subsec_nanos(), 123_456_789);
+    }
+
+    #[test]
+    fn pcapng_big_endian_section() {
+        // A big-endian SHB byte-order magic must be detected and parsed the
+        // same as its little-endian twin.
+        let frames = sample_frames();
+        let records: Vec<(u64, &[u8])> = frames
+            .iter()
+            .map(|f| (1_700_000_000u64 * 1_000_000 + 500_000, f.as_slice()))
+            .collect();
+        let be = build_pcapng_endian(&records, None, true);
+        let cap = open_bytes(&be).unwrap();
+        assert_eq!(cap.len(), 3);
+        assert_eq!(cap.linktype(), 1);
+        assert_eq!(cap.packet(0).unwrap().protocol, Protocol::Http);
+        assert_eq!(cap.packet(1).unwrap().protocol, Protocol::Dns);
+        assert_eq!(cap.packet(2).unwrap().timestamp.timestamp(), 1_700_000_000);
+        assert_eq!(
+            cap.packet(2).unwrap().timestamp.timestamp_subsec_millis(),
+            500
+        );
+    }
+
+    #[test]
+    fn pcapng_truncated_block_stops_cleanly() {
+        let frames = sample_frames();
+        let records: Vec<(u64, &[u8])> = frames
+            .iter()
+            .map(|f| (1_000_000u64, f.as_slice()))
+            .collect();
+        let mut bytes = build_pcapng(&records, None);
+        bytes.truncate(bytes.len() - 12); // lop off the final block's tail
+        let cap = open_bytes(&bytes).unwrap();
+        // The first two packets are fully present; the truncated one is dropped.
+        assert!(cap.len() >= 2);
+        assert_eq!(cap.packet(0).unwrap().protocol, Protocol::Http);
     }
 
     #[test]
