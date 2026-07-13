@@ -32,6 +32,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **netscope now makes zero outbound network calls — fully offline, like
+  Wireshark.** The opt-in `ipwho.is` online GeoIP lookup has been removed
+  (frontend fetch, the settings toggle and its UI, and the `connect-src`
+  allowance in the CSP, which is now `'self'` only). IP geolocation still works
+  via a local, offline MaxMind `.mmdb` database — the only GeoIP path. The app
+  captures and analyses entirely on the user's machine; there is no server, no
+  telemetry, and nothing to phone home to.
 - **Windows installer artifacts are no longer committed to the repository**
   (`dist/` is gitignored) — downloads come from GitHub Releases, built by the
   `release.yml` workflow on version tags.
