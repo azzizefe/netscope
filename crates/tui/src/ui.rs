@@ -33,6 +33,12 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     if app.show_columns {
         render_columns_overlay(frame, area, app, theme);
     }
+    if app.show_bookmarks {
+        render_bookmarks_overlay(frame, area, app, theme);
+    }
+    if app.show_expert {
+        render_expert_overlay(frame, area, app, theme);
+    }
     if app.show_help {
         render_help_overlay(frame, area, theme);
     }
@@ -144,6 +150,9 @@ fn render_keybinding_bar(frame: &mut Frame, area: Rect, app: &App, theme: Theme)
             " Enter details ",
             " F follow ",
             " C columns ",
+            " B filters ",
+            " E expert ",
+            " R time ref ",
             " h hex ",
             " T theme ",
             " ? help ",
@@ -291,6 +300,119 @@ fn render_columns_overlay(frame: &mut Frame, area: Rect, app: &App, theme: Theme
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
+fn render_bookmarks_overlay(frame: &mut Frame, area: Rect, _app: &App, theme: Theme) {
+    let mut lines = vec![
+        Line::from(Span::styled(
+            " Saved Filter Bookmarks ",
+            Style::new().bold(),
+        )),
+        Line::from(""),
+    ];
+    let bookmarks = &[
+        ("tcp.port == 443", "HTTPS (TCP Port 443)"),
+        ("dns", "DNS Traffic"),
+        ("http2", "HTTP/2 Cleartext"),
+        ("grpc", "gRPC Messages"),
+        ("rtp || rtcp", "RTP / VoIP Media"),
+        ("ntlm", "NTLM Authentication"),
+        ("tls.sni contains \"google\"", "Google TLS Connections"),
+        ("frame.len > 1000", "Large Frames (> 1000B)"),
+    ];
+    for (i, (filter, label)) in bookmarks.iter().enumerate() {
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {}  ", i + 1), Style::new().fg(theme.accent).bold()),
+            Span::styled(format!("{:<30} ", filter), Style::new().white()),
+            Span::styled(format!("({})", label), Style::new().dim()),
+        ]));
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::from(Span::styled(
+        " 1–8 select & apply · B/Esc close ",
+        Style::new().dim(),
+    )));
+
+    let area = centered_rect(50, 60, area);
+    frame.render_widget(Clear, area);
+    let block = Block::default()
+        .title(" Filter Library ")
+        .borders(Borders::ALL)
+        .border_style(Style::new().fg(theme.border))
+        .style(Style::new().bg(theme.bar_bg));
+    frame.render_widget(Paragraph::new(lines).block(block), area);
+}
+
+fn render_expert_overlay(frame: &mut Frame, area: Rect, app: &App, theme: Theme) {
+    use netscope_core::expert::{classify, ExpertSeverity};
+
+    let mut chat_count = 0;
+    let mut note_count = 0;
+    let mut warn_count = 0;
+    let mut err_count = 0;
+    let mut anomalies = Vec::new();
+
+    for (i, pkt) in app.packets.iter().enumerate() {
+        let sev = classify(pkt);
+        match sev {
+            ExpertSeverity::Chat => chat_count += 1,
+            ExpertSeverity::Note => note_count += 1,
+            ExpertSeverity::Warning => {
+                warn_count += 1;
+                anomalies.push((i + 1, "Warning", &pkt.summary));
+            }
+            ExpertSeverity::Error => {
+                err_count += 1;
+                anomalies.push((i + 1, "Error", &pkt.summary));
+            }
+        }
+    }
+
+    let mut lines = vec![
+        Line::from(Span::styled(" 🔬 Expert Info Diagnostics ", Style::new().bold())),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(format!("  Errors: {}  ", err_count), Style::new().bg(ratatui::style::Color::Red).fg(ratatui::style::Color::White).bold()),
+            Span::raw("  "),
+            Span::styled(format!("  Warnings: {}  ", warn_count), Style::new().bg(ratatui::style::Color::Yellow).fg(ratatui::style::Color::Black).bold()),
+            Span::raw("  "),
+            Span::styled(format!("  Notes: {}  ", note_count), Style::new().bg(ratatui::style::Color::Cyan).fg(ratatui::style::Color::Black).bold()),
+            Span::raw("  "),
+            Span::styled(format!("  Chat: {}  ", chat_count), Style::new().bg(ratatui::style::Color::Green).fg(ratatui::style::Color::Black).bold()),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(" Recent Warnings & Errors: ", Style::new().underlined().bold())),
+        Line::from(""),
+    ];
+
+    if anomalies.is_empty() {
+        lines.push(Line::from("  No anomalies detected. Network health is excellent!"));
+    } else {
+        for &(num, sev, summary) in anomalies.iter().rev().take(10) {
+            let color = if sev == "Error" {
+                ratatui::style::Color::Red
+            } else {
+                ratatui::style::Color::Yellow
+            };
+            lines.push(Line::from(vec![
+                Span::styled(format!("  Pkt {:>4} ", num), Style::new().dim()),
+                Span::styled(format!(" [{:<7}] ", sev), Style::new().fg(color).bold()),
+                Span::styled(summary.to_string(), Style::new().white()),
+            ]));
+        }
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(Span::styled(" Esc / E close ", Style::new().dim())));
+
+    let area = centered_rect(65, 70, area);
+    frame.render_widget(Clear, area);
+    let block = Block::default()
+        .title(" Expert Info Analyzer ")
+        .borders(Borders::ALL)
+        .border_style(Style::new().fg(theme.border))
+        .style(Style::new().bg(theme.bar_bg));
+    frame.render_widget(Paragraph::new(lines).block(block), area);
+}
+
 fn render_help_overlay(frame: &mut Frame, area: Rect, theme: Theme) {
     let lines = vec![
         Line::from(" Help ").bold().white(),
@@ -301,6 +423,9 @@ fn render_help_overlay(frame: &mut Frame, area: Rect, theme: Theme) {
         Line::from(" Tab / Shift+Tab    Switch views (or click a tab)"),
         Line::from(" F                  Follow the selected conversation's stream"),
         Line::from(" C                  Choose packet-list columns"),
+        Line::from(" B                  Saved filter bookmarks/macros library"),
+        Line::from(" E                  Open Expert Info diagnostics"),
+        Line::from(" R                  Toggle time reference on selected packet"),
         Line::from(" T                  Cycle colour theme"),
         Line::from(" h                  Toggle hex dump"),
         Line::from(" Space              Pause/resume capture"),

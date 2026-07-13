@@ -67,6 +67,11 @@ const KNOWN_PROTOS: &[&str] = &[
     "vxlan",
     "http2",
     "grpc",
+    "ntlm",
+    "rtp",
+    "rtcp",
+    "qpack",
+    "http3",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -146,6 +151,14 @@ enum Field {
     TlsJa3s,
     /// The human-readable summary ("Info" column).
     Info,
+    RtpSsrc,
+    RtpSeq,
+    NtlmUser,
+    NtlmDomain,
+    NtlmWorkstation,
+    TlsSni,
+    Http3Method,
+    Http3Status,
 }
 
 // TCP flag bit masks (RFC 9293, byte 13 of the TCP header).
@@ -245,6 +258,18 @@ fn eval_cmp(pkt: &Packet, field: Field, op: CmpOp, value: &Value) -> bool {
         Field::TlsJa4 => cmp_text(tls_ja4(pkt).as_deref(), op, value),
         Field::TlsJa3s => cmp_text(tls_ja3s(pkt).as_deref(), op, value),
         Field::Info => cmp_text(Some(&pkt.summary), op, value),
+        Field::RtpSsrc => cmp_num(rtp_ssrc(pkt), op, value),
+        Field::RtpSeq => cmp_num(rtp_seq(pkt), op, value),
+        Field::NtlmUser => cmp_text(ntlm_field(&pkt.summary, "User: ").as_deref(), op, value),
+        Field::NtlmDomain => cmp_text(ntlm_field(&pkt.summary, "Domain: ").as_deref(), op, value),
+        Field::NtlmWorkstation => cmp_text(ntlm_field(&pkt.summary, "Workstation: ").as_deref(), op, value),
+        Field::TlsSni => cmp_text(tls_sni(pkt).as_deref(), op, value),
+        Field::Http3Method => cmp_text(ntlm_field(&pkt.summary, ":method: ").as_deref(), op, value),
+        Field::Http3Status => {
+            let s = ntlm_field(&pkt.summary, ":status: ");
+            let val = s.and_then(|x| x.parse::<u64>().ok());
+            cmp_num(val, op, value)
+        }
     }
 }
 
@@ -401,6 +426,35 @@ fn tls_ja3s(pkt: &Packet) -> Option<String> {
     use crate::dissectors::tls;
     let s = tls::parse_server_hello(tls_payload(pkt)?)?;
     Some(tls::ja3s_hash(&s))
+}
+
+fn tls_sni(pkt: &Packet) -> Option<String> {
+    use crate::dissectors::tls;
+    let h = tls::parse_client_hello(tls_payload(pkt)?)?;
+    h.sni
+}
+
+fn rtp_ssrc(pkt: &Packet) -> Option<u64> {
+    let s = &pkt.summary;
+    let idx = s.find("SSRC 0x")?;
+    let rest = &s[idx + 7..];
+    let end = rest.find(|c: char| !c.is_ascii_hexdigit()).unwrap_or(rest.len());
+    u64::from_str_radix(&rest[..end], 16).ok()
+}
+
+fn rtp_seq(pkt: &Packet) -> Option<u64> {
+    let s = &pkt.summary;
+    let idx = s.find("seq ")?;
+    let rest = &s[idx + 4..];
+    let end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+    rest[..end].parse().ok()
+}
+
+fn ntlm_field(summary: &str, prefix: &str) -> Option<String> {
+    let idx = summary.find(prefix)?;
+    let rest = &summary[idx + prefix.len()..];
+    let end = rest.find(|c: char| c == ',' || c == ')').unwrap_or(rest.len());
+    Some(rest[..end].trim().to_string())
 }
 
 /// First question name of a DNS/mDNS message, dotted (`example.com`).
@@ -659,6 +713,12 @@ fn classify_word(word: &str) -> Tok {
         _ => {
             if let Ok(ip) = word.parse::<IpAddr>() {
                 Tok::Ip(ip)
+            } else if word.starts_with("0x") || word.starts_with("0X") {
+                if let Ok(n) = u64::from_str_radix(&word[2..], 16) {
+                    Tok::Num(n)
+                } else {
+                    Tok::Word(word.to_string())
+                }
             } else if let Ok(n) = word.parse::<u64>() {
                 Tok::Num(n)
             } else {
@@ -785,6 +845,14 @@ fn field_from_word(word: &str) -> Option<Field> {
         "tls.ja4" | "ja4" => Some(Field::TlsJa4),
         "tls.ja3s" | "ja3s" => Some(Field::TlsJa3s),
         "info" | "frame.info" | "summary" => Some(Field::Info),
+        "rtp.ssrc" | "rtcp.ssrc" => Some(Field::RtpSsrc),
+        "rtp.seq" | "rtp.sequence" => Some(Field::RtpSeq),
+        "ntlm.user" | "ntlm.username" => Some(Field::NtlmUser),
+        "ntlm.domain" => Some(Field::NtlmDomain),
+        "ntlm.workstation" | "ntlm.host" => Some(Field::NtlmWorkstation),
+        "tls.sni" | "tls.host" | "tls.server_name" => Some(Field::TlsSni),
+        "http3.method" | "qpack.method" => Some(Field::Http3Method),
+        "http3.status" | "qpack.status" => Some(Field::Http3Status),
         _ => None,
     }
 }
@@ -1189,5 +1257,45 @@ mod tests {
         assert!(matches("ip.addr == 2606:4700::1", &p));
         assert!(matches("ipv6", &p));
         assert!(!matches("ipv4", &p));
+    }
+
+    #[test]
+    fn test_new_filter_fields() {
+        let rtp_pkt = pkt(
+            Protocol::Rtp,
+            "10.0.0.1",
+            "10.0.0.2",
+            Some(40000),
+            Some(40002),
+            200,
+            "RTP PCMU/8000 — seq 1234, SSRC 0xdeadbeef, Jitter 1.2ms, MOS 4.2",
+        );
+        assert!(matches("rtp.ssrc == 0xdeadbeef", &rtp_pkt));
+        assert!(matches("rtp.seq == 1234", &rtp_pkt));
+
+        let ntlm_pkt = pkt(
+            Protocol::Ntlm,
+            "10.0.0.1",
+            "10.0.0.2",
+            Some(50000),
+            Some(139),
+            300,
+            "NTLM Authenticate — User: administrator, Domain: WORK, Workstation: PC",
+        );
+        assert!(matches("ntlm.user == administrator", &ntlm_pkt));
+        assert!(matches("ntlm.domain == WORK", &ntlm_pkt));
+        assert!(matches("ntlm.workstation == PC", &ntlm_pkt));
+
+        let quic_pkt = pkt(
+            Protocol::Quic,
+            "10.0.0.1",
+            "10.0.0.2",
+            Some(50000),
+            Some(443),
+            500,
+            "QUIC — 1-RTT (HTTP/3 :method: GET, :status: 200), 500 bytes",
+        );
+        assert!(matches("http3.method == GET", &quic_pkt));
+        assert!(matches("http3.status == 200", &quic_pkt));
     }
 }

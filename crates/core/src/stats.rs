@@ -20,6 +20,8 @@ pub struct StatsSnapshot {
     pub top_talkers_sent: Vec<(IpAddr, u64)>,
     pub top_talkers_received: Vec<(IpAddr, u64)>,
     pub top_domains: Vec<(String, u64)>,
+    pub len_distribution: [u64; 5],
+    pub protocol_hierarchy: Vec<(String, u64, u64)>,
 }
 
 #[derive(Debug)]
@@ -33,6 +35,21 @@ pub struct StatsEngine {
     sent_by_ip: HashMap<IpAddr, u64>,
     received_by_ip: HashMap<IpAddr, u64>,
     domain_counts: HashMap<String, u64>,
+    len_distribution: [u64; 5],
+    eth_packets: u64,
+    eth_bytes: u64,
+    ip4_packets: u64,
+    ip4_bytes: u64,
+    ip6_packets: u64,
+    ip6_bytes: u64,
+    arp_packets: u64,
+    arp_bytes: u64,
+    tcp_packets: u64,
+    tcp_bytes: u64,
+    udp_packets: u64,
+    udp_bytes: u64,
+    icmp_packets: u64,
+    icmp_bytes: u64,
 }
 
 impl Default for StatsEngine {
@@ -53,13 +70,108 @@ impl StatsEngine {
             sent_by_ip: HashMap::new(),
             received_by_ip: HashMap::new(),
             domain_counts: HashMap::new(),
+            len_distribution: [0; 5],
+            eth_packets: 0,
+            eth_bytes: 0,
+            ip4_packets: 0,
+            ip4_bytes: 0,
+            ip6_packets: 0,
+            ip6_bytes: 0,
+            arp_packets: 0,
+            arp_bytes: 0,
+            tcp_packets: 0,
+            tcp_bytes: 0,
+            udp_packets: 0,
+            udp_bytes: 0,
+            icmp_packets: 0,
+            icmp_bytes: 0,
         }
     }
 
     pub fn record_packet(&mut self, packet: &Packet) {
         self.total_packets += 1;
-        self.total_bytes += packet.length as u64;
-        self.bytes_this_second += packet.length as u64;
+        let bytes = packet.length as u64;
+        self.total_bytes += bytes;
+        self.bytes_this_second += bytes;
+
+        // Buckets: 0-79, 80-639, 640-1279, 1280-1500, >1500
+        if packet.length <= 79 {
+            self.len_distribution[0] += 1;
+        } else if packet.length <= 639 {
+            self.len_distribution[1] += 1;
+        } else if packet.length <= 1279 {
+            self.len_distribution[2] += 1;
+        } else if packet.length <= 1500 {
+            self.len_distribution[3] += 1;
+        } else {
+            self.len_distribution[4] += 1;
+        }
+
+        self.eth_packets += 1;
+        self.eth_bytes += bytes;
+
+        let is_ipv6 = packet.src_addr.map(|ip| ip.is_ipv6()).unwrap_or(false);
+        if packet.protocol == Protocol::Arp {
+            self.arp_packets += 1;
+            self.arp_bytes += bytes;
+        } else if is_ipv6 {
+            self.ip6_packets += 1;
+            self.ip6_bytes += bytes;
+        } else {
+            self.ip4_packets += 1;
+            self.ip4_bytes += bytes;
+        }
+
+        let is_tcp = matches!(
+            packet.protocol,
+            Protocol::Tcp
+                | Protocol::Http
+                | Protocol::Tls
+                | Protocol::Ssh
+                | Protocol::Ftp
+                | Protocol::Smtp
+                | Protocol::Imap
+                | Protocol::Pop3
+                | Protocol::Telnet
+                | Protocol::Rdp
+                | Protocol::WebSocket
+                | Protocol::Http2
+                | Protocol::Grpc
+                | Protocol::Postgres
+                | Protocol::Mysql
+                | Protocol::Mongodb
+                | Protocol::Redis
+                | Protocol::Cassandra
+                | Protocol::Modbus
+                | Protocol::Dnp3
+                | Protocol::Enip
+                | Protocol::OpcUa
+                | Protocol::Ntlm
+        );
+        let is_udp = matches!(
+            packet.protocol,
+            Protocol::Udp
+                | Protocol::Dns
+                | Protocol::Dhcp
+                | Protocol::Ntp
+                | Protocol::Mdns
+                | Protocol::Snmp
+                | Protocol::Quic
+                | Protocol::Sip
+                | Protocol::Rtp
+                | Protocol::Rtcp
+        );
+
+        if is_tcp {
+            self.tcp_packets += 1;
+            self.tcp_bytes += bytes;
+        } else if is_udp {
+            self.udp_packets += 1;
+            self.udp_bytes += bytes;
+        } else if packet.protocol == Protocol::Icmp {
+            self.icmp_packets += 1;
+            self.icmp_bytes += bytes;
+        }
 
         // Update per-protocol stats
         let proto = self
@@ -70,14 +182,14 @@ impl StatsEngine {
                 total_bytes: 0,
             });
         proto.total_packets += 1;
-        proto.total_bytes += packet.length as u64;
+        proto.total_bytes += bytes;
 
         // Track top talkers
         if let Some(src) = packet.src_addr {
-            *self.sent_by_ip.entry(src).or_insert(0) += packet.length as u64;
+            *self.sent_by_ip.entry(src).or_insert(0) += bytes;
         }
         if let Some(dst) = packet.dst_addr {
-            *self.received_by_ip.entry(dst).or_insert(0) += packet.length as u64;
+            *self.received_by_ip.entry(dst).or_insert(0) += bytes;
         }
 
         // Track DNS domains from summaries
@@ -135,6 +247,73 @@ impl StatsEngine {
         top_domains.sort_by_key(|k| std::cmp::Reverse(k.1));
         top_domains.truncate(10);
 
+        // Build hierarchy tree
+        let mut protocol_hierarchy = Vec::new();
+        protocol_hierarchy.push(("Frame (Ethernet)".to_string(), self.eth_packets, self.eth_bytes));
+        if self.arp_packets > 0 {
+            protocol_hierarchy.push(("  └─ ARP".to_string(), self.arp_packets, self.arp_bytes));
+        }
+        if self.ip6_packets > 0 {
+            protocol_hierarchy.push(("  └─ IPv6".to_string(), self.ip6_packets, self.ip6_bytes));
+        }
+        if self.ip4_packets > 0 {
+            protocol_hierarchy.push(("  └─ IPv4".to_string(), self.ip4_packets, self.ip4_bytes));
+            if self.tcp_packets > 0 {
+                protocol_hierarchy.push(("      └─ TCP".to_string(), self.tcp_packets, self.tcp_bytes));
+                for (proto, stats) in &self.per_protocol {
+                    if proto != &Protocol::Tcp && matches!(
+                        proto,
+                        Protocol::Http
+                            | Protocol::Tls
+                            | Protocol::Ssh
+                            | Protocol::Ftp
+                            | Protocol::Smtp
+                            | Protocol::Imap
+                            | Protocol::Pop3
+                            | Protocol::Telnet
+                            | Protocol::Rdp
+                            | Protocol::WebSocket
+                            | Protocol::Http2
+                            | Protocol::Grpc
+                            | Protocol::Postgres
+                            | Protocol::Mysql
+                            | Protocol::Mongodb
+                            | Protocol::Redis
+                            | Protocol::Cassandra
+                            | Protocol::Modbus
+                            | Protocol::Dnp3
+                            | Protocol::Enip
+                            | Protocol::OpcUa
+                            | Protocol::Ntlm
+                    ) {
+                        protocol_hierarchy.push((format!("          └─ {:?}", proto), stats.total_packets, stats.total_bytes));
+                    }
+                }
+            }
+            if self.udp_packets > 0 {
+                protocol_hierarchy.push(("      └─ UDP".to_string(), self.udp_packets, self.udp_bytes));
+                for (proto, stats) in &self.per_protocol {
+                    if proto != &Protocol::Udp && matches!(
+                        proto,
+                        Protocol::Dns
+                            | Protocol::Dhcp
+                            | Protocol::Ntp
+                            | Protocol::Mdns
+                            | Protocol::Snmp
+                            | Protocol::Quic
+                            | Protocol::Sip
+                            | Protocol::Rtp
+                            | Protocol::Rtcp
+                    ) {
+                        protocol_hierarchy.push((format!("          └─ {:?}", proto), stats.total_packets, stats.total_bytes));
+                    }
+                }
+            }
+            if self.icmp_packets > 0 {
+                protocol_hierarchy.push(("      └─ ICMP".to_string(), self.icmp_packets, self.icmp_bytes));
+            }
+        }
+
         StatsSnapshot {
             total_packets: self.total_packets,
             total_bytes: self.total_bytes,
@@ -144,6 +323,8 @@ impl StatsEngine {
             top_talkers_sent: top_sent,
             top_talkers_received: top_received,
             top_domains,
+            len_distribution: self.len_distribution,
+            protocol_hierarchy,
         }
     }
 }
