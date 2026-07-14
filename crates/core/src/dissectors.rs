@@ -484,10 +484,11 @@ mod tests {
 
     #[test]
     fn end_to_end_http_via_dissect() {
+        super::tcp::clear_tcp_reassembler();
         let data = build_tcp_packet(
             [10, 0, 0, 1],
             [10, 0, 0, 2],
-            12345,
+            51928,
             80,
             false,
             true,

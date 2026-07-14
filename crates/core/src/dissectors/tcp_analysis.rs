@@ -1,5 +1,3 @@
-use std::sync::OnceLock;
-use std::sync::Mutex;
 use std::collections::{HashMap, BTreeSet};
 use std::net::IpAddr;
 
@@ -20,9 +18,10 @@ pub struct TcpFlowState {
     pub last_was_pure_ack: bool,
 }
 
-fn get_tcp_states() -> &'static Mutex<HashMap<TcpFlowKey, TcpFlowState>> {
-    static STATES: OnceLock<Mutex<HashMap<TcpFlowKey, TcpFlowState>>> = OnceLock::new();
-    STATES.get_or_init(|| Mutex::new(HashMap::new()))
+use std::cell::RefCell;
+
+thread_local! {
+    static STATES: RefCell<HashMap<TcpFlowKey, TcpFlowState>> = RefCell::new(HashMap::new());
 }
 
 /// Analyze a TCP packet statefully to detect flow anomalies: Retransmissions, Duplicate ACKs, Out-of-Order.
@@ -47,54 +46,56 @@ pub fn analyze_packet(
         dst_port,
     };
 
-    let mut guard = get_tcp_states().lock().unwrap();
-    let state = guard.entry(key).or_insert_with(|| TcpFlowState {
-        max_seq: seq,
-        last_ack: ack,
-        last_win: win,
-        dup_ack_count: 0,
-        seen_seqs: BTreeSet::new(),
-        last_was_pure_ack: false,
-    });
+    STATES.with(|states| {
+        let mut guard = states.borrow_mut();
+        let state = guard.entry(key).or_insert_with(|| TcpFlowState {
+            max_seq: seq,
+            last_ack: ack,
+            last_win: win,
+            dup_ack_count: 0,
+            seen_seqs: BTreeSet::new(),
+            last_was_pure_ack: false,
+        });
 
-    let mut result = None;
+        let mut result = None;
 
-    let has_ack = flags & 0x10 != 0; // ACK flag
-    let has_syn = flags & 0x02 != 0;
-    let has_fin = flags & 0x01 != 0;
-    let has_rst = flags & 0x04 != 0;
+        let has_ack = flags & 0x10 != 0; // ACK flag
+        let has_syn = flags & 0x02 != 0;
+        let has_fin = flags & 0x01 != 0;
+        let has_rst = flags & 0x04 != 0;
 
-    let is_pure_ack = payload_len == 0 && has_ack && !has_syn && !has_fin && !has_rst;
+        let is_pure_ack = payload_len == 0 && has_ack && !has_syn && !has_fin && !has_rst;
 
-    if payload_len > 0 {
-        if state.seen_seqs.contains(&seq) {
-            result = Some("[TCP Retransmission]".to_string());
-        } else if seq < state.max_seq {
-            result = Some("[TCP Out-of-Order]".to_string());
+        if payload_len > 0 {
+            if state.seen_seqs.contains(&seq) {
+                result = Some("[TCP Retransmission]".to_string());
+            } else if seq < state.max_seq {
+                result = Some("[TCP Out-of-Order]".to_string());
+            }
+            state.seen_seqs.insert(seq);
+            if seq > state.max_seq {
+                state.max_seq = seq;
+            }
+            state.last_was_pure_ack = false;
+        } else if is_pure_ack {
+            if state.last_was_pure_ack && ack == state.last_ack && win == state.last_win {
+                state.dup_ack_count += 1;
+                result = Some(format!("[TCP Dup ACK #{}]", state.dup_ack_count));
+            } else {
+                state.dup_ack_count = 0;
+            }
+            state.last_was_pure_ack = true;
         }
-        state.seen_seqs.insert(seq);
-        if seq > state.max_seq {
-            state.max_seq = seq;
-        }
-        state.last_was_pure_ack = false;
-    } else if is_pure_ack {
-        if state.last_was_pure_ack && ack == state.last_ack && win == state.last_win {
-            state.dup_ack_count += 1;
-            result = Some(format!("[TCP Dup ACK #{}]", state.dup_ack_count));
-        } else {
-            state.dup_ack_count = 0;
-        }
-        state.last_was_pure_ack = true;
-    }
 
-    state.last_ack = ack;
-    state.last_win = win;
+        state.last_ack = ack;
+        state.last_win = win;
 
-    result
+        result
+    })
 }
 
 pub fn clear_tcp_states() {
-    get_tcp_states().lock().unwrap().clear();
+    STATES.with(|states| states.borrow_mut().clear());
 }
 
 #[cfg(test)]

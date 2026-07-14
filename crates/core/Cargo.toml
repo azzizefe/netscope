@@ -33,6 +33,9 @@ getrandom = "0.2"
 sha2 = "0.10"
 md-5 = "0.10"
 rcgen = { version = "0.13", default-features = false, features = ["pem", "ring"] }
+rsa = "0.9"
+sha1 = "0.10"
+ccm = "0.5"
 
 [features]
 # Async facade over the capture pipeline (see `capture::AsyncCaptureEngine`).
@@ -45,6 +48,7 @@ criterion = "0.5"
 # and Packet values through the public API.
 etherparse = "0.16"
 chrono = "0.4"
+rand = "0.8"
 
 # Continuous benchmarks (ROADMAP §4.4) — see benches/ and docs/core.md.
 [[bench]]

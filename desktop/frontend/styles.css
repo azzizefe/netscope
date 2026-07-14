@@ -810,3 +810,57 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 }
 .color-rule .btn-icon { font-size: 13px; }
 .coloring-hint { color: var(--text-muted); font-size: 12px; }
+
+/* ---- TCP Graph & VoIP Modals Custom Styling ---- */
+#tcp-graph-modal .modal-box, #voip-modal .modal-box {
+  width: min(880px, 94vw);
+  height: min(620px, 88vh);
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 16px;
+  background: var(--bg-elev-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-tab:hover {
+  color: var(--text);
+}
+
+.modal-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.voip-tab-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.voip-tab-content.hidden {
+  display: none !important;
+}
+
+#voip-log-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+

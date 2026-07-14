@@ -75,7 +75,7 @@ pub fn follow(packets: &VecDeque<Packet>, selected: usize) -> Option<FollowStrea
         }
         chunks.push(StreamChunk {
             from_client,
-            text: decode_stream_text(payload),
+            text: decode_stream_text(payload, &p.protocol),
         });
     }
 
@@ -153,7 +153,7 @@ fn extract_payload(pkt: &Packet) -> Option<&[u8]> {
 
 /// Bytes → text the way Wireshark's stream view does: printable ASCII, tabs
 /// and newlines kept; everything else becomes a middle dot.
-fn decode_stream_text(bytes: &[u8]) -> String {
+fn decode_plain_stream(bytes: &[u8]) -> String {
     bytes
         .iter()
         .map(|&b| match b {
@@ -162,6 +162,171 @@ fn decode_stream_text(bytes: &[u8]) -> String {
             _ => '·',
         })
         .collect()
+}
+
+fn decode_http2_stream(bytes: &[u8]) -> String {
+    let mut out = String::new();
+    let mut off = 0;
+    if bytes.starts_with(b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n") {
+        out.push_str("[HTTP/2 Connection Preface]\n");
+        off += 24;
+    }
+    
+    let mut frame_count = 0;
+    while off + 9 <= bytes.len() {
+        let len = ((bytes[off] as usize) << 16) | ((bytes[off+1] as usize) << 8) | (bytes[off+2] as usize);
+        let typ = bytes[off+3];
+        let flags = bytes[off+4];
+        let stream_id = u32::from_be_bytes([bytes[off+5] & 0x7f, bytes[off+6], bytes[off+7], bytes[off+8]]);
+        
+        let type_name = match typ {
+            0 => "DATA",
+            1 => "HEADERS",
+            2 => "PRIORITY",
+            3 => "RST_STREAM",
+            4 => "SETTINGS",
+            5 => "PUSH_PROMISE",
+            6 => "PING",
+            7 => "GOAWAY",
+            8 => "WINDOW_UPDATE",
+            9 => "CONTINUATION",
+            _ => "UNKNOWN",
+        };
+        
+        out.push_str(&format!("HTTP/2 Frame: {} (Stream {}, Length: {}, Flags: 0x{:02x})\n", type_name, stream_id, len, flags));
+        
+        let payload_start = off + 9;
+        let payload_end = (payload_start + len).min(bytes.len());
+        if payload_end > payload_start {
+            let payload = &bytes[payload_start..payload_end];
+            if typ == 0 {
+                let txt = decode_plain_stream(payload);
+                if !txt.is_empty() {
+                    out.push_str(&format!("  Data: {}\n", txt.chars().take(200).collect::<String>()));
+                }
+            } else if typ == 1 {
+                let txt = decode_plain_stream(payload);
+                if !txt.is_empty() {
+                    out.push_str(&format!("  Headers (Huffman/Raw): {}\n", txt.chars().take(200).collect::<String>()));
+                }
+            }
+        }
+        
+        off += 9 + len;
+        frame_count += 1;
+        if frame_count > 50 {
+            out.push_str("... (truncated HTTP/2 frames)\n");
+            break;
+        }
+    }
+    
+    if out.is_empty() {
+        decode_plain_stream(bytes)
+    } else {
+        out
+    }
+}
+
+fn decode_tls_stream(bytes: &[u8]) -> String {
+    let mut out = String::new();
+    let mut off = 0;
+    let mut record_count = 0;
+    
+    while off + 5 <= bytes.len() {
+        let content_type = bytes[off];
+        let version_major = bytes[off+1];
+        let version_minor = bytes[off+2];
+        let len = u16::from_be_bytes([bytes[off+3], bytes[off+4]]) as usize;
+        
+        let type_name = match content_type {
+            20 => "ChangeCipherSpec",
+            21 => "Alert",
+            22 => "Handshake",
+            23 => "Application Data",
+            24 => "Heartbeat",
+            _ => break,
+        };
+        
+        let version_str = match (version_major, version_minor) {
+            (3, 1) => "TLS 1.0",
+            (3, 2) => "TLS 1.1",
+            (3, 3) => "TLS 1.2",
+            (3, 4) => "TLS 1.3",
+            (3, 0) => "SSL 3.0",
+            _ => "Unknown TLS",
+        };
+        
+        if content_type == 22 && off + 6 <= bytes.len() {
+            let handshake_type = bytes[off+5];
+            let hs_name = match handshake_type {
+                1 => "ClientHello",
+                2 => "ServerHello",
+                4 => "NewSessionTicket",
+                8 => "EncryptedExtensions",
+                11 => "Certificate",
+                12 => "ServerKeyExchange",
+                13 => "CertificateRequest",
+                14 => "ServerHelloDone",
+                15 => "CertificateVerify",
+                16 => "ClientKeyExchange",
+                20 => "Finished",
+                _ => "Other Handshake",
+            };
+            out.push_str(&format!("TLS Record: Handshake - {} ({}, Length: {})\n", hs_name, version_str, len));
+        } else {
+            out.push_str(&format!("TLS Record: {} ({}, Length: {})\n", type_name, version_str, len));
+        }
+        
+        off += 5 + len;
+        record_count += 1;
+        if record_count > 50 {
+            out.push_str("... (truncated TLS records)\n");
+            break;
+        }
+    }
+    
+    if out.is_empty() {
+        decode_plain_stream(bytes)
+    } else {
+        out
+    }
+}
+
+fn decode_quic_stream(bytes: &[u8]) -> String {
+    let mut out = String::new();
+    if bytes.is_empty() {
+        return out;
+    }
+    let first = bytes[0];
+    if first & 0x80 != 0 {
+        let version = if bytes.len() >= 5 {
+            u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]])
+        } else {
+            0
+        };
+        let packet_type = (first >> 4) & 3;
+        let type_name = match packet_type {
+            0 => "Initial",
+            1 => "0-RTT",
+            2 => "Handshake",
+            3 => "Retry",
+            _ => "Unknown",
+        };
+        out.push_str(&format!("QUIC Long Header Packet: {} (Version: 0x{:08x}, Length: {})\n", type_name, version, bytes.len()));
+    } else {
+        let spin = if first & 0x20 != 0 { "Spin" } else { "NoSpin" };
+        out.push_str(&format!("QUIC Short Header Packet (1-RTT, Encrypted, {}, Length: {})\n", spin, bytes.len()));
+    }
+    out
+}
+
+fn decode_stream_text(bytes: &[u8], proto: &netscope_core::models::Protocol) -> String {
+    match proto {
+        netscope_core::models::Protocol::Http2 => decode_http2_stream(bytes),
+        netscope_core::models::Protocol::Tls => decode_tls_stream(bytes),
+        netscope_core::models::Protocol::Quic => decode_quic_stream(bytes),
+        _ => decode_plain_stream(bytes),
+    }
 }
 
 #[cfg(test)]
