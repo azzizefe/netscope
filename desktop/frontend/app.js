@@ -571,7 +571,7 @@ function updateFlow(pkt) {
     if (f.pkts.length < FLOW_STREAM_CAP) {
       // `epoch` (ms) drives the RTT / flow-graph timing charts (ROADMAP §6.4);
       // `len` lets the flow graph label segment sizes.
-      f.pkts.push({ fromClient: pkt.src_addr === f.clientAddr && pkt.src_port === f.clientPort, raw: pkt.raw, ts: pkt.timestamp, epoch: pkt.epoch_ms, len: pkt.length });
+      f.pkts.push({ fromClient: pkt.src_addr === f.clientAddr && pkt.src_port === f.clientPort, raw: pkt.raw, ts: pkt.timestamp, epoch: pkt.epoch_ms, len: pkt.length, proto: pkt.protocol });
     }
   }
 }
@@ -595,6 +595,10 @@ function renderConnections() {
     const followBtn = f.pkts.length
       ? `<button class="btn btn-small" data-follow="${esc(f.key)}" title="Read the full conversation as text">💬 Follow</button>`
       : '';
+    const isTcp = transportOf(f.proto) === 'tcp';
+    const graphBtn = (f.pkts.length && isTcp)
+      ? `<button class="btn btn-small btn-graph" data-graph-stream="${esc(f.key)}" title="Plot TCP Stream Graphs (Stevens/tcptrace, throughput, RTT, window)">📈 Graph</button>`
+      : '';
     return `
       <div class="conn-row conn-row-grid${isBlocked ? ' blocked' : ''}">
         <span class="mono">${client}</span>
@@ -602,7 +606,7 @@ function renderConnections() {
         <span class="conn-proto" style="color:${protoColor(f.proto)}">${esc(f.proto)}</span>
         <span>${f.packets}</span>
         <span>${formatBytes(f.bytes)}</span>
-        <span class="conn-actions">${followBtn}${btn}</span>
+        <span class="conn-actions">${followBtn}${graphBtn}${btn}</span>
       </div>`;
   }).join('');
 }
@@ -646,14 +650,128 @@ function extractPayload(raw) {
   return o <= raw.length ? raw.slice(o) : new Uint8Array(0);
 }
 
-// Render bytes as text the way Wireshark's stream view does: printable ASCII
-// and newlines kept as-is, everything else shown as a middle dot.
-function decodeStreamText(bytes) {
+function decodeStreamText(bytes, proto) {
+  if (proto === 'HTTP/2') {
+    return decodeHttp2Stream(bytes);
+  } else if (proto === 'TLS') {
+    return decodeTlsStream(bytes);
+  } else if (proto === 'QUIC') {
+    return decodeQuicStream(bytes);
+  }
+  return decodePlainStream(bytes);
+}
+
+function decodePlainStream(bytes) {
   let out = '';
   for (const b of bytes) {
     if (b === 10 || b === 13 || b === 9) out += String.fromCharCode(b);
     else if (b >= 32 && b < 127) out += String.fromCharCode(b);
     else out += '·';
+  }
+  return out;
+}
+
+function decodeHttp2Stream(bytes) {
+  let out = '';
+  let off = 0;
+  let isPreface = true;
+  const pref = [80, 82, 73, 32, 42, 32, 72, 84, 84, 80, 47, 50, 46, 48, 13, 10, 13, 10, 83, 77, 13, 10, 13, 10]; // PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n
+  if (bytes.length >= 24) {
+    for (let i = 0; i < 24; i++) {
+      if (bytes[i] !== pref[i]) { isPreface = false; break; }
+    }
+  } else {
+    isPreface = false;
+  }
+  if (isPreface) {
+    out += '[HTTP/2 Connection Preface]\n';
+    off += 24;
+  }
+
+  let frameCount = 0;
+  while (off + 9 <= bytes.length) {
+    const len = (bytes[off] << 16) | (bytes[off + 1] << 8) | bytes[off + 2];
+    const typ = bytes[off + 3];
+    const flags = bytes[off + 4];
+    const streamId = ((bytes[off + 5] & 0x7f) << 24) | (bytes[off + 6] << 16) | (bytes[off + 7] << 8) | bytes[off + 8];
+
+    const typeNames = ["DATA", "HEADERS", "PRIORITY", "RST_STREAM", "SETTINGS", "PUSH_PROMISE", "PING", "GOAWAY", "WINDOW_UPDATE", "CONTINUATION"];
+    const typeName = typeNames[typ] || "UNKNOWN";
+
+    out += `HTTP/2 Frame: ${typeName} (Stream ${streamId}, Length: ${len}, Flags: 0x${flags.toString(16).padStart(2, '0')})\n`;
+
+    const payloadStart = off + 9;
+    const payloadEnd = Math.min(payloadStart + len, bytes.length);
+    if (payloadEnd > payloadStart) {
+      const payload = bytes.slice(payloadStart, payloadEnd);
+      if (typ === 0) { // DATA
+        const txt = decodePlainStream(payload);
+        if (txt) out += `  Data: ${txt.substring(0, 200)}\n`;
+      } else if (typ === 1) { // HEADERS
+        const txt = decodePlainStream(payload);
+        if (txt) out += `  Headers (Huffman/Raw): ${txt.substring(0, 200)}\n`;
+      }
+    }
+
+    off += 9 + len;
+    frameCount++;
+    if (frameCount > 50) {
+      out += '... (truncated HTTP/2 frames)\n';
+      break;
+    }
+  }
+
+  return out || decodePlainStream(bytes);
+}
+
+function decodeTlsStream(bytes) {
+  let out = '';
+  let off = 0;
+  let recordCount = 0;
+  while (off + 5 <= bytes.length) {
+    const contentType = bytes[off];
+    const versionMajor = bytes[off + 1];
+    const versionMinor = bytes[off + 2];
+    const len = (bytes[off + 3] << 8) | bytes[off + 4];
+
+    const typeName = { 20: "ChangeCipherSpec", 21: "Alert", 22: "Handshake", 23: "Application Data", 24: "Heartbeat" }[contentType];
+    if (!typeName) break;
+
+    const versionStr = { 0x0301: "TLS 1.0", 0x0302: "TLS 1.1", 0x0303: "TLS 1.2", 0x0304: "TLS 1.3", 0x0300: "SSL 3.0" }[(versionMajor << 8) | versionMinor] || "Unknown TLS";
+
+    if (contentType === 22 && off + 6 <= bytes.length) {
+      const handshakeType = bytes[off + 5];
+      const hsName = { 1: "ClientHello", 2: "ServerHello", 4: "NewSessionTicket", 8: "EncryptedExtensions", 11: "Certificate", 12: "ServerKeyExchange", 13: "CertificateRequest", 14: "ServerHelloDone", 15: "CertificateVerify", 16: "ClientKeyExchange", 20: "Finished" }[handshakeType] || "Other Handshake";
+      out += `TLS Record: Handshake - ${hsName} (${versionStr}, Length: ${len})\n`;
+    } else {
+      out += `TLS Record: ${typeName} (${versionStr}, Length: ${len})\n`;
+    }
+
+    off += 5 + len;
+    recordCount++;
+    if (recordCount > 50) {
+      out += '... (truncated TLS records)\n';
+      break;
+    }
+  }
+  return out || decodePlainStream(bytes);
+}
+
+function decodeQuicStream(bytes) {
+  if (!bytes.length) return '';
+  let out = '';
+  const first = bytes[0];
+  if (first & 0x80) {
+    let version = 0;
+    if (bytes.length >= 5) {
+      version = (bytes[1] << 24) | (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
+    }
+    const packetType = (first >> 4) & 3;
+    const typeName = ["Initial", "0-RTT", "Handshake", "Retry"][packetType] || "Unknown";
+    out += `QUIC Long Header Packet: ${typeName} (Version: 0x${version.toString(16).padStart(8, '0')}, Length: ${bytes.length})\n`;
+  } else {
+    const spin = (first & 0x20) ? "Spin" : "NoSpin";
+    out += `QUIC Short Header Packet (1-RTT, Encrypted, ${spin}, Length: ${bytes.length})\n`;
   }
   return out;
 }
@@ -667,7 +785,7 @@ function openFollowStream(key) {
     const payload = extractPayload(p.raw);
     if (!payload || !payload.length) continue;
     if (p.fromClient) { clientBytes += payload.length; clientPkts++; } else { serverBytes += payload.length; serverPkts++; }
-    chunks.push({ fromClient: p.fromClient, text: decodeStreamText(payload) });
+    chunks.push({ fromClient: p.fromClient, text: decodeStreamText(payload, p.proto || f.proto) });
   }
 
   const client = endpointLabel(f.clientAddr, null, f.clientPort);
@@ -729,6 +847,10 @@ function showPacketContextMenu(ev, idx) {
     const enabled = !!(f && f.pkts.length);
     items.push({ id: 'follow', label: `💬 Follow ${t.toUpperCase()} Stream`, enabled,
       title: enabled ? '' : 'No captured conversation for this packet' });
+    if (t === 'tcp') {
+      items.push({ id: 'tcp-graph', label: `📈 TCP Stream Graph`, enabled,
+        title: enabled ? '' : 'No TCP stream to graph' });
+    }
     items.push({ sep: true });
   }
   if (pkt.src_addr) items.push({ id: 'filter-src', label: `Filter: ip.addr == ${pkt.src_addr}`, enabled: true });
@@ -736,6 +858,10 @@ function showPacketContextMenu(ev, idx) {
   items.push({ id: 'filter-proto', label: `Filter: protocol ${pkt.protocol}`, enabled: true });
   items.push({ sep: true });
   items.push({ id: 'copy-summary', label: '📋 Copy summary', enabled: true });
+  items.push({ id: 'copy-hex', label: '📋 Copy Hex Stream', enabled: !!pkt.raw });
+  items.push({ id: 'copy-c-array', label: '📋 Copy as C Array', enabled: !!pkt.raw });
+  items.push({ id: 'copy-plain-text', label: '📋 Copy as Plain Text (Decoded)', enabled: !!pkt.raw });
+  items.push({ id: 'export-bytes', label: '💾 Export Packet Bytes…', enabled: !!pkt.raw });
   if (packetToCurl(pkt)) items.push({ id: 'copy-curl', label: '📋 Copy as cURL', enabled: true });
 
   menu.innerHTML = items.map((it) => it.sep
@@ -763,10 +889,19 @@ async function onCtxMenuAction(action, idx) {
   };
   switch (action) {
     case 'follow': followStreamForPacket(pkt); break;
+    case 'tcp-graph': {
+      const key = flowKeyOf(pkt);
+      if (key) openTcpStreamGraph(key);
+      break;
+    }
     case 'filter-src': applyFilter(`ip.addr == ${pkt.src_addr}`); break;
     case 'filter-dst': applyFilter(`ip.addr == ${pkt.dst_addr}`); break;
     case 'filter-proto': applyFilter(pkt.protocol.toLowerCase()); break;
     case 'copy-summary': await copyText(pkt.summary || ''); break;
+    case 'copy-hex': copyHexStream(pkt); break;
+    case 'copy-c-array': copyCArray(pkt); break;
+    case 'copy-plain-text': copyPlainText(pkt); break;
+    case 'export-bytes': exportPacketBytes(pkt); break;
     case 'copy-curl': { const c = packetToCurl(pkt); if (c) await copyText(c); break; }
   }
 }
@@ -1717,7 +1852,9 @@ function tcpHeader(raw) {
   if (raw.length < l4 + 20) return null;
   const dataOff = ((raw[l4 + 12] >> 4) & 0x0f) * 4;
   if (dataOff < 20) return null;
-  return { flags: raw[l4 + 13], window: (raw[l4 + 14] << 8) | raw[l4 + 15], hdrLen: dataOff, l4 };
+  const seq = ((raw[l4 + 4] << 24) | (raw[l4 + 5] << 16) | (raw[l4 + 6] << 8) | raw[l4 + 7]) >>> 0;
+  const ack = ((raw[l4 + 8] << 24) | (raw[l4 + 9] << 16) | (raw[l4 + 10] << 8) | raw[l4 + 11]) >>> 0;
+  return { flags: raw[l4 + 13], window: (raw[l4 + 14] << 8) | raw[l4 + 15], seq, ack, hdrLen: dataOff, l4 };
 }
 
 function chartEmpty(svg, hint, msg) { svg.innerHTML = ''; if (hint) hint.textContent = msg; }
@@ -1861,6 +1998,209 @@ function tcpFlagLabel(flags) {
   if (flags & 0x04) names.push('RST');
   if (flags & 0x08) names.push('PSH');
   return names.join(' ') || 'data';
+}
+
+// ---- TCP Stream Graphs (Stevens/tcptrace, throughput, RTT, window) ----
+let tcpGraphState = { key: null, type: 'stevens' };
+
+function closeTcpStreamGraph() {
+  $('#tcp-graph-modal').classList.add('hidden');
+}
+
+function openTcpStreamGraph(key, type = 'stevens') {
+  tcpGraphState.key = key;
+  tcpGraphState.type = type;
+
+  const f = state.flows.get(key);
+  if (!f || !f.pkts.length) return;
+
+  // Update modal active tabs
+  $$('#tcp-graph-modal .modal-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.graph === type);
+  });
+
+  const client = endpointLabel(f.clientAddr, null, f.clientPort);
+  const server = endpointLabel(f.serverAddr, f.serverHost, f.serverPort);
+  $('#tcp-graph-title').innerHTML = `📈 TCP Stream Graph — <span class="mono">${esc(client)}</span> ⇄ ${esc(server)}`;
+
+  const pkts = f.pkts.filter(p => {
+    const proto = (p.protocol || '').toLowerCase();
+    return proto === 'tcp' || proto === 'tls' || proto === 'http';
+  });
+
+  if (!pkts.length) {
+    $('#tcp-graph-svg').innerHTML = '';
+    $('#tcp-graph-hint').textContent = 'No TCP segments found in this conversation.';
+    $('#tcp-graph-meta').textContent = 'Empty conversation.';
+    $('#tcp-graph-modal').classList.remove('hidden');
+    return;
+  }
+
+  const t0 = pkts[0].epoch;
+  const parsedPackets = [];
+
+  let clientIsn = null;
+  let serverIsn = null;
+
+  // Find ISNs
+  for (const p of pkts) {
+    const h = tcpHeader(p.raw);
+    if (!h) continue;
+    if (p.fromClient) {
+      if (clientIsn === null) clientIsn = h.seq;
+      if (h.flags & 0x02) clientIsn = h.seq; // SYN
+    } else {
+      if (serverIsn === null) serverIsn = h.seq;
+      if (h.flags & 0x02) serverIsn = h.seq; // SYN
+    }
+  }
+  if (clientIsn === null) clientIsn = 0;
+  if (serverIsn === null) serverIsn = 0;
+
+  for (const p of pkts) {
+    const h = tcpHeader(p.raw);
+    if (!h) continue;
+
+    const relSeq = (h.seq >= clientIsn) ? (h.seq - clientIsn) : (0xffffffff - clientIsn + h.seq + 1);
+    const relAck = (h.ack >= serverIsn) ? (h.ack - serverIsn) : (0xffffffff - serverIsn + h.ack + 1);
+
+    parsedPackets.push({
+      p,
+      h,
+      t: p.epoch - t0,
+      relSeq,
+      relAck,
+      len: p.length || 0,
+      window: h.window
+    });
+  }
+
+  const totalPkts = parsedPackets.length;
+  const duration = (pkts[pkts.length - 1].epoch - t0) / 1000; // seconds
+  $('#tcp-graph-meta').textContent = `${totalPkts} segments analysed · duration ${duration.toFixed(2)}s · Client ISN: ${clientIsn} · Server ISN: ${serverIsn}`;
+
+  const svg = $('#tcp-graph-svg');
+  const W = 600, H = 300;
+  const padLeft = 60, padRight = 20, padTop = 20, padBottom = 40;
+  const chartW = W - padLeft - padRight;
+  const chartH = H - padTop - padBottom;
+
+  let points = [];
+  let xLabel = 'Time (ms)';
+  let yLabel = '';
+
+  if (type === 'stevens') {
+    yLabel = 'Relative Sequence Number (B)';
+    parsedPackets.forEach(item => {
+      if (item.p.fromClient) {
+        points.push({ x: item.t, y: item.relSeq, color: 'var(--accent)', label: `Client Seq: ${item.relSeq} (${item.len} B)` });
+      } else {
+        points.push({ x: item.t, y: item.relAck, color: 'var(--http)', label: `Server Ack: ${item.relAck}` });
+      }
+    });
+  } else if (type === 'throughput') {
+    yLabel = 'Throughput (KB/s)';
+    const interval = 200; // ms
+    const buckets = {};
+    parsedPackets.forEach(item => {
+      const bucketIdx = Math.floor(item.t / interval);
+      buckets[bucketIdx] = (buckets[bucketIdx] || 0) + item.len;
+    });
+    const maxBucket = Math.ceil((pkts[pkts.length - 1].epoch - t0) / interval);
+    for (let i = 0; i <= maxBucket; i++) {
+      const bytes = buckets[i] || 0;
+      const throughput = (bytes / 1024) / (interval / 1000); // KB/s
+      points.push({ x: i * interval + interval / 2, y: throughput, color: 'var(--accent)', label: `Throughput: ${throughput.toFixed(1)} KB/s` });
+    }
+  } else if (type === 'rtt') {
+    yLabel = 'Handshake / Segment RTT (ms)';
+    const sentTimes = new Map();
+    parsedPackets.forEach(item => {
+      if (item.p.fromClient) {
+        sentTimes.set(item.relSeq, item.t);
+      } else {
+        const clientSentTime = sentTimes.get(item.relAck - item.len);
+        if (clientSentTime !== undefined) {
+          const rttVal = item.t - clientSentTime;
+          if (rttVal > 0 && rttVal < 1000) {
+            points.push({ x: item.t, y: rttVal, color: 'var(--danger)', label: `RTT: ${rttVal.toFixed(1)} ms` });
+          }
+        }
+      }
+    });
+    if (points.length === 0) {
+      let synTime = null;
+      for (const item of parsedPackets) {
+        if (item.p.fromClient && (item.h.flags & 0x02)) synTime = item.t;
+        else if (synTime !== null && !item.p.fromClient && (item.h.flags & 0x12) === 0x12) {
+          points.push({ x: item.t, y: item.t - synTime, color: 'var(--danger)', label: `Handshake RTT: ${(item.t - synTime).toFixed(1)} ms` });
+          break;
+        }
+      }
+    }
+  } else if (type === 'window') {
+    yLabel = 'Advertised Window (B)';
+    parsedPackets.forEach(item => {
+      points.push({ x: item.t, y: item.window, color: item.p.fromClient ? 'var(--accent)' : 'var(--http)', label: `${item.p.fromClient ? 'Client' : 'Server'} Window: ${item.window.toLocaleString()} B` });
+    });
+  }
+
+  if (points.length === 0) {
+    svg.innerHTML = '';
+    $('#tcp-graph-hint').textContent = 'Not enough data points to plot this graph type.';
+    $('#tcp-graph-modal').classList.remove('hidden');
+    return;
+  }
+
+  const xMin = 0;
+  const xMax = Math.max(...points.map(p => p.x), 1);
+  const yMin = 0;
+  const yMax = Math.max(...points.map(p => p.y), 1) * 1.1;
+
+  const scaleX = (xVal) => padLeft + (xVal / xMax) * chartW;
+  const scaleY = (yVal) => H - padBottom - (yVal / yMax) * chartH;
+
+  let out = '';
+
+  out += `<line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${H - padBottom}" stroke="var(--border)" stroke-width="1"/>`;
+  out += `<line x1="${padLeft}" y1="${H - padBottom}" x2="${W - padRight}" y2="${H - padBottom}" stroke="var(--border)" stroke-width="1"/>`;
+
+  const xTicks = 5;
+  for (let i = 0; i <= xTicks; i++) {
+    const val = (xMax / xTicks) * i;
+    const sx = scaleX(val);
+    out += `<line x1="${sx}" y1="${padTop}" x2="${sx}" y2="${H - padBottom}" stroke="var(--border)" stroke-dasharray="2,4" opacity="0.3"/>`;
+    out += `<text x="${sx}" y="${H - padBottom + 16}" fill="var(--text-muted)" font-size="10" text-anchor="middle">${val.toFixed(0)}</text>`;
+  }
+
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i++) {
+    const val = (yMax / yTicks) * i;
+    const sy = scaleY(val);
+    out += `<line x1="${padLeft}" y1="${sy}" x2="${W - padRight}" y2="${sy}" stroke="var(--border)" stroke-dasharray="2,4" opacity="0.3"/>`;
+    let labelText = val.toFixed(0);
+    if (val >= 1000000) labelText = (val / 1000000).toFixed(1) + 'M';
+    else if (val >= 1000) labelText = (val / 1000).toFixed(0) + 'K';
+    out += `<text x="${padLeft - 8}" y="${sy + 4}" fill="var(--text-muted)" font-size="10" text-anchor="end">${labelText}</text>`;
+  }
+
+  out += `<text x="${padLeft + chartW / 2}" y="${H - 8}" fill="var(--text)" font-size="11" font-weight="600" text-anchor="middle">${esc(xLabel)}</text>`;
+  out += `<text x="14" y="${padTop + chartH / 2}" fill="var(--text)" font-size="11" font-weight="600" text-anchor="middle" transform="rotate(-90 14 ${padTop + chartH / 2})">${esc(yLabel)}</text>`;
+
+  if (type === 'throughput' && points.length > 1) {
+    const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.x).toFixed(1)} ${scaleY(p.y).toFixed(1)}`).join(' ');
+    out += `<path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+  }
+
+  points.forEach(p => {
+    const cx = scaleX(p.x);
+    const cy = scaleY(p.y);
+    out += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${type === 'stevens' ? 2 : 3}" fill="${p.color}" class="graph-dot"><title>${esc(p.label)} at ${p.x.toFixed(0)} ms</title></circle>`;
+  });
+
+  svg.innerHTML = out;
+  $('#tcp-graph-hint').textContent = `Hover over points to inspect individual TCP segments. Toggle tabs above to view other metrics.`;
+  $('#tcp-graph-modal').classList.remove('hidden');
 }
 
 // ---- Learn ----
@@ -3886,6 +4226,91 @@ function packetsToJSON(packets) {
   );
 }
 
+/** Packets → PDML (XML). */
+function packetsToPDML(packets) {
+  let xml = '<?xml version="1.0" encoding="utf-8"?>\n';
+  xml += '<pdml version="0" creator="netscope">\n';
+  packets.forEach((p, i) => {
+    xml += `  <packet>\n`;
+    xml += `    <proto name="geninfo" showname="General Information">\n`;
+    xml += `      <field name="num" show="${i + 1}" value="${i + 1}"/>\n`;
+    xml += `      <field name="len" show="${p.length}" value="${p.length}"/>\n`;
+    xml += `      <field name="timestamp" show="${p.timestamp}" value="${p.epoch_ms}"/>\n`;
+    xml += `    </proto>\n`;
+    xml += `    <proto name="ip" showname="Internet Protocol">\n`;
+    xml += `      <field name="src" show="${p.src_addr || ''}" value="${p.src_addr || ''}"/>\n`;
+    xml += `      <field name="dst" show="${p.dst_addr || ''}" value="${p.dst_addr || ''}"/>\n`;
+    xml += `    </proto>\n`;
+    xml += `    <proto name="transport" showname="Transport Layer">\n`;
+    xml += `      <field name="srcport" show="${p.src_port || ''}" value="${p.src_port || ''}"/>\n`;
+    xml += `      <field name="dstport" show="${p.dst_port || ''}" value="${p.dst_port || ''}"/>\n`;
+    xml += `    </proto>\n`;
+    xml += `    <proto name="frame" showname="Application protocol: ${esc(p.protocol)}">\n`;
+    xml += `      <field name="info" show="${esc(p.summary)}" value=""/>\n`;
+    xml += `    </proto>\n`;
+    xml += `  </packet>\n`;
+  });
+  xml += '</pdml>\n';
+  return xml;
+}
+
+/** Packets → PSML (XML). */
+function packetsToPSML(packets) {
+  let xml = '<?xml version="1.0" encoding="utf-8"?>\n';
+  xml += '<psml version="0" creator="netscope">\n';
+  xml += '  <structure>\n';
+  ['No', 'Time', 'Source', 'Destination', 'Protocol', 'Length', 'Info'].forEach(col => {
+    xml += `    <section>${col}</section>\n`;
+  });
+  xml += '  </structure>\n';
+  packets.forEach((p, i) => {
+    xml += `  <packet>\n`;
+    xml += `    <section>${i + 1}</section>\n`;
+    xml += `    <section>${esc(p.timestamp)}</section>\n`;
+    xml += `    <section>${esc(p.src_host || p.src_addr || '')}</section>\n`;
+    xml += `    <section>${esc(p.dst_host || p.dst_addr || '')}</section>\n`;
+    xml += `    <section>${esc(p.protocol)}</section>\n`;
+    xml += `    <section>${p.length || 0}</section>\n`;
+    xml += `    <section>${esc(p.summary)}</section>\n`;
+    xml += `  </packet>\n`;
+  });
+  xml += '</psml>\n';
+  return xml;
+}
+
+function copyHexStream(pkt) {
+  if (!pkt.raw) return;
+  const hex = Array.from(pkt.raw).map(b => b.toString(16).padStart(2, '0')).join(' ');
+  copyText(hex);
+}
+
+function copyCArray(pkt) {
+  if (!pkt.raw) return;
+  const bytes = Array.from(pkt.raw).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(', ');
+  const text = `unsigned char pkt_data[] = {\n  ${bytes}\n};\nunsigned int pkt_len = ${pkt.raw.length};`;
+  copyText(text);
+}
+
+function copyPlainText(pkt) {
+  const payload = extractPayload(pkt.raw);
+  if (!payload || !payload.length) {
+    copyText(pkt.summary || '');
+    return;
+  }
+  copyText(decodeStreamText(payload));
+}
+
+function exportPacketBytes(pkt) {
+  if (!pkt.raw) return;
+  const blob = new Blob([new Uint8Array(pkt.raw)], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `packet_${pkt.epoch_ms || Date.now()}.bin`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /** OS firewall rules (Windows netsh + Linux iptables) for a set of IPs. */
 function firewallRulesText(ips) {
   if (!ips.length) return '# No IPs are currently blocked by netscope.';
@@ -3947,11 +4372,218 @@ function showEndpoints() {
   ], rows));
 }
 
+let voipActiveTab = 'log';
+let audioCtx = null;
+let audioInterval = null;
+let audioOsc = null;
+let audioGain = null;
+let isPlayingAudio = false;
+
+function closeVoipModal() {
+  $('#voip-modal').classList.add('hidden');
+  stopVoipAudio();
+}
+
+function switchVoipTab(tab) {
+  voipActiveTab = tab;
+  $$('#voip-modal .modal-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.voipTab === tab);
+  });
+  $$('.voip-tab-content').forEach(div => {
+    div.classList.add('hidden');
+  });
+  $(`#voip-tab-${tab}-content`).classList.remove('hidden');
+
+  if (tab === 'flow') {
+    renderVoipFlow();
+  } else if (tab === 'player') {
+    renderVoipPlayer();
+  }
+}
+
+function renderVoipFlow() {
+  const pkts = activePackets().filter(p => p.protocol === 'SIP');
+  const svg = $('#voip-flow-svg');
+  if (!pkts.length) {
+    svg.innerHTML = '<text x="250" y="150" fill="var(--text-muted)" font-size="12" text-anchor="middle">No SIP signalling packets captured yet.</text>';
+    return;
+  }
+
+  const hosts = [...new Set(pkts.flatMap(p => [p.src_addr || p.src_host, p.dst_addr || p.dst_host]))].filter(Boolean).slice(0, 3);
+  if (hosts.length < 2) {
+    svg.innerHTML = '<text x="250" y="150" fill="var(--text-muted)" font-size="12" text-anchor="middle">Need at least 2 hosts to draw a ladder diagram.</text>';
+    return;
+  }
+
+  const W = 500;
+  const rowH = 26;
+  const top = 30;
+  const H = top + pkts.length * rowH + 20;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.height = `${Math.min(H, 300)}px`;
+
+  let out = '';
+  const xCoords = [];
+  hosts.forEach((h, i) => {
+    const x = i === 0 ? 80 : (i === 1 ? W - 80 : W / 2);
+    xCoords.push(x);
+    out += `<line x1="${x}" y1="20" x2="${x}" y2="${H - 10}" stroke="var(--border)" stroke-width="1"/>`;
+    out += `<text x="${x}" y="14" fill="var(--text)" font-size="10" font-weight="600" text-anchor="middle">${esc(h.length > 15 ? h.slice(0, 13) + '…' : h)}</text>`;
+  });
+
+  pkts.forEach((p, i) => {
+    const y = top + i * rowH;
+    const srcIdx = hosts.indexOf(p.src_addr || p.src_host);
+    const dstIdx = hosts.indexOf(p.dst_addr || p.dst_host);
+    if (srcIdx < 0 || dstIdx < 0) return;
+    const x1 = xCoords[srcIdx];
+    const x2 = xCoords[dstIdx];
+    const color = p.summary.includes('200 OK') ? 'var(--success)' : (p.summary.includes('INVITE') ? 'var(--accent)' : 'var(--text-muted)');
+
+    out += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="1.5" marker-end="url(#voip-arrow)"/>`;
+
+    let label = p.summary;
+    if (label.startsWith('SIP ')) label = label.substring(4);
+    if (label.length > 30) label = label.substring(0, 28) + '…';
+
+    const textX = (x1 + x2) / 2;
+    out += `<text x="${textX}" y="${y - 4}" fill="${color}" font-size="9" text-anchor="middle" font-weight="500">${esc(label)}</text>`;
+    const timeX = x1 < x2 ? x1 - 6 : x1 + 6;
+    const timeAnchor = x1 < x2 ? 'end' : 'start';
+    out += `<text x="${timeX}" y="${y + 3}" fill="var(--text-muted)" font-size="8" text-anchor="${timeAnchor}">${esc(p.timestamp)}</text>`;
+  });
+
+  const arrow = `<defs><marker id="voip-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--text-muted)"/></marker></defs>`;
+  svg.innerHTML = arrow + out;
+}
+
+function playVoipAudio() {
+  if (isPlayingAudio) return;
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioOsc = audioCtx.createOscillator();
+  audioGain = audioCtx.createGain();
+
+  audioOsc.type = 'triangle';
+  audioOsc.frequency.setValueAtTime(320, audioCtx.currentTime);
+  audioGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+
+  audioOsc.connect(audioGain);
+  audioGain.connect(audioCtx.destination);
+  audioOsc.start();
+
+  isPlayingAudio = true;
+  $('#voip-play-btn').textContent = '■ Stop Audio';
+  $('#voip-player-status').textContent = 'Status: Playing Simulated Stream...';
+
+  let time = 0;
+  const canvas = $('#voip-waveform');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const jitterVal = parseFloat($('#voip-jitter-val').textContent) || 0;
+
+  audioInterval = setInterval(() => {
+    time += 0.05;
+    let freq = 320 + Math.sin(time * 3) * 60 + Math.sin(time * 8) * 20;
+    if (jitterVal > 0.5) {
+      freq += (Math.random() - 0.5) * jitterVal * 15;
+    }
+
+    audioOsc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+    ctx.fillStyle = '#0b111e';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'var(--accent)';
+    ctx.beginPath();
+    ctx.moveTo(0, H / 2);
+
+    for (let x = 0; x < W; x++) {
+      const amp = 30 + Math.sin(time * 5) * 10;
+      const noise = (jitterVal > 1.5) ? (Math.random() - 0.5) * (jitterVal * 2) : 0;
+      const y = H / 2 + Math.sin(x * 0.05 + time * 10) * amp + noise;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }, 30);
+}
+
+function stopVoipAudio() {
+  if (!isPlayingAudio) return;
+  clearInterval(audioInterval);
+  if (audioOsc) {
+    try { audioOsc.stop(); } catch(e) {}
+    audioOsc.disconnect();
+  }
+  if (audioGain) {
+    audioGain.disconnect();
+  }
+  if (audioCtx) {
+    audioCtx.close();
+  }
+  isPlayingAudio = false;
+  $('#voip-play-btn').textContent = '▶ Play Audio';
+  $('#voip-player-status').textContent = 'Status: Idle';
+
+  const canvas = $('#voip-waveform');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0b111e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function renderVoipPlayer() {
+  let rtpSSRC = '—';
+  let rtpJitter = '—';
+  let rtpMOS = '—';
+  const rtpPkts = activePackets().filter(p => p.protocol === 'RTP');
+  if (rtpPkts.length) {
+    for (const p of rtpPkts) {
+      const mSsrc = /SSRC 0x([0-9a-fA-F]+)/.exec(p.summary || '');
+      if (mSsrc) rtpSSRC = '0x' + mSsrc[1];
+      const mJit = /Jitter ([\d\.]+)ms/.exec(p.summary || '');
+      if (mJit) rtpJitter = mJit[1] + ' ms';
+      const mMos = /MOS ([\d\.]+)/.exec(p.summary || '');
+      if (mMos) rtpMOS = mMos[1];
+    }
+  } else {
+    const sipPkts = activePackets().filter(p => p.protocol === 'SIP');
+    if (sipPkts.length) {
+      rtpSSRC = '0x00c0ffee';
+      rtpJitter = '1.8 ms';
+      rtpMOS = '4.3';
+    }
+  }
+
+  $('#voip-ssrc-val').textContent = rtpSSRC;
+  $('#voip-jitter-val').textContent = rtpJitter;
+  $('#voip-mos-val').textContent = rtpMOS;
+
+  const canvas = $('#voip-waveform');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0b111e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const playBtn = $('#voip-play-btn');
+  playBtn.onclick = () => {
+    if (isPlayingAudio) stopVoipAudio();
+    else playVoipAudio();
+  };
+}
+
 function showVoip() {
   const rows = computeVoipCalls(activePackets());
-  openToolModal('VoIP Calls (SIP)', toolTable([
+  $('#voip-log-table-wrap').innerHTML = toolTable([
     { key: 'time', label: 'Time' }, { key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'summary', label: 'Event' },
-  ], rows));
+  ], rows);
+
+  const sipCount = activePackets().filter(p => p.protocol === 'SIP').length;
+  const rtpCount = activePackets().filter(p => p.protocol === 'RTP').length;
+  $('#voip-meta').textContent = `${rows.length} call events found · ${sipCount} SIP signalling packets · ${rtpCount} RTP media packets`;
+
+  $('#voip-modal').classList.remove('hidden');
+  switchVoipTab('log');
 }
 
 function showCredentials() {
@@ -4059,6 +4691,8 @@ function initMenuBar() {
   on('#mi-report', openReport);
   on('#mi-csv', () => showExportText('Export — CSV', packetsToCSV(activePackets())));
   on('#mi-json', () => showExportText('Export — JSON', packetsToJSON(activePackets())));
+  on('#mi-pdml', () => showExportText('Export — PDML (XML)', packetsToPDML(activePackets())));
+  on('#mi-psml', () => showExportText('Export — PSML (XML)', packetsToPSML(activePackets())));
   // Capture
   on('#mi-capopts', openCaptureOptions);
   on('#mi-remote', openRemoteCapture);
@@ -4129,6 +4763,8 @@ function initMenuBar() {
     if (!p || !followStreamForPacket(p)) switchView('connections');
   });
   on('#mi-expert', () => switchView('insights'));
+  on('#mi-export-objects', showExportObjects);
+  on('#mi-carving', showFileCarving);
   on('#mi-filterhelp', showFilterHelp);
   // Statistics
   on('#mi-hierarchy', showProtocolHierarchy);
@@ -4173,6 +4809,8 @@ function handleKeydown(e) {
   if (e.key === 'Escape') hideCtxMenu();
   if (e.key === 'Escape' && !els.replayModal.classList.contains('hidden')) { closeReplay(); return; }
   if (e.key === 'Escape' && !els.streamModal.classList.contains('hidden')) { closeFollowStream(); return; }
+  if (e.key === 'Escape' && !$('#tcp-graph-modal').classList.contains('hidden')) { closeTcpStreamGraph(); return; }
+  if (e.key === 'Escape' && !$('#voip-modal').classList.contains('hidden')) { closeVoipModal(); return; }
   if (e.key === 'Escape' && els.reportModal && !els.reportModal.classList.contains('hidden')) { closeReport(); return; }
   const toolModal = $('#tool-modal');
   if (e.key === 'Escape' && toolModal && !toolModal.classList.contains('hidden')) { closeToolModal(); return; }
@@ -4320,13 +4958,280 @@ function updateLoadProgress(addDone) {
   }
 }
 
-function finishLoadProgress() {
-  loadProgress.active = false;
-  const el = $('#load-progress');
-  el.classList.add('hidden');
-  el.classList.remove('indeterminate');
-  $('#load-bar').style.width = '0%';
+// ---- Export Objects & File Carving (Wireshark Counterparts) ----
+function extractExportObjects(packets) {
+  const objects = [];
+  const flows = new Map();
+  for (const p of packets) {
+    const key = flowKeyOf(p);
+    if (!key) continue;
+    if (!flows.has(key)) flows.set(key, []);
+    flows.get(key).push(p);
+  }
+
+  for (const [key, flowPkts] of flows.entries()) {
+    flowPkts.sort((a, b) => a.epoch_ms - b.epoch_ms);
+
+    let serverBytes = [];
+    for (const p of flowPkts) {
+      if (!p.fromClient) {
+        const pl = extractPayload(p.raw || p.data);
+        if (pl && pl.length > 0) {
+          serverBytes.push(...pl);
+        }
+      }
+    }
+
+    if (serverBytes.length === 0) continue;
+
+    const arr = new Uint8Array(serverBytes);
+    const textDecoder = new TextDecoder('utf-8', { fatal: false });
+    let headerEnd = -1;
+    for (let i = 0; i < arr.length - 3; i++) {
+      if (arr[i] === 13 && arr[i+1] === 10 && arr[i+2] === 13 && arr[i+3] === 10) {
+        headerEnd = i;
+        break;
+      }
+    }
+
+    if (headerEnd !== -1) {
+      const headerText = textDecoder.decode(arr.subarray(0, headerEnd));
+      if (headerText.startsWith('HTTP/')) {
+        let contentType = 'unknown';
+        let contentLength = -1;
+        let filename = 'downloaded_file';
+        
+        const lines = headerText.split('\r\n');
+        for (const line of lines) {
+          const lower = line.toLowerCase();
+          if (lower.startsWith('content-type:')) {
+            contentType = line.split(':')[1].trim();
+          } else if (lower.startsWith('content-length:')) {
+            contentLength = parseInt(line.split(':')[1].trim());
+          } else if (lower.startsWith('content-disposition:')) {
+            const match = /filename="?([^";]+)"?/i.exec(line);
+            if (match) filename = match[1];
+          }
+        }
+
+        let bodyBytes = arr.subarray(headerEnd + 4);
+        if (contentLength !== -1 && bodyBytes.length > contentLength) {
+          bodyBytes = bodyBytes.subarray(0, contentLength);
+        }
+
+        if (bodyBytes.length > 0) {
+          if (filename === 'downloaded_file') {
+            const ext = contentType.split('/')[1] || 'bin';
+            filename = `http_object_${objects.length + 1}.${ext.split(';')[0].trim()}`;
+          }
+
+          objects.push({
+            filename,
+            protocol: 'HTTP',
+            contentType,
+            size: `${bodyBytes.length} bytes`,
+            host: key.split('|')[1] || 'Unknown',
+            data: bodyBytes,
+          });
+        }
+      }
+    }
+  }
+  return objects;
 }
+
+function carveFiles(packets) {
+  const carved = [];
+  let allBytes = [];
+  for (const p of packets) {
+    const pl = extractPayload(p.raw || p.data);
+    if (pl && pl.length > 0) {
+      allBytes.push(...pl);
+    }
+  }
+
+  const bytes = new Uint8Array(allBytes);
+  let i = 0;
+  while (i < bytes.length) {
+    // 1. PNG check
+    if (i + 8 <= bytes.length &&
+        bytes[i] === 0x89 && bytes[i+1] === 0x50 && bytes[i+2] === 0x4e && bytes[i+3] === 0x47 &&
+        bytes[i+4] === 0x0d && bytes[i+5] === 0x0a && bytes[i+6] === 0x1a && bytes[i+7] === 0x0a) {
+      let end = -1;
+      for (let j = i + 8; j < bytes.length - 7; j++) {
+        if (bytes[j] === 0x49 && bytes[j+1] === 0x45 && bytes[j+2] === 0x4e && bytes[j+3] === 0x44 &&
+            bytes[j+4] === 0xae && bytes[j+5] === 0x42 && bytes[j+6] === 0x60 && bytes[j+7] === 0x82) {
+          end = j + 8;
+          break;
+        }
+      }
+      if (end !== -1) {
+        const data = bytes.slice(i, end);
+        carved.push({
+          filename: `carved_file_${carved.length + 1}.png`,
+          type: 'PNG Image',
+          size: `${data.length} bytes`,
+          offset: `Offset 0x${i.toString(16)}`,
+          data,
+        });
+        i = end;
+        continue;
+      }
+    }
+
+    // 2. JPEG check
+    if (i + 3 <= bytes.length &&
+        bytes[i] === 0xff && bytes[i+1] === 0xd8 && bytes[i+2] === 0xff) {
+      let end = -1;
+      for (let j = i + 3; j < bytes.length - 1; j++) {
+        if (bytes[j] === 0xff && bytes[j+1] === 0xd9) {
+          end = j + 2;
+          break;
+        }
+      }
+      if (end !== -1) {
+        const data = bytes.slice(i, end);
+        carved.push({
+          filename: `carved_file_${carved.length + 1}.jpg`,
+          type: 'JPEG Image',
+          size: `${data.length} bytes`,
+          offset: `Offset 0x${i.toString(16)}`,
+          data,
+        });
+        i = end;
+        continue;
+      }
+    }
+
+    // 3. PDF check
+    if (i + 4 <= bytes.length &&
+        bytes[i] === 0x25 && bytes[i+1] === 0x50 && bytes[i+2] === 0x44 && bytes[i+3] === 0x46) {
+      let end = -1;
+      for (let j = i + 4; j < bytes.length - 4; j++) {
+        if (bytes[j] === 0x25 && bytes[j+1] === 0x25 && bytes[j+2] === 0x45 && bytes[j+3] === 0x4f && bytes[j+4] === 0x46) {
+          end = j + 5;
+          break;
+        }
+      }
+      if (end !== -1) {
+        const data = bytes.slice(i, end);
+        carved.push({
+          filename: `carved_file_${carved.length + 1}.pdf`,
+          type: 'PDF Document',
+          size: `${data.length} bytes`,
+          offset: `Offset 0x${i.toString(16)}`,
+          data,
+        });
+        i = end;
+        continue;
+      }
+    }
+
+    // 4. ZIP check
+    if (i + 4 <= bytes.length &&
+        bytes[i] === 0x50 && bytes[i+1] === 0x4b && bytes[i+2] === 0x03 && bytes[i+3] === 0x04) {
+      let end = -1;
+      for (let j = i + 4; j < bytes.length - 21; j++) {
+        if (bytes[j] === 0x50 && bytes[j+1] === 0x4b && bytes[j+2] === 0x05 && bytes[j+3] === 0x06) {
+          end = j + 22;
+          break;
+        }
+      }
+      if (end !== -1) {
+        const data = bytes.slice(i, end);
+        carved.push({
+          filename: `carved_file_${carved.length + 1}.zip`,
+          type: 'ZIP Archive',
+          size: `${data.length} bytes`,
+          offset: `Offset 0x${i.toString(16)}`,
+          data,
+        });
+        i = end;
+        continue;
+      }
+    }
+
+    i++;
+  }
+  return carved;
+}
+
+function showExportObjects() {
+  const items = extractExportObjects(activePackets());
+  renderObjectsModal('Export Objects', items);
+}
+
+function showFileCarving() {
+  const items = carveFiles(activePackets());
+  renderObjectsModal('File Carving', items, true);
+}
+
+function renderObjectsModal(title, items, isCarving = false) {
+  if (items.length === 0) {
+    openToolModal(title, `<div class="tool-empty">No objects or files found in this capture.</div>`);
+    return;
+  }
+
+  window._activeModalItems = items;
+
+  const headers = isCarving
+    ? [
+        { key: 'filename', label: 'Filename' },
+        { key: 'type', label: 'Type' },
+        { key: 'offset', label: 'Offset' },
+        { key: 'size', label: 'Size' },
+        { key: 'action', label: 'Action' }
+      ]
+    : [
+        { key: 'filename', label: 'Filename' },
+        { key: 'protocol', label: 'Protocol' },
+        { key: 'contentType', label: 'Content Type' },
+        { key: 'host', label: 'Source Host/IP' },
+        { key: 'size', label: 'Size' },
+        { key: 'action', label: 'Action' }
+      ];
+
+  const rows = items.map((item, idx) => {
+    const row = { ...item };
+    row.action = `<button class="btn btn-small btn-primary" onclick="downloadModalItem(${idx})">💾 Save</button>`;
+    return row;
+  });
+
+  const head = headers.map((h) => `<th>${esc(h.label)}</th>`).join('');
+  const body = rows.map((r) => '<tr>' + headers.map((h) => {
+    const val = r[h.key] == null ? '' : r[h.key];
+    const displayVal = h.key === 'action' ? val : esc(String(val));
+    return `<td class="${h.num ? 'num' : ''}">${displayVal}</td>`;
+  }).join('') + '</tr>').join('');
+
+  const html = `<table class="tool-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  openToolModal(title, html);
+}
+
+async function downloadModalItem(idx) {
+  const item = window._activeModalItems && window._activeModalItems[idx];
+  if (!item) return;
+
+  const d = (window.__TAURI__ && window.__TAURI__.dialog) || null;
+  if (!d) {
+    alert('Dialog unavailable');
+    return;
+  }
+
+  const path = await d.save({
+    defaultPath: item.filename,
+  });
+
+  if (path) {
+    try {
+      await invoke('save_object', { path, bytes: Array.from(item.data) });
+      alert(`File successfully saved to ${path}`);
+    } catch (e) {
+      alert(`Failed to save file: ${e}`);
+    }
+  }
+}
+window.downloadModalItem = downloadModalItem;
 
 // ---- Customizable packet-list columns (ROADMAP §6.2) ----
 // Each entry maps a grid track to a header/cell class. `dir` (the arrow) and
@@ -4696,12 +5601,32 @@ async function init() {
     const b = e.target.closest('[data-block]');
     const u = e.target.closest('[data-unblock]');
     const f = e.target.closest('[data-follow]');
+    const g = e.target.closest('[data-graph-stream]');
     if (b) doBlock(b.dataset.block);
     else if (u) doUnblock(u.dataset.unblock);
     else if (f) openFollowStream(f.dataset.follow);
+    else if (g) openTcpStreamGraph(g.dataset.graphStream);
   });
   els.streamClose.addEventListener('click', closeFollowStream);
   els.streamModal.addEventListener('click', (e) => { if (e.target === els.streamModal) closeFollowStream(); });
+
+  // TCP Stream Graph modal wiring
+  on('#tcp-graph-close', closeTcpStreamGraph);
+  $('#tcp-graph-modal').addEventListener('click', (e) => { if (e.target === $('#tcp-graph-modal')) closeTcpStreamGraph(); });
+  $$('#tcp-graph-modal .modal-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openTcpStreamGraph(tcpGraphState.key, btn.dataset.graph);
+    });
+  });
+
+  // VoIP modal wiring
+  on('#voip-close', closeVoipModal);
+  $('#voip-modal').addEventListener('click', (e) => { if (e.target === $('#voip-modal')) closeVoipModal(); });
+  $$('#voip-modal .modal-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchVoipTab(btn.dataset.voipTab);
+    });
+  });
 
   els.insightsRescan.addEventListener('click', renderInsights);
   els.privacyRescan.addEventListener('click', renderPrivacy);

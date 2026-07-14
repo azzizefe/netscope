@@ -961,6 +961,11 @@ fn save_pcap(state: State<'_, Mutex<CaptureState>>, path: String) -> Result<(), 
     std::fs::write(&path, bytes).map_err(|e| format!("Failed to write '{path}': {e}"))
 }
 
+#[tauri::command]
+fn save_object(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    std::fs::write(&path, bytes).map_err(|e| format!("Failed to write object: {e}"))
+}
+
 /// Save the capture as an encrypted `.pcap.enc` bundle (ROADMAP §5.4). The
 /// passphrase never leaves this process; the file is AES-256-GCM sealed with an
 /// Argon2id-derived key and is unreadable — and tamper-evident — without it.
@@ -1084,6 +1089,7 @@ pub fn run() {
             list_plugins,
             reload_plugins,
             get_capture_stats,
+            save_object,
         ])
         .run(tauri::generate_context!())
         .expect("error while running netscope desktop");

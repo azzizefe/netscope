@@ -1,4 +1,7 @@
 use std::net::IpAddr;
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant};
+use std::cell::RefCell;
 
 use crate::models::Protocol;
 
@@ -8,13 +11,41 @@ use super::{
     DissectedResult,
 };
 
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+struct TcpFlowKey {
+    src_ip: IpAddr,
+    src_port: u16,
+    dst_ip: IpAddr,
+    dst_port: u16,
+}
+
+struct TcpFlowStream {
+    next_seq: u32,
+    stream_data: Vec<u8>,
+    buffered: BTreeMap<u32, Vec<u8>>,
+    last_seen: Instant,
+}
+
+thread_local! {
+    static REASSEMBLER: RefCell<HashMap<TcpFlowKey, TcpFlowStream>> = RefCell::new(HashMap::new());
+}
+
+#[cfg(test)]
+pub fn clear_tcp_reassembler() {
+    REASSEMBLER.with(|reasm_cell| {
+        reasm_cell.borrow_mut().clear();
+    });
+}
+
 pub fn dissect_tcp(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
     payload: &[u8],
 ) -> DissectedResult {
     #[cfg(test)]
-    super::tcp_analysis::clear_tcp_states();
+    {
+        super::tcp_analysis::clear_tcp_states();
+    }
 
     let mut result = dissect_tcp_inner(src_ip, dst_ip, payload);
     if let Ok((tcp, rest)) = etherparse::TcpHeader::from_slice(payload) {
@@ -73,7 +104,7 @@ fn dissect_tcp_inner(
         }
     };
 
-    let (tcp, tcp_payload) = header;
+    let (tcp, tcp_payload_raw) = header;
     let src_port = tcp.source_port;
     let dst_port = tcp.destination_port;
 
@@ -81,6 +112,92 @@ fn dissect_tcp_inner(
     let ack = tcp.ack;
     let fin = tcp.fin;
     let rst = tcp.rst;
+
+    let mut reassembled_payload = tcp_payload_raw.to_vec();
+
+    if let (Some(sip), Some(dip)) = (src_ip, dst_ip) {
+        if syn {
+            let key = TcpFlowKey { src_ip: sip, src_port, dst_ip: dip, dst_port };
+            REASSEMBLER.with(|reasm_cell| {
+                reasm_cell.borrow_mut().remove(&key);
+            });
+        } else if !tcp_payload_raw.is_empty() {
+            let key = TcpFlowKey { src_ip: sip, src_port, dst_ip: dip, dst_port };
+            REASSEMBLER.with(|reasm_cell| {
+                let mut reasm = reasm_cell.borrow_mut();
+                let now = Instant::now();
+                reasm.retain(|_, val| now.duration_since(val.last_seen) < Duration::from_secs(60));
+
+                let stream = reasm.entry(key).or_insert_with(|| TcpFlowStream {
+                    next_seq: tcp.sequence_number,
+                    stream_data: Vec::new(),
+                    buffered: BTreeMap::new(),
+                    last_seen: now,
+                });
+
+                let seq = tcp.sequence_number;
+                
+                if seq == 0 && stream.next_seq > 0 {
+                    stream.stream_data.clear();
+                    stream.buffered.clear();
+                    stream.next_seq = 0;
+                }
+
+                let mut is_contiguous = false;
+
+                if seq == stream.next_seq || stream.stream_data.is_empty() {
+                    if stream.stream_data.is_empty() {
+                        stream.next_seq = seq;
+                    }
+                    
+                    let overlap = if seq < stream.next_seq {
+                        (stream.next_seq - seq) as usize
+                    } else {
+                        0
+                    };
+                    if overlap < tcp_payload_raw.len() {
+                        stream.stream_data.extend_from_slice(&tcp_payload_raw[overlap..]);
+                        stream.next_seq = seq + tcp_payload_raw.len() as u32;
+                        is_contiguous = true;
+                    }
+
+                    while let Some(next_data) = stream.buffered.remove(&stream.next_seq) {
+                        stream.stream_data.extend_from_slice(&next_data);
+                        stream.next_seq += next_data.len() as u32;
+                        is_contiguous = true;
+                    }
+                } else if seq > stream.next_seq {
+                    if stream.stream_data.len() + tcp_payload_raw.len() < 5 * 1024 * 1024 {
+                        stream.buffered.insert(seq, tcp_payload_raw.to_vec());
+                    }
+                } else {
+                    let overlap = (stream.next_seq - seq) as usize;
+                    if overlap < tcp_payload_raw.len() {
+                        stream.stream_data.extend_from_slice(&tcp_payload_raw[overlap..]);
+                        stream.next_seq = seq + tcp_payload_raw.len() as u32;
+                        is_contiguous = true;
+
+                        while let Some(next_data) = stream.buffered.remove(&stream.next_seq) {
+                            stream.stream_data.extend_from_slice(&next_data);
+                            stream.next_seq += next_data.len() as u32;
+                        }
+                    }
+                }
+
+                if stream.stream_data.len() > 5 * 1024 * 1024 {
+                    stream.stream_data.truncate(5 * 1024 * 1024);
+                }
+
+                if is_contiguous {
+                    reassembled_payload = stream.stream_data.clone();
+                } else {
+                    reassembled_payload = Vec::new();
+                }
+            });
+        }
+    }
+
+    let tcp_payload = &reassembled_payload;
 
     let summary = if syn && !ack {
         "TCP Connection opened (3-way handshake)".into()
@@ -456,5 +573,37 @@ mod tests {
             result.summary,
             "HTTP GET / (HTTP/1.1) — HTTP/2 upgrade (h2c)"
         );
+    }
+
+    #[test]
+    fn tcp_reassembly_out_of_order() {
+        clear_tcp_reassembler();
+        let ip_src = Some("10.0.0.1".parse().unwrap());
+        let ip_dst = Some("10.0.0.2".parse().unwrap());
+
+        let p1 = etherparse::TcpHeader::new(12345, 80, 100, 1024);
+        let mut f1 = Vec::new();
+        p1.write(&mut f1).unwrap();
+        f1.extend_from_slice(b"GET / HTTP/1.1\r\n");
+
+        let p3 = etherparse::TcpHeader::new(12345, 80, 133, 1024);
+        let mut f3 = Vec::new();
+        p3.write(&mut f3).unwrap();
+        f3.extend_from_slice(b"\r\n");
+
+        let p2 = etherparse::TcpHeader::new(12345, 80, 116, 1024);
+        let mut f2 = Vec::new();
+        p2.write(&mut f2).unwrap();
+        f2.extend_from_slice(b"Host: localhost\r\n");
+
+        let r1 = dissect_tcp(ip_src, ip_dst, &f1);
+        assert_eq!(r1.protocol, Protocol::Http);
+
+        let r3 = dissect_tcp(ip_src, ip_dst, &f3);
+        assert_ne!(r3.protocol, Protocol::Http);
+
+        let r2 = dissect_tcp(ip_src, ip_dst, &f2);
+        assert_eq!(r2.protocol, Protocol::Http);
+        assert!(r2.summary.contains("HTTP GET /"));
     }
 }

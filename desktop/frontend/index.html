@@ -149,6 +149,8 @@
           <button class="menu-item" id="mi-report" data-i18n="menu.file.report">📄 Export report…</button>
           <button class="menu-item" id="mi-csv" data-i18n="menu.file.csv">Export packets as CSV…</button>
           <button class="menu-item" id="mi-json" data-i18n="menu.file.json">Export packets as JSON…</button>
+          <button class="menu-item" id="mi-pdml">Export packets as PDML (XML)…</button>
+          <button class="menu-item" id="mi-psml">Export packets as PSML (XML)…</button>
         </div>
       </div>
       <div class="menu">
@@ -188,6 +190,8 @@
           <button class="menu-item" id="mi-applyfilter" data-i18n="menu.analyze.apply">Apply selected as filter</button>
           <button class="menu-item" id="mi-follow" data-i18n="menu.analyze.follow">💬 Follow stream…</button>
           <button class="menu-item" id="mi-expert" data-i18n="menu.analyze.expert">🛡 Expert information</button>
+          <button class="menu-item" id="mi-export-objects">📦 Export Objects…</button>
+          <button class="menu-item" id="mi-carving">⛏ File Carving…</button>
           <div class="menu-sep"></div>
           <button class="menu-item" id="mi-filterhelp" data-i18n="menu.analyze.help">Display filter reference…</button>
         </div>
@@ -553,6 +557,83 @@
         </div>
         <div id="stream-meta" class="modal-meta"></div>
         <div id="stream-body" class="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- TCP Stream Graphs modal -->
+    <div id="tcp-graph-modal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-head">
+          <span id="tcp-graph-title">📈 TCP Stream Graph</span>
+          <button id="tcp-graph-close" class="btn-icon" data-i18n-title="title.close" title="Close (Esc)">×</button>
+        </div>
+        <div id="tcp-graph-meta" class="modal-meta"></div>
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-graph="stevens">Time-Sequence (Stevens)</button>
+          <button class="modal-tab" data-graph="throughput">Throughput</button>
+          <button class="modal-tab" data-graph="rtt">RTT</button>
+          <button class="modal-tab" data-graph="window">Window Size</button>
+        </div>
+        <div id="tcp-graph-body" class="modal-body">
+          <svg id="tcp-graph-svg" viewBox="0 0 600 300" style="width:100%; height:320px; background:var(--bg); border-radius:6px; border:1px solid var(--border);"></svg>
+          <div id="tcp-graph-hint" class="io-hint"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VoIP Calls modal -->
+    <div id="voip-modal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-head">
+          <span>📞 VoIP Call Analyzer (SIP/RTP)</span>
+          <button id="voip-close" class="btn-icon" data-i18n-title="title.close" title="Close (Esc)">×</button>
+        </div>
+        <div id="voip-meta" class="modal-meta">No active VoIP calls selected.</div>
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-voip-tab="log">📋 Call Log</button>
+          <button class="modal-tab" data-voip-tab="flow">↕ SIP Flow</button>
+          <button class="modal-tab" data-voip-tab="player">🔊 RTP Player &amp; QoS</button>
+        </div>
+        <div id="voip-body" class="modal-body">
+          <!-- Call Log Tab -->
+          <div id="voip-tab-log-content" class="voip-tab-content">
+            <div id="voip-log-table-wrap"></div>
+          </div>
+          <!-- SIP Flow Tab -->
+          <div id="voip-tab-flow-content" class="voip-tab-content hidden" style="display:flex; flex-direction:column; align-items:center; min-height:0; height:100%;">
+            <div id="voip-flow-wrap" style="width:100%; overflow-y:auto; flex:1; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
+              <svg id="voip-flow-svg" viewBox="0 0 500 300" style="width:100%; display:block;"></svg>
+            </div>
+          </div>
+          <!-- RTP Player Tab -->
+          <div id="voip-tab-player-content" class="voip-tab-content hidden">
+            <div class="player-controls" style="display:flex; align-items:center; gap:16px; margin-bottom:12px; padding:10px; background:var(--bg-elev-2); border-radius:6px; border:1px solid var(--border);">
+              <button id="voip-play-btn" class="btn btn-primary">▶ Play Audio</button>
+              <div id="voip-player-status" style="font-size:13px; font-weight:600;">Status: Idle</div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <h4 style="margin:0 0 6px 0;">Dynamic QoS Metrics</h4>
+              <div id="voip-qos-metrics" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;">
+                <div style="padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:4px;">
+                  <span style="font-size:11px; color:var(--text-muted); display:block;">SSRC</span>
+                  <b id="voip-ssrc-val" style="font-size:14px; font-family:monospace;">—</b>
+                </div>
+                <div style="padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:4px;">
+                  <span style="font-size:11px; color:var(--text-muted); display:block;">Jitter</span>
+                  <b id="voip-jitter-val" style="font-size:14px;">—</b>
+                </div>
+                <div style="padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:4px;">
+                  <span style="font-size:11px; color:var(--text-muted); display:block;">MOS Score (QoS)</span>
+                  <b id="voip-mos-val" style="font-size:14px;">—</b>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 style="margin:0 0 6px 0;">Audio Waveform</h4>
+              <canvas id="voip-waveform" width="600" height="120" style="width:100%; height:120px; background:#0b111e; border-radius:6px; border:1px solid var(--border); display:block;"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
