@@ -699,7 +699,7 @@ mod tests {
         
         let mut aad = Vec::new();
         aad.push(0x08 & 0x0f);
-        aad.push(0x00 & 0x07);
+        aad.push(0);
         aad.extend_from_slice(&addr1);
         aad.extend_from_slice(&addr2);
         aad.extend_from_slice(&addr3);

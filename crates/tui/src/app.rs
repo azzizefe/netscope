@@ -817,6 +817,46 @@ mod tests {
     }
 
     #[test]
+    fn tick_clamps_selection_when_selected_packet_is_evicted() {
+        let (mut app, tx) = test_app();
+        for i in 0..MAX_PACKETS {
+            tx.send(pkt(i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        app.selected = 10; // Selected packet-10
+
+        // Evict 20 packets: packet-10 gets evicted.
+        for i in 0..20 {
+            tx.send(pkt(MAX_PACKETS + i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        
+        // Selection should be safely clamped to the filtered list size and not panic/out-of-bounds.
+        assert!(app.selected < app.filtered_packets().len());
+    }
+
+    #[test]
+    fn tick_eviction_with_empty_filtered_packets() {
+        let (mut app, tx) = test_app();
+        for i in 0..MAX_PACKETS {
+            tx.send(pkt(i, Protocol::Tcp)).unwrap();
+        }
+        app.tick();
+        app.filter_text = "non-existent-filter-criteria".into();
+        assert!(app.filtered_packets().is_empty());
+        app.selected = 0;
+
+        // Evict 50 packets.
+        for i in 0..50 {
+            tx.send(pkt(MAX_PACKETS + i, Protocol::Tcp)).unwrap();
+        }
+        
+        // Tick should execute without panic.
+        app.tick();
+        assert_eq!(app.selected, 0);
+    }
+
+    #[test]
     fn tick_keeps_selection_while_buffer_grows() {
         let (mut app, tx) = test_app();
         for i in 0..10 {

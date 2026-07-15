@@ -370,6 +370,7 @@ fn decrypt_tls_record_stream(
     if decrypted_stream.is_empty() { None } else { Some(decrypted_stream) }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn generate_ca() -> Result<(rcgen::Certificate, rcgen::KeyPair), rcgen::Error> {
     let mut params = rcgen::CertificateParams::default();
     params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
@@ -380,6 +381,7 @@ pub fn generate_ca() -> Result<(rcgen::Certificate, rcgen::KeyPair), rcgen::Erro
     Ok((cert, key_pair))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn sign_host_cert(host: &str, ca: &rcgen::Certificate, ca_key: &rcgen::KeyPair) -> Result<String, rcgen::Error> {
     let mut params = rcgen::CertificateParams::new(vec![host.to_string()])?;
     params.distinguished_name.push(rcgen::DnType::CommonName, host);
