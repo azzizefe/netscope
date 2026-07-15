@@ -1,9 +1,9 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::sync::{Mutex, OnceLock};
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 struct DefragKey {
@@ -275,7 +275,8 @@ mod tests {
             etherparse::IpNumber::TCP,
             [192, 168, 1, 1],
             [192, 168, 1, 2],
-        ).unwrap();
+        )
+        .unwrap();
         ip1.identification = 42;
         ip1.fragment_offset = etherparse::IpFragOffset::try_from(0).unwrap();
         ip1.more_fragments = true;
@@ -289,7 +290,8 @@ mod tests {
             etherparse::IpNumber::TCP,
             [192, 168, 1, 1],
             [192, 168, 1, 2],
-        ).unwrap();
+        )
+        .unwrap();
         ip2.identification = 42;
         ip2.fragment_offset = etherparse::IpFragOffset::try_from(1).unwrap(); // 1 * 8 = 8 bytes
         ip2.more_fragments = false;

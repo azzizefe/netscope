@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Remote & external capture sources — netscope's take on Wireshark's
 //! sshdump / extcap family.
@@ -154,7 +154,11 @@ impl<R: Read> PcapStreamReader<R> {
             .context("capture stream ended mid-record")?;
         Ok(Some(RawFrame {
             ts_sec: ts_sec as i64,
-            ts_nanos: if nanos { ts_frac } else { ts_frac.saturating_mul(1000) },
+            ts_nanos: if nanos {
+                ts_frac
+            } else {
+                ts_frac.saturating_mul(1000)
+            },
             orig_len,
             data,
         }))
@@ -539,7 +543,11 @@ impl PipeSource {
     /// The last few stderr lines the command printed — the actual reason
     /// behind most "stream ended" failures (auth errors, tcpdump usage…).
     pub fn stderr_excerpt(&self) -> String {
-        let tail = self.stderr_tail.lock().map(|t| t.clone()).unwrap_or_default();
+        let tail = self
+            .stderr_tail
+            .lock()
+            .map(|t| t.clone())
+            .unwrap_or_default();
         tail.iter().cloned().collect::<Vec<_>>().join("\n  ")
     }
 
@@ -746,8 +754,13 @@ mod tests {
 
     #[test]
     fn rejects_non_capture_stream() {
-        let err = PcapStreamReader::new(&b"tcpdump: syntax error\n"[..]).err().unwrap();
-        assert!(err.to_string().contains("not a pcap/pcapng stream"), "{err}");
+        let err = PcapStreamReader::new(&b"tcpdump: syntax error\n"[..])
+            .err()
+            .unwrap();
+        assert!(
+            err.to_string().contains("not a pcap/pcapng stream"),
+            "{err}"
+        );
     }
 
     // ---- pcapng streaming ----
@@ -852,10 +865,7 @@ mod tests {
         assert_eq!(prog, "ssh");
         assert!(args.contains(&"BatchMode=yes".into()));
         assert!(args.contains(&"10.0.0.5".into()));
-        assert_eq!(
-            args.last().unwrap(),
-            "tcpdump -U -n -i any -s 0 -w -"
-        );
+        assert_eq!(args.last().unwrap(), "tcpdump -U -n -i any -s 0 -w -");
     }
 
     #[test]

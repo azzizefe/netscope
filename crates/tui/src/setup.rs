@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Shared capture bootstrap for the TUI and headless modes: turns the CLI
 //! options into a running [`CaptureEngine`] — local interfaces, `-i -`
@@ -142,7 +142,9 @@ pub fn start_capture(
                 ));
                 std::fs::write(&temp_file_path, decrypted)?;
                 actual_path = temp_file_path.to_string_lossy().to_string();
-                temp_guard = Some(TempFileGuard { path: temp_file_path });
+                temp_guard = Some(TempFileGuard {
+                    path: temp_file_path,
+                });
             }
         }
 
@@ -243,7 +245,9 @@ mod tests {
 
     #[test]
     fn ring_conditions() {
-        let r = parse_ring(&v(&["filesize:2048", "files:5"])).unwrap().unwrap();
+        let r = parse_ring(&v(&["filesize:2048", "files:5"]))
+            .unwrap()
+            .unwrap();
         assert_eq!(r.filesize_kb, Some(2048));
         assert_eq!(r.files, Some(5));
         assert!(parse_ring(&[]).unwrap().is_none());

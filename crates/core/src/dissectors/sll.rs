@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Linux "cooked" capture dissector — `LINKTYPE_LINUX_SLL` (DLT 113) and
 //! `LINKTYPE_LINUX_SLL2` (DLT 276).
@@ -92,7 +92,13 @@ mod tests {
 
     #[test]
     fn truncated_headers() {
-        assert!(matches!(dissect_sll(&[0; 10]).protocol, Protocol::Unknown(_)));
-        assert!(matches!(dissect_sll2(&[0; 19]).protocol, Protocol::Unknown(_)));
+        assert!(matches!(
+            dissect_sll(&[0; 10]).protocol,
+            Protocol::Unknown(_)
+        ));
+        assert!(matches!(
+            dissect_sll2(&[0; 19]).protocol,
+            Protocol::Unknown(_)
+        ));
     }
 }

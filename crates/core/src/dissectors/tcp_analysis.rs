@@ -1,6 +1,6 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap};
 use std::net::IpAddr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

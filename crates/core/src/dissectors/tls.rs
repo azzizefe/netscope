@@ -1,11 +1,11 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::net::IpAddr;
-use std::collections::HashMap;
-use std::cell::RefCell;
-use aes_gcm::{Aes128Gcm, Aes256Gcm, KeyInit, aead::Aead};
+use aes_gcm::{aead::Aead, Aes128Gcm, Aes256Gcm, KeyInit};
 use rsa::pkcs1::DecodeRsaPrivateKey;
 use rsa::pkcs8::DecodePrivateKey;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::net::IpAddr;
 
 use crate::models::Protocol;
 
@@ -65,7 +65,7 @@ fn decrypt_rsa_pre_master(enc: &[u8], key: &rsa::RsaPrivateKey) -> Option<[u8; 4
 fn prf_sha256(secret: &[u8], label: &str, seed: &[u8], length: usize) -> Vec<u8> {
     let mut label_seed = label.as_bytes().to_vec();
     label_seed.extend_from_slice(seed);
-    
+
     let mut out = Vec::new();
     let mut a = label_seed.clone();
     while out.len() < length {
@@ -87,33 +87,45 @@ fn decrypt_tls12_gcm_record(
     payload: &[u8],
     cipher_suite: u16,
 ) -> Option<Vec<u8>> {
-    if payload.len() < 24 { return None; }
+    if payload.len() < 24 {
+        return None;
+    }
     let explicit_nonce = &payload[..8];
     let ciphertext_and_tag = &payload[8..];
-    
+
     let mut nonce = [0u8; 12];
     nonce[..4].copy_from_slice(salt);
     nonce[4..].copy_from_slice(explicit_nonce);
-    
+
     let plaintext_len = (ciphertext_and_tag.len() - 16) as u16;
     let mut aad = [0u8; 13];
     aad[..8].copy_from_slice(&seq_num.to_be_bytes());
     aad[8] = record_header[0];
     aad[9..11].copy_from_slice(&record_header[1..3]);
     aad[11..13].copy_from_slice(&plaintext_len.to_be_bytes());
-    
+
     if cipher_suite == 0x009c {
         let cipher = Aes128Gcm::new_from_slice(key).ok()?;
-        cipher.decrypt(nonce.as_ref().into(), aes_gcm::aead::Payload {
-            msg: ciphertext_and_tag,
-            aad: &aad,
-        }).ok()
+        cipher
+            .decrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: ciphertext_and_tag,
+                    aad: &aad,
+                },
+            )
+            .ok()
     } else if cipher_suite == 0x009d {
         let cipher = Aes256Gcm::new_from_slice(key).ok()?;
-        cipher.decrypt(nonce.as_ref().into(), aes_gcm::aead::Payload {
-            msg: ciphertext_and_tag,
-            aad: &aad,
-        }).ok()
+        cipher
+            .decrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: ciphertext_and_tag,
+                    aad: &aad,
+                },
+            )
+            .ok()
     } else {
         None
     }
@@ -123,15 +135,15 @@ fn get_client_key_exchange_encrypted_pre_master(payload: &[u8]) -> Option<Vec<u8
     let mut pos = 0;
     while pos + 5 <= payload.len() {
         let typ = payload[pos];
-        let len = u16::from_be_bytes([payload[pos+3], payload[pos+4]]) as usize;
+        let len = u16::from_be_bytes([payload[pos + 3], payload[pos + 4]]) as usize;
         if pos + 5 + len > payload.len() {
             break;
         }
-        let record_body = &payload[pos+5..pos+5+len];
+        let record_body = &payload[pos + 5..pos + 5 + len];
         if typ == 22 && record_body.len() >= 6 && record_body[0] == 16 {
             let enc_len = u16::from_be_bytes([record_body[4], record_body[5]]) as usize;
             if 6 + enc_len <= record_body.len() {
-                return Some(record_body[6..6+enc_len].to_vec());
+                return Some(record_body[6..6 + enc_len].to_vec());
             }
         }
         pos += 5 + len;
@@ -145,7 +157,7 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, ()> {
     }
     (0..s.len())
         .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i+2], 16).map_err(|_| ()))
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).map_err(|_| ()))
         .collect()
 }
 
@@ -155,7 +167,9 @@ fn get_secrets_for_random(client_random: &[u8; 32]) -> Option<HashMap<String, Ve
     let target_hex = hex_encode(client_random);
     let mut secrets = HashMap::new();
     for line in content.lines() {
-        if line.starts_with('#') { continue; }
+        if line.starts_with('#') {
+            continue;
+        }
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() == 3 {
             let label = parts[0];
@@ -168,7 +182,11 @@ fn get_secrets_for_random(client_random: &[u8; 32]) -> Option<HashMap<String, Ve
             }
         }
     }
-    if secrets.is_empty() { None } else { Some(secrets) }
+    if secrets.is_empty() {
+        None
+    } else {
+        Some(secrets)
+    }
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
@@ -176,7 +194,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 }
 
 fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let mut ipad = [0x36; 64];
     let mut opad = [0x5c; 64];
     let mut key_block = [0u8; 64];
@@ -201,7 +219,7 @@ fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
 }
 
 fn hmac_sha384(key: &[u8], data: &[u8]) -> [u8; 48] {
-    use sha2::{Sha384, Digest};
+    use sha2::{Digest, Sha384};
     let mut ipad = [0x36; 128];
     let mut opad = [0x5c; 128];
     let mut key_block = [0u8; 128];
@@ -298,16 +316,26 @@ fn decrypt_tls13_record(
 
     let plaintext = if cipher_suite == 0x1301 {
         let cipher = Aes128Gcm::new_from_slice(key).ok()?;
-        cipher.decrypt(nonce.as_ref().into(), aes_gcm::aead::Payload {
-            msg: ciphertext_and_tag,
-            aad: record_header,
-        }).ok()?
+        cipher
+            .decrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: ciphertext_and_tag,
+                    aad: record_header,
+                },
+            )
+            .ok()?
     } else if cipher_suite == 0x1302 {
         let cipher = Aes256Gcm::new_from_slice(key).ok()?;
-        cipher.decrypt(nonce.as_ref().into(), aes_gcm::aead::Payload {
-            msg: ciphertext_and_tag,
-            aad: record_header,
-        }).ok()?
+        cipher
+            .decrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: ciphertext_and_tag,
+                    aad: record_header,
+                },
+            )
+            .ok()?
     } else {
         return None;
     };
@@ -321,7 +349,9 @@ fn decrypt_tls13_record(
             break;
         }
     }
-    if inner_type == 0 { return None; }
+    if inner_type == 0 {
+        return None;
+    }
     Some((inner_type, plaintext[..payload_len].to_vec()))
 }
 
@@ -336,18 +366,21 @@ fn decrypt_tls_record_stream(
     let mut pos = 0;
     while pos + 5 <= payload.len() {
         let typ = payload[pos];
-        let len = u16::from_be_bytes([payload[pos+3], payload[pos+4]]) as usize;
+        let len = u16::from_be_bytes([payload[pos + 3], payload[pos + 4]]) as usize;
         if pos + 5 + len > payload.len() {
             break;
         }
-        let record_body = &payload[pos+5..pos+5+len];
+        let record_body = &payload[pos + 5..pos + 5 + len];
         let mut header = [0u8; 5];
-        header.copy_from_slice(&payload[pos..pos+5]);
+        header.copy_from_slice(&payload[pos..pos + 5]);
 
         let is_tls13 = cipher_suite == 0x1301 || cipher_suite == 0x1302;
         if is_tls13 {
-            if typ == 23 { // Application Data / Encrypted Handshake
-                if let Some((inner_type, plaintext)) = decrypt_tls13_record(key, iv, *seq_num, &header, record_body, cipher_suite) {
+            if typ == 23 {
+                // Application Data / Encrypted Handshake
+                if let Some((inner_type, plaintext)) =
+                    decrypt_tls13_record(key, iv, *seq_num, &header, record_body, cipher_suite)
+                {
                     if inner_type == 23 {
                         decrypted_stream.extend_from_slice(&plaintext);
                     }
@@ -359,7 +392,9 @@ fn decrypt_tls_record_stream(
         } else {
             // TLS 1.2 GCM
             if typ == 23 {
-                if let Some(plaintext) = decrypt_tls12_gcm_record(key, iv, *seq_num, &header, record_body, cipher_suite) {
+                if let Some(plaintext) =
+                    decrypt_tls12_gcm_record(key, iv, *seq_num, &header, record_body, cipher_suite)
+                {
                     decrypted_stream.extend_from_slice(&plaintext);
                     *seq_num += 1;
                 } else {
@@ -369,25 +404,37 @@ fn decrypt_tls_record_stream(
         }
         pos += 5 + len;
     }
-    if decrypted_stream.is_empty() { None } else { Some(decrypted_stream) }
+    if decrypted_stream.is_empty() {
+        None
+    } else {
+        Some(decrypted_stream)
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn generate_ca() -> Result<(rcgen::Certificate, rcgen::KeyPair), rcgen::Error> {
     let mut params = rcgen::CertificateParams::default();
     params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
-    params.distinguished_name.push(rcgen::DnType::CommonName, "netscope MITM CA");
-    
+    params
+        .distinguished_name
+        .push(rcgen::DnType::CommonName, "netscope MITM CA");
+
     let key_pair = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256)?;
     let cert = params.self_signed(&key_pair)?;
     Ok((cert, key_pair))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn sign_host_cert(host: &str, ca: &rcgen::Certificate, ca_key: &rcgen::KeyPair) -> Result<String, rcgen::Error> {
+pub fn sign_host_cert(
+    host: &str,
+    ca: &rcgen::Certificate,
+    ca_key: &rcgen::KeyPair,
+) -> Result<String, rcgen::Error> {
     let mut params = rcgen::CertificateParams::new(vec![host.to_string()])?;
-    params.distinguished_name.push(rcgen::DnType::CommonName, host);
-    
+    params
+        .distinguished_name
+        .push(rcgen::DnType::CommonName, host);
+
     let key_pair = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256)?;
     let cert = params.signed_by(&key_pair, ca, ca_key)?;
     Ok(cert.pem())
@@ -413,17 +460,20 @@ pub fn dissect_tls(
                 server_port: dst_port,
             };
             TLS_SESSIONS.with(|sessions| {
-                sessions.borrow_mut().insert(key, TlsSessionState {
-                    client_random: h.random,
-                    server_random: None,
-                    cipher_suite: None,
-                    client_key: None,
-                    client_iv: None,
-                    server_key: None,
-                    server_iv: None,
-                    seq_num_client: 0,
-                    seq_num_server: 0,
-                });
+                sessions.borrow_mut().insert(
+                    key,
+                    TlsSessionState {
+                        client_random: h.random,
+                        server_random: None,
+                        cipher_suite: None,
+                        client_key: None,
+                        client_iv: None,
+                        server_key: None,
+                        server_iv: None,
+                        seq_num_client: 0,
+                        seq_num_server: 0,
+                    },
+                );
             });
         } else if let Some(s) = parse_server_hello(payload) {
             server_hello = Some(s.clone());
@@ -441,20 +491,28 @@ pub fn dissect_tls(
                     if let Some(secrets) = get_secrets_for_random(&state.client_random) {
                         if let Some(client_secret) = secrets.get("CLIENT_TRAFFIC_SECRET_0") {
                             if s.cipher_suite == 0x1301 {
-                                state.client_key = Some(hkdf_expand_label_sha256(client_secret, "key", &[], 16));
-                                state.client_iv = Some(hkdf_expand_label_sha256(client_secret, "iv", &[], 12));
+                                state.client_key =
+                                    Some(hkdf_expand_label_sha256(client_secret, "key", &[], 16));
+                                state.client_iv =
+                                    Some(hkdf_expand_label_sha256(client_secret, "iv", &[], 12));
                             } else if s.cipher_suite == 0x1302 {
-                                state.client_key = Some(hkdf_expand_label_sha384(client_secret, "key", &[], 32));
-                                state.client_iv = Some(hkdf_expand_label_sha384(client_secret, "iv", &[], 12));
+                                state.client_key =
+                                    Some(hkdf_expand_label_sha384(client_secret, "key", &[], 32));
+                                state.client_iv =
+                                    Some(hkdf_expand_label_sha384(client_secret, "iv", &[], 12));
                             }
                         }
                         if let Some(server_secret) = secrets.get("SERVER_TRAFFIC_SECRET_0") {
                             if s.cipher_suite == 0x1301 {
-                                state.server_key = Some(hkdf_expand_label_sha256(server_secret, "key", &[], 16));
-                                state.server_iv = Some(hkdf_expand_label_sha256(server_secret, "iv", &[], 12));
+                                state.server_key =
+                                    Some(hkdf_expand_label_sha256(server_secret, "key", &[], 16));
+                                state.server_iv =
+                                    Some(hkdf_expand_label_sha256(server_secret, "iv", &[], 12));
                             } else if s.cipher_suite == 0x1302 {
-                                state.server_key = Some(hkdf_expand_label_sha384(server_secret, "key", &[], 32));
-                                state.server_iv = Some(hkdf_expand_label_sha384(server_secret, "iv", &[], 12));
+                                state.server_key =
+                                    Some(hkdf_expand_label_sha384(server_secret, "key", &[], 32));
+                                state.server_iv =
+                                    Some(hkdf_expand_label_sha384(server_secret, "iv", &[], 12));
                             }
                         }
                     }
@@ -474,23 +532,33 @@ pub fn dissect_tls(
                         TLS_SESSIONS.with(|sessions| {
                             let mut sessions_map = sessions.borrow_mut();
                             if let Some(state) = sessions_map.get_mut(&key) {
-                                if let (Some(cs), Some(srv_rand)) = (state.cipher_suite, state.server_random) {
+                                if let (Some(cs), Some(srv_rand)) =
+                                    (state.cipher_suite, state.server_random)
+                                {
                                     if cs == 0x009c || cs == 0x009d {
                                         let mut seed = state.client_random.to_vec();
                                         seed.extend_from_slice(&srv_rand);
-                                        let master_secret = prf_sha256(&pm_secret, "master secret", &seed, 48);
+                                        let master_secret =
+                                            prf_sha256(&pm_secret, "master secret", &seed, 48);
 
                                         let mut seed2 = srv_rand.to_vec();
                                         seed2.extend_from_slice(&state.client_random);
 
                                         let key_len = if cs == 0x009c { 16 } else { 32 };
                                         let key_block_len = key_len * 2 + 4 * 2;
-                                        let key_block = prf_sha256(&master_secret, "key expansion", &seed2, key_block_len);
+                                        let key_block = prf_sha256(
+                                            &master_secret,
+                                            "key expansion",
+                                            &seed2,
+                                            key_block_len,
+                                        );
 
                                         let client_key = key_block[..key_len].to_vec();
                                         let server_key = key_block[key_len..key_len * 2].to_vec();
-                                        let client_salt = key_block[key_len * 2..key_len * 2 + 4].to_vec();
-                                        let server_salt = key_block[key_len * 2 + 4..key_len * 2 + 8].to_vec();
+                                        let client_salt =
+                                            key_block[key_len * 2..key_len * 2 + 4].to_vec();
+                                        let server_salt =
+                                            key_block[key_len * 2 + 4..key_len * 2 + 8].to_vec();
 
                                         state.client_key = Some(client_key);
                                         state.server_key = Some(server_key);
@@ -526,15 +594,23 @@ pub fn dissect_tls(
         TLS_SESSIONS.with(|sessions| {
             let mut sessions_map = sessions.borrow_mut();
             if let Some(state) = sessions_map.get_mut(&key_c_to_s) {
-                if let (Some(key), Some(iv), Some(cs)) = (&state.client_key, &state.client_iv, state.cipher_suite) {
-                    if let Some(decrypted) = decrypt_tls_record_stream(payload, key, iv, &mut state.seq_num_client, cs) {
+                if let (Some(key), Some(iv), Some(cs)) =
+                    (&state.client_key, &state.client_iv, state.cipher_suite)
+                {
+                    if let Some(decrypted) =
+                        decrypt_tls_record_stream(payload, key, iv, &mut state.seq_num_client, cs)
+                    {
                         decrypted_payload = decrypted;
                         was_decrypted = true;
                     }
                 }
             } else if let Some(state) = sessions_map.get_mut(&key_s_to_c) {
-                if let (Some(key), Some(iv), Some(cs)) = (&state.server_key, &state.server_iv, state.cipher_suite) {
-                    if let Some(decrypted) = decrypt_tls_record_stream(payload, key, iv, &mut state.seq_num_server, cs) {
+                if let (Some(key), Some(iv), Some(cs)) =
+                    (&state.server_key, &state.server_iv, state.cipher_suite)
+                {
+                    if let Some(decrypted) =
+                        decrypt_tls_record_stream(payload, key, iv, &mut state.seq_num_server, cs)
+                    {
                         decrypted_payload = decrypted;
                         was_decrypted = true;
                     }
@@ -544,11 +620,14 @@ pub fn dissect_tls(
     }
 
     if was_decrypted && !decrypted_payload.is_empty() {
-        if let Some(mut h2) = super::http2::try_dissect(src_ip, dst_ip, src_port, dst_port, &decrypted_payload) {
+        if let Some(mut h2) =
+            super::http2::try_dissect(src_ip, dst_ip, src_port, dst_port, &decrypted_payload)
+        {
             h2.summary = format!("[HTTPS] {}", h2.summary);
             return h2;
         }
-        let mut http_res = super::http::dissect_http(src_ip, dst_ip, src_port, dst_port, &decrypted_payload);
+        let mut http_res =
+            super::http::dissect_http(src_ip, dst_ip, src_port, dst_port, &decrypted_payload);
         if http_res.protocol == Protocol::Http {
             http_res.summary = format!("[HTTPS] {}", http_res.summary);
             return http_res;
@@ -1386,45 +1465,55 @@ mod tests {
     fn test_tls_decryption_with_keylog() {
         use std::fs::File;
         use std::io::Write;
-        
+
         clear_tls_sessions();
 
         let keylog_path = std::env::temp_dir().join("test_sslkeylog.log");
         let client_random = [0xaa; 32];
         let client_random_hex = hex_encode(&client_random);
-        
+
         let client_secret = [0x55; 32];
         let client_secret_hex = hex_encode(&client_secret);
-        
+
         let mut file = File::create(&keylog_path).unwrap();
-        writeln!(file, "CLIENT_TRAFFIC_SECRET_0 {} {}", client_random_hex, client_secret_hex).unwrap();
+        writeln!(
+            file,
+            "CLIENT_TRAFFIC_SECRET_0 {} {}",
+            client_random_hex, client_secret_hex
+        )
+        .unwrap();
         drop(file);
-        
+
         std::env::set_var("SSLKEYLOGFILE", &keylog_path);
-        
+
         let derived_key = hkdf_expand_label_sha256(&client_secret, "key", &[], 16);
         let derived_iv = hkdf_expand_label_sha256(&client_secret, "iv", &[], 12);
-        
+
         assert_eq!(derived_key.len(), 16);
         assert_eq!(derived_iv.len(), 12);
-        
+
         let plaintext_payload = b"GET / HTTP/1.1\r\n\r\n";
         let mut inner_plaintext = plaintext_payload.to_vec();
         inner_plaintext.push(23); // inner type
-        
+
         let cipher = Aes128Gcm::new_from_slice(&derived_key).unwrap();
         let mut nonce = [0u8; 12];
         nonce.copy_from_slice(&derived_iv[..12]);
-        
+
         let header = [23, 3, 3, 0, (inner_plaintext.len() + 16) as u8];
-        let ciphertext = cipher.encrypt(nonce.as_ref().into(), aes_gcm::aead::Payload {
-            msg: &inner_plaintext,
-            aad: &header,
-        }).unwrap();
-        
+        let ciphertext = cipher
+            .encrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: &inner_plaintext,
+                    aad: &header,
+                },
+            )
+            .unwrap();
+
         let mut record = header.to_vec();
         record.extend_from_slice(&ciphertext);
-        
+
         let ip_src = "10.0.0.1".parse().unwrap();
         let ip_dst = "10.0.0.2".parse().unwrap();
         let key = TlsFlowKey {
@@ -1434,23 +1523,26 @@ mod tests {
             server_port: 443,
         };
         TLS_SESSIONS.with(|sessions| {
-            sessions.borrow_mut().insert(key, TlsSessionState {
-                client_random,
-                server_random: None,
-                cipher_suite: Some(0x1301),
-                client_key: Some(derived_key),
-                client_iv: Some(derived_iv),
-                server_key: None,
-                server_iv: None,
-                seq_num_client: 0,
-                seq_num_server: 0,
-            });
+            sessions.borrow_mut().insert(
+                key,
+                TlsSessionState {
+                    client_random,
+                    server_random: None,
+                    cipher_suite: Some(0x1301),
+                    client_key: Some(derived_key),
+                    client_iv: Some(derived_iv),
+                    server_key: None,
+                    server_iv: None,
+                    seq_num_client: 0,
+                    seq_num_server: 0,
+                },
+            );
         });
-        
+
         let res = dissect_tls(Some(ip_src), Some(ip_dst), 12345, 443, &record);
         assert_eq!(res.protocol, Protocol::Http);
         assert!(res.summary.contains("[HTTPS] HTTP GET /"));
-        
+
         std::env::remove_var("SSLKEYLOGFILE");
         std::fs::remove_file(keylog_path).ok();
     }
@@ -1464,8 +1556,11 @@ mod tests {
 
         let rsa_key = rsa::RsaPrivateKey::new(&mut rand::thread_rng(), 1024).unwrap();
         use rsa::pkcs8::EncodePrivateKey;
-        let private_key_pem = rsa_key.to_pkcs8_pem(rsa::pkcs8::LineEnding::LF).unwrap().to_string();
-        
+        let private_key_pem = rsa_key
+            .to_pkcs8_pem(rsa::pkcs8::LineEnding::LF)
+            .unwrap()
+            .to_string();
+
         let key_path = std::env::temp_dir().join("test_rsa.key");
         let mut file = File::create(&key_path).unwrap();
         file.write_all(private_key_pem.as_bytes()).unwrap();
@@ -1478,10 +1573,14 @@ mod tests {
         let mut pre_master = [0u8; 48];
         pre_master[0] = 0x03;
         pre_master[1] = 0x03;
-        for i in 2..48 { pre_master[i] = i as u8; }
+        for i in 2..48 {
+            pre_master[i] = i as u8;
+        }
 
         let rsa_pub = rsa::RsaPublicKey::from(&rsa_key);
-        let enc_pm = rsa_pub.encrypt(&mut rand::thread_rng(), rsa::Pkcs1v15Encrypt, &pre_master).unwrap();
+        let enc_pm = rsa_pub
+            .encrypt(&mut rand::thread_rng(), rsa::Pkcs1v15Encrypt, &pre_master)
+            .unwrap();
 
         let client_random = [0x77; 32];
         let server_random = [0x88; 32];
@@ -1501,24 +1600,29 @@ mod tests {
 
         let plaintext_payload = b"GET /index.html HTTP/1.1\r\n\r\n";
         let cipher = Aes128Gcm::new_from_slice(&client_key).unwrap();
-        
+
         let explicit_nonce = [1u8, 2, 3, 4, 5, 6, 7, 8];
         let mut nonce = [0u8; 12];
         nonce[..4].copy_from_slice(&client_salt);
         nonce[4..].copy_from_slice(&explicit_nonce);
 
         let header = [23, 3, 3, 0, (plaintext_payload.len() + 8 + 16) as u8];
-        
+
         let mut aad = [0u8; 13];
         aad[8] = 23;
         aad[9] = 3;
         aad[10] = 3;
         aad[11..13].copy_from_slice(&(plaintext_payload.len() as u16).to_be_bytes());
 
-        let ciphertext = cipher.encrypt(nonce.as_ref().into(), aes_gcm::aead::Payload {
-            msg: plaintext_payload,
-            aad: &aad,
-        }).unwrap();
+        let ciphertext = cipher
+            .encrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: plaintext_payload,
+                    aad: &aad,
+                },
+            )
+            .unwrap();
 
         let mut cke_body = vec![16, 0, 0, 0];
         let cke_len = (enc_pm.len() + 2) as u32;
@@ -1540,17 +1644,20 @@ mod tests {
             server_port: 443,
         };
         TLS_SESSIONS.with(|sessions| {
-            sessions.borrow_mut().insert(key, TlsSessionState {
-                client_random,
-                server_random: Some(server_random),
-                cipher_suite: Some(0x009c),
-                client_key: None,
-                client_iv: None,
-                server_key: None,
-                server_iv: None,
-                seq_num_client: 0,
-                seq_num_server: 0,
-            });
+            sessions.borrow_mut().insert(
+                key,
+                TlsSessionState {
+                    client_random,
+                    server_random: Some(server_random),
+                    cipher_suite: Some(0x009c),
+                    client_key: None,
+                    client_iv: None,
+                    server_key: None,
+                    server_iv: None,
+                    seq_num_client: 0,
+                    seq_num_server: 0,
+                },
+            );
         });
 
         dissect_tls(Some(ip_src), Some(ip_dst), 12345, 443, &cke_record);

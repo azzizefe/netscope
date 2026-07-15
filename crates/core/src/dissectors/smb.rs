@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
@@ -21,7 +21,9 @@ pub fn dissect_smb(
             is_smb = true;
         } else if &payload[..4] == b"\xFESMB" {
             is_smb2 = true;
-        } else if payload.len() >= 8 && (&payload[4..8] == b"\xFFSMB" || &payload[4..8] == b"\xFESMB") {
+        } else if payload.len() >= 8
+            && (&payload[4..8] == b"\xFFSMB" || &payload[4..8] == b"\xFESMB")
+        {
             if &payload[4..8] == b"\xFFSMB" {
                 is_smb = true;
             } else {

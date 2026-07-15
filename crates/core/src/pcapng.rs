@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! pcapng writer — netscope's native "save" format, matching Wireshark's
 //! default. Unlike classic pcap, pcapng carries structured metadata:
@@ -96,7 +96,11 @@ impl PcapngWriter<BufWriter<File>> {
 
 impl<W: Write> PcapngWriter<W> {
     /// Write the section header + interface blocks onto an arbitrary sink.
-    pub fn new(mut inner: W, section: SectionMeta, interfaces: &[InterfaceMeta]) -> io::Result<Self> {
+    pub fn new(
+        mut inner: W,
+        section: SectionMeta,
+        interfaces: &[InterfaceMeta],
+    ) -> io::Result<Self> {
         write_shb(&mut inner, &section)?;
         for iface in interfaces {
             write_idb(&mut inner, iface)?;
@@ -249,8 +253,15 @@ mod tests {
         let mut buf = Vec::new();
         {
             let mut w = PcapngWriter::new(&mut buf, section, ifaces).unwrap();
-            w.write_packet(0, 1_700_000_000, 250_000_000, 42, &[0xAB; 42], Some("hello"))
-                .unwrap();
+            w.write_packet(
+                0,
+                1_700_000_000,
+                250_000_000,
+                42,
+                &[0xAB; 42],
+                Some("hello"),
+            )
+            .unwrap();
             w.write_packet(0, 1_700_000_001, 0, 4, &[1, 2, 3, 4], None)
                 .unwrap();
             w.finish().unwrap();
@@ -297,8 +308,16 @@ mod tests {
                 &mut buf,
                 SectionMeta::default(),
                 &[
-                    InterfaceMeta { linktype: 1, name: Some("eth0".into()), ..Default::default() },
-                    InterfaceMeta { linktype: 1, name: Some("wlan0".into()), ..Default::default() },
+                    InterfaceMeta {
+                        linktype: 1,
+                        name: Some("eth0".into()),
+                        ..Default::default()
+                    },
+                    InterfaceMeta {
+                        linktype: 1,
+                        name: Some("wlan0".into()),
+                        ..Default::default()
+                    },
                 ],
             )
             .unwrap();
@@ -315,8 +334,14 @@ mod tests {
     fn block_lengths_are_multiples_of_four() {
         // A comment of odd length exercises option padding.
         let buf = write_sample(
-            SectionMeta { comment: Some("odd".into()), ..Default::default() },
-            &[InterfaceMeta { linktype: 1, ..Default::default() }],
+            SectionMeta {
+                comment: Some("odd".into()),
+                ..Default::default()
+            },
+            &[InterfaceMeta {
+                linktype: 1,
+                ..Default::default()
+            }],
         );
         // Every block's total-length field (offset 4) must be 4-aligned, and
         // the file length must be exactly the sum of block lengths.

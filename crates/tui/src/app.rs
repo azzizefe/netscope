@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::collections::{BTreeSet, HashSet, VecDeque};
 use std::net::IpAddr;
@@ -101,7 +101,8 @@ impl App {
         let mut capture = CaptureEngine::new();
         // Local interfaces, `-i -` (stdin stream), USBPcap devices or a
         // remote host over SSH — plus autostop and ring-buffer options.
-        let (interface_name, temp_guard) = crate::setup::start_capture(cli, &mut capture, packet_tx)?;
+        let (interface_name, temp_guard) =
+            crate::setup::start_capture(cli, &mut capture, packet_tx)?;
 
         Ok(Self {
             capture,
@@ -325,7 +326,9 @@ impl App {
         }
         if self.show_bookmarks {
             match key.code {
-                KeyCode::Esc | KeyCode::Char('B') | KeyCode::Char('b') => self.show_bookmarks = false,
+                KeyCode::Esc | KeyCode::Char('B') | KeyCode::Char('b') => {
+                    self.show_bookmarks = false
+                }
                 KeyCode::Char(d @ '1'..='8') => {
                     let idx = d as usize - '1' as usize;
                     let bookmarks = &[
@@ -832,7 +835,7 @@ mod tests {
             tx.send(pkt(MAX_PACKETS + i, Protocol::Tcp)).unwrap();
         }
         app.tick();
-        
+
         // Selection should be safely clamped to the filtered list size and not panic/out-of-bounds.
         assert!(app.selected < app.filtered_packets().len());
     }
@@ -852,7 +855,7 @@ mod tests {
         for i in 0..50 {
             tx.send(pkt(MAX_PACKETS + i, Protocol::Tcp)).unwrap();
         }
-        
+
         // Tick should execute without panic.
         app.tick();
         assert_eq!(app.selected, 0);

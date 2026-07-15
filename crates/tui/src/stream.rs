@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Follow TCP/UDP Stream for the TUI (ROADMAP §6.1) — the terminal counterpart
 //! of the desktop's "Follow Stream". Given the selected packet, it gathers
@@ -173,14 +173,21 @@ fn decode_http2_stream(bytes: &[u8]) -> String {
         out.push_str("[HTTP/2 Connection Preface]\n");
         off += 24;
     }
-    
+
     let mut frame_count = 0;
     while off + 9 <= bytes.len() {
-        let len = ((bytes[off] as usize) << 16) | ((bytes[off+1] as usize) << 8) | (bytes[off+2] as usize);
-        let typ = bytes[off+3];
-        let flags = bytes[off+4];
-        let stream_id = u32::from_be_bytes([bytes[off+5] & 0x7f, bytes[off+6], bytes[off+7], bytes[off+8]]);
-        
+        let len = ((bytes[off] as usize) << 16)
+            | ((bytes[off + 1] as usize) << 8)
+            | (bytes[off + 2] as usize);
+        let typ = bytes[off + 3];
+        let flags = bytes[off + 4];
+        let stream_id = u32::from_be_bytes([
+            bytes[off + 5] & 0x7f,
+            bytes[off + 6],
+            bytes[off + 7],
+            bytes[off + 8],
+        ]);
+
         let type_name = match typ {
             0 => "DATA",
             1 => "HEADERS",
@@ -194,9 +201,12 @@ fn decode_http2_stream(bytes: &[u8]) -> String {
             9 => "CONTINUATION",
             _ => "UNKNOWN",
         };
-        
-        out.push_str(&format!("HTTP/2 Frame: {} (Stream {}, Length: {}, Flags: 0x{:02x})\n", type_name, stream_id, len, flags));
-        
+
+        out.push_str(&format!(
+            "HTTP/2 Frame: {} (Stream {}, Length: {}, Flags: 0x{:02x})\n",
+            type_name, stream_id, len, flags
+        ));
+
         let payload_start = off + 9;
         let payload_end = (payload_start + len).min(bytes.len());
         if payload_end > payload_start {
@@ -204,16 +214,22 @@ fn decode_http2_stream(bytes: &[u8]) -> String {
             if typ == 0 {
                 let txt = decode_plain_stream(payload);
                 if !txt.is_empty() {
-                    out.push_str(&format!("  Data: {}\n", txt.chars().take(200).collect::<String>()));
+                    out.push_str(&format!(
+                        "  Data: {}\n",
+                        txt.chars().take(200).collect::<String>()
+                    ));
                 }
             } else if typ == 1 {
                 let txt = decode_plain_stream(payload);
                 if !txt.is_empty() {
-                    out.push_str(&format!("  Headers (Huffman/Raw): {}\n", txt.chars().take(200).collect::<String>()));
+                    out.push_str(&format!(
+                        "  Headers (Huffman/Raw): {}\n",
+                        txt.chars().take(200).collect::<String>()
+                    ));
                 }
             }
         }
-        
+
         off += 9 + len;
         frame_count += 1;
         if frame_count > 50 {
@@ -221,7 +237,7 @@ fn decode_http2_stream(bytes: &[u8]) -> String {
             break;
         }
     }
-    
+
     if out.is_empty() {
         decode_plain_stream(bytes)
     } else {
@@ -233,13 +249,13 @@ fn decode_tls_stream(bytes: &[u8]) -> String {
     let mut out = String::new();
     let mut off = 0;
     let mut record_count = 0;
-    
+
     while off + 5 <= bytes.len() {
         let content_type = bytes[off];
-        let version_major = bytes[off+1];
-        let version_minor = bytes[off+2];
-        let len = u16::from_be_bytes([bytes[off+3], bytes[off+4]]) as usize;
-        
+        let version_major = bytes[off + 1];
+        let version_minor = bytes[off + 2];
+        let len = u16::from_be_bytes([bytes[off + 3], bytes[off + 4]]) as usize;
+
         let type_name = match content_type {
             20 => "ChangeCipherSpec",
             21 => "Alert",
@@ -248,7 +264,7 @@ fn decode_tls_stream(bytes: &[u8]) -> String {
             24 => "Heartbeat",
             _ => break,
         };
-        
+
         let version_str = match (version_major, version_minor) {
             (3, 1) => "TLS 1.0",
             (3, 2) => "TLS 1.1",
@@ -257,9 +273,9 @@ fn decode_tls_stream(bytes: &[u8]) -> String {
             (3, 0) => "SSL 3.0",
             _ => "Unknown TLS",
         };
-        
+
         if content_type == 22 && off + 6 <= bytes.len() {
-            let handshake_type = bytes[off+5];
+            let handshake_type = bytes[off + 5];
             let hs_name = match handshake_type {
                 1 => "ClientHello",
                 2 => "ServerHello",
@@ -274,11 +290,17 @@ fn decode_tls_stream(bytes: &[u8]) -> String {
                 20 => "Finished",
                 _ => "Other Handshake",
             };
-            out.push_str(&format!("TLS Record: Handshake - {} ({}, Length: {})\n", hs_name, version_str, len));
+            out.push_str(&format!(
+                "TLS Record: Handshake - {} ({}, Length: {})\n",
+                hs_name, version_str, len
+            ));
         } else {
-            out.push_str(&format!("TLS Record: {} ({}, Length: {})\n", type_name, version_str, len));
+            out.push_str(&format!(
+                "TLS Record: {} ({}, Length: {})\n",
+                type_name, version_str, len
+            ));
         }
-        
+
         off += 5 + len;
         record_count += 1;
         if record_count > 50 {
@@ -286,7 +308,7 @@ fn decode_tls_stream(bytes: &[u8]) -> String {
             break;
         }
     }
-    
+
     if out.is_empty() {
         decode_plain_stream(bytes)
     } else {
@@ -314,10 +336,19 @@ fn decode_quic_stream(bytes: &[u8]) -> String {
             3 => "Retry",
             _ => "Unknown",
         };
-        out.push_str(&format!("QUIC Long Header Packet: {} (Version: 0x{:08x}, Length: {})\n", type_name, version, bytes.len()));
+        out.push_str(&format!(
+            "QUIC Long Header Packet: {} (Version: 0x{:08x}, Length: {})\n",
+            type_name,
+            version,
+            bytes.len()
+        ));
     } else {
         let spin = if first & 0x20 != 0 { "Spin" } else { "NoSpin" };
-        out.push_str(&format!("QUIC Short Header Packet (1-RTT, Encrypted, {}, Length: {})\n", spin, bytes.len()));
+        out.push_str(&format!(
+            "QUIC Short Header Packet (1-RTT, Encrypted, {}, Length: {})\n",
+            spin,
+            bytes.len()
+        ));
     }
     out
 }

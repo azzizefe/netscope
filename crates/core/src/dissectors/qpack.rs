@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 /// QPACK Static Table and Decoder (RFC 9204).
 /// QPACK is the header compression protocol for HTTP/3 over QUIC.
@@ -46,11 +46,11 @@ pub fn decode_qpack(mut bytes: &[u8]) -> Option<Vec<(String, String)>> {
     if bytes.len() < 2 {
         return None;
     }
-    
+
     // Skip the prefix: Required Insert Count and Base
     bytes = &bytes[2..];
     let mut headers = Vec::new();
-    
+
     while !bytes.is_empty() {
         let b = bytes[0];
         if b & 0x80 != 0 {
@@ -68,7 +68,7 @@ pub fn decode_qpack(mut bytes: &[u8]) -> Option<Vec<(String, String)>> {
             bytes = &bytes[1..];
         }
     }
-    
+
     if headers.is_empty() {
         None
     } else {

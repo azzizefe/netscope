@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Style, Stylize};
@@ -79,7 +79,10 @@ fn render_protocol_hierarchy(frame: &mut Frame, area: Rect, snap: &StatsSnapshot
         };
         lines.push(Line::from(vec![
             Span::raw(format!("{:<30}", name)),
-            Span::styled(format!(" {:>6} pkts", packets), Style::new().fg(Color::Cyan)),
+            Span::styled(
+                format!(" {:>6} pkts", packets),
+                Style::new().fg(Color::Cyan),
+            ),
             Span::raw("  ·  "),
             Span::styled(size_str, Style::new().fg(Color::Green)),
         ]));
@@ -111,7 +114,10 @@ fn render_packet_lengths(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, bo
         let bar = "█".repeat(bar_len);
         lines.push(Line::from(vec![
             Span::raw(format!(" {:<12} ", label)),
-            Span::styled(format!(" {:>6} pkts", count), Style::new().fg(Color::White).bold()),
+            Span::styled(
+                format!(" {:>6} pkts", count),
+                Style::new().fg(Color::White).bold(),
+            ),
             Span::raw(format!(" ({:>3}%) ", pct)),
             Span::styled(bar, Style::new().fg(Color::Yellow)),
         ]));

@@ -115,7 +115,7 @@ jobs:
 
       # Build the WASM filter module — frontend tests load it at runtime
       - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.100
+        run: cargo install wasm-bindgen-cli --version 0.2.126
 
       - name: Build WASM filter module
         run: |

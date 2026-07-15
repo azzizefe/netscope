@@ -1,12 +1,12 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+use crate::models::Packet;
+use crossbeam_channel::Receiver;
+use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use crossbeam_channel::Receiver;
-use serde::Serialize;
-use crate::models::Packet;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SiemEvent {
@@ -74,21 +74,36 @@ impl SiemExporter {
                     Ok(pkt) => {
                         batch.push(SiemEvent::from_packet(&pkt));
                         if batch.len() >= batch_size || last_flush.elapsed() >= timeout {
-                            flush_batch(&batch, es_url.as_deref(), splunk_url.as_deref(), splunk_token.as_deref());
+                            flush_batch(
+                                &batch,
+                                es_url.as_deref(),
+                                splunk_url.as_deref(),
+                                splunk_token.as_deref(),
+                            );
                             batch.clear();
                             last_flush = std::time::Instant::now();
                         }
                     }
                     Err(crossbeam_channel::RecvTimeoutError::Timeout) => {
                         if !batch.is_empty() {
-                            flush_batch(&batch, es_url.as_deref(), splunk_url.as_deref(), splunk_token.as_deref());
+                            flush_batch(
+                                &batch,
+                                es_url.as_deref(),
+                                splunk_url.as_deref(),
+                                splunk_token.as_deref(),
+                            );
                             batch.clear();
                             last_flush = std::time::Instant::now();
                         }
                     }
                     Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
                         if !batch.is_empty() {
-                            flush_batch(&batch, es_url.as_deref(), splunk_url.as_deref(), splunk_token.as_deref());
+                            flush_batch(
+                                &batch,
+                                es_url.as_deref(),
+                                splunk_url.as_deref(),
+                                splunk_token.as_deref(),
+                            );
                             batch.clear();
                         }
                         break;
@@ -122,9 +137,10 @@ fn flush_batch(
                 bulk_body.push('\n');
             }
         }
-        
+
         let agent = ureq::Agent::new();
-        let res = agent.post(url)
+        let res = agent
+            .post(url)
             .set("Content-Type", "application/x-ndjson")
             .send_string(&bulk_body);
         if let Err(e) = res {
@@ -136,7 +152,10 @@ fn flush_batch(
         let mut splunk_body = String::new();
         for event in batch {
             let mut event_wrapper = serde_json::Map::new();
-            event_wrapper.insert("event".to_string(), serde_json::to_value(event).unwrap_or(serde_json::Value::Null));
+            event_wrapper.insert(
+                "event".to_string(),
+                serde_json::to_value(event).unwrap_or(serde_json::Value::Null),
+            );
             if let Ok(json) = serde_json::to_string(&event_wrapper) {
                 splunk_body.push_str(&json);
                 splunk_body.push('\n');
@@ -144,7 +163,8 @@ fn flush_batch(
         }
 
         let agent = ureq::Agent::new();
-        let res = agent.post(url)
+        let res = agent
+            .post(url)
             .set("Authorization", &format!("Splunk {}", token))
             .set("Content-Type", "application/json")
             .send_string(&splunk_body);

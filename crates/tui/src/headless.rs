@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use anyhow::Result;
 use netscope_core::capture::CaptureEngine;
@@ -13,7 +13,8 @@ pub fn run(cli: Cli) -> Result<()> {
 
     // Local interfaces, `-i -` (stdin stream), USBPcap devices or a remote
     // host over SSH — plus autostop and ring-buffer options.
-    let (label, _temp_guard) = crate::setup::start_capture(&cli, capture.as_mut().unwrap(), packet_tx)?;
+    let (label, _temp_guard) =
+        crate::setup::start_capture(&cli, capture.as_mut().unwrap(), packet_tx)?;
     eprintln!("Capturing on: {label}");
 
     let use_json = cli.json;
@@ -21,7 +22,11 @@ pub fn run(cli: Cli) -> Result<()> {
 
     let api_server = if let Some(port) = cli.serve {
         let buffer = netscope_core::api_server::ApiPacketBuffer::new();
-        let server = netscope_core::api_server::ApiServer::new(port, buffer.clone(), capture.take().unwrap());
+        let server = netscope_core::api_server::ApiServer::new(
+            port,
+            buffer.clone(),
+            capture.take().unwrap(),
+        );
         let engine_lock = server.engine();
         let _server_handle = server.start();
         Some((buffer, engine_lock))

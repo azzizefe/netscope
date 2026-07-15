@@ -1,8 +1,8 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::net::IpAddr;
-use std::collections::HashMap;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::net::IpAddr;
 
 use crate::models::Protocol;
 
@@ -23,7 +23,7 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, ()> {
     }
     (0..s.len())
         .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i+2], 16).map_err(|_| ()))
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).map_err(|_| ()))
         .collect()
 }
 
@@ -31,9 +31,9 @@ fn parse_encrypted_data(data: &[u8]) -> Option<(i32, Vec<u8>)> {
     let mut pos = 0;
     while pos + 4 < data.len() {
         if data[pos] == 0xa0 {
-            let _len = data[pos+1] as usize;
-            if pos + 2 < data.len() && data[pos+2] == 0x02 {
-                let etype_len = data[pos+3] as usize;
+            let _len = data[pos + 1] as usize;
+            if pos + 2 < data.len() && data[pos + 2] == 0x02 {
+                let etype_len = data[pos + 3] as usize;
                 if pos + 4 + etype_len <= data.len() {
                     let mut etype = 0;
                     for i in 0..etype_len {
@@ -42,10 +42,11 @@ fn parse_encrypted_data(data: &[u8]) -> Option<(i32, Vec<u8>)> {
                     let mut cipher_pos = pos + 4 + etype_len;
                     while cipher_pos + 4 < data.len() {
                         if data[cipher_pos] == 0xa2 {
-                            if cipher_pos + 2 < data.len() && data[cipher_pos+2] == 0x04 {
-                                let cipher_len = data[cipher_pos+3] as usize;
+                            if cipher_pos + 2 < data.len() && data[cipher_pos + 2] == 0x04 {
+                                let cipher_len = data[cipher_pos + 3] as usize;
                                 if cipher_pos + 4 + cipher_len <= data.len() {
-                                    let cipher = data[cipher_pos+4..cipher_pos+4+cipher_len].to_vec();
+                                    let cipher =
+                                        data[cipher_pos + 4..cipher_pos + 4 + cipher_len].to_vec();
                                     return Some((etype, cipher));
                                 }
                             }
@@ -63,15 +64,18 @@ fn parse_encrypted_data(data: &[u8]) -> Option<(i32, Vec<u8>)> {
 fn decrypt_krb_aes(ciphertext: &[u8], key: &[u8]) -> Option<Vec<u8>> {
     use aes_gcm::aes::cipher::{BlockDecrypt, KeyInit};
     use aes_gcm::aes::Aes128;
-    
-    if ciphertext.len() < 16 || ciphertext.len() % 16 != 0 { return None; }
-    
+
+    if ciphertext.len() < 16 || ciphertext.len() % 16 != 0 {
+        return None;
+    }
+
     let mut decrypted = ciphertext.to_vec();
     if key.len() == 16 {
         let cipher = Aes128::new_from_slice(key).ok()?;
         for i in (0..decrypted.len()).step_by(16) {
-            let block = &mut decrypted[i..i+16];
-            let mut block_arr = aes_gcm::aes::cipher::generic_array::GenericArray::from_mut_slice(block);
+            let block = &mut decrypted[i..i + 16];
+            let mut block_arr =
+                aes_gcm::aes::cipher::generic_array::GenericArray::from_mut_slice(block);
             cipher.decrypt_block(&mut block_arr);
         }
         Some(decrypted)
@@ -98,8 +102,13 @@ pub fn dissect_kerberos(
 
     let mut decrypted_summary = None;
     if let Some((_etype, cipher)) = parse_encrypted_data(payload) {
-        let key_bytes = TEST_KRB_KEYS.with(|keys| keys.borrow().get("default").cloned())
-            .or_else(|| std::env::var("KRB_KEY").ok().and_then(|k| decode_hex(&k).ok()));
+        let key_bytes = TEST_KRB_KEYS
+            .with(|keys| keys.borrow().get("default").cloned())
+            .or_else(|| {
+                std::env::var("KRB_KEY")
+                    .ok()
+                    .and_then(|k| decode_hex(&k).ok())
+            });
         if let Some(key) = key_bytes {
             if cipher.len() >= 16 + 12 {
                 let encrypted_body = &cipher[..cipher.len() - 12];
@@ -113,7 +122,8 @@ pub fn dissect_kerberos(
                         }
                     }
                     if !principal.is_empty() && principal.len() > 3 {
-                        decrypted_summary = Some(format!("[Kerberos Decrypted] Principal: {principal}"));
+                        decrypted_summary =
+                            Some(format!("[Kerberos Decrypted] Principal: {principal}"));
                     }
                 }
             }
@@ -200,7 +210,8 @@ mod tests {
 
         let key = [0x55u8; 16];
         TEST_KRB_KEYS.with(|keys| {
-            keys.borrow_mut().insert("default".to_string(), key.to_vec());
+            keys.borrow_mut()
+                .insert("default".to_string(), key.to_vec());
         });
 
         let mut plaintext = b"admin/admin@REALM".to_vec();
@@ -211,8 +222,9 @@ mod tests {
         let cipher = Aes128::new_from_slice(&key).unwrap();
         let mut ciphertext = plaintext.clone();
         for i in (0..ciphertext.len()).step_by(16) {
-            let block = &mut ciphertext[i..i+16];
-            let mut block_arr = aes_gcm::aes::cipher::generic_array::GenericArray::from_mut_slice(block);
+            let block = &mut ciphertext[i..i + 16];
+            let mut block_arr =
+                aes_gcm::aes::cipher::generic_array::GenericArray::from_mut_slice(block);
             cipher.encrypt_block(&mut block_arr);
         }
 

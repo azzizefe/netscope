@@ -1,17 +1,16 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::net::IpAddr;
-use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
 use std::cell::RefCell;
+use std::collections::{BTreeMap, HashMap};
+use std::net::IpAddr;
+use std::time::{Duration, Instant};
 
 use crate::models::Protocol;
 
 use super::{
-    bgp, cassandra, dnp3, enip, ftp, http, http2, imap, kerberos, ldap, modbus, mongodb, mqtt,
-    mysql, ntlm, opcua, openvpn, pop3, postgres, rdp, redis, smtp, ssh, telnet, tls, websocket,
-    smb, tds, amqp, kafka,
-    DissectedResult,
+    amqp, bgp, cassandra, dnp3, enip, ftp, http, http2, imap, kafka, kerberos, ldap, modbus,
+    mongodb, mqtt, mysql, ntlm, opcua, openvpn, pop3, postgres, rdp, redis, smb, smtp, ssh, tds,
+    telnet, tls, websocket, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -53,12 +52,24 @@ pub fn dissect_tcp(
     let mut result = dissect_tcp_inner(src_ip, dst_ip, payload);
     if let Ok((tcp, rest)) = etherparse::TcpHeader::from_slice(payload) {
         let mut flags_byte = 0u8;
-        if tcp.fin { flags_byte |= 0x01; }
-        if tcp.syn { flags_byte |= 0x02; }
-        if tcp.rst { flags_byte |= 0x04; }
-        if tcp.psh { flags_byte |= 0x08; }
-        if tcp.ack { flags_byte |= 0x10; }
-        if tcp.urg { flags_byte |= 0x20; }
+        if tcp.fin {
+            flags_byte |= 0x01;
+        }
+        if tcp.syn {
+            flags_byte |= 0x02;
+        }
+        if tcp.rst {
+            flags_byte |= 0x04;
+        }
+        if tcp.psh {
+            flags_byte |= 0x08;
+        }
+        if tcp.ack {
+            flags_byte |= 0x10;
+        }
+        if tcp.urg {
+            flags_byte |= 0x20;
+        }
         if let Some(warning) = super::tcp_analysis::analyze_packet(
             src_ip,
             dst_ip,
@@ -81,7 +92,11 @@ pub fn dissect_tcp(
                 tcp.destination_port,
                 &result.summary,
             ) {
-                result.summary = format!("{} [SRT: {:.1}ms]", result.summary, dur.as_secs_f64() * 1000.0);
+                result.summary = format!(
+                    "{} [SRT: {:.1}ms]",
+                    result.summary,
+                    dur.as_secs_f64() * 1000.0
+                );
             }
         }
     }
@@ -120,12 +135,22 @@ fn dissect_tcp_inner(
 
     if let (Some(sip), Some(dip)) = (src_ip, dst_ip) {
         if syn {
-            let key = TcpFlowKey { src_ip: sip, src_port, dst_ip: dip, dst_port };
+            let key = TcpFlowKey {
+                src_ip: sip,
+                src_port,
+                dst_ip: dip,
+                dst_port,
+            };
             REASSEMBLER.with(|reasm_cell| {
                 reasm_cell.borrow_mut().remove(&key);
             });
         } else if !tcp_payload_raw.is_empty() {
-            let key = TcpFlowKey { src_ip: sip, src_port, dst_ip: dip, dst_port };
+            let key = TcpFlowKey {
+                src_ip: sip,
+                src_port,
+                dst_ip: dip,
+                dst_port,
+            };
             REASSEMBLER.with(|reasm_cell| {
                 let mut reasm = reasm_cell.borrow_mut();
                 let now = Instant::now();
@@ -139,7 +164,7 @@ fn dissect_tcp_inner(
                 });
 
                 let seq = tcp.sequence_number;
-                
+
                 if seq == 0 && stream.next_seq > 0 {
                     stream.stream_data.clear();
                     stream.buffered.clear();
@@ -152,14 +177,16 @@ fn dissect_tcp_inner(
                     if stream.stream_data.is_empty() {
                         stream.next_seq = seq;
                     }
-                    
+
                     let overlap = if seq < stream.next_seq {
                         (stream.next_seq - seq) as usize
                     } else {
                         0
                     };
                     if overlap < tcp_payload_raw.len() {
-                        stream.stream_data.extend_from_slice(&tcp_payload_raw[overlap..]);
+                        stream
+                            .stream_data
+                            .extend_from_slice(&tcp_payload_raw[overlap..]);
                         stream.next_seq = seq + tcp_payload_raw.len() as u32;
                         is_contiguous = true;
                     }
@@ -176,7 +203,9 @@ fn dissect_tcp_inner(
                 } else {
                     let overlap = (stream.next_seq - seq) as usize;
                     if overlap < tcp_payload_raw.len() {
-                        stream.stream_data.extend_from_slice(&tcp_payload_raw[overlap..]);
+                        stream
+                            .stream_data
+                            .extend_from_slice(&tcp_payload_raw[overlap..]);
                         stream.next_seq = seq + tcp_payload_raw.len() as u32;
                         is_contiguous = true;
 
