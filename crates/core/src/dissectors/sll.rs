@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Linux "cooked" capture dissector — `LINKTYPE_LINUX_SLL` (DLT 113) and
 //! `LINKTYPE_LINUX_SLL2` (DLT 276).
 //!

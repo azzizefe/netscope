@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Memory footprint of parsed packets (ROADMAP §4.4) — not a timing
 //! benchmark. A counting global allocator measures the real heap cost of
 //! holding one million dissected `Packet`s, and of cloning them (which,

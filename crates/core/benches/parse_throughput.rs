@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Dissection throughput (ROADMAP §4.4): how many packets per second the
 //! full `dissect()` chain (Ethernet → IP → TCP/UDP → app layer) handles.
 //!

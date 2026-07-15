@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use ratatui::layout::{Constraint, Rect};
 use ratatui::style::{Style, Stylize};
 use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState};

@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use netscope_core::capture::CaptureEngine;

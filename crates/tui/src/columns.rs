@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! User-selectable packet-list columns for the TUI (ROADMAP §6.1). The
 //! packet table can show any subset of the standard columns; the Columns
 //! overlay (`c`) toggles them with the number keys. Info is never hidden — a

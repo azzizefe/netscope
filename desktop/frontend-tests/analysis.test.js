@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadApp, tcpFrame, udpFrame, bytes } from './load-app.js';
 

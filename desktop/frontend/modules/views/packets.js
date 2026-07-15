@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 // netscope Desktop — Packets View Module
 // Handles virtual scrolling, packet list rendering, and protocol detail trees.
 

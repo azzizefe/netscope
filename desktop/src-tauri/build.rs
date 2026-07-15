@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 fn main() {
     let attributes = tauri_build::Attributes::new();
 

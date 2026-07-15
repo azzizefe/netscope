@@ -122,6 +122,19 @@ The desktop app layers a full analysis workbench on top of the capture engine �
 netscope ships in two flavors: a **desktop app** (native window, no terminal)
 and a **terminal UI** (TUI). Both share the same engine.
 
+> [!WARNING]
+> **Windows users:** You **must** install **[Npcap](https://npcap.com)** before
+> running netscope (both desktop and TUI). During installation, tick
+> **☑ "Install Npcap in WinPcap API-compatible mode"**. Without it, netscope
+> cannot see any network interfaces and capture will fail silently.
+>
+> 👉 **Download:** [npcap.com](https://npcap.com) (free for personal use)
+
+> [!NOTE]
+> **Linux users:** Install `libpcap` via your package manager
+> (`sudo apt install libpcap-dev` on Debian/Ubuntu, `sudo dnf install libpcap-devel` on Fedora).
+> **macOS** ships libpcap by default — no extra install needed.
+
 ### 🖥️ Desktop app — what you need to run it
 
 1. **Npcap** (Windows) — the driver that lets any app read packets. Install from
@@ -153,12 +166,126 @@ Grab the prebuilt `netscope-tui` binary for your OS from
 
 ### Build from source
 
+Building from source requires **Rust 1.75+** and the platform-specific packet
+capture library headers.
+
+#### Prerequisites
+
+<details>
+<summary><b>🪟 Windows</b></summary>
+
+1. **Npcap** — Install from [npcap.com](https://npcap.com) with both
+   **"WinPcap API-compatible mode"** and **"Install Npcap SDK"** ticked.
+2. **Npcap SDK** — If the SDK wasn't installed alongside the driver, download
+   it separately from [npcap.com/dist](https://npcap.com/dist/npcap-sdk-1.13.zip)
+   and extract it. Then set the environment variable so the `pcap` crate can
+   find it:
+   ```powershell
+   # PowerShell — adjust the path to where you extracted the SDK
+   $env:LIB = "C:\npcap-sdk\Lib\x64;$env:LIB"
+   ```
+3. **WebView2** — Pre-installed on Windows 10/11 (needed for the desktop app).
+4. **Visual Studio Build Tools** — `rustup` on Windows needs the MSVC toolchain.
+   Install "Desktop development with C++" from
+   [visualstudio.microsoft.com](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
+
+</details>
+
+<details>
+<summary><b>🐧 Linux (Debian / Ubuntu)</b></summary>
+
+```bash
+# Packet capture library + Tauri desktop dependencies
+sudo apt update
+sudo apt install -y \
+  libpcap-dev \
+  build-essential \
+  pkg-config \
+  libssl-dev \
+  libgtk-3-dev \
+  libwebkit2gtk-4.1-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev
+```
+
+> **Note:** `libwebkit2gtk-4.1-dev` and the GTK packages are only needed if you
+> want to build the **desktop app**. For the TUI alone, `libpcap-dev` and
+> `build-essential` are sufficient.
+
+</details>
+
+<details>
+<summary><b>🐧 Linux (Fedora / RHEL)</b></summary>
+
+```bash
+sudo dnf install -y \
+  libpcap-devel \
+  gcc \
+  openssl-devel \
+  gtk3-devel \
+  webkit2gtk4.1-devel \
+  libappindicator-gtk3-devel \
+  librsvg2-devel
+```
+
+</details>
+
+<details>
+<summary><b>🐧 Linux (Arch)</b></summary>
+
+```bash
+sudo pacman -S --needed \
+  libpcap \
+  base-devel \
+  openssl \
+  gtk3 \
+  webkit2gtk-4.1 \
+  libappindicator-gtk3 \
+  librsvg
+```
+
+</details>
+
+<details>
+<summary><b>🍎 macOS</b></summary>
+
+macOS ships `libpcap` out of the box — no extra packages needed.
+
+If you want to build the desktop app, install Xcode Command Line Tools:
+
+```bash
+xcode-select --install
+```
+
+</details>
+
+#### Build & Run
+
 ```bash
 git clone https://github.com/azzizefe/netscope.git
 cd netscope
-cargo build --release
-./target/release/netscope-tui        # terminal UI
-cargo run -p netscope-desktop        # desktop app (run the exe "as admin" on Windows)
+
+# TUI only
+cargo build --release -p netscope-tui
+./target/release/netscope-tui
+
+# Desktop app (run as admin on Windows for packet capture)
+cargo tauri dev                       # development mode
+cargo tauri build                     # production bundle
+```
+
+#### Post-install (Linux) — capture without root
+
+```bash
+# Grant raw-socket capability so you don't need sudo every time
+sudo setcap cap_net_raw,cap_net_admin+eip ./target/release/netscope-tui
+```
+
+#### Verify your build
+
+```bash
+cargo test                           # run all unit tests (~460 tests)
+cd desktop/frontend-tests && npm test  # run frontend tests (74 tests)
 ```
 
 ---
@@ -331,12 +458,15 @@ Full index: [docs/README.md](docs/README.md)
 netscope/
 ├── crates/
 │   ├── core/           Capture engine, protocol dissectors, models, stats
-│   └── tui/            Terminal UI (ratatui + crossterm + clap)
+│   ├── tui/            Terminal UI (ratatui + crossterm + clap)
+│   ├── wasm/           WASM bindings (display filter engine for frontend)
+│   └── python/         Python bindings (PyO3)
 ├── desktop/
-│   ├── frontend/       Desktop frontend (HTML/CSS/JS)
+│   ├── frontend/       Desktop frontend (HTML/CSS/JS + ES modules)
+│   ├── frontend-tests/ Vitest unit tests for the frontend
 │   └── src-tauri/      Tauri 2 backend (Rust)
 ├── fixtures/           8 sample .pcap files for testing
-├── docs/               Architecture, API, guides (7 files)
+├── docs/               Architecture, API, guides (10+ files)
 ├── tools/gen-fixtures/ pcap generator (etherparse)
 └── .github/workflows/  CI + Release pipelines
 ```

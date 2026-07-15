@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use std::io::Read;
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},

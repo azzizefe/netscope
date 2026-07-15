@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Capture encryption — write a capture to disk sealed with a passphrase
 //! (ROADMAP §5.4).
 //!

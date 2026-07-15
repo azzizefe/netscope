@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! IEEE 802.11 (Wi-Fi) frame dissection.
 //!
 //! Handles the three frame classes — management (beacons, probe/assoc/auth),

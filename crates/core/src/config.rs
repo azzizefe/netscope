@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Layered configuration — a single, discoverable home for netscope's
 //! user settings, shared by the TUI and desktop (ROADMAP §2.4).
 //!

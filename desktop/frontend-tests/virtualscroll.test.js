@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 // Virtual scrolling of the packet list (ROADMAP §2.2): only the viewport
 // window is materialised in the DOM, a spacer carries the full list height,
 // and scrolling re-renders the window at the new position.

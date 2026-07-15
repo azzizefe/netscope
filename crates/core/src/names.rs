@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Passive hostname resolution.
 //!
 //! Watches DNS responses as they fly by and remembers which IP belongs to

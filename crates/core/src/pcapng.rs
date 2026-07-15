@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! pcapng writer — netscope's native "save" format, matching Wireshark's
 //! default. Unlike classic pcap, pcapng carries structured metadata:
 //!

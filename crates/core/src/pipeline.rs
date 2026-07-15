@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Parallel capture pipeline — the architecture from ROADMAP §2.1:
 //!
 //! ```text

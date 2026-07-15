@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Lightweight, zero-dependency REST API server (ROADMAP §7.1).
 //! Listens on a TCP port and exposes packet list, statistics, and control endpoints.
 
