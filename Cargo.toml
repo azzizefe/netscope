@@ -4,6 +4,7 @@ members = [
     "crates/core",
     "crates/tui",
     "crates/python",
+    "crates/wasm",
     "desktop/src-tauri",
     "tools/gen-fixtures",
 ]

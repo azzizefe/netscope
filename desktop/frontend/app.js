@@ -1,6 +1,11 @@
 // netscope Desktop — Frontend
 // Talks to the Rust backend over Tauri IPC (window.__TAURI__).
 
+import { invoke, listen, loadInterfaces, startCapture, stopCapture, onCaptureStopped, openCaptureOptions, openRemoteCapture, startRemoteCapture, doBlock, doUnblock } from './modules/api.js';
+import { packetRowHtml, renderPacketRows, renderPacketList, transportName, fieldRanges, treeNode, buildDetailTree, showDetail, hideDetail, hexDump, highlightBytes } from './modules/views/packets.js';
+import { closeVoipModal, switchVoipTab, renderVoipFlow, playVoipAudio, stopVoipAudio, renderVoipPlayer, showVoip } from './modules/views/voip.js';
+import initWasm from './wasm/netscope_wasm.js';
+
 const PROTOCOL_COLORS = {
   TCP: '#4a9ef5', UDP: '#45d1c5', DNS: '#a78bfa', HTTP: '#34d399',
   TLS: '#6ee7b7', ICMP: '#fbbf24', ARP: '#9ca3af',
@@ -141,6 +146,7 @@ const state = {
   packets: [],
   filteredPackets: [],
   selectedIndex: -1,
+  selectedPacket: null,
   filterText: '',
   status: STATES.IDLE,
   packetCount: 0,
@@ -187,16 +193,7 @@ const state = {
 };
 const LIVE_HISTORY = 60; // seconds of sparkline history
 
-// ---- Tauri IPC ----
-async function invoke(cmd, args = {}) {
-  if (window.__TAURI__) return window.__TAURI__.core.invoke(cmd, args);
-  console.warn(`[mock] invoke ${cmd}`, args);
-  return null;
-}
-async function listen(event, handler) {
-  if (window.__TAURI__) return window.__TAURI__.event.listen(event, handler);
-  console.warn(`[mock] listen ${event}`);
-}
+
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -239,33 +236,7 @@ function formatPacketTime(pkt) {
 }
 
 // ---- Interfaces ----
-async function loadInterfaces() {
-  try {
-    const ifaces = await invoke('list_interfaces');
-    if (ifaces && ifaces.length) {
-      // "All interfaces" (a sentinel value) captures on every listed interface
-      // at once, Wireshark-style; individual interfaces follow.
-      const allOpt = `<option value="__all__">${esc(I18N.t('iface.all'))}</option>`;
-      // Hardware-bus sources (USB / Bluetooth / CAN) get a badge so they're
-      // recognisable next to network adapters.
-      const badge = (k) => (k && k !== 'ethernet' && k !== 'loopback') ? `[${k.toUpperCase()}] ` : '';
-      els.interfaceSelect.innerHTML = allOpt + ifaces
-        .map((d) => `<option value="${d.name}">${esc(badge(d.kind))}${d.description || d.name}</option>`)
-        .join('');
-      // Prefer an interface that has a description (physical adapters usually do).
-      const best = ifaces.findIndex((d) => /wi-?fi|ethernet|wireless|realtek|intel/i.test(d.description || ''));
-      // +1 offsets the prepended "All interfaces" option.
-      els.interfaceSelect.selectedIndex = best >= 0 ? best + 1 : 1;
-      showNpcapWarning(false);
-    } else {
-      els.interfaceSelect.innerHTML = `<option>${esc(I18N.t('iface.none'))}</option>`;
-      showNpcapWarning(true);
-    }
-  } catch (e) {
-    els.interfaceSelect.innerHTML = `<option>${esc(I18N.t('iface.error'))}</option>`;
-    showNpcapWarning(true, String(e && e.message ? e.message : e));
-  }
-}
+
 
 const NPCAP_URL = 'https://npcap.com';
 
@@ -326,155 +297,7 @@ function buildCaptureOptions() {
   return Object.values(opts).some((v) => v != null) ? opts : null;
 }
 
-async function startCapture() {
-  const sel = els.interfaceSelect.value;
-  // "__all__" expands to every real interface; otherwise capture on the one
-  // chosen. The backend merges multiple interfaces into a single stream.
-  const interfaces = sel === '__all__'
-    ? [...els.interfaceSelect.options].map((o) => o.value).filter((v) => v && v !== '__all__')
-    : [sel];
-  const filter = els.filterInput.value || null;
-  try {
-    resetSession();
-    await invoke('start_capture', {
-      interfaces, filter,
-      monitor: !!state.settings.monitor,
-      options: buildCaptureOptions(),
-    });
-    markCapturing();
-  } catch (e) {
-    alert(`Could not start capture:\n${e}`);
-  }
-}
-async function stopCapture() {
-  try { await invoke('stop_capture'); } catch (e) { console.error(e); }
-  setStatus(STATES.IDLE);
-  els.startBtn.disabled = false;
-  els.stopBtn.disabled = true;
-}
 
-// The backend emits `capture-stopped` when a capture ends on its own — an
-// autostop limit (duration/packets/size) was hit, or a remote/USB stream
-// ended. Flip the UI back to idle; harmless after a manual stop.
-function onCaptureStopped() {
-  if (state.status !== STATES.CAPTURING) return;
-  setStatus(STATES.IDLE);
-  els.startBtn.disabled = false;
-  els.stopBtn.disabled = true;
-}
-
-// ---- Capture > Options… (autostop + save file + ring buffer) ----
-function openCaptureOptions() {
-  const o = state.captureOpts;
-  const field = (id, label, value, ph) => `
-    <label class="capopt-row"><span>${esc(label)}</span>
-      <input type="text" id="${id}" value="${esc(String(value || ''))}" placeholder="${esc(ph || '')}" spellcheck="false">
-    </label>`;
-  const body = `
-    <p class="popover-hint">${esc(I18N.t('capopts.hint'))}</p>
-    <fieldset class="capopt-group"><legend>${esc(I18N.t('capopts.autostop'))}</legend>
-      ${field('co-stop-dur', I18N.t('capopts.stop.duration'), o.stopDurationSecs, '60')}
-      ${field('co-stop-pkts', I18N.t('capopts.stop.packets'), o.stopPackets, '10000')}
-      ${field('co-stop-size', I18N.t('capopts.stop.filesize'), o.stopFilesizeKb, '10240')}
-    </fieldset>
-    <fieldset class="capopt-group"><legend>${esc(I18N.t('capopts.file'))}</legend>
-      ${field('co-out', I18N.t('capopts.output'), o.outputPath, 'C:\\captures\\session.pcap')}
-      ${field('co-ring-size', I18N.t('capopts.ring.filesize'), o.ringFilesizeKb, '2048')}
-      ${field('co-ring-dur', I18N.t('capopts.ring.duration'), o.ringDurationSecs, '300')}
-      ${field('co-ring-files', I18N.t('capopts.ring.files'), o.ringFiles, '10')}
-      <div class="popover-hint">${esc(I18N.t('capopts.ring.hint'))}</div>
-    </fieldset>
-    <div class="modal-actions">
-      <button id="co-clear" class="btn btn-small">${esc(I18N.t('capopts.clear'))}</button>
-      <button id="co-apply" class="btn btn-primary">${esc(I18N.t('capopts.apply'))}</button>
-    </div>`;
-  openToolModal(I18N.t('capopts.title'), body);
-  $('#co-apply').addEventListener('click', () => {
-    state.captureOpts = {
-      stopDurationSecs: $('#co-stop-dur').value.trim(),
-      stopPackets: $('#co-stop-pkts').value.trim(),
-      stopFilesizeKb: $('#co-stop-size').value.trim(),
-      outputPath: $('#co-out').value.trim(),
-      ringFilesizeKb: $('#co-ring-size').value.trim(),
-      ringDurationSecs: $('#co-ring-dur').value.trim(),
-      ringFiles: $('#co-ring-files').value.trim(),
-    };
-    saveJSON('netscope.captureopts', state.captureOpts);
-    closeToolModal();
-  });
-  $('#co-clear').addEventListener('click', () => {
-    state.captureOpts = { stopDurationSecs: '', stopPackets: '', stopFilesizeKb: '', outputPath: '', ringFilesizeKb: '', ringDurationSecs: '', ringFiles: '' };
-    saveJSON('netscope.captureopts', state.captureOpts);
-    closeToolModal();
-  });
-}
-
-// ---- Capture > Remote capture (SSH)… — sshdump-style ----
-function openRemoteCapture() {
-  const r = state.remote;
-  const field = (id, label, value, ph) => `
-    <label class="capopt-row"><span>${esc(label)}</span>
-      <input type="text" id="${id}" value="${esc(String(value || ''))}" placeholder="${esc(ph || '')}" spellcheck="false">
-    </label>`;
-  const body = `
-    <p class="popover-hint">${esc(I18N.t('remote.hint'))}</p>
-    ${field('rc-host', I18N.t('remote.host'), r.host, '192.168.1.1')}
-    ${field('rc-user', I18N.t('remote.user'), r.user, 'root')}
-    ${field('rc-port', I18N.t('remote.port'), r.port, '22')}
-    ${field('rc-identity', I18N.t('remote.identity'), r.identity, '~/.ssh/id_ed25519')}
-    ${field('rc-iface', I18N.t('remote.iface'), r.iface, 'any')}
-    ${field('rc-filter', I18N.t('remote.filter'), r.filter, 'not tcp port 22')}
-    ${field('rc-command', I18N.t('remote.command'), r.command, I18N.t('remote.command.ph'))}
-    <label class="capopt-row capopt-check"><input type="checkbox" id="rc-sudo" ${r.sudo ? 'checked' : ''}> <span>${esc(I18N.t('remote.sudo'))}</span></label>
-    <div class="popover-hint">${esc(I18N.t('remote.auth.hint'))}</div>
-    <div class="modal-actions">
-      <button id="rc-start" class="btn btn-primary">${esc(I18N.t('remote.start'))}</button>
-    </div>`;
-  openToolModal(I18N.t('remote.title'), body);
-  $('#rc-start').addEventListener('click', startRemoteCapture);
-}
-
-async function startRemoteCapture() {
-  const r = {
-    host: $('#rc-host').value.trim(),
-    user: $('#rc-user').value.trim(),
-    port: $('#rc-port').value.trim(),
-    identity: $('#rc-identity').value.trim(),
-    iface: $('#rc-iface').value.trim(),
-    filter: $('#rc-filter').value.trim(),
-    command: $('#rc-command').value.trim(),
-    sudo: $('#rc-sudo').checked,
-  };
-  if (!r.host) { alert(I18N.t('remote.needhost')); return; }
-  state.remote = r;
-  saveJSON('netscope.remote', r);
-  const startBtn = $('#rc-start');
-  startBtn.disabled = true;
-  startBtn.textContent = I18N.t('remote.connecting');
-  try {
-    resetSession();
-    // Blocks until the SSH stream starts, so errors (auth, unreachable,
-    // tcpdump missing) come back here with the server's message.
-    const label = await invoke('start_remote_capture', {
-      host: r.host,
-      user: r.user || null,
-      port: r.port ? parseInt(r.port, 10) : null,
-      identityFile: r.identity || null,
-      remoteInterface: r.iface || null,
-      filter: r.filter || null,
-      remoteCommand: r.command || null,
-      useSudo: !!r.sudo,
-      options: buildCaptureOptions(),
-    });
-    closeToolModal();
-    markCapturing();
-    els.statusText.textContent = `${I18N.t('status.capturing')} — ${label}`;
-  } catch (e) {
-    alert(`${I18N.t('remote.failed')}\n${e}`);
-    startBtn.disabled = false;
-    startBtn.textContent = I18N.t('remote.start');
-  }
-}
 function setStatus(s) {
   state.status = s;
   els.statusText.textContent = s === STATES.CAPTURING ? I18N.t('status.capturing') : I18N.t('status.idle');
@@ -1255,26 +1078,7 @@ function expertInfo(pkt) {
   return null;
 }
 
-async function doBlock(ip) {
-  try {
-    await invoke('block_ip', { ip });
-    state.blocked.add(ip);
-    renderConnections();
-    renderStats();
-  } catch (e) {
-    alert(`Could not block ${ip}:\n${e}`);
-  }
-}
-async function doUnblock(ip) {
-  try {
-    await invoke('unblock_ip', { ip });
-    state.blocked.delete(ip);
-    renderConnections();
-    renderStats();
-  } catch (e) {
-    alert(`Could not unblock ${ip}:\n${e}`);
-  }
-}
+
 
 // ---- Packets view ----
 function matchesFilter(pkt, text) {
@@ -1288,262 +1092,9 @@ function matchesFilter(pkt, text) {
     (pkt.dst_host && pkt.dst_host.toLowerCase().includes(l))
   );
 }
-// ---- Virtual scrolling (ROADMAP §2.2) ----
-// Only the rows inside the viewport (plus overscan) exist in the DOM; a
-// spacer gives the list its true height, so a 100k-packet capture scrolls as
-// smoothly as a 100-packet one. ROW_H must match .packet-row in styles.css.
-const ROW_H = 24;
-const VSCROLL_OVERSCAN = 12;
 
-function packetRowHtml(pkt, idx) {
-  const c = protoColor(pkt.protocol);
-  const isSel = idx === state.selectedIndex;
-  const sel = isSel ? ' selected' : '';
-  // Coloring rules: the first matching rule tints the row (selection wins).
-  const cr = isSel ? null : colorRuleFor(pkt);
-  const ruleStyle = cr ? ` style="background:${esc(cr.color)}2b;box-shadow:inset 3px 0 0 ${esc(cr.color)}"` : '';
-  const src = esc(endpointLabel(pkt.src_addr, pkt.src_host, pkt.src_port));
-  const dst = esc(endpointLabel(pkt.dst_addr, pkt.dst_host, pkt.dst_port));
-  const ei = expertInfo(pkt);
-  const badge = ei ? `<span class="expert-badge ${ei.cls}" title="${esc(ei.label)}">${ei.icon}</span> ` : '';
-  return `
-    <div class="packet-row proto-${esc(pkt.protocol)}${sel}" data-index="${idx}"${ruleStyle}>
-      <span class="col-num">${idx + 1}</span>
-      <span class="col-time" title="${esc(formatPacketTime(pkt))}">${esc(formatPacketTime(pkt))}</span>
-      <span class="col-src">${src}</span>
-      <span class="col-dir" style="color:${c}">→</span>
-      <span class="col-dst">${dst}</span>
-      <span class="col-proto" style="color:${c}">${esc(pkt.protocol)}</span>
-      <span class="col-len">${pkt.length}B</span>
-      <span class="col-info">${badge}${esc(pkt.summary)}</span>
-    </div>`;
-}
 
-// Re-render just the visible window of the already-filtered list. Called on
-// scroll — no filtering, no full-list DOM work.
-function renderPacketRows() {
-  const packets = state.filteredPackets;
-  const scroller = els.packetTable || els.packetList.parentElement;
-  const total = packets.length;
-  const headerH = els.packetHeader ? els.packetHeader.offsetHeight : 0;
-  const viewTop = Math.max(0, scroller.scrollTop - headerH);
-  const first = Math.max(0, Math.floor(viewTop / ROW_H) - VSCROLL_OVERSCAN);
-  const count = Math.ceil((scroller.clientHeight || 600) / ROW_H) + 2 * VSCROLL_OVERSCAN;
-  const last = Math.min(total, first + count);
-  const rows = [];
-  for (let i = first; i < last; i++) rows.push(packetRowHtml(packets[i], i));
-  els.packetList.style.position = 'relative';
-  els.packetList.style.height = `${total * ROW_H}px`;
-  els.packetList.innerHTML =
-    `<div style="position:absolute;top:${first * ROW_H}px;left:0;right:0">${rows.join('')}</div>`;
-}
 
-function renderPacketList() {
-  // Prefer the structured display-filter language (ip.addr == x, tcp.port ==
-  // 443, dns && frame.len > 1000). If the text isn't a valid filter
-  // expression, fall back to the free-text substring search so partial input
-  // and plain keywords still filter.
-  let packets;
-  if (state.filterText) {
-    const compiled = typeof NetscopeFilter !== 'undefined'
-      ? NetscopeFilter.compile(state.filterText)
-      : null;
-    packets = compiled
-      ? state.packets.filter((p) => compiled.matches(p))
-      : state.packets.filter((p) => matchesFilter(p, state.filterText));
-  } else {
-    packets = state.packets;
-  }
-  if (state.settings.noiseFilter) packets = packets.filter((p) => !isNoise(p));
-  state.filteredPackets = packets;
-
-  updateFilterFeedback();
-
-  if (!packets.length) {
-    els.packetList.style.height = 'auto';
-    els.packetList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No packets yet</div>';
-    return;
-  }
-
-  // Follow the tail (as the old tail-slice view did) unless the user has
-  // scrolled up to read something.
-  const scroller = els.packetTable || els.packetList.parentElement;
-  const nearBottom =
-    scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 3 * ROW_H;
-  renderPacketRows();
-  if (nearBottom) scroller.scrollTop = scroller.scrollHeight;
-}
-
-// Human transport-layer name for the packet's protocol.
-function transportName(proto) {
-  if (['TCP', 'HTTP', 'TLS', 'WebSocket', 'HTTP/2', 'gRPC', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Cassandra', 'Modbus', 'DNP3', 'EtherNet/IP', 'OPC UA', 'LDAP', 'MQTT', 'BGP'].includes(proto)) return 'TCP';
-  if (['UDP', 'DNS', 'BACnet', 'RTP', 'RTCP', 'Kerberos', 'RADIUS', 'OpenVPN', 'WireGuard', 'CoAP'].includes(proto)) return 'UDP';
-  if (proto === 'ICMP' || proto === 'ARP') return proto;
-  return null;
-}
-const u16be = (raw, off) => ((raw[off] << 8) | raw[off + 1]) >>> 0;
-const macStr = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(':');
-
-// Byte ranges [start, end) of well-known header fields within a raw Ethernet
-// frame, so a detail-tree field can highlight its bytes in the hex view.
-// Walks VLAN tags and reads the IPv4 IHL / IPv6 fixed header to locate the
-// transport ports. Returns only the fields it can place within captured bytes.
-function fieldRanges(raw) {
-  const R = {};
-  if (!raw || raw.length < 14) return R;
-  R.ethDst = [0, 6];
-  R.ethSrc = [6, 12];
-  const VLAN = new Set([0x8100, 0x88a8, 0x9100]);
-  let p = 12;
-  let et = u16be(raw, p);
-  while (VLAN.has(et) && p + 6 <= raw.length) { p += 4; et = u16be(raw, p); }
-  R.ethType = [p, p + 2];
-  const l3 = p + 2;
-  if (et === 0x0800 && raw.length >= l3 + 20) { // IPv4
-    const ihl = (raw[l3] & 0x0f) * 4;
-    const proto = raw[l3 + 9];
-    R.ipProto = [l3 + 9, l3 + 10];
-    R.ipSrc = [l3 + 12, l3 + 16];
-    R.ipDst = [l3 + 16, l3 + 20];
-    const l4 = l3 + ihl;
-    if ((proto === 6 || proto === 17) && raw.length >= l4 + 4) {
-      R.srcPort = [l4, l4 + 2];
-      R.dstPort = [l4 + 2, l4 + 4];
-    }
-  } else if (et === 0x86dd && raw.length >= l3 + 40) { // IPv6
-    const nh = raw[l3 + 6];
-    R.ipSrc = [l3 + 8, l3 + 24];
-    R.ipDst = [l3 + 24, l3 + 40];
-    const l4 = l3 + 40;
-    if ((nh === 6 || nh === 17) && raw.length >= l4 + 4) {
-      R.srcPort = [l4, l4 + 2];
-      R.dstPort = [l4 + 2, l4 + 4];
-    }
-  }
-  return R;
-}
-
-// One collapsible protocol layer for the detail tree. Each field is
-// [key, value, mono?, range?]; when a byte range is given the row becomes
-// clickable to highlight those bytes in the hex view.
-function treeNode(label, sub, fields, extraClass = '') {
-  const head = `<div class="tnode-head"><span class="twist">▾</span>` +
-    `<span class="tlabel">${esc(label)}${sub ? ` <span class="tlabel-sub">${esc(sub)}</span>` : ''}</span></div>`;
-  const body = `<div class="tbody">${fields.map(([k, v, mono, range]) => {
-    const attrs = range ? ` data-range="${range[0]},${range[1]}"` : '';
-    const cls = range ? 'tfield tfield-click' : 'tfield';
-    return `<div class="${cls}"${attrs}><span class="tkey">${esc(k)}</span><span class="tval${mono ? ' mono' : ''}">${esc(v)}</span></div>`;
-  }).join('')}</div>`;
-  return `<div class="tnode ${extraClass}">${head}${body}</div>`;
-}
-
-// Build the Wireshark-style layered protocol tree for one packet.
-function buildDetailTree(pkt, index) {
-  const nodes = [];
-  const raw = pkt.raw || [];
-  const R = fieldRanges(raw);
-  const ipVer = pkt.src_addr ? (pkt.src_addr.includes(':') ? 'IPv6' : 'IPv4') : null;
-  const transport = transportName(pkt.protocol);
-  const chain = ['Ethernet', ipVer, transport !== pkt.protocol ? transport : null, pkt.protocol]
-    .filter((x, i, a) => x && a.indexOf(x) === i);
-
-  // Frame layer
-  nodes.push(treeNode(`Frame ${index + 1}`, `${pkt.length} bytes on wire`, [
-    ['Arrival time', formatPacketTime(pkt)],
-    ['Frame length', `${pkt.length} bytes`],
-    ['Captured bytes', `${raw.length} bytes`],
-    ['Protocols in frame', chain.join(' · ')],
-  ]));
-
-  // Link layer (Ethernet) — click a MAC/EtherType to highlight its bytes.
-  if (R.ethDst && raw.length >= 14) {
-    nodes.push(treeNode('Ethernet II', '', [
-      ['Destination', macStr(raw.slice(R.ethDst[0], R.ethDst[1])), true, R.ethDst],
-      ['Source', macStr(raw.slice(R.ethSrc[0], R.ethSrc[1])), true, R.ethSrc],
-      ['EtherType', `0x${u16be(raw, R.ethType[0]).toString(16).padStart(4, '0')}`, true, R.ethType],
-    ]));
-  }
-
-  // Network layer
-  if (pkt.src_addr || pkt.dst_addr) {
-    const net = [];
-    if (pkt.src_addr) net.push(['Source address', pkt.src_addr, true, R.ipSrc]);
-    if (state.settings.showHostnames && pkt.src_host) net.push(['Source host', pkt.src_host]);
-    if (pkt.dst_addr) net.push(['Destination address', pkt.dst_addr, true, R.ipDst]);
-    if (state.settings.showHostnames && pkt.dst_host) net.push(['Destination host', pkt.dst_host]);
-    nodes.push(treeNode(`Internet Protocol ${ipVer ? `(${ipVer})` : ''}`.trim(),
-      pkt.src_addr && pkt.dst_addr ? `${pkt.src_addr} → ${pkt.dst_addr}` : '', net));
-  }
-
-  // GeoIP placeholders — filled in asynchronously by enrichGeo() for public IPs.
-  for (const [role, ip] of [['Destination', pkt.dst_addr], ['Source', pkt.src_addr]]) {
-    if (!isPublicIp(ip)) continue;
-    nodes.push(`<div class="tnode tnode-geo geo-node" data-ip="${esc(ip)}" data-role="${role}">` +
-      `<div class="tnode-head"><span class="twist">▾</span>` +
-      `<span class="tlabel">🌍 ${role} location <span class="tlabel-sub">${esc(ip)}</span></span></div>` +
-      `<div class="tbody"><div class="tfield"><span class="tkey">Location</span>` +
-      `<span class="tval geo-status">${state.geoDb ? 'Looking up…' : esc(I18N.t('geoip.off'))}</span></div></div></div>`);
-  }
-
-  // Transport layer
-  if (transport && (pkt.src_port != null || pkt.dst_port != null)) {
-    const t = [['Transport', transport]];
-    if (pkt.src_port != null) t.push(['Source port', String(pkt.src_port), true, R.srcPort]);
-    if (pkt.dst_port != null) t.push(['Destination port', String(pkt.dst_port), true, R.dstPort]);
-    nodes.push(treeNode(transport,
-      `${pkt.src_port ?? '?'} → ${pkt.dst_port ?? '?'}`, t));
-  }
-
-  // Application / summary layer
-  nodes.push(treeNode(pkt.protocol, 'application data', [
-    ['Protocol', pkt.protocol],
-    ['Info', pkt.summary || '—'],
-  ]));
-
-  // Expert Info — only for real anomalies the dissector actually reported
-  const ei = expertInfo(pkt);
-  if (ei) {
-    nodes.push(`<div class="tnode tnode-expert ${ei.cls}"><div class="tnode-head">` +
-      `<span class="twist">▾</span><span class="tlabel">${ei.icon} Expert Info</span></div>` +
-      `<div class="tbody"><div class="tfield"><span class="tkey">Notice</span><span class="tval">${esc(ei.label)}</span></div></div></div>`);
-  }
-
-  // Protocol guesser — for traffic the dissector couldn't name (obfuscated /
-  // non-standard ports), suggest what it most likely is and show the reasoning.
-  if (pkt.protocol === 'Unknown' || (['TCP', 'UDP'].includes(pkt.protocol) && (pkt.raw || []).length > 42)) {
-    const g = guessProtocol(pkt);
-    if (g) {
-      const pct = Math.round(g.confidence * 100);
-      nodes.push(`<div class="tnode tnode-guess"><div class="tnode-head">` +
-        `<span class="twist">▾</span><span class="tlabel">🔮 Protocol guess <span class="tlabel-sub">${esc(g.label)} · ${pct}% confidence</span></span></div>` +
-        `<div class="tbody">${g.reasons.map((r) => `<div class="tfield"><span class="tkey">•</span><span class="tval">${esc(r)}</span></div>`).join('')}</div></div>`);
-    }
-  }
-
-  // Semantic Log Parsing — the business-logic meaning of this packet.
-  const events = semanticEvents(pkt);
-  if (events.length) {
-    nodes.push(`<div class="tnode tnode-semantic"><div class="tnode-head">` +
-      `<span class="twist">▾</span><span class="tlabel">🧩 What happened</span></div>` +
-      `<div class="tbody">${events.map((e) => `<div class="tfield"><span class="tkey">${e.icon}</span><span class="tval">${esc(e.text)}</span></div>`).join('')}</div></div>`);
-  }
-
-  // Dynamic Payload Beautifier — JSON/XML rendered as a coloured tree.
-  const beauty = beautifyPayload(pkt.raw && pkt.raw.length ? decodeStreamText(extractPayload(pkt.raw) || []) : '');
-  if (beauty) {
-    nodes.push(`<div class="tnode tnode-beauty"><div class="tnode-head">` +
-      `<span class="twist">▾</span><span class="tlabel">✨ Payload (${beauty.kind}) <span class="tlabel-sub">beautified</span></span></div>` +
-      `<div class="tbody jt-root">${beauty.html}</div></div>`);
-  }
-
-  // netscope's plain-language explanation (its edge over Wireshark)
-  if (pkt.explanation) {
-    nodes.push(`<div class="tnode tnode-explain"><div class="tnode-head">` +
-      `<span class="twist">▾</span><span class="tlabel">ℹ What is this?</span></div>` +
-      `<div class="tbody">${esc(pkt.explanation)}</div></div>`);
-  }
-  return nodes.join('');
-}
 
 // ---- GeoIP enrichment ----
 // Looked up on demand (only when a packet is opened), cached per IP, so we add
@@ -1692,70 +1243,7 @@ async function enrichGeo(pkt) {
   }
 }
 
-function showDetail(index) {
-  const pkt = state.filteredPackets[index];
-  if (!pkt) return;
-  state.selectedIndex = index;
-  $('#view-packets').classList.add('with-detail');
-  els.detailTree.innerHTML = buildDetailTree(pkt, index);
-  els.hexDump.innerHTML = hexDump(pkt.raw || []);
-  els.hexLen.textContent = `${(pkt.raw || []).length} bytes`;
-  enrichGeo(pkt);
 
-  if (window.__TAURI__) {
-    window.__TAURI__.event.emit("packet-selected", pkt);
-  }
-}
-function hideDetail() {
-  state.selectedIndex = -1;
-  $('#view-packets').classList.remove('with-detail');
-  renderPacketList();
-}
-function hexDump(bytes) {
-  if (!bytes.length) return '<span class="hx-off">(no data)</span>';
-  let out = '';
-  for (let i = 0; i < bytes.length; i += 16) {
-    const chunk = bytes.slice(i, i + 16);
-    // Per-byte spans (tagged with their absolute offset) let a detail-tree
-    // field highlight exactly its bytes. Missing slots in the last row still
-    // emit two spaces so the ASCII column stays aligned (47-char hex column).
-    let hex = '';
-    for (let j = 0; j < 16; j++) {
-      if (j > 0) hex += ' ';
-      if (j < chunk.length) {
-        hex += `<span class="hb" data-i="${i + j}">${chunk[j].toString(16).padStart(2, '0')}</span>`;
-      } else {
-        hex += '  ';
-      }
-    }
-    let asc = '';
-    for (let j = 0; j < chunk.length; j++) {
-      const b = chunk[j];
-      const ch = (b >= 32 && b < 127) ? String.fromCharCode(b) : '.';
-      asc += `<span class="ha" data-i="${i + j}">${esc(ch)}</span>`;
-    }
-    out += `<span class="hx-off">${i.toString(16).padStart(4, '0')}</span>  ` +
-      `<span class="hx-hex">${hex}</span>  ` +
-      `<span class="hx-asc">${asc}</span>\n`;
-  }
-  return out;
-}
-
-// Highlight bytes [start, end) in the hex view (both hex and ASCII columns)
-// and scroll the first one into view. Called when a detail-tree field is clicked.
-function highlightBytes(start, end) {
-  const hd = els.hexDump;
-  if (!hd) return;
-  hd.querySelectorAll('.hl').forEach((el) => el.classList.remove('hl'));
-  let first = null;
-  for (let i = start; i < end; i++) {
-    hd.querySelectorAll(`[data-i="${i}"]`).forEach((el) => {
-      el.classList.add('hl');
-      if (!first) first = el;
-    });
-  }
-  if (first) first.scrollIntoView({ block: 'nearest' });
-}
 
 // ---- Dashboard ----
 function updateStats(pkt) {
@@ -4405,219 +3893,7 @@ function showEndpoints() {
   ], rows));
 }
 
-let voipActiveTab = 'log';
-let audioCtx = null;
-let audioInterval = null;
-let audioOsc = null;
-let audioGain = null;
-let isPlayingAudio = false;
 
-function closeVoipModal() {
-  $('#voip-modal').classList.add('hidden');
-  stopVoipAudio();
-}
-
-function switchVoipTab(tab) {
-  voipActiveTab = tab;
-  $$('#voip-modal .modal-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.voipTab === tab);
-  });
-  $$('.voip-tab-content').forEach(div => {
-    div.classList.add('hidden');
-  });
-  $(`#voip-tab-${tab}-content`).classList.remove('hidden');
-
-  if (tab === 'flow') {
-    renderVoipFlow();
-  } else if (tab === 'player') {
-    renderVoipPlayer();
-  }
-}
-
-function renderVoipFlow() {
-  const pkts = activePackets().filter(p => p.protocol === 'SIP');
-  const svg = $('#voip-flow-svg');
-  if (!pkts.length) {
-    svg.innerHTML = '<text x="250" y="150" fill="var(--text-muted)" font-size="12" text-anchor="middle">No SIP signalling packets captured yet.</text>';
-    return;
-  }
-
-  const hosts = [...new Set(pkts.flatMap(p => [p.src_addr || p.src_host, p.dst_addr || p.dst_host]))].filter(Boolean).slice(0, 3);
-  if (hosts.length < 2) {
-    svg.innerHTML = '<text x="250" y="150" fill="var(--text-muted)" font-size="12" text-anchor="middle">Need at least 2 hosts to draw a ladder diagram.</text>';
-    return;
-  }
-
-  const W = 500;
-  const rowH = 26;
-  const top = 30;
-  const H = top + pkts.length * rowH + 20;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.style.height = `${Math.min(H, 300)}px`;
-
-  let out = '';
-  const xCoords = [];
-  hosts.forEach((h, i) => {
-    const x = i === 0 ? 80 : (i === 1 ? W - 80 : W / 2);
-    xCoords.push(x);
-    out += `<line x1="${x}" y1="20" x2="${x}" y2="${H - 10}" stroke="var(--border)" stroke-width="1"/>`;
-    out += `<text x="${x}" y="14" fill="var(--text)" font-size="10" font-weight="600" text-anchor="middle">${esc(h.length > 15 ? h.slice(0, 13) + '…' : h)}</text>`;
-  });
-
-  pkts.forEach((p, i) => {
-    const y = top + i * rowH;
-    const srcIdx = hosts.indexOf(p.src_addr || p.src_host);
-    const dstIdx = hosts.indexOf(p.dst_addr || p.dst_host);
-    if (srcIdx < 0 || dstIdx < 0) return;
-    const x1 = xCoords[srcIdx];
-    const x2 = xCoords[dstIdx];
-    const color = p.summary.includes('200 OK') ? 'var(--success)' : (p.summary.includes('INVITE') ? 'var(--accent)' : 'var(--text-muted)');
-
-    out += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="1.5" marker-end="url(#voip-arrow)"/>`;
-
-    let label = p.summary;
-    if (label.startsWith('SIP ')) label = label.substring(4);
-    if (label.length > 30) label = label.substring(0, 28) + '…';
-
-    const textX = (x1 + x2) / 2;
-    out += `<text x="${textX}" y="${y - 4}" fill="${color}" font-size="9" text-anchor="middle" font-weight="500">${esc(label)}</text>`;
-    const timeX = x1 < x2 ? x1 - 6 : x1 + 6;
-    const timeAnchor = x1 < x2 ? 'end' : 'start';
-    out += `<text x="${timeX}" y="${y + 3}" fill="var(--text-muted)" font-size="8" text-anchor="${timeAnchor}">${esc(p.timestamp)}</text>`;
-  });
-
-  const arrow = `<defs><marker id="voip-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--text-muted)"/></marker></defs>`;
-  svg.innerHTML = arrow + out;
-}
-
-function playVoipAudio() {
-  if (isPlayingAudio) return;
-
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioOsc = audioCtx.createOscillator();
-  audioGain = audioCtx.createGain();
-
-  audioOsc.type = 'triangle';
-  audioOsc.frequency.setValueAtTime(320, audioCtx.currentTime);
-  audioGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-
-  audioOsc.connect(audioGain);
-  audioGain.connect(audioCtx.destination);
-  audioOsc.start();
-
-  isPlayingAudio = true;
-  $('#voip-play-btn').textContent = '■ Stop Audio';
-  $('#voip-player-status').textContent = 'Status: Playing Simulated Stream...';
-
-  let time = 0;
-  const canvas = $('#voip-waveform');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-
-  const jitterVal = parseFloat($('#voip-jitter-val').textContent) || 0;
-
-  audioInterval = setInterval(() => {
-    time += 0.05;
-    let freq = 320 + Math.sin(time * 3) * 60 + Math.sin(time * 8) * 20;
-    if (jitterVal > 0.5) {
-      freq += (Math.random() - 0.5) * jitterVal * 15;
-    }
-
-    audioOsc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-    ctx.fillStyle = '#0b111e';
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'var(--accent)';
-    ctx.beginPath();
-    ctx.moveTo(0, H / 2);
-
-    for (let x = 0; x < W; x++) {
-      const amp = 30 + Math.sin(time * 5) * 10;
-      const noise = (jitterVal > 1.5) ? (Math.random() - 0.5) * (jitterVal * 2) : 0;
-      const y = H / 2 + Math.sin(x * 0.05 + time * 10) * amp + noise;
-      ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }, 30);
-}
-
-function stopVoipAudio() {
-  if (!isPlayingAudio) return;
-  clearInterval(audioInterval);
-  if (audioOsc) {
-    try { audioOsc.stop(); } catch(e) {}
-    audioOsc.disconnect();
-  }
-  if (audioGain) {
-    audioGain.disconnect();
-  }
-  if (audioCtx) {
-    audioCtx.close();
-  }
-  isPlayingAudio = false;
-  $('#voip-play-btn').textContent = '▶ Play Audio';
-  $('#voip-player-status').textContent = 'Status: Idle';
-
-  const canvas = $('#voip-waveform');
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#0b111e';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function renderVoipPlayer() {
-  let rtpSSRC = '—';
-  let rtpJitter = '—';
-  let rtpMOS = '—';
-  const rtpPkts = activePackets().filter(p => p.protocol === 'RTP');
-  if (rtpPkts.length) {
-    for (const p of rtpPkts) {
-      const mSsrc = /SSRC 0x([0-9a-fA-F]+)/.exec(p.summary || '');
-      if (mSsrc) rtpSSRC = '0x' + mSsrc[1];
-      const mJit = /Jitter ([\d\.]+)ms/.exec(p.summary || '');
-      if (mJit) rtpJitter = mJit[1] + ' ms';
-      const mMos = /MOS ([\d\.]+)/.exec(p.summary || '');
-      if (mMos) rtpMOS = mMos[1];
-    }
-  } else {
-    const sipPkts = activePackets().filter(p => p.protocol === 'SIP');
-    if (sipPkts.length) {
-      rtpSSRC = '0x00c0ffee';
-      rtpJitter = '1.8 ms';
-      rtpMOS = '4.3';
-    }
-  }
-
-  $('#voip-ssrc-val').textContent = rtpSSRC;
-  $('#voip-jitter-val').textContent = rtpJitter;
-  $('#voip-mos-val').textContent = rtpMOS;
-
-  const canvas = $('#voip-waveform');
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#0b111e';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const playBtn = $('#voip-play-btn');
-  playBtn.onclick = () => {
-    if (isPlayingAudio) stopVoipAudio();
-    else playVoipAudio();
-  };
-}
-
-function showVoip() {
-  const rows = computeVoipCalls(activePackets());
-  $('#voip-log-table-wrap').innerHTML = toolTable([
-    { key: 'time', label: 'Time' }, { key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'summary', label: 'Event' },
-  ], rows);
-
-  const sipCount = activePackets().filter(p => p.protocol === 'SIP').length;
-  const rtpCount = activePackets().filter(p => p.protocol === 'RTP').length;
-  $('#voip-meta').textContent = `${rows.length} call events found · ${sipCount} SIP signalling packets · ${rtpCount} RTP media packets`;
-
-  $('#voip-modal').classList.remove('hidden');
-  switchVoipTab('log');
-}
 
 function showCredentials() {
   const rows = computeCredentials(activePackets());
@@ -5378,6 +4654,12 @@ function toggleTabPin(view) {
 
 // ---- Init ----
 async function init() {
+  try {
+    await initWasm();
+  } catch (e) {
+    console.error("WASM init failed", e);
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const detached = urlParams.get('detached');
   if (detached) {

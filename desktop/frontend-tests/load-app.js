@@ -10,12 +10,39 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { TextDecoder, TextEncoder } from 'node:util';
 import path from 'node:path';
 import vm from 'node:vm';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const filterSource = readFileSync(path.join(here, '..', 'frontend', 'filter.js'), 'utf8');
-const source = readFileSync(path.join(here, '..', 'frontend', 'app.js'), 'utf8');
+
+function stripESM(src) {
+  return src
+    .replace(/import\s+(?:{[\s\S]*?}|[a-zA-Z0-9_*]+)\s+from\s+['"].*?['"];?/g, '')
+    .replace(/export\s+(function|const|let|class|async\s+function)\b/g, '$1')
+    .replace(/export\s+{[\s\S]*?};?/g, '')
+    .replace(/export\s+default\s+.*?;?/g, '')
+    .replace(/\bimport\.meta\.url\b/g, '""')
+    .replace(/\bimport\.meta\b/g, '{}');
+}
+
+function loadModule(name) {
+  try {
+    return readFileSync(path.join(here, '..', 'frontend', name), 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function initWasmInContext(ctx) {
+  const wasmJsSource = readFileSync(path.join(here, '..', 'frontend', 'wasm', 'netscope_wasm.js'), 'utf8');
+  const wasmBuffer = readFileSync(path.join(here, '..', 'frontend', 'wasm', 'netscope_wasm_bg.wasm'));
+  vm.runInContext(stripESM(wasmJsSource), ctx, { filename: 'netscope_wasm.js' });
+  ctx.wasmBuffer = wasmBuffer;
+  ctx.initSync(vm.runInContext("({ module: wasmBuffer })", ctx));
+  delete ctx.wasmBuffer;
+}
 
 export function loadApp() {
   const noop = () => {};
@@ -39,25 +66,37 @@ export function loadApp() {
     setTimeout: noop, clearTimeout: noop, setInterval: () => 0, clearInterval: noop,
     fetch: () => Promise.reject(new Error('network disabled in tests')),
     I18N: { t: (k) => k, apply: noop, lang: () => 'en', has: () => true },
+    TextDecoder,
+    TextEncoder,
   };
   ctx.window = ctx;
   ctx.self = ctx;
   ctx.globalThis = ctx;
 
   vm.createContext(ctx);
+  initWasmInContext(ctx);
   // filter.js must run first: app.js references the NetscopeFilter global it
   // defines (exactly as index.html loads them in order).
-  vm.runInContext(filterSource, ctx, { filename: 'filter.js' });
-  vm.runInContext(source, ctx, { filename: 'app.js' });
+  vm.runInContext(stripESM(filterSource), ctx, { filename: 'filter.js' });
+  const apiSource = loadModule('modules/api.js');
+  const packetsSource = loadModule('modules/views/packets.js');
+  const voipSource = loadModule('modules/views/voip.js');
+  const appSource = readFileSync(path.join(here, '..', 'frontend', 'app.js'), 'utf8');
+
+  if (apiSource) vm.runInContext(stripESM(apiSource), ctx, { filename: 'api.js' });
+  if (packetsSource) vm.runInContext(stripESM(packetsSource), ctx, { filename: 'packets.js' });
+  if (voipSource) vm.runInContext(stripESM(voipSource), ctx, { filename: 'voip.js' });
+  vm.runInContext(stripESM(appSource), ctx, { filename: 'app.js' });
   return ctx;
 }
 
 /** Load just filter.js (no DOM/app needed) and return its NetscopeFilter. */
 export function loadFilter() {
-  const ctx = { console };
+  const ctx = { console, TextDecoder, TextEncoder };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  vm.runInContext(filterSource, ctx, { filename: 'filter.js' });
+  initWasmInContext(ctx);
+  vm.runInContext(stripESM(filterSource), ctx, { filename: 'filter.js' });
   return ctx.NetscopeFilter;
 }
 
