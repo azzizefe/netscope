@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use crate::models::{Packet, Protocol};

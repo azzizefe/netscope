@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 pub mod connections;
 pub mod dashboard;
 pub mod dns_log;

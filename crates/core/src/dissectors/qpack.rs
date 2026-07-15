@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 /// QPACK Static Table and Decoder (RFC 9204).
 /// QPACK is the header compression protocol for HTTP/3 over QUIC.
 

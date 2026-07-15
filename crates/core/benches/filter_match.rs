@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Display-filter evaluation speed (ROADMAP §4.4): 100k match calls across a
 //! representative set of filter expressions, from a bare protocol word to
 //! frame-parsing fields like `http.request.method`.

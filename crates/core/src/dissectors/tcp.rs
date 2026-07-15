@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};

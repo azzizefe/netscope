@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Shared packet builders for the benchmarks (ROADMAP §4.4).
 //!
 //! Benches compile as separate crates, so the library's `#[cfg(test)]`

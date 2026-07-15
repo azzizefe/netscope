@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! CAN bus dissector — SocketCAN captures (`LINKTYPE_CAN_SOCKETCAN`, DLT 227).
 //!
 //! Linux exposes CAN controllers (`can0`, `vcan0`, `slcan0`) as ordinary

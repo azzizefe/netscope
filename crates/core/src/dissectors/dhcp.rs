@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use std::net::{IpAddr, Ipv4Addr};
 
 use crate::models::Protocol;

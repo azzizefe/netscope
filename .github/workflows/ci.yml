@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+
 name: CI
 
 on:
@@ -8,27 +11,47 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Jobs:
+#   1. lint        — cargo clippy (deny warnings) + cargo fmt --check
+#   2. test        — cargo test on Linux / macOS / Windows
+#   3. frontend    — npm test (vitest) for desktop frontend unit tests
+#   4. bench       — continuous benchmarks (parse, filter, memory)
+# ─────────────────────────────────────────────────────────────────────────────
+
 jobs:
+  # ── 1. Lint ────────────────────────────────────────────────────────────────
   lint:
+    name: Clippy + Rustfmt
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
-      - name: Install libpcap
-        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
-      - run: cargo clippy --workspace --exclude netscope-desktop -- -D warnings
-      - run: cargo fmt --check
 
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install libpcap-dev
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: Clippy (all workspace crates except desktop)
+        run: cargo clippy --workspace --exclude netscope-desktop -- -D warnings
+
+      - name: Rustfmt
+        run: cargo fmt --check
+
+  # ── 2. Rust tests (matrix: Linux, macOS, Windows) ─────────────────────────
   test:
+    name: Tests (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -37,10 +60,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
+
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install libpcap (Linux)
+      # Platform-specific packet capture library setup
+      - name: Install libpcap-dev (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
@@ -48,44 +74,84 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip" -UseBasicParsing
-          Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk" -Force
-          echo "LIBPCAP_LIBDIR=$env:TEMP\npcap-sdk\Lib\x64" | Out-File -FilePath $env:GITHUB_ENV -Append
+          # Download and extract the Npcap SDK so the `pcap` crate can link
+          $sdkUrl  = "https://npcap.com/dist/npcap-sdk-1.13.zip"
+          $zipPath = "$env:TEMP\npcap-sdk.zip"
+          $sdkDir  = "$env:TEMP\npcap-sdk"
+          Invoke-WebRequest -Uri $sdkUrl -OutFile $zipPath -UseBasicParsing
+          Expand-Archive -Path $zipPath -DestinationPath $sdkDir -Force
+          # Expose LIB so the linker finds Packet.lib / wpcap.lib
+          $libDir = "$sdkDir\Lib\x64"
+          echo "LIB=$libDir;$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "LIBPCAP_LIBDIR=$libDir"| Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - run: cargo build -p netscope-core -p netscope-tui
-      - run: cargo test -p netscope-core -p netscope-tui
+      # Build & test the core + TUI crates (desktop is excluded because it
+      # needs Tauri system deps that differ per-OS and are tested in release.yml)
+      - name: Build
+        run: cargo build -p netscope-core -p netscope-tui
 
-  # Desktop frontend unit tests (vitest) — run the shipped app.js/filter.js
-  # sources in a sandbox, no build step required.
+      - name: Test
+        run: cargo test -p netscope-core -p netscope-tui
+
+  # ── 3. Frontend tests (vitest) ─────────────────────────────────────────────
   frontend:
+    name: Frontend (vitest)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: desktop/frontend-tests/package-lock.json
-      - run: npm ci
-        working-directory: desktop/frontend-tests
-      - run: npm test
+
+      # Build the WASM filter module — frontend tests load it at runtime
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.100
+
+      - name: Build WASM filter module
+        run: |
+          cargo build -p netscope-wasm --release --target wasm32-unknown-unknown
+          wasm-bindgen \
+            --target web \
+            --out-dir desktop/frontend/wasm \
+            target/wasm32-unknown-unknown/release/netscope_wasm.wasm
+
+      - name: Install npm dependencies
+        run: npm ci
         working-directory: desktop/frontend-tests
 
-  # Continuous benchmarks (ROADMAP §4.4). Quick mode keeps the job fast; the
-  # numbers land in the job log so regressions are visible in review.
+      - name: Run frontend tests
+        run: npm test
+        working-directory: desktop/frontend-tests
+
+  # ── 4. Benchmarks (quick mode) ─────────────────────────────────────────────
   bench:
+    name: Benchmarks
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
+
       - uses: Swatinem/rust-cache@v2
-      - name: Install libpcap
+
+      - name: Install libpcap-dev
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
       - name: Parse & filter benchmarks (quick mode)
         run: |
           cargo bench -p netscope-core --bench parse_throughput -- --quick
           cargo bench -p netscope-core --bench filter_match -- --quick
+
       - name: Memory footprint (200k packets)
         run: MEM_PACKETS=200000 cargo bench -p netscope-core --bench mem_usage

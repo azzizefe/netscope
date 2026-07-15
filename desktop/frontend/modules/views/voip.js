@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 // netscope Desktop — VoIP and RTP View Module
 // Handles VoIP SIP Flow ladders and RTP audio player simulations.
 

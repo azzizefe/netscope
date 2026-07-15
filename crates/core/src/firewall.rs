@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Blocking traffic by remote IP.
 //!
 //! netscope captures passively (libpcap/Npcap can't drop packets inline), so

@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Remote & external capture sources — netscope's take on Wireshark's
 //! sshdump / extcap family.
 //!

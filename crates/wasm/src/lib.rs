@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use wasm_bindgen::prelude::*;
 use netscope_core::filter::Filter;
 use netscope_core::models::{Packet, Protocol};

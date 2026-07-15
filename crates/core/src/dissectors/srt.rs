@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use std::sync::OnceLock;
 use std::sync::Mutex;
 use std::collections::HashMap;

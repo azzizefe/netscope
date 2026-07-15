@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Bluetooth HCI dissector — host↔controller traffic captured on Linux
 //! `bluetoothN` interfaces (`LINKTYPE_BLUETOOTH_HCI_H4` DLT 187 and
 //! `LINKTYPE_BLUETOOTH_HCI_H4_WITH_PHDR` DLT 201, which prefixes a 4-byte

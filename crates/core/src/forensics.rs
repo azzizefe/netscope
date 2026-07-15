@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 use crate::models::{Packet, Protocol};
 use std::collections::{BTreeMap, HashMap};
 use serde::{Serialize, Deserialize};

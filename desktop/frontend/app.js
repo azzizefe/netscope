@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 // netscope Desktop — Frontend
 // Talks to the Rust backend over Tauri IPC (window.__TAURI__).
 

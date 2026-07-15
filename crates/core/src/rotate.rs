@@ -1,3 +1,5 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Ring-buffer capture files — Wireshark's `-b` option for netscope.
 //!
 //! [`RingWriter`] writes classic pcap files and switches to a new file when
