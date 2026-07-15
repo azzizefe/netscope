@@ -18,11 +18,17 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             binary: netscope-tui
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            binary: netscope-tui
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: netscope-tui
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            binary: netscope-tui.exe
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
             binary: netscope-tui.exe
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -35,7 +41,12 @@ jobs:
 
       - name: Install libpcap (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpcap-dev
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          fi
 
       - name: Install Npcap SDK (Windows)
         if: runner.os == 'Windows'
@@ -43,9 +54,26 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip" -UseBasicParsing
           Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk" -Force
-          echo "LIBPCAP_LIBDIR=$env:TEMP\npcap-sdk\Lib\x64" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $libDir = if ("${{ matrix.target }}" -eq "aarch64-pc-windows-msvc") { "$env:TEMP\npcap-sdk\Lib\ARM64" } else { "$env:TEMP\npcap-sdk\Lib\x64" }
+          if (-not (Test-Path $libDir)) { $libDir = "$env:TEMP\npcap-sdk\Lib\x64" }
+          echo "LIBPCAP_LIBDIR=$libDir" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - run: cargo build -p netscope-tui --release --target ${{ matrix.target }}
+
+      # Code signing template for EV certificate (ROADMAP §8.3)
+      - name: Code Sign Binary (Windows EV Cert)
+        if: runner.os == 'Windows' && env.SIGNING_CERTIFICATE_PFX != ''
+        shell: pwsh
+        run: |
+          # Example using signtool with EV Cert from GitHub Secrets
+          # signtool sign /f "$env:SIGNING_CERTIFICATE_PFX" /p "$env:SIGNING_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 target/${{ matrix.target }}/release/${{ matrix.binary }}
+          Write-Host "Code signing placeholder run completed for Windows EV Certificate."
+
+      - name: Notarize Binary (macOS Apple Developer EV Cert)
+        if: runner.os == 'macOS' && env.APPLE_DEVELOPER_IDENTITY != ''
+        run: |
+          # codesign -s "$APPLE_DEVELOPER_IDENTITY" --timestamp target/${{ matrix.target }}/release/${{ matrix.binary }}
+          echo "Notarization placeholder run completed for macOS."
 
       - name: Upload TUI binary
         uses: actions/upload-artifact@v4
@@ -139,8 +167,10 @@ jobs:
         with:
           files: |
             netscope-x86_64-unknown-linux-gnu/netscope-tui
+            netscope-aarch64-unknown-linux-gnu/netscope-tui
             netscope-aarch64-apple-darwin/netscope-tui
             netscope-x86_64-pc-windows-msvc/netscope-tui.exe
+            netscope-aarch64-pc-windows-msvc/netscope-tui.exe
             netscope-desktop-Linux/**
             netscope-desktop-macOS/**
             netscope-desktop-Windows/**

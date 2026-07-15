@@ -458,7 +458,7 @@ fn ntlm_field(summary: &str, prefix: &str) -> Option<String> {
 }
 
 /// First question name of a DNS/mDNS message, dotted (`example.com`).
-fn dns_qry_name(pkt: &Packet) -> Option<String> {
+pub fn dns_qry_name(pkt: &Packet) -> Option<String> {
     if !matches!(pkt.protocol, Protocol::Dns | Protocol::Mdns) {
         return None;
     }

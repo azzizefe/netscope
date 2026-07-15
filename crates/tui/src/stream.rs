@@ -320,11 +320,124 @@ fn decode_quic_stream(bytes: &[u8]) -> String {
     out
 }
 
+fn decode_websocket_stream(bytes: &[u8]) -> String {
+    let mut out = String::new();
+    let mut off = 0;
+    let mut frame_count = 0;
+
+    while off + 2 <= bytes.len() {
+        let first = bytes[off];
+        let fin = first & 0x80 != 0;
+        let opcode = first & 0x0f;
+        let masked = bytes[off + 1] & 0x80 != 0;
+        let len7 = (bytes[off + 1] & 0x7f) as u64;
+
+        let mut len_bytes = 2usize;
+        let len = match len7 {
+            126 => {
+                if off + 4 > bytes.len() {
+                    break;
+                }
+                let v = u64::from(u16::from_be_bytes([bytes[off + 2], bytes[off + 3]]));
+                len_bytes = 4;
+                v
+            }
+            127 => {
+                if off + 10 > bytes.len() {
+                    break;
+                }
+                let mut buf = [0u8; 8];
+                buf.copy_from_slice(&bytes[off + 2..off + 10]);
+                len_bytes = 10;
+                u64::from_be_bytes(buf)
+            }
+            n => n,
+        };
+
+        let mut mask_offset = off + len_bytes;
+        let mask = if masked {
+            if mask_offset + 4 > bytes.len() {
+                break;
+            }
+            let key = [
+                bytes[mask_offset],
+                bytes[mask_offset + 1],
+                bytes[mask_offset + 2],
+                bytes[mask_offset + 3],
+            ];
+            mask_offset += 4;
+            Some(key)
+        } else {
+            None
+        };
+
+        let payload_start = mask_offset;
+        let payload_end = (payload_start + len as usize).min(bytes.len());
+        let mut payload = bytes[payload_start..payload_end].to_vec();
+        if let Some(key) = mask {
+            for (i, byte) in payload.iter_mut().enumerate() {
+                *byte ^= key[i % 4];
+            }
+        }
+
+        let op_name = match opcode {
+            0 => "Continuation",
+            1 => "Text",
+            2 => "Binary",
+            8 => "Close",
+            9 => "Ping",
+            10 => "Pong",
+            _ => "Unknown",
+        };
+
+        if opcode == 1 {
+            let preview = match std::str::from_utf8(&payload) {
+                Ok(s) => s.chars().take(200).collect::<String>(),
+                Err(_) => format!("(binary/invalid UTF-8, {} bytes)", payload.len()),
+            };
+            out.push_str(&format!(
+                "WebSocket Text (Len: {}, Fin: {}): \"{}\"\n",
+                len, fin, preview
+            ));
+        } else if opcode == 8 {
+            if payload.len() >= 2 {
+                let code = u16::from_be_bytes([payload[0], payload[1]]);
+                out.push_str(&format!("WebSocket Close (Code: {}, Fin: {})\n", code, fin));
+            } else {
+                out.push_str(&format!("WebSocket Close (Fin: {})\n", fin));
+            }
+        } else {
+            out.push_str(&format!(
+                "WebSocket {} (Len: {}, Fin: {})\n",
+                op_name, len, fin
+            ));
+        }
+
+        let next_offset = payload_start + len as usize;
+        if next_offset <= off || next_offset > bytes.len() {
+            break;
+        }
+        off = next_offset;
+        frame_count += 1;
+        if frame_count > 50 {
+            out.push_str("... (truncated WebSocket frames)\n");
+            break;
+        }
+    }
+
+    if out.is_empty() {
+        decode_plain_stream(bytes)
+    } else {
+        out
+    }
+}
+
 fn decode_stream_text(bytes: &[u8], proto: &netscope_core::models::Protocol) -> String {
     match proto {
         netscope_core::models::Protocol::Http2 => decode_http2_stream(bytes),
         netscope_core::models::Protocol::Tls => decode_tls_stream(bytes),
         netscope_core::models::Protocol::Quic => decode_quic_stream(bytes),
+        netscope_core::models::Protocol::WebSocket => decode_websocket_stream(bytes),
         _ => decode_plain_stream(bytes),
     }
 }

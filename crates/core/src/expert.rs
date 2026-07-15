@@ -21,7 +21,7 @@ impl ExpertSeverity {
 
 pub fn classify(pkt: &Packet) -> ExpertSeverity {
     let s = &pkt.summary;
-    if s.contains("reset") || s.contains("RST") || s.contains("Malformed") || s.contains("unreachable") || s.contains("bad") {
+    if s.contains("reset") || s.contains("RST") || s.contains("Malformed") || s.contains("unreachable") || s.contains("bad") || s.contains("Threat") || s.contains("Alert") || s.contains("AbuseIPDB") || s.contains("URLhaus") {
         ExpertSeverity::Error
     } else if s.contains("[TCP Retransmission]") || s.contains("[TCP Dup ACK") || s.contains("[TCP Out-of-Order]") || s.contains("SERVFAIL") || s.contains("NXDOMAIN") {
         ExpertSeverity::Warning

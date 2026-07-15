@@ -8,6 +8,7 @@ use crate::models::Protocol;
 use super::{
     bgp, cassandra, dnp3, enip, ftp, http, http2, imap, kerberos, ldap, modbus, mongodb, mqtt,
     mysql, ntlm, opcua, openvpn, pop3, postgres, rdp, redis, smtp, ssh, telnet, tls, websocket,
+    smb, tds, amqp, kafka,
     DissectedResult,
 };
 
@@ -288,6 +289,19 @@ fn dissect_tcp_inner(
         // Operator / routing protocols (ROADMAP §3.3).
         if on(179) {
             return bgp::dissect_bgp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // SMB, TDS, AMQP, Kafka
+        if on(445) {
+            return smb::dissect_smb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1433) {
+            return tds::dissect_tds(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5672) {
+            return amqp::dissect_amqp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(9092) {
+            return kafka::dissect_kafka(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their

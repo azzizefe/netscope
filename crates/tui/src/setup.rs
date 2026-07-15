@@ -21,12 +21,29 @@ pub fn capture_options(cli: &Cli) -> Result<CaptureOptions> {
         monitor: cli.monitor,
         stop: parse_autostop(&cli.autostop)?,
         ring: parse_ring(&cli.ring)?,
+        ..Default::default()
     })
 }
 
+#[derive(Debug)]
+pub struct TempFileGuard {
+    pub path: std::path::PathBuf,
+}
+
+impl Drop for TempFileGuard {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
+}
+
 /// Start whichever capture the CLI describes on `engine`. Returns the label
-/// to show for the capture source (interface name, file, `ssh:user@host`…).
-pub fn start_capture(cli: &Cli, engine: &mut CaptureEngine, tx: Sender<Packet>) -> Result<String> {
+/// to show for the capture source (interface name, file, `ssh:user@host`…)
+/// along with an optional temporary file guard for decrypted files.
+pub fn start_capture(
+    cli: &Cli,
+    engine: &mut CaptureEngine,
+    tx: Sender<Packet>,
+) -> Result<(String, Option<TempFileGuard>)> {
     let opts = capture_options(cli)?;
 
     // Remote capture over SSH (sshdump-style): -f runs on the remote side.
@@ -47,7 +64,7 @@ pub fn start_capture(cli: &Cli, engine: &mut CaptureEngine, tx: Sender<Packet>) 
             ..opts
         };
         engine.start_remote(&spec, &opts, tx)?;
-        return Ok(label);
+        return Ok((label, None));
     }
 
     if let Some(iface) = cli.interface.as_deref() {
@@ -59,7 +76,7 @@ pub fn start_capture(cli: &Cli, engine: &mut CaptureEngine, tx: Sender<Packet>) 
                 ..opts
             };
             engine.start_read_stream(Box::new(std::io::stdin()), "stdin", &opts, tx)?;
-            return Ok("stdin".into());
+            return Ok(("stdin".into(), None));
         }
 
         let ifaces: Vec<&str> = iface
@@ -82,30 +99,64 @@ pub fn start_capture(cli: &Cli, engine: &mut CaptureEngine, tx: Sender<Packet>) 
                 ..opts
             };
             engine.start_pipe(&program, &args, usb, &opts, tx)?;
-            return Ok(usb.to_string());
+            return Ok((usb.to_string(), None));
         }
 
         engine.start_with(&ifaces, &opts, tx)?;
-        return Ok(match ifaces.as_slice() {
+        let label = match ifaces.as_slice() {
             [one] => netscope_core::capture::friendly_name_of(one),
             many => format!("{} interfaces", many.len()),
-        });
+        };
+        return Ok((label, None));
     }
 
     if let Some(path) = cli.read.as_deref() {
+        let mut actual_path = path.to_string();
+        let mut temp_guard = None;
+
+        if let Ok(bytes) = std::fs::read(path) {
+            if netscope_core::crypto::is_encrypted(&bytes) {
+                use std::io::Write;
+                let passphrase = if let Some(ref p) = cli.passphrase {
+                    p.clone()
+                } else if let Ok(p) = std::env::var("NETSCOPE_PASSPHRASE") {
+                    p
+                } else {
+                    print!("Enter passphrase to decrypt {}: ", path);
+                    let _ = std::io::stdout().flush();
+                    rpassword::read_password()?
+                };
+
+                let decrypted = netscope_core::crypto::decrypt(&bytes, &passphrase)
+                    .map_err(|e| anyhow::anyhow!("Decryption failed: {}", e))?;
+
+                let temp_dir = std::env::temp_dir();
+                let temp_file_path = temp_dir.join(format!(
+                    "netscope_decrypted_{}.pcap",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_nanos()
+                ));
+                std::fs::write(&temp_file_path, decrypted)?;
+                actual_path = temp_file_path.to_string_lossy().to_string();
+                temp_guard = Some(TempFileGuard { path: temp_file_path });
+            }
+        }
+
         engine.start_offline(
-            path,
+            &actual_path,
             opts.bpf_filter.as_deref(),
             opts.output_path.as_deref(),
             tx,
         )?;
-        return Ok(path.to_string());
+        return Ok((path.to_string(), temp_guard));
     }
 
     let dev = netscope_core::capture::default_interface()?;
     let label = netscope_core::capture::friendly_name(&dev);
     engine.start_with(&[dev.name.as_str()], &opts, tx)?;
-    Ok(label)
+    Ok((label, None))
 }
 
 /// Parse repeated `-a` conditions: `duration:SECONDS`, `packets:COUNT`,

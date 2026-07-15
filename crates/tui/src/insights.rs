@@ -60,6 +60,9 @@ const CRED_NEEDLES: &[&str] = &[
 pub fn analyze(packets: &VecDeque<Packet>, flows: &FlowTable) -> Vec<Finding> {
     let mut findings = Vec::new();
 
+    let threat_engine = netscope_core::threat::ThreatEngine::load();
+    let mut threat_alerts = Vec::new();
+
     let mut tls_bytes = 0u64;
     let mut http_bytes = 0u64;
     let mut http_hosts: BTreeSet<String> = BTreeSet::new();
@@ -74,6 +77,10 @@ pub fn analyze(packets: &VecDeque<Packet>, flows: &FlowTable) -> Vec<Finding> {
     let mut hosts_per_src: BTreeMap<IpAddr, BTreeSet<IpAddr>> = BTreeMap::new();
 
     for p in packets {
+        let alerts = threat_engine.check_packet(p);
+        for alert in alerts {
+            threat_alerts.push(format!("Packet #{}: {}", p.summary, alert.msg));
+        }
         match p.protocol {
             Protocol::Tls => tls_bytes += p.length as u64,
             Protocol::Http => {
@@ -121,6 +128,17 @@ pub fn analyze(packets: &VecDeque<Packet>, flows: &FlowTable) -> Vec<Finding> {
             }
             hosts_per_src.entry(src).or_default().insert(dst);
         }
+    }
+
+    // 0. Threat Intelligence & IDS Alerts — highest priority.
+    if !threat_alerts.is_empty() {
+        findings.push(Finding {
+            severity: Severity::High,
+            title: format!("Tehdit İstihbaratı ve IDS Alarmları ({})", threat_alerts.len()),
+            detail: "Offline AbuseIPDB, URLhaus listeleri veya yerel Suricata/Snort kurallarıyla eşleşen trafik tespit edildi."
+                .into(),
+            evidence: threat_alerts.into_iter().take(10).collect(),
+        });
     }
 
     // 1. Cleartext credentials — highest priority.

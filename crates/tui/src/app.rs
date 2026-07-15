@@ -86,6 +86,7 @@ pub struct App {
     pub time_reference: Option<DateTime<Utc>>,
     pub show_bookmarks: bool,
     pub show_expert: bool,
+    pub _temp_guard: Option<crate::setup::TempFileGuard>,
 }
 
 impl App {
@@ -98,11 +99,12 @@ impl App {
         let mut capture = CaptureEngine::new();
         // Local interfaces, `-i -` (stdin stream), USBPcap devices or a
         // remote host over SSH — plus autostop and ring-buffer options.
-        let interface_name = crate::setup::start_capture(cli, &mut capture, packet_tx)?;
+        let (interface_name, temp_guard) = crate::setup::start_capture(cli, &mut capture, packet_tx)?;
 
         Ok(Self {
             capture,
             packets: VecDeque::with_capacity(MAX_PACKETS),
+            _temp_guard: temp_guard,
             selected: 0,
             paused: false,
             view: View::Packets,
@@ -747,6 +749,7 @@ mod tests {
             time_reference: None,
             show_bookmarks: false,
             show_expert: false,
+            _temp_guard: None,
         };
         (app, packet_tx)
     }

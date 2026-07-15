@@ -49,7 +49,11 @@ impl Transport {
             | Protocol::Ldap
             | Protocol::Mqtt
             | Protocol::Bgp
-            | Protocol::Ntlm => Transport::Tcp,
+            | Protocol::Ntlm
+            | Protocol::Smb
+            | Protocol::Tds
+            | Protocol::Amqp
+            | Protocol::Kafka => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -208,7 +212,11 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Lacp
         | Protocol::Stp
         | Protocol::Mpls
-        | Protocol::Ntlm => 3,
+        | Protocol::Ntlm
+        | Protocol::Smb
+        | Protocol::Tds
+        | Protocol::Amqp
+        | Protocol::Kafka => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,

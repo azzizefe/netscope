@@ -1701,6 +1701,10 @@ function showDetail(index) {
   els.hexDump.innerHTML = hexDump(pkt.raw || []);
   els.hexLen.textContent = `${(pkt.raw || []).length} bytes`;
   enrichGeo(pkt);
+
+  if (window.__TAURI__) {
+    window.__TAURI__.event.emit("packet-selected", pkt);
+  }
 }
 function hideDetail() {
   state.selectedIndex = -1;
@@ -4091,6 +4095,35 @@ function switchView(view) {
   $(`#view-${view}`).classList.add('active');
   renderAll();
 }
+
+function toggleSplitView() {
+  const select = $('#split-view-select');
+  const main = $('#main-content');
+  const active = main.classList.toggle('split-view-active');
+  select.classList.toggle('hidden', !active);
+  
+  if (active) {
+    applySplitView(select.value);
+  } else {
+    $$('.view').forEach(v => v.classList.remove('split-active'));
+  }
+}
+
+function applySplitView(viewName) {
+  $$('.view').forEach(v => v.classList.remove('split-active'));
+  if (viewName && viewName !== 'none') {
+    const target = $(`#view-${viewName}`);
+    if (target) {
+      target.classList.add('split-active');
+      if (viewName === 'connections') renderConnections();
+      else if (viewName === 'dashboard') { renderStats(); renderLive(); }
+      else if (viewName === 'topology') renderTopology(true);
+      else if (viewName === 'insights') renderInsights();
+      else if (viewName === 'privacy') renderPrivacy();
+      else if (viewName === 'diff') renderDiff();
+    }
+  }
+}
 function renderAll() {
   if (state.view === 'packets') renderPacketList();
   else if (state.view === 'connections') renderConnections();
@@ -5345,6 +5378,12 @@ function toggleTabPin(view) {
 
 // ---- Init ----
 async function init() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const detached = urlParams.get('detached');
+  if (detached) {
+    document.body.classList.add('detached-mode', `detached-${detached}`);
+  }
+
   Object.assign(els, {
     interfaceSelect: $('#interface-select'), startBtn: $('#start-btn'), stopBtn: $('#stop-btn'),
     statusText: $('#status-text'), packetCount: $('#packet-count'), filterInput: $('#filter-input'),
@@ -5406,6 +5445,56 @@ async function init() {
   });
   document.addEventListener('keydown', handleKeydown);
   initMenuBar();
+
+  // Bind custom desktop layout events
+  const miNewWindow = $('#mi-new-window');
+  if (miNewWindow) {
+    miNewWindow.addEventListener('click', () => {
+      if (window.__TAURI__) {
+        window.__TAURI__.core.invoke('open_new_window');
+      }
+    });
+  }
+  const miSplitView = $('#mi-split-view');
+  if (miSplitView) {
+    miSplitView.addEventListener('click', toggleSplitView);
+  }
+  const splitSelect = $('#split-view-select');
+  if (splitSelect) {
+    splitSelect.addEventListener('change', (e) => {
+      applySplitView(e.target.value);
+    });
+  }
+  const detailDetach = $('#detail-detach');
+  if (detailDetach) {
+    detailDetach.addEventListener('click', () => {
+      if (window.__TAURI__) {
+        window.__TAURI__.core.invoke('open_detached_window', { viewType: 'detail' });
+        document.body.classList.add('main-detached-detail');
+      }
+    });
+  }
+  const hexDetach = $('#hex-detach');
+  if (hexDetach) {
+    hexDetach.addEventListener('click', () => {
+      if (window.__TAURI__) {
+        window.__TAURI__.core.invoke('open_detached_window', { viewType: 'hex' });
+        document.body.classList.add('main-detached-hex');
+      }
+    });
+  }
+
+  if (detached && window.__TAURI__) {
+    window.__TAURI__.event.listen("packet-selected", (event) => {
+      const pkt = event.payload;
+      if (pkt) {
+        els.detailTree.innerHTML = buildDetailTree(pkt, 0);
+        els.hexDump.innerHTML = hexDump(pkt.raw || []);
+        els.hexLen.textContent = `${(pkt.raw || []).length} bytes`;
+        enrichGeo(pkt);
+      }
+    });
+  }
 
   // Translate all static UI chrome to the saved/detected language up front.
   I18N.apply(state.settings.lang);

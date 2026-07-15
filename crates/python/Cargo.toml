@@ -1,0 +1,15 @@
+[package]
+name = "netscope-py"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "netscope"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+netscope-core = { path = "../core" }
+chrono = "0.4"
+bytes = "1"
+crossbeam-channel = "0.5"

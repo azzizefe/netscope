@@ -7,18 +7,31 @@ use crate::Cli;
 
 pub fn run(cli: Cli) -> Result<()> {
     let (packet_tx, packet_rx) = crossbeam_channel::unbounded();
-    let mut capture = CaptureEngine::new();
+    let mut capture = Some(CaptureEngine::new());
 
     // Local interfaces, `-i -` (stdin stream), USBPcap devices or a remote
     // host over SSH — plus autostop and ring-buffer options.
-    let label = crate::setup::start_capture(&cli, &mut capture, packet_tx)?;
+    let (label, _temp_guard) = crate::setup::start_capture(&cli, capture.as_mut().unwrap(), packet_tx)?;
     eprintln!("Capturing on: {label}");
 
     let use_json = cli.json;
     let mut names = NameCache::new();
 
+    let api_server = if let Some(port) = cli.serve {
+        let buffer = netscope_core::api_server::ApiPacketBuffer::new();
+        let server = netscope_core::api_server::ApiServer::new(port, buffer.clone(), capture.take().unwrap());
+        let engine_lock = server.engine();
+        let _server_handle = server.start();
+        Some((buffer, engine_lock))
+    } else {
+        None
+    };
+
     while let Ok(pkt) = packet_rx.recv() {
         names.observe(&pkt);
+        if let Some((ref buffer, _)) = api_server {
+            buffer.push(pkt.clone());
+        }
         if use_json {
             println!("{}", format_json(&pkt));
         } else {
@@ -26,7 +39,12 @@ pub fn run(cli: Cli) -> Result<()> {
         }
     }
 
-    capture.stop();
+    if let Some((_, ref engine_lock)) = api_server {
+        let mut eng = engine_lock.lock().unwrap();
+        eng.stop();
+    } else if let Some(mut cap) = capture {
+        cap.stop();
+    }
     Ok(())
 }
 
