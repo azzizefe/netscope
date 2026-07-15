@@ -864,3 +864,68 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
   border-radius: 6px;
 }
 
+/* Detached view support */
+.detached-mode #title-bar,
+.detached-mode #menubar,
+.detached-mode #tabs,
+.detached-mode #packet-table {
+  display: none !important;
+}
+.detached-detail #hex-panel,
+.detached-detail #view-connections,
+.detached-detail #view-dashboard,
+.detached-detail #view-topology,
+.detached-detail #view-insights,
+.detached-detail #view-privacy,
+.detached-detail #view-diff,
+.detached-detail #view-script,
+.detached-detail #view-learn {
+  display: none !important;
+}
+.detached-hex #detail-tree-panel,
+.detached-hex #view-connections,
+.detached-hex #view-dashboard,
+.detached-hex #view-topology,
+.detached-hex #view-insights,
+.detached-hex #view-privacy,
+.detached-hex #view-diff,
+.detached-hex #view-script,
+.detached-hex #view-learn {
+  display: none !important;
+}
+.detached-mode #main-content {
+  height: 100vh !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.detached-mode #view-packets {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100vh !important;
+}
+.detached-mode .pane {
+  flex: 1 !important;
+  display: block !important;
+  height: 100vh !important;
+  border: none !important;
+}
+
+/* Split-view support */
+#main-content.split-view-active {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+  padding: 8px !important;
+  box-sizing: border-box;
+}
+#main-content.split-view-active > section.view {
+  display: none !important;
+  height: calc(100vh - 120px) !important;
+  overflow: auto !important;
+}
+#main-content.split-view-active > section.view.active,
+#main-content.split-view-active > section.view.split-active {
+  display: flex !important;
+  flex-direction: column !important;
+}
+

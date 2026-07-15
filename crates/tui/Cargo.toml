@@ -16,6 +16,7 @@ ratatui = "0.29"
 crossterm = { version = "0.28", features = ["event-stream"] }
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
+rpassword = "7.3"
 crossbeam-channel = "0.5"
 chrono = "0.4"
 netscope-core = { path = "../core", version = "0.1.0" }

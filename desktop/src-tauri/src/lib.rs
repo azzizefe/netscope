@@ -603,6 +603,7 @@ impl CaptureOptionsArg {
                 bytes: self.stop_filesize_kb.map(|kb| kb.saturating_mul(1024)),
             },
             ring,
+            ..Default::default()
         })
     }
 }
@@ -1024,6 +1025,48 @@ fn open_pcap_encrypted(
     run_open(app, &state, temp.to_string_lossy().into_owned(), Some(temp))
 }
 
+#[tauri::command]
+fn open_detached_window(app_handle: AppHandle, view_type: String) -> Result<(), String> {
+    let label = format!("detached_{}", view_type);
+    if let Some(w) = app_handle.get_webview_window(&label) {
+        let _ = w.set_focus();
+    } else {
+        let _ = tauri::WebviewWindowBuilder::new(
+            &app_handle,
+            &label,
+            tauri::WebviewUrl::App(format!("index.html?detached={}", view_type).into()),
+        )
+        .title(format!("netscope — Detached {}", view_type))
+        .inner_size(800.0, 600.0)
+        .resizable(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn open_new_window(app_handle: AppHandle) -> Result<(), String> {
+    let id = format!(
+        "window_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+    let _ = tauri::WebviewWindowBuilder::new(
+        &app_handle,
+        &id,
+        tauri::WebviewUrl::App("index.html".into()),
+    )
+    .title("netscope — Network Analyzer")
+    .inner_size(1280.0, 800.0)
+    .resizable(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub fn run() {
     // Layered configuration (~/.netscope): load once, install the protocol
     // plugins into the core registry, and pre-load an offline GeoIP database
@@ -1090,6 +1133,8 @@ pub fn run() {
             reload_plugins,
             get_capture_stats,
             save_object,
+            open_detached_window,
+            open_new_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running netscope desktop");

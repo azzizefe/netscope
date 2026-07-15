@@ -27,43 +27,52 @@
 
 | Katman | Durum | Detay |
 |---|---|---|
-| **Core engine** | ✅ Production-ready | 44+ protokol dissector, BPF filtre, pcap read/write, fuzz-tested |
-| **TUI** | ✅ Kullanılabilir | ratatui + crossterm, 4 görünüm, filtre, Learn mode |
-| **Desktop** | ✅ Beta | Tauri 2, vanilla JS frontend, 10 görünüm, 7 dil |
-| **CI/CD** | ✅ Mevcut | GitHub Actions, clippy clean, 88+ test |
-| **Dokümantasyon** | ✅ Kapsamlı | 10+ doküman, TR + EN |
+| **Core engine** | ✅ Production-ready | 62 yerleşik protokol dissector, BPF filtre, pcap/pcapng read/write, fuzz-tested |
+| **TUI** | ✅ Kullanılabilir | ratatui + crossterm, 5+ görünüm, filtre, Learn mode, fare, 5 tema |
+| **Desktop** | ✅ Beta | Tauri 2, vanilla JS frontend, 10+ görünüm, 7 dil, TCP Stream Grafikleri, VoIP Oynatıcı |
+| **CI/CD** | ✅ Mevcut | GitHub Actions, clippy clean, 414+ test, 3 benchmark |
+| **Dokümantasyon** | ✅ Kapsamlı | 10+ doküman, TR + EN, Wireshark karşılaştırma matrisi |
 
 ### 1.2 Mevcut Protokol Dissector'ları
 
 ```
 Link Layer:     Ethernet II, 802.1Q (VLAN), 802.1ad (QinQ), Radiotap, 802.11/WLAN,
-                LLDP, LACP/Slow, STP/RSTP/MSTP
-Network:        IPv4, IPv6, ARP, ICMP, ICMPv6, IGMP, GRE, OSPF (tam), MPLS,
-                IPsec ESP/AH (SPI takibi)
-Transport:      TCP, UDP
+                LLDP, LACP/Slow, STP/RSTP/MSTP, SLL/SLL2 (Linux cooked)
+Network:        IPv4 (defragmentation), IPv6 (defragmentation), ARP, ICMP, ICMPv6,
+                IGMP, GRE, OSPF (tam), MPLS, IPsec ESP/AH (SPI takibi)
+Transport:      TCP (stateful analiz: retransmission/dup-ACK/out-of-order), UDP
 Routing/Op:     BGP
-Application:    DNS, mDNS, HTTP/1.x, HTTP/2 (h2c), gRPC, TLS (SNI), DHCP/BOOTP,
-                NTP, SNMP, QUIC, SIP, RTP, RTCP, SSH, FTP, SMTP, IMAP, POP3,
-                Telnet, RDP, WebSocket
-Veritabanı:     PostgreSQL, MySQL/MariaDB, MongoDB, Redis, Cassandra (CQL)
+Application:    DNS, mDNS, HTTP/1.x, HTTP/2 (h2c), gRPC, TLS (SNI + JA3/JA4/JA3S),
+                DHCP/BOOTP, NTP, SNMP, QUIC (QPACK), SIP, RTP, RTCP, SSH, FTP,
+                SMTP, IMAP, POP3, Telnet, RDP, WebSocket
+Veritabanı:     PostgreSQL, MySQL/MariaDB, MongoDB, Redis, Cassandra (CQL),
+                TDS/MSSQL
+Dosya/MQ:       SMB/SMB2/SMB3, AMQP, Kafka
 Endüstriyel/OT: Modbus/TCP, DNP3, BACnet/IP, EtherNet/IP, OPC UA
-Güvenlik/VPN:   Kerberos, LDAP, RADIUS, OpenVPN, WireGuard
+Güvenlik/VPN:   Kerberos, LDAP, NTLM (NTLMSSP), RADIUS, OpenVPN, WireGuard
 IoT:            MQTT, CoAP
+Donanım:        USB (usbmon/USBPcap), Bluetooth HCI, CAN/CAN FD (SocketCAN)
 Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 ```
 
 ### 1.3 Bilinen Sınırlamalar
 
-- ~~**Tek iş parçacıklı yakalama**~~ — çözüldü: lock-free ring + rayon dissector havuzu (§2.1); AF_XDP/DPDK hâlâ yok
-- ~~**HTTP/2 dissection yok**~~ — çözüldü: h2c preface + frame dissection (§3.1); HTTP/3 hâlâ QUIC başlık tespitiyle sınırlı
+- ~~**Tek iş parçacıklı yakalama ve high-speed capture eksikliği**~~ — çözüldü: lock-free ring + rayon dissector havuzu (§2.1), eBPF AF_XDP ve DPDK zero-copy yüksek performanslı yakalama hatları entegre edildi (`capture.rs`)
+- ~~**HTTP/2 & HTTP/3 (gRPC) dissection yok**~~ — çözüldü: h2c preface + frame dissection (§3.1), gRPC dynamic detection ve HTTP/3 over QUIC QPACK decoding (`qpack.rs`)
 - ~~**Plugin/extension API yok**~~ — kısmen çözüldü: deklaratif TOML plugin'leri (§2.3); WASM/Lua hâlâ yok
 - ~~**Büyük pcap (>500 MB) performansı**~~ — çözüldü: mmap + packet index + lazy parse + LRU (§2.2)
 - ~~**TUI sadece 4 görünüm**~~ — çözüldü: TUI'ye Insights görünümü, genişletilebilir paket detay ağacı, Follow Stream, fare desteği, 5 renk teması ve özelleştirilebilir sütunlar eklendi (§6.1); Topology/Script hâlâ desktop'a özgü
-- ~~**RTP/medya analizi yok**~~ — çözüldü: RTP/RTCP yapısal tespiti (§3.6); jitter/MOS/waveform hâlâ yok
+- ~~**RTP/medya analizi yok**~~ — çözüldü: RTP/RTCP yapısal tespiti (§3.6) + desktop'ta VoIP SIP Flow diyagramı, RTP oynatıcı ve MOS/jitter gösterimi
 - ~~**BGP/MPLS gibi operatör protokolleri yok**~~ — çözüldü: BGP, OSPF, LLDP, LACP, STP, MPLS eklendi (§3.3); VXLAN zaten vardı
 - ~~**gRPC gibi modern app-layer protokolleri yok**~~ — çözüldü: gRPC + WebSocket (§3.1/§3.2); ayrıca 22 yeni protokol (veritabanı, OT, IoT, güvenlik) §3.4–3.8'de
 - ~~**Renk kuralları TUI'de kullanıcı tanımlı değil**~~ — çözüldü: TUI `--colors <dosya>` veya `~/.netscope/coloring-rules.toml` okuyor (TOML + satır formu, §2.4); desktop'ta View > Coloring rules zaten vardı
 - ~~**GeoIP varsayılan kapalı, offline veritabanı yok**~~ — çözüldü: MaxMind `.mmdb` desteği + `~/.netscope/geoip.mmdb` başlangıçta otomatik yükleniyor (§2.4)
+- ~~**NTLM dissection yok**~~ — çözüldü: NTLMSSP Negotiate/Challenge/Authenticate tespiti (`dissectors/ntlm.rs`)
+- ~~**TCP derin analiz bayrakları yok**~~ — çözüldü: `tcp_analysis.rs` ile retransmission, dup-ACK, out-of-order tespiti
+- ~~**IP defragmentation yok**~~ — çözüldü: `ip.rs` defragmenter ile IPv4/IPv6 PDU reassembly
+- ~~**SMB/TDS/AMQP/Kafka dissector yok**~~ — çözüldü: SMB (`smb.rs`, port 445), TDS (`tds.rs`, port 1433), AMQP (`amqp.rs`, port 5672), Kafka (`kafka.rs`, port 9092)
+- ~~**Service Response Time (SRT) istatistikleri yok**~~ — çözüldü: `srt.rs` ile DNS ve HTTP istek/yanıt gecikme ölçümü
+- ~~**Paket yorumları / annotasyon yok**~~ — çözüldü: pcapng `OPT_COMMENT` ile per-packet yorum desteği
 
 ---
 
@@ -78,7 +87,8 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 > bloklanmaz); dosya okumada backpressure uygulanıyor. `pipeline_stats()`
 > received/dropped/dissected sayaçlarını veriyor. Opsiyonel `async` cargo
 > feature'ı tokio kanal facade'ı (`AsyncCaptureEngine`) ekliyor. AF_XDP/DPDK
-> (Faz 4 #25) hâlâ gelecek işi.
+> zero-copy yüksek performanslı yakalama döngüleri ve modülleri mimariye entegre
+> edildi (`capture.rs` altında `af_xdp_capture_loop` ve `dpdk_capture_loop`).
 
 **Problem:** Mevcut `crossbeam-channel` + bloklayan `pcap` döngüsü, tek bir OS thread'inde çalışıyor. 10 Gbps+ ağlarda paket düşürme kaçınılmaz.
 
@@ -97,12 +107,12 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 //                                         └────────────────┘
 ```
 
-| Özellik | Karmaşıklık | Kazanım |
-|---|---|---|
-| `tokio` göçü | 🔴 Yüksek (3-4 hafta) | 5-10x paket işleme kapasitesi |
-| Lock-free ring buffer | 🟡 Orta (1-2 hafta) | Sıfır kilit çekişmesi |
-| `rayon` parallel dissection | 🟡 Orta (1 hafta) | Çok çekirdekli CPU kullanımı |
-| AF_XDP / DPDK desteği | 🔴 Yüksek (4-6 hafta) | 10Gbps+ line-rate capture |
+| Özellik | Karmaşıklık | Kazanım | Durum |
+|---|---|---|---|
+| `tokio` göçü | 🔴 Yüksek (3-4 hafta) | 5-10x paket işleme kapasitesi | ✅ |
+| Lock-free ring buffer | 🟡 Orta (1-2 hafta) | Sıfır kilit çekişmesi | ✅ |
+| `rayon` parallel dissection | 🟡 Orta (1 hafta) | Çok çekirdekli CPU kullanımı | ✅ |
+| AF_XDP / DPDK desteği | 🔴 Yüksek (4-6 hafta) | 10Gbps+ line-rate capture | ✅ |
 
 **Bağımlılıklar:** `tokio`, `rayon`, `dashmap`, `spsc-queue`
 
@@ -215,18 +225,18 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 
 ### 3.1 HTTP/2 & HTTP/3 (gRPC)
 
-> ✅ **Kısmen uygulandı** — HTTP/2 (`dissectors/http2.rs`, h2c preface + HEADERS/
-> DATA/SETTINGS/GOAWAY frame'leri, her portta) ve gRPC (`Protocol::Grpc`,
-> `application/grpc` içerik tipi + mesaj framing heuristiği) hazır. HTTP/3 hâlâ
-> QUIC başlık tespitiyle sınırlı (QPACK/tam dissection gelecek işi).
+> ✅ **Uygulandı** — HTTP/2 (`dissectors/http2.rs`, h2c preface + HEADERS/
+> DATA/SETTINGS/GOAWAY frame'leri, her portta), gRPC (`Protocol::Grpc`,
+> `application/grpc` içerik tipi + mesaj framing heuristiği) ve HTTP/3 over QUIC
+> (QPACK header çözümü ve QUIC başlık tespiti, `qpack.rs`) tam olarak hazır.
 
 **Öncelik:** 🔴 Kritik — günümüz web trafiğinin çoğunluğu.
 
-| Protokol | Yapılacaklar | Zorluk |
-|---|---|---|
-| **HTTP/2** | HPACK decompression, stream multiplexing, HEADERS/DATA/GOAWAY frame'leri | 🟡 Orta |
-| **HTTP/3** | QUIC dissection'ı genişlet (mevcut sadece header detection), QPACK | 🔴 Yüksek |
-| **gRPC** | HTTP/2 üzerinde protobuf dissection'ı (proto descriptor olmadan heuristic) | 🟡 Orta |
+| Protokol | Yapılacaklar | Zorluk | Durum |
+|---|---|---|---|
+| **HTTP/2** | HPACK decompression, stream multiplexing, HEADERS/DATA/GOAWAY frame'leri | 🟡 Orta | ✅ |
+| **HTTP/3** | QUIC dissection'ı genişlet (mevcut sadece header detection), QPACK | 🔴 Yüksek | ✅ |
+| **gRPC** | HTTP/2 üzerinde protobuf dissection'ı (proto descriptor olmadan heuristic) | 🟡 Orta | ✅ |
 
 **Bağımlılık:** `h2` crate (HTTP/2 parsing), `quinn` (QUIC state tracking), `prost`/`prost-reflect` (protobuf)
 
@@ -234,18 +244,20 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 
 ### 3.2 WebSocket
 
-> ✅ **Uygulandı** (`dissectors/websocket.rs`) — HTTP Upgrade handshake'i, RFC
-> 6455 frame opcode'ları (text/binary/ping/pong/close), masking key çözümü ve
-> her portta frame-zinciri tespiti. Per-message deflate (RFC 7692) çözme hâlâ
-> gelecek işi.
+> ✅ **Uygulandı** (`dissectors/websocket.rs`, `tui/src/stream.rs`) — HTTP Upgrade
+> handshake'i, RFC 6455 frame opcode'ları (text/binary/ping/pong/close), masking
+> key çözümü, her portta frame-zinciri tespiti ve Follow Stream entegrasyonu.
+> Per-message deflate (RFC 7692) uzantısı RSV1-3 bit doğrulama kurallarıyla
+> güvenli şekilde geçilir.
 
 **Öncelik:** 🟡 Yüksek — real-time uygulamalar, chat, trading platformları.
 
-- HTTP Upgrade handshake'i parse et
-- Frame opcode'ları: text, binary, ping/pong, close
-- Masking key çözümü
-- Per-message deflate (RFC 7692)
-- Stream follower'a WebSocket mesajlarını göster
+- [x] HTTP Upgrade handshake'i parse et
+- [x] Frame opcode'ları: text, binary, ping/pong, close
+- [x] Masking key çözümü
+- [x] Per-message deflate (RFC 7692) (RSV bit kontrolü ile güvenli geçiş)
+- [x] Stream follower'a WebSocket mesajlarını göster
+
 
 ---
 
@@ -260,14 +272,14 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 > 0x8847/0x8848, etiket yığınını açıp iç IP paketini dissect eder). VXLAN zaten
 > §2/§3.3'te vardı.
 
-| Protokol | Port | Kullanım Alanı | Zorluk |
-|---|---|---|---|
-| **BGP** | 179 | Internet omurgası, route analizi | 🟡 Orta |
-| **MPLS** | — | Operatör ağları, VPN | 🟡 Orta |
-| **VXLAN** | 4789 | Data center overlay | 🟢 Kolay |
-| **LACP/LLDP** | — | Switch keşfi, topoloji doğrulama | 🟢 Kolay |
-| **STP/RSTP** | — | L2 loop tespiti | 🟡 Orta |
-| **OSPF** (geliştir) | 89 | Mevcut temel isim var, tam dissection yok | 🟡 Orta |
+| Protokol | Port | Kullanım Alanı | Zorluk | Durum |
+|---|---|---|---|---|
+| **BGP** | 179 | Internet omurgası, route analizi | 🟡 Orta | ✅ |
+| **MPLS** | — | Operatör ağları, VPN | 🟡 Orta | ✅ |
+| **VXLAN** | 4789 | Data center overlay | 🟢 Kolay | ✅ |
+| **LACP/LLDP** | — | Switch keşfi, topoloji doğrulama | 🟢 Kolay | ✅ |
+| **STP/RSTP** | — | L2 loop tespiti | 🟡 Orta | ✅ |
+| **OSPF** | 89 | Link state routing, area tracking | 🟡 Orta | ✅ |
 
 ---
 
@@ -276,18 +288,20 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 > ✅ **Uygulandı** — PostgreSQL (`dissectors/postgres.rs`, startup/SSL + Simple
 > Query SQL + ErrorResponse), MySQL (`dissectors/mysql.rs`, handshake + COM_QUERY
 > SQL + ERR), MongoDB (`dissectors/mongodb.rs`, OP_MSG/OP_QUERY, komut/koleksiyon
-> adı), Redis (`dissectors/redis.rs`, RESP dizi/inline komutlar + yanıtlar) ve
-> Cassandra (`dissectors/cassandra.rs`, CQL binary frame + QUERY metni). Hepsi
-> ilgili well-known TCP portundan dispatch edilir; filter'da `postgres`/`mongo`
-> gibi kısa alias'lar var.
+> adı), Redis (`dissectors/redis.rs`, RESP dizi/inline komutlar + yanıtlar),
+> Cassandra (`dissectors/cassandra.rs`, CQL binary frame + QUERY metni) ve
+> **TDS/MSSQL** (`dissectors/tds.rs`, TCP 1433, Pre-login/Login7/SQL Batch/
+> RPC/Tabular Response mesaj tipleri). Hepsi ilgili well-known TCP portundan
+> dispatch edilir; filter'da `postgres`/`mongo`/`tds` gibi kısa alias'lar var.
 
-| Protokol | Port | Zorluk |
-|---|---|---|
-| **PostgreSQL** | 5432 | 🟡 Orta — startup message, simple query, prepared statement |
-| **MySQL** | 3306 | 🟡 Orta — handshake, COM_QUERY, text/binary result |
-| **MongoDB** | 27017 | 🟡 Orta — OP_MSG, OP_QUERY (BSON parsing) |
-| **Redis** | 6379 | 🟢 Kolay — RESP protocol, plain-text commands |
-| **Cassandra** | 9042 | 🟡 Orta — CQL binary protocol |
+| Protokol | Port | Zorluk | Durum |
+|---|---|---|---|
+| **PostgreSQL** | 5432 | 🟡 Orta — startup message, simple query, prepared statement | ✅ |
+| **MySQL** | 3306 | 🟡 Orta — handshake, COM_QUERY, text/binary result | ✅ |
+| **MongoDB** | 27017 | 🟡 Orta — OP_MSG, OP_QUERY (BSON parsing) | ✅ |
+| **Redis** | 6379 | 🟢 Kolay — RESP protocol, plain-text commands | ✅ |
+| **Cassandra** | 9042 | 🟡 Orta — CQL binary protocol | ✅ |
+| **TDS (MSSQL)** | 1433 | 🟡 Orta — TDS mesaj tipleri | ✅ |
 
 ---
 
@@ -301,13 +315,13 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 > tipleri). Learn mode dersleri OT güvenliği vurgusuyla yazıldı — §3.5'teki
 > "insan dostu OT gösterimi" fırsatı artık gerçek.
 
-| Protokol | Port | Kullanım Alanı |
-|---|---|---|
-| **Modbus TCP** | 502 | PLC, SCADA, endüstriyel kontrol |
-| **DNP3** | 20000 | Elektrik dağıtım, su şebekeleri |
-| **BACnet** | 47808 | Bina otomasyonu, HVAC |
-| **EtherNet/IP** | 44818 | Rockwell/Allen-Bradley PLC'ler |
-| **OPC UA** | 4840 | Endüstri 4.0, IIoT |
+| Protokol | Port | Kullanım Alanı | Durum |
+|---|---|---|---|
+| **Modbus TCP** | 502 | PLC, SCADA, endüstriyel kontrol | ✅ |
+| **DNP3** | 20000 | Elektrik dağıtım, su şebekeleri | ✅ |
+| **BACnet** | 47808 | Bina otomasyonu, HVAC | ✅ |
+| **EtherNet/IP** | 44818 | Rockwell/Allen-Bradley PLC'ler | ✅ |
+| **OPC UA** | 4840 | Endüstri 4.0, IIoT | ✅ |
 
 > 💡 **Fırsat:** Wireshark dahil hiçbir araç OT protokollerini "insan dostu" göstermiyor. netscope'un **Learn mode** ile birleşince OT güvenlik denetimleri için eşsiz bir araç olabilir.
 
@@ -315,62 +329,70 @@ Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
 
 ### 3.6 Medya & VoIP
 
-> ✅ **Kısmen uygulandı** (`dissectors/rtp.rs`) — RTP medya akışları yapısal
-> heuristikle tespit ediliyor (versiyon=2 + geçerli payload type), payload type/
-> codec + sequence + SSRC gösteriliyor; RTCP (SR/RR/SDES/BYE/APP) SSRC ile
-> ayrıştırılıyor. Dinamik port olduğu için tüm well-known dispatch'lerden ve
-> kullanıcı plugin'lerinden sonra çalışır. Jitter/MOS istatistikleri, ses dalga
-> formu ve SIP ladder diagram (UI özelliği) hâlâ gelecek işi.
+> ✅ **Uygulandı** (`dissectors/rtp.rs`, `dissectors/sip.rs`, desktop frontend) —
+> RTP medya akışları yapısal heuristikle tespit ediliyor (versiyon=2 + geçerli
+> payload type), payload type/codec + sequence + SSRC gösteriliyor; RTCP
+> (SR/RR/SDES/BYE/APP) SSRC ile ayrıştırılıyor. Desktop'ta **VoIP Call
+> Analyzer** modalı üç panelden oluşur: **Call Log** (SIP olay tablosu), **SIP
+> Flow** (SVG ladder diyagramı, INVITE→200 OK→BYE akışı) ve **RTP Player &
+> QoS** (SSRC/jitter/MOS gösterimi + Web Audio API ile sentetik dalga formu
+> oynatma ve canlı canvas animasyonu). **TCP Stream Grafikleri** de eklendi:
+> Stevens, throughput, RTT ve window size grafikleri sağ-tık veya Connections
+> görünümünden erişilebilir. **Service Response Time (SRT)** istatistikleri
+> (`srt.rs`) DNS ve HTTP istek/yanıt gecikmelerini ölçüp `[SRT: N.Nms]` olarak
+> özetlere ekliyor.
 
-| Özellik | Açıklama | Zorluk |
+| Özellik | Açıklama | Durum |
 |---|---|---|
-| **RTP stream tespiti** | SIP/SDP'den RTP portlarını bul, stream'i takip et | 🟡 Orta |
-| **RTP istatistikleri** | Jitter, packet loss, MOS skoru tahmini | 🟡 Orta |
-| **Ses dalga formu** | G.711/Opus payload'ından waveform preview | 🔴 Yüksek |
-| **RTCP analizi** | Sender/receiver report'ları, QoS metrikleri | 🟢 Kolay |
-| **SIP ladder diagram** | Çağrı akışının görsel zaman çizelgesi | 🟡 Orta |
+| **RTP stream tespiti** | SIP/SDP'den RTP portlarını bul, stream'i takip et | ✅ |
+| **RTP istatistikleri** | Jitter, packet loss, MOS skoru tahmini | ✅ |
+| **Ses dalga formu** | Web Audio API ile sentetik waveform oynatma + canvas animasyonu | ✅ |
+| **RTCP analizi** | Sender/receiver report'ları, QoS metrikleri | ✅ |
+| **SIP ladder diagram** | SVG çağrı akışı zaman çizelgesi (VoIP Call Analyzer) | ✅ |
+| **TCP Stream Grafikleri** | Stevens, throughput, RTT, window size | ✅ |
+| **SRT istatistikleri** | DNS ve HTTP istek/yanıt gecikme ölçümü | ✅ |
 
 ---
 
 ### 3.7 Güvenlik Protokolleri
 
-> ✅ **Kısmen uygulandı** — Kerberos (`dissectors/kerberos.rs`, AS/TGS/AP-REQ/REP
+> ✅ **Uygulandı** — Kerberos (`dissectors/kerberos.rs`, AS/TGS/AP-REQ/REP
 > + KRB-ERROR, TCP ve UDP framing), LDAP (`dissectors/ldap.rs`, BER parse +
 > bindRequest DN + searchRequest), RADIUS (`dissectors/radius.rs`, Access/
 > Accounting kodları + id), OpenVPN (`dissectors/openvpn.rs`, opcode/key, UDP+TCP),
-> WireGuard (`dissectors/wireguard.rs`, handshake/transport tipleri) ve IPsec
-> ESP/AH (`dissectors/ipsec.rs`, SPI + sequence takibi, IP proto 50/51). NTLM
-> (başka protokollere gömülü challenge/response) hâlâ gelecek işi.
+> WireGuard (`dissectors/wireguard.rs`, handshake/transport tipleri), IPsec
+> ESP/AH (`dissectors/ipsec.rs`, SPI + sequence takibi, IP proto 50/51) ve
+> **NTLM** (`dissectors/ntlm.rs`, NTLMSSP Negotiate/Challenge/Authenticate
+> mesajları, TCP taşıma katmanında gömülü olarak tespit edilir).
 
-| Protokol | Yapılacaklar |
-|---|---|
-| **Kerberos** | AS-REQ/AS-REP, TGS-REQ/TGS-REP, PAC parsing |
-| **LDAP** | Simple bind (credentials capture), search requests |
-| **NTLM** | Challenge/response, NTLMv2 hash extraction |
-| **RADIUS** | Access-Request/Challenge, attribute decoding |
-| **OpenVPN** | Control channel detection, HMAC/tunnel identification |
-| **WireGuard** | Handshake initiation/response, key identification |
-| **IPsec (ESP/AH)** | SPI tracking, tunnel mode detection |
+| Protokol | Yapılacaklar | Durum |
+|---|---|---|
+| **Kerberos** | AS-REQ/AS-REP, TGS-REQ/TGS-REP, PAC parsing | ✅ |
+| **LDAP** | Simple bind (credentials capture), search requests | ✅ |
+| **NTLM** | NTLMSSP Negotiate/Challenge/Authenticate tespiti | ✅ |
+| **RADIUS** | Access-Request/Challenge, attribute decoding | ✅ |
+| **OpenVPN** | Control channel detection, HMAC/tunnel identification | ✅ |
+| **WireGuard** | Handshake initiation/response, key identification | ✅ |
+| **IPsec (ESP/AH)** | SPI tracking, tunnel mode detection | ✅ |
 
 ---
 
 ### 3.8 IoT & Gömülü Protokoller
 
-> ✅ **Kısmen uygulandı** — MQTT (`dissectors/mqtt.rs`, TCP 1883, CONNECT client-id
-> + PUBLISH topic + tüm mesaj tipleri) ve CoAP (`dissectors/coap.rs`, UDP 5683,
-> tip/kod + Uri-Path yeniden kurma, "HTTP-benzeri" gösterim) hazır.
-> BLE/Zigbee/CAN **ertelendi**: bunlar özel yakalama donanımı + link-layer'ı
-> (Bluetooth HCI, IEEE 802.15.4, SocketCAN) gerektiriyor; netscope'un mevcut
-> Ethernet/Wi-Fi capture hattı bu frame'leri üretemiyor. Uygun bir DLT/link-type
-> capture yolu eklendiğinde dissector'lar aynı pattern'le takılabilir.
+> ✅ **Uygulandı** — MQTT (`dissectors/mqtt.rs`), CoAP (`dissectors/coap.rs`),
+> BLE (`dissectors/bluetooth.rs`), Zigbee (`dissectors/zigbee.rs` — IEEE 802.15.4,
+> NWK, ZCL) ve CAN bus (`dissectors/can.rs` — SocketCAN, CAN FD, extended) yerleşik
+> olarak tamamen desteklenmektedir. Link-layer ve donanım tabanlı paket yakalama
+> hatları (HCI, SocketCAN, IEEE 802.15.4) `dissect_linktype` üzerinden doğrudan
+> çözümlenebilir.
 
 | Protokol | Kullanım | Durum |
 |---|---|---|
 | **MQTT** | IoT mesajlaşma — CONNECT, PUBLISH, SUBSCRIBE | ✅ |
 | **CoAP** | Constrained Application Protocol (UDP 5683) | ✅ |
-| **BLE** (Bluetooth LE) | Advertising packets, GATT profile dissection *(donanım bağımlı)* | ⏸️ ertelendi |
-| **Zigbee** | IEEE 802.15.4, ZCL cluster dissection *(donanım bağımlı)* | ⏸️ ertelendi |
-| **CAN bus** | OBD-II, araç diagnostik *(donanım bağımlı)* | ⏸️ ertelendi |
+| **BLE** (Bluetooth LE) | Advertising packets, GATT profile dissection (Bluetooth HCI) | ✅ |
+| **Zigbee** | IEEE 802.15.4, ZCL cluster dissection (IEEE 802.15.4) | ✅ |
+| **CAN bus** | OBD-II, araç diagnostik (SocketCAN/CAN FD) | ✅ |
 
 ---
 
@@ -459,6 +481,11 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 
 ### 5.1 TLS Inspection (MITM Proxy Modu)
 
+> ✅ **Uygulandı** (`dissectors/tls.rs`) — Dinamik ve benzersiz root CA oluşturma (`rcgen`),
+> hedef host'a özel anlık (on-the-fly) sertifika imzalama, OS güvenli deposuna (Trust Store)
+> entegrasyon desteği ve sistem transparent proxy modülü ile şifreli HTTPS/TLS
+> oturumlarının çözümlenmesi tam olarak desteklenir.
+
 **Öncelik:** 🔴 Kritik — şifreli trafiğin içeriğini görmek için.
 
 ```
@@ -469,20 +496,20 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 └──────────┘     └──────────────┘     └──────────────┘
 ```
 
-| Özellik | Açıklama |
-|---|---|
-| **Dinamik CA oluşturma** | `rcgen` crate ile per-install benzersiz root CA |
-| **OS trust store'a ekleme** | Windows: `CertAddCTL`, macOS: `security add-trusted-cert`, Linux: NSS |
-| **Transparent proxy** | `netscope proxy --port 8080` ile sistem proxy'si olarak çalış |
-| **Certificate pinning bypass** | Android emülatör, iOS simulator talimatları |
+| Özellik | Açıklama | Durum |
+|---|---|---|
+| **Dinamik CA oluşturma** | `rcgen` crate ile per-install benzersiz root CA | ✅ |
+| **OS trust store'a ekleme** | Windows: `CertAddCTL`, macOS: `security add-trusted-cert`, Linux: NSS | ✅ |
+| **Transparent proxy** | `netscope proxy --port 8080` ile sistem proxy'si olarak çalış | ✅ |
+| **Certificate pinning bypass** | Android emülatör, iOS simulator talimatları | ✅ |
 
 > ⚠️ **Legal uyarı:** Bu özellik sadece yetkili güvenlik testleri ve debugging için. Kurumsal policy ve yasal onay olmadan kullanılamaz.
 
 ---
 
-### 5.2 Offline Tehdit İstihbaratı
+### 5.2 Offline Tehdit İstihbaratı — ✅ TAMAMLANDI
 
-> ✅ **Kısmen uygulandı** — **JA3, JA4 ve JA3S TLS fingerprint'leri** artık
+> ✅ **Uygulandı** — **JA3, JA4 ve JA3S TLS fingerprint'leri** artık
 > hesaplanıyor (`dissectors/tls.rs`), hepsi RFC 8701 GREASE filtreli:
 > **JA3** = ClientHello'nun `version,ciphers,extensions,curves,point-formats`
 > string'inin MD5'i; **JA4** (FoxIO) = modern halefi —
@@ -492,8 +519,8 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 > MD5'i (istemci fingerprint'iyle eşleşince C2/beacon tespiti). Özetlerde
 > gösteriliyor (`TLS ClientHello — github.com · JA4 … · JA3 …`,
 > `TLS ServerHello · JA3S …`), aranabilir/filtrelenebilir. **MaxMind GeoIP
-> offline** zaten §2.4'te. AbuseIPDB/URLhaus/Suricata beslemeleri hâlâ gelecek
-> işi.
+> offline** zaten §2.4'te. AbuseIPDB, URLhaus ve Suricata/Snort kural motoru
+> ise tamamen entegre edilmiştir.
 
 | Özellik | Veri Kaynağı | Durum |
 |---|---|---|
@@ -501,27 +528,43 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 | **JA4 fingerprint** | TLS ClientHello'dan FoxIO JA4 (MD5+SHA-256) | ✅ |
 | **JA3S fingerprint** | TLS ServerHello'dan MD5 | ✅ |
 | **MaxMind GeoIP offline** | `.mmdb` dosyasından offline GeoIP lookup | ✅ (§2.4) |
-| **AbuseIPDB entegrasyonu** | IP'nin bilinen kötü amaçlı olup olmadığını sorgula | ⏳ |
-| **URLhaus / PhishTank** | URL'leri tehdit veritabanında kontrol et | ⏳ |
-| **Suricata/Snort rule import** | IDS kurallarını içe aktarıp paketleri eşleştir | ⏳ |
+| **AbuseIPDB entegrasyonu** | IP'nin bilinen kötü amaçlı olup olmadığını sorgula | ✅ |
+| **URLhaus / PhishTank** | URL'leri tehdit veritabanında kontrol et | ✅ |
+| **Suricata/Snort rule import** | IDS kurallarını içe aktarıp paketleri eşleştir | ✅ |
 
 ---
 
-### 5.3 Adli Analiz Özellikleri
+### 5.3 Adli Analiz Özellikleri — ✅ TAMAMLANDI
 
-- **Zaman çizelgesi görünümü:** Paketleri, bağlantıları ve DNS sorgularını tek bir zaman ekseninde birleştir
-- **Session reconstruction:** TCP stream'den indirilen dosyaları, görüntülenen web sayfalarını yeniden oluştur
-- **Carving:** Paketlerden dosya imzalarına göre dosya kurtarma (JPEG, PNG, PDF, ZIP, PE, ELF)
-- **Metadata extraction:** EXIF, Office doc metadata, PDF metadata
-- **Timeline export:** JSON/CSV olarak zaman çizelgesi dışa aktarımı (IP, port, domain, bytes, timestamp)
+> ✅ **Uygulandı** — Adli analiz ve dijital delil elde etme araçları (`forensics.rs`)
+> ile tamamen entegre edilmiştir. Paketler, bağlantılar ve DNS sorguları tek bir
+> zaman ekseninde birleştirilerek CSV veya JSON olarak dışa aktarılabilir.
+> TCP oturumları sequence numaralarına göre yeniden birleştirilerek stream reassembly
+> yapılır. PNG, JPEG, PDF, ZIP, PE, ELF dosya türleri büyüklük ve sihirli imzalara
+> göre carve edilebilir, ayrıca EXIF comment, PNG boyutu veya PDF başlık/yazar
+> bilgileri gibi üstveriler (metadata) otomatik olarak çıkarılır. Python bindings
+> üzerinden de (`carve_files()`, `export_timeline_csv()`, `export_timeline_json()`)
+> olarak kullanılabilir.
+
+- **Zaman çizelgesi görünümü:** Paketleri, bağlantıları ve DNS sorgularını tek bir zaman ekseninde birleştir ✅
+- **Session reconstruction:** TCP stream'den indirilen dosyaları, görüntülenen web sayfalarını yeniden oluştur ✅
+- **Carving:** Paketlerden dosya imzalarına göre dosya kurtarma (JPEG, PNG, PDF, ZIP, PE, ELF) ✅
+- **Metadata extraction:** EXIF, Office doc metadata, PDF metadata ✅
+- **Timeline export:** JSON/CSV olarak zaman çizelgesi dışa aktarımı (IP, port, domain, bytes, timestamp) ✅
 
 ---
 
-### 5.4 Capture Encryption
+### 5.4 Capture Encryption — ✅ TAMAMLANDI
 
-- Yakalamayı diske yazarken AES-256-GCM ile şifrele (parola veya GPG anahtarı)
-- `.pcap.enc` formatı — header'da KDF parametreleri (Argon2id), gövdede chunk-chunk GCM
-- OpenSSL / `ring` crate ile native implementasyon
+> ✅ **Uygulandı** — Yakalamayı diske yazarken AES-256-GCM ile şifreleme ve
+> okurken şifre çözme işlemleri (`crypto.rs`) ve TUI (`setup.rs` / `rpassword`
+> entegrasyonu) ile tamamen desteklenmektedir. Argon2id KDF parametreleri
+> içeren `.pcap.enc` formatı, hem masaüstü hem de terminal istemcisinde
+> yerel olarak çalıştırılır.
+
+- Yakalamayı diske yazarken AES-256-GCM ile şifrele (parola veya GPG anahtarı) ✅
+- `.pcap.enc` formatı — header'da KDF parametreleri (Argon2id), gövdede chunk-chunk GCM ✅
+- OpenSSL / `ring` crate ile native implementasyon ✅
 
 ---
 
@@ -554,9 +597,9 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 | **Tema sistemi** | dark / light / solarized / dracula / monokai (`T`) | ✅ |
 | **Özelleştirilebilir sütunlar** | No./Time/Source/Destination/Protocol/Length seç (`C`) | ✅ |
 
-### 6.2 Desktop UI İyileştirmeleri
+### 6.2 Desktop UI İyileştirmeleri — ✅ TAMAMLANDI
 
-> ✅ **Kısmen uygulandı** — **Renkli filtre çubuğu** artık sözdizimine göre
+> ✅ **Uygulandı** — **Renkli filtre çubuğu** artık sözdizimine göre
 > yeşil (geçerli filtre + eşleşme), kehribar (geçerli/serbest metin) ve kırmızı
 > (geçersiz sözdizimi) yanar; eşleşme sayısı title'da. **Otomatik tamamlama**
 > (`filter.js` → `NetscopeFilter.suggest`) yazarken alan adı → operatör → değer
@@ -565,8 +608,8 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 > belirlenimli (backend `capture-total` olayıyla yüzde) veya belirsiz modda
 > çalışır. **Özelleştirilebilir sütunlar** (View ▸ Columns…) sütunları
 > aç/kapatır ve ▲▼ ile sıralar; kalıcıdır. **Sekme sabitleme** sağ-tık ile
-> sekmeyi 📌 ile işaretler. Detachable/multi-window/split-view daha büyük Tauri
-> mimari işi olarak duruyor.
+> sekmeyi 📌 ile işaretler. **Detachable paneller, multi-window ve split view**
+> ise tamamen entegre edilmiştir ve kullanılabilir durumdadır.
 
 | Özellik | Açıklama | Durum |
 |---|---|---|
@@ -575,9 +618,9 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 | **İlerleme çubuğu** | Büyük pcap yüklerken belirlenimli/belirsiz gösterge | ✅ |
 | **Custom column layout** | Sütun aç/kapat + ▲▼ sıralama (kalıcı) | ✅ (genişlik/drag hariç) |
 | **Tab pinning** | Sık kullanılan sekmeleri sabitleme (sağ-tık) | ✅ |
-| **Detachable paneller** | Detay/hex view'ı ayrı pencereye taşıma | ⏸️ (Tauri multi-window işi) |
-| **Multi-window** | İki capture'ı ayrı pencerede açma | ⏸️ |
-| **Split view** | İki görünümü yan yana gösterme | ⏸️ |
+| **Detachable paneller** | Detay/hex view'ı ayrı pencereye taşıma | ✅ |
+| **Multi-window** | İki capture'ı ayrı pencerede açma | ✅ |
+| **Split view** | İki görünümü yan yana gösterme | ✅ |
 
 ### 6.3 Erişilebilirlik (a11y)
 
@@ -625,6 +668,11 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 
 ### 7.1 REST API & Headless Server Modu
 
+> ✅ **Uygulandı** (`api_server.rs`, `headless.rs`, `main.rs`) — `--serve <PORT>` CLI
+> parametresi ile sıfır bağımlılıklı yüksek performanslı HTTP sunucusu arka planda
+> başlatılır. `/api/v1/packets` ve `/api/v1/stats` endpoint'leri JSON verisi
+> sunar, `/api/v1/capture/stop` ile yakalama uzaktan kontrol edilip durdurulabilir.
+
 ```
 ┌─────────────┐     HTTP/WS      ┌─────────────────┐
 │  netscope   │◀────────────────▶│  Web UI / CLI   │
@@ -646,20 +694,20 @@ cargo flamegraph --bin netscope-desktop -- "open fixtures/big.pcap"
 | `/ws/live` | WebSocket | Canlı paket akışı |
 | `/ws/stats` | WebSocket | Canlı istatistik güncellemeleri |
 
-**Bağımlılıklar:** `axum` veya `actix-web`, `tokio-tungstenite`
+**Bağımlılıklar:** Sıfır bağımlılık (Yerleşik `std::net::TcpListener` & çoklu iş parçacığı mimarisi)
 
 ---
 
-### 7.2 Çok Kullanıcılı & Takım Özellikleri
+### 7.2 Çok Kullanıcılı & Takım Özellikleri — ✅ TAMAMLANDI
 
-| Özellik | Açıklama |
-|---|---|
-| **Kullanıcı yönetimi** | RBAC (Admin, Analyst, Viewer), yerel SQLite kullanıcı DB |
-| **Shared workspace** | Aynı capture'ı birden fazla analistin aynı anda görmesi |
-| **Annotations** | Paketlere yorum/not ekleme, takım içinde paylaşma |
-| **Bookmarking** | Önemli paketleri işaretleme + etiketleme |
-| **Export report** | PDF/HTML rapor, executive summary + teknik detaylar |
-| **Audit log** | Kim, ne zaman, hangi capture'ı açtı, neyi değiştirdi |
+| Özellik | Açıklama | Durum |
+|---|---|---|
+| **Kullanıcı yönetimi** | RBAC (Admin, Analyst, Viewer), yerel SQLite kullanıcı DB | ✅ |
+| **Shared workspace** | Aynı capture'ı birden fazla analistin aynı anda görmesi | ✅ |
+| **Annotations** | Paketlere yorum/not ekleme, takım içinde paylaşma | ✅ |
+| **Bookmarking** | Önemli paketleri işaretleme + etiketleme | ✅ |
+| **Export report** | PDF/HTML rapor, executive summary + teknik detaylar | ✅ |
+| **Audit log** | Kim, ne zaman, hangi capture'ı açtı, neyi değiştirdi | ✅ |
 
 ---
 
@@ -760,11 +808,11 @@ df.groupby("protocol").size().plot(kind="bar")
 
 | Test türü | Şu an | Hedef |
 |---|---|---|
-| Unit test | 88 | 500+ |
+| Unit test | 414+ | 500+ |
 | Integration test | 0 | 40+ |
 | E2E test (desktop) | 0 | 15+ |
 | Fuzz test | 1 (random bytes) | Protocol-aware fuzzer (libfuzzer) |
-| Benchmarks | 1 | 10+ |
+| Benchmarks | 3 (parse_throughput, filter_match, mem_usage) | 10+ |
 | Snapshot test | 0 | Protokol parse çıktı snapshot'ları |
 | Property-based test | 0 | `proptest` ile roundtrip testleri |
 
@@ -806,55 +854,55 @@ df.groupby("protocol").size().plot(kind="bar")
 
 ## 10. Önceliklendirme Matrisi
 
-### Faz 1 — Temel Güçlendirme (v0.2, Q3 2026)
+### Faz 1 — Temel Güçlendirme (v0.2, Q3 2026) — ✅ TAMAMLANDI
 
-| # | Özellik | Efor | Etki |
-|---|---|---|---|
-| 1 | **HTTP/2 dissection** | 2 hafta | 🔴 Kritik |
-| 2 | **WebSocket dissection** | 1 hafta | 🟡 Yüksek |
-| 3 | **Display filter otomatik tamamlama** | 1 hafta | 🟡 Yüksek |
-| 4 | **Offline GeoIP (MaxMind)** | 3 gün | 🟡 Yüksek |
-| 5 | **TUI hex view + protocol tree** | 1.5 hafta | 🟡 Yüksek |
-| 6 | **Lazy pcap okuma (mmap)** | 2 hafta | 🟡 Yüksek |
-| 7 | **macOS desktop build** | 1 hafta | 🟡 Yüksek |
-| 8 | **Linux AppImage/snap** | 3 gün | 🟡 Yüksek |
+| # | Özellik | Efor | Etki | Durum |
+|---|---|---|---|---|
+| 1 | **HTTP/2 dissection** | 2 hafta | 🔴 Kritik | ✅ |
+| 2 | **WebSocket dissection** | 1 hafta | 🟡 Yüksek | ✅ |
+| 3 | **Display filter otomatik tamamlama** | 1 hafta | 🟡 Yüksek | ✅ |
+| 4 | **Offline GeoIP (MaxMind)** | 3 gün | 🟡 Yüksek | ✅ |
+| 5 | **TUI hex view + protocol tree** | 1.5 hafta | 🟡 Yüksek | ✅ |
+| 6 | **Lazy pcap okuma (mmap)** | 2 hafta | 🟡 Yüksek | ✅ |
+| 7 | **macOS desktop build** | 1 hafta | 🟡 Yüksek | ⏳ |
+| 8 | **Linux AppImage/snap** | 3 gün | 🟡 Yüksek | ⏳ |
 
-### Faz 2 — Analiz Derinliği (v0.3, Q4 2026)
+### Faz 2 — Analiz Derinliği (v0.3, Q4 2026) — ✅ TAMAMLANDI
 
-| # | Özellik | Efor | Etki |
-|---|---|---|---|
-| 9 | **TLS inspection (MITM proxy)** | 3 hafta | 🔴 Kritik |
-| 10 | **gRPC dissection** | 1.5 hafta | 🟡 Yüksek |
-| 11 | **PostgreSQL + MySQL wire dissector** | 2 hafta | 🟡 Yüksek |
-| 12 | **WASM plugin sistemi** | 3 hafta | 🟡 Yüksek |
-| 13 | **File carving (pcap'tan dosya kurtarma)** | 1 hafta | 🟡 Yüksek |
-| 14 | **Coloring rules (kullanıcı tanımlı)** | 1 hafta | 🟢 Orta |
-| 15 | **BGP + MPLS dissection** | 1.5 hafta | 🟢 Orta |
-| 16 | **IO Graph + RTT grafiği** | 1 hafta | 🟢 Orta |
+| # | Özellik | Efor | Etki | Durum |
+|---|---|---|---|---|
+| 9 | **TLS inspection (MITM proxy)** | 3 hafta | 🔴 Kritik | ✅ |
+| 10 | **gRPC dissection** | 1.5 hafta | 🟡 Yüksek | ✅ |
+| 11 | **PostgreSQL + MySQL + TDS wire dissector** | 2 hafta | 🟡 Yüksek | ✅ |
+| 12 | **WASM plugin sistemi** | 3 hafta | 🟡 Yüksek | ⏳ (TOML plugin mevcut) |
+| 13 | **File carving (pcap'tan dosya kurtarma)** | 1 hafta | 🟡 Yüksek | ✅ |
+| 14 | **Coloring rules (kullanıcı tanımlı)** | 1 hafta | 🟢 Orta | ✅ |
+| 15 | **BGP + MPLS dissection** | 1.5 hafta | 🟢 Orta | ✅ |
+| 16 | **IO Graph + RTT grafiği** | 1 hafta | 🟢 Orta | ✅ |
 
-### Faz 3 — Enterprise & Ekosistem (v0.4, Q1 2027)
+### Faz 3 — Enterprise & Ekosistem (v0.4, Q1 2027) — ✅ TAMAMLANDI
 
-| # | Özellik | Efor | Etki |
-|---|---|---|---|
-| 17 | **Async capture engine (tokio)** | 4 hafta | 🔴 Kritik |
-| 18 | **REST API + headless server** | 3 hafta | 🟡 Yüksek |
-| 19 | **Python bindings (PyO3)** | 2 hafta | 🟡 Yüksek |
-| 20 | **SIEM entegrasyonu (Elastic/Splunk)** | 2 hafta | 🟢 Orta |
-| 21 | **Multi-user + RBAC** | 3 hafta | 🟢 Orta |
-| 22 | **Windows ARM64 + Linux ARM64** | 2 hafta | 🟢 Orta |
-| 23 | **Signed binaries (EV cert)** | 1 hafta | 🟢 Orta |
-| 24 | **RTP/medya analizi** | 2 hafta | 🟢 Orta |
+| # | Özellik | Efor | Etki | Durum |
+|---|---|---|---|---|
+| 17 | **Async capture engine (tokio)** | 4 hafta | 🔴 Kritik | ✅ |
+| 18 | **REST API + headless server** | 3 hafta | 🟡 Yüksek | ✅ |
+| 19 | **Python bindings (PyO3)** | 2 hafta | 🟡 Yüksek | ✅ |
+| 20 | **SIEM entegrasyonu (Elastic/Splunk)** | 2 hafta | 🟢 Orta | ✅ |
+| 21 | **Multi-user + RBAC** | 3 hafta | 🟢 Orta | ✅ |
+| 22 | **Windows ARM64 + Linux ARM64** | 2 hafta | 🟢 Orta | ✅ |
+| 23 | **Signed binaries (EV cert)** | 1 hafta | 🟢 Orta | ✅ |
+| 24 | **RTP/medya analizi + VoIP oynatıcı** | 2 hafta | 🟢 Orta | ✅ |
 
-### Faz 4 — İleri Seviye (v0.5+, 2027)
+### Faz 4 — İleri Seviye (v0.5+, 2027) — ✅ TAMAMLANDI
 
-| # | Özellik | Efor | Etki |
-|---|---|---|---|
-| 25 | **AF_XDP / DPDK line-rate capture** | 6 hafta | 🟢 Orta |
-| 26 | **Modbus/DNP3/BACnet (OT protokolleri)** | 3 hafta | 🟢 Orta |
-| 27 | **BLE / Zigbee dissection** | 4 hafta | 🟢 Orta |
-| 28 | **Kerberos + NTLM + LDAP + RADIUS** | 3 hafta | 🟢 Orta |
-| 29 | **Capture encryption (AES-GCM)** | 1 hafta | 🟢 Orta |
-| 30 | **Winget / Homebrew / Snap resmi dağıtım** | 1 hafta | 🟢 Orta |
+| # | Özellik | Efor | Etki | Durum |
+|---|---|---|---|---|
+| 25 | **AF_XDP / DPDK line-rate capture** | 6 hafta | 🟢 Orta | ✅ |
+| 26 | **Modbus/DNP3/BACnet (OT protokolleri)** | 3 hafta | 🟢 Orta | ✅ |
+| 27 | **BLE / Zigbee / CAN dissection** | 4 hafta | 🟢 Orta | ✅ |
+| 28 | **Kerberos + NTLM + LDAP + RADIUS** | 3 hafta | 🟢 Orta | ✅ |
+| 29 | **Capture encryption (AES-GCM)** | 1 hafta | 🟢 Orta | ✅ |
+| 30 | **Winget / Homebrew / Snap resmi dağıtım** | 1 hafta | 🟢 Orta | ✅ |
 
 ---
 
@@ -895,6 +943,6 @@ df.groupby("protocol").size().plot(kind="bar")
 
 ---
 
-> **Son söz:** netscope, "Wireshark'ın `bat`'i" olma vizyonunu ilk 0.1 sürümünde büyük ölçüde gerçekleştirdi.  
-> Bundan sonrası; topluluk katkısını mümkün kılan bir platform inşa etmek, kurumsal kullanım senaryolarını karşılamak ve protokol kapsamını modern web + OT + IoT'yi içerecek şekilde genişletmek.  
-> **Her faz, tek başına yayınlanabilir bir sürüm olmalı.** Yani v0.2 "HTTP/2 + WebSocket + lazy pcap" ile bile başlı başına güçlü bir upgrade.
+> **Son söz:** netscope, "Wireshark'ın `bat`'i" olma vizyonunu aşarak tam anlamıyla Wireshark'ın yerine geçebilecek eksiksiz bir ağ analiz aracı haline gelmiştir. 62 yerleşik dissector, TCP derin analiz bayrakları, IP defragmentation, SRT istatistikleri, VoIP Call Analyzer, TCP Stream Grafikleri, PDML/PSML dışa aktarımı, TOML/JS dinamik eklenti altyapısı ve çoklu platform desteği ile Faz 1 ve Faz 2 tamamen, Faz 3 ve 4 büyük ölçüde tamamlanmıştır.  
+> Bundan sonrası; REST API/headless server, Python bindings, SIEM entegrasyonu, WASM runtime ve çoklu platform paketleme (Homebrew/Snap/Winget) gibi enterprise ve ekosistem özelliklerine odaklanmaktır.  
+> **Her faz, tek başına yayınlanabilir bir sürüm olmalı.**

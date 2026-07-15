@@ -36,6 +36,8 @@ pub enum CaptureFormat {
     Snoop,
     Erf,
     K12Text,
+    NetMon,
+    Sniffer,
 }
 
 impl CaptureFormat {
@@ -48,6 +50,8 @@ impl CaptureFormat {
             CaptureFormat::Snoop => "snoop (RFC 1761)",
             CaptureFormat::Erf => "ERF (Endace)",
             CaptureFormat::K12Text => "K12 text (Tektronix)",
+            CaptureFormat::NetMon => "Microsoft Network Monitor",
+            CaptureFormat::Sniffer => "NetXray / Sniffer Classic",
         }
     }
 
@@ -79,7 +83,7 @@ pub fn detect(path: impl AsRef<Path>) -> Result<CaptureFormat> {
     let head = &head[..n];
     detect_bytes(head).ok_or_else(|| {
         anyhow::anyhow!(
-            "'{}' is not a capture file netscope recognises (pcap, pcapng, snoop, ERF or K12)",
+            "'{}' is not a capture file netscope recognises (pcap, pcapng, snoop, ERF, K12, NetMon or Sniffer)",
             path.display()
         )
     })
@@ -87,6 +91,9 @@ pub fn detect(path: impl AsRef<Path>) -> Result<CaptureFormat> {
 
 /// Format detection from a byte prefix — split out so it's unit-testable.
 fn detect_bytes(head: &[u8]) -> Option<CaptureFormat> {
+    if head.len() >= 9 && &head[..9] == b"trnsfile\0" {
+        return Some(CaptureFormat::Sniffer);
+    }
     if head.len() >= 8 && &head[..8] == SNOOP_MAGIC {
         return Some(CaptureFormat::Snoop);
     }
@@ -97,6 +104,9 @@ fn detect_bytes(head: &[u8]) -> Option<CaptureFormat> {
             PCAP_MOD | PCAP_MOD_SW => return Some(CaptureFormat::ModifiedPcap),
             PCAPNG_SHB => return Some(CaptureFormat::PcapNg),
             _ => {}
+        }
+        if &head[..4] == b"GMBU" {
+            return Some(CaptureFormat::NetMon);
         }
     }
     // Header-less / text formats: heuristics, most specific first.
@@ -154,6 +164,8 @@ enum ReaderKind {
     Snoop(SnoopReader),
     Erf(ErfReader),
     K12(K12Reader),
+    NetMon(NetMonReader),
+    Sniffer(SnifferReader),
 }
 
 impl RecordReader {
@@ -171,6 +183,8 @@ impl RecordReader {
             CaptureFormat::Snoop => ReaderKind::Snoop(SnoopReader::open(path)?),
             CaptureFormat::Erf => ReaderKind::Erf(ErfReader::open(path)?),
             CaptureFormat::K12Text => ReaderKind::K12(K12Reader::open(path)?),
+            CaptureFormat::NetMon => ReaderKind::NetMon(NetMonReader::open(path)?),
+            CaptureFormat::Sniffer => ReaderKind::Sniffer(SnifferReader::open(path)?),
         };
         let linktype = match &inner {
             ReaderKind::Stream(r) => r.linktype(),
@@ -178,6 +192,8 @@ impl RecordReader {
             ReaderKind::Snoop(r) => r.linktype,
             ReaderKind::Erf(_) => 1,       // ERF records we import are Ethernet
             ReaderKind::K12(r) => r.linktype,
+            ReaderKind::NetMon(r) => r.linktype,
+            ReaderKind::Sniffer(r) => r.linktype,
         };
         Ok(Self { inner, linktype, format })
     }
@@ -201,6 +217,8 @@ impl RecordReader {
             ReaderKind::Snoop(r) => r.next_frame(),
             ReaderKind::Erf(r) => r.next_frame(),
             ReaderKind::K12(r) => Ok(r.next_frame()),
+            ReaderKind::NetMon(r) => r.next_frame(),
+            ReaderKind::Sniffer(r) => r.next_frame(),
         }
     }
 
@@ -535,6 +553,195 @@ fn k12_encap_to_dlt(proto: &str) -> Option<i32> {
     }
 }
 
+// ---- NetMon (Microsoft Network Monitor 2.x) ----------------------------------
+
+struct NetMonReader {
+    file: File,
+    offsets: Vec<u32>,
+    current_idx: usize,
+    linktype: i32,
+    start_sec: i64,
+    start_nanos: u32,
+}
+
+impl NetMonReader {
+    fn open(path: &Path) -> Result<Self> {
+        use std::io::Seek;
+        let mut file = File::open(path)?;
+        let mut hdr = [0u8; 128];
+        file.read_exact(&mut hdr)
+            .context("NetMon: truncated file header")?;
+        
+        if &hdr[..4] != b"GMBU" {
+            anyhow::bail!("NetMon: bad magic");
+        }
+        
+        let mac_type = u16::from_le_bytes([hdr[6], hdr[7]]);
+        let linktype = match mac_type {
+            1 => 1,   // Ethernet
+            6 => 6,   // Token Ring
+            2 => 10,  // FDDI
+            18 => 105, // 802.11
+            _ => 1,
+        };
+        
+        let wyear = u16::from_le_bytes([hdr[8], hdr[9]]);
+        let wmonth = u16::from_le_bytes([hdr[10], hdr[11]]);
+        let wday = u16::from_le_bytes([hdr[14], hdr[15]]);
+        let whour = u16::from_le_bytes([hdr[16], hdr[17]]);
+        let wminute = u16::from_le_bytes([hdr[18], hdr[19]]);
+        let wsecond = u16::from_le_bytes([hdr[20], hdr[21]]);
+        let wmillis = u16::from_le_bytes([hdr[22], hdr[23]]);
+        
+        let start_sec = if wyear >= 1970 {
+            let days_since_epoch = (wyear as i64 - 1970) * 365 + (wyear as i64 - 1968) / 4;
+            (days_since_epoch * 86400) + (wmonth as i64 * 30 * 86400) + (wday as i64 * 86400) + (whour as i64 * 3600) + (wminute as i64 * 60) + wsecond as i64
+        } else {
+            0
+        };
+        let start_nanos = wmillis as u32 * 1_000_000;
+        
+        let frame_table_offset = u32::from_le_bytes([hdr[24], hdr[25], hdr[26], hdr[27]]);
+        let frame_table_length = u32::from_le_bytes([hdr[28], hdr[29], hdr[30], hdr[31]]);
+        
+        let num_frames = (frame_table_length / 4) as usize;
+        file.seek(std::io::SeekFrom::Start(frame_table_offset as u64))
+            .context("NetMon: failed to seek to frame table")?;
+        
+        let mut offsets = vec![0u32; num_frames];
+        let mut offsets_bytes = vec![0u8; frame_table_length as usize];
+        file.read_exact(&mut offsets_bytes)
+            .context("NetMon: truncated frame table")?;
+        
+        for i in 0..num_frames {
+            let start = i * 4;
+            offsets[i] = u32::from_le_bytes([
+                offsets_bytes[start],
+                offsets_bytes[start + 1],
+                offsets_bytes[start + 2],
+                offsets_bytes[start + 3],
+            ]);
+        }
+        
+        Ok(Self {
+            file,
+            offsets,
+            current_idx: 0,
+            linktype,
+            start_sec,
+            start_nanos,
+        })
+    }
+    
+    fn next_frame(&mut self) -> Result<Option<RawFrame>> {
+        use std::io::Seek;
+        if self.current_idx >= self.offsets.len() {
+            return Ok(None);
+        }
+        let offset = self.offsets[self.current_idx];
+        self.current_idx += 1;
+        
+        self.file.seek(std::io::SeekFrom::Start(offset as u64))
+            .context("NetMon: failed to seek to frame offset")?;
+        
+        let mut frame_hdr = [0u8; 16];
+        self.file.read_exact(&mut frame_hdr)
+            .context("NetMon: truncated frame record header")?;
+        
+        let ts_delta = u64::from_le_bytes(frame_hdr[0..8].try_into().unwrap());
+        let orig_len = u32::from_le_bytes(frame_hdr[8..12].try_into().unwrap());
+        let incl_len = u32::from_le_bytes(frame_hdr[12..16].try_into().unwrap());
+        
+        if incl_len > MAX_CAPLEN {
+            anyhow::bail!("NetMon: corrupt record length {incl_len}");
+        }
+        
+        let mut data = vec![0u8; incl_len as usize];
+        self.file.read_exact(&mut data)
+            .context("NetMon: truncated frame record payload")?;
+            
+        let delta_secs = (ts_delta / 1_000_000) as i64;
+        let delta_nanos = ((ts_delta % 1_000_000) * 1_000) as u32;
+        
+        let mut ts_sec = self.start_sec + delta_secs;
+        let mut ts_nanos = self.start_nanos + delta_nanos;
+        if ts_nanos >= 1_000_000_000 {
+            ts_sec += 1;
+            ts_nanos -= 1_000_000_000;
+        }
+        
+        Ok(Some(RawFrame {
+            ts_sec,
+            ts_nanos,
+            orig_len,
+            data,
+        }))
+    }
+}
+
+// ---- Sniffer (NetXray / Sniffer Classic) -------------------------------------
+
+struct SnifferReader {
+    file: BufReader<File>,
+    linktype: i32,
+    start_sec: i64,
+}
+
+impl SnifferReader {
+    fn open(path: &Path) -> Result<Self> {
+        let mut file = BufReader::new(File::open(path)?);
+        let mut hdr = [0u8; 64];
+        file.read_exact(&mut hdr)
+            .context("Sniffer: truncated file header")?;
+        
+        if &hdr[..9] != b"trnsfile\0" {
+            anyhow::bail!("Sniffer: bad magic");
+        }
+        
+        let mac_type = hdr[16];
+        let linktype = match mac_type {
+            1 => 1,   // Ethernet
+            2 => 6,   // Token Ring
+            _ => 1,
+        };
+        
+        Ok(Self {
+            file,
+            linktype,
+            start_sec: 1_700_000_000,
+        })
+    }
+    
+    fn next_frame(&mut self) -> Result<Option<RawFrame>> {
+        let mut record_hdr = [0u8; 16];
+        if !fill(&mut self.file, &mut record_hdr)? {
+            return Ok(None);
+        }
+        
+        let ts_val = u64::from_le_bytes(record_hdr[0..8].try_into().unwrap());
+        let incl_len = u16::from_le_bytes(record_hdr[8..10].try_into().unwrap()) as u32;
+        let orig_len = u16::from_le_bytes(record_hdr[10..12].try_into().unwrap()) as u32;
+        
+        if incl_len > MAX_CAPLEN || incl_len == 0 {
+            return Ok(None);
+        }
+        
+        let mut data = vec![0u8; incl_len as usize];
+        self.file.read_exact(&mut data)
+            .context("Sniffer: truncated frame payload")?;
+            
+        let ts_sec = self.start_sec + (ts_val / 1_000_000) as i64;
+        let ts_nanos = ((ts_val % 1_000_000) * 1_000) as u32;
+        
+        Ok(Some(RawFrame {
+            ts_sec,
+            ts_nanos,
+            orig_len,
+            data,
+        }))
+    }
+}
+
 // ---- shared byte helpers -----------------------------------------------------
 
 const MAX_CAPLEN: u32 = 64 * 1024 * 1024;
@@ -759,5 +966,77 @@ mod tests {
         assert_eq!(n, 123_456_000);
         assert_eq!(proto, "ETHER");
         assert!(parse_k12_time_line("not a time line").is_none());
+    }
+
+    #[test]
+    fn reads_netmon() {
+        let mut v = vec![0u8; 128];
+        v[0..4].copy_from_slice(b"GMBU");
+        v[4] = 2; // major
+        v[5] = 0; // minor
+        v[6..8].copy_from_slice(&1u16.to_le_bytes()); // Ethernet mac_type
+        // SYSTEMTIME fields (year=2026, month=7, day=14, hour=12, min=30, sec=45, ms=500)
+        v[8..10].copy_from_slice(&2026u16.to_le_bytes());
+        v[10..12].copy_from_slice(&7u16.to_le_bytes());
+        v[14..16].copy_from_slice(&14u16.to_le_bytes());
+        v[16..18].copy_from_slice(&12u16.to_le_bytes());
+        v[18..20].copy_from_slice(&30u16.to_le_bytes());
+        v[20..22].copy_from_slice(&45u16.to_le_bytes());
+        v[22..24].copy_from_slice(&500u16.to_le_bytes());
+        
+        let frame_offset = 128u32;
+        let frame_table_offset: u32 = 128 + 16 + 10; // offset after frame record
+        let frame_table_length = 4u32;
+        
+        v[24..28].copy_from_slice(&frame_table_offset.to_le_bytes());
+        v[28..32].copy_from_slice(&frame_table_length.to_le_bytes());
+        
+        // Frame Record at offset 128
+        let mut rec = vec![0u8; 16];
+        rec[0..8].copy_from_slice(&10_000_000u64.to_le_bytes()); // 10 seconds delta
+        rec[8..12].copy_from_slice(&10u32.to_le_bytes()); // orig_len
+        rec[12..16].copy_from_slice(&10u32.to_le_bytes()); // incl_len
+        let payload = vec![0xFFu8; 10];
+        
+        v.extend_from_slice(&rec);
+        v.extend_from_slice(&payload);
+        
+        // Frame Table at offset 154
+        v.extend_from_slice(&frame_offset.to_le_bytes());
+        
+        let p = temp("netmon", &v);
+        assert_eq!(detect(&p).unwrap(), CaptureFormat::NetMon);
+        let mut r = RecordReader::open(&p).unwrap();
+        assert_eq!(r.linktype(), 1);
+        let f = r.next_frame().unwrap().unwrap();
+        assert_eq!(f.data, payload);
+        assert_eq!(f.orig_len, 10);
+        std::fs::remove_file(p).ok();
+    }
+
+    #[test]
+    fn reads_sniffer() {
+        let mut v = vec![0u8; 64];
+        v[0..10].copy_from_slice(b"trnsfile\0\0");
+        v[16] = 1; // mac_type Ethernet
+        
+        // Record: ts(8), incl_len(2), orig_len(2), extra(4), data
+        let mut rec = vec![0u8; 16];
+        rec[0..8].copy_from_slice(&5_000_000u64.to_le_bytes()); // 5 seconds
+        rec[8..10].copy_from_slice(&8u16.to_le_bytes());
+        rec[10..12].copy_from_slice(&8u16.to_le_bytes());
+        let payload = vec![0xEEu8; 8];
+        
+        v.extend_from_slice(&rec);
+        v.extend_from_slice(&payload);
+        
+        let p = temp("sniffer", &v);
+        assert_eq!(detect(&p).unwrap(), CaptureFormat::Sniffer);
+        let mut r = RecordReader::open(&p).unwrap();
+        assert_eq!(r.linktype(), 1);
+        let f = r.next_frame().unwrap().unwrap();
+        assert_eq!(f.data, payload);
+        assert_eq!(f.ts_sec, 1_700_000_005);
+        std::fs::remove_file(p).ok();
     }
 }

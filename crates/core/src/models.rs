@@ -110,6 +110,10 @@ pub enum Protocol {
     Can,
     /// NT LAN Manager Security Support Provider (NTLMSSP).
     Ntlm,
+    Smb,
+    Tds,
+    Amqp,
+    Kafka,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -192,6 +196,10 @@ impl std::fmt::Display for Protocol {
             Protocol::Bluetooth => write!(f, "BT HCI"),
             Protocol::Can => write!(f, "CAN"),
             Protocol::Ntlm => write!(f, "NTLM"),
+            Protocol::Smb => write!(f, "SMB"),
+            Protocol::Tds => write!(f, "TDS"),
+            Protocol::Amqp => write!(f, "AMQP"),
+            Protocol::Kafka => write!(f, "Kafka"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }

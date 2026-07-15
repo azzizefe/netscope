@@ -54,8 +54,13 @@ pub mod udp;
 pub mod usb;
 pub mod vxlan;
 pub mod websocket;
+pub mod smb;
+pub mod tds;
+pub mod amqp;
+pub mod kafka;
 pub mod wireguard;
 pub mod wlan;
+pub mod zigbee;
 
 use std::net::IpAddr;
 
@@ -115,6 +120,7 @@ const DLT_USB_LINUX: i32 = 189; // usbmon, 48-byte header
 const DLT_USB_LINUX_MMAPPED: i32 = 220; // usbmon, 64-byte header
 const DLT_CAN_SOCKETCAN: i32 = 227; // SocketCAN (can0/vcan0)
 const DLT_USBPCAP: i32 = 249; // Windows USBPcap
+const DLT_IEEE802_15_4: i32 = 195; // IEEE 802.15.4 Wireless PAN (Zigbee)
 
 /// Entry point that respects the capture's link-layer type. Ethernet captures
 /// (the default) go through [`dissect`]; Wi-Fi, Linux-cooked (remote
@@ -131,6 +137,7 @@ pub fn dissect_linktype(data: &[u8], linktype: i32) -> DissectedResult {
         DLT_USB_LINUX | DLT_USB_LINUX_MMAPPED => usb::dissect_usb_linux(data),
         DLT_USBPCAP => usb::dissect_usbpcap(data),
         DLT_CAN_SOCKETCAN => can::dissect_can(data),
+        DLT_IEEE802_15_4 => zigbee::dissect_ieee802154(data),
         DLT_EN10MB => dissect(data),
         _ => dissect(data),
     }

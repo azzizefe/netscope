@@ -142,6 +142,7 @@
         <div class="menu-drop">
           <button class="menu-item" id="mi-open" data-i18n="menu.file.open">📂 Open capture…</button>
           <button class="menu-item" id="mi-save" data-i18n="menu.file.save">💾 Save capture as…</button>
+          <button class="menu-item" id="mi-new-window">📂 New window</button>
           <div class="menu-sep"></div>
           <button class="menu-item" id="mi-open-enc" data-i18n="menu.file.openenc">🔐 Open encrypted capture…</button>
           <button class="menu-item" id="mi-save-enc" data-i18n="menu.file.saveenc">🔒 Save encrypted capture…</button>
@@ -180,6 +181,7 @@
           <button class="menu-item" data-goview="learn" data-i18n="tab.learn">Learn</button>
           <div class="menu-sep"></div>
           <button class="menu-item" id="mi-columns" data-i18n="menu.view.columns">📊 Columns…</button>
+          <button class="menu-item" id="mi-split-view">🥞 Toggle Split View</button>
           <button class="menu-item" id="mi-coloring" data-i18n="menu.view.coloring">🎨 Coloring rules…</button>
           <button class="menu-item" id="mi-timeprefs" data-i18n="menu.view.time">🕐 Time &amp; display settings…</button>
         </div>
@@ -292,6 +294,17 @@
       <button class="tab" role="tab" aria-selected="false" data-view="diff" data-i18n="tab.diff">🔀 Diff</button>
       <button class="tab" role="tab" aria-selected="false" data-view="script" data-i18n="tab.script">⚡ Script</button>
       <button class="tab" role="tab" aria-selected="false" data-view="learn" data-i18n="tab.learn">🎓 Learn</button>
+      <select id="split-view-select" class="split-view-select hidden" aria-label="Split view tab" style="margin-left:auto; background:var(--bg-card); color:var(--text); border:1px solid var(--border); padding:2px 8px; border-radius:4px">
+        <option value="none">— Select Split View —</option>
+        <option value="connections" data-i18n="tab.connections">Connections</option>
+        <option value="dashboard" data-i18n="tab.dashboard">Dashboard</option>
+        <option value="topology" data-i18n="tab.topology">Topology</option>
+        <option value="insights" data-i18n="tab.insights">Insights</option>
+        <option value="privacy" data-i18n="tab.privacy">Privacy</option>
+        <option value="diff" data-i18n="tab.diff">Diff</option>
+        <option value="script" data-i18n="tab.script">Script</option>
+        <option value="learn" data-i18n="tab.learn">Learn</option>
+      </select>
     </nav>
 
     <!-- Main Content -->
@@ -320,6 +333,7 @@
             <span class="pane-head-actions">
               <button id="curl-copy" class="btn btn-small hidden" data-i18n="btn.curl" data-i18n-title="title.curl" title="Copy this HTTP request as a cURL command">📋 Copy as cURL</button>
               <button id="replay-open" class="btn btn-small" data-i18n="btn.replay" data-i18n-title="title.replay" title="Resend this packet's payload to a target and see the response">↻ Replay</button>
+              <button id="detail-detach" class="btn-icon" title="Detach panel" style="margin-right:4px">⧉</button>
               <button id="detail-close" class="btn-icon" data-i18n-title="title.close" title="Close (Esc)">×</button>
             </span>
           </div>
@@ -337,6 +351,7 @@
               <button class="btn btn-small" data-hexcode="python">Python</button>
               <button class="btn btn-small" data-hexcode="hex">hex</button>
               <span id="hex-len" class="pane-head-meta"></span>
+              <button id="hex-detach" class="btn-icon" title="Detach panel" style="margin-left: 8px">⧉</button>
             </span>
           </div>
           <pre id="hex-dump"></pre>

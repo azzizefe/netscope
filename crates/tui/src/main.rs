@@ -27,6 +27,10 @@ struct Cli {
     #[arg(short = 'r', long = "read")]
     read: Option<String>,
 
+    /// Passphrase to decrypt an encrypted capture file (.pcap.enc)
+    #[arg(long = "passphrase", value_name = "PASSPHRASE")]
+    passphrase: Option<String>,
+
     /// Save captured packets to a pcap file
     #[arg(short = 'w', long)]
     write: Option<String>,
@@ -106,6 +110,10 @@ struct Cli {
     /// JSON output mode (implies --headless, one JSON object per line)
     #[arg(long)]
     json: bool,
+
+    /// Spawn a lightweight REST API server on the specified port (implies --headless)
+    #[arg(long = "serve", value_name = "PORT")]
+    serve: Option<u16>,
 
     #[command(subcommand)]
     subcommand: Option<SubCommand>,
@@ -245,7 +253,7 @@ fn main() -> Result<()> {
         return unblock_all();
     }
 
-    let headless = cli.headless || cli.json;
+    let headless = cli.headless || cli.json || cli.serve.is_some();
     if headless {
         return headless::run(cli);
     }

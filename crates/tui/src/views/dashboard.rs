@@ -5,8 +5,6 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::colors::protocol_color;
-use netscope_core::models::Protocol;
 use netscope_core::stats::StatsSnapshot;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {

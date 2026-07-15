@@ -62,6 +62,10 @@ pub fn protocol_color(protocol: &Protocol) -> Color {
         Protocol::Bluetooth => Color::Rgb(0x3B, 0x82, 0xF6),
         Protocol::Can => Color::Rgb(0xD9, 0xA4, 0x42),
         Protocol::Ntlm => Color::Rgb(0xA8, 0x55, 0xF7),
+        Protocol::Smb => Color::Rgb(0x4B, 0x55, 0x63),
+        Protocol::Tds => Color::Rgb(0x05, 0x96, 0x69),
+        Protocol::Amqp => Color::Rgb(0xD9, 0x77, 0x06),
+        Protocol::Kafka => Color::Rgb(0x4F, 0x46, 0xE5),
         Protocol::Plugin(_) => Color::Rgb(0xE2, 0xB0, 0x7A),
         Protocol::Unknown(_) => Color::Rgb(0xF8, 0x71, 0x71),
     }
