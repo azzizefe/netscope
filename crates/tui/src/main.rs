@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 mod app;
 mod colors;
@@ -14,7 +14,7 @@ mod views;
 
 use anyhow::Result;
 use clap::Parser;
-use netscope_core::editcap::{MergeOptions, SplitOptions, SplitMode, WriteFormat};
+use netscope_core::editcap::{MergeOptions, SplitMode, SplitOptions, WriteFormat};
 
 #[derive(Parser)]
 #[command(name = "netscope", about = "Terminal network packet analyzer")]
@@ -169,29 +169,59 @@ enum SubCommand {
 
 fn handle_subcommand(sub: SubCommand) -> Result<()> {
     match sub {
-        SubCommand::Merge { inputs, output, pcapng, no_sort } => {
-            let format = if pcapng { WriteFormat::PcapNg } else { WriteFormat::Pcap };
+        SubCommand::Merge {
+            inputs,
+            output,
+            pcapng,
+            no_sort,
+        } => {
+            let format = if pcapng {
+                WriteFormat::PcapNg
+            } else {
+                WriteFormat::Pcap
+            };
             let opts = MergeOptions {
                 format,
                 chronological: !no_sort,
                 comment: Some("Merged with netscope".to_string()),
             };
-            let input_paths: Vec<std::path::PathBuf> = inputs.iter().map(std::path::PathBuf::from).collect();
+            let input_paths: Vec<std::path::PathBuf> =
+                inputs.iter().map(std::path::PathBuf::from).collect();
             let output_path = std::path::PathBuf::from(output);
-            
-            println!("Merging {} file(s) into {}...", input_paths.len(), output_path.display());
+
+            println!(
+                "Merging {} file(s) into {}...",
+                input_paths.len(),
+                output_path.display()
+            );
             let stats = netscope_core::editcap::merge(&input_paths, &output_path, &opts)?;
             println!("Merge complete!");
             println!("  Packets merged: {}", stats.packets);
-            println!("  Output size: {} bytes", std::fs::metadata(&output_path)?.len());
+            println!(
+                "  Output size: {} bytes",
+                std::fs::metadata(&output_path)?.len()
+            );
         }
-        SubCommand::Split { input, output_prefix, packets, seconds, bytes, pcapng } => {
-            let format = if pcapng { WriteFormat::PcapNg } else { WriteFormat::Pcap };
+        SubCommand::Split {
+            input,
+            output_prefix,
+            packets,
+            seconds,
+            bytes,
+            pcapng,
+        } => {
+            let format = if pcapng {
+                WriteFormat::PcapNg
+            } else {
+                WriteFormat::Pcap
+            };
             let mode = match (packets, seconds, bytes) {
                 (Some(p), None, None) => SplitMode::Packets(p),
                 (None, Some(s), None) => SplitMode::Seconds(s),
                 (None, None, Some(b)) => SplitMode::Bytes(b),
-                _ => anyhow::bail!("Specify exactly one split condition: --packets, --seconds, or --bytes"),
+                _ => anyhow::bail!(
+                    "Specify exactly one split condition: --packets, --seconds, or --bytes"
+                ),
             };
             let opts = SplitOptions { format, mode };
             let input_path = std::path::PathBuf::from(input);
@@ -207,14 +237,21 @@ fn handle_subcommand(sub: SubCommand) -> Result<()> {
         SubCommand::Info { input } => {
             let input_path = std::path::PathBuf::from(input);
             let info = netscope_core::editcap::info(&input_path)?;
-            println!("File name:    {}", input_path.file_name().unwrap_or_default().to_string_lossy());
+            println!(
+                "File name:    {}",
+                input_path.file_name().unwrap_or_default().to_string_lossy()
+            );
             println!("File format:  {}", info.format.label());
-            println!("Link type:    {} ({})", info.linktype, match info.linktype {
-                1 => "Ethernet",
-                127 => "IEEE 802.11 (WLAN)",
-                189 | 220 | 249 => "USB",
-                _ => "Other",
-            });
+            println!(
+                "Link type:    {} ({})",
+                info.linktype,
+                match info.linktype {
+                    1 => "Ethernet",
+                    127 => "IEEE 802.11 (WLAN)",
+                    189 | 220 | 249 => "USB",
+                    _ => "Other",
+                }
+            );
             println!("Packet count: {}", info.packets);
             println!("Data size:    {} bytes", info.data_bytes);
             if let Some(dur) = info.duration_secs() {

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Ring-buffer capture files — Wireshark's `-b` option for netscope.
 //!
@@ -100,7 +100,13 @@ impl RingWriter {
     }
 
     /// Write one packet record, rotating first if a limit would be crossed.
-    pub fn write(&mut self, ts_sec: u32, ts_usec: u32, orig_len: u32, data: &[u8]) -> io::Result<()> {
+    pub fn write(
+        &mut self,
+        ts_sec: u32,
+        ts_usec: u32,
+        orig_len: u32,
+        data: &[u8],
+    ) -> io::Result<()> {
         if self.should_rotate(data.len() as u64) {
             self.rotate()?;
         }
@@ -255,10 +261,17 @@ mod tests {
         // last two files survive.
         assert_eq!(kept.len(), 2, "ring must keep exactly `files` members");
         let on_disk = pcap_files(&dir);
-        assert_eq!(on_disk.len(), 2, "pruned files must be deleted: {on_disk:?}");
+        assert_eq!(
+            on_disk.len(),
+            2,
+            "pruned files must be deleted: {on_disk:?}"
+        );
         for f in &on_disk {
             let name = f.file_name().unwrap().to_string_lossy().into_owned();
-            assert!(name.starts_with("ring_") && name.ends_with(".pcap"), "{name}");
+            assert!(
+                name.starts_with("ring_") && name.ends_with(".pcap"),
+                "{name}"
+            );
             let bytes = std::fs::read(f).unwrap();
             assert_eq!(&bytes[0..4], &PCAP_MAGIC_US.to_le_bytes());
             assert!(bytes.len() > 24, "rotated file must hold records");

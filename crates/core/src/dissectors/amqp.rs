@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
@@ -15,7 +15,10 @@ pub fn dissect_amqp(
     payload: &[u8],
 ) -> DissectedResult {
     let summary = if payload.starts_with(b"AMQP") && payload.len() >= 8 {
-        format!("AMQP Connection Header (v{}.{}.{})", payload[4], payload[5], payload[6])
+        format!(
+            "AMQP Connection Header (v{}.{}.{})",
+            payload[4], payload[5], payload[6]
+        )
     } else {
         "AMQP Message Queuing Traffic".to_string()
     };

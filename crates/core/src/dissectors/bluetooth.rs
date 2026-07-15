@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Bluetooth HCI dissector — host↔controller traffic captured on Linux
 //! `bluetoothN` interfaces (`LINKTYPE_BLUETOOTH_HCI_H4` DLT 187 and
@@ -161,8 +161,16 @@ mod tests {
     #[test]
     fn phdr_direction_arrows() {
         let sent = dissect_hci_with_phdr(&[0, 0, 0, 0, 0x01, 0x03, 0x0c, 0x00]);
-        assert!(sent.summary.starts_with("→ HCI Command: Reset"), "{}", sent.summary);
+        assert!(
+            sent.summary.starts_with("→ HCI Command: Reset"),
+            "{}",
+            sent.summary
+        );
         let rcvd = dissect_hci_with_phdr(&[0, 0, 0, 1, 0x04, 0x0f, 0x01, 0x00]);
-        assert!(rcvd.summary.starts_with("← HCI Event: Command Status"), "{}", rcvd.summary);
+        assert!(
+            rcvd.summary.starts_with("← HCI Event: Command Status"),
+            "{}",
+            rcvd.summary
+        );
     }
 }

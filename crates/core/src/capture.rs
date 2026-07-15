@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::io::Read;
 use std::sync::{
@@ -764,15 +764,19 @@ impl CaptureEngine {
             let handle = thread::Builder::new()
                 .name("capture".into())
                 .spawn(move || {
-                    let mut savefile = output_path
-                        .as_ref()
-                        .and_then(|path| match cap.savefile(path) {
-                            Ok(sf) => Some(sf),
-                            Err(e) => {
-                                eprintln!("Warning: Failed to create savefile '{}': {}", path, e);
-                                None
-                            }
-                        });
+                    let mut savefile =
+                        output_path
+                            .as_ref()
+                            .and_then(|path| match cap.savefile(path) {
+                                Ok(sf) => Some(sf),
+                                Err(e) => {
+                                    eprintln!(
+                                        "Warning: Failed to create savefile '{}': {}",
+                                        path, e
+                                    );
+                                    None
+                                }
+                            });
                     while running.load(Ordering::SeqCst) {
                         match cap.next_packet() {
                             Ok(pkt) => {
@@ -812,15 +816,19 @@ impl CaptureEngine {
             let handle = thread::Builder::new()
                 .name("capture".into())
                 .spawn(move || {
-                    let mut writer = output_path.as_ref().and_then(|path| {
-                        match RingWriter::create(path, linktype, RingBufferOptions::default()) {
-                            Ok(w) => Some(w),
-                            Err(e) => {
-                                eprintln!("Warning: Failed to create savefile '{}': {}", path, e);
-                                None
+                    let mut writer =
+                        output_path.as_ref().and_then(|path| {
+                            match RingWriter::create(path, linktype, RingBufferOptions::default()) {
+                                Ok(w) => Some(w),
+                                Err(e) => {
+                                    eprintln!(
+                                        "Warning: Failed to create savefile '{}': {}",
+                                        path, e
+                                    );
+                                    None
+                                }
                             }
-                        }
-                    });
+                        });
 
                     while running.load(Ordering::SeqCst) {
                         match reader.next_frame() {
@@ -918,7 +926,7 @@ fn af_xdp_capture_loop(
     #[cfg(target_os = "linux")]
     {
         println!("AF_XDP: Initializing eBPF redirect program and user-space ring buffer for zero-copy on {}", iface);
-        // Under Linux, we would bind an AF_XDP (XSK) socket. 
+        // Under Linux, we would bind an AF_XDP (XSK) socket.
         // We run standard capture_loop as a zero-copy optimized fallback.
         capture_loop(cap, iface, producer, running, tracker, writer);
     }
@@ -938,7 +946,10 @@ fn dpdk_capture_loop(
     tracker: Option<Arc<StopTracker>>,
     writer: Option<RingWriter>,
 ) {
-    println!("DPDK PMD: Initializing user-space rx_burst poll ring for zero-copy on {}", iface);
+    println!(
+        "DPDK PMD: Initializing user-space rx_burst poll ring for zero-copy on {}",
+        iface
+    );
     // DPDK bypasses the kernel entirely by polling ring descriptors in user-space.
     // Falls back to regular pcap capture loop.
     capture_loop(cap, iface, producer, running, tracker, writer);
@@ -962,12 +973,13 @@ fn capture_loop(
                     // tv_sec is i32 on Windows but i64 on Linux/macOS.
                     #[allow(clippy::unnecessary_cast)]
                     let ts_sec = pkt.header.ts.tv_sec as u32;
-                    if let Err(e) =
-                        w.write(ts_sec, pkt.header.ts.tv_usec as u32, pkt.header.len, pkt.data)
-                    {
-                        eprintln!(
-                            "Warning: capture file write failed: {e} — file saving disabled"
-                        );
+                    if let Err(e) = w.write(
+                        ts_sec,
+                        pkt.header.ts.tv_usec as u32,
+                        pkt.header.len,
+                        pkt.data,
+                    ) {
+                        eprintln!("Warning: capture file write failed: {e} — file saving disabled");
                         write_failed = true;
                     }
                 }

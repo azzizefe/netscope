@@ -1,8 +1,8 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::net::IpAddr;
-use std::collections::HashMap;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::net::IpAddr;
 
 use crate::models::Protocol;
 
@@ -23,36 +23,47 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, ()> {
     }
     (0..s.len())
         .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i+2], 16).map_err(|_| ()))
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).map_err(|_| ()))
         .collect()
 }
 
 fn decrypt_esp_gcm(payload: &[u8], _spi: u32, key_bytes: &[u8]) -> Option<(u8, Vec<u8>)> {
-    if key_bytes.len() != 20 || payload.len() < 8 + 8 + 16 + 2 { return None; }
-    
+    if key_bytes.len() != 20 || payload.len() < 8 + 8 + 16 + 2 {
+        return None;
+    }
+
     let iv = &payload[8..16];
     let ciphertext_and_tag = &payload[16..];
-    
+
     let mut nonce = [0u8; 12];
     nonce[..4].copy_from_slice(&key_bytes[16..20]);
     nonce[4..12].copy_from_slice(iv);
-    
+
     let mut aad = [0u8; 8];
     aad[..4].copy_from_slice(&payload[..4]);
     aad[4..8].copy_from_slice(&payload[4..8]);
-    
-    use aes_gcm::{Aes128Gcm, KeyInit, aead::Aead};
+
+    use aes_gcm::{aead::Aead, Aes128Gcm, KeyInit};
     let cipher = Aes128Gcm::new_from_slice(&key_bytes[..16]).ok()?;
-    let plaintext = cipher.decrypt(nonce.as_ref().into(), aes_gcm::aead::Payload {
-        msg: ciphertext_and_tag,
-        aad: &aad,
-    }).ok()?;
-    
-    if plaintext.len() < 2 { return None; }
+    let plaintext = cipher
+        .decrypt(
+            nonce.as_ref().into(),
+            aes_gcm::aead::Payload {
+                msg: ciphertext_and_tag,
+                aad: &aad,
+            },
+        )
+        .ok()?;
+
+    if plaintext.len() < 2 {
+        return None;
+    }
     let pad_len = plaintext[plaintext.len() - 2] as usize;
     let next_header = plaintext[plaintext.len() - 1];
-    if plaintext.len() < 2 + pad_len { return None; }
-    
+    if plaintext.len() < 2 + pad_len {
+        return None;
+    }
+
     let decrypted_payload = plaintext[..plaintext.len() - 2 - pad_len].to_vec();
     Some((next_header, decrypted_payload))
 }
@@ -88,7 +99,9 @@ pub fn dissect_esp(
                 if subparts.len() == 2 {
                     let spi_str = subparts[0].trim().trim_start_matches("0x");
                     let key_hex = subparts[1].trim();
-                    if let (Ok(parsed_spi), Ok(parsed_bytes)) = (u32::from_str_radix(spi_str, 16), decode_hex(key_hex)) {
+                    if let (Ok(parsed_spi), Ok(parsed_bytes)) =
+                        (u32::from_str_radix(spi_str, 16), decode_hex(key_hex))
+                    {
                         if parsed_spi == spi {
                             key_bytes = Some(parsed_bytes);
                             break;
@@ -212,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_esp_gcm_decryption() {
-        use aes_gcm::{Aes128Gcm, KeyInit, aead::Aead};
+        use aes_gcm::{aead::Aead, Aes128Gcm, KeyInit};
 
         clear_esp_keys();
 
@@ -226,8 +239,8 @@ mod tests {
         });
 
         let mut inner_plaintext = vec![
-            0x45, 0x00, 0x00, 0x28, 0x00, 0x01, 0x00, 0x00, 0x40, 0x06, 0x00, 0x00, 10, 0, 0, 1, 10, 0, 0, 2,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            0x45, 0x00, 0x00, 0x28, 0x00, 0x01, 0x00, 0x00, 0x40, 0x06, 0x00, 0x00, 10, 0, 0, 1,
+            10, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         inner_plaintext.push(0);
         inner_plaintext.push(0);
@@ -243,10 +256,15 @@ mod tests {
         aad[..4].copy_from_slice(&spi.to_be_bytes());
         aad[4..8].copy_from_slice(&1u32.to_be_bytes());
 
-        let ciphertext = cipher.encrypt(nonce.as_ref().into(), aes_gcm::aead::Payload {
-            msg: &inner_plaintext,
-            aad: &aad,
-        }).unwrap();
+        let ciphertext = cipher
+            .encrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: &inner_plaintext,
+                    aad: &aad,
+                },
+            )
+            .unwrap();
 
         let mut packet = Vec::new();
         packet.extend_from_slice(&spi.to_be_bytes());
@@ -254,7 +272,11 @@ mod tests {
         packet.extend_from_slice(&iv);
         packet.extend_from_slice(&ciphertext);
 
-        let res = dissect_esp(Some("10.0.0.1".parse().unwrap()), Some("10.0.0.2".parse().unwrap()), &packet);
+        let res = dissect_esp(
+            Some("10.0.0.1".parse().unwrap()),
+            Some("10.0.0.2".parse().unwrap()),
+            &packet,
+        );
         assert!(res.summary.contains("[ESP Decrypted]"));
         assert!(res.summary.contains("TCP"));
     }

@@ -1,12 +1,12 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use wasm_bindgen::prelude::*;
+use bytes::Bytes;
+use chrono::{TimeZone, Utc};
 use netscope_core::filter::Filter;
 use netscope_core::models::{Packet, Protocol};
-use bytes::Bytes;
-use std::net::IpAddr;
-use chrono::{Utc, TimeZone};
 use serde::Deserialize;
+use std::net::IpAddr;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmFilter {
@@ -58,8 +58,15 @@ impl WasmFilter {
 pub fn matches_batch(filter: &WasmFilter, packets: JsValue) -> Result<Vec<u8>, String> {
     let js_pkts: Vec<JsPacket> = serde_wasm_bindgen::from_value(packets)
         .map_err(|e| format!("failed to deserialize packets: {}", e))?;
-    let results = js_pkts.into_iter()
-        .map(|jp| if filter.filter.matches(&jp.to_packet()) { 1 } else { 0 })
+    let results = js_pkts
+        .into_iter()
+        .map(|jp| {
+            if filter.filter.matches(&jp.to_packet()) {
+                1
+            } else {
+                0
+            }
+        })
         .collect();
     Ok(results)
 }

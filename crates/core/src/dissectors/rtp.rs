@@ -1,11 +1,11 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
-use std::sync::OnceLock;
-use std::sync::Mutex;
+use crate::models::Protocol;
 use std::collections::HashMap;
+use std::net::IpAddr;
+use std::sync::Mutex;
+use std::sync::OnceLock;
 
 struct RtpStreamState {
     last_seq: u16,
@@ -140,7 +140,10 @@ pub fn try_dissect(
 
     Some(make(
         Protocol::Rtp,
-        format!("RTP {codec} — seq {seq}, SSRC 0x{ssrc:08x}, Jitter {:.1}ms, MOS {:.1}{mark}", state.jitter, mos),
+        format!(
+            "RTP {codec} — seq {seq}, SSRC 0x{ssrc:08x}, Jitter {:.1}ms, MOS {:.1}{mark}",
+            state.jitter, mos
+        ),
     ))
 }
 
@@ -195,7 +198,9 @@ mod tests {
         let p = rtp_packet(0, 1234, 0xdead_beef);
         let r = try_dissect(None, None, 40000, 40002, &p).unwrap();
         assert_eq!(r.protocol, Protocol::Rtp);
-        assert!(r.summary.starts_with("RTP PCMU/8000 — seq 1234, SSRC 0xdeadbeef"));
+        assert!(r
+            .summary
+            .starts_with("RTP PCMU/8000 — seq 1234, SSRC 0xdeadbeef"));
     }
 
     #[test]

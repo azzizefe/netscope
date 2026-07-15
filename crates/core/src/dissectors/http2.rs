@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! HTTP/2 (RFC 9113) cleartext frames + gRPC detection.
 //!
@@ -388,12 +388,14 @@ fn to_hex(bytes: &[u8]) -> String {
 
 fn decode_protobuf_heuristic(mut bytes: &[u8]) -> Option<String> {
     let mut fields = Vec::new();
-    
+
     fn read_varint(bytes: &mut &[u8]) -> Option<u64> {
         let mut val = 0u64;
         let mut shift = 0;
         loop {
-            if bytes.is_empty() { return None; }
+            if bytes.is_empty() {
+                return None;
+            }
             let b = bytes[0];
             *bytes = &bytes[1..];
             val |= ((b & 0x7f) as u64) << shift;
@@ -401,7 +403,9 @@ fn decode_protobuf_heuristic(mut bytes: &[u8]) -> Option<String> {
                 break;
             }
             shift += 7;
-            if shift >= 64 { return None; }
+            if shift >= 64 {
+                return None;
+            }
         }
         Some(val)
     }
@@ -420,18 +424,27 @@ fn decode_protobuf_heuristic(mut bytes: &[u8]) -> Option<String> {
                 fields.push(format!("{field_num}: {val}"));
             }
             1 => {
-                if bytes.len() < 8 { return None; }
-                let val = u64::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]]);
+                if bytes.len() < 8 {
+                    return None;
+                }
+                let val = u64::from_le_bytes([
+                    bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+                ]);
                 bytes = &bytes[8..];
                 fields.push(format!("{field_num}: 0x{val:016x}"));
             }
             2 => {
                 let len = read_varint(&mut bytes)? as usize;
-                if bytes.len() < len { return None; }
+                if bytes.len() < len {
+                    return None;
+                }
                 let sub = &bytes[..len];
                 bytes = &bytes[len..];
                 // Check if it's printable ASCII
-                if sub.iter().all(|&b| b.is_ascii_graphic() || b.is_ascii_whitespace()) {
+                if sub
+                    .iter()
+                    .all(|&b| b.is_ascii_graphic() || b.is_ascii_whitespace())
+                {
                     if let Ok(s) = std::str::from_utf8(sub) {
                         let display_str = if s.len() > 30 {
                             format!("\"{}...\"", &s[..27])
@@ -455,7 +468,9 @@ fn decode_protobuf_heuristic(mut bytes: &[u8]) -> Option<String> {
                 }
             }
             5 => {
-                if bytes.len() < 4 { return None; }
+                if bytes.len() < 4 {
+                    return None;
+                }
                 let val = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
                 bytes = &bytes[4..];
                 fields.push(format!("{field_num}: 0x{val:08x}"));
@@ -463,15 +478,19 @@ fn decode_protobuf_heuristic(mut bytes: &[u8]) -> Option<String> {
             _ => return None,
         }
     }
-    
+
     Some(format!("{{{}}}", fields.join(", ")))
 }
 
 fn decode_grpc_payload(data: &[u8]) -> Option<String> {
-    if data.len() < 5 { return None; }
+    if data.len() < 5 {
+        return None;
+    }
     let compressed = data[0] == 1;
     let len = u32::from_be_bytes([data[1], data[2], data[3], data[4]]) as usize;
-    if data.len() < 5 + len { return None; }
+    if data.len() < 5 + len {
+        return None;
+    }
     let msg_bytes = &data[5..5 + len];
     if compressed {
         None
@@ -623,10 +642,7 @@ mod tests {
         let b2 = frame(FT_DATA, F_END_STREAM, 1, &msg2, None);
         let r2 = dissect(&b2).unwrap();
         assert_eq!(r2.protocol, Protocol::Grpc);
-        assert_eq!(
-            r2.summary,
-            "gRPC message — {1: \"grpc\"} on stream 1"
-        );
+        assert_eq!(r2.summary, "gRPC message — {1: \"grpc\"} on stream 1");
     }
 
     #[test]

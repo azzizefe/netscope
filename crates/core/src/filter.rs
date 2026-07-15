@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Wireshark-style display filter language.
 //!
@@ -264,7 +264,11 @@ fn eval_cmp(pkt: &Packet, field: Field, op: CmpOp, value: &Value) -> bool {
         Field::RtpSeq => cmp_num(rtp_seq(pkt), op, value),
         Field::NtlmUser => cmp_text(ntlm_field(&pkt.summary, "User: ").as_deref(), op, value),
         Field::NtlmDomain => cmp_text(ntlm_field(&pkt.summary, "Domain: ").as_deref(), op, value),
-        Field::NtlmWorkstation => cmp_text(ntlm_field(&pkt.summary, "Workstation: ").as_deref(), op, value),
+        Field::NtlmWorkstation => cmp_text(
+            ntlm_field(&pkt.summary, "Workstation: ").as_deref(),
+            op,
+            value,
+        ),
         Field::TlsSni => cmp_text(tls_sni(pkt).as_deref(), op, value),
         Field::Http3Method => cmp_text(ntlm_field(&pkt.summary, ":method: ").as_deref(), op, value),
         Field::Http3Status => {
@@ -440,7 +444,9 @@ fn rtp_ssrc(pkt: &Packet) -> Option<u64> {
     let s = &pkt.summary;
     let idx = s.find("SSRC 0x")?;
     let rest = &s[idx + 7..];
-    let end = rest.find(|c: char| !c.is_ascii_hexdigit()).unwrap_or(rest.len());
+    let end = rest
+        .find(|c: char| !c.is_ascii_hexdigit())
+        .unwrap_or(rest.len());
     u64::from_str_radix(&rest[..end], 16).ok()
 }
 
@@ -448,14 +454,18 @@ fn rtp_seq(pkt: &Packet) -> Option<u64> {
     let s = &pkt.summary;
     let idx = s.find("seq ")?;
     let rest = &s[idx + 4..];
-    let end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(rest.len());
     rest[..end].parse().ok()
 }
 
 fn ntlm_field(summary: &str, prefix: &str) -> Option<String> {
     let idx = summary.find(prefix)?;
     let rest = &summary[idx + prefix.len()..];
-    let end = rest.find(|c: char| c == ',' || c == ')').unwrap_or(rest.len());
+    let end = rest
+        .find(|c: char| c == ',' || c == ')')
+        .unwrap_or(rest.len());
     Some(rest[..end].trim().to_string())
 }
 

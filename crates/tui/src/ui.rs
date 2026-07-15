@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Style, Stylize};
@@ -322,7 +322,10 @@ fn render_bookmarks_overlay(frame: &mut Frame, area: Rect, _app: &App, theme: Th
     ];
     for (i, (filter, label)) in bookmarks.iter().enumerate() {
         lines.push(Line::from(vec![
-            Span::styled(format!("  {}  ", i + 1), Style::new().fg(theme.accent).bold()),
+            Span::styled(
+                format!("  {}  ", i + 1),
+                Style::new().fg(theme.accent).bold(),
+            ),
             Span::styled(format!("{:<30} ", filter), Style::new().white()),
             Span::styled(format!("({})", label), Style::new().dim()),
         ]));
@@ -369,24 +372,56 @@ fn render_expert_overlay(frame: &mut Frame, area: Rect, app: &App, theme: Theme)
     }
 
     let mut lines = vec![
-        Line::from(Span::styled(" 🔬 Expert Info Diagnostics ", Style::new().bold())),
+        Line::from(Span::styled(
+            " 🔬 Expert Info Diagnostics ",
+            Style::new().bold(),
+        )),
         Line::from(""),
         Line::from(vec![
-            Span::styled(format!("  Errors: {}  ", err_count), Style::new().bg(ratatui::style::Color::Red).fg(ratatui::style::Color::White).bold()),
+            Span::styled(
+                format!("  Errors: {}  ", err_count),
+                Style::new()
+                    .bg(ratatui::style::Color::Red)
+                    .fg(ratatui::style::Color::White)
+                    .bold(),
+            ),
             Span::raw("  "),
-            Span::styled(format!("  Warnings: {}  ", warn_count), Style::new().bg(ratatui::style::Color::Yellow).fg(ratatui::style::Color::Black).bold()),
+            Span::styled(
+                format!("  Warnings: {}  ", warn_count),
+                Style::new()
+                    .bg(ratatui::style::Color::Yellow)
+                    .fg(ratatui::style::Color::Black)
+                    .bold(),
+            ),
             Span::raw("  "),
-            Span::styled(format!("  Notes: {}  ", note_count), Style::new().bg(ratatui::style::Color::Cyan).fg(ratatui::style::Color::Black).bold()),
+            Span::styled(
+                format!("  Notes: {}  ", note_count),
+                Style::new()
+                    .bg(ratatui::style::Color::Cyan)
+                    .fg(ratatui::style::Color::Black)
+                    .bold(),
+            ),
             Span::raw("  "),
-            Span::styled(format!("  Chat: {}  ", chat_count), Style::new().bg(ratatui::style::Color::Green).fg(ratatui::style::Color::Black).bold()),
+            Span::styled(
+                format!("  Chat: {}  ", chat_count),
+                Style::new()
+                    .bg(ratatui::style::Color::Green)
+                    .fg(ratatui::style::Color::Black)
+                    .bold(),
+            ),
         ]),
         Line::from(""),
-        Line::from(Span::styled(" Recent Warnings & Errors: ", Style::new().underlined().bold())),
+        Line::from(Span::styled(
+            " Recent Warnings & Errors: ",
+            Style::new().underlined().bold(),
+        )),
         Line::from(""),
     ];
 
     if anomalies.is_empty() {
-        lines.push(Line::from("  No anomalies detected. Network health is excellent!"));
+        lines.push(Line::from(
+            "  No anomalies detected. Network health is excellent!",
+        ));
     } else {
         for &(num, sev, summary) in anomalies.iter().rev().take(10) {
             let color = if sev == "Error" {
@@ -403,7 +438,10 @@ fn render_expert_overlay(frame: &mut Frame, area: Rect, app: &App, theme: Theme)
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::from(Span::styled(" Esc / E close ", Style::new().dim())));
+    lines.push(Line::from(Span::styled(
+        " Esc / E close ",
+        Style::new().dim(),
+    )));
 
     let area = centered_rect(65, 70, area);
     frame.render_widget(Clear, area);

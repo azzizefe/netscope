@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use crate::models::Packet;
 
@@ -23,11 +23,30 @@ impl ExpertSeverity {
 
 pub fn classify(pkt: &Packet) -> ExpertSeverity {
     let s = &pkt.summary;
-    if s.contains("reset") || s.contains("RST") || s.contains("Malformed") || s.contains("unreachable") || s.contains("bad") || s.contains("Threat") || s.contains("Alert") || s.contains("AbuseIPDB") || s.contains("URLhaus") {
+    if s.contains("reset")
+        || s.contains("RST")
+        || s.contains("Malformed")
+        || s.contains("unreachable")
+        || s.contains("bad")
+        || s.contains("Threat")
+        || s.contains("Alert")
+        || s.contains("AbuseIPDB")
+        || s.contains("URLhaus")
+    {
         ExpertSeverity::Error
-    } else if s.contains("[TCP Retransmission]") || s.contains("[TCP Dup ACK") || s.contains("[TCP Out-of-Order]") || s.contains("SERVFAIL") || s.contains("NXDOMAIN") {
+    } else if s.contains("[TCP Retransmission]")
+        || s.contains("[TCP Dup ACK")
+        || s.contains("[TCP Out-of-Order]")
+        || s.contains("SERVFAIL")
+        || s.contains("NXDOMAIN")
+    {
         ExpertSeverity::Warning
-    } else if s.contains("304") || s.contains("opened") || s.contains("closing") || s.contains("SYN") || s.contains("FIN") {
+    } else if s.contains("304")
+        || s.contains("opened")
+        || s.contains("closing")
+        || s.contains("SYN")
+        || s.contains("FIN")
+    {
         ExpertSeverity::Note
     } else {
         ExpertSeverity::Chat

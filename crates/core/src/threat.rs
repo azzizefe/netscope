@@ -1,8 +1,8 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+use crate::models::{Packet, Protocol};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use crate::models::{Packet, Protocol};
 
 #[derive(Debug, Clone)]
 pub struct SuricataRule {
@@ -22,19 +22,25 @@ impl SuricataRule {
         // 1. Check protocol
         match self.protocol.as_str() {
             "tcp" => {
-                if pkt.protocol == Protocol::Udp || pkt.protocol == Protocol::Dns || pkt.protocol == Protocol::Mdns {
+                if pkt.protocol == Protocol::Udp
+                    || pkt.protocol == Protocol::Dns
+                    || pkt.protocol == Protocol::Mdns
+                {
                     return false;
                 }
             }
             "udp" => {
-                if pkt.protocol != Protocol::Udp && pkt.protocol != Protocol::Dns && pkt.protocol != Protocol::Mdns {
+                if pkt.protocol != Protocol::Udp
+                    && pkt.protocol != Protocol::Dns
+                    && pkt.protocol != Protocol::Mdns
+                {
                     return false;
                 }
             }
             "ip" => {}
             _ => {}
         }
-        
+
         // 2. Check ports (if not "any")
         if self.src_port != "any" {
             if let Some(port) = pkt.src_port {
@@ -54,7 +60,7 @@ impl SuricataRule {
                 return false;
             }
         }
-        
+
         // 3. Check IPs (if not "any")
         if self.src_ip != "any" && self.src_ip != "$EXTERNAL_NET" && self.src_ip != "$HOME_NET" {
             if let Some(ip) = pkt.src_addr {
@@ -74,16 +80,19 @@ impl SuricataRule {
                 return false;
             }
         }
-        
+
         // 4. Check content
         if !self.content.is_empty() {
-            let matches_data = pkt.data.windows(self.content.len()).any(|w| w == self.content.as_bytes());
+            let matches_data = pkt
+                .data
+                .windows(self.content.len())
+                .any(|w| w == self.content.as_bytes());
             let matches_summary = pkt.summary.contains(&self.content);
             if !matches_data && !matches_summary {
                 return false;
             }
         }
-        
+
         true
     }
 }
@@ -93,31 +102,31 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
     if line.starts_with('#') || line.is_empty() {
         return None;
     }
-    
+
     let parts: Vec<&str> = line.splitn(2, '(').collect();
     if parts.len() < 2 {
         return None;
     }
-    
+
     let header = parts[0].trim();
     let options_str = parts[1].trim().trim_end_matches(')');
-    
+
     let header_tokens: Vec<&str> = header.split_whitespace().collect();
     if header_tokens.len() < 7 {
         return None;
     }
-    
+
     let action = header_tokens[0].to_string();
     let protocol = header_tokens[1].to_ascii_lowercase();
     let src_ip = header_tokens[2].to_string();
     let src_port = header_tokens[3].to_string();
     let dst_ip = header_tokens[5].to_string();
     let dst_port = header_tokens[6].to_string();
-    
+
     let mut msg = String::new();
     let mut content = String::new();
     let mut sid = 0;
-    
+
     for opt in options_str.split(';') {
         let opt = opt.trim();
         if opt.is_empty() {
@@ -135,7 +144,7 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
             }
         }
     }
-    
+
     Some(SuricataRule {
         action,
         protocol,
@@ -167,7 +176,7 @@ impl ThreatEngine {
         let dir = crate::config::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("threat");
-        
+
         Self::load_from(&dir)
     }
 
@@ -191,7 +200,10 @@ impl ThreatEngine {
                 malicious_ips.insert(ip.to_string());
             }
             let _ = std::fs::create_dir_all(dir);
-            let _ = std::fs::write(&abuse_path, "# AbuseIPDB malicious IP list\n185.220.101.5\n45.143.203.2\n80.82.77.33\n");
+            let _ = std::fs::write(
+                &abuse_path,
+                "# AbuseIPDB malicious IP list\n185.220.101.5\n45.143.203.2\n80.82.77.33\n",
+            );
         }
 
         // 2. Load URLhaus malicious domains
@@ -204,7 +216,11 @@ impl ThreatEngine {
                 }
             }
         } else {
-            let defaults = vec!["malicious-c2.com", "phishing-bank-update.org", "get-malware-now.ru"];
+            let defaults = vec![
+                "malicious-c2.com",
+                "phishing-bank-update.org",
+                "get-malware-now.ru",
+            ];
             for d in defaults {
                 malicious_domains.insert(d.to_string());
             }
@@ -214,7 +230,7 @@ impl ThreatEngine {
         // 3. Load Suricata rules
         let rules_dir = dir.join("rules");
         let _ = std::fs::create_dir_all(&rules_dir);
-        
+
         let mut read_any_rule = false;
         if let Ok(entries) = std::fs::read_dir(&rules_dir) {
             for entry in entries.flatten() {
@@ -231,7 +247,7 @@ impl ThreatEngine {
                 }
             }
         }
-        
+
         if !read_any_rule {
             let rule_str = "alert tcp any any -> any 80 (msg:\"MALWARE payload detected\"; content:\"get_c2_payload\"; sid:100001;)\n\
                             alert udp any any -> any 53 (msg:\"Suspicious DNS lookup request\"; content:\"phishing-bank\"; sid:100002;)\n";
@@ -260,7 +276,10 @@ impl ThreatEngine {
             if self.malicious_ips.contains(&src_str) {
                 alerts.push(ThreatAlert {
                     severity: "High".to_string(),
-                    msg: format!("AbuseIPDB: Connection from malicious source IP ({})", src_str),
+                    msg: format!(
+                        "AbuseIPDB: Connection from malicious source IP ({})",
+                        src_str
+                    ),
                     sid: 200001,
                 });
             }
@@ -270,7 +289,10 @@ impl ThreatEngine {
             if self.malicious_ips.contains(&dst_str) {
                 alerts.push(ThreatAlert {
                     severity: "High".to_string(),
-                    msg: format!("AbuseIPDB: Traffic to malicious destination IP ({})", dst_str),
+                    msg: format!(
+                        "AbuseIPDB: Traffic to malicious destination IP ({})",
+                        dst_str
+                    ),
                     sid: 200002,
                 });
             }
@@ -281,7 +303,8 @@ impl ThreatEngine {
             crate::filter::dns_qry_name(pkt)
         } else if pkt.protocol == Protocol::Http {
             let data_str = String::from_utf8_lossy(&pkt.data);
-            data_str.lines()
+            data_str
+                .lines()
                 .find(|l| l.to_ascii_lowercase().starts_with("host:"))
                 .map(|l| l["host:".len()..].trim().to_ascii_lowercase())
         } else {
@@ -323,7 +346,10 @@ mod tests {
 
     #[test]
     fn test_parse_rule() {
-        let rule = parse_rule("alert tcp any any -> any 80 (msg:\"test rule\"; content:\"malware\"; sid:12345;)").unwrap();
+        let rule = parse_rule(
+            "alert tcp any any -> any 80 (msg:\"test rule\"; content:\"malware\"; sid:12345;)",
+        )
+        .unwrap();
         assert_eq!(rule.action, "alert");
         assert_eq!(rule.protocol, "tcp");
         assert_eq!(rule.dst_port, "80");
@@ -334,8 +360,11 @@ mod tests {
 
     #[test]
     fn test_rule_matching() {
-        let rule = parse_rule("alert tcp any any -> any 80 (msg:\"detect payload\"; content:\"bad_code\"; sid:999;)").unwrap();
-        
+        let rule = parse_rule(
+            "alert tcp any any -> any 80 (msg:\"detect payload\"; content:\"bad_code\"; sid:999;)",
+        )
+        .unwrap();
+
         let mut pkt = Packet {
             timestamp: Utc::now(),
             src_addr: Some("192.168.1.10".parse().unwrap()),

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Capture merge & split — netscope's take on Wireshark's `mergecap` and
 //! `editcap`, plus a `capinfos`-style summary.
@@ -98,7 +98,14 @@ impl RecordWriter {
             }
             RecordWriter::Ng(w) => {
                 let w = w.as_mut().expect("writer used after finish");
-                w.write_packet(interface_id, f.ts_sec, f.ts_nanos, f.orig_len, &f.data, None)?;
+                w.write_packet(
+                    interface_id,
+                    f.ts_sec,
+                    f.ts_nanos,
+                    f.orig_len,
+                    &f.data,
+                    None,
+                )?;
             }
         }
         Ok(())
@@ -128,7 +135,11 @@ pub struct MergeOptions {
 
 impl Default for MergeOptions {
     fn default() -> Self {
-        Self { format: WriteFormat::PcapNg, chronological: true, comment: None }
+        Self {
+            format: WriteFormat::PcapNg,
+            chronological: true,
+            comment: None,
+        }
     }
 }
 
@@ -163,7 +174,9 @@ pub fn merge(inputs: &[PathBuf], output: &Path, opts: &MergeOptions) -> Result<M
         readers.push(reader);
     }
 
-    let mixed_linktypes = interfaces.iter().any(|i| i.linktype != interfaces[0].linktype);
+    let mixed_linktypes = interfaces
+        .iter()
+        .any(|i| i.linktype != interfaces[0].linktype);
     if opts.format == WriteFormat::Pcap && mixed_linktypes {
         anyhow::bail!(
             "inputs have different link types — a classic pcap can't hold them; write pcapng instead"
@@ -206,7 +219,11 @@ pub fn merge(inputs: &[PathBuf], output: &Path, opts: &MergeOptions) -> Result<M
             }
             let Some(i) = pick else { break };
             let frame = heads[i].take().unwrap();
-            let iface_id = if opts.format == WriteFormat::Pcap { 0 } else { i as u32 };
+            let iface_id = if opts.format == WriteFormat::Pcap {
+                0
+            } else {
+                i as u32
+            };
             writer.write(iface_id, &frame)?;
             packets += 1;
             heads[i] = readers[i].next_frame()?;
@@ -214,7 +231,11 @@ pub fn merge(inputs: &[PathBuf], output: &Path, opts: &MergeOptions) -> Result<M
     } else {
         // Concatenate: drain each input fully, in order.
         for (i, reader) in readers.iter_mut().enumerate() {
-            let iface_id = if opts.format == WriteFormat::Pcap { 0 } else { i as u32 };
+            let iface_id = if opts.format == WriteFormat::Pcap {
+                0
+            } else {
+                i as u32
+            };
             while let Some(frame) = reader.next_frame()? {
                 writer.write(iface_id, &frame)?;
                 packets += 1;
@@ -223,7 +244,11 @@ pub fn merge(inputs: &[PathBuf], output: &Path, opts: &MergeOptions) -> Result<M
     }
 
     writer.finish()?;
-    Ok(MergeStats { inputs: inputs.len(), packets, output: output.to_path_buf() })
+    Ok(MergeStats {
+        inputs: inputs.len(),
+        packets,
+        output: output.to_path_buf(),
+    })
 }
 
 /// How to divide a capture in [`split`].
@@ -272,9 +297,7 @@ pub fn split(input: &Path, output_prefix: &Path, opts: &SplitOptions) -> Result<
             && match opts.mode {
                 SplitMode::Packets(n) => chunk_packets >= n.max(1),
                 SplitMode::Seconds(s) => chunk_start
-                    .map(|start| {
-                        frame_key(&frame).0 - start.0 >= s.max(1) as i64
-                    })
+                    .map(|start| frame_key(&frame).0 - start.0 >= s.max(1) as i64)
                     .unwrap_or(false),
                 SplitMode::Bytes(b) => {
                     chunk_bytes + frame.data.len() as u64 > b.max(1) && chunk_packets > 0
@@ -291,7 +314,12 @@ pub fn split(input: &Path, output_prefix: &Path, opts: &SplitOptions) -> Result<
                 application: Some(concat!("netscope ", env!("CARGO_PKG_VERSION")).to_string()),
                 ..Default::default()
             };
-            writer = Some(RecordWriter::create(&path, opts.format, &interfaces, section)?);
+            writer = Some(RecordWriter::create(
+                &path,
+                opts.format,
+                &interfaces,
+                section,
+            )?);
             written.push(path);
             chunk_packets = 0;
             chunk_bytes = 0;
@@ -325,9 +353,7 @@ impl CaptureFileInfo {
     /// Capture span in seconds (last − first timestamp), if known.
     pub fn duration_secs(&self) -> Option<f64> {
         match (self.first, self.last) {
-            (Some(a), Some(b)) => {
-                Some((b.0 - a.0) as f64 + (b.1 as f64 - a.1 as f64) / 1e9)
-            }
+            (Some(a), Some(b)) => Some((b.0 - a.0) as f64 + (b.1 as f64 - a.1 as f64) / 1e9),
             _ => None,
         }
     }
@@ -351,7 +377,14 @@ pub fn info(path: &Path) -> Result<CaptureFileInfo> {
         packets += 1;
         data_bytes += f.data.len() as u64;
     }
-    Ok(CaptureFileInfo { format, linktype, packets, data_bytes, first, last })
+    Ok(CaptureFileInfo {
+        format,
+        linktype,
+        packets,
+        data_bytes,
+        first,
+        last,
+    })
 }
 
 /// Sort key for a frame: `(seconds, nanoseconds)`.
@@ -417,7 +450,11 @@ mod tests {
         let stats = merge(
             &[a, b],
             &out,
-            &MergeOptions { format: WriteFormat::PcapNg, chronological: true, comment: None },
+            &MergeOptions {
+                format: WriteFormat::PcapNg,
+                chronological: true,
+                comment: None,
+            },
         )
         .unwrap();
         assert_eq!(stats.packets, 4);
@@ -439,7 +476,11 @@ mod tests {
         merge(
             &[a, b],
             &out,
-            &MergeOptions { format: WriteFormat::PcapNg, chronological: false, comment: None },
+            &MergeOptions {
+                format: WriteFormat::PcapNg,
+                chronological: false,
+                comment: None,
+            },
         )
         .unwrap();
         let secs: Vec<i64> = read_all(&out).iter().map(|f| f.ts_sec).collect();
@@ -463,7 +504,11 @@ mod tests {
         let err = merge(
             &[a, b],
             &out,
-            &MergeOptions { format: WriteFormat::Pcap, chronological: true, comment: None },
+            &MergeOptions {
+                format: WriteFormat::Pcap,
+                chronological: true,
+                comment: None,
+            },
         )
         .unwrap_err();
         assert!(err.to_string().contains("different link types"), "{err}");
@@ -480,7 +525,10 @@ mod tests {
         let files = split(
             &input,
             &dir.join("part.pcap"),
-            &SplitOptions { format: WriteFormat::Pcap, mode: SplitMode::Packets(3) },
+            &SplitOptions {
+                format: WriteFormat::Pcap,
+                mode: SplitMode::Packets(3),
+            },
         )
         .unwrap();
         // 10 packets / 3 → 4 files (3,3,3,1).
@@ -488,7 +536,11 @@ mod tests {
         let counts: Vec<usize> = files.iter().map(|f| read_all(f).len()).collect();
         assert_eq!(counts, vec![3, 3, 3, 1]);
         // Names are numbered in the prefix's directory.
-        assert!(files[0].file_name().unwrap().to_string_lossy().contains("part_00001"));
+        assert!(files[0]
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .contains("part_00001"));
         std::fs::remove_dir_all(dir).ok();
     }
 
@@ -504,7 +556,10 @@ mod tests {
         let files = split(
             &input,
             &dir.join("w.pcap"),
-            &SplitOptions { format: WriteFormat::Pcap, mode: SplitMode::Seconds(5) },
+            &SplitOptions {
+                format: WriteFormat::Pcap,
+                mode: SplitMode::Seconds(5),
+            },
         )
         .unwrap();
         let counts: Vec<usize> = files.iter().map(|f| read_all(f).len()).collect();
@@ -537,16 +592,23 @@ mod tests {
             let mut w = PcapngWriter::create(
                 &src,
                 SectionMeta::default(),
-                &[InterfaceMeta { linktype: 1, ..Default::default() }],
+                &[InterfaceMeta {
+                    linktype: 1,
+                    ..Default::default()
+                }],
             )
             .unwrap();
-            w.write_packet(0, 5, 123_456_789, 4, &[1, 2, 3, 4], None).unwrap();
+            w.write_packet(0, 5, 123_456_789, 4, &[1, 2, 3, 4], None)
+                .unwrap();
             w.finish().unwrap();
         }
         let files = split(
             &src,
             &dir.join("out.pcapng"),
-            &SplitOptions { format: WriteFormat::PcapNg, mode: SplitMode::Packets(10) },
+            &SplitOptions {
+                format: WriteFormat::PcapNg,
+                mode: SplitMode::Packets(10),
+            },
         )
         .unwrap();
         let f = &read_all(&files[0])[0];

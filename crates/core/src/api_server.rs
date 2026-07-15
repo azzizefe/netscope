@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Lightweight, zero-dependency REST API server (ROADMAP §7.1).
 //! Listens on a TCP port and exposes packet list, statistics, and control endpoints.
@@ -52,7 +52,7 @@ struct AnnotationRequest {
 }
 
 fn hash_password(password: &str) -> String {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(password.as_bytes());
     format!("{:x}", hasher.finalize())
@@ -167,7 +167,7 @@ fn handle_connection(
 
     let parts: Vec<&str> = request_str.split("\r\n\r\n").collect();
     let header_part = parts.get(0).copied().unwrap_or("");
-    
+
     let mut content_length = 0;
     for line in header_part.lines() {
         if line.to_ascii_lowercase().starts_with("content-length:") {
@@ -210,10 +210,14 @@ fn handle_connection(
         if let Ok(json) = json_body {
             let username = json.get("username").and_then(|v| v.as_str()).unwrap_or("");
             let password = json.get("password").and_then(|v| v.as_str()).unwrap_or("");
-            
+
             let password_hash = hash_password(password);
-            let role_opt = db.lock().unwrap().get_user_role(username, &password_hash).unwrap_or(None);
-            
+            let role_opt = db
+                .lock()
+                .unwrap()
+                .get_user_role(username, &password_hash)
+                .unwrap_or(None);
+
             if let Some(role_str) = role_opt {
                 let role = UserRole::from_str(&role_str);
                 let token = generate_token();
@@ -222,9 +226,9 @@ fn handle_connection(
                     role: role.clone(),
                 };
                 sessions.lock().unwrap().insert(token.clone(), user);
-                
+
                 let _ = db.lock().unwrap().log_action(username, "Login", "-");
-                
+
                 let json_resp = format!(
                     "{{\n  \"token\": \"{}\",\n  \"role\": \"{:?}\"\n}}",
                     token, role
@@ -232,7 +236,13 @@ fn handle_connection(
                 return send_response(&mut stream, 200, "OK", "application/json", &json_resp);
             }
         }
-        return send_response(&mut stream, 401, "Unauthorized", "application/json", "{\"error\":\"Invalid credentials\"}");
+        return send_response(
+            &mut stream,
+            401,
+            "Unauthorized",
+            "application/json",
+            "{\"error\":\"Invalid credentials\"}",
+        );
     }
 
     // 2. Auth Interceptor for all other routes
@@ -253,22 +263,50 @@ fn handle_connection(
     };
 
     let Some(user) = user else {
-        return send_response(&mut stream, 401, "Unauthorized", "application/json", "{\"error\":\"Unauthorized. Bearer token required.\"}");
+        return send_response(
+            &mut stream,
+            401,
+            "Unauthorized",
+            "application/json",
+            "{\"error\":\"Unauthorized. Bearer token required.\"}",
+        );
     };
 
     // 3. RBAC checks
     match user.role {
         UserRole::Viewer => {
-            if path != "/api/v1/stats" && path != "/api/v1/packets" && !path.starts_with("/api/v1/bookmarks") && !path.starts_with("/api/v1/annotations") {
-                return send_response(&mut stream, 403, "Forbidden", "application/json", "{\"error\":\"Forbidden. Viewer role has insufficient permissions.\"}");
+            if path != "/api/v1/stats"
+                && path != "/api/v1/packets"
+                && !path.starts_with("/api/v1/bookmarks")
+                && !path.starts_with("/api/v1/annotations")
+            {
+                return send_response(
+                    &mut stream,
+                    403,
+                    "Forbidden",
+                    "application/json",
+                    "{\"error\":\"Forbidden. Viewer role has insufficient permissions.\"}",
+                );
             }
             if method != "GET" {
-                return send_response(&mut stream, 403, "Forbidden", "application/json", "{\"error\":\"Forbidden. Viewers cannot modify resources.\"}");
+                return send_response(
+                    &mut stream,
+                    403,
+                    "Forbidden",
+                    "application/json",
+                    "{\"error\":\"Forbidden. Viewers cannot modify resources.\"}",
+                );
             }
         }
         UserRole::Analyst => {
             if path == "/api/v1/audit" {
-                return send_response(&mut stream, 403, "Forbidden", "application/json", "{\"error\":\"Forbidden. Analyst role has insufficient permissions.\"}");
+                return send_response(
+                    &mut stream,
+                    403,
+                    "Forbidden",
+                    "application/json",
+                    "{\"error\":\"Forbidden. Analyst role has insufficient permissions.\"}",
+                );
             }
         }
         UserRole::Admin => {}
@@ -277,12 +315,15 @@ fn handle_connection(
     // 4. Handle Authenticated Routes
     let base_path = path.split('?').next().unwrap_or(path);
     let query_str = path.split('?').nth(1).unwrap_or("");
-    let query_params: HashMap<&str, &str> = query_str.split('&').filter_map(|kv| {
-        let mut p = kv.splitn(2, '=');
-        let k = p.next()?;
-        let v = p.next().unwrap_or("");
-        Some((k, v))
-    }).collect();
+    let query_params: HashMap<&str, &str> = query_str
+        .split('&')
+        .filter_map(|kv| {
+            let mut p = kv.splitn(2, '=');
+            let k = p.next()?;
+            let v = p.next().unwrap_or("");
+            Some((k, v))
+        })
+        .collect();
 
     match (method, base_path) {
         ("GET", "/api/v1/stats") => {
@@ -292,7 +333,10 @@ fn handle_connection(
                 "{{\"received\":{},\"dropped\":{},\"dissected\":{}}}",
                 stats.received, stats.dropped, stats.dissected
             );
-            let _ = db.lock().unwrap().log_action(&user.username, "Read Stats", "-");
+            let _ = db
+                .lock()
+                .unwrap()
+                .log_action(&user.username, "Read Stats", "-");
             send_response(&mut stream, 200, "OK", "application/json", &json)
         }
         ("GET", "/api/v1/packets") => {
@@ -314,14 +358,26 @@ fn handle_connection(
                 ));
             }
             json.push(']');
-            let _ = db.lock().unwrap().log_action(&user.username, "Read Packets", "-");
+            let _ = db
+                .lock()
+                .unwrap()
+                .log_action(&user.username, "Read Packets", "-");
             send_response(&mut stream, 200, "OK", "application/json", &json)
         }
         ("POST", "/api/v1/capture/stop") => {
             let mut engine_lock = engine.lock().unwrap();
             engine_lock.stop();
-            let _ = db.lock().unwrap().log_action(&user.username, "Stop Capture", "-");
-            send_response(&mut stream, 200, "OK", "application/json", "{\"status\":\"stopped\"}")
+            let _ = db
+                .lock()
+                .unwrap()
+                .log_action(&user.username, "Stop Capture", "-");
+            send_response(
+                &mut stream,
+                200,
+                "OK",
+                "application/json",
+                "{\"status\":\"stopped\"}",
+            )
         }
         // Bookmarking
         ("GET", "/api/v1/bookmarks") => {
@@ -329,7 +385,9 @@ fn handle_connection(
             let list = db.lock().unwrap().list_bookmarks(file).unwrap_or_default();
             let mut json = String::from("[");
             for (i, (idx, tag)) in list.iter().enumerate() {
-                if i > 0 { json.push(','); }
+                if i > 0 {
+                    json.push(',');
+                }
                 json.push_str(&format!("{{\"packet_index\":{},\"tag\":\"{}\"}}", idx, tag));
             }
             json.push(']');
@@ -337,20 +395,45 @@ fn handle_connection(
         }
         ("POST", "/api/v1/bookmarks") => {
             if let Ok(req) = serde_json::from_str::<BookmarkRequest>(body_part) {
-                let _ = db.lock().unwrap().add_bookmark(&req.capture_file, req.packet_index, &req.tag);
-                let _ = db.lock().unwrap().log_action(&user.username, "Add Bookmark", &req.capture_file);
-                send_response(&mut stream, 200, "OK", "application/json", "{\"status\":\"bookmarked\"}")
+                let _ =
+                    db.lock()
+                        .unwrap()
+                        .add_bookmark(&req.capture_file, req.packet_index, &req.tag);
+                let _ = db.lock().unwrap().log_action(
+                    &user.username,
+                    "Add Bookmark",
+                    &req.capture_file,
+                );
+                send_response(
+                    &mut stream,
+                    200,
+                    "OK",
+                    "application/json",
+                    "{\"status\":\"bookmarked\"}",
+                )
             } else {
-                send_response(&mut stream, 400, "Bad Request", "application/json", "{\"error\":\"Invalid bookmark body\"}")
+                send_response(
+                    &mut stream,
+                    400,
+                    "Bad Request",
+                    "application/json",
+                    "{\"error\":\"Invalid bookmark body\"}",
+                )
             }
         }
         // Annotations
         ("GET", "/api/v1/annotations") => {
             let file = query_params.get("file").copied().unwrap_or("default.pcap");
-            let list = db.lock().unwrap().list_annotations(file).unwrap_or_default();
+            let list = db
+                .lock()
+                .unwrap()
+                .list_annotations(file)
+                .unwrap_or_default();
             let mut json = String::from("[");
             for (i, (idx, comment, author, time)) in list.iter().enumerate() {
-                if i > 0 { json.push(','); }
+                if i > 0 {
+                    json.push(',');
+                }
                 json.push_str(&format!(
                     "{{\"packet_index\":{},\"comment\":\"{}\",\"username\":\"{}\",\"timestamp\":\"{}\"}}",
                     idx, comment.replace('"', "\\\""), author, time
@@ -361,11 +444,32 @@ fn handle_connection(
         }
         ("POST", "/api/v1/annotations") => {
             if let Ok(req) = serde_json::from_str::<AnnotationRequest>(body_part) {
-                let _ = db.lock().unwrap().add_annotation(&req.capture_file, req.packet_index, &req.comment, &user.username);
-                let _ = db.lock().unwrap().log_action(&user.username, "Add Annotation", &req.capture_file);
-                send_response(&mut stream, 200, "OK", "application/json", "{\"status\":\"annotated\"}")
+                let _ = db.lock().unwrap().add_annotation(
+                    &req.capture_file,
+                    req.packet_index,
+                    &req.comment,
+                    &user.username,
+                );
+                let _ = db.lock().unwrap().log_action(
+                    &user.username,
+                    "Add Annotation",
+                    &req.capture_file,
+                );
+                send_response(
+                    &mut stream,
+                    200,
+                    "OK",
+                    "application/json",
+                    "{\"status\":\"annotated\"}",
+                )
             } else {
-                send_response(&mut stream, 400, "Bad Request", "application/json", "{\"error\":\"Invalid annotation body\"}")
+                send_response(
+                    &mut stream,
+                    400,
+                    "Bad Request",
+                    "application/json",
+                    "{\"error\":\"Invalid annotation body\"}",
+                )
             }
         }
         // Audit Logs (Admin Only)
@@ -373,7 +477,9 @@ fn handle_connection(
             let list = db.lock().unwrap().list_audit_logs().unwrap_or_default();
             let mut json = String::from("[");
             for (i, (usr, act, file, time)) in list.iter().enumerate() {
-                if i > 0 { json.push(','); }
+                if i > 0 {
+                    json.push(',');
+                }
                 json.push_str(&format!(
                     "{{\"username\":\"{}\",\"action\":\"{}\",\"capture_file\":\"{}\",\"timestamp\":\"{}\"}}",
                     usr, act, file, time
@@ -385,15 +491,26 @@ fn handle_connection(
         // Executive Forensic Report (HTML/JSON format)
         ("GET", "/api/v1/report") => {
             let packets = buffer.get_all();
-            let _ = db.lock().unwrap().log_action(&user.username, "Export Report", "-");
-            
-            let mut html = String::from("<!DOCTYPE html><html><head><title>netscope Forensic Report</title>");
+            let _ = db
+                .lock()
+                .unwrap()
+                .log_action(&user.username, "Export Report", "-");
+
+            let mut html =
+                String::from("<!DOCTYPE html><html><head><title>netscope Forensic Report</title>");
             html.push_str("<style>body{font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:24px;}h1,h2{color:#38bdf8;}table{width:100%;border-collapse:collapse;margin-top:16px;}th,td{border:1px solid #334155;padding:12px;text-align:left;}th{background:#1e293b;}</style>");
             html.push_str("</head><body><h1>netscope Incident Forensic Report</h1>");
-            html.push_str(&format!("<p>Generated by <strong>{}</strong> at {}</p>", user.username, Utc::now().to_rfc3339()));
+            html.push_str(&format!(
+                "<p>Generated by <strong>{}</strong> at {}</p>",
+                user.username,
+                Utc::now().to_rfc3339()
+            ));
             html.push_str("<h2>Executive Summary</h2><p>This report documents parsed packet records captured via netscope.</p>");
-            html.push_str(&format!("<p>Total packets analyzed: <strong>{}</strong></p>", packets.len()));
-            
+            html.push_str(&format!(
+                "<p>Total packets analyzed: <strong>{}</strong></p>",
+                packets.len()
+            ));
+
             html.push_str("<h2>Captured Packet Timeline</h2><table><tr><th>#</th><th>Time</th><th>Source</th><th>Destination</th><th>Protocol</th><th>Length</th><th>Summary</th></tr>");
             for (i, p) in packets.iter().enumerate() {
                 html.push_str(&format!(
@@ -405,12 +522,10 @@ fn handle_connection(
                 ));
             }
             html.push_str("</table></body></html>");
-            
+
             send_response(&mut stream, 200, "OK", "text/html", &html)
         }
-        _ => {
-            send_response(&mut stream, 404, "Not Found", "text/plain", "Not Found")
-        }
+        _ => send_response(&mut stream, 404, "Not Found", "text/plain", "Not Found"),
     }
 }
 
@@ -441,10 +556,10 @@ fn send_response(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::net::TcpStream;
-    use std::time::Duration;
     use crate::models::Protocol;
     use chrono::Utc;
+    use std::net::TcpStream;
+    use std::time::Duration;
 
     #[test]
     fn test_api_server_routes() {

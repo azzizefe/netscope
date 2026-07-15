@@ -1,9 +1,13 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+#[cfg(not(target_arch = "wasm32"))]
+pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
 pub mod config;
 pub mod crypto;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod db;
 pub mod dissectors;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
@@ -12,6 +16,8 @@ pub mod expert;
 pub mod filter;
 pub mod firewall;
 pub mod flows;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod forensics;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod formats;
 pub mod models;
@@ -25,16 +31,9 @@ pub mod plugins;
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rotate;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod siem;
 pub mod stats;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stream;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod api_server;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod siem;
 pub mod threat;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod forensics;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod db;
-

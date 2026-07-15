@@ -1,9 +1,9 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::sync::OnceLock;
-use std::sync::Mutex;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::sync::Mutex;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -29,10 +29,12 @@ pub struct SrtState {
 
 fn get_srt_state() -> &'static Mutex<SrtState> {
     static STATE: OnceLock<Mutex<SrtState>> = OnceLock::new();
-    STATE.get_or_init(|| Mutex::new(SrtState {
-        dns_queries: HashMap::new(),
-        http_requests: HashMap::new(),
-    }))
+    STATE.get_or_init(|| {
+        Mutex::new(SrtState {
+            dns_queries: HashMap::new(),
+            http_requests: HashMap::new(),
+        })
+    })
 }
 
 /// Record a DNS packet and return the response time if it is a response matching a previous query.
@@ -91,7 +93,10 @@ pub fn record_http(
     let src = src_ip?;
     let dst = dst_ip?;
 
-    let is_request = summary.contains("HTTP GET") || summary.contains("HTTP POST") || summary.contains("HTTP PUT") || summary.contains("HTTP DELETE");
+    let is_request = summary.contains("HTTP GET")
+        || summary.contains("HTTP POST")
+        || summary.contains("HTTP PUT")
+        || summary.contains("HTTP DELETE");
     let is_response = summary.contains("HTTP/1.0") || summary.contains("HTTP/1.1");
 
     let mut guard = get_srt_state().lock().unwrap();
@@ -102,7 +107,11 @@ pub fn record_http(
             server_ip: dst,
             server_port: dst_port,
         };
-        guard.http_requests.entry(key).or_default().push(Instant::now());
+        guard
+            .http_requests
+            .entry(key)
+            .or_default()
+            .push(Instant::now());
         None
     } else if is_response {
         // Response from server to client: key belongs to the client (swapped)

@@ -1,10 +1,10 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+use netscope_core::capture::CaptureEngine;
+use netscope_core::filter::{dns_qry_name, Filter};
+use netscope_core::models::Packet;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use netscope_core::capture::CaptureEngine;
-use netscope_core::models::Packet;
-use netscope_core::filter::{Filter, dns_qry_name};
 
 #[pyclass]
 #[derive(Clone)]
@@ -39,8 +39,10 @@ pub struct PyPacket {
 impl PyPacket {
     fn from_core(pkt: Packet) -> Self {
         let dns_query = dns_qry_name(&pkt);
-        let dns_info = dns_query.map(|name| PyDnsInfo { query_name: Some(name) });
-        
+        let dns_info = dns_query.map(|name| PyDnsInfo {
+            query_name: Some(name),
+        });
+
         PyPacket {
             timestamp: pkt.timestamp.format("%Y-%m-%d %H:%M:%S%.6f").to_string(),
             src: pkt.src_addr.map(|a| a.to_string()),
@@ -63,8 +65,14 @@ pub struct Capture {
 fn read_packets_offline(filepath: &str) -> PyResult<Vec<Packet>> {
     let (tx, rx) = crossbeam_channel::unbounded();
     let mut engine = CaptureEngine::new();
-    engine.start_offline(filepath, None, None, tx)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Failed to start offline capture: {}", e)))?;
+    engine
+        .start_offline(filepath, None, None, tx)
+        .map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "Failed to start offline capture: {}",
+                e
+            ))
+        })?;
 
     let mut packets = Vec::new();
     while let Ok(pkt) = rx.recv() {
@@ -98,7 +106,7 @@ impl Capture {
     fn to_dataframe(&self, py: Python) -> PyResult<PyObject> {
         let packets = read_packets_offline(&self.filepath)?;
         let list = pyo3::types::PyList::empty(py);
-        
+
         for pkt in packets {
             let py_pkt = PyPacket::from_core(pkt);
             let dict = PyDict::new(py);
@@ -110,15 +118,19 @@ impl Capture {
             dict.set_item("protocol", py_pkt.protocol)?;
             dict.set_item("length", py_pkt.length)?;
             dict.set_item("summary", py_pkt.summary)?;
-            
+
             let dns_query = py_pkt.dns.and_then(|d| d.query_name);
             dict.set_item("dns_query_name", dns_query)?;
-            
+
             list.append(dict)?;
         }
-        
-        let pandas = py.import("pandas")
-            .map_err(|e| pyo3::exceptions::PyImportError::new_err(format!("Pandas is required for to_dataframe(): {}", e)))?;
+
+        let pandas = py.import("pandas").map_err(|e| {
+            pyo3::exceptions::PyImportError::new_err(format!(
+                "Pandas is required for to_dataframe(): {}",
+                e
+            ))
+        })?;
         let df = pandas.call_method1("DataFrame", (list,))?;
         Ok(df.to_object(py))
     }
@@ -129,7 +141,7 @@ impl Capture {
         for pkt in &packets {
             all_payload.extend_from_slice(&pkt.data);
         }
-        
+
         let carved = netscope_core::forensics::carve_files(&all_payload);
         let mut results = Vec::new();
         for item in carved {
@@ -138,7 +150,7 @@ impl Capture {
             dict.set_item("file_type", item.file_type)?;
             dict.set_item("start_offset", item.start_offset)?;
             dict.set_item("size", item.size)?;
-            
+
             let py_meta = PyDict::new(py);
             for (k, v) in item.metadata {
                 py_meta.set_item(k, v)?;

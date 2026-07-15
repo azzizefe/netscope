@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
@@ -18,7 +18,10 @@ pub fn dissect_kafka(
         let size = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
         let api_key = u16::from_be_bytes([payload[4], payload[5]]);
         let api_ver = u16::from_be_bytes([payload[6], payload[7]]);
-        format!("Kafka Message — Size {}, API Key {}, Version {}", size, api_key, api_ver)
+        format!(
+            "Kafka Message — Size {}, API Key {}, Version {}",
+            size, api_key, api_ver
+        )
     } else {
         "Kafka MQ Traffic".to_string()
     };
@@ -40,8 +43,8 @@ mod tests {
     fn kafka_basic() {
         let mut pkt = vec![0u8; 12];
         pkt[0..4].copy_from_slice(&100u32.to_be_bytes()); // size
-        pkt[4..6].copy_from_slice(&18u16.to_be_bytes());  // api key
-        pkt[6..8].copy_from_slice(&3u16.to_be_bytes());   // version
+        pkt[4..6].copy_from_slice(&18u16.to_be_bytes()); // api key
+        pkt[6..8].copy_from_slice(&3u16.to_be_bytes()); // version
         let r = dissect_kafka(None, None, 50000, 9092, &pkt);
         assert_eq!(r.protocol, Protocol::Kafka);
         assert!(r.summary.contains("Size 100, API Key 18, Version 3"));

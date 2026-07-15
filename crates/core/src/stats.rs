@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -251,7 +251,11 @@ impl StatsEngine {
 
         // Build hierarchy tree
         let mut protocol_hierarchy = Vec::new();
-        protocol_hierarchy.push(("Frame (Ethernet)".to_string(), self.eth_packets, self.eth_bytes));
+        protocol_hierarchy.push((
+            "Frame (Ethernet)".to_string(),
+            self.eth_packets,
+            self.eth_bytes,
+        ));
         if self.arp_packets > 0 {
             protocol_hierarchy.push(("  └─ ARP".to_string(), self.arp_packets, self.arp_bytes));
         }
@@ -261,58 +265,82 @@ impl StatsEngine {
         if self.ip4_packets > 0 {
             protocol_hierarchy.push(("  └─ IPv4".to_string(), self.ip4_packets, self.ip4_bytes));
             if self.tcp_packets > 0 {
-                protocol_hierarchy.push(("      └─ TCP".to_string(), self.tcp_packets, self.tcp_bytes));
+                protocol_hierarchy.push((
+                    "      └─ TCP".to_string(),
+                    self.tcp_packets,
+                    self.tcp_bytes,
+                ));
                 for (proto, stats) in &self.per_protocol {
-                    if proto != &Protocol::Tcp && matches!(
-                        proto,
-                        Protocol::Http
-                            | Protocol::Tls
-                            | Protocol::Ssh
-                            | Protocol::Ftp
-                            | Protocol::Smtp
-                            | Protocol::Imap
-                            | Protocol::Pop3
-                            | Protocol::Telnet
-                            | Protocol::Rdp
-                            | Protocol::WebSocket
-                            | Protocol::Http2
-                            | Protocol::Grpc
-                            | Protocol::Postgres
-                            | Protocol::Mysql
-                            | Protocol::Mongodb
-                            | Protocol::Redis
-                            | Protocol::Cassandra
-                            | Protocol::Modbus
-                            | Protocol::Dnp3
-                            | Protocol::Enip
-                            | Protocol::OpcUa
-                            | Protocol::Ntlm
-                    ) {
-                        protocol_hierarchy.push((format!("          └─ {:?}", proto), stats.total_packets, stats.total_bytes));
+                    if proto != &Protocol::Tcp
+                        && matches!(
+                            proto,
+                            Protocol::Http
+                                | Protocol::Tls
+                                | Protocol::Ssh
+                                | Protocol::Ftp
+                                | Protocol::Smtp
+                                | Protocol::Imap
+                                | Protocol::Pop3
+                                | Protocol::Telnet
+                                | Protocol::Rdp
+                                | Protocol::WebSocket
+                                | Protocol::Http2
+                                | Protocol::Grpc
+                                | Protocol::Postgres
+                                | Protocol::Mysql
+                                | Protocol::Mongodb
+                                | Protocol::Redis
+                                | Protocol::Cassandra
+                                | Protocol::Modbus
+                                | Protocol::Dnp3
+                                | Protocol::Enip
+                                | Protocol::OpcUa
+                                | Protocol::Ntlm
+                        )
+                    {
+                        protocol_hierarchy.push((
+                            format!("          └─ {:?}", proto),
+                            stats.total_packets,
+                            stats.total_bytes,
+                        ));
                     }
                 }
             }
             if self.udp_packets > 0 {
-                protocol_hierarchy.push(("      └─ UDP".to_string(), self.udp_packets, self.udp_bytes));
+                protocol_hierarchy.push((
+                    "      └─ UDP".to_string(),
+                    self.udp_packets,
+                    self.udp_bytes,
+                ));
                 for (proto, stats) in &self.per_protocol {
-                    if proto != &Protocol::Udp && matches!(
-                        proto,
-                        Protocol::Dns
-                            | Protocol::Dhcp
-                            | Protocol::Ntp
-                            | Protocol::Mdns
-                            | Protocol::Snmp
-                            | Protocol::Quic
-                            | Protocol::Sip
-                            | Protocol::Rtp
-                            | Protocol::Rtcp
-                    ) {
-                        protocol_hierarchy.push((format!("          └─ {:?}", proto), stats.total_packets, stats.total_bytes));
+                    if proto != &Protocol::Udp
+                        && matches!(
+                            proto,
+                            Protocol::Dns
+                                | Protocol::Dhcp
+                                | Protocol::Ntp
+                                | Protocol::Mdns
+                                | Protocol::Snmp
+                                | Protocol::Quic
+                                | Protocol::Sip
+                                | Protocol::Rtp
+                                | Protocol::Rtcp
+                        )
+                    {
+                        protocol_hierarchy.push((
+                            format!("          └─ {:?}", proto),
+                            stats.total_packets,
+                            stats.total_bytes,
+                        ));
                     }
                 }
             }
             if self.icmp_packets > 0 {
-                protocol_hierarchy.push(("      └─ ICMP".to_string(), self.icmp_packets, self.icmp_bytes));
+                protocol_hierarchy.push((
+                    "      └─ ICMP".to_string(),
+                    self.icmp_packets,
+                    self.icmp_bytes,
+                ));
             }
         }
 

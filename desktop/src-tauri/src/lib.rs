@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -533,7 +533,9 @@ fn list_interfaces() -> Result<Vec<InterfaceInfo>, String> {
     let mut out: Vec<InterfaceInfo> = devices
         .into_iter()
         .map(|d| {
-            let kind = netscope_core::capture::interface_kind(&d).as_str().to_string();
+            let kind = netscope_core::capture::interface_kind(&d)
+                .as_str()
+                .to_string();
             InterfaceInfo {
                 name: d.name,
                 description: d.desc.unwrap_or_default(),
@@ -584,9 +586,7 @@ impl CaptureOptionsArg {
                 files: self.ring_files,
             };
             if !ring.rotates() {
-                return Err(
-                    "A ring buffer needs a file size or duration to rotate on.".to_string()
-                );
+                return Err("A ring buffer needs a file size or duration to rotate on.".to_string());
             }
             if self.output_path.is_none() {
                 return Err("A ring buffer needs an output file to write to.".to_string());
@@ -937,12 +937,14 @@ fn build_pcapng_bytes(packets: &[Packet]) -> Result<Vec<u8>, String> {
             name: Some("eth0".to_string()),
             description: Some("netscope captured interface".to_string()),
         }],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
 
     for pkt in packets {
         let ts_sec = pkt.timestamp.timestamp();
         let ts_nanos = pkt.timestamp.timestamp_subsec_nanos();
-        writer.write_packet(0, ts_sec, ts_nanos, pkt.length as u32, &pkt.data, None)
+        writer
+            .write_packet(0, ts_sec, ts_nanos, pkt.length as u32, &pkt.data, None)
             .map_err(|e| e.to_string())?;
     }
     writer.finish().map_err(|e| e.to_string())?;

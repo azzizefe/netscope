@@ -1,8 +1,8 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+use chrono::Utc;
 use rusqlite::{params, Connection, Result};
 use std::path::PathBuf;
-use chrono::Utc;
 
 pub struct Database {
     conn: Connection,
@@ -10,11 +10,10 @@ pub struct Database {
 
 impl Database {
     pub fn open() -> Result<Self> {
-        let dir = crate::config::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."));
+        let dir = crate::config::config_dir().unwrap_or_else(|| PathBuf::from("."));
         let _ = std::fs::create_dir_all(&dir);
         let db_path = dir.join("netscope.db");
-        
+
         let conn = Connection::open(db_path)?;
         let db = Database { conn };
         db.init_tables()?;
@@ -75,11 +74,9 @@ impl Database {
     }
 
     fn seed_users(&self) -> Result<()> {
-        let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM users",
-            [],
-            |row| row.get(0),
-        )?;
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))?;
 
         if count == 0 {
             // Hash helper: SHA-256 (same as in api_server.rs)
@@ -109,7 +106,9 @@ impl Database {
 
     // --- Authentication ---
     pub fn get_user_role(&self, username: &str, password_hash: &str) -> Result<Option<String>> {
-        let mut stmt = self.conn.prepare("SELECT role FROM users WHERE username = ? AND password_hash = ?")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT role FROM users WHERE username = ? AND password_hash = ?")?;
         let mut rows = stmt.query(params![username, password_hash])?;
         if let Some(row) = rows.next()? {
             let role: String = row.get(0)?;
@@ -137,10 +136,10 @@ impl Database {
     }
 
     pub fn list_bookmarks(&self, capture_file: &str) -> Result<Vec<(i64, String)>> {
-        let mut stmt = self.conn.prepare("SELECT packet_index, tag FROM bookmarks WHERE capture_file = ?")?;
-        let rows = stmt.query_map(params![capture_file], |row| {
-            Ok((row.get(0)?, row.get(1)?))
-        })?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT packet_index, tag FROM bookmarks WHERE capture_file = ?")?;
+        let rows = stmt.query_map(params![capture_file], |row| Ok((row.get(0)?, row.get(1)?)))?;
         let mut results = Vec::new();
         for r in rows {
             results.push(r?);
@@ -149,7 +148,13 @@ impl Database {
     }
 
     // --- Annotations ---
-    pub fn add_annotation(&self, capture_file: &str, packet_index: i64, comment: &str, username: &str) -> Result<()> {
+    pub fn add_annotation(
+        &self,
+        capture_file: &str,
+        packet_index: i64,
+        comment: &str,
+        username: &str,
+    ) -> Result<()> {
         let now = Utc::now().to_rfc3339();
         self.conn.execute(
             "INSERT INTO annotations (capture_file, packet_index, comment, username, timestamp) VALUES (?, ?, ?, ?, ?)",
@@ -158,7 +163,10 @@ impl Database {
         Ok(())
     }
 
-    pub fn list_annotations(&self, capture_file: &str) -> Result<Vec<(i64, String, String, String)>> {
+    pub fn list_annotations(
+        &self,
+        capture_file: &str,
+    ) -> Result<Vec<(i64, String, String, String)>> {
         let mut stmt = self.conn.prepare("SELECT packet_index, comment, username, timestamp FROM annotations WHERE capture_file = ?")?;
         let rows = stmt.query_map(params![capture_file], |row| {
             Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
@@ -181,7 +189,9 @@ impl Database {
     }
 
     pub fn list_audit_logs(&self) -> Result<Vec<(String, String, String, String)>> {
-        let mut stmt = self.conn.prepare("SELECT username, action, capture_file, timestamp FROM audit_log ORDER BY id DESC")?;
+        let mut stmt = self.conn.prepare(
+            "SELECT username, action, capture_file, timestamp FROM audit_log ORDER BY id DESC",
+        )?;
         let rows = stmt.query_map([], |row| {
             Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
         })?;

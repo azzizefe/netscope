@@ -1,12 +1,12 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
 use crate::models::Protocol;
 
 use super::{
-    bacnet, coap, dhcp, dnp3, dns, enip, kerberos, ntp, openvpn, qpack, radius, rtp, sip, snmp, vxlan,
-    wireguard, DissectedResult,
+    bacnet, coap, dhcp, dnp3, dns, enip, kerberos, ntp, openvpn, qpack, radius, rtp, sip, snmp,
+    vxlan, wireguard, DissectedResult,
 };
 
 pub fn dissect_udp(
