@@ -1573,8 +1573,8 @@ mod tests {
         let mut pre_master = [0u8; 48];
         pre_master[0] = 0x03;
         pre_master[1] = 0x03;
-        for i in 2..48 {
-            pre_master[i] = i as u8;
+        for (i, byte) in pre_master.iter_mut().enumerate().skip(2) {
+            *byte = i as u8;
         }
 
         let rsa_pub = rsa::RsaPublicKey::from(&rsa_key);

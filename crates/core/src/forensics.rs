@@ -399,7 +399,7 @@ mod tests {
     fn test_carve_png() {
         let mut data = vec![0; 100];
         data.extend_from_slice(b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00IEND\xae\x42\x60\x82");
-        data.extend_from_slice(&vec![0; 50]);
+        data.extend_from_slice(&[0; 50]);
 
         let carved = carve_files(&data);
         assert_eq!(carved.len(), 1);

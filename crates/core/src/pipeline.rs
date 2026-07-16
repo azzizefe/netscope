@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Parallel capture pipeline — the architecture from ROADMAP §2.1:
 //!
@@ -268,7 +268,9 @@ pub(crate) fn dissect_frame(frame: RawFrame, linktype: i32) -> Packet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dissectors::test_helpers::{build_dns_query, build_tcp_packet, build_udp_packet};
+    use crate::dissectors::test_helpers::{
+        build_dns_query, build_tcp_packet, build_udp_packet, TcpFlags,
+    };
     use crate::models::Protocol;
 
     fn frame(i: usize, data: Vec<u8>) -> RawFrame {
@@ -295,10 +297,10 @@ mod tests {
                     [10, 0, 0, 2],
                     12345,
                     80,
-                    false,
-                    true,
-                    false,
-                    false,
+                    TcpFlags {
+                        ack: true,
+                        ..Default::default()
+                    },
                     b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
                 )
             } else {
@@ -373,10 +375,10 @@ mod tests {
                 [10, 0, 0, 2],
                 1,
                 2,
-                true,
-                false,
-                false,
-                false,
+                TcpFlags {
+                    syn: true,
+                    ..Default::default()
+                },
                 &[],
             ),
         ));
@@ -410,10 +412,10 @@ mod tests {
                     [10, 0, 0, 2],
                     12345,
                     80,
-                    false,
-                    true,
-                    false,
-                    false,
+                    TcpFlags {
+                        ack: true,
+                        ..Default::default()
+                    },
                     if i % 2 == 0 {
                         b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n".as_slice()
                     } else {

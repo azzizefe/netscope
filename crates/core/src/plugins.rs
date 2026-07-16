@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Declarative protocol plugins — recognise new protocols without touching
 //! Rust or recompiling (ROADMAP §2.3).
@@ -377,7 +377,7 @@ mod tests {
     fn tcp_dissector_uses_plugin_after_builtins() {
         use crate::dissectors::ip::dissect_ipv4;
         use crate::dissectors::tcp::dissect_tcp;
-        use crate::dissectors::test_helpers::build_tcp_packet;
+        use crate::dissectors::test_helpers::{build_tcp_packet, TcpFlags};
 
         with_registry(vec![Plugin::parse(REDIS_TOML).unwrap()], || {
             let data = build_tcp_packet(
@@ -385,10 +385,10 @@ mod tests {
                 [10, 0, 0, 2],
                 50000,
                 16379,
-                false,
-                true,
-                false,
-                false,
+                TcpFlags {
+                    ack: true,
+                    ..Default::default()
+                },
                 b"*1\r\n$4\r\nPING\r\n",
             );
             let (_s, _d, _p, tcp_data) = dissect_ipv4(&data[14..]);
@@ -415,10 +415,10 @@ mod tests {
                 [10, 0, 0, 2],
                 50000,
                 16379,
-                false,
-                true,
-                false,
-                false,
+                TcpFlags {
+                    ack: true,
+                    ..Default::default()
+                },
                 &[0x81, 0x02, b'h', b'i'],
             );
             let (_s, _d, _p, ws_tcp) = dissect_ipv4(&ws[14..]);
