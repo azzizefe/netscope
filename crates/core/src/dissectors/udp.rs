@@ -6,7 +6,7 @@ use crate::models::Protocol;
 
 use super::{
     bacnet, coap, dhcp, dnp3, dns, enip, kerberos, ntp, openvpn, qpack, radius, rtp, sip, snmp,
-    vxlan, wireguard, DissectedResult,
+    ssdp, stun, syslog, tftp, vxlan, wireguard, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -86,6 +86,26 @@ pub fn dissect_udp(
     // IoT messaging (ROADMAP §3.8).
     if on(5683) {
         return coap::dissect_coap(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Infrastructure / discovery / logging services carried over UDP.
+    if on(514) {
+        return syslog::dissect_syslog(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(69) {
+        return tftp::dissect_tftp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1900) {
+        return ssdp::dissect_ssdp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3478) || on(3479) {
+        return stun::dissect_stun(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5355) {
+        // LLMNR uses the DNS wire format; reuse the DNS dissector, then relabel.
+        let mut r = dns::dissect_dns(src_ip, dst_ip, src_port, dst_port, udp_payload);
+        r.protocol = Protocol::Llmnr;
+        r.summary = format!("LLMNR — {}", r.summary.trim_start_matches("DNS ").trim());
+        return r;
     }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);

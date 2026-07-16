@@ -522,6 +522,96 @@ traffic paths. Labels can stack (an outer one for the tunnel, an inner one for t
 service). netscope unwraps the labels and shows the real packet inside.",
             look_for: "\"MPLS label 16 (TTL 64) · IPv4 …\" — the part after the dot is the actual packet being carried.",
         },
+        Protocol::Syslog => Lesson {
+            title: "Syslog — the system's diary",
+            summary: "Devices and servers send their log messages to a central collector.",
+            body: "Routers, firewalls and servers can ship their log lines over the \
+network to one place. Each message carries a priority that encodes a facility \
+(which subsystem) and a severity (how bad), from Emergency down to Debug. It's \
+usually plaintext over UDP 514 — handy for ops, but readable by anyone capturing.",
+            look_for: "\"Syslog Error (facility 4) — …\" on UDP 514.",
+        },
+        Protocol::Tftp => Lesson {
+            title: "TFTP — tiny file transfer",
+            summary: "A bare-bones file copy used to boot devices and load firmware.",
+            body: "TFTP is FTP stripped to the bone: no login, no listing, just read \
+or write a file in fixed blocks over UDP 69. It's how switches, phones and \
+diskless machines pull their config and firmware at boot. No encryption and no \
+auth, so it's strictly for trusted local networks.",
+            look_for: "\"TFTP Read Request — firmware.bin\" on UDP 69.",
+        },
+        Protocol::Ssdp => Lesson {
+            title: "SSDP — 'who's on my network?'",
+            summary: "The discovery chatter behind UPnP — smart TVs, printers, speakers.",
+            body: "SSDP is how consumer gadgets find each other. A device shouts an \
+M-SEARCH to a multicast address asking 'any media renderers out there?', and \
+others answer or announce themselves with NOTIFY. It looks like HTTP but rides \
+UDP 1900. Lots of it is normal on home/office LANs.",
+            look_for: "\"SSDP M-SEARCH — device discovery\" on UDP 1900.",
+        },
+        Protocol::Stun => Lesson {
+            title: "STUN — finding your way through NAT",
+            summary: "Helps voice/video calls discover their public address behind a router.",
+            body: "When two people make a WebRTC or VoIP call, each sits behind a home \
+router (NAT) and doesn't know its own public address. STUN asks a public server \
+'what address do you see me coming from?' so the two sides can connect directly. \
+A magic-cookie value in the header identifies it — netscope checks that so it \
+only labels real STUN.",
+            look_for: "\"STUN Binding Request\" on UDP 3478, around a video call.",
+        },
+        Protocol::Llmnr => Lesson {
+            title: "LLMNR — DNS's little local cousin",
+            summary: "Windows machines resolving names on the local link without a DNS server.",
+            body: "LLMNR lets computers on the same LAN ask 'who is called PRINTER?' \
+without a configured DNS server, using the DNS message format on UDP 5355. It's \
+convenient but a known security footgun: attackers can answer these queries to \
+impersonate hosts, so many networks disable it.",
+            look_for: "\"LLMNR — Query PRINTER\" on UDP 5355.",
+        },
+        Protocol::Rtsp => Lesson {
+            title: "RTSP — the remote control for streams",
+            summary: "The 'play/pause' signalling for IP cameras and streaming media.",
+            body: "RTSP is like HTTP but for controlling a live media stream: DESCRIBE \
+asks what's available, SETUP prepares it, then PLAY and PAUSE act like a remote. \
+The actual audio/video usually flows separately as RTP. It's the backbone of IP \
+security cameras.",
+            look_for: "\"RTSP DESCRIBE — rtsp://cam/stream\" on TCP 554.",
+        },
+        Protocol::Irc => Lesson {
+            title: "IRC — classic text chat",
+            summary: "One of the internet's oldest group-chat protocols, still widely used.",
+            body: "IRC is plain-text chat: you JOIN a channel and PRIVMSG messages to \
+it. Simple and human-readable on TCP 6667 (or TLS on 6697). Because it's easy to \
+script, it's also historically been used to control botnets — so unexpected IRC \
+from a server is worth a second look.",
+            look_for: "\"IRC PRIVMSG — :nick … #channel\" on TCP 6667.",
+        },
+        Protocol::Rfb => Lesson {
+            title: "RFB / VNC — sharing a screen",
+            summary: "The remote-desktop protocol behind VNC — see and control another PC.",
+            body: "RFB (Remote Framebuffer), better known as VNC, streams one machine's \
+screen to another and sends back mouse and keyboard events. A session opens with \
+a version banner like 'RFB 003.008'. Plain VNC is unencrypted, so it's often \
+tunnelled over SSH or a VPN.",
+            look_for: "\"VNC/RFB handshake — RFB 003.008\" on TCP 5900.",
+        },
+        Protocol::Whois => Lesson {
+            title: "WHOIS — who owns this domain?",
+            summary: "A plain-text lookup for who registered a domain or IP range.",
+            body: "WHOIS is dead simple: connect to a registry on TCP 43, send one line \
+(a domain or IP), and read back a text record of who registered it and when. \
+Investigators use it to attribute domains and IP blocks.",
+            look_for: "\"WHOIS — example.com\" on TCP 43.",
+        },
+        Protocol::Nntp => Lesson {
+            title: "NNTP — Usenet newsgroups",
+            summary: "The protocol behind Usenet discussion groups and binary downloads.",
+            body: "NNTP moves articles between news servers and to readers, organised \
+into newsgroups. Commands like GROUP and ARTICLE fetch content; servers answer \
+with 3-digit status codes, much like FTP or SMTP. Still used for both discussion \
+and large binary downloads.",
+            look_for: "\"NNTP — GROUP comp.lang.rust\" on TCP 119.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -675,6 +765,16 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Usb,
         Protocol::Bluetooth,
         Protocol::Can,
+        Protocol::Syslog,
+        Protocol::Tftp,
+        Protocol::Ssdp,
+        Protocol::Stun,
+        Protocol::Llmnr,
+        Protocol::Rtsp,
+        Protocol::Irc,
+        Protocol::Rfb,
+        Protocol::Whois,
+        Protocol::Nntp,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -821,6 +921,16 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Tds => "A Tabular Data Stream (TDS) database message over TCP 1433.",
         Protocol::Amqp => "An Advanced Message Queuing Protocol (AMQP) message on TCP 5672.",
         Protocol::Kafka => "An Apache Kafka message queuing request/response on TCP 9092.",
+        Protocol::Syslog => "A system log message shipped to a central collector (UDP 514) — usually plaintext.",
+        Protocol::Tftp => "A trivial file transfer (UDP 69) — often a device pulling firmware or config at boot.",
+        Protocol::Ssdp => "UPnP device-discovery chatter (UDP 1900) — gadgets finding each other on the LAN.",
+        Protocol::Stun => "A NAT-traversal probe (UDP 3478) used by voice/video calls to find a public path.",
+        Protocol::Llmnr => "A link-local name lookup (UDP 5355) — like DNS, but for the local network only.",
+        Protocol::Rtsp => "Streaming-media control (TCP 554) — play/pause signalling for an IP camera or stream.",
+        Protocol::Irc => "An Internet Relay Chat message (TCP 6667) — plain-text group chat.",
+        Protocol::Rfb => "A VNC / remote-framebuffer session (TCP 5900) — one screen shared to another.",
+        Protocol::Whois => "A WHOIS registration lookup (TCP 43) — who owns a domain or IP.",
+        Protocol::Nntp => "A Usenet news transfer (TCP 119) — fetching or moving newsgroup articles.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -867,7 +977,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 56);
+        assert_eq!(all_lessons().len(), 66);
     }
 
     #[test]

@@ -74,6 +74,17 @@ const KNOWN_PROTOS: &[&str] = &[
     "rtcp",
     "qpack",
     "http3",
+    "syslog",
+    "tftp",
+    "ssdp",
+    "stun",
+    "llmnr",
+    "rtsp",
+    "irc",
+    "rfb",
+    "vnc",
+    "whois",
+    "nntp",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -222,6 +233,8 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         // Short aliases for protocols whose display name is longer/branded.
         "postgres" | "psql" | "pgsql" => pkt.protocol == Protocol::Postgres,
         "mongo" => pkt.protocol == Protocol::Mongodb,
+        // Display is "VNC/RFB", which the lexer can't produce as a bare word.
+        "rfb" | "vnc" => pkt.protocol == Protocol::Rfb,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

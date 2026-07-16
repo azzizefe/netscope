@@ -19,6 +19,7 @@ pub mod http2;
 pub mod icmp;
 pub mod imap;
 pub mod ip;
+pub mod irc;
 pub mod ipsec;
 pub mod kafka;
 pub mod kerberos;
@@ -30,6 +31,7 @@ pub mod mongodb;
 pub mod mpls;
 pub mod mqtt;
 pub mod mysql;
+pub mod nntp;
 pub mod ntlm;
 pub mod ntp;
 pub mod opcua;
@@ -42,24 +44,31 @@ pub mod radiotap;
 pub mod radius;
 pub mod rdp;
 pub mod redis;
+pub mod rfb;
 pub mod rtp;
+pub mod rtsp;
 pub mod sip;
 pub mod sll;
 pub mod smb;
 pub mod smtp;
 pub mod snmp;
 pub mod srt;
+pub mod ssdp;
 pub mod ssh;
 pub mod stp;
+pub mod stun;
+pub mod syslog;
 pub mod tcp;
 pub mod tcp_analysis;
 pub mod tds;
 pub mod telnet;
+pub mod tftp;
 pub mod tls;
 pub mod udp;
 pub mod usb;
 pub mod vxlan;
 pub mod websocket;
+pub mod whois;
 pub mod wireguard;
 pub mod wlan;
 pub mod zigbee;
@@ -700,6 +709,46 @@ mod tests {
         let r = dissect(&buf);
         assert_eq!(r.protocol, Protocol::Ospf);
         assert!(r.summary.starts_with("OSPFv2 Hello — router 10.0.0.1"));
+    }
+
+    #[test]
+    fn end_to_end_syslog_via_dissect() {
+        // Syslog PRI <34> (facility 4, severity 2 = Critical) to UDP 514.
+        let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 514, b"<34>disk failing");
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Syslog);
+        assert!(r.summary.contains("Critical"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_stun_via_dissect() {
+        // STUN Binding Request (with the magic cookie) to UDP 3478.
+        let mut stun = vec![0x00, 0x01, 0x00, 0x00];
+        stun.extend_from_slice(&0x2112_A442u32.to_be_bytes());
+        stun.extend_from_slice(&[0u8; 12]);
+        let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 50000, 3478, &stun);
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Stun);
+        assert_eq!(r.summary, "STUN Binding Request");
+    }
+
+    #[test]
+    fn end_to_end_rtsp_via_dissect() {
+        super::tcp::clear_tcp_reassembler();
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            40000,
+            554,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            b"OPTIONS rtsp://cam/stream RTSP/1.0\r\n",
+        );
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Rtsp);
+        assert!(r.summary.starts_with("RTSP OPTIONS"), "{}", r.summary);
     }
 
     #[test]
