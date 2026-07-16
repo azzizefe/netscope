@@ -116,6 +116,26 @@ pub enum Protocol {
     Tds,
     Amqp,
     Kafka,
+    /// Syslog event logging (UDP 514).
+    Syslog,
+    /// Trivial File Transfer Protocol (UDP 69).
+    Tftp,
+    /// SSDP / UPnP device discovery (UDP 1900).
+    Ssdp,
+    /// STUN NAT-traversal for WebRTC/VoIP (UDP 3478).
+    Stun,
+    /// Link-Local Multicast Name Resolution (UDP 5355) — DNS wire format.
+    Llmnr,
+    /// Real Time Streaming Protocol media control (TCP 554).
+    Rtsp,
+    /// Internet Relay Chat (TCP 6667).
+    Irc,
+    /// Remote Framebuffer / VNC remote desktop (TCP 5900).
+    Rfb,
+    /// WHOIS registration lookups (TCP 43).
+    Whois,
+    /// Network News Transfer Protocol / Usenet (TCP 119).
+    Nntp,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -202,6 +222,16 @@ impl std::fmt::Display for Protocol {
             Protocol::Tds => write!(f, "TDS"),
             Protocol::Amqp => write!(f, "AMQP"),
             Protocol::Kafka => write!(f, "Kafka"),
+            Protocol::Syslog => write!(f, "Syslog"),
+            Protocol::Tftp => write!(f, "TFTP"),
+            Protocol::Ssdp => write!(f, "SSDP"),
+            Protocol::Stun => write!(f, "STUN"),
+            Protocol::Llmnr => write!(f, "LLMNR"),
+            Protocol::Rtsp => write!(f, "RTSP"),
+            Protocol::Irc => write!(f, "IRC"),
+            Protocol::Rfb => write!(f, "VNC/RFB"),
+            Protocol::Whois => write!(f, "WHOIS"),
+            Protocol::Nntp => write!(f, "NNTP"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }

@@ -8,9 +8,9 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    amqp, bgp, cassandra, dnp3, enip, ftp, http, http2, imap, kafka, kerberos, ldap, modbus,
-    mongodb, mqtt, mysql, ntlm, opcua, openvpn, pop3, postgres, rdp, redis, smb, smtp, ssh, tds,
-    telnet, tls, websocket, DissectedResult,
+    amqp, bgp, cassandra, dnp3, enip, ftp, http, http2, imap, irc, kafka, kerberos, ldap, modbus,
+    mongodb, mqtt, mysql, nntp, ntlm, opcua, openvpn, pop3, postgres, rdp, redis, rfb, rtsp, smb,
+    smtp, ssh, tds, telnet, tls, websocket, whois, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -335,6 +335,22 @@ fn dissect_tcp_inner(
         }
         if on(9092) {
             return kafka::dissect_kafka(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Media, chat, remote-desktop and legacy text services over TCP.
+        if on(554) {
+            return rtsp::dissect_rtsp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6667) || on(6697) {
+            return irc::dissect_irc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5900) {
+            return rfb::dissect_rfb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(43) {
+            return whois::dissect_whois(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(119) {
+            return nntp::dissect_nntp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their
