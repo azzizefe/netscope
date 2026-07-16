@@ -30,7 +30,13 @@ jobs:
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             binary: netscope-tui.exe
+            # arm64 Windows is a cross-compile that CI never exercises and that
+            # needs both the arm64 MSVC toolchain and an arm64 Npcap lib. Mark it
+            # best-effort so a failure here can't block the whole release; when it
+            # succeeds the binary is still published.
+            experimental: true
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental || false }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
