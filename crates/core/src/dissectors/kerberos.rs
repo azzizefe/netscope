@@ -18,7 +18,7 @@ pub fn clear_krb_keys() {
 }
 
 fn decode_hex(s: &str) -> Result<Vec<u8>, ()> {
-    if s.len() % 2 != 0 {
+    if !s.len().is_multiple_of(2) {
         return Err(());
     }
     (0..s.len())
@@ -41,14 +41,15 @@ fn parse_encrypted_data(data: &[u8]) -> Option<(i32, Vec<u8>)> {
                     }
                     let mut cipher_pos = pos + 4 + etype_len;
                     while cipher_pos + 4 < data.len() {
-                        if data[cipher_pos] == 0xa2 {
-                            if cipher_pos + 2 < data.len() && data[cipher_pos + 2] == 0x04 {
-                                let cipher_len = data[cipher_pos + 3] as usize;
-                                if cipher_pos + 4 + cipher_len <= data.len() {
-                                    let cipher =
-                                        data[cipher_pos + 4..cipher_pos + 4 + cipher_len].to_vec();
-                                    return Some((etype, cipher));
-                                }
+                        if data[cipher_pos] == 0xa2
+                            && cipher_pos + 2 < data.len()
+                            && data[cipher_pos + 2] == 0x04
+                        {
+                            let cipher_len = data[cipher_pos + 3] as usize;
+                            if cipher_pos + 4 + cipher_len <= data.len() {
+                                let cipher =
+                                    data[cipher_pos + 4..cipher_pos + 4 + cipher_len].to_vec();
+                                return Some((etype, cipher));
                             }
                         }
                         cipher_pos += 1;
@@ -65,7 +66,7 @@ fn decrypt_krb_aes(ciphertext: &[u8], key: &[u8]) -> Option<Vec<u8>> {
     use aes_gcm::aes::cipher::{BlockDecrypt, KeyInit};
     use aes_gcm::aes::Aes128;
 
-    if ciphertext.len() < 16 || ciphertext.len() % 16 != 0 {
+    if ciphertext.len() < 16 || !ciphertext.len().is_multiple_of(16) {
         return None;
     }
 
@@ -74,9 +75,9 @@ fn decrypt_krb_aes(ciphertext: &[u8], key: &[u8]) -> Option<Vec<u8>> {
         let cipher = Aes128::new_from_slice(key).ok()?;
         for i in (0..decrypted.len()).step_by(16) {
             let block = &mut decrypted[i..i + 16];
-            let mut block_arr =
+            let block_arr =
                 aes_gcm::aes::cipher::generic_array::GenericArray::from_mut_slice(block);
-            cipher.decrypt_block(&mut block_arr);
+            cipher.decrypt_block(block_arr);
         }
         Some(decrypted)
     } else {
@@ -115,7 +116,7 @@ pub fn dissect_kerberos(
                 if let Some(plaintext) = decrypt_krb_aes(encrypted_body, &key) {
                     let mut principal = String::new();
                     for &b in &plaintext {
-                        if b >= 32 && b <= 126 {
+                        if (32..=126).contains(&b) {
                             principal.push(b as char);
                         } else if !principal.is_empty() {
                             break;

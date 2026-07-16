@@ -49,7 +49,7 @@ impl WasmFilter {
             Ok(p) => p,
             Err(_) => return false,
         };
-        let pkt = js_pkt.to_packet();
+        let pkt = js_pkt.into_packet();
         self.filter.matches(&pkt)
     }
 }
@@ -61,7 +61,7 @@ pub fn matches_batch(filter: &WasmFilter, packets: JsValue) -> Result<Vec<u8>, S
     let results = js_pkts
         .into_iter()
         .map(|jp| {
-            if filter.filter.matches(&jp.to_packet()) {
+            if filter.filter.matches(&jp.into_packet()) {
                 1
             } else {
                 0
@@ -141,7 +141,7 @@ fn parse_protocol(s: &str) -> Protocol {
 }
 
 impl JsPacket {
-    fn to_packet(self) -> Packet {
+    fn into_packet(self) -> Packet {
         let timestamp = Utc.timestamp_millis_opt(self.epoch_ms).unwrap();
         let src_addr = self.src_addr.and_then(|s| s.parse::<IpAddr>().ok());
         let dst_addr = self.dst_addr.and_then(|s| s.parse::<IpAddr>().ok());

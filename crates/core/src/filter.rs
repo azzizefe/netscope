@@ -463,9 +463,7 @@ fn rtp_seq(pkt: &Packet) -> Option<u64> {
 fn ntlm_field(summary: &str, prefix: &str) -> Option<String> {
     let idx = summary.find(prefix)?;
     let rest = &summary[idx + prefix.len()..];
-    let end = rest
-        .find(|c: char| c == ',' || c == ')')
-        .unwrap_or(rest.len());
+    let end = rest.find([',', ')']).unwrap_or(rest.len());
     Some(rest[..end].trim().to_string())
 }
 
