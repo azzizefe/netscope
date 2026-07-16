@@ -8,10 +8,10 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    amqp, bgp, bittorrent, cassandra, dnp3, enip, finger, ftp, git, http, http2, imap, irc, kafka,
-    kerberos, ldap, memcached, modbus, mongodb, mqtt, mysql, nntp, ntlm, opcua, openvpn, pop3,
-    postgres, rdp, redis, rfb, rtsp, smb, smtp, socks, ssh, tds, telnet, tls, websocket, whois,
-    xmpp, DissectedResult,
+    amqp, bgp, bittorrent, cassandra, diameter, dnp3, enip, finger, ftp, git, http, http2, imap,
+    irc, kafka, kerberos, ldap, memcached, modbus, mongodb, mqtt, mysql, nntp, ntlm, opcua,
+    openvpn, pop3, postgres, rdp, redis, rfb, rlogin, rtsp, smb, smtp, socks, ssh, tacacs, tds,
+    telnet, tls, websocket, whois, xmpp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -376,6 +376,16 @@ fn dissect_tcp_inner(
             || bittorrent::looks_like_bittorrent(tcp_payload)
         {
             return bittorrent::dissect_bittorrent(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // AAA (TACACS+, Diameter) and legacy remote login.
+        if on(49) {
+            return tacacs::dissect_tacacs(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3868) {
+            return diameter::dissect_diameter(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(513) {
+            return rlogin::dissect_rlogin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their

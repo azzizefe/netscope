@@ -11,14 +11,18 @@ pub mod cassandra;
 pub mod coap;
 pub mod dhcp;
 pub mod dhcpv6;
+pub mod diameter;
 pub mod dnp3;
 pub mod dns;
+pub mod eapol;
+pub mod eigrp;
 pub mod enip;
 pub mod ethernet;
 pub mod finger;
 pub mod ftp;
 pub mod git;
 pub mod gre;
+pub mod gtp;
 pub mod http;
 pub mod http2;
 pub mod icmp;
@@ -29,6 +33,7 @@ pub mod irc;
 pub mod ipsec;
 pub mod kafka;
 pub mod kerberos;
+pub mod l2tp;
 pub mod lacp;
 pub mod ldap;
 pub mod lldp;
@@ -45,8 +50,10 @@ pub mod ntp;
 pub mod opcua;
 pub mod openvpn;
 pub mod ospf;
+pub mod pim;
 pub mod pop3;
 pub mod postgres;
+pub mod pppoe;
 pub mod qpack;
 pub mod radiotap;
 pub mod radius;
@@ -54,6 +61,8 @@ pub mod rdp;
 pub mod redis;
 pub mod rfb;
 pub mod rip;
+pub mod rlogin;
+pub mod rmcp;
 pub mod rtp;
 pub mod rtsp;
 pub mod sctp;
@@ -69,6 +78,7 @@ pub mod ssh;
 pub mod stp;
 pub mod stun;
 pub mod syslog;
+pub mod tacacs;
 pub mod tcp;
 pub mod tcp_analysis;
 pub mod tds;
@@ -77,11 +87,13 @@ pub mod tftp;
 pub mod tls;
 pub mod udp;
 pub mod usb;
+pub mod vrrp;
 pub mod vxlan;
 pub mod websocket;
 pub mod whois;
 pub mod wireguard;
 pub mod wlan;
+pub mod wsd;
 pub mod xmpp;
 pub mod zigbee;
 
@@ -194,6 +206,9 @@ const ETHERTYPE_QINQ_88A8: u16 = 0x88A8; // 802.1ad service tag
 const ETHERTYPE_QINQ_9100: u16 = 0x9100; // legacy double-tag
 const ETHERTYPE_LLDP: u16 = 0x88CC; // Link Layer Discovery Protocol
 const ETHERTYPE_SLOW: u16 = 0x8809; // 802.3 slow protocols (LACP/Marker/OAM)
+const ETHERTYPE_PPPOE_DISC: u16 = 0x8863; // PPPoE discovery stage
+const ETHERTYPE_PPPOE_SESS: u16 = 0x8864; // PPPoE session stage
+const ETHERTYPE_EAPOL: u16 = 0x888E; // 802.1X port authentication (EAPOL)
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
@@ -216,6 +231,9 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         }
         ETHERTYPE_LLDP => lldp::dissect_lldp(payload),
         ETHERTYPE_SLOW => lacp::dissect_slow(payload),
+        ETHERTYPE_PPPOE_DISC => pppoe::dissect_pppoe(payload, false),
+        ETHERTYPE_PPPOE_SESS => pppoe::dissect_pppoe(payload, true),
+        ETHERTYPE_EAPOL => eapol::dissect_eapol(payload),
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
@@ -335,6 +353,10 @@ fn dispatch_transport(
         Some(2) => igmp::dissect_igmp(src_ip, dst_ip, &payload),
         Some(47) => gre::dissect_gre(src_ip, dst_ip, &payload),
         Some(132) => sctp::dissect_sctp(src_ip, dst_ip, &payload),
+        // Interior routing (EIGRP 88, PIM 103) and gateway redundancy (VRRP 112).
+        Some(88) => eigrp::dissect_eigrp(src_ip, dst_ip, &payload),
+        Some(103) => pim::dissect_pim(src_ip, dst_ip, &payload),
+        Some(112) => vrrp::dissect_vrrp(src_ip, dst_ip, &payload),
         Some(p) => {
             let name = ip_protocol_name(p);
             DissectedResult {
@@ -812,6 +834,29 @@ mod tests {
         let r = dissect(&build_ipv4_proto(47, &[0x00, 0x00, 0x08, 0x00]));
         assert_eq!(r.protocol, Protocol::Gre);
         assert!(r.summary.contains("IPv4"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_eapol_via_dissect() {
+        // EtherType 0x888E, version 2, type 3 (Key / WPA handshake).
+        let r = dissect(&build_eth_frame(0x888E, &[0x02, 0x03, 0x00, 0x5F]));
+        assert_eq!(r.protocol, Protocol::Eapol);
+        assert!(r.summary.contains("Key"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_pppoe_via_dissect() {
+        // EtherType 0x8863 (discovery), code 0x09 (PADI).
+        let r = dissect(&build_eth_frame(0x8863, &[0x11, 0x09, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Pppoe);
+        assert!(r.summary.contains("PADI"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_vrrp_via_dissect() {
+        let r = dissect(&build_ipv4_proto(112, &[0x31, 0x0A, 0x64, 0x00]));
+        assert_eq!(r.protocol, Protocol::Vrrp);
+        assert!(r.summary.contains("VRID 10"), "{}", r.summary);
     }
 
     #[test]
