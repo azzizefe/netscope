@@ -715,6 +715,108 @@ username, and get back details about that user or everyone logged in. It leaks \
 information and is essentially obsolete, so seeing it today is unusual.",
             look_for: "\"Finger — alice\" on TCP 79.",
         },
+        Protocol::Vrrp => Lesson {
+            title: "VRRP — a shared backup gateway",
+            summary: "Lets two routers share one virtual IP so the gateway never goes down.",
+            body: "If your default gateway is a single router and it dies, everyone \
+loses internet. VRRP has several routers share one virtual IP: one is master, \
+the others stand by, and if the master fails a backup takes over in seconds. \
+The advertisements you see are the master saying 'I'm still here'.",
+            look_for: "\"VRRPv3 Advertisement — VRID 10, priority 100\" (IP protocol 112).",
+        },
+        Protocol::Pim => Lesson {
+            title: "PIM — routing multicast",
+            summary: "How routers build delivery trees for multicast traffic.",
+            body: "Where IGMP is how a host joins a multicast group, PIM is how the \
+routers between the source and the receivers agree on a path to carry that \
+stream — without flooding it everywhere. Common wherever IPTV or market-data \
+multicast is routed across a network.",
+            look_for: "\"PIMv2 Join/Prune\" (IP protocol 103).",
+        },
+        Protocol::Eigrp => Lesson {
+            title: "EIGRP — Cisco's routing protocol",
+            summary: "A fast interior routing protocol used inside Cisco networks.",
+            body: "EIGRP is how Cisco routers inside one organisation learn which \
+networks each other can reach and pick good paths. Hello messages keep neighbours \
+alive; Update/Query/Reply exchange routes. It reacts quickly to changes.",
+            look_for: "\"EIGRPv2 Hello\" (IP protocol 88).",
+        },
+        Protocol::Pppoe => Lesson {
+            title: "PPPoE — how DSL logs in",
+            summary: "Wraps a dial-up-style session over Ethernet — common on DSL links.",
+            body: "Many home broadband links (especially DSL) authenticate with PPPoE: \
+a short discovery handshake (PADI/PADO/PADR/PADS) finds the access concentrator, \
+then a session carries your traffic with a username/password login. It's why your \
+router has a 'PPPoE username' field.",
+            look_for: "\"PPPoE PADI (discovery init)\" then \"PPPoE session\".",
+        },
+        Protocol::Eapol => Lesson {
+            title: "EAPOL / 802.1X — port access control",
+            summary: "The login at the network's edge — and the Wi-Fi WPA handshake.",
+            body: "802.1X decides whether a device is even allowed onto the network, \
+before it gets an IP. EAPOL carries that conversation. You also see it as the \
+WPA/WPA2 4-way 'Key' handshake every time a device joins a protected Wi-Fi.",
+            look_for: "\"EAPOL Key (WPA handshake)\" when a device joins Wi-Fi.",
+        },
+        Protocol::L2tp => Lesson {
+            title: "L2TP — a VPN tunnel",
+            summary: "Builds a tunnel between sites or clients, usually secured by IPsec.",
+            body: "L2TP carries one network's traffic across another by tunnelling it. \
+On its own it has no encryption, so it's almost always paired with IPsec (you'll \
+see 'L2TP/IPsec' in VPN settings). Control messages set the tunnel up; data \
+messages carry the payload.",
+            look_for: "\"L2TPv2 control message\" on UDP 1701.",
+        },
+        Protocol::Gtp => Lesson {
+            title: "GTP — the mobile network's tunnel",
+            summary: "Carries your phone's data through the 4G/5G core network.",
+            body: "When you browse on mobile data, your packets are tunnelled across \
+the carrier's core with GTP: a control part (GTP-C) sets up your session, and a \
+user part (GTP-U) carries the actual traffic. Central to how 3G/4G/5G data works.",
+            look_for: "\"GTP G-PDU (user data)\" on UDP 2152.",
+        },
+        Protocol::Rmcp => Lesson {
+            title: "RMCP / IPMI — managing servers out-of-band",
+            summary: "Talks to a server's management chip (BMC/iLO/iDRAC) even when it's off.",
+            body: "Servers have a small always-on management processor (a BMC, branded \
+iLO or iDRAC) that lets admins power-cycle and monitor the machine remotely, even \
+when the OS is down. RMCP/IPMI is how that's reached over the network. Exposed to \
+the internet it's a serious risk, so seeing it there matters.",
+            look_for: "\"RMCP/IPMI (out-of-band management)\" on UDP 623.",
+        },
+        Protocol::WsDiscovery => Lesson {
+            title: "WS-Discovery — finding printers and cameras",
+            summary: "How Windows and ONVIF IP cameras announce and find each other.",
+            body: "WS-Discovery is a SOAP/XML discovery protocol: a device sends a \
+Probe ('any printers here?') and others answer or announce with Hello/Bye. It's \
+what makes network printers and ONVIF security cameras appear automatically.",
+            look_for: "\"WS-Discovery Probe (searching)\" on UDP 3702.",
+        },
+        Protocol::Tacacs => Lesson {
+            title: "TACACS+ — who can touch the routers",
+            summary: "Cisco's protocol for logging admins into network devices.",
+            body: "When an engineer logs into a router or switch, TACACS+ checks their \
+username/password (authentication), what commands they're allowed (authorization), \
+and logs what they did (accounting) — all against a central server. Unlike RADIUS \
+it encrypts the whole body.",
+            look_for: "\"TACACS+ Authentication\" on TCP 49.",
+        },
+        Protocol::Diameter => Lesson {
+            title: "Diameter — RADIUS's big successor",
+            summary: "The AAA protocol behind mobile-network authentication and billing.",
+            body: "Diameter replaced RADIUS for large carriers: it authenticates \
+subscribers, authorises services, and drives billing across the mobile core. \
+Requests and Answers carry command codes like Credit-Control for charging.",
+            look_for: "\"Diameter Device-Watchdog Request\" on TCP/SCTP 3868.",
+        },
+        Protocol::Rlogin => Lesson {
+            title: "rlogin — an obsolete remote login",
+            summary: "A BSD-era remote shell — cleartext, insecure, replaced by SSH.",
+            body: "rlogin let you log into another Unix machine over the network — but \
+it sends everything, including what you type, in the clear, and trusts hosts by \
+name. SSH replaced it decades ago, so seeing rlogin today is a red flag.",
+            look_for: "\"rlogin — login alice/bob\" on TCP 513.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -890,6 +992,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Git,
         Protocol::Xmpp,
         Protocol::Finger,
+        Protocol::Vrrp,
+        Protocol::Pim,
+        Protocol::Eigrp,
+        Protocol::Pppoe,
+        Protocol::Eapol,
+        Protocol::L2tp,
+        Protocol::Gtp,
+        Protocol::Rmcp,
+        Protocol::WsDiscovery,
+        Protocol::Tacacs,
+        Protocol::Diameter,
+        Protocol::Rlogin,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -1058,6 +1172,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Git => "A native Git transfer (TCP 9418) — cloning, fetching or pushing a repository.",
         Protocol::Xmpp => "An XMPP / Jabber message (TCP 5222) — open-standard instant messaging.",
         Protocol::Finger => "A Finger lookup (TCP 79) — an old service reporting who is logged in.",
+        Protocol::Vrrp => "A VRRP advertisement (IP proto 112) — routers sharing a virtual gateway IP for failover.",
+        Protocol::Pim => "A PIM message (IP proto 103) — routers building paths to deliver multicast.",
+        Protocol::Eigrp => "An EIGRP routing message (IP proto 88) — Cisco routers exchanging routes.",
+        Protocol::Pppoe => "A PPPoE frame — a DSL-style login/session carried over Ethernet.",
+        Protocol::Eapol => "An 802.1X / EAPOL frame — port authentication, or the Wi-Fi WPA key handshake.",
+        Protocol::L2tp => "An L2TP tunnel message (UDP 1701) — usually the L2TP/IPsec VPN transport.",
+        Protocol::Gtp => "A GTP message (UDP 2123/2152) — carrying mobile data through the 4G/5G core.",
+        Protocol::Rmcp => "An RMCP/IPMI message (UDP 623) — out-of-band management of a server's BMC.",
+        Protocol::WsDiscovery => "A WS-Discovery message (UDP 3702) — devices like printers/cameras finding each other.",
+        Protocol::Tacacs => "A TACACS+ message (TCP 49) — admin login/authorization for network gear.",
+        Protocol::Diameter => "A Diameter message (TCP/SCTP 3868) — carrier AAA and billing.",
+        Protocol::Rlogin => "An rlogin session (TCP 513) — a legacy cleartext remote login; prefer SSH.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -1104,7 +1230,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 78);
+        assert_eq!(all_lessons().len(), 90);
     }
 
     #[test]

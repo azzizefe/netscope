@@ -97,6 +97,19 @@ const KNOWN_PROTOS: &[&str] = &[
     "git",
     "xmpp",
     "finger",
+    "vrrp",
+    "pim",
+    "eigrp",
+    "pppoe",
+    "eapol",
+    "l2tp",
+    "gtp",
+    "rmcp",
+    "ipmi",
+    "wsd",
+    "tacacs",
+    "diameter",
+    "rlogin",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -247,6 +260,10 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "mongo" => pkt.protocol == Protocol::Mongodb,
         // Display is "VNC/RFB", which the lexer can't produce as a bare word.
         "rfb" | "vnc" => pkt.protocol == Protocol::Rfb,
+        // Display names carry a "+" or hyphen the fallback can't match verbatim.
+        "tacacs" | "tacacs+" => pkt.protocol == Protocol::Tacacs,
+        "ipmi" => pkt.protocol == Protocol::Rmcp,
+        "wsd" | "wsdiscovery" => pkt.protocol == Protocol::WsDiscovery,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

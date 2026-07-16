@@ -160,6 +160,30 @@ pub enum Protocol {
     Xmpp,
     /// Finger user lookup (TCP 79).
     Finger,
+    /// VRRP gateway redundancy (IP protocol 112).
+    Vrrp,
+    /// PIM multicast routing (IP protocol 103).
+    Pim,
+    /// EIGRP interior routing (IP protocol 88).
+    Eigrp,
+    /// PPPoE — PPP over Ethernet (EtherType 0x8863/0x8864).
+    Pppoe,
+    /// EAPOL / 802.1X port authentication (EtherType 0x888E).
+    Eapol,
+    /// L2TP tunnelling (UDP 1701).
+    L2tp,
+    /// GTP GPRS tunnelling for mobile networks (UDP 2123/2152).
+    Gtp,
+    /// RMCP / IPMI out-of-band server management (UDP 623).
+    Rmcp,
+    /// WS-Discovery device discovery (UDP 3702).
+    WsDiscovery,
+    /// TACACS+ device administration AAA (TCP 49).
+    Tacacs,
+    /// Diameter AAA protocol (TCP/SCTP 3868).
+    Diameter,
+    /// rlogin legacy remote login (TCP 513).
+    Rlogin,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -268,6 +292,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Git => write!(f, "Git"),
             Protocol::Xmpp => write!(f, "XMPP"),
             Protocol::Finger => write!(f, "Finger"),
+            Protocol::Vrrp => write!(f, "VRRP"),
+            Protocol::Pim => write!(f, "PIM"),
+            Protocol::Eigrp => write!(f, "EIGRP"),
+            Protocol::Pppoe => write!(f, "PPPoE"),
+            Protocol::Eapol => write!(f, "EAPOL"),
+            Protocol::L2tp => write!(f, "L2TP"),
+            Protocol::Gtp => write!(f, "GTP"),
+            Protocol::Rmcp => write!(f, "RMCP"),
+            Protocol::WsDiscovery => write!(f, "WS-Discovery"),
+            Protocol::Tacacs => write!(f, "TACACS+"),
+            Protocol::Diameter => write!(f, "Diameter"),
+            Protocol::Rlogin => write!(f, "rlogin"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
