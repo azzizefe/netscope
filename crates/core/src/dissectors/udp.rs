@@ -5,8 +5,8 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bacnet, coap, dhcp, dnp3, dns, enip, kerberos, ntp, openvpn, qpack, radius, rtp, sip, snmp,
-    ssdp, stun, syslog, tftp, vxlan, wireguard, DissectedResult,
+    bacnet, coap, dhcp, dhcpv6, dnp3, dns, enip, kerberos, nbns, ntp, openvpn, qpack, radius, rip,
+    rtp, sip, snmp, ssdp, stun, syslog, tftp, vxlan, wireguard, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -106,6 +106,15 @@ pub fn dissect_udp(
         r.protocol = Protocol::Llmnr;
         r.summary = format!("LLMNR — {}", r.summary.trim_start_matches("DNS ").trim());
         return r;
+    }
+    if on(546) || on(547) {
+        return dhcpv6::dissect_dhcpv6(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(520) {
+        return rip::dissect_rip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(137) {
+        return nbns::dissect_nbns(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);

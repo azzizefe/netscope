@@ -8,9 +8,10 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    amqp, bgp, cassandra, dnp3, enip, ftp, http, http2, imap, irc, kafka, kerberos, ldap, modbus,
-    mongodb, mqtt, mysql, nntp, ntlm, opcua, openvpn, pop3, postgres, rdp, redis, rfb, rtsp, smb,
-    smtp, ssh, tds, telnet, tls, websocket, whois, DissectedResult,
+    amqp, bgp, bittorrent, cassandra, dnp3, enip, finger, ftp, git, http, http2, imap, irc, kafka,
+    kerberos, ldap, memcached, modbus, mongodb, mqtt, mysql, nntp, ntlm, opcua, openvpn, pop3,
+    postgres, rdp, redis, rfb, rtsp, smb, smtp, socks, ssh, tds, telnet, tls, websocket, whois,
+    xmpp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -351,6 +352,30 @@ fn dissect_tcp_inner(
         }
         if on(119) {
             return nntp::dissect_nntp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Legacy text services, proxies, chat, caching and version control.
+        if on(79) {
+            return finger::dissect_finger(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1080) {
+            return socks::dissect_socks(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5222) || on(5269) {
+            return xmpp::dissect_xmpp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(9418) {
+            return git::dissect_git(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(11211) {
+            return memcached::dissect_memcached(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // BitTorrent uses a port range and an unmistakable handshake, so match
+        // either the well-known ports or the handshake bytes on any port.
+        if (6881..=6889).contains(&src_port)
+            || (6881..=6889).contains(&dst_port)
+            || bittorrent::looks_like_bittorrent(tcp_payload)
+        {
+            return bittorrent::dissect_bittorrent(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their

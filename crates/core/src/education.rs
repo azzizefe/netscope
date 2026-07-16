@@ -612,6 +612,109 @@ with 3-digit status codes, much like FTP or SMTP. Still used for both discussion
 and large binary downloads.",
             look_for: "\"NNTP — GROUP comp.lang.rust\" on TCP 119.",
         },
+        Protocol::Sctp => Lesson {
+            title: "SCTP — TCP's multi-streaming cousin",
+            summary: "A reliable transport used heavily in telecom (4G/5G) signalling.",
+            body: "SCTP does what TCP does — reliable, ordered delivery — but adds \
+multiple independent streams in one connection (so one lost message doesn't \
+stall the rest) and multi-homing for failover. You'll mostly see it carrying \
+mobile-core signalling like Diameter and S1AP.",
+            look_for: "\"SCTP INIT — 1234 → 38412\" — the chunk type names the action.",
+        },
+        Protocol::Gre => Lesson {
+            title: "GRE — a plain tunnel",
+            summary: "Wraps one packet inside another to build tunnels and VPNs.",
+            body: "GRE is a simple envelope: it takes a whole packet and puts it inside \
+another IP packet so it can cross a network that otherwise couldn't route it. \
+It's the basis of PPTP VPNs and many router-to-router tunnels. netscope shows \
+what kind of packet is riding inside.",
+            look_for: "\"GRE — tunnelling IPv4\" — the inner protocol being carried.",
+        },
+        Protocol::Igmp => Lesson {
+            title: "IGMP — joining multicast groups",
+            summary: "How a device says 'send me this multicast stream' (IPTV, discovery).",
+            body: "Multicast lets one sender reach many receivers efficiently. IGMP is \
+how your device tells the local router 'I want the traffic for group 239.1.2.3' \
+(a Membership Report) or 'stop sending it' (a Leave). Common around IPTV and \
+service discovery.",
+            look_for: "\"IGMP v2 Membership Report — group 239.1.2.3\".",
+        },
+        Protocol::Dhcpv6 => Lesson {
+            title: "DHCPv6 — addresses for IPv6",
+            summary: "The IPv6 version of DHCP — handing out addresses and settings.",
+            body: "Just like DHCP does for IPv4, DHCPv6 assigns IPv6 addresses and \
+config (DNS servers, etc.). A device Solicits, servers Advertise, and it \
+Requests and gets a Reply. Runs on UDP 546/547.",
+            look_for: "\"DHCPv6 Solicit\" / \"DHCPv6 Reply\" on UDP 546-547.",
+        },
+        Protocol::Rip => Lesson {
+            title: "RIP — the simplest router chatter",
+            summary: "An old distance-vector routing protocol still seen on small networks.",
+            body: "RIP is routing at its most basic: routers periodically tell each \
+other 'I can reach network X in N hops'. Simple but slow to react and limited to \
+15 hops, so it survives mostly on small or legacy networks. Runs on UDP 520.",
+            look_for: "\"RIPv2 Response\" on UDP 520.",
+        },
+        Protocol::Nbns => Lesson {
+            title: "NBNS — old-school Windows name lookup",
+            summary: "NetBIOS name resolution — the pre-DNS way Windows hosts found each other.",
+            body: "Before DNS took over everywhere, Windows machines used NetBIOS names \
+and this service to resolve them on the local network. Like LLMNR, it's a known \
+spoofing target and is often disabled in hardened environments. Runs on UDP 137.",
+            look_for: "\"NBNS Name Query\" on UDP 137.",
+        },
+        Protocol::Socks => Lesson {
+            title: "SOCKS — a generic proxy",
+            summary: "A proxy that forwards any TCP/UDP connection — used by Tor and tunnels.",
+            body: "SOCKS is a proxy that doesn't care what protocol you're speaking: \
+it just relays your connection to wherever you ask. SOCKS5 adds authentication \
+and UDP. It's what tools like Tor and SSH dynamic port-forwarding expose.",
+            look_for: "\"SOCKS5 Connect\" on TCP 1080.",
+        },
+        Protocol::Memcached => Lesson {
+            title: "Memcached — a memory cache",
+            summary: "A fast in-memory key-value store apps use to cache results.",
+            body: "Memcached keeps frequently used data in RAM so applications don't \
+have to hit a slower database every time. Simple get/set commands over TCP 11211. \
+Left exposed to the internet it has been abused for huge amplification attacks, \
+so seeing it on a public interface is worth noting.",
+            look_for: "\"Memcached get — session:42\" on TCP 11211.",
+        },
+        Protocol::BitTorrent => Lesson {
+            title: "BitTorrent — peer-to-peer file sharing",
+            summary: "Downloads a file in pieces from many peers at once.",
+            body: "Instead of one server, BitTorrent gets a file from lots of peers \
+simultaneously, each sharing the pieces they have. Connections open with a fixed \
+handshake naming the 'BitTorrent protocol'. Common on ports 6881-6889 but peers \
+use many ports.",
+            look_for: "\"BitTorrent handshake\" — the start of a peer connection.",
+        },
+        Protocol::Git => Lesson {
+            title: "Git — the native git:// transport",
+            summary: "The unencrypted protocol behind `git clone git://…`.",
+            body: "Git can move repositories over its own lightweight protocol on TCP \
+9418. It names a service — upload-pack for clone/fetch, receive-pack for push. \
+It has no encryption or authentication, so it's read-only and mostly superseded \
+by SSH and HTTPS.",
+            look_for: "\"Git — upload-pack (clone/fetch)\" on TCP 9418.",
+        },
+        Protocol::Xmpp => Lesson {
+            title: "XMPP — open instant messaging",
+            summary: "The Jabber chat protocol — an XML stream of messages and presence.",
+            body: "XMPP (formerly Jabber) is an open standard for chat: an ongoing XML \
+stream where <message> carries chat, <presence> says who's online, and <iq> does \
+requests. Used by some messaging apps and lots of IoT/push backends. Runs on TCP \
+5222.",
+            look_for: "\"XMPP message\" / \"XMPP presence\" on TCP 5222.",
+        },
+        Protocol::Finger => Lesson {
+            title: "Finger — 'who is this user?'",
+            summary: "A very old service that reports who's logged in on a machine.",
+            body: "Finger dates to the early internet: connect to TCP 79, send a \
+username, and get back details about that user or everyone logged in. It leaks \
+information and is essentially obsolete, so seeing it today is unusual.",
+            look_for: "\"Finger — alice\" on TCP 79.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -775,6 +878,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Rfb,
         Protocol::Whois,
         Protocol::Nntp,
+        Protocol::Sctp,
+        Protocol::Gre,
+        Protocol::Igmp,
+        Protocol::Dhcpv6,
+        Protocol::Rip,
+        Protocol::Nbns,
+        Protocol::Socks,
+        Protocol::Memcached,
+        Protocol::BitTorrent,
+        Protocol::Git,
+        Protocol::Xmpp,
+        Protocol::Finger,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -931,6 +1046,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Rfb => "A VNC / remote-framebuffer session (TCP 5900) — one screen shared to another.",
         Protocol::Whois => "A WHOIS registration lookup (TCP 43) — who owns a domain or IP.",
         Protocol::Nntp => "A Usenet news transfer (TCP 119) — fetching or moving newsgroup articles.",
+        Protocol::Sctp => "An SCTP transport packet (IP proto 132) — reliable multi-stream, common in telecom signalling.",
+        Protocol::Gre => "A GRE tunnel (IP proto 47) — one packet wrapped inside another to cross a network.",
+        Protocol::Igmp => "An IGMP message (IP proto 2) — a host joining or leaving an IPv4 multicast group.",
+        Protocol::Dhcpv6 => "A DHCPv6 message (UDP 546/547) — IPv6 address assignment, like DHCP for IPv4.",
+        Protocol::Rip => "A RIP routing update (UDP 520) — routers telling each other which networks they can reach.",
+        Protocol::Nbns => "A NetBIOS name lookup (UDP 137) — the old Windows way of resolving names locally.",
+        Protocol::Socks => "A SOCKS proxy negotiation (TCP 1080) — relaying a connection through a proxy.",
+        Protocol::Memcached => "A Memcached cache operation (TCP 11211) — reading or writing an in-memory key.",
+        Protocol::BitTorrent => "A BitTorrent peer connection (TCP 6881+) — peer-to-peer file sharing.",
+        Protocol::Git => "A native Git transfer (TCP 9418) — cloning, fetching or pushing a repository.",
+        Protocol::Xmpp => "An XMPP / Jabber message (TCP 5222) — open-standard instant messaging.",
+        Protocol::Finger => "A Finger lookup (TCP 79) — an old service reporting who is logged in.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -977,7 +1104,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 66);
+        assert_eq!(all_lessons().len(), 78);
     }
 
     #[test]

@@ -4,19 +4,25 @@ pub mod amqp;
 pub mod arp;
 pub mod bacnet;
 pub mod bgp;
+pub mod bittorrent;
 pub mod bluetooth;
 pub mod can;
 pub mod cassandra;
 pub mod coap;
 pub mod dhcp;
+pub mod dhcpv6;
 pub mod dnp3;
 pub mod dns;
 pub mod enip;
 pub mod ethernet;
+pub mod finger;
 pub mod ftp;
+pub mod git;
+pub mod gre;
 pub mod http;
 pub mod http2;
 pub mod icmp;
+pub mod igmp;
 pub mod imap;
 pub mod ip;
 pub mod irc;
@@ -26,11 +32,13 @@ pub mod kerberos;
 pub mod lacp;
 pub mod ldap;
 pub mod lldp;
+pub mod memcached;
 pub mod modbus;
 pub mod mongodb;
 pub mod mpls;
 pub mod mqtt;
 pub mod mysql;
+pub mod nbns;
 pub mod nntp;
 pub mod ntlm;
 pub mod ntp;
@@ -45,13 +53,16 @@ pub mod radius;
 pub mod rdp;
 pub mod redis;
 pub mod rfb;
+pub mod rip;
 pub mod rtp;
 pub mod rtsp;
+pub mod sctp;
 pub mod sip;
 pub mod sll;
 pub mod smb;
 pub mod smtp;
 pub mod snmp;
+pub mod socks;
 pub mod srt;
 pub mod ssdp;
 pub mod ssh;
@@ -71,6 +82,7 @@ pub mod websocket;
 pub mod whois;
 pub mod wireguard;
 pub mod wlan;
+pub mod xmpp;
 pub mod zigbee;
 
 use std::net::IpAddr;
@@ -318,6 +330,11 @@ fn dispatch_transport(
         Some(51) => ipsec::dissect_ah(src_ip, dst_ip, &payload),
         // OSPF interior routing (ROADMAP §3.3).
         Some(89) => ospf::dissect_ospf(src_ip, dst_ip, &payload),
+        // IGMP multicast group membership, GRE tunnels and SCTP transport all
+        // ride directly on IP (protocols 2, 47 and 132).
+        Some(2) => igmp::dissect_igmp(src_ip, dst_ip, &payload),
+        Some(47) => gre::dissect_gre(src_ip, dst_ip, &payload),
+        Some(132) => sctp::dissect_sctp(src_ip, dst_ip, &payload),
         Some(p) => {
             let name = ip_protocol_name(p);
             DissectedResult {
@@ -749,6 +766,52 @@ mod tests {
         let r = dissect(&data);
         assert_eq!(r.protocol, Protocol::Rtsp);
         assert!(r.summary.starts_with("RTSP OPTIONS"), "{}", r.summary);
+    }
+
+    /// Build Ethernet + a minimal 20-byte IPv4 header with a chosen IP protocol
+    /// number, wrapping `payload`. Mirrors the hand-rolled frame in the OSPF test.
+    fn build_ipv4_proto(proto: u8, payload: &[u8]) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+        buf.extend_from_slice(&[0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb]);
+        buf.extend_from_slice(&0x0800u16.to_be_bytes());
+        let total_len = (20 + payload.len()) as u16;
+        let mut ip = vec![0x45, 0x00];
+        ip.extend_from_slice(&total_len.to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00, 0x00, 0x00, 0x40, proto, 0x00, 0x00]);
+        ip.extend_from_slice(&[10, 0, 0, 1]);
+        ip.extend_from_slice(&[10, 0, 0, 2]);
+        buf.extend_from_slice(&ip);
+        buf.extend_from_slice(payload);
+        buf
+    }
+
+    #[test]
+    fn end_to_end_sctp_via_dissect() {
+        let mut sctp = Vec::new();
+        sctp.extend_from_slice(&1234u16.to_be_bytes());
+        sctp.extend_from_slice(&38412u16.to_be_bytes());
+        sctp.extend_from_slice(&[0u8; 8]); // vtag + checksum
+        sctp.push(1); // INIT chunk
+        let r = dissect(&build_ipv4_proto(132, &sctp));
+        assert_eq!(r.protocol, Protocol::Sctp);
+        assert!(r.summary.contains("INIT"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_igmp_via_dissect() {
+        let mut igmp = vec![0x16, 0x00, 0x00, 0x00];
+        igmp.extend_from_slice(&[239, 1, 2, 3]);
+        let r = dissect(&build_ipv4_proto(2, &igmp));
+        assert_eq!(r.protocol, Protocol::Igmp);
+        assert!(r.summary.contains("239.1.2.3"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_gre_via_dissect() {
+        let r = dissect(&build_ipv4_proto(47, &[0x00, 0x00, 0x08, 0x00]));
+        assert_eq!(r.protocol, Protocol::Gre);
+        assert!(r.summary.contains("IPv4"), "{}", r.summary);
     }
 
     #[test]
