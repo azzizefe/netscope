@@ -70,17 +70,19 @@ pub fn dissect_tcp(
         if tcp.urg {
             flags_byte |= 0x20;
         }
-        if let Some(warning) = super::tcp_analysis::analyze_packet(
-            src_ip,
-            dst_ip,
-            tcp.source_port,
-            tcp.destination_port,
-            tcp.sequence_number,
-            tcp.acknowledgment_number,
-            flags_byte,
-            tcp.window_size,
-            rest.len(),
-        ) {
+        if let Some(warning) =
+            super::tcp_analysis::analyze_packet(super::tcp_analysis::TcpSegment {
+                src_ip,
+                dst_ip,
+                src_port: tcp.source_port,
+                dst_port: tcp.destination_port,
+                seq: tcp.sequence_number,
+                ack: tcp.acknowledgment_number,
+                flags: flags_byte,
+                win: tcp.window_size,
+                payload_len: rest.len(),
+            })
+        {
             result.summary = format!("{warning} {}", result.summary);
         }
 

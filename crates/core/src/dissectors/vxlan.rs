@@ -25,8 +25,6 @@ pub const VXLAN_PORTS: [u16; 2] = [4789, 8472];
 // anything deeper is hostile input (fuzzing, crafted pcaps) — stop recursing.
 const MAX_NESTING: u8 = 3;
 
-// The initializer already uses a `const` block; clippy 0.1.96 flags it anyway.
-#[allow(clippy::missing_const_for_thread_local)]
 mod depth {
     use std::cell::Cell;
     thread_local! {

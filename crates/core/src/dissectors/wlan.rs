@@ -8,22 +8,17 @@
 //! are set; the summary carries the SSID/BSSID and (from radiotap) the signal
 //! and channel.
 
-// `WLAN_SESSIONS` below is initialized with `HashMap::new()`, which is not a
-// const fn (its `RandomState` needs runtime entropy), so its `thread_local!`
-// initializer can't be `const`. Clippy's `missing_const_for_thread_local`
-// false-positives on it and the allow can't be scoped to the macro-generated
-// item, so it's silenced module-wide (the other two statics already use `const`).
-#![allow(clippy::missing_const_for_thread_local)]
-
 use crate::models::Protocol;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use super::ethernet::mac_to_string;
 use super::{radiotap, DissectedResult};
 
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+// `BTreeMap` (rather than `HashMap`) so `WLAN_SESSIONS` can use a `const`
+// initializer: `BTreeMap::new()` is a const fn, `HashMap::new()` is not.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 struct WlanSessionKey {
     addr1: [u8; 6],
     addr2: [u8; 6],
@@ -36,7 +31,7 @@ struct WlanSessionState {
 }
 
 thread_local! {
-    static WLAN_SESSIONS: RefCell<HashMap<WlanSessionKey, WlanSessionState>> = RefCell::new(HashMap::new());
+    static WLAN_SESSIONS: RefCell<BTreeMap<WlanSessionKey, WlanSessionState>> = const { RefCell::new(BTreeMap::new()) };
     static TEST_WEP_KEY: RefCell<Option<String>> = const { RefCell::new(None) };
     static TEST_WPA_TK: RefCell<Option<String>> = const { RefCell::new(None) };
 }

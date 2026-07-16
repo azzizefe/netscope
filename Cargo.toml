@@ -20,3 +20,13 @@ homepage = "https://github.com/azzizefe/netscope"
 readme = "README.md"
 keywords = ["network", "packet", "capture", "wireshark", "tui"]
 categories = ["network-programming", "command-line-utilities"]
+
+# Workspace-wide lint configuration, opted into per crate with `[lints]
+# workspace = true`.
+[workspace.lints.clippy]
+# clippy 0.1.96 false-positives this lint on `thread_local!` initializers that
+# already use a `const { ... }` block — it fires with no applicable suggestion
+# (see crates/core/src/dissectors/{wlan,vxlan}.rs). The code is already correct;
+# disable this one buggy lint until the upstream fix lands, rather than sprinkle
+# per-item `#[allow]`s. Remove when the toolchain fix ships.
+missing_const_for_thread_local = "allow"

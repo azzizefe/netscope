@@ -20,13 +20,13 @@ pub enum UserRole {
     Viewer,
 }
 
-impl UserRole {
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(s: &str) -> Self {
+impl From<&str> for UserRole {
+    /// Map a stored role string to a role. Anything unrecognized falls back to
+    /// the least-privileged `Viewer` — fail closed.
+    fn from(s: &str) -> Self {
         match s {
             "Admin" => Self::Admin,
             "Analyst" => Self::Analyst,
-            "Viewer" => Self::Viewer,
             _ => Self::Viewer,
         }
     }
@@ -212,7 +212,7 @@ fn handle_connection(
                 .unwrap_or(None);
 
             if let Some(role_str) = role_opt {
-                let role = UserRole::from_str(&role_str);
+                let role = UserRole::from(role_str.as_str());
                 let token = generate_token();
                 let user = User {
                     username: username.to_string(),

@@ -26,20 +26,35 @@ thread_local! {
     static STATES: RefCell<HashMap<TcpFlowKey, TcpFlowState>> = RefCell::new(HashMap::new());
 }
 
+/// The TCP-segment fields flow analysis needs. Grouping them keeps
+/// [`analyze_packet`]'s signature small and lets call sites name each field.
+#[derive(Clone, Copy)]
+pub struct TcpSegment {
+    pub src_ip: Option<IpAddr>,
+    pub dst_ip: Option<IpAddr>,
+    pub src_port: u16,
+    pub dst_port: u16,
+    pub seq: u32,
+    pub ack: u32,
+    pub flags: u8,
+    pub win: u16,
+    pub payload_len: usize,
+}
+
 /// Analyze a TCP packet statefully to detect flow anomalies: Retransmissions, Duplicate ACKs, Out-of-Order.
 /// Returns an optional warning string, e.g., `Some("[TCP Retransmission]")`.
-#[allow(clippy::too_many_arguments)]
-pub fn analyze_packet(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    seq: u32,
-    ack: u32,
-    flags: u8,
-    win: u16,
-    payload_len: usize,
-) -> Option<String> {
+pub fn analyze_packet(seg: TcpSegment) -> Option<String> {
+    let TcpSegment {
+        src_ip,
+        dst_ip,
+        src_port,
+        dst_port,
+        seq,
+        ack,
+        flags,
+        win,
+        payload_len,
+    } = seg;
     let src = src_ip?;
     let dst = dst_ip?;
     let key = TcpFlowKey {
@@ -111,22 +126,41 @@ mod tests {
         let ip_a = Some("10.0.0.1".parse().unwrap());
         let ip_b = Some("10.0.0.2".parse().unwrap());
 
+        // A data segment; individual tests override seq/flags/payload_len.
+        let base = TcpSegment {
+            src_ip: ip_a,
+            dst_ip: ip_b,
+            src_port: 59999,
+            dst_port: 9999,
+            seq: 1000,
+            ack: 1,
+            flags: 0x18,
+            win: 1024,
+            payload_len: 100,
+        };
+
         // First packet with payload
-        let r1 = analyze_packet(ip_a, ip_b, 59999, 9999, 1000, 1, 0x18, 1024, 100);
+        let r1 = analyze_packet(base);
         assert!(r1.is_none());
 
         // Retransmission of the same seq
-        let r2 = analyze_packet(ip_a, ip_b, 59999, 9999, 1000, 1, 0x18, 1024, 100);
+        let r2 = analyze_packet(base);
         assert_eq!(r2, Some("[TCP Retransmission]".to_string()));
 
         // Out of order packet
-        let r3 = analyze_packet(ip_a, ip_b, 59999, 9999, 500, 1, 0x18, 1024, 100);
+        let r3 = analyze_packet(TcpSegment { seq: 500, ..base });
         assert_eq!(r3, Some("[TCP Out-of-Order]".to_string()));
 
-        // Dup ACK
-        let d1 = analyze_packet(ip_a, ip_b, 59999, 9999, 1100, 1, 0x10, 1024, 0); // Pure ACK
+        // Dup ACK (pure ACK: no payload, ACK flag only)
+        let pure_ack = TcpSegment {
+            seq: 1100,
+            flags: 0x10,
+            payload_len: 0,
+            ..base
+        };
+        let d1 = analyze_packet(pure_ack);
         assert!(d1.is_none());
-        let d2 = analyze_packet(ip_a, ip_b, 59999, 9999, 1100, 1, 0x10, 1024, 0); // Dup ACK 1
+        let d2 = analyze_packet(pure_ack);
         assert_eq!(d2, Some("[TCP Dup ACK #1]".to_string()));
     }
 }
