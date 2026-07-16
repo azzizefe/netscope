@@ -51,13 +51,6 @@ struct AnnotationRequest {
     comment: String,
 }
 
-fn hash_password(password: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    format!("{:x}", hasher.finalize())
-}
-
 fn generate_token() -> String {
     let mut bytes = [0u8; 16];
     let _ = getrandom::getrandom(&mut bytes);
@@ -211,11 +204,10 @@ fn handle_connection(
             let username = json.get("username").and_then(|v| v.as_str()).unwrap_or("");
             let password = json.get("password").and_then(|v| v.as_str()).unwrap_or("");
 
-            let password_hash = hash_password(password);
             let role_opt = db
                 .lock()
                 .unwrap()
-                .get_user_role(username, &password_hash)
+                .authenticate(username, password)
                 .unwrap_or(None);
 
             if let Some(role_str) = role_opt {
@@ -581,10 +573,17 @@ mod tests {
         let server = ApiServer::new(19090, buffer, engine);
         let _handle = server.start();
 
+        // Seeded passwords are random; set a known one on the shared on-disk DB
+        // the server reads from so the login below is deterministic.
+        crate::db::Database::open()
+            .unwrap()
+            .upsert_user("admin", "test-admin-pw", "Admin")
+            .unwrap();
+
         thread::sleep(Duration::from_millis(100));
 
         let mut client = TcpStream::connect("127.0.0.1:19090").unwrap();
-        let login_body = "{\"username\":\"admin\",\"password\":\"admin123\"}";
+        let login_body = "{\"username\":\"admin\",\"password\":\"test-admin-pw\"}";
         let login_req = format!(
             "POST /api/v1/auth/login HTTP/1.1\r\n\
              Content-Length: {}\r\n\

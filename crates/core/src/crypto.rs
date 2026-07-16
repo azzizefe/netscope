@@ -288,6 +288,41 @@ impl<'a> Reader<'a> {
     }
 }
 
+// --- Password hashing for local API-server accounts ---
+//
+// Distinct from the capture encryption above: this hashes short login passwords
+// for the optional REST API's account store (`db::Database`). Argon2id with a
+// random per-password salt, serialized as a standard PHC string
+// (`$argon2id$v=19$m=...$salt$hash`) so the salt and parameters travel with the
+// hash — `verify_password` needs only the stored string, and no fixed
+// credentials are ever compiled into the binary or committed to the repo.
+
+use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
+
+/// Hash a password with Argon2id and a fresh random salt, returning a PHC
+/// string safe to store verbatim.
+pub fn hash_password(password: &str) -> Result<String> {
+    let mut salt_bytes = [0u8; SALT_LEN];
+    random_bytes(&mut salt_bytes)?;
+    let salt =
+        SaltString::encode_b64(&salt_bytes).map_err(|e| anyhow!("salt encoding failed: {e}"))?;
+    let hash = Argon2::default()
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|e| anyhow!("password hashing failed: {e}"))?;
+    Ok(hash.to_string())
+}
+
+/// Verify `password` against a PHC string produced by [`hash_password`].
+/// Returns `false` on any mismatch or malformed hash — never panics.
+pub fn verify_password(password: &str, phc: &str) -> bool {
+    match PasswordHash::new(phc) {
+        Ok(parsed) => Argon2::default()
+            .verify_password(password.as_bytes(), &parsed)
+            .is_ok(),
+        Err(_) => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -357,5 +392,24 @@ mod tests {
         };
         let enc = encrypt_with(b"parameterised", "pw", kdf, 8).unwrap();
         assert_eq!(decrypt(&enc, "pw").unwrap(), b"parameterised");
+    }
+
+    #[test]
+    fn password_roundtrip_and_salt_uniqueness() {
+        let h1 = hash_password("correct horse battery staple").unwrap();
+        let h2 = hash_password("correct horse battery staple").unwrap();
+        assert!(h1.starts_with("$argon2id$"), "{h1}");
+        // Random salt ⇒ same password hashes differently, yet both verify.
+        assert_ne!(h1, h2);
+        assert!(verify_password("correct horse battery staple", &h1));
+        assert!(verify_password("correct horse battery staple", &h2));
+    }
+
+    #[test]
+    fn password_verify_rejects_wrong_and_malformed() {
+        let hash = hash_password("s3cret").unwrap();
+        assert!(!verify_password("wrong", &hash));
+        assert!(!verify_password("s3cret", "not-a-phc-string"));
+        assert!(!verify_password("s3cret", ""));
     }
 }

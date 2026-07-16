@@ -4,6 +4,19 @@ use chrono::Utc;
 use rusqlite::{params, Connection, Result};
 use std::path::PathBuf;
 
+/// A URL-safe random password (96 bits, hex-encoded) for first-run seeding.
+fn random_password() -> String {
+    let mut bytes = [0u8; 12];
+    let _ = getrandom::getrandom(&mut bytes);
+    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+}
+
+/// Bridge a crypto (`anyhow`) error into the `rusqlite::Error` this module
+/// returns, so password hashing composes with the SQLite call sites.
+fn to_db_err(e: anyhow::Error) -> rusqlite::Error {
+    rusqlite::Error::ToSqlConversionFailure(e.into())
+}
+
 pub struct Database {
     conn: Connection,
 }
@@ -15,6 +28,9 @@ impl Database {
         let db_path = dir.join("netscope.db");
 
         let conn = Connection::open(db_path)?;
+        // Wait rather than fail immediately if the TUI and the REST API touch
+        // the DB at the same time.
+        conn.busy_timeout(std::time::Duration::from_secs(5))?;
         let db = Database { conn };
         db.init_tables()?;
         db.seed_users()?;
@@ -79,43 +95,66 @@ impl Database {
             .query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))?;
 
         if count == 0 {
-            // Hash helper: SHA-256 (same as in api_server.rs)
-            let hash_pwd = |pwd: &str| {
-                use sha2::{Digest, Sha256};
-                let mut hasher = Sha256::new();
-                hasher.update(pwd.as_bytes());
-                format!("{:x}", hasher.finalize())
-            };
+            // First run only: create the three RBAC accounts with RANDOM
+            // passwords, hashed with Argon2id, and print them once. No fixed
+            // credentials are compiled into the binary or committed to the repo.
+            let creds = [
+                ("admin", "Admin", random_password()),
+                ("analyst", "Analyst", random_password()),
+                ("viewer", "Viewer", random_password()),
+            ];
+            for (username, role, password) in &creds {
+                let hash = crate::crypto::hash_password(password).map_err(to_db_err)?;
+                self.conn.execute(
+                    "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                    params![username, hash, role],
+                )?;
+            }
 
-            // Seed admin, analyst, viewer
-            self.conn.execute(
-                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                params!["admin", hash_pwd("admin123"), "Admin"],
-            )?;
-            self.conn.execute(
-                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                params!["analyst", hash_pwd("analyst123"), "Analyst"],
-            )?;
-            self.conn.execute(
-                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                params!["viewer", hash_pwd("viewer123"), "Viewer"],
-            )?;
+            eprintln!(
+                "\n=== netscope: first-run account setup ===\n\
+                 Generated random passwords for the optional local REST API accounts.\n\
+                 They are shown ONCE and are not recoverable — save the ones you need\n\
+                 (the API is off by default and binds to 127.0.0.1 only):\n\n  \
+                 admin    {}\n  analyst  {}\n  viewer   {}\n\
+                 =========================================\n",
+                creds[0].2, creds[1].2, creds[2].2,
+            );
         }
         Ok(())
     }
 
     // --- Authentication ---
-    pub fn get_user_role(&self, username: &str, password_hash: &str) -> Result<Option<String>> {
+
+    /// Verify a username/password pair against the stored Argon2 hash.
+    /// Returns the user's role on success; `None` for an unknown user or a
+    /// wrong password.
+    pub fn authenticate(&self, username: &str, password: &str) -> Result<Option<String>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT role FROM users WHERE username = ? AND password_hash = ?")?;
-        let mut rows = stmt.query(params![username, password_hash])?;
+            .prepare("SELECT password_hash, role FROM users WHERE username = ?")?;
+        let mut rows = stmt.query(params![username])?;
         if let Some(row) = rows.next()? {
-            let role: String = row.get(0)?;
-            Ok(Some(role))
-        } else {
-            Ok(None)
+            let stored_hash: String = row.get(0)?;
+            let role: String = row.get(1)?;
+            if crate::crypto::verify_password(password, &stored_hash) {
+                return Ok(Some(role));
+            }
         }
+        Ok(None)
+    }
+
+    /// Insert a user, or replace an existing one's password and role. Hashes
+    /// with Argon2id like the seed path. Used for administrative bootstrapping
+    /// and by tests that need a known password.
+    pub fn upsert_user(&self, username: &str, password: &str, role: &str) -> Result<()> {
+        let hash = crate::crypto::hash_password(password).map_err(to_db_err)?;
+        self.conn.execute(
+            "INSERT INTO users (username, password_hash, role) VALUES (?1, ?2, ?3)
+             ON CONFLICT(username) DO UPDATE SET password_hash = ?2, role = ?3",
+            params![username, hash, role],
+        )?;
+        Ok(())
     }
 
     // --- Bookmarks ---
