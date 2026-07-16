@@ -216,7 +216,7 @@ mod tests {
         });
 
         let mut plaintext = b"admin/admin@REALM".to_vec();
-        while plaintext.len() % 16 != 0 {
+        while !plaintext.len().is_multiple_of(16) {
             plaintext.push(0);
         }
 
@@ -224,9 +224,9 @@ mod tests {
         let mut ciphertext = plaintext.clone();
         for i in (0..ciphertext.len()).step_by(16) {
             let block = &mut ciphertext[i..i + 16];
-            let mut block_arr =
+            let block_arr =
                 aes_gcm::aes::cipher::generic_array::GenericArray::from_mut_slice(block);
-            cipher.encrypt_block(&mut block_arr);
+            cipher.encrypt_block(block_arr);
         }
 
         ciphertext.extend_from_slice(&[0xaa; 12]);

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Packet streaming & lazy parse — open big pcaps without loading or parsing
 //! them up front (ROADMAP §2.2).
@@ -521,7 +521,9 @@ impl LruCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dissectors::test_helpers::{build_dns_query, build_tcp_packet, build_udp_packet};
+    use crate::dissectors::test_helpers::{
+        build_dns_query, build_tcp_packet, build_udp_packet, TcpFlags,
+    };
     use crate::models::Protocol;
 
     /// Build an in-memory classic pcap from frames, in either endianness.
@@ -581,10 +583,10 @@ mod tests {
                 [10, 0, 0, 2],
                 12345,
                 80,
-                false,
-                true,
-                false,
-                false,
+                TcpFlags {
+                    ack: true,
+                    ..Default::default()
+                },
                 b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
             ),
             build_udp_packet(
@@ -599,10 +601,10 @@ mod tests {
                 [10, 0, 0, 1],
                 80,
                 12345,
-                false,
-                false,
-                true,
-                false,
+                TcpFlags {
+                    fin: true,
+                    ..Default::default()
+                },
                 &[],
             ),
         ]

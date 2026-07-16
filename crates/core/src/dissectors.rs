@@ -335,18 +335,23 @@ fn dispatch_transport(
 pub(crate) mod test_helpers {
     use etherparse::*;
 
+    /// TCP control flags for [`build_tcp_packet`]. `Default` is all-false.
+    #[derive(Default, Clone, Copy)]
+    pub struct TcpFlags {
+        pub syn: bool,
+        pub ack: bool,
+        pub fin: bool,
+        pub rst: bool,
+    }
+
     /// Build an Ethernet + IPv4 + TCP packet with optional payload.
     /// Returns the raw bytes.
-    #[allow(clippy::too_many_arguments)]
     pub fn build_tcp_packet(
         src_ip: [u8; 4],
         dst_ip: [u8; 4],
         src_port: u16,
         dst_port: u16,
-        syn: bool,
-        ack: bool,
-        fin: bool,
-        rst: bool,
+        flags: TcpFlags,
         payload: &[u8],
     ) -> Vec<u8> {
         let mut buf = Vec::new();
@@ -363,10 +368,10 @@ pub(crate) mod test_helpers {
         ip.write(&mut buf).unwrap();
 
         let mut tcp = TcpHeader::new(src_port, dst_port, 0, 65535);
-        tcp.syn = syn;
-        tcp.ack = ack;
-        tcp.fin = fin;
-        tcp.rst = rst;
+        tcp.syn = flags.syn;
+        tcp.ack = flags.ack;
+        tcp.fin = flags.fin;
+        tcp.rst = flags.rst;
         tcp.write(&mut buf).unwrap();
 
         buf.extend_from_slice(payload);
@@ -499,10 +504,10 @@ mod tests {
             [10, 0, 0, 2],
             51928,
             80,
-            false,
-            true,
-            false,
-            false,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
             b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
         );
         let result = dissect(&data);
@@ -554,10 +559,10 @@ mod tests {
             [10, 0, 0, 2],
             54321,
             443,
-            false,
-            true,
-            false,
-            false,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
             &tls_data,
         );
         let result = dissect(&data);
@@ -635,10 +640,10 @@ mod tests {
             [10, 0, 0, 2],
             50000,
             179,
-            false,
-            true,
-            false,
-            false,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
             &bgp,
         );
         let r = dissect(&data);
@@ -661,10 +666,10 @@ mod tests {
             [10, 0, 0, 2],
             50000,
             502,
-            false,
-            true,
-            false,
-            false,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
             &mb,
         );
         let r = dissect(&data);
@@ -752,10 +757,10 @@ mod bench {
                     [10, 0, 0, 2],
                     12345,
                     80,
-                    false,
-                    true,
-                    false,
-                    false,
+                    TcpFlags {
+                        ack: true,
+                        ..Default::default()
+                    },
                     b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
                 ),
                 1 => {
@@ -771,10 +776,10 @@ mod bench {
                     [10, 0, 0, 2],
                     54321,
                     443,
-                    true,
-                    false,
-                    false,
-                    false,
+                    TcpFlags {
+                        syn: true,
+                        ..Default::default()
+                    },
                     &[],
                 ),
                 _ => build_arp_packet(1, &[0xaa; 6], &[192, 168, 1, 1], &[0; 6], &[192, 168, 1, 2]),

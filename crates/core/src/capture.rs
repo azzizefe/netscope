@@ -970,8 +970,8 @@ fn capture_loop(
             Ok(pkt) => {
                 let mut write_failed = false;
                 if let Some(w) = writer.as_mut() {
-                    // tv_sec is i32 on Windows but i64 on Linux/macOS.
-                    #[allow(clippy::unnecessary_cast)]
+                    // tv_sec is i32 on Windows but i64 on Linux/macOS; either
+                    // way this narrows to the pcap timestamp's 32-bit seconds.
                     let ts_sec = pkt.header.ts.tv_sec as u32;
                     if let Err(e) = w.write(
                         ts_sec,
@@ -1050,10 +1050,9 @@ fn build_file_writer(
 /// Convert a libpcap packet into the pipeline's raw-frame form. This is all
 /// the capture thread does per packet — dissection happens downstream.
 fn raw_frame(pkt: pcap::Packet) -> RawFrame {
-    // tv_sec is i32 on Windows but already i64 on Linux/macOS, so the cast
-    // is platform-necessary even where clippy flags it as i64 -> i64.
-    #[allow(clippy::unnecessary_cast)]
-    let ts_sec = pkt.header.ts.tv_sec as i64;
+    // tv_sec is i32 on Windows but already i64 on Linux/macOS; `i64::from`
+    // widens on Windows and is a no-op on Linux/macOS, with no lossy cast.
+    let ts_sec = i64::from(pkt.header.ts.tv_sec);
     RawFrame {
         ts_sec,
         ts_nanos: pkt.header.ts.tv_usec as u32 * 1000,
@@ -1142,7 +1141,7 @@ fn bridge(
 #[cfg(all(test, feature = "async"))]
 mod async_tests {
     use super::*;
-    use crate::dissectors::test_helpers::build_tcp_packet;
+    use crate::dissectors::test_helpers::{build_tcp_packet, TcpFlags};
     use crate::models::Protocol;
 
     /// Write a minimal little-endian classic pcap with `n` HTTP frames.
@@ -1161,10 +1160,10 @@ mod async_tests {
                 [10, 0, 0, 2],
                 12345,
                 80,
-                false,
-                true,
-                false,
-                false,
+                TcpFlags {
+                    ack: true,
+                    ..Default::default()
+                },
                 b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
             );
             buf.extend_from_slice(&(1_700_000_000u32 + i as u32).to_le_bytes());
@@ -1207,7 +1206,7 @@ mod async_tests {
 #[cfg(test)]
 mod capture_tests {
     use super::*;
-    use crate::dissectors::test_helpers::build_tcp_packet;
+    use crate::dissectors::test_helpers::{build_tcp_packet, TcpFlags};
 
     /// In-memory little-endian classic pcap with `n` HTTP frames.
     fn test_pcap_bytes(n: usize) -> Vec<u8> {
@@ -1225,10 +1224,10 @@ mod capture_tests {
                 [10, 0, 0, 2],
                 12345,
                 80,
-                false,
-                true,
-                false,
-                false,
+                TcpFlags {
+                    ack: true,
+                    ..Default::default()
+                },
                 b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
             );
             buf.extend_from_slice(&(1_700_000_000u32 + i as u32).to_le_bytes());

@@ -388,7 +388,7 @@ fn dissect_tcp_inner(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dissectors::test_helpers::build_tcp_packet;
+    use crate::dissectors::test_helpers::{build_tcp_packet, TcpFlags};
 
     #[test]
     fn tcp_syn() {
@@ -397,10 +397,10 @@ mod tests {
             [10, 0, 0, 2],
             12345,
             80,
-            true,
-            false,
-            false,
-            false,
+            TcpFlags {
+                syn: true,
+                ..Default::default()
+            },
             &[],
         );
         // We need only the TCP portion (after IP header)
@@ -425,10 +425,10 @@ mod tests {
             [10, 0, 0, 2],
             12345,
             80,
-            false,
-            false,
-            true,
-            false,
+            TcpFlags {
+                fin: true,
+                ..Default::default()
+            },
             &[],
         );
         let ip_data = &data[14..];
@@ -448,10 +448,10 @@ mod tests {
             [10, 0, 0, 2],
             12345,
             80,
-            false,
-            false,
-            false,
-            true,
+            TcpFlags {
+                rst: true,
+                ..Default::default()
+            },
             &[],
         );
         let ip_data = &data[14..];
@@ -471,10 +471,11 @@ mod tests {
             [10, 0, 0, 2],
             12345,
             80,
-            true,
-            true,
-            false,
-            false,
+            TcpFlags {
+                syn: true,
+                ack: true,
+                ..Default::default()
+            },
             &[],
         );
         let ip_data = &data[14..];
@@ -494,10 +495,10 @@ mod tests {
             [10, 0, 0, 2],
             12345,
             80,
-            false,
-            true,
-            false,
-            false,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
             &[],
         );
         let ip_data = &data[14..];
@@ -524,10 +525,10 @@ mod tests {
             [10, 0, 0, 2],
             50000,
             8080,
-            false,
-            true,
-            false,
-            false,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
             payload,
         );
         let ip_data = &data[14..];
@@ -580,10 +581,10 @@ mod tests {
             [10, 0, 0, 2],
             50000,
             80,
-            false,
-            true,
-            false,
-            false,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
             b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n",
         );
         let ip_data = &data[14..];

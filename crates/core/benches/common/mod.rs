@@ -11,7 +11,6 @@
 use etherparse::*;
 
 /// Ethernet + IPv4 + TCP frame with the given payload.
-#[allow(clippy::too_many_arguments)]
 pub fn build_tcp_packet(
     src_ip: [u8; 4],
     dst_ip: [u8; 4],
