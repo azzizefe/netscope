@@ -223,5 +223,20 @@ jobs:
             netscope-desktop-Linux/**
             netscope-desktop-macOS/**
             netscope-desktop-Windows/**
+          # Static preamble; with generate_release_notes the auto changelog is
+          # appended below this body.
+          body: |
+            ## Installation requirements
+
+            ### Windows — Npcap required
+            The desktop app and TUI capture packets through **Npcap**, which is
+            **not bundled** in the installer. Install it before running netscope:
+
+            1. Download and run the installer from https://npcap.com/#download
+            2. Keep **"Install Npcap in WinPcap API-compatible Mode"** checked
+
+            Without Npcap, packet capture fails to start.
+
+            ---
           generate_release_notes: true
           fail_on_unmatched_files: false
