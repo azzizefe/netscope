@@ -653,9 +653,9 @@ impl NetMonReader {
         file.read_exact(&mut offsets_bytes)
             .context("NetMon: truncated frame table")?;
 
-        for i in 0..num_frames {
+        for (i, offset) in offsets.iter_mut().enumerate() {
             let start = i * 4;
-            offsets[i] = u32::from_le_bytes([
+            *offset = u32::from_le_bytes([
                 offsets_bytes[start],
                 offsets_bytes[start + 1],
                 offsets_bytes[start + 2],

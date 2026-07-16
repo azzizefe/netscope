@@ -28,6 +28,7 @@ thread_local! {
 
 /// Analyze a TCP packet statefully to detect flow anomalies: Retransmissions, Duplicate ACKs, Out-of-Order.
 /// Returns an optional warning string, e.g., `Some("[TCP Retransmission]")`.
+#[allow(clippy::too_many_arguments)]
 pub fn analyze_packet(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,

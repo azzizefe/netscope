@@ -74,11 +74,10 @@ pub fn record_dns(
             server_ip: src,
             dns_id,
         };
-        if let Some(req_time) = guard.dns_queries.remove(&key) {
-            Some(req_time.elapsed())
-        } else {
-            None
-        }
+        guard
+            .dns_queries
+            .remove(&key)
+            .map(|req_time| req_time.elapsed())
     }
 }
 

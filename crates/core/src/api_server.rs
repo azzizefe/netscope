@@ -21,6 +21,7 @@ pub enum UserRole {
 }
 
 impl UserRole {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s {
             "Admin" => Self::Admin,
@@ -159,7 +160,7 @@ fn handle_connection(
     let request_str = String::from_utf8_lossy(&request_bytes[..read_len]);
 
     let parts: Vec<&str> = request_str.split("\r\n\r\n").collect();
-    let header_part = parts.get(0).copied().unwrap_or("");
+    let header_part = parts.first().copied().unwrap_or("");
 
     let mut content_length = 0;
     for line in header_part.lines() {
@@ -171,7 +172,7 @@ fn handle_connection(
     }
 
     let mut body_bytes = Vec::new();
-    let header_bytes_len = header_part.as_bytes().len() + 4; // including \r\n\r\n
+    let header_bytes_len = header_part.len() + 4; // including \r\n\r\n
     if read_len > header_bytes_len {
         body_bytes.extend_from_slice(&request_bytes[header_bytes_len..read_len]);
     }

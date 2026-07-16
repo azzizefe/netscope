@@ -152,7 +152,7 @@ fn get_client_key_exchange_encrypted_pre_master(payload: &[u8]) -> Option<Vec<u8
 }
 
 fn decode_hex(s: &str) -> Result<Vec<u8>, ()> {
-    if s.len() % 2 != 0 {
+    if !s.len().is_multiple_of(2) {
         return Err(());
     }
     (0..s.len())
@@ -209,12 +209,12 @@ fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
         opad[i] ^= key_block[i];
     }
     let mut h = Sha256::new();
-    h.update(&ipad);
+    h.update(ipad);
     h.update(data);
     let inner = h.finalize();
     let mut h = Sha256::new();
-    h.update(&opad);
-    h.update(&inner);
+    h.update(opad);
+    h.update(inner);
     h.finalize().into()
 }
 
@@ -234,12 +234,12 @@ fn hmac_sha384(key: &[u8], data: &[u8]) -> [u8; 48] {
         opad[i] ^= key_block[i];
     }
     let mut h = Sha384::new();
-    h.update(&ipad);
+    h.update(ipad);
     h.update(data);
     let inner = h.finalize();
     let mut h = Sha384::new();
-    h.update(&opad);
-    h.update(&inner);
+    h.update(opad);
+    h.update(inner);
     h.finalize().into()
 }
 

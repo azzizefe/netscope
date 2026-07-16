@@ -8,6 +8,13 @@
 //! are set; the summary carries the SSID/BSSID and (from radiotap) the signal
 //! and channel.
 
+// `WLAN_SESSIONS` below is initialized with `HashMap::new()`, which is not a
+// const fn (its `RandomState` needs runtime entropy), so its `thread_local!`
+// initializer can't be `const`. Clippy's `missing_const_for_thread_local`
+// false-positives on it and the allow can't be scoped to the macro-generated
+// item, so it's silenced module-wide (the other two statics already use `const`).
+#![allow(clippy::missing_const_for_thread_local)]
+
 use crate::models::Protocol;
 
 use std::cell::RefCell;
@@ -30,8 +37,8 @@ struct WlanSessionState {
 
 thread_local! {
     static WLAN_SESSIONS: RefCell<HashMap<WlanSessionKey, WlanSessionState>> = RefCell::new(HashMap::new());
-    static TEST_WEP_KEY: RefCell<Option<String>> = RefCell::new(None);
-    static TEST_WPA_TK: RefCell<Option<String>> = RefCell::new(None);
+    static TEST_WEP_KEY: RefCell<Option<String>> = const { RefCell::new(None) };
+    static TEST_WPA_TK: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 #[cfg(test)]
@@ -48,7 +55,7 @@ pub fn clear_wlan_sessions() {
 }
 
 fn decode_hex(s: &str) -> Result<Vec<u8>, ()> {
-    if s.len() % 2 != 0 {
+    if !s.len().is_multiple_of(2) {
         return Err(());
     }
     (0..s.len())
@@ -73,12 +80,12 @@ fn hmac_sha1(key: &[u8], data: &[u8]) -> [u8; 20] {
         opad[i] ^= key_block[i];
     }
     let mut h = Sha1::new();
-    h.update(&ipad);
+    h.update(ipad);
     h.update(data);
     let inner = h.finalize();
     let mut h = Sha1::new();
-    h.update(&opad);
-    h.update(&inner);
+    h.update(opad);
+    h.update(inner);
     h.finalize().into()
 }
 
@@ -124,8 +131,8 @@ fn prf_512(key: &[u8], label: &str, init: &[u8]) -> Vec<u8> {
 
 fn rc4_decrypt(key: &[u8], ciphertext: &[u8]) -> Vec<u8> {
     let mut s = [0u8; 256];
-    for i in 0..256 {
-        s[i] = i as u8;
+    for (i, val) in s.iter_mut().enumerate() {
+        *val = i as u8;
     }
     let mut j = 0u8;
     for i in 0..256 {
@@ -395,10 +402,7 @@ pub fn dissect_80211(data: &[u8], radio: Option<&radiotap::Radiotap>) -> Dissect
                     addr2: addr1,
                 }
             } else {
-                WlanSessionKey {
-                    addr1: addr1,
-                    addr2: addr2,
-                }
+                WlanSessionKey { addr1, addr2 }
             };
             let mut tk = TEST_WPA_TK
                 .with(|k| k.borrow().clone())
@@ -416,15 +420,13 @@ pub fn dissect_80211(data: &[u8], radio: Option<&radiotap::Radiotap>) -> Dissect
                 }
             }
 
-            if decrypted_payload.is_none() {
-                if data.len() > mac_header_len + 8 {
-                    let iv: [u8; 3] = data[mac_header_len..mac_header_len + 3]
-                        .try_into()
-                        .unwrap_or([0u8; 3]);
-                    let ciphertext = &data[mac_header_len + 4..data.len() - 4];
-                    if let Some(decrypted) = decrypt_wep(&iv, ciphertext) {
-                        decrypted_payload = Some(decrypted);
-                    }
+            if decrypted_payload.is_none() && data.len() > mac_header_len + 8 {
+                let iv: [u8; 3] = data[mac_header_len..mac_header_len + 3]
+                    .try_into()
+                    .unwrap_or([0u8; 3]);
+                let ciphertext = &data[mac_header_len + 4..data.len() - 4];
+                if let Some(decrypted) = decrypt_wep(&iv, ciphertext) {
+                    decrypted_payload = Some(decrypted);
                 }
             }
         }
@@ -435,9 +437,7 @@ pub fn dissect_80211(data: &[u8], radio: Option<&radiotap::Radiotap>) -> Dissect
             let ethertype = u16::from_be_bytes([decrypted[6], decrypted[7]]);
             let ip_payload = &decrypted[8..];
 
-            let mut res = if ethertype == 0x0800 {
-                super::dispatch_l3(ethertype, ip_payload, 0)
-            } else if ethertype == 0x86dd {
+            let mut res = if ethertype == 0x0800 || ethertype == 0x86dd {
                 super::dispatch_l3(ethertype, ip_payload, 0)
             } else if ethertype == 0x888e {
                 DissectedResult {
