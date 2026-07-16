@@ -6,14 +6,14 @@ use netscope_core::models::Packet;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
 pub struct PyDnsInfo {
     #[pyo3(get)]
     pub query_name: Option<String>,
 }
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
 pub struct PyPacket {
     #[pyo3(get)]
@@ -103,7 +103,7 @@ impl Capture {
         Ok(result)
     }
 
-    fn to_dataframe(&self, py: Python) -> PyResult<PyObject> {
+    fn to_dataframe(&self, py: Python) -> PyResult<Py<PyAny>> {
         let packets = read_packets_offline(&self.filepath)?;
         let list = pyo3::types::PyList::empty(py);
 
@@ -132,10 +132,10 @@ impl Capture {
             ))
         })?;
         let df = pandas.call_method1("DataFrame", (list,))?;
-        Ok(df.to_object(py))
+        Ok(df.unbind())
     }
 
-    fn carve_files(&self, py: Python) -> PyResult<Vec<PyObject>> {
+    fn carve_files(&self, py: Python) -> PyResult<Vec<Py<PyAny>>> {
         let packets = read_packets_offline(&self.filepath)?;
         let mut all_payload = Vec::new();
         for pkt in &packets {
@@ -156,7 +156,7 @@ impl Capture {
                 py_meta.set_item(k, v)?;
             }
             dict.set_item("metadata", py_meta)?;
-            results.push(dict.to_object(py));
+            results.push(dict.into_any().unbind());
         }
         Ok(results)
     }
