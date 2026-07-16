@@ -85,6 +85,18 @@ const KNOWN_PROTOS: &[&str] = &[
     "vnc",
     "whois",
     "nntp",
+    "sctp",
+    "gre",
+    "igmp",
+    "dhcpv6",
+    "rip",
+    "nbns",
+    "socks",
+    "memcached",
+    "bittorrent",
+    "git",
+    "xmpp",
+    "finger",
 ];
 
 #[derive(Debug, Clone, PartialEq)]

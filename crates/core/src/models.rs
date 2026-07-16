@@ -136,6 +136,30 @@ pub enum Protocol {
     Whois,
     /// Network News Transfer Protocol / Usenet (TCP 119).
     Nntp,
+    /// SCTP transport with multi-streaming (IP protocol 132).
+    Sctp,
+    /// Generic Routing Encapsulation tunnel (IP protocol 47).
+    Gre,
+    /// IGMP IPv4 multicast group management (IP protocol 2).
+    Igmp,
+    /// DHCPv6 address assignment (UDP 546/547).
+    Dhcpv6,
+    /// Routing Information Protocol (UDP 520).
+    Rip,
+    /// NetBIOS Name Service (UDP 137).
+    Nbns,
+    /// SOCKS proxy (TCP 1080).
+    Socks,
+    /// Memcached key-value cache (TCP 11211).
+    Memcached,
+    /// BitTorrent peer-to-peer file sharing (TCP 6881-6889).
+    BitTorrent,
+    /// Git native transport (TCP 9418).
+    Git,
+    /// XMPP / Jabber instant messaging (TCP 5222).
+    Xmpp,
+    /// Finger user lookup (TCP 79).
+    Finger,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -232,6 +256,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Rfb => write!(f, "VNC/RFB"),
             Protocol::Whois => write!(f, "WHOIS"),
             Protocol::Nntp => write!(f, "NNTP"),
+            Protocol::Sctp => write!(f, "SCTP"),
+            Protocol::Gre => write!(f, "GRE"),
+            Protocol::Igmp => write!(f, "IGMP"),
+            Protocol::Dhcpv6 => write!(f, "DHCPv6"),
+            Protocol::Rip => write!(f, "RIP"),
+            Protocol::Nbns => write!(f, "NBNS"),
+            Protocol::Socks => write!(f, "SOCKS"),
+            Protocol::Memcached => write!(f, "Memcached"),
+            Protocol::BitTorrent => write!(f, "BitTorrent"),
+            Protocol::Git => write!(f, "Git"),
+            Protocol::Xmpp => write!(f, "XMPP"),
+            Protocol::Finger => write!(f, "Finger"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }

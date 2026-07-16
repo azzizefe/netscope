@@ -60,7 +60,13 @@ impl Transport {
             | Protocol::Irc
             | Protocol::Rfb
             | Protocol::Whois
-            | Protocol::Nntp => Transport::Tcp,
+            | Protocol::Nntp
+            | Protocol::Socks
+            | Protocol::Memcached
+            | Protocol::BitTorrent
+            | Protocol::Git
+            | Protocol::Xmpp
+            | Protocol::Finger => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -75,7 +81,10 @@ impl Transport {
             | Protocol::Lldp
             | Protocol::Lacp
             | Protocol::Stp
-            | Protocol::Mpls => Transport::Other,
+            | Protocol::Mpls
+            | Protocol::Sctp
+            | Protocol::Gre
+            | Protocol::Igmp => Transport::Other,
             Protocol::Udp
             | Protocol::Dns
             | Protocol::Dhcp
@@ -91,7 +100,10 @@ impl Transport {
             | Protocol::Tftp
             | Protocol::Ssdp
             | Protocol::Stun
-            | Protocol::Llmnr => Transport::Udp,
+            | Protocol::Llmnr
+            | Protocol::Dhcpv6
+            | Protocol::Rip
+            | Protocol::Nbns => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
             // A plugin-recognised protocol groups by the transport it declared,
@@ -238,7 +250,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Irc
         | Protocol::Rfb
         | Protocol::Whois
-        | Protocol::Nntp => 3,
+        | Protocol::Nntp
+        | Protocol::Sctp
+        | Protocol::Gre
+        | Protocol::Igmp
+        | Protocol::Dhcpv6
+        | Protocol::Rip
+        | Protocol::Nbns
+        | Protocol::Socks
+        | Protocol::Memcached
+        | Protocol::BitTorrent
+        | Protocol::Git
+        | Protocol::Xmpp
+        | Protocol::Finger => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,
