@@ -145,13 +145,18 @@ jobs:
         run: cargo tauri build --ci --bundles "${{ matrix.bundles }}" --config version.conf.json
         working-directory: desktop/src-tauri
 
+      # netscope-desktop is a member of the root Cargo workspace, so Tauri emits
+      # the bundles under the workspace-root target dir, NOT desktop/src-tauri/target.
+      # The path below is relative to the workspace root (this step has no
+      # working-directory), and `error` makes a future path drift fail loudly
+      # instead of silently publishing a release with no installers.
       - name: Upload desktop bundle
         uses: actions/upload-artifact@v4
         with:
           name: netscope-desktop-${{ matrix.name }}
           path: |
-            desktop/src-tauri/target/release/bundle/**
-          if-no-files-found: warn
+            target/release/bundle/**
+          if-no-files-found: error
 
       - name: Find bundle fallback
         if: failure()

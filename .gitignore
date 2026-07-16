@@ -7,3 +7,6 @@ npcap-sdk/
 .cargo/
 .claude/
 /dist/
+
+# CI-generated Tauri version override (see release.yml)
+desktop/src-tauri/version.conf.json
