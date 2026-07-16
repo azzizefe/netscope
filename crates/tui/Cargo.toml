@@ -25,3 +25,6 @@ netscope-core = { path = "../core", version = "0.1.0" }
 # Frame-byte fixtures in the detail-tree / stream / insights unit tests build
 # `Packet.data`, which is a `bytes::Bytes`.
 bytes = "1"
+
+[lints]
+workspace = true

@@ -13,3 +13,6 @@ netscope-core = { path = "../core" }
 chrono = "0.4"
 bytes = "1"
 crossbeam-channel = "0.5"
+
+[lints]
+workspace = true

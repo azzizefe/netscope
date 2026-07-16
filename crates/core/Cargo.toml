@@ -68,3 +68,6 @@ harness = false
 [[bench]]
 name = "mem_usage"
 harness = false
+
+[lints]
+workspace = true
