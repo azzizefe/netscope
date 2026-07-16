@@ -99,6 +99,14 @@ jobs:
             bundles: "nsis,msi"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    # Windows Authenticode signing is opt-in: set these two repo secrets to sign
+    # the .msi/.exe (and the app exe inside them). Left unset, the signing step is
+    # skipped and unsigned installers are produced — the build still succeeds.
+    #   WINDOWS_CERTIFICATE          = base64 of the code-signing .pfx
+    #   WINDOWS_CERTIFICATE_PASSWORD = that .pfx's password
+    env:
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -140,6 +148,31 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "Building version: $VERSION"
           echo "{\"version\": \"$VERSION\"}" > version.conf.json
+
+      # Enable Tauri's native Authenticode signing when the cert secrets are set.
+      # We import the .pfx into the runner's cert store, grab its thumbprint, and
+      # merge bundle.windows.certificateThumbprint into version.conf.json so the
+      # unchanged build step below signs both the installers and the app exe.
+      # No secrets -> step is skipped -> installers are produced unsigned.
+      - name: Enable Windows code signing
+        if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
+        shell: pwsh
+        working-directory: desktop/src-tauri
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "code-sign.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $securePwd = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePwd
+          Remove-Item $pfx -Force
+          $cfg = Get-Content version.conf.json -Raw | ConvertFrom-Json
+          $windows = [pscustomobject]@{
+            certificateThumbprint = $cert.Thumbprint
+            digestAlgorithm       = "sha256"
+            timestampUrl          = "http://timestamp.digicert.com"
+          }
+          $cfg | Add-Member -NotePropertyName bundle -NotePropertyValue ([pscustomobject]@{ windows = $windows }) -Force
+          $cfg | ConvertTo-Json -Depth 10 | Set-Content version.conf.json
+          Write-Host "Signing enabled with certificate thumbprint $($cert.Thumbprint)"
 
       - name: Build desktop
         run: cargo tauri build --ci --bundles "${{ matrix.bundles }}" --config version.conf.json
