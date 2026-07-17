@@ -232,6 +232,30 @@ pub enum Protocol {
     Iec104,
     /// LDP MPLS label distribution (TCP/UDP 646).
     Ldp,
+    /// GOOSE IEC 61850 substation events (EtherType 0x88B8).
+    Goose,
+    /// PTP IEEE 1588 precision time sync (EtherType 0x88F7 / UDP 319/320).
+    Ptp,
+    /// RSVP QoS / MPLS-TE signalling (IP protocol 46).
+    Rsvp,
+    /// ISAKMP / IKE VPN key exchange (UDP 500/4500).
+    Isakmp,
+    /// Geneve network-virtualisation overlay (UDP 6081).
+    Geneve,
+    /// CAPWAP wireless AP control (UDP 5246/5247).
+    Capwap,
+    /// Teredo IPv6-over-UDP tunnelling (UDP 3544).
+    Teredo,
+    /// GVCP GigE Vision camera control (UDP 3956).
+    Gvcp,
+    /// ONC RPC — Portmap/NFS/Mount/NLM (TCP/UDP 111, 2049).
+    Rpc,
+    /// Graphite/Carbon plaintext metrics (TCP 2003).
+    Graphite,
+    /// Gearman job queue (TCP 4730).
+    Gearman,
+    /// beanstalkd work queue (TCP 11300).
+    Beanstalk,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -376,6 +400,18 @@ impl std::fmt::Display for Protocol {
             Protocol::S7comm => write!(f, "S7comm"),
             Protocol::Iec104 => write!(f, "IEC-104"),
             Protocol::Ldp => write!(f, "LDP"),
+            Protocol::Goose => write!(f, "GOOSE"),
+            Protocol::Ptp => write!(f, "PTP"),
+            Protocol::Rsvp => write!(f, "RSVP"),
+            Protocol::Isakmp => write!(f, "ISAKMP"),
+            Protocol::Geneve => write!(f, "Geneve"),
+            Protocol::Capwap => write!(f, "CAPWAP"),
+            Protocol::Teredo => write!(f, "Teredo"),
+            Protocol::Gvcp => write!(f, "GVCP"),
+            Protocol::Rpc => write!(f, "RPC"),
+            Protocol::Graphite => write!(f, "Graphite"),
+            Protocol::Gearman => write!(f, "Gearman"),
+            Protocol::Beanstalk => write!(f, "Beanstalk"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }

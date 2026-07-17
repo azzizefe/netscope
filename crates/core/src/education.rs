@@ -1022,6 +1022,111 @@ label-switched paths. Hello messages find neighbours; Label Mapping messages \
 distribute the labels.",
             look_for: "\"LDP Hello\" / \"LDP Label Mapping\" on TCP/UDP 646.",
         },
+        Protocol::Goose => Lesson {
+            title: "GOOSE — substation trip signals",
+            summary: "Ultra-fast IEC 61850 messages that trip breakers in a power substation.",
+            body: "When a fault happens in an electrical substation, protection relays \
+must act in milliseconds. GOOSE carries those trip/status signals directly over \
+Ethernet (no IP) for minimum delay, repeating them for reliability. Seeing \
+unexpected GOOSE is a serious grid-security signal.",
+            look_for: "\"GOOSE — APPID 0x0001 (IEC 61850 substation event)\".",
+        },
+        Protocol::Ptp => Lesson {
+            title: "PTP — clocks in lockstep",
+            summary: "Sub-microsecond time sync for finance, telecom, power and broadcast.",
+            body: "Some systems need clocks aligned far tighter than NTP can manage — \
+trading timestamps, 5G radios, power-grid measurements, live video. PTP (IEEE \
+1588) syncs them to sub-microsecond accuracy by carefully measuring message \
+delays. Sync/Follow_Up/Delay_Req are the exchange.",
+            look_for: "\"PTP Sync\" / \"PTP Announce\" on Ethernet or UDP 319/320.",
+        },
+        Protocol::Rsvp => Lesson {
+            title: "RSVP — reserving bandwidth",
+            summary: "Signals QoS reservations and sets up MPLS traffic-engineering tunnels.",
+            body: "RSVP lets a device ask the network to guarantee bandwidth along a \
+path (a Path message going out, a Resv coming back). Its main modern use is \
+MPLS-TE: building label-switched tunnels with reserved capacity across a \
+provider's core.",
+            look_for: "\"RSVP Path\" / \"RSVP Resv\" (IP protocol 46).",
+        },
+        Protocol::Isakmp => Lesson {
+            title: "ISAKMP / IKE — negotiating a VPN",
+            summary: "The handshake that sets up the keys for an IPsec VPN tunnel.",
+            body: "Before IPsec can encrypt traffic, both ends must agree on keys and \
+parameters. IKE (carried by ISAKMP) is that negotiation: IKE_SA_INIT and IKE_AUTH \
+in IKEv2 establish the secure tunnel. On UDP 500, or 4500 when NAT is in the way.",
+            look_for: "\"ISAKMP/IKEv2 IKE_SA_INIT\" on UDP 500/4500.",
+        },
+        Protocol::Geneve => Lesson {
+            title: "Geneve — a flexible overlay",
+            summary: "Wraps whole Ethernet frames to build virtual networks (a VXLAN successor).",
+            body: "Cloud and data-centre networks build many virtual networks on top of \
+one physical fabric. Geneve tunnels a tenant's Ethernet frame inside UDP, tagged \
+with a VNI identifying which virtual network it belongs to — like VXLAN, but with \
+room for extensible options.",
+            look_for: "\"Geneve — VNI 100, carrying Ethernet\" on UDP 6081.",
+        },
+        Protocol::Capwap => Lesson {
+            title: "CAPWAP — controller-managed Wi-Fi",
+            summary: "How a wireless controller manages many thin access points.",
+            body: "In enterprise Wi-Fi the access points are 'thin' — a central \
+controller does the thinking. CAPWAP is the tunnel between them: a control channel \
+(usually DTLS-encrypted) configures the APs, and a data channel carries client \
+traffic back to the controller.",
+            look_for: "\"CAPWAP control (DTLS-encrypted)\" on UDP 5246/5247.",
+        },
+        Protocol::Teredo => Lesson {
+            title: "Teredo — IPv6 through a NAT",
+            summary: "Tunnels IPv6 inside IPv4/UDP so it can cross home NAT routers.",
+            body: "Teredo is a transition technology: it lets a host with only IPv4 (and \
+behind a NAT) still reach the IPv6 internet by wrapping IPv6 packets in IPv4 UDP. \
+Handy historically, but also a way traffic can slip past IPv4-only controls, so \
+it's worth noticing.",
+            look_for: "\"Teredo — tunnelled IPv6 packet\" on UDP 3544.",
+        },
+        Protocol::Gvcp => Lesson {
+            title: "GVCP — machine-vision cameras",
+            summary: "Discovers and configures industrial GigE Vision cameras.",
+            body: "Factory inspection and robotics use GigE Vision cameras. GVCP is the \
+control side: discovering cameras on the network and reading/writing their \
+registers (exposure, triggering, IP settings). The high-rate image data rides a \
+separate stream.",
+            look_for: "\"GVCP Discovery\" / \"GVCP WriteReg\" on UDP 3956.",
+        },
+        Protocol::Rpc => Lesson {
+            title: "ONC RPC / NFS — remote file access",
+            summary: "The plumbing behind NFS network file shares and the portmapper.",
+            body: "ONC RPC lets a program call a procedure on another machine. Its most \
+familiar user is NFS — mounting a remote directory as if it were local. The \
+Portmapper (port 111) tells clients which port each RPC service is on; NFS itself \
+is program 100003.",
+            look_for: "\"NFS call\" / \"Portmap call\" on TCP/UDP 111 and 2049.",
+        },
+        Protocol::Graphite => Lesson {
+            title: "Graphite — pushing metrics",
+            summary: "A dead-simple line format apps use to report time-series metrics.",
+            body: "Graphite/Carbon accepts metrics as plain text lines — \
+`path value timestamp` — which makes almost anything able to emit them. A \
+monitoring backend stores and graphs the series. If you see it, something is \
+reporting operational metrics.",
+            look_for: "\"Graphite — servers.web1.cpu\" on TCP 2003.",
+        },
+        Protocol::Gearman => Lesson {
+            title: "Gearman — farming out jobs",
+            summary: "A job server that hands work from clients to worker processes.",
+            body: "Gearman lets an application offload work: a client submits a job, the \
+server queues it, and an available worker picks it up and returns the result. \
+Requests and responses use a small binary framing ('\\0REQ' / '\\0RES').",
+            look_for: "\"Gearman request\" / \"Gearman response\" on TCP 4730.",
+        },
+        Protocol::Beanstalk => Lesson {
+            title: "beanstalkd — a simple work queue",
+            summary: "A lightweight queue for background jobs, with a plain-text protocol.",
+            body: "beanstalkd is a minimal work queue: producers `put` jobs, workers \
+`reserve` and then `delete` them when done. Its text protocol is easy to read on \
+the wire and easy to speak from any language.",
+            look_for: "\"Beanstalk put\" / \"Beanstalk reserve\" on TCP 11300.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1233,6 +1338,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::S7comm,
         Protocol::Iec104,
         Protocol::Ldp,
+        Protocol::Goose,
+        Protocol::Ptp,
+        Protocol::Rsvp,
+        Protocol::Isakmp,
+        Protocol::Geneve,
+        Protocol::Capwap,
+        Protocol::Teredo,
+        Protocol::Gvcp,
+        Protocol::Rpc,
+        Protocol::Graphite,
+        Protocol::Gearman,
+        Protocol::Beanstalk,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -1437,6 +1554,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::S7comm => "An S7comm message (TCP 102) — reading/writing a Siemens PLC's memory.",
         Protocol::Iec104 => "An IEC 60870-5-104 message (TCP 2404) — power-grid SCADA telecontrol.",
         Protocol::Ldp => "An LDP message (TCP/UDP 646) — MPLS routers distributing forwarding labels.",
+        Protocol::Goose => "A GOOSE frame (EtherType 0x88B8) — fast IEC 61850 substation protection signalling.",
+        Protocol::Ptp => "A PTP message (IEEE 1588) — sub-microsecond clock synchronisation.",
+        Protocol::Rsvp => "An RSVP message (IP proto 46) — reserving bandwidth / signalling an MPLS-TE tunnel.",
+        Protocol::Isakmp => "An ISAKMP/IKE message (UDP 500/4500) — negotiating the keys for an IPsec VPN.",
+        Protocol::Geneve => "A Geneve packet (UDP 6081) — a network-virtualisation overlay carrying an inner frame.",
+        Protocol::Capwap => "A CAPWAP message (UDP 5246/5247) — a wireless controller managing access points.",
+        Protocol::Teredo => "A Teredo packet (UDP 3544) — IPv6 tunnelled through IPv4/NAT.",
+        Protocol::Gvcp => "A GVCP message (UDP 3956) — controlling an industrial GigE Vision camera.",
+        Protocol::Rpc => "An ONC RPC message (TCP/UDP 111/2049) — the plumbing behind NFS file sharing.",
+        Protocol::Graphite => "A Graphite metric (TCP 2003) — an app pushing a time-series data point.",
+        Protocol::Gearman => "A Gearman message (TCP 4730) — handing a background job to a worker.",
+        Protocol::Beanstalk => "A beanstalkd command (TCP 11300) — a simple background-job work queue.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -1483,7 +1612,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 114);
+        assert_eq!(all_lessons().len(), 126);
     }
 
     #[test]
