@@ -256,6 +256,30 @@ pub enum Protocol {
     Gearman,
     /// beanstalkd work queue (TCP 11300).
     Beanstalk,
+    /// EtherCAT real-time industrial fieldbus (EtherType 0x88A4).
+    Ethercat,
+    /// Fibre Channel over Ethernet storage (EtherType 0x8906).
+    Fcoe,
+    /// MACsec 802.1AE link-layer encryption (EtherType 0x88E5).
+    Macsec,
+    /// Reverse ARP (EtherType 0x8035).
+    Rarp,
+    /// RTPS / DDS real-time pub-sub middleware (dynamic UDP).
+    Rtps,
+    /// InfluxDB line-protocol metrics (UDP 8089).
+    Influxdb,
+    /// MQTT-SN sensor-network messaging (UDP 1883).
+    MqttSn,
+    /// Babel mesh routing protocol (UDP 6696).
+    Babel,
+    /// X11 display protocol (TCP 6000+).
+    X11,
+    /// rsync daemon file sync (TCP 873).
+    Rsync,
+    /// Subversion svnserve (TCP 3690).
+    Svn,
+    /// RethinkDB document database (TCP 28015).
+    Rethinkdb,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -412,6 +436,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Graphite => write!(f, "Graphite"),
             Protocol::Gearman => write!(f, "Gearman"),
             Protocol::Beanstalk => write!(f, "Beanstalk"),
+            Protocol::Ethercat => write!(f, "EtherCAT"),
+            Protocol::Fcoe => write!(f, "FCoE"),
+            Protocol::Macsec => write!(f, "MACsec"),
+            Protocol::Rarp => write!(f, "RARP"),
+            Protocol::Rtps => write!(f, "RTPS/DDS"),
+            Protocol::Influxdb => write!(f, "InfluxDB"),
+            Protocol::MqttSn => write!(f, "MQTT-SN"),
+            Protocol::Babel => write!(f, "Babel"),
+            Protocol::X11 => write!(f, "X11"),
+            Protocol::Rsync => write!(f, "rsync"),
+            Protocol::Svn => write!(f, "SVN"),
+            Protocol::Rethinkdb => write!(f, "RethinkDB"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }

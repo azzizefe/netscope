@@ -1127,6 +1127,113 @@ Requests and responses use a small binary framing ('\\0REQ' / '\\0RES').",
 the wire and easy to speak from any language.",
             look_for: "\"Beanstalk put\" / \"Beanstalk reserve\" on TCP 11300.",
         },
+        Protocol::Ethercat => Lesson {
+            title: "EtherCAT — a fieldbus on Ethernet",
+            summary: "Real-time industrial control that passes one frame down a chain of devices.",
+            body: "EtherCAT wires up motors, drives and IO in machines and factories. \
+Cleverly, one Ethernet frame flies through every slave device 'on the fly' — each \
+reads and writes its slice as the frame passes — giving very low, predictable \
+latency. Runs directly on Ethernet, no IP.",
+            look_for: "\"EtherCAT LRW (logical read/write)\" (EtherType 0x88A4).",
+        },
+        Protocol::Fcoe => Lesson {
+            title: "FCoE — storage over Ethernet",
+            summary: "Carries Fibre Channel storage traffic on a converged Ethernet network.",
+            body: "Data centres traditionally ran a separate Fibre Channel network just \
+for storage. FCoE puts those same FC frames onto the regular Ethernet fabric, so \
+one set of cables carries both LAN and storage. Seeing it means SAN traffic on \
+the wire.",
+            look_for: "\"FCoE — Fibre Channel device data\" (EtherType 0x8906).",
+        },
+        Protocol::Macsec => Lesson {
+            title: "MACsec — encrypting the wire itself",
+            summary: "802.1AE encryption between two directly-connected devices.",
+            body: "MACsec encrypts Ethernet frames hop by hop — between a device and \
+the switch it plugs into — so even someone tapping that cable sees only ciphertext. \
+Unlike a VPN it protects the local link, including traffic that never leaves the \
+building.",
+            look_for: "\"MACsec — encrypted (AN 1)\" (EtherType 0x88E5).",
+        },
+        Protocol::Rarp => Lesson {
+            title: "RARP — ARP in reverse",
+            summary: "A diskless device asking 'I know my MAC — what's my IP?'",
+            body: "RARP is the mirror image of ARP: instead of finding a MAC for a known \
+IP, a device that only knows its own hardware address asks a server for an IP. \
+It's largely obsolete (BOOTP/DHCP replaced it), so it's rare and worth a glance \
+when it appears.",
+            look_for: "\"RARP Request\" / \"RARP Reply\" (EtherType 0x8035).",
+        },
+        Protocol::Rtps => Lesson {
+            title: "RTPS / DDS — robots' nervous system",
+            summary: "The real-time pub/sub bus behind ROS 2, vehicles and defence systems.",
+            body: "DDS is a data-distribution middleware where components publish and \
+subscribe to topics without knowing each other directly; RTPS is its wire \
+protocol. It's the backbone of ROS 2 robotics, autonomous vehicles and many \
+industrial/defence systems. Seeing it maps out a control system.",
+            look_for: "\"RTPS/DDS DATA\" / \"RTPS/DDS HEARTBEAT\" (magic \"RTPS\").",
+        },
+        Protocol::Influxdb => Lesson {
+            title: "InfluxDB — time-series metrics",
+            summary: "A simple text line format for writing measurements to a time-series DB.",
+            body: "InfluxDB's line protocol lets anything report metrics as text: a \
+measurement name, tags, fields and a timestamp. Monitoring and IoT systems push \
+huge volumes of these points. If you see it, something is recording operational \
+data.",
+            look_for: "\"InfluxDB — cpu\" on UDP 8089.",
+        },
+        Protocol::MqttSn => Lesson {
+            title: "MQTT-SN — MQTT for tiny sensors",
+            summary: "A UDP-based variant of MQTT for constrained wireless sensor devices.",
+            body: "Plain MQTT needs a TCP connection, which is heavy for a battery \
+sensor on a flaky radio. MQTT-SN keeps MQTT's publish/subscribe model but runs \
+over UDP with smaller messages and gateways, so very constrained devices can \
+still play.",
+            look_for: "\"MQTT-SN PUBLISH\" / \"MQTT-SN CONNECT\" on UDP 1883.",
+        },
+        Protocol::Babel => Lesson {
+            title: "Babel — routing for mesh networks",
+            summary: "A robust distance-vector routing protocol popular in community meshes.",
+            body: "Babel is a routing protocol designed to work well on messy, changing \
+networks — wireless mesh and community networks especially — avoiding the loops \
+that trip up simpler schemes. Routers periodically exchange updates about which \
+destinations they can reach.",
+            look_for: "\"Babel routing update (v2)\" on UDP 6696.",
+        },
+        Protocol::X11 => Lesson {
+            title: "X11 — the Unix display protocol",
+            summary: "How a Unix GUI app draws on a screen, possibly across the network.",
+            body: "On Unix/Linux, the X Window System separates the app from the display: \
+an app sends drawing requests to an X server, which can be on the same machine or \
+another one. That network-transparency is why you can run a graphical app remotely \
+over SSH. It's unencrypted on its own.",
+            look_for: "\"X11 connection setup (little-endian)\" on TCP 6000+.",
+        },
+        Protocol::Rsync => Lesson {
+            title: "rsync — efficient file sync",
+            summary: "Copies only the changed parts of files between machines.",
+            body: "rsync is the classic tool for syncing files and backups: instead of \
+resending whole files, it works out which blocks changed and transfers just those. \
+Its native daemon transport (port 873) opens with an \"@RSYNCD:\" greeting; it's \
+also often tunnelled over SSH.",
+            look_for: "\"rsync daemon — @RSYNCD: 31.0\" on TCP 873.",
+        },
+        Protocol::Svn => Lesson {
+            title: "Subversion — centralised version control",
+            summary: "The svn:// protocol for a Subversion source-code repository.",
+            body: "Subversion is a version-control system (an older, centralised \
+alternative to Git). Its svnserve protocol speaks a Lisp-like tuple syntax; a \
+session opens with a server greeting. Still common in enterprises with long-lived \
+codebases.",
+            look_for: "\"SVN — server greeting\" on TCP 3690.",
+        },
+        Protocol::Rethinkdb => Lesson {
+            title: "RethinkDB — a realtime document DB",
+            summary: "A JSON document database built around live, pushed query results.",
+            body: "RethinkDB stores JSON documents and is known for changefeeds — queries \
+that keep pushing updates as the data changes, handy for realtime apps. Clients \
+open the connection with a version magic number before running queries.",
+            look_for: "\"RethinkDB V1.0 handshake\" on TCP 28015.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1350,6 +1457,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Graphite,
         Protocol::Gearman,
         Protocol::Beanstalk,
+        Protocol::Ethercat,
+        Protocol::Fcoe,
+        Protocol::Macsec,
+        Protocol::Rarp,
+        Protocol::Rtps,
+        Protocol::Influxdb,
+        Protocol::MqttSn,
+        Protocol::Babel,
+        Protocol::X11,
+        Protocol::Rsync,
+        Protocol::Svn,
+        Protocol::Rethinkdb,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -1566,6 +1685,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Graphite => "A Graphite metric (TCP 2003) — an app pushing a time-series data point.",
         Protocol::Gearman => "A Gearman message (TCP 4730) — handing a background job to a worker.",
         Protocol::Beanstalk => "A beanstalkd command (TCP 11300) — a simple background-job work queue.",
+        Protocol::Ethercat => "An EtherCAT frame (EtherType 0x88A4) — real-time industrial fieldbus control.",
+        Protocol::Fcoe => "An FCoE frame (EtherType 0x8906) — Fibre Channel storage carried over Ethernet.",
+        Protocol::Macsec => "A MACsec frame (EtherType 0x88E5) — 802.1AE hop-by-hop link encryption.",
+        Protocol::Rarp => "A RARP packet (EtherType 0x8035) — a host asking for its IP given its MAC.",
+        Protocol::Rtps => "An RTPS/DDS message — real-time pub/sub middleware (ROS 2, vehicles, industrial).",
+        Protocol::Influxdb => "An InfluxDB metric (UDP 8089) — a time-series data point written in line protocol.",
+        Protocol::MqttSn => "An MQTT-SN message (UDP 1883) — MQTT for constrained sensor devices over UDP.",
+        Protocol::Babel => "A Babel routing update (UDP 6696) — mesh-friendly distance-vector routing.",
+        Protocol::X11 => "An X11 message (TCP 6000+) — the Unix display protocol drawing a GUI.",
+        Protocol::Rsync => "An rsync transfer (TCP 873) — efficient file synchronisation.",
+        Protocol::Svn => "A Subversion message (TCP 3690) — centralised version-control traffic.",
+        Protocol::Rethinkdb => "A RethinkDB message (TCP 28015) — a realtime JSON document database.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -1612,7 +1743,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 126);
+        assert_eq!(all_lessons().len(), 138);
     }
 
     #[test]

@@ -150,6 +150,19 @@ const KNOWN_PROTOS: &[&str] = &[
     "graphite",
     "gearman",
     "beanstalk",
+    "ethercat",
+    "fcoe",
+    "macsec",
+    "rarp",
+    "rtps",
+    "dds",
+    "influxdb",
+    "mqttsn",
+    "babel",
+    "x11",
+    "rsync",
+    "svn",
+    "rethinkdb",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -310,6 +323,8 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "iec104" => pkt.protocol == Protocol::Iec104,
         "ike" => pkt.protocol == Protocol::Isakmp,
         "nfs" | "portmap" => pkt.protocol == Protocol::Rpc,
+        "rtps" | "dds" => pkt.protocol == Protocol::Rtps,
+        "mqttsn" => pkt.protocol == Protocol::MqttSn,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

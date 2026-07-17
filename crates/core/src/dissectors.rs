@@ -2,6 +2,7 @@
 // Copyright (c) 2026 netscope contributors
 pub mod amqp;
 pub mod arp;
+pub mod babel;
 pub mod bacnet;
 pub mod beanstalk;
 pub mod bfd;
@@ -23,7 +24,9 @@ pub mod dtls;
 pub mod eapol;
 pub mod eigrp;
 pub mod enip;
+pub mod ethercat;
 pub mod ethernet;
+pub mod fcoe;
 pub mod finger;
 pub mod fix;
 pub mod ftp;
@@ -44,6 +47,7 @@ pub mod icmp;
 pub mod iec104;
 pub mod igmp;
 pub mod imap;
+pub mod influxdb;
 pub mod ip;
 pub mod irc;
 pub mod ipsec;
@@ -56,12 +60,14 @@ pub mod lacp;
 pub mod ldap;
 pub mod ldp;
 pub mod lldp;
+pub mod macsec;
 pub mod memcached;
 pub mod mgcp;
 pub mod modbus;
 pub mod mongodb;
 pub mod mpls;
 pub mod mqtt;
+pub mod mqttsn;
 pub mod mysql;
 pub mod nats;
 pub mod nbds;
@@ -83,16 +89,20 @@ pub mod ptp;
 pub mod qpack;
 pub mod radiotap;
 pub mod radius;
+pub mod rarp;
 pub mod rdp;
 pub mod redis;
+pub mod rethinkdb;
 pub mod rfb;
 pub mod rip;
 pub mod rlogin;
 pub mod rmcp;
 pub mod rpc;
 pub mod rsvp;
+pub mod rsync;
 pub mod rtmp;
 pub mod rtp;
+pub mod rtps;
 pub mod rtsp;
 pub mod s7comm;
 pub mod sctp;
@@ -110,6 +120,7 @@ pub mod ssh;
 pub mod stomp;
 pub mod stp;
 pub mod stun;
+pub mod svn;
 pub mod syslog;
 pub mod tacacs;
 pub mod tcp;
@@ -130,6 +141,7 @@ pub mod wireguard;
 pub mod wlan;
 pub mod wol;
 pub mod wsd;
+pub mod x11;
 pub mod xmpp;
 pub mod zigbee;
 
@@ -249,6 +261,10 @@ const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
 const ETHERTYPE_GOOSE: u16 = 0x88B8; // IEC 61850 GOOSE substation events
 const ETHERTYPE_PTP: u16 = 0x88F7; // IEEE 1588 Precision Time Protocol
+const ETHERTYPE_RARP: u16 = 0x8035; // Reverse ARP
+const ETHERTYPE_ETHERCAT: u16 = 0x88A4; // EtherCAT industrial fieldbus
+const ETHERTYPE_MACSEC: u16 = 0x88E5; // 802.1AE MACsec link encryption
+const ETHERTYPE_FCOE: u16 = 0x8906; // Fibre Channel over Ethernet
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
@@ -278,6 +294,10 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_WOL => wol::dissect_wol(payload),
         ETHERTYPE_GOOSE => goose::dissect_goose(payload),
         ETHERTYPE_PTP => ptp::dissect_ptp_l2(payload),
+        ETHERTYPE_RARP => rarp::dissect_rarp(payload),
+        ETHERTYPE_ETHERCAT => ethercat::dissect_ethercat(payload),
+        ETHERTYPE_MACSEC => macsec::dissect_macsec(payload),
+        ETHERTYPE_FCOE => fcoe::dissect_fcoe(payload),
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
@@ -967,6 +987,39 @@ mod tests {
         let r = dissect(&data);
         assert_eq!(r.protocol, Protocol::Fix);
         assert!(r.summary.contains("NewOrderSingle"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_rarp_via_dissect() {
+        let r = dissect(&build_eth_frame(
+            0x8035,
+            &[0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x03],
+        ));
+        assert_eq!(r.protocol, Protocol::Rarp);
+        assert_eq!(r.summary, "RARP Request");
+    }
+
+    #[test]
+    fn end_to_end_ethercat_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88A4, &[0x10, 0x10, 12, 0x00]));
+        assert_eq!(r.protocol, Protocol::Ethercat);
+    }
+
+    #[test]
+    fn end_to_end_macsec_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88E5, &[0x0D, 0x00, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Macsec);
+    }
+
+    #[test]
+    fn end_to_end_rtps_via_dissect() {
+        let mut rtps = b"RTPS".to_vec();
+        rtps.extend_from_slice(&[0x02, 0x03]);
+        rtps.extend_from_slice(&[0u8; 14]);
+        rtps.push(0x15); // DATA submessage
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 7400, 7401, &rtps);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Rtps);
     }
 
     #[test]
