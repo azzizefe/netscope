@@ -5,9 +5,9 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bacnet, coap, dhcp, dhcpv6, dnp3, dns, enip, gtp, kerberos, l2tp, nbns, ntp, openvpn, qpack,
-    radius, rip, rmcp, rtp, sip, snmp, ssdp, stun, syslog, tftp, vxlan, wireguard, wsd,
-    DissectedResult,
+    bacnet, bfd, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, gtp, hsrp, kerberos, l2tp, nbns,
+    netflow, ntp, openvpn, qpack, radius, rip, rmcp, rtp, sflow, sip, snmp, ssdp, stun, syslog,
+    tftp, vxlan, wireguard, wsd, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -130,6 +130,19 @@ pub fn dissect_udp(
     if on(3702) {
         return wsd::dissect_wsd(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
+    // Flow telemetry and router liveness/redundancy.
+    if on(2055) || on(4739) || on(9995) {
+        return netflow::dissect_netflow(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(6343) {
+        return sflow::dissect_sflow(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3784) {
+        return bfd::dissect_bfd(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1985) {
+        return hsrp::dissect_hsrp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
@@ -139,6 +152,11 @@ pub fn dissect_udp(
         if let Some(r) = vxlan::dissect_vxlan(src_ip, dst_ip, src_port, dst_port, udp_payload) {
             return r;
         }
+    }
+    // DTLS rides dynamically negotiated ports (WebRTC/VPN media), so recognise
+    // it structurally from its record header before falling through to plugins.
+    if dtls::looks_like_dtls(udp_payload) {
+        return dtls::dissect_dtls(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     // User-defined plugins claim what no built-in dissector recognised
     // (see crate::plugins) — they never shadow the protocols above.

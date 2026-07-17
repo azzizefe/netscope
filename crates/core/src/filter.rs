@@ -110,6 +110,19 @@ const KNOWN_PROTOS: &[&str] = &[
     "tacacs",
     "diameter",
     "rlogin",
+    "dccp",
+    "dtls",
+    "netflow",
+    "ipfix",
+    "sflow",
+    "bfd",
+    "hsrp",
+    "iscsi",
+    "rtmp",
+    "smpp",
+    "openflow",
+    "nats",
+    "stomp",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -264,6 +277,7 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "tacacs" | "tacacs+" => pkt.protocol == Protocol::Tacacs,
         "ipmi" => pkt.protocol == Protocol::Rmcp,
         "wsd" | "wsdiscovery" => pkt.protocol == Protocol::WsDiscovery,
+        "ipfix" => pkt.protocol == Protocol::Netflow,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

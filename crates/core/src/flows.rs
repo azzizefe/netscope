@@ -69,7 +69,13 @@ impl Transport {
             | Protocol::Finger
             | Protocol::Tacacs
             | Protocol::Diameter
-            | Protocol::Rlogin => Transport::Tcp,
+            | Protocol::Rlogin
+            | Protocol::Iscsi
+            | Protocol::Rtmp
+            | Protocol::Smpp
+            | Protocol::OpenFlow
+            | Protocol::Nats
+            | Protocol::Stomp => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -92,7 +98,8 @@ impl Transport {
             | Protocol::Pim
             | Protocol::Eigrp
             | Protocol::Pppoe
-            | Protocol::Eapol => Transport::Other,
+            | Protocol::Eapol
+            | Protocol::Dccp => Transport::Other,
             Protocol::Udp
             | Protocol::Dns
             | Protocol::Dhcp
@@ -115,7 +122,12 @@ impl Transport {
             | Protocol::L2tp
             | Protocol::Gtp
             | Protocol::Rmcp
-            | Protocol::WsDiscovery => Transport::Udp,
+            | Protocol::WsDiscovery
+            | Protocol::Dtls
+            | Protocol::Netflow
+            | Protocol::Sflow
+            | Protocol::Bfd
+            | Protocol::Hsrp => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
             // A plugin-recognised protocol groups by the transport it declared,
@@ -286,7 +298,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::WsDiscovery
         | Protocol::Tacacs
         | Protocol::Diameter
-        | Protocol::Rlogin => 3,
+        | Protocol::Rlogin
+        | Protocol::Dccp
+        | Protocol::Dtls
+        | Protocol::Netflow
+        | Protocol::Sflow
+        | Protocol::Bfd
+        | Protocol::Hsrp
+        | Protocol::Iscsi
+        | Protocol::Rtmp
+        | Protocol::Smpp
+        | Protocol::OpenFlow
+        | Protocol::Nats
+        | Protocol::Stomp => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,
