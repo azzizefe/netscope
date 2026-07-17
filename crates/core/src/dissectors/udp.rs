@@ -5,10 +5,10 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bacnet, bfd, capwap, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, geneve, glbp, gtp, gvcp, hsrp,
-    isakmp, kerberos, l2tp, mgcp, nbds, nbns, netflow, ntp, openvpn, ptp, qpack, radius, rip, rmcp,
-    rpc, rtp, sflow, sip, snmp, ssdp, stun, syslog, teredo, tftp, vxlan, wccp, wireguard, wol, wsd,
-    DissectedResult,
+    babel, bacnet, bfd, capwap, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, geneve, glbp, gtp, gvcp,
+    hsrp, influxdb, isakmp, kerberos, l2tp, mgcp, mqttsn, nbds, nbns, netflow, ntp, openvpn, ptp,
+    qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip, snmp, ssdp, stun, syslog, teredo, tftp,
+    vxlan, wccp, wireguard, wol, wsd, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -181,6 +181,16 @@ pub fn dissect_udp(
     if on(111) || on(2049) {
         return rpc::dissect_rpc(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
+    // Metrics, sensor MQTT and mesh routing.
+    if on(8089) {
+        return influxdb::dissect_influxdb(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1883) {
+        return mqttsn::dissect_mqttsn(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(6696) {
+        return babel::dissect_babel(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
@@ -200,6 +210,10 @@ pub fn dissect_udp(
     // it structurally from its record header before falling through to plugins.
     if dtls::looks_like_dtls(udp_payload) {
         return dtls::dissect_dtls(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // RTPS/DDS uses dynamic ports; recognise it by its "RTPS" magic.
+    if rtps::looks_like_rtps(udp_payload) {
+        return rtps::dissect_rtps(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     // User-defined plugins claim what no built-in dissector recognised
     // (see crate::plugins) — they never shadow the protocols above.

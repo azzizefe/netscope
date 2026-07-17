@@ -11,8 +11,8 @@ use super::{
     amqp, beanstalk, bgp, bittorrent, cassandra, diameter, dicom, dnp3, enip, finger, fix, ftp,
     gearman, git, graphite, hl7, http, http2, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp,
     memcached, modbus, mongodb, mqtt, mysql, nats, nntp, ntlm, opcua, openflow, openvpn, pop3,
-    postgres, rdp, redis, rfb, rlogin, rpc, rtmp, rtsp, s7comm, smb, smpp, smtp, socks, ssh, stomp,
-    tacacs, tds, telnet, tls, websocket, whois, xmpp, DissectedResult,
+    postgres, rdp, redis, rethinkdb, rfb, rlogin, rpc, rsync, rtmp, rtsp, s7comm, smb, smpp, smtp,
+    socks, ssh, stomp, svn, tacacs, tds, telnet, tls, websocket, whois, x11, xmpp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -439,6 +439,19 @@ fn dissect_tcp_inner(
         }
         if on(11300) {
             return beanstalk::dissect_beanstalk(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Display, file sync, version control and document DB.
+        if (6000..=6005).contains(&src_port) || (6000..=6005).contains(&dst_port) {
+            return x11::dissect_x11(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(873) {
+            return rsync::dissect_rsync(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3690) {
+            return svn::dissect_svn(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(28015) {
+            return rethinkdb::dissect_rethinkdb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their
