@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 pub mod aerospike;
+pub mod afp;
 pub mod amqp;
 pub mod arp;
+pub mod avtp;
 pub mod babel;
 pub mod bacnet;
 pub mod beanstalk;
@@ -17,12 +19,15 @@ pub mod coap;
 pub mod dccp;
 pub mod dhcp;
 pub mod dhcpv6;
+pub mod dht;
 pub mod diameter;
 pub mod dicom;
 pub mod dnp3;
 pub mod dns;
+pub mod doip;
 pub mod dtls;
 pub mod eapol;
+pub mod edonkey;
 pub mod eigrp;
 pub mod elasticsearch;
 pub mod enip;
@@ -37,6 +42,7 @@ pub mod gelf;
 pub mod geneve;
 pub mod git;
 pub mod glbp;
+pub mod gnutella;
 pub mod goose;
 pub mod graphite;
 pub mod gre;
@@ -66,13 +72,16 @@ pub mod ldap;
 pub mod ldp;
 pub mod lldp;
 pub mod macsec;
+pub mod matter;
 pub mod memcached;
 pub mod mgcp;
+pub mod minecraft;
 pub mod modbus;
 pub mod mongodb;
 pub mod mpls;
 pub mod mqtt;
 pub mod mqttsn;
+pub mod mumble;
 pub mod mysql;
 pub mod nats;
 pub mod nbds;
@@ -122,6 +131,8 @@ pub mod smpp;
 pub mod smtp;
 pub mod snmp;
 pub mod socks;
+pub mod someip;
+pub mod source_query;
 pub mod srt;
 pub mod ssdp;
 pub mod ssh;
@@ -152,6 +163,7 @@ pub mod wlan;
 pub mod wol;
 pub mod wsd;
 pub mod x11;
+pub mod xcp;
 pub mod xmpp;
 pub mod zabbix;
 pub mod zigbee;
@@ -273,6 +285,7 @@ const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
 const ETHERTYPE_GOOSE: u16 = 0x88B8; // IEC 61850 GOOSE substation events
 const ETHERTYPE_PTP: u16 = 0x88F7; // IEEE 1588 Precision Time Protocol
+const ETHERTYPE_AVTP: u16 = 0x22F0; // IEEE 1722 Audio/Video Transport
 const ETHERTYPE_SV: u16 = 0x88BA; // IEC 61850-9-2 Sampled Values
 const ETHERTYPE_POWERLINK: u16 = 0x88AB; // Ethernet POWERLINK real-time
 const ETHERTYPE_SERCOS: u16 = 0x88CD; // SERCOS III motion control
@@ -309,6 +322,7 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_WOL => wol::dissect_wol(payload),
         ETHERTYPE_GOOSE => goose::dissect_goose(payload),
         ETHERTYPE_PTP => ptp::dissect_ptp_l2(payload),
+        ETHERTYPE_AVTP => avtp::dissect_avtp(payload),
         ETHERTYPE_SV => sv::dissect_sv(payload),
         ETHERTYPE_POWERLINK => powerlink::dissect_powerlink(payload),
         ETHERTYPE_SERCOS => sercos::dissect_sercos(payload),
@@ -1005,6 +1019,29 @@ mod tests {
         let r = dissect(&data);
         assert_eq!(r.protocol, Protocol::Fix);
         assert!(r.summary.contains("NewOrderSingle"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_avtp_via_dissect() {
+        let r = dissect(&build_eth_frame(0x22F0, &[0x22, 0x00, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Avtp);
+    }
+
+    #[test]
+    fn end_to_end_dht_via_dissect() {
+        let msg = b"d1:ad2:id20:aaaaaaaaaaaaaaaaaaaae1:q9:get_peers1:y1:qe";
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 50000, 51000, msg);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Dht);
+    }
+
+    #[test]
+    fn end_to_end_source_query_via_dissect() {
+        let mut q = vec![0xFF, 0xFF, 0xFF, 0xFF, b'T'];
+        q.extend_from_slice(b"Source Engine Query\0");
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 27015, &q);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::SourceQuery);
     }
 
     #[test]

@@ -8,12 +8,13 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    aerospike, amqp, beanstalk, bgp, bittorrent, cassandra, diameter, dicom, dnp3, elasticsearch,
-    enip, finger, fix, ftp, gearman, git, graphite, hl7, http, http2, iec104, imap, irc, iscsi,
-    kafka, kerberos, ldap, ldp, memcached, modbus, mongodb, mqtt, mysql, nats, nntp, nsq, ntlm,
-    opcua, openflow, openvpn, pop3, postgres, rdp, redis, rethinkdb, rfb, rlogin, rpc, rsync, rtmp,
-    rtsp, s7comm, smb, smpp, smtp, socks, ssh, stomp, svn, tacacs, tds, telnet, tls, websocket,
-    whois, x11, xmpp, zabbix, zmtp, DissectedResult,
+    aerospike, afp, amqp, beanstalk, bgp, bittorrent, cassandra, diameter, dicom, dnp3, doip,
+    edonkey, elasticsearch, enip, finger, fix, ftp, gearman, git, gnutella, graphite, hl7, http,
+    http2, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp, memcached, minecraft, modbus,
+    mongodb, mqtt, mumble, mysql, nats, nntp, nsq, ntlm, opcua, openflow, openvpn, pop3, postgres,
+    rdp, redis, rethinkdb, rfb, rlogin, rpc, rsync, rtmp, rtsp, s7comm, smb, smpp, smtp, socks,
+    someip, ssh, stomp, svn, tacacs, tds, telnet, tls, websocket, whois, x11, xmpp, zabbix, zmtp,
+    DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -468,6 +469,28 @@ fn dissect_tcp_inner(
         }
         if on(3000) {
             return aerospike::dissect_aerospike(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Automotive (SOME/IP, DoIP), Apple filing, P2P, gaming and voice.
+        if (30490..=30510).contains(&src_port) || (30490..=30510).contains(&dst_port) {
+            return someip::dissect_someip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(13400) {
+            return doip::dissect_doip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(548) {
+            return afp::dissect_afp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6346) {
+            return gnutella::dissect_gnutella(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4662) {
+            return edonkey::dissect_edonkey(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(25565) {
+            return minecraft::dissect_minecraft(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(64738) {
+            return mumble::dissect_mumble(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // ZMTP/ZeroMQ uses arbitrary ports; recognise its greeting structurally.
         if zmtp::looks_like_zmtp(tcp_payload) {

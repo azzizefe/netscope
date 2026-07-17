@@ -180,6 +180,20 @@ const KNOWN_PROTOS: &[&str] = &[
     "zeromq",
     "zmq",
     "aerospike",
+    "avtp",
+    "someip",
+    "doip",
+    "xcp",
+    "matter",
+    "afp",
+    "dht",
+    "gnutella",
+    "edonkey",
+    "emule",
+    "sourcequery",
+    "a2s",
+    "minecraft",
+    "mumble",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -348,6 +362,10 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "hart" | "hartip" => pkt.protocol == Protocol::Hartip,
         "es" => pkt.protocol == Protocol::Elasticsearch,
         "zeromq" | "zmq" => pkt.protocol == Protocol::Zmtp,
+        "someip" => pkt.protocol == Protocol::SomeIp,
+        "dht" => pkt.protocol == Protocol::Dht,
+        "sourcequery" | "a2s" => pkt.protocol == Protocol::SourceQuery,
+        "emule" => pkt.protocol == Protocol::Edonkey,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }
