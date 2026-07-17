@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+pub mod aerospike;
 pub mod amqp;
 pub mod arp;
 pub mod babel;
@@ -23,6 +24,7 @@ pub mod dns;
 pub mod dtls;
 pub mod eapol;
 pub mod eigrp;
+pub mod elasticsearch;
 pub mod enip;
 pub mod ethercat;
 pub mod ethernet;
@@ -31,6 +33,7 @@ pub mod finger;
 pub mod fix;
 pub mod ftp;
 pub mod gearman;
+pub mod gelf;
 pub mod geneve;
 pub mod git;
 pub mod glbp;
@@ -39,6 +42,7 @@ pub mod graphite;
 pub mod gre;
 pub mod gtp;
 pub mod gvcp;
+pub mod hartip;
 pub mod hl7;
 pub mod hsrp;
 pub mod http;
@@ -55,6 +59,7 @@ pub mod isakmp;
 pub mod iscsi;
 pub mod kafka;
 pub mod kerberos;
+pub mod knxip;
 pub mod l2tp;
 pub mod lacp;
 pub mod ldap;
@@ -74,6 +79,7 @@ pub mod nbds;
 pub mod nbns;
 pub mod netflow;
 pub mod nntp;
+pub mod nsq;
 pub mod ntlm;
 pub mod ntp;
 pub mod opcua;
@@ -83,6 +89,7 @@ pub mod ospf;
 pub mod pim;
 pub mod pop3;
 pub mod postgres;
+pub mod powerlink;
 pub mod pppoe;
 pub mod profinet;
 pub mod ptp;
@@ -106,6 +113,7 @@ pub mod rtps;
 pub mod rtsp;
 pub mod s7comm;
 pub mod sctp;
+pub mod sercos;
 pub mod sflow;
 pub mod sip;
 pub mod sll;
@@ -117,9 +125,11 @@ pub mod socks;
 pub mod srt;
 pub mod ssdp;
 pub mod ssh;
+pub mod statsd;
 pub mod stomp;
 pub mod stp;
 pub mod stun;
+pub mod sv;
 pub mod svn;
 pub mod syslog;
 pub mod tacacs;
@@ -143,7 +153,9 @@ pub mod wol;
 pub mod wsd;
 pub mod x11;
 pub mod xmpp;
+pub mod zabbix;
 pub mod zigbee;
+pub mod zmtp;
 
 use std::net::IpAddr;
 
@@ -261,6 +273,9 @@ const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
 const ETHERTYPE_GOOSE: u16 = 0x88B8; // IEC 61850 GOOSE substation events
 const ETHERTYPE_PTP: u16 = 0x88F7; // IEEE 1588 Precision Time Protocol
+const ETHERTYPE_SV: u16 = 0x88BA; // IEC 61850-9-2 Sampled Values
+const ETHERTYPE_POWERLINK: u16 = 0x88AB; // Ethernet POWERLINK real-time
+const ETHERTYPE_SERCOS: u16 = 0x88CD; // SERCOS III motion control
 const ETHERTYPE_RARP: u16 = 0x8035; // Reverse ARP
 const ETHERTYPE_ETHERCAT: u16 = 0x88A4; // EtherCAT industrial fieldbus
 const ETHERTYPE_MACSEC: u16 = 0x88E5; // 802.1AE MACsec link encryption
@@ -294,6 +309,9 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_WOL => wol::dissect_wol(payload),
         ETHERTYPE_GOOSE => goose::dissect_goose(payload),
         ETHERTYPE_PTP => ptp::dissect_ptp_l2(payload),
+        ETHERTYPE_SV => sv::dissect_sv(payload),
+        ETHERTYPE_POWERLINK => powerlink::dissect_powerlink(payload),
+        ETHERTYPE_SERCOS => sercos::dissect_sercos(payload),
         ETHERTYPE_RARP => rarp::dissect_rarp(payload),
         ETHERTYPE_ETHERCAT => ethercat::dissect_ethercat(payload),
         ETHERTYPE_MACSEC => macsec::dissect_macsec(payload),
@@ -987,6 +1005,25 @@ mod tests {
         let r = dissect(&data);
         assert_eq!(r.protocol, Protocol::Fix);
         assert!(r.summary.contains("NewOrderSingle"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_sampled_values_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88BA, &[0x40, 0x00, 0x00, 0x20]));
+        assert_eq!(r.protocol, Protocol::Sv);
+    }
+
+    #[test]
+    fn end_to_end_powerlink_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88AB, &[0x04, 0x01, 0xF0, 0x00]));
+        assert_eq!(r.protocol, Protocol::Powerlink);
+        assert!(r.summary.contains("PRes"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_sercos_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88CD, &[0x00, 0x00, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Sercos);
     }
 
     #[test]

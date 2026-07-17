@@ -8,11 +8,12 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    amqp, beanstalk, bgp, bittorrent, cassandra, diameter, dicom, dnp3, enip, finger, fix, ftp,
-    gearman, git, graphite, hl7, http, http2, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp,
-    memcached, modbus, mongodb, mqtt, mysql, nats, nntp, ntlm, opcua, openflow, openvpn, pop3,
-    postgres, rdp, redis, rethinkdb, rfb, rlogin, rpc, rsync, rtmp, rtsp, s7comm, smb, smpp, smtp,
-    socks, ssh, stomp, svn, tacacs, tds, telnet, tls, websocket, whois, x11, xmpp, DissectedResult,
+    aerospike, amqp, beanstalk, bgp, bittorrent, cassandra, diameter, dicom, dnp3, elasticsearch,
+    enip, finger, fix, ftp, gearman, git, graphite, hl7, http, http2, iec104, imap, irc, iscsi,
+    kafka, kerberos, ldap, ldp, memcached, modbus, mongodb, mqtt, mysql, nats, nntp, nsq, ntlm,
+    opcua, openflow, openvpn, pop3, postgres, rdp, redis, rethinkdb, rfb, rlogin, rpc, rsync, rtmp,
+    rtsp, s7comm, smb, smpp, smtp, socks, ssh, stomp, svn, tacacs, tds, telnet, tls, websocket,
+    whois, x11, xmpp, zabbix, zmtp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -452,6 +453,25 @@ fn dissect_tcp_inner(
         }
         if on(28015) {
             return rethinkdb::dissect_rethinkdb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Search, monitoring, messaging and key-value DB.
+        if on(9300) {
+            return elasticsearch::dissect_elasticsearch(
+                src_ip, dst_ip, src_port, dst_port, tcp_payload,
+            );
+        }
+        if on(10050) || on(10051) {
+            return zabbix::dissect_zabbix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4150) {
+            return nsq::dissect_nsq(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3000) {
+            return aerospike::dissect_aerospike(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // ZMTP/ZeroMQ uses arbitrary ports; recognise its greeting structurally.
+        if zmtp::looks_like_zmtp(tcp_payload) {
+            return zmtp::dissect_zmtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their

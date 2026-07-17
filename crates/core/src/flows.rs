@@ -89,7 +89,12 @@ impl Transport {
             | Protocol::X11
             | Protocol::Rsync
             | Protocol::Svn
-            | Protocol::Rethinkdb => Transport::Tcp,
+            | Protocol::Rethinkdb
+            | Protocol::Elasticsearch
+            | Protocol::Zabbix
+            | Protocol::Nsq
+            | Protocol::Zmtp
+            | Protocol::Aerospike => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -121,7 +126,10 @@ impl Transport {
             | Protocol::Ethercat
             | Protocol::Fcoe
             | Protocol::Macsec
-            | Protocol::Rarp => Transport::Other,
+            | Protocol::Rarp
+            | Protocol::Sv
+            | Protocol::Powerlink
+            | Protocol::Sercos => Transport::Other,
             Protocol::Udp
             | Protocol::Dns
             | Protocol::Dhcp
@@ -163,7 +171,11 @@ impl Transport {
             | Protocol::Rtps
             | Protocol::Influxdb
             | Protocol::MqttSn
-            | Protocol::Babel => Transport::Udp,
+            | Protocol::Babel
+            | Protocol::Knxip
+            | Protocol::Statsd
+            | Protocol::Gelf
+            | Protocol::Hartip => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
             // A plugin-recognised protocol groups by the transport it declared,
@@ -382,7 +394,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::X11
         | Protocol::Rsync
         | Protocol::Svn
-        | Protocol::Rethinkdb => 3,
+        | Protocol::Rethinkdb
+        | Protocol::Sv
+        | Protocol::Powerlink
+        | Protocol::Sercos
+        | Protocol::Knxip
+        | Protocol::Statsd
+        | Protocol::Gelf
+        | Protocol::Hartip
+        | Protocol::Elasticsearch
+        | Protocol::Zabbix
+        | Protocol::Nsq
+        | Protocol::Zmtp
+        | Protocol::Aerospike => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,

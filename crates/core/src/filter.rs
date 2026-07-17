@@ -163,6 +163,23 @@ const KNOWN_PROTOS: &[&str] = &[
     "rsync",
     "svn",
     "rethinkdb",
+    "sv",
+    "powerlink",
+    "sercos",
+    "knx",
+    "knxip",
+    "statsd",
+    "gelf",
+    "hartip",
+    "hart",
+    "elasticsearch",
+    "es",
+    "zabbix",
+    "nsq",
+    "zmtp",
+    "zeromq",
+    "zmq",
+    "aerospike",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -325,6 +342,12 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "nfs" | "portmap" => pkt.protocol == Protocol::Rpc,
         "rtps" | "dds" => pkt.protocol == Protocol::Rtps,
         "mqttsn" => pkt.protocol == Protocol::MqttSn,
+        "sv" => pkt.protocol == Protocol::Sv,
+        "sercos" => pkt.protocol == Protocol::Sercos,
+        "knx" | "knxip" => pkt.protocol == Protocol::Knxip,
+        "hart" | "hartip" => pkt.protocol == Protocol::Hartip,
+        "es" => pkt.protocol == Protocol::Elasticsearch,
+        "zeromq" | "zmq" => pkt.protocol == Protocol::Zmtp,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

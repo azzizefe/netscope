@@ -1234,6 +1234,109 @@ that keep pushing updates as the data changes, handy for realtime apps. Clients 
 open the connection with a version magic number before running queries.",
             look_for: "\"RethinkDB V1.0 handshake\" on TCP 28015.",
         },
+        Protocol::Sv => Lesson {
+            title: "Sampled Values — digital measurements",
+            summary: "Streams of digitised current/voltage from substation sensors (IEC 61850-9-2).",
+            body: "Modern substations replace thick copper wiring from sensors with a \
+network: merging units digitise the current and voltage waveforms and stream them \
+as Sampled Values many thousands of times a second, directly over Ethernet, to \
+the protection relays that watch them.",
+            look_for: "\"Sampled Values — APPID 0x4000 (IEC 61850-9-2)\".",
+        },
+        Protocol::Powerlink => Lesson {
+            title: "POWERLINK — deterministic Ethernet",
+            summary: "A real-time industrial protocol for tightly-timed motion control.",
+            body: "Standard Ethernet is non-deterministic — you can't guarantee exactly \
+when a frame arrives. Ethernet POWERLINK adds a strict cyclic schedule (a managing \
+node polls each device in turn) so machines and robots get the predictable timing \
+that motion control needs.",
+            look_for: "\"POWERLINK PRes (Poll Response)\" (EtherType 0x88AB).",
+        },
+        Protocol::Sercos => Lesson {
+            title: "SERCOS III — servo motion bus",
+            summary: "A real-time Ethernet bus that commands servo drives in machinery.",
+            body: "SERCOS III is a motion-control bus: a controller sends setpoints to \
+servo drives and reads back positions, all on a tightly-timed Ethernet ring. \
+Master data (MDT) goes out to the drives; drive data (AT) comes back.",
+            look_for: "\"SERCOS III MDT (master data)\" (EtherType 0x88CD).",
+        },
+        Protocol::Knxip => Lesson {
+            title: "KNXnet/IP — smart buildings",
+            summary: "Carries KNX building-automation commands (lights, HVAC, blinds) over IP.",
+            body: "KNX is a widespread building-automation standard: switches, thermostats \
+and actuators on a bus. KNXnet/IP tunnels or routes that bus over the IP network, \
+so a building controller or app can drive the lights and heating remotely.",
+            look_for: "\"KNXnet/IP Routing Indication\" on UDP 3671.",
+        },
+        Protocol::Statsd => Lesson {
+            title: "StatsD — fire-and-forget metrics",
+            summary: "Tiny UDP packets an app sends to count events and time operations.",
+            body: "StatsD makes instrumenting code cheap: send a one-line UDP packet like \
+`api.requests:1|c` and forget about it — no connection, no waiting. An aggregator \
+collects and summarises them. Because it's UDP, a lost packet just means a slightly \
+undercounted metric.",
+            look_for: "\"StatsD — api.requests (counter)\" on UDP 8125.",
+        },
+        Protocol::Gelf => Lesson {
+            title: "GELF — structured logs to Graylog",
+            summary: "Ships application logs as structured messages (often to Graylog).",
+            body: "Plain syslog lines are hard to search. GELF sends logs as structured \
+JSON (with fields, levels and source), optionally compressed or split into chunks \
+for UDP. A log server like Graylog collects and indexes them.",
+            look_for: "\"GELF (Graylog) — chunked\" on UDP 12201.",
+        },
+        Protocol::Hartip => Lesson {
+            title: "HART-IP — smart field instruments",
+            summary: "Brings HART process-instrument data (flow, pressure) onto the IP network.",
+            body: "HART is the long-standing protocol for smart field instruments in \
+process plants — reading a flow meter, configuring a valve positioner. HART-IP \
+carries that same data over Ethernet/IP so modern asset-management systems can \
+reach the instruments.",
+            look_for: "\"HART-IP Session Initiate\" on UDP/TCP 5094.",
+        },
+        Protocol::Elasticsearch => Lesson {
+            title: "Elasticsearch — cluster transport",
+            summary: "The internal binary protocol Elasticsearch nodes use among themselves.",
+            body: "Elasticsearch clients usually talk to it over HTTP (port 9200), but the \
+nodes of a cluster talk to *each other* over a separate binary transport protocol \
+on 9300 — replicating shards, running distributed searches. Seeing it maps the \
+cluster's internal chatter.",
+            look_for: "\"Elasticsearch transport message\" on TCP 9300.",
+        },
+        Protocol::Zabbix => Lesson {
+            title: "Zabbix — monitoring agents",
+            summary: "How Zabbix agents and server exchange monitoring data.",
+            body: "Zabbix watches servers and network gear. Agents on the monitored hosts \
+send metrics to (or answer requests from) the Zabbix server using this protocol, \
+framed with a \"ZBXD\" header. Seeing it means infrastructure monitoring is running.",
+            look_for: "\"Zabbix protocol data\" on TCP 10050/10051.",
+        },
+        Protocol::Nsq => Lesson {
+            title: "NSQ — realtime message queue",
+            summary: "A distributed messaging platform for decoupling services.",
+            body: "NSQ moves messages between producers and consumers at scale, with no \
+single broker to bottleneck. Clients open with a \"  V2\" handshake, then PUB to \
+publish and SUB to consume topics. Popular in Go-based microservice systems.",
+            look_for: "\"NSQ PUB\" / \"NSQ handshake (V2)\" on TCP 4150.",
+        },
+        Protocol::Zmtp => Lesson {
+            title: "ZMTP / ZeroMQ — brokerless messaging",
+            summary: "The wire protocol of ZeroMQ, a library for connecting code directly.",
+            body: "ZeroMQ isn't a server — it's a library that gives sockets superpowers \
+(pub/sub, request/reply, pipelines) with no central broker. ZMTP is what those \
+sockets speak on the wire; a connection opens with a recognisable greeting before \
+exchanging framed messages.",
+            look_for: "\"ZMTP/ZeroMQ greeting (v3.x)\" on arbitrary TCP ports.",
+        },
+        Protocol::Aerospike => Lesson {
+            title: "Aerospike — a fast key-value store",
+            summary: "A low-latency database built for huge, real-time workloads.",
+            body: "Aerospike is a key-value/document database designed for very high \
+throughput and sub-millisecond reads (ad-tech, fraud detection, recommendation). \
+Clients talk to it with this binary protocol — Info messages for cluster state, \
+AS_MSG for data operations.",
+            look_for: "\"Aerospike Message (AS_MSG)\" on TCP 3000.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1469,6 +1572,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Rsync,
         Protocol::Svn,
         Protocol::Rethinkdb,
+        Protocol::Sv,
+        Protocol::Powerlink,
+        Protocol::Sercos,
+        Protocol::Knxip,
+        Protocol::Statsd,
+        Protocol::Gelf,
+        Protocol::Hartip,
+        Protocol::Elasticsearch,
+        Protocol::Zabbix,
+        Protocol::Nsq,
+        Protocol::Zmtp,
+        Protocol::Aerospike,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -1697,6 +1812,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Rsync => "An rsync transfer (TCP 873) — efficient file synchronisation.",
         Protocol::Svn => "A Subversion message (TCP 3690) — centralised version-control traffic.",
         Protocol::Rethinkdb => "A RethinkDB message (TCP 28015) — a realtime JSON document database.",
+        Protocol::Sv => "A Sampled Values frame (EtherType 0x88BA) — digitised substation measurements.",
+        Protocol::Powerlink => "An Ethernet POWERLINK frame (0x88AB) — deterministic real-time industrial control.",
+        Protocol::Sercos => "A SERCOS III frame (EtherType 0x88CD) — real-time servo motion control.",
+        Protocol::Knxip => "A KNXnet/IP message (UDP 3671) — building automation (lights/HVAC) over IP.",
+        Protocol::Statsd => "A StatsD metric (UDP 8125) — a fire-and-forget counter/gauge/timer.",
+        Protocol::Gelf => "A GELF message (UDP 12201) — a structured application log, often to Graylog.",
+        Protocol::Hartip => "A HART-IP message (UDP/TCP 5094) — smart process-instrument data over IP.",
+        Protocol::Elasticsearch => "An Elasticsearch transport message (TCP 9300) — internal cluster traffic.",
+        Protocol::Zabbix => "A Zabbix message (TCP 10050/10051) — infrastructure monitoring data.",
+        Protocol::Nsq => "An NSQ message (TCP 4150) — a realtime distributed message queue.",
+        Protocol::Zmtp => "A ZMTP/ZeroMQ message — brokerless messaging between applications.",
+        Protocol::Aerospike => "An Aerospike message (TCP 3000) — a low-latency key-value database.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -1743,7 +1870,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 138);
+        assert_eq!(all_lessons().len(), 150);
     }
 
     #[test]

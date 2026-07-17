@@ -280,6 +280,30 @@ pub enum Protocol {
     Svn,
     /// RethinkDB document database (TCP 28015).
     Rethinkdb,
+    /// IEC 61850-9-2 Sampled Values (EtherType 0x88BA).
+    Sv,
+    /// Ethernet POWERLINK real-time industrial (EtherType 0x88AB).
+    Powerlink,
+    /// SERCOS III motion control (EtherType 0x88CD).
+    Sercos,
+    /// KNXnet/IP building automation (UDP 3671).
+    Knxip,
+    /// StatsD metrics (UDP 8125).
+    Statsd,
+    /// GELF Graylog structured logging (UDP 12201).
+    Gelf,
+    /// HART-IP industrial process instruments (UDP/TCP 5094).
+    Hartip,
+    /// Elasticsearch transport protocol (TCP 9300).
+    Elasticsearch,
+    /// Zabbix monitoring (TCP 10050/10051).
+    Zabbix,
+    /// NSQ realtime messaging (TCP 4150).
+    Nsq,
+    /// ZMTP / ZeroMQ messaging (dynamic TCP).
+    Zmtp,
+    /// Aerospike key-value database (TCP 3000).
+    Aerospike,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -448,6 +472,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Rsync => write!(f, "rsync"),
             Protocol::Svn => write!(f, "SVN"),
             Protocol::Rethinkdb => write!(f, "RethinkDB"),
+            Protocol::Sv => write!(f, "Sampled Values"),
+            Protocol::Powerlink => write!(f, "POWERLINK"),
+            Protocol::Sercos => write!(f, "SERCOS III"),
+            Protocol::Knxip => write!(f, "KNXnet/IP"),
+            Protocol::Statsd => write!(f, "StatsD"),
+            Protocol::Gelf => write!(f, "GELF"),
+            Protocol::Hartip => write!(f, "HART-IP"),
+            Protocol::Elasticsearch => write!(f, "Elasticsearch"),
+            Protocol::Zabbix => write!(f, "Zabbix"),
+            Protocol::Nsq => write!(f, "NSQ"),
+            Protocol::Zmtp => write!(f, "ZMTP"),
+            Protocol::Aerospike => write!(f, "Aerospike"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
