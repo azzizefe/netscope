@@ -14,6 +14,7 @@ pub mod dccp;
 pub mod dhcp;
 pub mod dhcpv6;
 pub mod diameter;
+pub mod dicom;
 pub mod dnp3;
 pub mod dns;
 pub mod dtls;
@@ -22,14 +23,18 @@ pub mod eigrp;
 pub mod enip;
 pub mod ethernet;
 pub mod finger;
+pub mod fix;
 pub mod ftp;
 pub mod git;
+pub mod glbp;
 pub mod gre;
 pub mod gtp;
+pub mod hl7;
 pub mod hsrp;
 pub mod http;
 pub mod http2;
 pub mod icmp;
+pub mod iec104;
 pub mod igmp;
 pub mod imap;
 pub mod ip;
@@ -41,14 +46,17 @@ pub mod kerberos;
 pub mod l2tp;
 pub mod lacp;
 pub mod ldap;
+pub mod ldp;
 pub mod lldp;
 pub mod memcached;
+pub mod mgcp;
 pub mod modbus;
 pub mod mongodb;
 pub mod mpls;
 pub mod mqtt;
 pub mod mysql;
 pub mod nats;
+pub mod nbds;
 pub mod nbns;
 pub mod netflow;
 pub mod nntp;
@@ -62,6 +70,7 @@ pub mod pim;
 pub mod pop3;
 pub mod postgres;
 pub mod pppoe;
+pub mod profinet;
 pub mod qpack;
 pub mod radiotap;
 pub mod radius;
@@ -74,6 +83,7 @@ pub mod rmcp;
 pub mod rtmp;
 pub mod rtp;
 pub mod rtsp;
+pub mod s7comm;
 pub mod sctp;
 pub mod sflow;
 pub mod sip;
@@ -101,10 +111,12 @@ pub mod udp;
 pub mod usb;
 pub mod vrrp;
 pub mod vxlan;
+pub mod wccp;
 pub mod websocket;
 pub mod whois;
 pub mod wireguard;
 pub mod wlan;
+pub mod wol;
 pub mod wsd;
 pub mod xmpp;
 pub mod zigbee;
@@ -221,6 +233,8 @@ const ETHERTYPE_SLOW: u16 = 0x8809; // 802.3 slow protocols (LACP/Marker/OAM)
 const ETHERTYPE_PPPOE_DISC: u16 = 0x8863; // PPPoE discovery stage
 const ETHERTYPE_PPPOE_SESS: u16 = 0x8864; // PPPoE session stage
 const ETHERTYPE_EAPOL: u16 = 0x888E; // 802.1X port authentication (EAPOL)
+const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
+const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
@@ -246,6 +260,8 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_PPPOE_DISC => pppoe::dissect_pppoe(payload, false),
         ETHERTYPE_PPPOE_SESS => pppoe::dissect_pppoe(payload, true),
         ETHERTYPE_EAPOL => eapol::dissect_eapol(payload),
+        ETHERTYPE_PROFINET => profinet::dissect_profinet(payload),
+        ETHERTYPE_WOL => wol::dissect_wol(payload),
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
@@ -895,6 +911,45 @@ mod tests {
         let r = dissect(&pkt);
         assert_eq!(r.protocol, Protocol::Dtls);
         assert!(r.summary.contains("Handshake"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_profinet_via_dissect() {
+        // EtherType 0x8892, FrameID 0xFEFC (DCP Identify).
+        let r = dissect(&build_eth_frame(0x8892, &[0xFE, 0xFC, 0x05, 0x00]));
+        assert_eq!(r.protocol, Protocol::Profinet);
+        assert!(r.summary.contains("DCP Identify"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_wol_via_dissect() {
+        // EtherType 0x0842 Wake-on-LAN magic packet.
+        let mac = [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01];
+        let mut magic = vec![0xFF; 6];
+        for _ in 0..16 {
+            magic.extend_from_slice(&mac);
+        }
+        let r = dissect(&build_eth_frame(0x0842, &magic));
+        assert_eq!(r.protocol, Protocol::Wol);
+    }
+
+    #[test]
+    fn end_to_end_fix_structural_via_dissect() {
+        // FIX recognised by its "8=FIX" prefix on an arbitrary TCP port.
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            50000,
+            9999,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            b"8=FIX.4.4\x0135=D\x0149=A\x01",
+        );
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Fix);
+        assert!(r.summary.contains("NewOrderSingle"), "{}", r.summary);
     }
 
     #[test]

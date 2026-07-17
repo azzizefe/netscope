@@ -75,7 +75,13 @@ impl Transport {
             | Protocol::Smpp
             | Protocol::OpenFlow
             | Protocol::Nats
-            | Protocol::Stomp => Transport::Tcp,
+            | Protocol::Stomp
+            | Protocol::Dicom
+            | Protocol::Hl7
+            | Protocol::Fix
+            | Protocol::S7comm
+            | Protocol::Iec104
+            | Protocol::Ldp => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -99,7 +105,9 @@ impl Transport {
             | Protocol::Eigrp
             | Protocol::Pppoe
             | Protocol::Eapol
-            | Protocol::Dccp => Transport::Other,
+            | Protocol::Dccp
+            | Protocol::Profinet
+            | Protocol::Wol => Transport::Other,
             Protocol::Udp
             | Protocol::Dns
             | Protocol::Dhcp
@@ -127,7 +135,11 @@ impl Transport {
             | Protocol::Netflow
             | Protocol::Sflow
             | Protocol::Bfd
-            | Protocol::Hsrp => Transport::Udp,
+            | Protocol::Hsrp
+            | Protocol::Glbp
+            | Protocol::Wccp
+            | Protocol::Mgcp
+            | Protocol::Nbds => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
             // A plugin-recognised protocol groups by the transport it declared,
@@ -310,7 +322,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Smpp
         | Protocol::OpenFlow
         | Protocol::Nats
-        | Protocol::Stomp => 3,
+        | Protocol::Stomp
+        | Protocol::Profinet
+        | Protocol::Wol
+        | Protocol::Glbp
+        | Protocol::Wccp
+        | Protocol::Mgcp
+        | Protocol::Nbds
+        | Protocol::Dicom
+        | Protocol::Hl7
+        | Protocol::Fix
+        | Protocol::S7comm
+        | Protocol::Iec104
+        | Protocol::Ldp => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,

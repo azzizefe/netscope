@@ -921,6 +921,107 @@ SEND, SUBSCRIBE, MESSAGE) let almost any language talk to a message broker \
 without a heavy client library. Human-readable on the wire.",
             look_for: "\"STOMP SEND\" / \"STOMP MESSAGE\" on TCP 61613.",
         },
+        Protocol::Profinet => Lesson {
+            title: "PROFINET — factory-floor real-time",
+            summary: "Runs the sensors, motors and PLCs on an industrial network in real time.",
+            body: "PROFINET carries the tightly-timed data that keeps a production line \
+running — a controller reading sensors and driving actuators, often every few \
+milliseconds. It rides directly on Ethernet (no IP) for speed. DCP messages \
+discover and name devices; RT frames carry the cyclic process data.",
+            look_for: "\"PROFINET RT Class 1 (cyclic data)\" or \"PROFINET DCP Identify\".",
+        },
+        Protocol::Wol => Lesson {
+            title: "Wake-on-LAN — powering a machine on remotely",
+            summary: "A special broadcast that turns a sleeping computer on over the network.",
+            body: "A 'magic packet' contains the target's MAC address repeated 16 times. \
+A powered-off-but-plugged-in machine's network card watches for it and boots the \
+system when it arrives. Handy for remote admin — and worth noticing if unexpected.",
+            look_for: "\"Wake-on-LAN — magic packet for de:ad:be:ef:00:01\".",
+        },
+        Protocol::Glbp => Lesson {
+            title: "GLBP — sharing the load across gateways",
+            summary: "Cisco redundancy that also load-balances across several routers.",
+            body: "Where HSRP/VRRP keep a backup gateway ready, GLBP goes further and \
+lets multiple routers actively share the traffic at the same time, not just stand \
+by. Hello messages coordinate which router handles which hosts.",
+            look_for: "\"GLBP Hello\" on UDP 3222.",
+        },
+        Protocol::Wccp => Lesson {
+            title: "WCCP — steering traffic to a cache",
+            summary: "Lets a router hand web requests to a caching proxy transparently.",
+            body: "WCCP is how a router transparently redirects traffic (classically web \
+requests) to a nearby cache or security appliance, without reconfiguring clients. \
+The router and cache exchange Here-I-Am / I-See-You to stay in sync.",
+            look_for: "\"WCCP Here-I-Am\" on UDP 2048.",
+        },
+        Protocol::Mgcp => Lesson {
+            title: "MGCP — controlling VoIP gateways",
+            summary: "A call agent telling media gateways how to set up phone calls.",
+            body: "In some VoIP designs the intelligence is central: a call agent uses \
+MGCP to command simple media gateways to create connections, play tones and \
+report events. Commands are four-letter verbs like CRCX (create connection).",
+            look_for: "\"MGCP CRCX (command)\" on UDP 2427.",
+        },
+        Protocol::Nbds => Lesson {
+            title: "NetBIOS Datagram — legacy Windows broadcast",
+            summary: "The connectionless side of old Windows networking (browsing/announcements).",
+            body: "NetBIOS Datagram Service carries the broadcast chatter of classic \
+Windows networking — network browsing, host announcements. Like its NBNS cousin \
+it's noisy, legacy, and often disabled in modern/hardened networks.",
+            look_for: "\"NetBIOS-DGM Broadcast\" on UDP 138.",
+        },
+        Protocol::Dicom => Lesson {
+            title: "DICOM — medical images on the wire",
+            summary: "How scanners, PACS and viewers exchange X-rays, CTs and MRIs.",
+            body: "DICOM is the standard for medical imaging: a scanner associates with \
+an archive (A-ASSOCIATE), then ships images and metadata (P-DATA-TF). Because it \
+carries patient data, seeing it in a capture is sensitive by nature.",
+            look_for: "\"DICOM A-ASSOCIATE-RQ\" / \"DICOM P-DATA-TF\" on TCP 104/11112.",
+        },
+        Protocol::Hl7 => Lesson {
+            title: "HL7 — hospital data exchange",
+            summary: "The text format hospitals use to share admissions, orders and lab results.",
+            body: "HL7 v2 is how hospital systems talk: an ADT^A01 message admits a \
+patient, ORU^R01 delivers lab results, and so on. It's pipe-delimited text, often \
+wrapped in MLLP framing over TCP. Like DICOM, it carries protected health data.",
+            look_for: "\"HL7 ADT^A01 (MLLP)\" on TCP 2575.",
+        },
+        Protocol::Fix => Lesson {
+            title: "FIX — the language of trading",
+            summary: "How trading systems and exchanges send orders and market data.",
+            body: "FIX is the lingua franca of electronic finance: tag=value pairs \
+(8=FIX.4.2…35=D…) carry orders (NewOrderSingle), fills (ExecutionReport) and \
+market data between brokers, funds and exchanges. Latency-sensitive and \
+high-value, so it's tightly monitored.",
+            look_for: "\"FIX FIX.4.2 — NewOrderSingle\" — tag 35 is the message type.",
+        },
+        Protocol::S7comm => Lesson {
+            title: "S7comm — talking to Siemens PLCs",
+            summary: "The protocol used to program and read Siemens S7 industrial controllers.",
+            body: "S7comm is how engineering software and SCADA systems read and write \
+the memory of Siemens S7 PLCs — the controllers running physical processes. It \
+rides on ISO-on-TCP (port 102). It has no built-in authentication, which is why \
+industrial-network monitoring cares about it (recall Stuxnet).",
+            look_for: "\"S7comm Job request\" on TCP 102.",
+        },
+        Protocol::Iec104 => Lesson {
+            title: "IEC 60870-5-104 — power-grid telecontrol",
+            summary: "SCADA commands and measurements for electrical substations.",
+            body: "IEC-104 carries the telemetry and control for power utilities: a \
+control centre reads measurements and sends commands (open/close a breaker) to \
+substation equipment over TCP. Critical infrastructure, so unexpected IEC-104 \
+traffic is a serious flag.",
+            look_for: "\"IEC 60870-5-104 I-frame (information)\" on TCP 2404.",
+        },
+        Protocol::Ldp => Lesson {
+            title: "LDP — handing out MPLS labels",
+            summary: "How MPLS routers agree on the labels that build forwarding paths.",
+            body: "MPLS forwards packets by short labels instead of IP lookups. LDP is \
+how routers tell each other 'use label N to reach network X', building the \
+label-switched paths. Hello messages find neighbours; Label Mapping messages \
+distribute the labels.",
+            look_for: "\"LDP Hello\" / \"LDP Label Mapping\" on TCP/UDP 646.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1120,6 +1221,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::OpenFlow,
         Protocol::Nats,
         Protocol::Stomp,
+        Protocol::Profinet,
+        Protocol::Wol,
+        Protocol::Glbp,
+        Protocol::Wccp,
+        Protocol::Mgcp,
+        Protocol::Nbds,
+        Protocol::Dicom,
+        Protocol::Hl7,
+        Protocol::Fix,
+        Protocol::S7comm,
+        Protocol::Iec104,
+        Protocol::Ldp,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -1312,6 +1425,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::OpenFlow => "An OpenFlow message (TCP 6653) — an SDN controller programming a switch.",
         Protocol::Nats => "A NATS message (TCP 4222) — publish/subscribe messaging between services.",
         Protocol::Stomp => "A STOMP frame (TCP 61613) — simple text messaging with a broker.",
+        Protocol::Profinet => "A PROFINET frame (EtherType 0x8892) — real-time industrial automation data.",
+        Protocol::Wol => "A Wake-on-LAN magic packet — a broadcast that powers a sleeping machine on.",
+        Protocol::Glbp => "A GLBP message (UDP 3222) — Cisco routers load-sharing a virtual gateway.",
+        Protocol::Wccp => "A WCCP message (UDP 2048) — a router redirecting traffic to a cache/proxy.",
+        Protocol::Mgcp => "An MGCP message (UDP 2427) — a call agent controlling a VoIP media gateway.",
+        Protocol::Nbds => "A NetBIOS datagram (UDP 138) — legacy Windows broadcast/browsing traffic.",
+        Protocol::Dicom => "A DICOM message (TCP 104/11112) — medical imaging devices exchanging studies (patient data).",
+        Protocol::Hl7 => "An HL7 v2 message (TCP 2575) — hospital systems exchanging patient/lab data.",
+        Protocol::Fix => "A FIX message — a trading system sending orders or market data; tag 35 is the type.",
+        Protocol::S7comm => "An S7comm message (TCP 102) — reading/writing a Siemens PLC's memory.",
+        Protocol::Iec104 => "An IEC 60870-5-104 message (TCP 2404) — power-grid SCADA telecontrol.",
+        Protocol::Ldp => "An LDP message (TCP/UDP 646) — MPLS routers distributing forwarding labels.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -1358,7 +1483,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 102);
+        assert_eq!(all_lessons().len(), 114);
     }
 
     #[test]

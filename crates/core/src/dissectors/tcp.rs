@@ -8,10 +8,11 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    amqp, bgp, bittorrent, cassandra, diameter, dnp3, enip, finger, ftp, git, http, http2, imap,
-    irc, iscsi, kafka, kerberos, ldap, memcached, modbus, mongodb, mqtt, mysql, nats, nntp, ntlm,
-    opcua, openflow, openvpn, pop3, postgres, rdp, redis, rfb, rlogin, rtmp, rtsp, smb, smpp, smtp,
-    socks, ssh, stomp, tacacs, tds, telnet, tls, websocket, whois, xmpp, DissectedResult,
+    amqp, bgp, bittorrent, cassandra, diameter, dicom, dnp3, enip, finger, fix, ftp, git, hl7,
+    http, http2, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp, memcached, modbus, mongodb,
+    mqtt, mysql, nats, nntp, ntlm, opcua, openflow, openvpn, pop3, postgres, rdp, redis, rfb,
+    rlogin, rtmp, rtsp, s7comm, smb, smpp, smtp, socks, ssh, stomp, tacacs, tds, telnet, tls,
+    websocket, whois, xmpp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -405,6 +406,26 @@ fn dissect_tcp_inner(
         }
         if on(61613) {
             return stomp::dissect_stomp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Industrial control, healthcare, finance and MPLS label signalling.
+        if on(102) {
+            return s7comm::dissect_s7comm(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2404) {
+            return iec104::dissect_iec104(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(104) || on(11112) {
+            return dicom::dissect_dicom(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(646) {
+            return ldp::dissect_ldp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // HL7 (MLLP) and FIX ride assorted ports; recognise them by content too.
+        if on(2575) || hl7::looks_like_hl7(tcp_payload) {
+            return hl7::dissect_hl7(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if fix::looks_like_fix(tcp_payload) {
+            return fix::dissect_fix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their

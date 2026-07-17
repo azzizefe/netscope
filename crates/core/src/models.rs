@@ -208,6 +208,30 @@ pub enum Protocol {
     Nats,
     /// STOMP simple text messaging (TCP 61613).
     Stomp,
+    /// PROFINET real-time industrial automation (EtherType 0x8892).
+    Profinet,
+    /// Wake-on-LAN magic packet (EtherType 0x0842 / UDP).
+    Wol,
+    /// GLBP Cisco gateway load balancing (UDP 3222).
+    Glbp,
+    /// WCCP web-cache redirection (UDP 2048).
+    Wccp,
+    /// MGCP VoIP media gateway control (UDP 2427/2727).
+    Mgcp,
+    /// NetBIOS Datagram Service (UDP 138).
+    Nbds,
+    /// DICOM medical imaging (TCP 104/11112).
+    Dicom,
+    /// HL7 v2 healthcare messaging (TCP 2575, MLLP).
+    Hl7,
+    /// FIX financial trading protocol (negotiated TCP ports).
+    Fix,
+    /// S7comm Siemens PLC protocol (TCP 102).
+    S7comm,
+    /// IEC 60870-5-104 SCADA telecontrol (TCP 2404).
+    Iec104,
+    /// LDP MPLS label distribution (TCP/UDP 646).
+    Ldp,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -340,6 +364,18 @@ impl std::fmt::Display for Protocol {
             Protocol::OpenFlow => write!(f, "OpenFlow"),
             Protocol::Nats => write!(f, "NATS"),
             Protocol::Stomp => write!(f, "STOMP"),
+            Protocol::Profinet => write!(f, "PROFINET"),
+            Protocol::Wol => write!(f, "Wake-on-LAN"),
+            Protocol::Glbp => write!(f, "GLBP"),
+            Protocol::Wccp => write!(f, "WCCP"),
+            Protocol::Mgcp => write!(f, "MGCP"),
+            Protocol::Nbds => write!(f, "NetBIOS-DGM"),
+            Protocol::Dicom => write!(f, "DICOM"),
+            Protocol::Hl7 => write!(f, "HL7"),
+            Protocol::Fix => write!(f, "FIX"),
+            Protocol::S7comm => write!(f, "S7comm"),
+            Protocol::Iec104 => write!(f, "IEC-104"),
+            Protocol::Ldp => write!(f, "LDP"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
