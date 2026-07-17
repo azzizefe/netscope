@@ -9,9 +9,9 @@ use crate::models::Protocol;
 
 use super::{
     amqp, bgp, bittorrent, cassandra, diameter, dnp3, enip, finger, ftp, git, http, http2, imap,
-    irc, kafka, kerberos, ldap, memcached, modbus, mongodb, mqtt, mysql, nntp, ntlm, opcua,
-    openvpn, pop3, postgres, rdp, redis, rfb, rlogin, rtsp, smb, smtp, socks, ssh, tacacs, tds,
-    telnet, tls, websocket, whois, xmpp, DissectedResult,
+    irc, iscsi, kafka, kerberos, ldap, memcached, modbus, mongodb, mqtt, mysql, nats, nntp, ntlm,
+    opcua, openflow, openvpn, pop3, postgres, rdp, redis, rfb, rlogin, rtmp, rtsp, smb, smpp, smtp,
+    socks, ssh, stomp, tacacs, tds, telnet, tls, websocket, whois, xmpp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -386,6 +386,25 @@ fn dissect_tcp_inner(
         }
         if on(513) {
             return rlogin::dissect_rlogin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Storage, streaming, SMS gateways, SDN and message brokers.
+        if on(3260) {
+            return iscsi::dissect_iscsi(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1935) {
+            return rtmp::dissect_rtmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2775) {
+            return smpp::dissect_smpp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6653) {
+            return openflow::dissect_openflow(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4222) {
+            return nats::dissect_nats(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(61613) {
+            return stomp::dissect_stomp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their

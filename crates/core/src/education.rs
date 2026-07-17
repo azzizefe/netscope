@@ -817,6 +817,110 @@ it sends everything, including what you type, in the clear, and trusts hosts by 
 name. SSH replaced it decades ago, so seeing rlogin today is a red flag.",
             look_for: "\"rlogin — login alice/bob\" on TCP 513.",
         },
+        Protocol::Dccp => Lesson {
+            title: "DCCP — TCP without the retransmits",
+            summary: "A transport for streaming: congestion control, but no re-sending lost data.",
+            body: "Some real-time apps want TCP's politeness (not flooding the network) \
+but not its insistence on redelivering old data — by the time it arrives, it's \
+too late to be useful. DCCP gives congestion control without reliability, aimed \
+at streaming and gaming.",
+            look_for: "\"DCCP Request — 5001 → 5002\" (IP protocol 33).",
+        },
+        Protocol::Dtls => Lesson {
+            title: "DTLS — TLS for UDP",
+            summary: "The encryption behind WebRTC media and some VPNs.",
+            body: "TLS needs the reliable, ordered stream that TCP gives it. DTLS is a \
+version of TLS redesigned to run over UDP's unreliable datagrams, so real-time \
+traffic (video calls, some VPNs) can be encrypted without TCP's delays. Same \
+privacy guarantees, datagram-friendly.",
+            look_for: "\"DTLS 1.2 Handshake\" / \"DTLS 1.2 Application Data\".",
+        },
+        Protocol::Netflow => Lesson {
+            title: "NetFlow / IPFIX — traffic accounting",
+            summary: "Routers summarising 'who talked to whom' and exporting it to a collector.",
+            body: "Instead of capturing every packet, a router can keep a running tally \
+of flows — source, destination, ports, byte counts — and export those summaries \
+with NetFlow (or its standard successor, IPFIX). It's how networks do capacity \
+planning and spot anomalies without storing full traffic.",
+            look_for: "\"IPFIX flow export\" on UDP 2055/4739.",
+        },
+        Protocol::Sflow => Lesson {
+            title: "sFlow — sampled traffic",
+            summary: "Switches sending a random sample of packets plus counters to a collector.",
+            body: "sFlow takes a different approach to NetFlow: rather than track every \
+flow, it randomly samples 1-in-N packets and ships them, along with interface \
+counters, to a collector. Cheap enough to run at line rate on big switches, and \
+statistically good enough to see the big picture.",
+            look_for: "\"sFlow v5 sample datagram\" on UDP 6343.",
+        },
+        Protocol::Bfd => Lesson {
+            title: "BFD — is the link still up?",
+            summary: "A very fast heartbeat between routers so failover happens in milliseconds.",
+            body: "Routing protocols can take seconds to notice a dead neighbour. BFD is \
+a lightweight, rapid hello between two devices whose only job is to detect a \
+broken path in milliseconds and tell the routing protocol to reroute. You'll see \
+a steady stream of tiny control packets.",
+            look_for: "\"BFDv1 control — state Up\" on UDP 3784.",
+        },
+        Protocol::Hsrp => Lesson {
+            title: "HSRP — Cisco's backup gateway",
+            summary: "Cisco's version of VRRP: two routers sharing one gateway IP.",
+            body: "Like VRRP, HSRP lets several routers present one virtual gateway so a \
+failure is invisible to hosts. One router is Active, another Standby; Hello \
+messages keep them in sync and trigger a takeover when the Active one goes quiet.",
+            look_for: "\"HSRP Hello (Active)\" on UDP 1985.",
+        },
+        Protocol::Iscsi => Lesson {
+            title: "iSCSI — disks over the network",
+            summary: "Carries raw SCSI storage commands over TCP, so a server's 'disk' is remote.",
+            body: "iSCSI lets a server use a disk that physically lives on a storage \
+array across the network, as if it were local. It wraps the same low-level SCSI \
+commands a real disk uses inside TCP. Common in data centres for shared storage.",
+            look_for: "\"iSCSI Login Request\" / \"iSCSI SCSI Command\" on TCP 3260.",
+        },
+        Protocol::Rtmp => Lesson {
+            title: "RTMP — live video ingest",
+            summary: "The Flash-era streaming protocol, still used to push live video to servers.",
+            body: "RTMP was built for Flash but outlived it: it's still how many \
+streamers push live video into platforms (which then transcode it to modern \
+formats). A session starts with a distinctive handshake, then carries chunked \
+audio/video.",
+            look_for: "\"RTMP handshake\" on TCP 1935.",
+        },
+        Protocol::Smpp => Lesson {
+            title: "SMPP — sending SMS",
+            summary: "The protocol apps and gateways use to send and receive text messages.",
+            body: "When an app sends you an SMS (a login code, a delivery alert), it \
+usually reaches an SMS gateway over SMPP. It binds as transmitter/receiver, then \
+submit_sm sends a message and deliver_sm brings replies back.",
+            look_for: "\"SMPP submit_sm\" on TCP 2775.",
+        },
+        Protocol::OpenFlow => Lesson {
+            title: "OpenFlow — software-defined networking",
+            summary: "How a central controller programs switches' forwarding tables.",
+            body: "In SDN, switches don't decide routing on their own — a central \
+controller does, and pushes the decisions down as flow rules over OpenFlow. \
+Packet-In asks the controller 'what do I do with this?', Flow-Mod installs the \
+answer. It decouples the network's brains from the hardware.",
+            look_for: "\"OpenFlow Packet-In\" / \"OpenFlow Flow-Mod\" on TCP 6653.",
+        },
+        Protocol::Nats => Lesson {
+            title: "NATS — cloud messaging",
+            summary: "A fast publish/subscribe system tying microservices together.",
+            body: "NATS is a lightweight message bus: services PUBlish to subjects and \
+SUBscribe to the ones they care about, and the server fans messages out. Its \
+text protocol (PUB/SUB/MSG/PING) is simple and very fast, popular in \
+cloud-native systems.",
+            look_for: "\"NATS PUB — events.orders\" on TCP 4222.",
+        },
+        Protocol::Stomp => Lesson {
+            title: "STOMP — simple broker messaging",
+            summary: "A plain-text protocol for talking to message brokers like ActiveMQ.",
+            body: "STOMP is deliberately simple: a handful of text commands (CONNECT, \
+SEND, SUBSCRIBE, MESSAGE) let almost any language talk to a message broker \
+without a heavy client library. Human-readable on the wire.",
+            look_for: "\"STOMP SEND\" / \"STOMP MESSAGE\" on TCP 61613.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1004,6 +1108,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Tacacs,
         Protocol::Diameter,
         Protocol::Rlogin,
+        Protocol::Dccp,
+        Protocol::Dtls,
+        Protocol::Netflow,
+        Protocol::Sflow,
+        Protocol::Bfd,
+        Protocol::Hsrp,
+        Protocol::Iscsi,
+        Protocol::Rtmp,
+        Protocol::Smpp,
+        Protocol::OpenFlow,
+        Protocol::Nats,
+        Protocol::Stomp,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -1184,6 +1300,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Tacacs => "A TACACS+ message (TCP 49) — admin login/authorization for network gear.",
         Protocol::Diameter => "A Diameter message (TCP/SCTP 3868) — carrier AAA and billing.",
         Protocol::Rlogin => "An rlogin session (TCP 513) — a legacy cleartext remote login; prefer SSH.",
+        Protocol::Dccp => "A DCCP packet (IP proto 33) — congestion-controlled but unreliable transport for streaming.",
+        Protocol::Dtls => "A DTLS record — TLS encryption over UDP, as used by WebRTC media and some VPNs.",
+        Protocol::Netflow => "A NetFlow/IPFIX export (UDP 2055/4739) — a router reporting traffic-flow summaries.",
+        Protocol::Sflow => "An sFlow datagram (UDP 6343) — a switch exporting sampled packets and counters.",
+        Protocol::Bfd => "A BFD heartbeat (UDP 3784) — a fast liveness check between routers for quick failover.",
+        Protocol::Hsrp => "An HSRP message (UDP 1985) — Cisco routers sharing a virtual gateway IP.",
+        Protocol::Iscsi => "An iSCSI PDU (TCP 3260) — SCSI storage commands carried over the network.",
+        Protocol::Rtmp => "An RTMP message (TCP 1935) — the streaming protocol used to ingest live video.",
+        Protocol::Smpp => "An SMPP PDU (TCP 2775) — an app or gateway sending/receiving SMS text messages.",
+        Protocol::OpenFlow => "An OpenFlow message (TCP 6653) — an SDN controller programming a switch.",
+        Protocol::Nats => "A NATS message (TCP 4222) — publish/subscribe messaging between services.",
+        Protocol::Stomp => "A STOMP frame (TCP 61613) — simple text messaging with a broker.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -1230,7 +1358,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 90);
+        assert_eq!(all_lessons().len(), 102);
     }
 
     #[test]

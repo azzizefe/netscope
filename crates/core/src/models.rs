@@ -184,6 +184,30 @@ pub enum Protocol {
     Diameter,
     /// rlogin legacy remote login (TCP 513).
     Rlogin,
+    /// DCCP congestion-controlled datagram transport (IP protocol 33).
+    Dccp,
+    /// Datagram TLS — encryption over UDP (WebRTC/VPN media).
+    Dtls,
+    /// NetFlow / IPFIX flow export (UDP 2055/4739).
+    Netflow,
+    /// sFlow sampled-traffic export (UDP 6343).
+    Sflow,
+    /// Bidirectional Forwarding Detection (UDP 3784).
+    Bfd,
+    /// HSRP Cisco gateway redundancy (UDP 1985).
+    Hsrp,
+    /// iSCSI SCSI-over-TCP storage (TCP 3260).
+    Iscsi,
+    /// RTMP Flash/live streaming (TCP 1935).
+    Rtmp,
+    /// SMPP SMS gateway protocol (TCP 2775).
+    Smpp,
+    /// OpenFlow SDN switch control (TCP 6653).
+    OpenFlow,
+    /// NATS cloud messaging (TCP 4222).
+    Nats,
+    /// STOMP simple text messaging (TCP 61613).
+    Stomp,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -304,6 +328,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Tacacs => write!(f, "TACACS+"),
             Protocol::Diameter => write!(f, "Diameter"),
             Protocol::Rlogin => write!(f, "rlogin"),
+            Protocol::Dccp => write!(f, "DCCP"),
+            Protocol::Dtls => write!(f, "DTLS"),
+            Protocol::Netflow => write!(f, "NetFlow"),
+            Protocol::Sflow => write!(f, "sFlow"),
+            Protocol::Bfd => write!(f, "BFD"),
+            Protocol::Hsrp => write!(f, "HSRP"),
+            Protocol::Iscsi => write!(f, "iSCSI"),
+            Protocol::Rtmp => write!(f, "RTMP"),
+            Protocol::Smpp => write!(f, "SMPP"),
+            Protocol::OpenFlow => write!(f, "OpenFlow"),
+            Protocol::Nats => write!(f, "NATS"),
+            Protocol::Stomp => write!(f, "STOMP"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }

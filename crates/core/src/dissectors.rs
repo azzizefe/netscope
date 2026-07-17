@@ -3,17 +3,20 @@
 pub mod amqp;
 pub mod arp;
 pub mod bacnet;
+pub mod bfd;
 pub mod bgp;
 pub mod bittorrent;
 pub mod bluetooth;
 pub mod can;
 pub mod cassandra;
 pub mod coap;
+pub mod dccp;
 pub mod dhcp;
 pub mod dhcpv6;
 pub mod diameter;
 pub mod dnp3;
 pub mod dns;
+pub mod dtls;
 pub mod eapol;
 pub mod eigrp;
 pub mod enip;
@@ -23,6 +26,7 @@ pub mod ftp;
 pub mod git;
 pub mod gre;
 pub mod gtp;
+pub mod hsrp;
 pub mod http;
 pub mod http2;
 pub mod icmp;
@@ -31,6 +35,7 @@ pub mod imap;
 pub mod ip;
 pub mod irc;
 pub mod ipsec;
+pub mod iscsi;
 pub mod kafka;
 pub mod kerberos;
 pub mod l2tp;
@@ -43,11 +48,14 @@ pub mod mongodb;
 pub mod mpls;
 pub mod mqtt;
 pub mod mysql;
+pub mod nats;
 pub mod nbns;
+pub mod netflow;
 pub mod nntp;
 pub mod ntlm;
 pub mod ntp;
 pub mod opcua;
+pub mod openflow;
 pub mod openvpn;
 pub mod ospf;
 pub mod pim;
@@ -63,18 +71,22 @@ pub mod rfb;
 pub mod rip;
 pub mod rlogin;
 pub mod rmcp;
+pub mod rtmp;
 pub mod rtp;
 pub mod rtsp;
 pub mod sctp;
+pub mod sflow;
 pub mod sip;
 pub mod sll;
 pub mod smb;
+pub mod smpp;
 pub mod smtp;
 pub mod snmp;
 pub mod socks;
 pub mod srt;
 pub mod ssdp;
 pub mod ssh;
+pub mod stomp;
 pub mod stp;
 pub mod stun;
 pub mod syslog;
@@ -353,6 +365,7 @@ fn dispatch_transport(
         Some(2) => igmp::dissect_igmp(src_ip, dst_ip, &payload),
         Some(47) => gre::dissect_gre(src_ip, dst_ip, &payload),
         Some(132) => sctp::dissect_sctp(src_ip, dst_ip, &payload),
+        Some(33) => dccp::dissect_dccp(src_ip, dst_ip, &payload),
         // Interior routing (EIGRP 88, PIM 103) and gateway redundancy (VRRP 112).
         Some(88) => eigrp::dissect_eigrp(src_ip, dst_ip, &payload),
         Some(103) => pim::dissect_pim(src_ip, dst_ip, &payload),
@@ -857,6 +870,31 @@ mod tests {
         let r = dissect(&build_ipv4_proto(112, &[0x31, 0x0A, 0x64, 0x00]));
         assert_eq!(r.protocol, Protocol::Vrrp);
         assert!(r.summary.contains("VRID 10"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_dccp_via_dissect() {
+        let mut dccp = Vec::new();
+        dccp.extend_from_slice(&5001u16.to_be_bytes());
+        dccp.extend_from_slice(&5002u16.to_be_bytes());
+        dccp.extend_from_slice(&[0u8; 4]); // offset, ccval, checksum
+        dccp.push(0x00); // type 0 (Request)
+        dccp.extend_from_slice(&[0u8; 3]);
+        let r = dissect(&build_ipv4_proto(33, &dccp));
+        assert_eq!(r.protocol, Protocol::Dccp);
+        assert!(r.summary.contains("5001 → 5002"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_dtls_via_dissect() {
+        // DTLS 1.2 Handshake record on an arbitrary UDP port — recognised
+        // structurally, not by port.
+        let mut dtls = vec![22, 0xFE, 0xFD, 0x00, 0x00];
+        dtls.extend_from_slice(&[0u8; 8]);
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 50000, 50001, &dtls);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Dtls);
+        assert!(r.summary.contains("Handshake"), "{}", r.summary);
     }
 
     #[test]
