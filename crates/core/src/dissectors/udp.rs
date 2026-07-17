@@ -5,10 +5,10 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    babel, bacnet, bfd, capwap, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, geneve, glbp, gtp, gvcp,
-    hsrp, influxdb, isakmp, kerberos, l2tp, mgcp, mqttsn, nbds, nbns, netflow, ntp, openvpn, ptp,
-    qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip, snmp, ssdp, stun, syslog, teredo, tftp,
-    vxlan, wccp, wireguard, wol, wsd, DissectedResult,
+    babel, bacnet, bfd, capwap, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, gelf, geneve, glbp, gtp,
+    gvcp, hartip, hsrp, influxdb, isakmp, kerberos, knxip, l2tp, mgcp, mqttsn, nbds, nbns, netflow,
+    ntp, openvpn, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip, snmp, ssdp, statsd,
+    stun, syslog, teredo, tftp, vxlan, wccp, wireguard, wol, wsd, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -190,6 +190,19 @@ pub fn dissect_udp(
     }
     if on(6696) {
         return babel::dissect_babel(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Building automation, metrics, structured logs and industrial process.
+    if on(3671) {
+        return knxip::dissect_knxip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(8125) {
+        return statsd::dissect_statsd(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(12201) {
+        return gelf::dissect_gelf(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5094) {
+        return hartip::dissect_hartip(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
