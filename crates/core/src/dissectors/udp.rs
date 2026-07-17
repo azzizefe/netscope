@@ -5,10 +5,11 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    babel, bacnet, bfd, capwap, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, gelf, geneve, glbp, gtp,
-    gvcp, hartip, hsrp, influxdb, isakmp, kerberos, knxip, l2tp, mgcp, mqttsn, nbds, nbns, netflow,
-    ntp, openvpn, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip, snmp, ssdp, statsd,
-    stun, syslog, teredo, tftp, vxlan, wccp, wireguard, wol, wsd, DissectedResult,
+    babel, bacnet, bfd, capwap, coap, dhcp, dhcpv6, dht, dnp3, dns, doip, dtls, enip, gelf, geneve,
+    glbp, gtp, gvcp, hartip, hsrp, influxdb, isakmp, kerberos, knxip, l2tp, matter, mgcp, mqttsn,
+    nbds, nbns, netflow, ntp, openvpn, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip,
+    snmp, someip, source_query, ssdp, statsd, stun, syslog, teredo, tftp, vxlan, wccp, wireguard,
+    wol, wsd, xcp, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -204,6 +205,19 @@ pub fn dissect_udp(
     if on(5094) {
         return hartip::dissect_hartip(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
+    // Automotive / IoT: service middleware, diagnostics, calibration, smart home.
+    if (30490..=30510).contains(&src_port) || (30490..=30510).contains(&dst_port) {
+        return someip::dissect_someip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(13400) {
+        return doip::dissect_doip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5555) {
+        return xcp::dissect_xcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5540) {
+        return matter::dissect_matter(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
@@ -227,6 +241,13 @@ pub fn dissect_udp(
     // RTPS/DDS uses dynamic ports; recognise it by its "RTPS" magic.
     if rtps::looks_like_rtps(udp_payload) {
         return rtps::dissect_rtps(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // BitTorrent DHT and Source-engine queries also ride arbitrary UDP ports.
+    if dht::looks_like_dht(udp_payload) {
+        return dht::dissect_dht(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if source_query::looks_like_source(udp_payload) {
+        return source_query::dissect_source_query(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     // User-defined plugins claim what no built-in dissector recognised
     // (see crate::plugins) — they never shadow the protocols above.

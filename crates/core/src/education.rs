@@ -1337,6 +1337,112 @@ Clients talk to it with this binary protocol — Info messages for cluster state
 AS_MSG for data operations.",
             look_for: "\"Aerospike Message (AS_MSG)\" on TCP 3000.",
         },
+        Protocol::Avtp => Lesson {
+            title: "AVTP — audio/video over the car network",
+            summary: "IEEE 1722 media streaming, big in automotive Ethernet and pro AV.",
+            body: "As cars replace bundles of dedicated wires with a single Ethernet \
+network, they need to carry synchronised audio and video (cameras, microphones, \
+displays) with tight timing. AVTP does exactly that — time-aligned media streams \
+— and the same standard powers professional AV installations.",
+            look_for: "\"AVTP — AVTP Audio (AAF)\" (EtherType 0x22F0).",
+        },
+        Protocol::SomeIp => Lesson {
+            title: "SOME/IP — services inside a car",
+            summary: "How software components (ECUs) call each other in modern vehicles.",
+            body: "Modern cars run distributed software across many ECUs. SOME/IP lets one \
+component offer a service and others call it or subscribe to its events — remote \
+procedure calls and pub/sub for the vehicle. Its Service Discovery variant \
+advertises what's available.",
+            look_for: "\"SOME/IP Request — service 0x1234\" on UDP/TCP 30490+.",
+        },
+        Protocol::Doip => Lesson {
+            title: "DoIP — plugging into a car over Ethernet",
+            summary: "Carries vehicle diagnostics (fault codes, flashing) over IP.",
+            body: "When a garage tool reads your car's fault codes or updates an ECU's \
+firmware, it increasingly does so over Ethernet using DoIP: it finds the vehicle, \
+activates a diagnostic route, then tunnels the UDS diagnostic messages to the \
+target ECU.",
+            look_for: "\"DoIP Diagnostic message\" on UDP/TCP 13400.",
+        },
+        Protocol::Xcp => Lesson {
+            title: "XCP — tuning an ECU live",
+            summary: "Reads and calibrates ECU variables while the engine runs.",
+            body: "Engineers developing an engine or controller need to watch internal \
+variables and tweak calibration constants in real time. XCP is the standard \
+measurement-and-calibration protocol for that, running over CAN, Ethernet (as \
+here) and other links.",
+            look_for: "\"XCP CONNECT / positive response\" on UDP/TCP 5555.",
+        },
+        Protocol::Matter => Lesson {
+            title: "Matter — smart home, one standard",
+            summary: "The cross-vendor protocol so smart-home devices finally interoperate.",
+            body: "Matter (backed by Apple, Google, Amazon and others) aims to end the \
+smart-home tower of Babel: a lamp, lock or sensor from any vendor speaks the same \
+secure protocol over IP, so any hub can control it. You'll see it around smart-home \
+gear and Thread border routers.",
+            look_for: "\"Matter message (format v0)\" on UDP 5540.",
+        },
+        Protocol::Afp => Lesson {
+            title: "AFP — Mac file sharing",
+            summary: "Apple's file-sharing protocol for mounting shared volumes on a Mac.",
+            body: "AFP is how Macs traditionally shared files and mounted network volumes \
+(before Apple moved toward SMB). It's framed by DSI and opens with a session \
+handshake. Seeing it means Apple file sharing, often to a NAS or older macOS \
+server.",
+            look_for: "\"AFP/DSI OpenSession request\" on TCP 548.",
+        },
+        Protocol::Dht => Lesson {
+            title: "BitTorrent DHT — trackerless torrents",
+            summary: "A distributed hash table that lets peers find each other with no tracker.",
+            body: "Torrents originally needed a central tracker to introduce peers. The DHT \
+removes it: every client is a node in a giant distributed lookup table, so peers \
+find each other directly. It's a lot of small UDP queries — ping, find_node, \
+get_peers, announce_peer.",
+            look_for: "\"BitTorrent DHT get_peers\" on random UDP ports.",
+        },
+        Protocol::Gnutella => Lesson {
+            title: "Gnutella — decentralised file sharing",
+            summary: "An early fully-decentralised peer-to-peer file-sharing network.",
+            body: "Gnutella was one of the first file-sharing networks with no central \
+server at all — peers connect to each other and flood search queries across the \
+mesh. A connection opens with a recognisable \"GNUTELLA CONNECT\" handshake.",
+            look_for: "\"Gnutella handshake — GNUTELLA CONNECT\" on TCP 6346.",
+        },
+        Protocol::Edonkey => Lesson {
+            title: "eDonkey / eMule — P2P file sharing",
+            summary: "A once-huge peer-to-peer network for sharing large files.",
+            body: "The eDonkey network (and its popular eMule client) let users share and \
+reassemble large files from many peers, coordinated by servers and later a Kademlia \
+DHT. The protocol marker byte distinguishes plain eDonkey from eMule's extensions.",
+            look_for: "\"eMule extended message\" on TCP 4662.",
+        },
+        Protocol::SourceQuery => Lesson {
+            title: "Source Query (A2S) — game server info",
+            summary: "How game clients and server browsers ask what's running on a server.",
+            body: "The A2S query protocol lets a client or a server browser ask a game \
+server for its name, map, player list and rules — the data you see in a server \
+browser. Used by Valve's Source engine and many other games. It's a small \
+connectionless UDP request/response.",
+            look_for: "\"Source Query A2S_INFO request\" on UDP (often 27015).",
+        },
+        Protocol::Minecraft => Lesson {
+            title: "Minecraft — the Java Edition protocol",
+            summary: "How the Minecraft client and server talk (logins, world updates, chat).",
+            body: "Minecraft Java Edition speaks its own TCP protocol: length-prefixed \
+packets that start with a handshake, then move through login into play — carrying \
+world chunks, entity movement and chat. The legacy server-list ping is a special \
+older format.",
+            look_for: "\"Minecraft handshake\" on TCP 25565.",
+        },
+        Protocol::Mumble => Lesson {
+            title: "Mumble — low-latency voice chat",
+            summary: "A voice-chat protocol (control over TCP, audio over UDP).",
+            body: "Mumble is a voice-chat system popular with gamers and teams for its low \
+latency. A TLS-protected TCP control channel handles logins, channels and text; the \
+actual voice audio travels over a separate UDP path. You'll see the control messages \
+here.",
+            look_for: "\"Mumble Authenticate\" / \"Mumble UserState\" on TCP 64738.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1584,6 +1690,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Nsq,
         Protocol::Zmtp,
         Protocol::Aerospike,
+        Protocol::Avtp,
+        Protocol::SomeIp,
+        Protocol::Doip,
+        Protocol::Xcp,
+        Protocol::Matter,
+        Protocol::Afp,
+        Protocol::Dht,
+        Protocol::Gnutella,
+        Protocol::Edonkey,
+        Protocol::SourceQuery,
+        Protocol::Minecraft,
+        Protocol::Mumble,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -1824,6 +1942,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Nsq => "An NSQ message (TCP 4150) — a realtime distributed message queue.",
         Protocol::Zmtp => "A ZMTP/ZeroMQ message — brokerless messaging between applications.",
         Protocol::Aerospike => "An Aerospike message (TCP 3000) — a low-latency key-value database.",
+        Protocol::Avtp => "An AVTP frame (EtherType 0x22F0) — time-synced audio/video (automotive Ethernet / pro AV).",
+        Protocol::SomeIp => "A SOME/IP message (UDP/TCP 30490+) — service-oriented communication between car ECUs.",
+        Protocol::Doip => "A DoIP message (UDP/TCP 13400) — vehicle diagnostics carried over Ethernet.",
+        Protocol::Xcp => "An XCP message (UDP/TCP 5555) — live ECU measurement and calibration.",
+        Protocol::Matter => "A Matter message (UDP 5540) — the cross-vendor smart-home standard.",
+        Protocol::Afp => "An AFP message (TCP 548) — Apple Filing Protocol for Mac file sharing.",
+        Protocol::Dht => "A BitTorrent DHT message — trackerless peer discovery over UDP.",
+        Protocol::Gnutella => "A Gnutella message (TCP 6346) — decentralised peer-to-peer file sharing.",
+        Protocol::Edonkey => "An eDonkey/eMule message (TCP 4662) — peer-to-peer file sharing.",
+        Protocol::SourceQuery => "A Source A2S query — a game client/browser asking a server for its info.",
+        Protocol::Minecraft => "A Minecraft message (TCP 25565) — the Java Edition client/server protocol.",
+        Protocol::Mumble => "A Mumble control message (TCP 64738) — low-latency voice-chat signalling.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -1870,7 +2000,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 150);
+        assert_eq!(all_lessons().len(), 162);
     }
 
     #[test]

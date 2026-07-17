@@ -304,6 +304,30 @@ pub enum Protocol {
     Zmtp,
     /// Aerospike key-value database (TCP 3000).
     Aerospike,
+    /// AVTP / IEEE 1722 audio-video transport (EtherType 0x22F0).
+    Avtp,
+    /// SOME/IP automotive service middleware (UDP/TCP 30490+).
+    SomeIp,
+    /// DoIP diagnostics over IP (UDP/TCP 13400).
+    Doip,
+    /// XCP ECU measurement/calibration (UDP/TCP 5555).
+    Xcp,
+    /// Matter smart-home protocol (UDP 5540).
+    Matter,
+    /// AFP Apple Filing Protocol (TCP 548).
+    Afp,
+    /// BitTorrent DHT / KRPC peer discovery (dynamic UDP).
+    Dht,
+    /// Gnutella peer-to-peer file sharing (TCP 6346).
+    Gnutella,
+    /// eDonkey/eMule peer-to-peer file sharing (TCP 4662).
+    Edonkey,
+    /// Source engine game-server query (A2S, UDP).
+    SourceQuery,
+    /// Minecraft Java Edition protocol (TCP 25565).
+    Minecraft,
+    /// Mumble voice-chat control (TCP 64738).
+    Mumble,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -484,6 +508,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Nsq => write!(f, "NSQ"),
             Protocol::Zmtp => write!(f, "ZMTP"),
             Protocol::Aerospike => write!(f, "Aerospike"),
+            Protocol::Avtp => write!(f, "AVTP"),
+            Protocol::SomeIp => write!(f, "SOME/IP"),
+            Protocol::Doip => write!(f, "DoIP"),
+            Protocol::Xcp => write!(f, "XCP"),
+            Protocol::Matter => write!(f, "Matter"),
+            Protocol::Afp => write!(f, "AFP"),
+            Protocol::Dht => write!(f, "BitTorrent DHT"),
+            Protocol::Gnutella => write!(f, "Gnutella"),
+            Protocol::Edonkey => write!(f, "eDonkey"),
+            Protocol::SourceQuery => write!(f, "Source Query"),
+            Protocol::Minecraft => write!(f, "Minecraft"),
+            Protocol::Mumble => write!(f, "Mumble"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
