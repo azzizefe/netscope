@@ -5,9 +5,9 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bacnet, bfd, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, gtp, hsrp, kerberos, l2tp, nbns,
-    netflow, ntp, openvpn, qpack, radius, rip, rmcp, rtp, sflow, sip, snmp, ssdp, stun, syslog,
-    tftp, vxlan, wireguard, wsd, DissectedResult,
+    bacnet, bfd, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, glbp, gtp, hsrp, kerberos, l2tp, mgcp,
+    nbds, nbns, netflow, ntp, openvpn, qpack, radius, rip, rmcp, rtp, sflow, sip, snmp, ssdp, stun,
+    syslog, tftp, vxlan, wccp, wireguard, wol, wsd, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -143,6 +143,20 @@ pub fn dissect_udp(
     if on(1985) {
         return hsrp::dissect_hsrp(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
+    // Cisco load-balancing, web-cache redirection, VoIP gateway control and
+    // legacy NetBIOS datagrams.
+    if on(3222) {
+        return glbp::dissect_glbp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(2048) {
+        return wccp::dissect_wccp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(2427) || on(2727) {
+        return mgcp::dissect_mgcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(138) {
+        return nbds::dissect_nbds(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
@@ -152,6 +166,11 @@ pub fn dissect_udp(
         if let Some(r) = vxlan::dissect_vxlan(src_ip, dst_ip, src_port, dst_port, udp_payload) {
             return r;
         }
+    }
+    // Wake-on-LAN magic packets are sent to assorted UDP ports (7/9/…), so match
+    // the unmistakable payload rather than a port.
+    if wol::looks_like_wol(udp_payload) {
+        return wol::dissect_wol(udp_payload);
     }
     // DTLS rides dynamically negotiated ports (WebRTC/VPN media), so recognise
     // it structurally from its record header before falling through to plugins.
