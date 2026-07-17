@@ -3,11 +3,13 @@
 pub mod amqp;
 pub mod arp;
 pub mod bacnet;
+pub mod beanstalk;
 pub mod bfd;
 pub mod bgp;
 pub mod bittorrent;
 pub mod bluetooth;
 pub mod can;
+pub mod capwap;
 pub mod cassandra;
 pub mod coap;
 pub mod dccp;
@@ -25,10 +27,15 @@ pub mod ethernet;
 pub mod finger;
 pub mod fix;
 pub mod ftp;
+pub mod gearman;
+pub mod geneve;
 pub mod git;
 pub mod glbp;
+pub mod goose;
+pub mod graphite;
 pub mod gre;
 pub mod gtp;
+pub mod gvcp;
 pub mod hl7;
 pub mod hsrp;
 pub mod http;
@@ -40,6 +47,7 @@ pub mod imap;
 pub mod ip;
 pub mod irc;
 pub mod ipsec;
+pub mod isakmp;
 pub mod iscsi;
 pub mod kafka;
 pub mod kerberos;
@@ -71,6 +79,7 @@ pub mod pop3;
 pub mod postgres;
 pub mod pppoe;
 pub mod profinet;
+pub mod ptp;
 pub mod qpack;
 pub mod radiotap;
 pub mod radius;
@@ -80,6 +89,8 @@ pub mod rfb;
 pub mod rip;
 pub mod rlogin;
 pub mod rmcp;
+pub mod rpc;
+pub mod rsvp;
 pub mod rtmp;
 pub mod rtp;
 pub mod rtsp;
@@ -105,6 +116,7 @@ pub mod tcp;
 pub mod tcp_analysis;
 pub mod tds;
 pub mod telnet;
+pub mod teredo;
 pub mod tftp;
 pub mod tls;
 pub mod udp;
@@ -235,6 +247,8 @@ const ETHERTYPE_PPPOE_SESS: u16 = 0x8864; // PPPoE session stage
 const ETHERTYPE_EAPOL: u16 = 0x888E; // 802.1X port authentication (EAPOL)
 const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
+const ETHERTYPE_GOOSE: u16 = 0x88B8; // IEC 61850 GOOSE substation events
+const ETHERTYPE_PTP: u16 = 0x88F7; // IEEE 1588 Precision Time Protocol
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
@@ -262,6 +276,8 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_EAPOL => eapol::dissect_eapol(payload),
         ETHERTYPE_PROFINET => profinet::dissect_profinet(payload),
         ETHERTYPE_WOL => wol::dissect_wol(payload),
+        ETHERTYPE_GOOSE => goose::dissect_goose(payload),
+        ETHERTYPE_PTP => ptp::dissect_ptp_l2(payload),
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
@@ -382,6 +398,7 @@ fn dispatch_transport(
         Some(47) => gre::dissect_gre(src_ip, dst_ip, &payload),
         Some(132) => sctp::dissect_sctp(src_ip, dst_ip, &payload),
         Some(33) => dccp::dissect_dccp(src_ip, dst_ip, &payload),
+        Some(46) => rsvp::dissect_rsvp(src_ip, dst_ip, &payload),
         // Interior routing (EIGRP 88, PIM 103) and gateway redundancy (VRRP 112).
         Some(88) => eigrp::dissect_eigrp(src_ip, dst_ip, &payload),
         Some(103) => pim::dissect_pim(src_ip, dst_ip, &payload),
@@ -950,6 +967,26 @@ mod tests {
         let r = dissect(&data);
         assert_eq!(r.protocol, Protocol::Fix);
         assert!(r.summary.contains("NewOrderSingle"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_rsvp_via_dissect() {
+        let r = dissect(&build_ipv4_proto(46, &[0x10, 0x01, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Rsvp);
+        assert_eq!(r.summary, "RSVP Path");
+    }
+
+    #[test]
+    fn end_to_end_goose_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88B8, &[0x00, 0x01, 0x00, 0x10]));
+        assert_eq!(r.protocol, Protocol::Goose);
+    }
+
+    #[test]
+    fn end_to_end_ptp_l2_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88F7, &[0x00, 0x02, 0x00, 0x2c]));
+        assert_eq!(r.protocol, Protocol::Ptp);
+        assert!(r.summary.contains("Sync"), "{}", r.summary);
     }
 
     #[test]

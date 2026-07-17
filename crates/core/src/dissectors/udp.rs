@@ -5,9 +5,10 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bacnet, bfd, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, glbp, gtp, hsrp, kerberos, l2tp, mgcp,
-    nbds, nbns, netflow, ntp, openvpn, qpack, radius, rip, rmcp, rtp, sflow, sip, snmp, ssdp, stun,
-    syslog, tftp, vxlan, wccp, wireguard, wol, wsd, DissectedResult,
+    bacnet, bfd, capwap, coap, dhcp, dhcpv6, dnp3, dns, dtls, enip, geneve, glbp, gtp, gvcp, hsrp,
+    isakmp, kerberos, l2tp, mgcp, nbds, nbns, netflow, ntp, openvpn, ptp, qpack, radius, rip, rmcp,
+    rpc, rtp, sflow, sip, snmp, ssdp, stun, syslog, teredo, tftp, vxlan, wccp, wireguard, wol, wsd,
+    DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -156,6 +157,29 @@ pub fn dissect_udp(
     }
     if on(138) {
         return nbds::dissect_nbds(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // VPN key exchange, overlays, wireless AP control, IPv6 transition, timing,
+    // machine vision and RPC.
+    if on(500) || on(4500) {
+        return isakmp::dissect_isakmp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(6081) {
+        return geneve::dissect_geneve(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5246) || on(5247) {
+        return capwap::dissect_capwap(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3544) {
+        return teredo::dissect_teredo(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(319) || on(320) {
+        return ptp::dissect_ptp_udp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3956) {
+        return gvcp::dissect_gvcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(111) || on(2049) {
+        return rpc::dissect_rpc(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);

@@ -135,6 +135,21 @@ const KNOWN_PROTOS: &[&str] = &[
     "s7comm",
     "iec104",
     "ldp",
+    "goose",
+    "ptp",
+    "rsvp",
+    "isakmp",
+    "ike",
+    "geneve",
+    "capwap",
+    "teredo",
+    "gvcp",
+    "rpc",
+    "nfs",
+    "portmap",
+    "graphite",
+    "gearman",
+    "beanstalk",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -293,6 +308,8 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "wol" | "wakeonlan" => pkt.protocol == Protocol::Wol,
         "nbds" => pkt.protocol == Protocol::Nbds,
         "iec104" => pkt.protocol == Protocol::Iec104,
+        "ike" => pkt.protocol == Protocol::Isakmp,
+        "nfs" | "portmap" => pkt.protocol == Protocol::Rpc,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

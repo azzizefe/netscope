@@ -8,11 +8,11 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    amqp, bgp, bittorrent, cassandra, diameter, dicom, dnp3, enip, finger, fix, ftp, git, hl7,
-    http, http2, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp, memcached, modbus, mongodb,
-    mqtt, mysql, nats, nntp, ntlm, opcua, openflow, openvpn, pop3, postgres, rdp, redis, rfb,
-    rlogin, rtmp, rtsp, s7comm, smb, smpp, smtp, socks, ssh, stomp, tacacs, tds, telnet, tls,
-    websocket, whois, xmpp, DissectedResult,
+    amqp, beanstalk, bgp, bittorrent, cassandra, diameter, dicom, dnp3, enip, finger, fix, ftp,
+    gearman, git, graphite, hl7, http, http2, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp,
+    memcached, modbus, mongodb, mqtt, mysql, nats, nntp, ntlm, opcua, openflow, openvpn, pop3,
+    postgres, rdp, redis, rfb, rlogin, rpc, rtmp, rtsp, s7comm, smb, smpp, smtp, socks, ssh, stomp,
+    tacacs, tds, telnet, tls, websocket, whois, xmpp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -426,6 +426,19 @@ fn dissect_tcp_inner(
         }
         if fix::looks_like_fix(tcp_payload) {
             return fix::dissect_fix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // RPC/NFS, metrics and job queues.
+        if on(111) || on(2049) {
+            return rpc::dissect_rpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2003) {
+            return graphite::dissect_graphite(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4730) {
+            return gearman::dissect_gearman(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(11300) {
+            return beanstalk::dissect_beanstalk(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their
