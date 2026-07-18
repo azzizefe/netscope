@@ -1655,6 +1655,108 @@ broker/connection/consumer info and the messages themselves. A deserialisation \
 flaw in it caused a well-known critical CVE, so its exposure matters.",
             look_for: "\"OpenWire WireFormatInfo\" / \"ActiveMQMessage\" on TCP 61616.",
         },
+        Protocol::Zookeeper => Lesson {
+            title: "ZooKeeper — keeping a cluster in agreement",
+            summary: "The coordination service behind Kafka, HBase and many clusters.",
+            body: "Distributed systems need somewhere to agree on who is the leader, what \
+the config is and which nodes are alive. ZooKeeper is that shared source of \
+truth, exposing a small filesystem-like tree of znodes with watches. If it's \
+struggling, the systems on top of it struggle too.",
+            look_for: "\"ZooKeeper getData\" / \"ZooKeeper ping\" on TCP 2181.",
+        },
+        Protocol::HadoopRpc => Lesson {
+            title: "Hadoop RPC — talking to HDFS",
+            summary: "The call protocol between clients and the HDFS NameNode.",
+            body: "Reading a file from HDFS starts with asking the NameNode where its \
+blocks live. That conversation is Hadoop RPC, which opens with an \"hrpc\" magic \
+and a version, then carries protobuf-encoded calls.",
+            look_for: "\"Hadoop RPC handshake (v9)\" on TCP 8020.",
+        },
+        Protocol::Fluentd => Lesson {
+            title: "Fluentd — collecting logs",
+            summary: "Agents forwarding structured log events to a collector.",
+            body: "Fluentd unifies logging: agents on each host tag events and forward \
+them, MessagePack-encoded, to aggregators that route them onward to storage or \
+search. Seeing this is your logging pipeline at work.",
+            look_for: "\"Fluentd forward (3 fields, msgpack)\" on TCP 24224.",
+        },
+        Protocol::Beats => Lesson {
+            title: "Elastic Beats — shipping logs to Logstash",
+            summary: "Filebeat and friends sending events into the Elastic stack.",
+            body: "Beats are lightweight shippers that tail logs or collect metrics and \
+send them to Logstash or Elasticsearch. The protocol batches events in windows \
+and waits for acknowledgements, so nothing is lost if the far end is slow.",
+            look_for: "\"Beats v2 JSON event\" / \"window size\" on TCP 5044.",
+        },
+        Protocol::Clamav => Lesson {
+            title: "ClamAV — scanning content for malware",
+            summary: "A mail or file gateway handing data to the clamd daemon.",
+            body: "Rather than every application embedding a scanner, they stream content \
+to clamd and get a verdict back. A reply ending in FOUND means a signature \
+matched — worth noticing in a capture, because it means something malicious was \
+in the traffic.",
+            look_for: "\"ClamAV INSTREAM\", or a reply containing FOUND, on TCP 3310.",
+        },
+        Protocol::Spamd => Lesson {
+            title: "spamd — scoring mail for spam",
+            summary: "A mail server asking SpamAssassin to judge a message.",
+            body: "When mail arrives, the server can hand it to spamd, which applies \
+rules and returns a spam score and symbols. The client speaks SPAMC and the \
+daemon answers SPAMD, with the message body in between.",
+            look_for: "\"spamd CHECK request\" on TCP 783.",
+        },
+        Protocol::ManageSieve => Lesson {
+            title: "ManageSieve — server-side mail rules",
+            summary: "A mail client uploading the filters that sort your inbox.",
+            body: "Sieve scripts move, file and reject mail on the server, so the rules \
+apply even when your client is closed. ManageSieve is the small text protocol a \
+client uses to list, upload and activate those scripts.",
+            look_for: "\"ManageSieve PUTSCRIPT\" on TCP 4190.",
+        },
+        Protocol::Relp => Lesson {
+            title: "RELP — syslog that doesn't lose messages",
+            summary: "rsyslog's acknowledged transport for reliable log delivery.",
+            body: "Plain syslog over UDP silently drops messages under load — bad when \
+the logs are evidence. RELP adds transaction numbers and acknowledgements over \
+TCP, so the sender knows a message was accepted and can retry if not.",
+            look_for: "\"RELP syslog message (txn 3)\" on TCP 2514.",
+        },
+        Protocol::Lpd => Lesson {
+            title: "LPD — the classic print protocol",
+            summary: "Sending a job to a print queue, Unix-style.",
+            body: "LPD is the long-standing line-printer protocol still spoken by many \
+network printers and print servers: a one-byte command selects the action (send a \
+job, query the queue, remove jobs) and names the queue. No authentication or \
+encryption.",
+            look_for: "\"LPD — receive a printer job on lp\" on TCP 515.",
+        },
+        Protocol::Ident => Lesson {
+            title: "Ident — who owns this connection?",
+            summary: "A legacy service naming the local user behind a TCP connection.",
+            body: "Ident lets a remote server ask your machine which user account opened \
+a connection — historically used by IRC servers and mail relays. Since it hands \
+out local usernames on request and is trivially spoofed, it's usually disabled \
+now, so seeing it is unusual.",
+            look_for: "\"Ident query — ports 6193, 23\" on TCP 113.",
+        },
+        Protocol::Gopher => Lesson {
+            title: "Gopher — the web before the web",
+            summary: "A menu-driven document protocol that predates HTTP.",
+            body: "Gopher serves documents through nested menus: the client sends a \
+selector string and gets back either a document or a tab-separated menu where each \
+line's first character says what type the item is. Largely historical, with a \
+small enthusiast revival.",
+            look_for: "\"Gopher — root menu request\" on TCP 70.",
+        },
+        Protocol::Rsh => Lesson {
+            title: "rsh — an obsolete remote shell",
+            summary: "Runs a command on another machine, entirely in the clear.",
+            body: "rsh executes a command on a remote host, trusting the client purely by \
+hostname and a local user list. The username and the command — and anything it \
+prints — cross the network unencrypted. SSH replaced it decades ago, so rsh \
+traffic today is a genuine finding.",
+            look_for: "\"rsh — alice runs \\\"cat /etc/passwd\\\"\" on TCP 514.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1938,6 +2040,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Clickhouse,
         Protocol::Pulsar,
         Protocol::Openwire,
+        Protocol::Zookeeper,
+        Protocol::HadoopRpc,
+        Protocol::Fluentd,
+        Protocol::Beats,
+        Protocol::Clamav,
+        Protocol::Spamd,
+        Protocol::ManageSieve,
+        Protocol::Relp,
+        Protocol::Lpd,
+        Protocol::Ident,
+        Protocol::Gopher,
+        Protocol::Rsh,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -2214,6 +2328,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Clickhouse => "A ClickHouse native message (TCP 9000) — columnar analytics query or data.",
         Protocol::Pulsar => "An Apache Pulsar command (TCP 6650) — distributed pub/sub messaging.",
         Protocol::Openwire => "An OpenWire message (TCP 61616) — Apache ActiveMQ's native protocol.",
+        Protocol::Zookeeper => "A ZooKeeper message (TCP 2181) — cluster coordination and leader election.",
+        Protocol::HadoopRpc => "A Hadoop RPC call (TCP 8020) — a client talking to the HDFS NameNode.",
+        Protocol::Fluentd => "A Fluentd forward message (TCP 24224) — structured logs heading to a collector.",
+        Protocol::Beats => "An Elastic Beats frame (TCP 5044) — Filebeat shipping events to Logstash.",
+        Protocol::Clamav => "A ClamAV daemon message (TCP 3310) — content being scanned for malware.",
+        Protocol::Spamd => "A spamd message (TCP 783) — SpamAssassin scoring a mail message.",
+        Protocol::ManageSieve => "A ManageSieve message (TCP 4190) — managing server-side mail filters.",
+        Protocol::Relp => "A RELP frame (TCP 2514) — reliable, acknowledged syslog delivery.",
+        Protocol::Lpd => "An LPD message (TCP 515) — a print job or queue query.",
+        Protocol::Ident => "An Ident message (TCP 113) — a legacy lookup of the user behind a connection.",
+        Protocol::Gopher => "A Gopher message (TCP 70) — the pre-web menu/document protocol.",
+        Protocol::Rsh => "An rsh session (TCP 514) — a cleartext remote command; prefer SSH.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -2260,7 +2386,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 186);
+        assert_eq!(all_lessons().len(), 198);
     }
 
     #[test]

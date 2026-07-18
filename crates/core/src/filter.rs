@@ -223,6 +223,21 @@ const KNOWN_PROTOS: &[&str] = &[
     "pulsar",
     "openwire",
     "activemq",
+    "zookeeper",
+    "zk",
+    "hadooprpc",
+    "hdfs",
+    "fluentd",
+    "beats",
+    "clamav",
+    "spamd",
+    "managesieve",
+    "sieve",
+    "relp",
+    "lpd",
+    "ident",
+    "gopher",
+    "rsh",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -402,6 +417,9 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "rpkirtr" => pkt.protocol == Protocol::RpkiRtr,
         "neo4j" => pkt.protocol == Protocol::Bolt,
         "activemq" => pkt.protocol == Protocol::Openwire,
+        "zk" => pkt.protocol == Protocol::Zookeeper,
+        "hadooprpc" | "hdfs" => pkt.protocol == Protocol::HadoopRpc,
+        "sieve" => pkt.protocol == Protocol::ManageSieve,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

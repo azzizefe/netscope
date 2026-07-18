@@ -376,6 +376,30 @@ pub enum Protocol {
     Pulsar,
     /// OpenWire — Apache ActiveMQ native protocol (TCP 61616).
     Openwire,
+    /// ZooKeeper coordination service (TCP 2181).
+    Zookeeper,
+    /// Hadoop RPC / HDFS NameNode (TCP 8020).
+    HadoopRpc,
+    /// Fluentd forward log collection (TCP 24224).
+    Fluentd,
+    /// Elastic Beats log shipping (TCP 5044).
+    Beats,
+    /// ClamAV antivirus daemon (TCP 3310).
+    Clamav,
+    /// SpamAssassin spamd (TCP 783).
+    Spamd,
+    /// ManageSieve mail-filter management (TCP 4190).
+    ManageSieve,
+    /// RELP reliable syslog transport (TCP 2514).
+    Relp,
+    /// LPD line printer daemon (TCP 515).
+    Lpd,
+    /// Ident user lookup (TCP 113).
+    Ident,
+    /// Gopher document protocol (TCP 70).
+    Gopher,
+    /// rsh BSD remote shell (TCP 514).
+    Rsh,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -592,6 +616,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Clickhouse => write!(f, "ClickHouse"),
             Protocol::Pulsar => write!(f, "Pulsar"),
             Protocol::Openwire => write!(f, "OpenWire"),
+            Protocol::Zookeeper => write!(f, "ZooKeeper"),
+            Protocol::HadoopRpc => write!(f, "HadoopRPC"),
+            Protocol::Fluentd => write!(f, "Fluentd"),
+            Protocol::Beats => write!(f, "Beats"),
+            Protocol::Clamav => write!(f, "ClamAV"),
+            Protocol::Spamd => write!(f, "spamd"),
+            Protocol::ManageSieve => write!(f, "ManageSieve"),
+            Protocol::Relp => write!(f, "RELP"),
+            Protocol::Lpd => write!(f, "LPD"),
+            Protocol::Ident => write!(f, "Ident"),
+            Protocol::Gopher => write!(f, "Gopher"),
+            Protocol::Rsh => write!(f, "rsh"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
