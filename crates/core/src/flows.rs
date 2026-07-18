@@ -116,7 +116,19 @@ impl Transport {
             | Protocol::Bolt
             | Protocol::Clickhouse
             | Protocol::Pulsar
-            | Protocol::Openwire => Transport::Tcp,
+            | Protocol::Openwire
+            | Protocol::Zookeeper
+            | Protocol::HadoopRpc
+            | Protocol::Fluentd
+            | Protocol::Beats
+            | Protocol::Clamav
+            | Protocol::Spamd
+            | Protocol::ManageSieve
+            | Protocol::Relp
+            | Protocol::Lpd
+            | Protocol::Ident
+            | Protocol::Gopher
+            | Protocol::Rsh => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -478,7 +490,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Bolt
         | Protocol::Clickhouse
         | Protocol::Pulsar
-        | Protocol::Openwire => 3,
+        | Protocol::Openwire
+        | Protocol::Zookeeper
+        | Protocol::HadoopRpc
+        | Protocol::Fluentd
+        | Protocol::Beats
+        | Protocol::Clamav
+        | Protocol::Spamd
+        | Protocol::ManageSieve
+        | Protocol::Relp
+        | Protocol::Lpd
+        | Protocol::Ident
+        | Protocol::Gopher
+        | Protocol::Rsh => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,
