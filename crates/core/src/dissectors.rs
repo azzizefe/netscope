@@ -1460,3 +1460,82 @@ mod batch16_dispatch_check {
         assert_ne!(r.protocol, Protocol::Zrtp);
     }
 }
+
+/// Guards a defect class found in iax2.rs and then in four more dissectors:
+/// a match arm whose "unknown" fallback is a word the surrounding format
+/// string already prints, producing summaries like "IAX2 full frame — full
+/// frame", "collectd — part part" or "SPICE link — channel channel".
+///
+/// The unit tests of each dissector all passed while this was live, because
+/// they only ever exercised the *recognised* values. These cases deliberately
+/// feed values no arm matches.
+#[cfg(test)]
+mod unknown_value_summaries {
+    use super::*;
+
+    #[test]
+    fn unknown_values_do_not_repeat_the_label() {
+        let cases: Vec<(&str, String)> = vec![
+            (
+                "collectd — unknown part type 0x0999",
+                collectd::dissect_collectd(None, None, 25826, 25826, &[0x09, 0x99, 0, 4]).summary,
+            ),
+            (
+                "NBD request — command 99",
+                nbd::dissect_nbd(
+                    None,
+                    None,
+                    10809,
+                    10809,
+                    &[0x25, 0x60, 0x95, 0x13, 0, 0, 0x00, 0x63],
+                )
+                .summary,
+            ),
+            (
+                "Source Query message",
+                source_query::dissect_source_query(
+                    None,
+                    None,
+                    27015,
+                    27015,
+                    &[0xff, 0xff, 0xff, 0xff, b'Z'],
+                )
+                .summary,
+            ),
+            (
+                "SPICE link — channel type 9",
+                spice::dissect_spice(None, None, 5900, 5900, &{
+                    let mut p = b"REDQ".to_vec();
+                    p.extend_from_slice(&[0u8; 16]);
+                    p.push(9);
+                    p
+                })
+                .summary,
+            ),
+            (
+                "IAX2 full frame — unknown type 0",
+                iax2::dissect_iax2(None, None, 4569, 4569, &{
+                    let mut p = vec![0x80, 0x01];
+                    p.extend_from_slice(&[0u8; 9]);
+                    p
+                })
+                .summary,
+            ),
+        ];
+
+        for (want, got) in cases {
+            assert_eq!(got, want);
+            let words: Vec<String> = got
+                .split_whitespace()
+                .map(|w| {
+                    w.trim_matches(|c: char| !c.is_alphanumeric())
+                        .to_lowercase()
+                })
+                .filter(|w| w.len() > 2)
+                .collect();
+            for pair in words.windows(2) {
+                assert_ne!(pair[0], pair[1], "summary repeats a word: {got:?}");
+            }
+        }
+    }
+}

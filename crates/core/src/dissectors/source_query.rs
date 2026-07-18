@@ -31,7 +31,8 @@ pub fn dissect_source_query(
         Some(b'V') => "A2S_RULES request",
         Some(b'E') => "A2S_RULES response",
         Some(b'A') => "challenge",
-        _ => "query",
+        // "query" here would render as the self-repeating "Source Query query".
+        _ => "message",
     };
     DissectedResult {
         src_addr: src_ip,
