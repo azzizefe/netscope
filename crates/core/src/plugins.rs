@@ -21,6 +21,34 @@
 //! summary = "Redis — {first_line}"   # {name} {len} {src_port} {dst_port} {first_line}
 //! ```
 //!
+//! ## Lua summaries (optional)
+//!
+//! When the template isn't expressive enough, build the summary in Lua. This
+//! needs the `lua` cargo feature; without it the section is ignored and the
+//! template is used, so a plugin file stays portable either way:
+//!
+//! ```toml
+//! [lua]
+//! summary = '''
+//! local op = payload:byte(1) or 0
+//! return string.format("%s op=%d (%d bytes)", name, op, #payload)
+//! '''
+//! ```
+//!
+//! The script is the body of a function receiving `(payload, src_port,
+//! dst_port, name)` and returning a string; `payload` is a Lua string of raw
+//! bytes, so `payload:byte(i)` and `#payload` work on binary protocols.
+//!
+//! Scripts are deliberately confined. The VM gets only `string`, `table` and
+//! `math` — no `io`, `os`, `package` or `debug` — and the base library's
+//! loaders (`dofile`, `loadfile`, `load`) are removed, so a plugin cannot read
+//! files, spawn processes or pull in native code. Execution is capped by an
+//! instruction budget, so a runaway loop is aborted instead of stalling a
+//! dissector thread. Any error, timeout or non-string return simply falls back
+//! to the template: a broken plugin degrades, it never breaks dissection.
+//! Matching stays declarative, so Lua never runs for traffic a plugin's ports
+//! and prefix wouldn't have claimed anyway.
+//!
 //! Plugins run **after** every built-in dissector and **before** the generic
 //! "TCP/UDP — N bytes" fallback, so they can claim unknown traffic but never
 //! shadow a built-in protocol. Matched packets get
@@ -60,6 +88,19 @@ pub struct Plugin {
     pub matcher: Matcher,
     #[serde(default)]
     pub display: Display,
+    /// Optional Lua script that builds the summary. Needs the `lua` feature;
+    /// without it (or if the script errors) the `display` template is used.
+    #[serde(default)]
+    pub lua: Option<LuaScript>,
+}
+
+/// A plugin's Lua hook. Only the summary is scriptable — matching stays
+/// declarative so the hot path never enters Lua for traffic it won't claim.
+#[derive(Debug, Clone, Deserialize)]
+pub struct LuaScript {
+    /// Body of a function receiving `(payload, src_port, dst_port, name)` and
+    /// returning the summary string. `payload` is a Lua string of raw bytes.
+    pub summary: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -112,6 +153,14 @@ impl Plugin {
                 format!("plugin '{}': prefix_hex is not valid hex", plugin.name)
             })?;
         }
+        // Reject a malformed script at load time rather than silently falling
+        // back to the template on every packet.
+        #[cfg(feature = "lua")]
+        if let Some(script) = &plugin.lua {
+            if let Err(e) = lua_engine::check(&script.summary) {
+                anyhow::bail!("plugin '{}': invalid Lua summary: {e}", plugin.name);
+            }
+        }
         Ok(plugin)
     }
 
@@ -142,8 +191,22 @@ impl Plugin {
         true
     }
 
-    /// Render the summary template for a matched payload.
+    /// Build the summary for a matched payload: the Lua hook when the plugin
+    /// has one and it succeeds, otherwise the declarative template.
     fn summary(&self, src_port: u16, dst_port: u16, payload: &[u8]) -> String {
+        #[cfg(feature = "lua")]
+        if let Some(script) = &self.lua {
+            if let Some(s) =
+                lua_engine::summary(&script.summary, &self.name, src_port, dst_port, payload)
+            {
+                return s;
+            }
+        }
+        self.template_summary(src_port, dst_port, payload)
+    }
+
+    /// Render the declarative summary template for a matched payload.
+    fn template_summary(&self, src_port: u16, dst_port: u16, payload: &[u8]) -> String {
         self.display
             .summary
             .replace("{name}", &self.name)
@@ -151,6 +214,106 @@ impl Plugin {
             .replace("{src_port}", &src_port.to_string())
             .replace("{dst_port}", &dst_port.to_string())
             .replace("{first_line}", &truncate(&first_text_line(payload), 60))
+    }
+}
+
+/// Lua scripting for plugin summaries. Enabled by the `lua` feature; without
+/// it a plugin's `[lua]` section is ignored and the template is used instead.
+#[cfg(feature = "lua")]
+mod lua_engine {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+
+    /// Lua instructions a plugin script may execute before it is aborted, so a
+    /// runaway loop can never stall a dissector thread.
+    const INSTRUCTION_BUDGET: u32 = 200_000;
+
+    thread_local! {
+        /// One VM per dissector thread — `mlua::Lua` is not shareable, and the
+        /// pipeline dissects across a rayon pool.
+        static VM: RefCell<Option<mlua::Lua>> = const { RefCell::new(None) };
+        /// Chunks already compiled on this thread, keyed by script source.
+        static CACHE: RefCell<HashMap<String, mlua::Function>> =
+            RefCell::new(HashMap::new());
+    }
+
+    /// Build a deliberately small VM: string/table/math only. No `io`, `os`,
+    /// `package` or `debug`, so a plugin cannot touch the filesystem, spawn a
+    /// process or load native code.
+    fn new_vm() -> mlua::Result<mlua::Lua> {
+        let lua = mlua::Lua::new_with(
+            mlua::StdLib::STRING | mlua::StdLib::TABLE | mlua::StdLib::MATH,
+            mlua::LuaOptions::default(),
+        )?;
+        // The base library comes in regardless of the StdLib selection, and it
+        // carries loaders that can reach the filesystem or compile new chunks.
+        // Remove them explicitly — a plugin only needs to format a string.
+        let globals = lua.globals();
+        for name in ["dofile", "loadfile", "load", "loadstring", "collectgarbage"] {
+            globals.set(name, mlua::Value::Nil)?;
+        }
+        lua.set_hook(
+            mlua::HookTriggers::new().every_nth_instruction(INSTRUCTION_BUDGET),
+            |_lua, _debug| {
+                Err(mlua::Error::runtime(
+                    "plugin script exceeded its instruction budget",
+                ))
+            },
+        );
+        Ok(lua)
+    }
+
+    /// Run a plugin's summary script. Returns `None` on any error — a broken
+    /// script must never break dissection, the caller falls back to the
+    /// declarative template.
+    pub(super) fn summary(
+        script: &str,
+        name: &str,
+        src_port: u16,
+        dst_port: u16,
+        payload: &[u8],
+    ) -> Option<String> {
+        VM.with(|vm| {
+            let mut vm = vm.borrow_mut();
+            if vm.is_none() {
+                *vm = new_vm().ok();
+            }
+            let lua = vm.as_ref()?;
+
+            let func = CACHE.with(|cache| {
+                let mut cache = cache.borrow_mut();
+                if let Some(f) = cache.get(script) {
+                    return Some(f.clone());
+                }
+                // Wrap the user's body so it can simply `return "..."`.
+                let chunk =
+                    format!("return function(payload, src_port, dst_port, name)\n{script}\nend");
+                let f: mlua::Function = lua.load(&chunk).eval().ok()?;
+                cache.insert(script.to_string(), f.clone());
+                Some(f)
+            })?;
+
+            let out: mlua::String = func
+                .call((
+                    lua.create_string(payload).ok()?,
+                    src_port,
+                    dst_port,
+                    name.to_string(),
+                ))
+                .ok()?;
+            Some(out.to_string_lossy().to_string())
+        })
+    }
+
+    /// Compile a script without running it, so `Plugin::parse` can reject
+    /// syntax errors at load time rather than silently at dissect time.
+    pub(super) fn check(script: &str) -> Result<(), String> {
+        let lua = new_vm().map_err(|e| e.to_string())?;
+        let chunk = format!("return function(payload, src_port, dst_port, name)\n{script}\nend");
+        lua.load(&chunk)
+            .eval::<mlua::Function>()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
     }
 }
 
@@ -497,5 +660,84 @@ mod tests {
         let outcome = load_dir(&dir.join("missing"));
         assert_eq!(outcome.loaded, 0);
         assert!(installed().is_empty());
+    }
+}
+
+/// Behaviour of the Lua summary hook: it must work, stay sandboxed, and never
+/// be able to break dissection.
+#[cfg(all(test, feature = "lua"))]
+mod lua_tests {
+    use super::*;
+
+    fn plugin_with_script(script: &str) -> Plugin {
+        let toml = format!(
+            "name = \"Demo\"\ntransport = \"tcp\"\nports = [9999]\n\n\
+             [display]\nsummary = \"TEMPLATE {{len}}\"\n\n\
+             [lua]\nsummary = '''\n{script}\n'''\n"
+        );
+        Plugin::parse(&toml).expect("plugin should parse")
+    }
+
+    #[test]
+    fn script_builds_the_summary_from_the_payload() {
+        let p = plugin_with_script(
+            r#"return string.format("%s op=%d len=%d", name, payload:byte(1), #payload)"#,
+        );
+        assert_eq!(p.summary(1000, 9999, &[0x07, 0xaa, 0xbb]), "Demo op=7 len=3");
+    }
+
+    #[test]
+    fn script_receives_both_ports() {
+        let p = plugin_with_script(r#"return string.format("%d->%d", src_port, dst_port)"#);
+        assert_eq!(p.summary(1234, 9999, b"x"), "1234->9999");
+    }
+
+    #[test]
+    fn payload_is_raw_bytes_not_utf8_text() {
+        // A non-UTF-8 byte must still reach the script intact.
+        let p = plugin_with_script(r#"return tostring(payload:byte(1))"#);
+        assert_eq!(p.summary(1000, 9999, &[0xff]), "255");
+    }
+
+    #[test]
+    fn runtime_error_falls_back_to_the_template() {
+        let p = plugin_with_script(r#"error("boom")"#);
+        assert_eq!(p.summary(1000, 9999, b"abcd"), "TEMPLATE 4");
+    }
+
+    #[test]
+    fn wrong_return_type_falls_back_to_the_template() {
+        let p = plugin_with_script("return {}");
+        assert_eq!(p.summary(1000, 9999, b"abcd"), "TEMPLATE 4");
+    }
+
+    #[test]
+    fn runaway_loop_is_aborted_and_falls_back() {
+        // Without the instruction budget this would hang the dissector thread.
+        let p = plugin_with_script("while true do end");
+        assert_eq!(p.summary(1000, 9999, b"abcd"), "TEMPLATE 4");
+    }
+
+    #[test]
+    fn sandbox_hides_io_os_and_package() {
+        for global in ["io", "os", "package", "require", "dofile", "loadfile", "load", "loadstring", "debug"] {
+            let p = plugin_with_script(&format!("return tostring({global})"));
+            assert_eq!(
+                p.summary(1000, 9999, b"x"),
+                "nil",
+                "`{global}` must not be reachable from a plugin script"
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_script_is_rejected_at_load_time() {
+        let toml = "name = \"Bad\"\ntransport = \"tcp\"\nports = [1]\n\n\
+                    [lua]\nsummary = \"return (((\"\n";
+        let err = Plugin::parse(toml).expect_err("syntax error should be rejected");
+        assert!(
+            err.to_string().contains("invalid Lua summary"),
+            "unexpected error: {err}"
+        );
     }
 }
