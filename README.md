@@ -36,7 +36,7 @@
 | **Size** | ✅ ~8 MB TUI binary · ~7-10 MB desktop installer | ⚪ ~85 MB installer (Windows) |
 | **Interprets your capture** | ✅ Automatic security & privacy findings, JA3/JA4, per-site X-ray | ❌ Shows everything, interprets nothing |
 | **Acts on traffic** | ✅ Block a host live via a real OS firewall rule | ❌ Passive only, by design |
-| **Protocol coverage** | ⚪ **178 protocols** — the common ones, plus industrial/automotive/telecom | ✅ **~3000** — unmatched breadth and decode depth |
+| **Protocol coverage** | ⚪ **250 protocols** — broad coverage, but decode depth varies: some are fully parsed, others recognised and labelled | ✅ **~3000** — unmatched breadth and decode depth |
 | **TLS decryption** | ✅ TLS 1.3 + 1.2 AEAD (ECDHE, GCM & ChaCha20) via `SSLKEYLOGFILE` | ✅ Broader — also legacy CBC suites and QUIC |
 | **Deep analysis** | ⚪ Summaries, Follow Stream, protocol tree | ✅ Decode-as, VoIP playback, IO graphs, Lua/C plugins |
 | **Speed** | ✅ 100k+ pkt/s dissect throughput | ⚪ Can slow down on very large captures |
@@ -50,7 +50,7 @@ decryption or forensic depth, Wireshark is still the reference.
 
 ## Features
 
-- **🗂 178 protocols out of the box** — from everyday (DNS, HTTP/2, TLS, QUIC, SMB) to
+- **🗂 250 protocols out of the box** — from everyday (DNS, HTTP/2, TLS, QUIC, SMB) to
   industrial (Modbus, S7comm, PROFINET, EtherCAT, IEC 61850 GOOSE/SV, KNX, HART-IP),
   automotive (SOME/IP, DoIP, XCP, AVTP), telecom (PFCP, GTP, Diameter, Megaco, Skinny),
   healthcare/finance (DICOM, HL7, FIX) and cloud infra (Kafka, NATS, gRPC, ZeroMQ,
@@ -404,7 +404,7 @@ ip.addr == 1.2.3.4            # either endpoint is this IP
 ip.src == 10.0.0.5            # source only (also ip.dst)
 tcp.port == 443              # TCP on port 443 (also udp.port, port)
 frame.len > 1000             # packets larger than 1000 bytes (also len)
-dns                          # bare protocol name — any of the 178 supported protocols
+dns                          # bare protocol name — any of the 250 supported protocols
                              # (tcp, udp, http, tls, quic, dns, ssh, smb, rdp, sip, rtp,
                              #  modbus, s7comm, profinet, ethercat, goose, knx, dicom, hl7,
                              #  fix, someip, doip, pfcp, gtp, diameter, kafka, nats, dds…)
