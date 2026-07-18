@@ -37,7 +37,7 @@
 | **Interprets your capture** | ✅ Automatic security & privacy findings, JA3/JA4, per-site X-ray | ❌ Shows everything, interprets nothing |
 | **Acts on traffic** | ✅ Block a host live via a real OS firewall rule | ❌ Passive only, by design |
 | **Protocol coverage** | ⚪ **178 protocols** — the common ones, plus industrial/automotive/telecom | ✅ **~3000** — unmatched breadth and decode depth |
-| **TLS decryption** | ✅ TLS 1.3 + 1.2 (incl. ECDHE) via `SSLKEYLOGFILE`, or an RSA key | ✅ Broader — also CBC/ChaCha suites and QUIC |
+| **TLS decryption** | ✅ TLS 1.3 + 1.2 AEAD (ECDHE, GCM & ChaCha20) via `SSLKEYLOGFILE` | ✅ Broader — also legacy CBC suites and QUIC |
 | **Deep analysis** | ⚪ Summaries, Follow Stream, protocol tree | ✅ Decode-as, VoIP playback, IO graphs, Lua/C plugins |
 | **Speed** | ✅ 100k+ pkt/s dissect throughput | ⚪ Can slow down on very large captures |
 

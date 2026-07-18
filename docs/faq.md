@@ -146,10 +146,11 @@ Key-log decryption covers TLS 1.3 (`CLIENT_TRAFFIC_SECRET_0`) and TLS 1.2
 (`CLIENT_RANDOM`), including forward-secret **ECDHE** suites — which a server
 private key can never recover.
 
-**Supported TLS 1.2 suites:** AES-128/256-GCM with RSA or ECDHE key exchange
-(`0x009c`, `0x009d`, `0xc02b`, `0xc02c`, `0xc02f`, `0xc030`). CBC and
-ChaCha20-Poly1305 suites aren't decrypted yet, and QUIC decryption isn't
-supported. Wireshark covers both.
+**Supported TLS 1.2 suites:** AES-128/256-GCM (`0x009c`, `0x009d`, `0xc02b`,
+`0xc02c`, `0xc02f`, `0xc030`) and ChaCha20-Poly1305 (`0xcca8`, `0xcca9`,
+`0xccaa`) — covering the AEAD suites browsers actually negotiate. Legacy CBC
+suites aren't decrypted, and QUIC decryption isn't supported; Wireshark covers
+both.
 
 If you have no keys, the SNI hostname, JA3/JA4 fingerprints and traffic
 patterns still answer most "what is this app talking to?" questions.
