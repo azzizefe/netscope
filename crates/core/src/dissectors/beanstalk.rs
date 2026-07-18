@@ -9,22 +9,8 @@ use super::DissectedResult;
 /// Known beanstalkd command/response keywords, used to confirm the first token
 /// is protocol traffic rather than arbitrary text.
 const KEYWORDS: [&str; 16] = [
-    "put",
-    "reserve",
-    "delete",
-    "release",
-    "bury",
-    "watch",
-    "ignore",
-    "use",
-    "peek",
-    "kick",
-    "stats",
-    "INSERTED",
-    "RESERVED",
-    "DELETED",
-    "BURIED",
-    "OK",
+    "put", "reserve", "delete", "release", "bury", "watch", "ignore", "use", "peek", "kick",
+    "stats", "INSERTED", "RESERVED", "DELETED", "BURIED", "OK",
 ];
 
 /// Dissect a beanstalkd message (TCP 11300) — a simple work queue. It's a

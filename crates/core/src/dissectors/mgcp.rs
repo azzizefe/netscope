@@ -46,7 +46,13 @@ mod tests {
 
     #[test]
     fn create_connection() {
-        let r = dissect_mgcp(None, None, 40000, 2427, b"CRCX 1201 aaln/1@gw.example.com MGCP 1.0\r\n");
+        let r = dissect_mgcp(
+            None,
+            None,
+            40000,
+            2427,
+            b"CRCX 1201 aaln/1@gw.example.com MGCP 1.0\r\n",
+        );
         assert_eq!(r.protocol, Protocol::Mgcp);
         assert_eq!(r.summary, "MGCP CRCX (command)");
     }

@@ -57,6 +57,10 @@ mod tests {
             &[0x01, 0x00, 0x00, 0x14, 0x80, 0x00, 0x01, 0x18],
         );
         assert_eq!(r.protocol, Protocol::Diameter);
-        assert!(r.summary.contains("Device-Watchdog Request"), "{}", r.summary);
+        assert!(
+            r.summary.contains("Device-Watchdog Request"),
+            "{}",
+            r.summary
+        );
     }
 }

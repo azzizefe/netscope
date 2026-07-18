@@ -43,7 +43,13 @@ mod tests {
 
     #[test]
     fn privmsg_with_prefix() {
-        let r = dissect_irc(None, None, 40000, 6667, b":nick!user@host PRIVMSG #chan :hello\r\n");
+        let r = dissect_irc(
+            None,
+            None,
+            40000,
+            6667,
+            b":nick!user@host PRIVMSG #chan :hello\r\n",
+        );
         assert_eq!(r.protocol, Protocol::Irc);
         assert!(r.summary.starts_with("IRC PRIVMSG —"), "{}", r.summary);
     }

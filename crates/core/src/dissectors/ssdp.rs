@@ -44,7 +44,13 @@ mod tests {
 
     #[test]
     fn msearch() {
-        let r = dissect_ssdp(None, None, 40000, 1900, b"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\n");
+        let r = dissect_ssdp(
+            None,
+            None,
+            40000,
+            1900,
+            b"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\n",
+        );
         assert_eq!(r.protocol, Protocol::Ssdp);
         assert_eq!(r.summary, "SSDP M-SEARCH — device discovery");
     }

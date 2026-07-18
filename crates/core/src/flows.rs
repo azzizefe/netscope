@@ -108,7 +108,15 @@ impl Transport {
             | Protocol::Dcerpc
             | Protocol::Pptp
             | Protocol::Radmin
-            | Protocol::Skinny => Transport::Tcp,
+            | Protocol::Skinny
+            | Protocol::Bmp
+            | Protocol::RpkiRtr
+            | Protocol::Mms
+            | Protocol::Nrpe
+            | Protocol::Bolt
+            | Protocol::Clickhouse
+            | Protocol::Pulsar
+            | Protocol::Openwire => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -199,7 +207,11 @@ impl Transport {
             | Protocol::Pfcp
             | Protocol::GtpPrime
             | Protocol::Megaco
-            | Protocol::Pcoip => Transport::Udp,
+            | Protocol::Pcoip
+            | Protocol::Cldap
+            | Protocol::Collectd
+            | Protocol::Jaeger
+            | Protocol::Ganglia => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
             // A plugin-recognised protocol groups by the transport it declared,
@@ -454,7 +466,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Dcerpc
         | Protocol::Pptp
         | Protocol::Radmin
-        | Protocol::Skinny => 3,
+        | Protocol::Skinny
+        | Protocol::Cldap
+        | Protocol::Bmp
+        | Protocol::RpkiRtr
+        | Protocol::Mms
+        | Protocol::Nrpe
+        | Protocol::Collectd
+        | Protocol::Jaeger
+        | Protocol::Ganglia
+        | Protocol::Bolt
+        | Protocol::Clickhouse
+        | Protocol::Pulsar
+        | Protocol::Openwire => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,

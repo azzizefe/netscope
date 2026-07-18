@@ -34,6 +34,10 @@ mod tests {
     fn display() {
         let r = dissect_pcoip(None, None, 50000, 4172, &[0u8; 32]);
         assert_eq!(r.protocol, Protocol::Pcoip);
-        assert!(r.summary.starts_with("PCoIP remote display"), "{}", r.summary);
+        assert!(
+            r.summary.starts_with("PCoIP remote display"),
+            "{}",
+            r.summary
+        );
     }
 }

@@ -38,7 +38,13 @@ mod tests {
 
     #[test]
     fn transaction() {
-        let r = dissect_megaco(None, None, 40000, 2944, b"MEGACO/1 [10.0.0.1]:2944\r\nTransaction = 9998 {\r\n");
+        let r = dissect_megaco(
+            None,
+            None,
+            40000,
+            2944,
+            b"MEGACO/1 [10.0.0.1]:2944\r\nTransaction = 9998 {\r\n",
+        );
         assert_eq!(r.protocol, Protocol::Megaco);
         assert!(r.summary.contains("MEGACO/1"), "{}", r.summary);
     }

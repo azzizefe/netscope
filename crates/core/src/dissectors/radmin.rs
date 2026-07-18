@@ -33,6 +33,10 @@ mod tests {
     fn session() {
         let r = dissect_radmin(None, None, 40000, 4899, &[0x01, 0x00, 0x00, 0x00]);
         assert_eq!(r.protocol, Protocol::Radmin);
-        assert!(r.summary.starts_with("Radmin remote control"), "{}", r.summary);
+        assert!(
+            r.summary.starts_with("Radmin remote control"),
+            "{}",
+            r.summary
+        );
     }
 }

@@ -42,7 +42,13 @@ mod tests {
 
     #[test]
     fn greeting() {
-        let r = dissect_svn(None, None, 40000, 3690, b"( success ( 2 2 ( ) ( edit-pipeline ) ) ) ");
+        let r = dissect_svn(
+            None,
+            None,
+            40000,
+            3690,
+            b"( success ( 2 2 ( ) ( edit-pipeline ) ) ) ",
+        );
         assert_eq!(r.protocol, Protocol::Svn);
         assert_eq!(r.summary, "SVN — server greeting");
     }

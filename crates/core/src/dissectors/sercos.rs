@@ -11,7 +11,11 @@ pub fn dissect_sercos(payload: &[u8]) -> DissectedResult {
     let summary = match payload.get(1) {
         Some(&b) => {
             // Bit 0 distinguishes the two real-time channels (MDT vs AT).
-            let telegram = if b & 0x01 == 0 { "MDT (master data)" } else { "AT (drive data)" };
+            let telegram = if b & 0x01 == 0 {
+                "MDT (master data)"
+            } else {
+                "AT (drive data)"
+            };
             format!("SERCOS III {telegram}")
         }
         None => "SERCOS III (truncated)".to_string(),
