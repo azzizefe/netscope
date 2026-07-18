@@ -555,6 +555,27 @@ fn list_interfaces() -> Result<Vec<InterfaceInfo>, String> {
     Ok(out)
 }
 
+#[derive(Serialize, Clone)]
+struct NeighbourInfo {
+    ip: String,
+    mac: String,
+}
+
+/// Sweep the local IPv4 subnet of `interface` and return the neighbours the OS
+/// resolved. `"__all__"` (or an empty string) means "pick the interface with a
+/// routable IPv4", which is what the toolbar's default selection maps to.
+#[tauri::command]
+fn arp_scan(interface: String) -> Result<Vec<NeighbourInfo>, String> {
+    let found = netscope_core::discover::arp_scan_interface(&interface)?;
+    Ok(found
+        .into_iter()
+        .map(|n| NeighbourInfo {
+            ip: n.ip,
+            mac: n.mac,
+        })
+        .collect())
+}
+
 /// Optional capture knobs sent from the frontend's Capture-options dialog.
 /// All fields default to off, so an older frontend (or a plain start) works
 /// unchanged.
@@ -1115,6 +1136,7 @@ pub fn run() {
         .manage(Mutex::new(config_state))
         .invoke_handler(tauri::generate_handler![
             list_interfaces,
+            arp_scan,
             start_capture,
             start_remote_capture,
             stop_capture,

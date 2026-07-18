@@ -931,3 +931,36 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
   flex-direction: column !important;
 }
 
+
+/* ---- WiFi / LAN device discovery ---------------------------------------- */
+.wifi-toolbar { gap: 8px; align-items: center; }
+.wifi-status { color: var(--text-muted); font-size: 12px; }
+.wifi-status.wifi-err { color: var(--danger); }
+.wifi-note {
+  margin: 8px 12px; padding: 8px 12px; font-size: 12px; line-height: 1.5;
+  color: var(--text-muted); background: var(--bg-elev);
+  border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px;
+}
+.wifi-note b { color: var(--text); font-weight: 600; }
+.wifi-empty { padding: 24px 16px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+#wifi-list { padding: 0 12px 16px; overflow-x: auto; }
+.wifi-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.wifi-table th, .wifi-table td {
+  text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.wifi-table th {
+  color: var(--text-muted); font-weight: 600; position: sticky; top: 0;
+  background: var(--bg-elev); z-index: 1;
+}
+.wifi-table tbody tr:hover { background: var(--bg-elev); }
+.wifi-mac { color: var(--accent); }
+.wifi-vendor { color: var(--text); }
+.wifi-proto { color: var(--text-muted); }
+.wifi-num { text-align: right; font-variant-numeric: tabular-nums; }
+.wifi-dim { color: var(--text-muted); font-size: 11px; }
+.wifi-tag {
+  display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 10px;
+  vertical-align: middle;
+}
+.wifi-tag-scan { background: rgba(74,158,245,.15); color: var(--accent); }
+.wifi-tag-rnd { background: transparent; }

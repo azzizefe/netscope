@@ -3,6 +3,13 @@
 // netscope Desktop — API Module
 // Handles Tauri IPC invocations and capture control flows.
 
+// Shared application scope. These modules were split out of app.js but never
+// received its bindings, so every function here that touched `els`, `state` or
+// a helper threw ReferenceError at runtime. The cycle with app.js is safe:
+// the imports are only dereferenced inside function bodies, long after both
+// modules have finished evaluating.
+import { $, STATES, buildCaptureOptions, closeToolModal, els, esc, markCapturing, openToolModal, renderConnections, renderStats, resetSession, saveJSON, setStatus, showNpcapWarning, state } from '../app.js';
+
 export async function invoke(cmd, args = {}) {
   if (window.__TAURI__) return window.__TAURI__.core.invoke(cmd, args);
   console.warn(`[mock] invoke ${cmd}`, args);

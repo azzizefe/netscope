@@ -3,6 +3,13 @@
 // netscope Desktop — Packets View Module
 // Handles virtual scrolling, packet list rendering, and protocol detail trees.
 
+// Shared application scope. These modules were split out of app.js but never
+// received its bindings, so every function here that touched `els`, `state` or
+// a helper threw ReferenceError at runtime. The cycle with app.js is safe:
+// the imports are only dereferenced inside function bodies, long after both
+// modules have finished evaluating.
+import { $, beautifyPayload, colorRuleFor, decodeStreamText, els, endpointLabel, enrichGeo, esc, expertInfo, extractPayload, formatPacketTime, guessProtocol, isNoise, isPublicIp, matchesFilter, protoColor, semanticEvents, state, updateFilterFeedback } from '../../app.js';
+
 const ROW_H = 24;
 const VSCROLL_OVERSCAN = 12;
 
