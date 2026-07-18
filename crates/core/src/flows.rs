@@ -139,7 +139,10 @@ impl Transport {
             | Protocol::Riak
             | Protocol::Nmea
             | Protocol::Adsb
-            | Protocol::Aprs => Transport::Tcp,
+            | Protocol::Aprs
+            | Protocol::NvmeOf
+            | Protocol::Nbd
+            | Protocol::Fcip => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -187,7 +190,15 @@ impl Transport {
             | Protocol::Aarp
             | Protocol::Decnet
             | Protocol::Vines
-            | Protocol::Erspan => Transport::Other,
+            | Protocol::Erspan
+            | Protocol::Ppp
+            | Protocol::Pap
+            | Protocol::Chap
+            | Protocol::L2cap
+            | Protocol::Att
+            | Protocol::Smp
+            | Protocol::Aoe
+            | Protocol::Roce => Transport::Other,
             Protocol::Udp
             | Protocol::Dns
             | Protocol::Dhcp
@@ -247,7 +258,8 @@ impl Transport {
             | Protocol::Collectd
             | Protocol::Jaeger
             | Protocol::Ganglia
-            | Protocol::Turn => Transport::Udp,
+            | Protocol::Turn
+            | Protocol::Xdmcp => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
             // A plugin-recognised protocol groups by the transport it declared,
@@ -550,7 +562,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Turn
         | Protocol::Decnet
         | Protocol::Vines
-        | Protocol::Erspan => 3,
+        | Protocol::Erspan
+        | Protocol::Ppp
+        | Protocol::Pap
+        | Protocol::Chap
+        | Protocol::L2cap
+        | Protocol::Att
+        | Protocol::Smp
+        | Protocol::NvmeOf
+        | Protocol::Nbd
+        | Protocol::Fcip
+        | Protocol::Aoe
+        | Protocol::Roce
+        | Protocol::Xdmcp => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,

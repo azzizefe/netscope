@@ -10,14 +10,14 @@ use crate::models::Protocol;
 use super::{
     adsb, aerospike, afp, amqp, aprs, beanstalk, beats, bgp, bittorrent, bmp, bolt, cassandra,
     clamav, clickhouse, dcerpc, diameter, dicom, dnp3, doip, drda, edonkey, elasticsearch, enip,
-    finger, firebird, fix, fluentd, ftp, gearman, git, gnutella, gopher, graphite, hadooprpc, hl7,
-    http, http2, ica, ident, iec104, imap, ipp, irc, iscsi, kafka, kerberos, ldap, ldp, lpd,
+    fcip, finger, firebird, fix, fluentd, ftp, gearman, git, gnutella, gopher, graphite, hadooprpc,
+    hl7, http, http2, ica, ident, iec104, imap, ipp, irc, iscsi, kafka, kerberos, ldap, ldp, lpd,
     managesieve, megaco, memcached, minecraft, mms, modbus, mongodb, mqtt, msrp, mumble, mysql,
-    mysqlx, nats, ndmp, nmea, nntp, nrpe, nsq, ntlm, opcua, openflow, openvpn, openwire, pcoip,
-    pop3, postgres, pptp, pulsar, radmin, rdp, redis, relp, rethinkdb, rexec, rfb, riak, rlogin,
-    rpc, rpkirtr, rsh, rsync, rtmp, rtsp, s7comm, sane, skinny, smb, smpp, smtp, socks, someip,
-    spamd, spice, ssh, stomp, svn, tacacs, tds, telnet, tls, tns, websocket, whois, x11, xmpp,
-    zabbix, zmtp, zookeeper, DissectedResult,
+    mysqlx, nats, nbd, ndmp, nmea, nntp, nrpe, nsq, ntlm, nvmeof, opcua, openflow, openvpn,
+    openwire, pcoip, pop3, postgres, pptp, pulsar, radmin, rdp, redis, relp, rethinkdb, rexec, rfb,
+    riak, rlogin, rpc, rpkirtr, rsh, rsync, rtmp, rtsp, s7comm, sane, skinny, smb, smpp, smtp,
+    socks, someip, spamd, spice, ssh, stomp, svn, tacacs, tds, telnet, tls, tns, websocket, whois,
+    x11, xmpp, zabbix, zmtp, zookeeper, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -621,6 +621,16 @@ fn dissect_tcp_inner(
         }
         if on(8087) {
             return riak::dissect_riak(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Storage networking.
+        if on(4420) {
+            return nvmeof::dissect_nvmeof(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(10809) {
+            return nbd::dissect_nbd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3225) {
+            return fcip::dissect_fcip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // Telemetry feeds: navigation, aviation and amateur radio.
         if on(10110) && nmea::looks_like_nmea(tcp_payload) {
