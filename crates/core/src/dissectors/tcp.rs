@@ -8,16 +8,16 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    adsb, aerospike, afp, amqp, aprs, beanstalk, beats, bgp, bittorrent, bmp, bolt, cassandra,
-    clamav, clickhouse, dcerpc, diameter, dicom, dnp3, doip, drda, edonkey, elasticsearch, enip,
-    fcip, finger, firebird, fix, fluentd, ftp, gearman, git, gnutella, gopher, graphite, hadooprpc,
-    hl7, http, http2, ica, ident, iec104, imap, ipp, irc, iscsi, kafka, kerberos, ldap, ldp, lpd,
-    managesieve, megaco, memcached, minecraft, mms, modbus, mongodb, mqtt, msrp, mumble, mysql,
-    mysqlx, nats, nbd, ndmp, nmea, nntp, nrpe, nsq, ntlm, nvmeof, opcua, openflow, openvpn,
-    openwire, pcoip, pop3, postgres, pptp, pulsar, radmin, rdp, redis, relp, rethinkdb, rexec, rfb,
-    riak, rlogin, rpc, rpkirtr, rsh, rsync, rtmp, rtsp, s7comm, sane, skinny, smb, smpp, smtp,
-    socks, someip, spamd, spice, ssh, stomp, svn, tacacs, tds, telnet, tls, tns, websocket, whois,
-    x11, xmpp, zabbix, zmtp, zookeeper, DissectedResult,
+    adsb, aerospike, afp, amqp, aprs, beanstalk, beats, bfcp, bgp, bittorrent, bmp, bolt,
+    cassandra, clamav, clickhouse, dcerpc, dhcpfo, diameter, dicom, dnp3, doip, drda, edonkey,
+    elasticsearch, enip, fcip, finger, firebird, fix, fluentd, ftp, gearman, git, gnutella, gopher,
+    graphite, hadooprpc, hl7, http, http2, ica, ident, iec104, imap, ipp, irc, iscsi, kafka,
+    kerberos, ldap, ldp, lpd, managesieve, megaco, memcached, minecraft, mms, modbus, mongodb,
+    mqtt, msrp, mumble, mysql, mysqlx, nats, nbd, ndmp, nmea, nntp, nrpe, nsq, ntlm, nvmeof, opcua,
+    openflow, openvpn, openwire, pcoip, pop3, postgres, pptp, pulsar, q931, radmin, rdp, redis,
+    relp, rethinkdb, rexec, rfb, riak, rlogin, rpc, rpkirtr, rsh, rsync, rtmp, rtsp, s7comm, sane,
+    skinny, smb, smpp, smtp, socks, someip, spamd, spice, ssh, stomp, svn, tacacs, tds, telnet,
+    tls, tns, websocket, whois, x11, xmpp, zabbix, zmtp, zookeeper, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -631,6 +631,16 @@ fn dissect_tcp_inner(
         }
         if on(3225) {
             return fcip::dissect_fcip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // H.323 call signalling, conference floor control and DHCP failover.
+        if on(1720) {
+            return q931::dissect_q931(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3238) {
+            return bfcp::dissect_bfcp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(647) {
+            return dhcpfo::dissect_dhcpfo(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // Telemetry feeds: navigation, aviation and amateur radio.
         if on(10110) && nmea::looks_like_nmea(tcp_payload) {

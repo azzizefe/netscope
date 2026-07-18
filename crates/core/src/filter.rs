@@ -278,6 +278,21 @@ const KNOWN_PROTOS: &[&str] = &[
     "aoe",
     "roce",
     "xdmcp",
+    "iax2",
+    "iax",
+    "zrtp",
+    "sqlbrowser",
+    "h225ras",
+    "q931",
+    "h323",
+    "bfcp",
+    "lisp",
+    "l2tpv3",
+    "vxlangpe",
+    "pcp",
+    "natpmp",
+    "rwho",
+    "dhcpfailover",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -465,6 +480,13 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "drda" | "db2" => pkt.protocol == Protocol::Drda,
         "mysqlx" => pkt.protocol == Protocol::MysqlX,
         "nvmeof" | "nvme" => pkt.protocol == Protocol::NvmeOf,
+        "iax" => pkt.protocol == Protocol::Iax2,
+        "sqlbrowser" => pkt.protocol == Protocol::MssqlBrowser,
+        "h225ras" => pkt.protocol == Protocol::H225Ras,
+        "h323" | "q931" => pkt.protocol == Protocol::Q931,
+        "vxlangpe" => pkt.protocol == Protocol::VxlanGpe,
+        "natpmp" => pkt.protocol == Protocol::Pcp,
+        "dhcpfailover" => pkt.protocol == Protocol::DhcpFailover,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

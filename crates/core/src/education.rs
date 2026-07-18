@@ -2147,6 +2147,106 @@ capture like any NIC.",
             body: "Kafka protocol handles read/write requests between clients and broker clusters.",
             look_for: "Kafka messages and API requests on port 9092.",
         },
+        Protocol::Iax2 => Lesson {
+            title: "IAX2 — trunking Asterisk boxes together",
+            summary: "Carries VoIP signalling and audio over a single UDP port.",
+            body: "IAX2 links Asterisk PBXs to each other. Unlike SIP, which negotiates a separate RTP \
+stream on its own random port, IAX2 multiplexes call setup and the audio itself onto UDP \
+4569 — which is why it survives NAT and restrictive firewalls so much more easily.",
+            look_for: "\"IAX2 NEW\" / \"IAX2 ACK\" on UDP 4569.",
+        },
+        Protocol::Zrtp => Lesson {
+            title: "ZRTP — agreeing on a key inside the call itself",
+            summary: "Derives SRTP keys in the media stream, with no certificate authority.",
+            body: "ZRTP runs a Diffie-Hellman exchange in the same path the audio takes, so the signalling \
+server never sees the key. To rule out a man in the middle the two parties read a short \
+authentication string to each other out loud and check that it matches.",
+            look_for: "\"ZRTP Hello\" / \"ZRTP Commit\" — the magic sits where RTP keeps its timestamp.",
+        },
+        Protocol::MssqlBrowser => Lesson {
+            title: "SQL Server Browser — finding the right instance",
+            summary: "Tells a client which TCP port a named SQL Server instance listens on.",
+            body: "A host can run several named SQL Server instances, each on a dynamic port. The Browser \
+service listens on UDP 1434 and answers a one-byte query with the full list. That is \
+convenient for clients and equally convenient for anyone enumerating your database \
+servers, so it is a common scan target.",
+            look_for: "\"SQL Browser request\" and instance-name responses on UDP 1434.",
+        },
+        Protocol::H225Ras => Lesson {
+            title: "H.225 RAS — registering with the gatekeeper",
+            summary: "How H.323 endpoints register, ask permission to call, and report status.",
+            body: "RAS (Registration, Admission, Status) is the first conversation in an H.323 network: a \
+phone or codec registers with the gatekeeper, then asks admission before each call so \
+the gatekeeper can apply bandwidth and dial-plan policy.",
+            look_for: "\"H.225 RAS RRQ/RCF\" (registration) and \"ARQ/ACF\" (admission) on UDP 1719.",
+        },
+        Protocol::Q931 => Lesson {
+            title: "Q.931 — setting up an H.323 call",
+            summary: "The ISDN-derived call signalling that H.323 carries over TCP 1720.",
+            body: "Q.931 drives the call state machine: SETUP starts it, ALERTING means ringing, CONNECT \
+means answered, and RELEASE COMPLETE tears it down carrying a cause code that says why. \
+H.323 kept the ISDN message set and wrapped it in a TPKT header.",
+            look_for: "\"Q.931 SETUP\" / \"Q.931 CONNECT\" on TCP 1720; the cause code explains failed calls.",
+        },
+        Protocol::Bfcp => Lesson {
+            title: "BFCP — deciding whose turn it is",
+            summary: "Arbitrates a shared conference resource such as screen sharing.",
+            body: "A conference has resources only one participant can hold at a time — the presenter \
+screen, for instance. BFCP calls each of these a floor; clients request it, the floor \
+control server grants or denies, and everyone is told who holds it.",
+            look_for: "\"BFCP FloorRequest\" / \"FloorStatus\" on TCP 3238.",
+        },
+        Protocol::Lisp => Lesson {
+            title: "LISP — splitting who you are from where you are",
+            summary: "Separates an endpoint's identity (EID) from its network location (RLOC).",
+            body: "In plain IP an address means both identity and location, so moving a host means \
+renumbering it. LISP keeps the EID stable and maps it to whichever RLOC currently \
+reaches it, encapsulating traffic between the two. UDP 4341 carries data, 4342 the \
+mapping control.",
+            look_for: "\"LISP data\" on UDP 4341 and \"Map-Request/Map-Reply\" on 4342.",
+        },
+        Protocol::L2tpv3 => Lesson {
+            title: "L2TPv3 — a pseudowire straight over IP",
+            summary: "Tunnels raw layer-2 frames using IP protocol 115, with no UDP underneath.",
+            body: "L2TPv3 carries Ethernet (or Frame Relay, or PPP) frames inside IP so two distant switch \
+ports behave as if they were patched together. Each direction is identified by a session \
+ID in the header.",
+            look_for: "IP protocol 115 with a session ID — netscope reports the session and payload size.",
+        },
+        Protocol::VxlanGpe => Lesson {
+            title: "VXLAN-GPE — VXLAN that isn't only Ethernet",
+            summary: "Adds a next-protocol field so the overlay can carry IPv4, IPv6 or NSH.",
+            body: "Classic VXLAN always encapsulates an Ethernet frame. GPE (Generic Protocol Extension) \
+adds a next-protocol byte, which is what lets service-chaining designs push an NSH \
+header or a bare IP packet through the same tunnel. It uses UDP 4790 to stay distinct \
+from VXLAN's 4789.",
+            look_for: "\"VXLAN-GPE\" on UDP 4790, with the inner protocol named.",
+        },
+        Protocol::Pcp => Lesson {
+            title: "PCP / NAT-PMP — asking the NAT to open a port",
+            summary: "Lets a client request an inbound mapping through its router.",
+            body: "Games, P2P and VoIP need someone outside to be able to reach in. PCP is the modern \
+replacement for UPnP IGD: the client asks for a mapping and a lifetime, and the gateway \
+answers with the external address and port it actually got.",
+            look_for: "\"PCP MAP request\" / \"NAT-PMP\" on UDP 5351.",
+        },
+        Protocol::Rwho => Lesson {
+            title: "rwho — broadcasting who is logged in",
+            summary: "A BSD-era service where each host announces its users and load.",
+            body: "Every rwho host periodically broadcasts its uptime, load average and logged-in users so \
+any machine on the segment can print them. There is no authentication of any kind, and \
+it leaks usernames to the whole broadcast domain — seeing it today means something very \
+old is still running.",
+            look_for: "Periodic broadcasts on UDP 513 (TCP 513 is rlogin, a different protocol).",
+        },
+        Protocol::DhcpFailover => Lesson {
+            title: "DHCP failover — keeping two servers in step",
+            summary: "The channel a DHCP server pair uses to share lease state.",
+            body: "Two DHCP servers serving one pool must agree on who holds which lease, or they will hand \
+the same address to two clients. The failover channel on TCP 647 carries binding updates \
+and pool balancing so either server can take over alone.",
+            look_for: "\"DHCP failover BNDUPD\" / \"POOLREQ\" on TCP 647.",
+        },
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail — shown safely anyway.",
@@ -2395,6 +2495,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Aoe,
         Protocol::Roce,
         Protocol::Xdmcp,
+        Protocol::Iax2,
+        Protocol::Zrtp,
+        Protocol::MssqlBrowser,
+        Protocol::H225Ras,
+        Protocol::Q931,
+        Protocol::Bfcp,
+        Protocol::Lisp,
+        Protocol::L2tpv3,
+        Protocol::VxlanGpe,
+        Protocol::Pcp,
+        Protocol::Rwho,
+        Protocol::DhcpFailover,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -2720,6 +2832,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Roce => "A RoCE frame (EtherType 0x8915) — RDMA writing straight into remote memory.",
         Protocol::Xdmcp => "An XDMCP message (UDP 177) — an X terminal asking for a remote login session.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
+        Protocol::Iax2 => "An IAX2 message (UDP 4569) — Asterisk PBXs trunking calls over a single port.",
+        Protocol::Zrtp => "A ZRTP handshake — endpoints agreeing on an SRTP key inside the media stream.",
+        Protocol::MssqlBrowser => "A SQL Server Browser exchange (UDP 1434) — a client asking which port an instance uses.",
+        Protocol::H225Ras => "An H.225 RAS message (UDP 1719) — an H.323 endpoint registering with its gatekeeper.",
+        Protocol::Q931 => "A Q.931 message (TCP 1720) — H.323 call signalling: setup, ringing, answer or release.",
+        Protocol::Bfcp => "A BFCP message (TCP 3238) — conference floor control deciding who may share.",
+        Protocol::Lisp => "A LISP packet — overlay traffic separating an endpoint's identity from its location.",
+        Protocol::L2tpv3 => "An L2TPv3 pseudowire packet (IP protocol 115) — layer-2 frames tunnelled over IP.",
+        Protocol::VxlanGpe => "A VXLAN-GPE packet (UDP 4790) — an overlay that names the protocol it carries.",
+        Protocol::Pcp => "A PCP / NAT-PMP message (UDP 5351) — a client asking the NAT to open an inbound port.",
+        Protocol::Rwho => "An rwho broadcast (UDP 513) — a legacy BSD host announcing its users and load.",
+        Protocol::DhcpFailover => "A DHCP failover message (TCP 647) — two DHCP servers synchronising lease state.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
 }
@@ -2765,7 +2889,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 234);
+        assert_eq!(all_lessons().len(), 246);
     }
 
     #[test]
