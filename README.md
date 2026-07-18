@@ -31,18 +31,31 @@
 
 | | netscope | Wireshark |
 |---|---|---|
-| **Readability** | ✅ Shows `google.com → 142.250.74.46` | ❌ Raw hex dumps, cryptic flags |
-| **Setup** | ✅ One small binary — run it, it works | ❌ 47 menus, 200 MB installer, 5 config dialogs |
-| **Size** | ✅ ~5 MB single binary | ❌ ~200 MB installer + profiles + plugins |
-| **Focus** | ✅ Just the signal, no noise | ❌ Everything including kitchen sink |
-| **Speed** | ✅ 10k+ pkt/s, zero lag | ❌ Can freeze on large captures |
+| **Readability** | ✅ Plain-language summaries by default — `google.com → 142.250.74.46` | ⚪ Full protocol tree, but you decode the meaning yourself |
+| **Setup** | ✅ One binary, sensible defaults, no profile to configure | ⚪ Powerful but heavy — lots of dialogs before you're productive |
+| **Size** | ✅ ~8 MB TUI binary · ~7-10 MB desktop installer | ⚪ ~85 MB installer (Windows) |
+| **Interprets your capture** | ✅ Automatic security & privacy findings, JA3/JA4, per-site X-ray | ❌ Shows everything, interprets nothing |
+| **Acts on traffic** | ✅ Block a host live via a real OS firewall rule | ❌ Passive only, by design |
+| **Protocol coverage** | ⚪ **178 protocols** — the common ones, plus industrial/automotive/telecom | ✅ **~3000** — unmatched breadth and decode depth |
+| **TLS decryption** | ⚪ TLS 1.3 via `SSLKEYLOGFILE`; TLS 1.2 via an RSA key | ✅ Broader — incl. TLS 1.2 key logs and QUIC |
+| **Deep analysis** | ⚪ Summaries, Follow Stream, protocol tree | ✅ Decode-as, VoIP playback, IO graphs, Lua/C plugins |
+| **Speed** | ✅ 100k+ pkt/s dissect throughput | ⚪ Can slow down on very large captures |
 
-**netscope is to Wireshark what `bat` is to `cat`.** Same power, but actually pleasant to use.
+**netscope is to Wireshark what `bat` is to `cat`.** Not a replacement for Wireshark's
+depth — the tool you open *first*, that answers 90% of questions in seconds and
+tells you what the traffic actually means. For exotic protocol internals, full
+decryption or forensic depth, Wireshark is still the reference.
 
 ---
 
 ## Features
 
+- **🗂 178 protocols out of the box** — from everyday (DNS, HTTP/2, TLS, QUIC, SMB) to
+  industrial (Modbus, S7comm, PROFINET, EtherCAT, IEC 61850 GOOSE/SV, KNX, HART-IP),
+  automotive (SOME/IP, DoIP, XCP, AVTP), telecom (PFCP, GTP, Diameter, Megaco, Skinny),
+  healthcare/finance (DICOM, HL7, FIX) and cloud infra (Kafka, NATS, gRPC, ZeroMQ,
+  Elasticsearch). Protocols on dynamic ports — DTLS, DDS/RTPS, FIX, SPICE, BitTorrent
+  DHT — are recognised by their wire signature, not just a port number.
 - **🧠 Human-readable summaries** — DNS domains, TLS SNI hostnames, HTTP paths. Not hex.
 - **🌐 Passive hostname resolution** — Watches DNS responses and shows `github.com:443` instead of a bare IP. No lookups of its own, zero added traffic.
 - **⛔ Block traffic, live** — See a connection you don't like? Select it and press `b`. netscope installs a real OS firewall rule to cut it off. Wireshark can't do that.
@@ -60,6 +73,11 @@
 - **⚠ Expert Info** — Packets the dissector flags as a reset or malformed connection get a small warning badge in the packet list and detail view, in plain language (no "duplicate ACK" jargon).
 - **🛡 Insights — automatic security & privacy scan** — The thing Wireshark won't do: it shows you everything but interprets nothing. The **🛡 Insights** tab reads your capture and surfaces plain-language findings — cleartext passwords, unencrypted HTTP, possible port scans, connection-reset bursts, suspicious/DGA-looking domains, plaintext DNS exposure, and an encrypted-vs-cleartext ratio — each rated high / warning / info. No rules to write, no columns to configure.
 - **🔑 TLS fingerprinting (JA3 / JA4 / JA3S)** — Every TLS handshake is fingerprinted: **JA3** and the modern **JA4** for the client, **JA3S** for the server. They show up in the packet summary and are first-class filter fields (`ja3 == …`, `ja4 contains "t13d"`, `ja3s == …`), so you can hunt a malicious client or C2 server by *how* it speaks TLS — even though the payload is encrypted. Wireshark needs a plugin for this; netscope does it out of the box, offline.
+- **🔓 TLS decryption (opt-in, local)** — Supply the keys and netscope reads the plaintext:
+  set `SSLKEYLOGFILE` to the key log your browser or `curl` already writes (**TLS 1.3**),
+  or `TLS_RSA_PRIVATE_KEY` to a PEM private key for classic **TLS 1.2 RSA** handshakes.
+  Same approach Wireshark uses — keys are read locally, never leave your machine, and
+  nothing is decrypted unless you provide them.
 - **↻ Replay (Repeater)** — Open a packet and press **↻ Replay** to reload its payload into an editor, tweak it, point it at a host/port, and resend it over a fresh socket — the response comes back in the same window. No exporting to Packet Sender or Burp Repeater. *Sends real traffic — for authorised testing only.*
 - **⚡ Script console** — An in-app **⚡ Script** tab runs JavaScript directly over the captured packet stream. Instead of exporting a `.pcap` and re-reading it with Python/Scapy, every packet is already a `packets` array you can filter, aggregate, and flag anomalies on — with `Ctrl+Enter` to run and built-in examples (connection-reset anomalies, top talkers, unencrypted-secret scanning, suspicious DNS domains).
 - **🗂 Profiles** — The **🗂 Profile** button (top right) saves task presets — a filter, a starting view, and display settings — the way Wireshark's Configuration Profiles do. Ships with **HTTP Analysis**, **VoIP**, and **Security Review** presets, plus "Save current as…" for your own. Persists across restarts.
@@ -284,7 +302,7 @@ sudo setcap cap_net_raw,cap_net_admin+eip ./target/release/netscope-tui
 #### Verify your build
 
 ```bash
-cargo test                           # run all unit tests (~460 tests)
+cargo test -p netscope-core -p netscope-tui   # run the engine + TUI tests (~630)
 cd desktop/frontend-tests && npm test  # run frontend tests (74 tests)
 ```
 
@@ -386,7 +404,10 @@ ip.addr == 1.2.3.4            # either endpoint is this IP
 ip.src == 10.0.0.5            # source only (also ip.dst)
 tcp.port == 443              # TCP on port 443 (also udp.port, port)
 frame.len > 1000             # packets larger than 1000 bytes (also len)
-dns                          # bare protocol name (tcp, udp, http, tls, dhcp, ntp, mdns, snmp, quic, sip, ssh, ftp, smtp, imap, pop3, telnet, rdp, websocket, http2, grpc, vxlan…)
+dns                          # bare protocol name — any of the 178 supported protocols
+                             # (tcp, udp, http, tls, quic, dns, ssh, smb, rdp, sip, rtp,
+                             #  modbus, s7comm, profinet, ethercat, goose, knx, dicom, hl7,
+                             #  fix, someip, doip, pfcp, gtp, diameter, kafka, nats, dds…)
 http && ip.dst == 8.8.8.8    # combine with &&, ||, !  (and / or / not)
 tcp && (tls || dns)          # parentheses group
 ip.dst contains "142.250"    # substring match on a field

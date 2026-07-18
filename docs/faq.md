@@ -124,9 +124,31 @@ Any of: press `u` on it in the Connections view, run
 
 ### Can netscope decrypt HTTPS?
 
-No, and it won't. Decryption (SSLKEYLOGFILE etc.) is out of scope for the
-project. Use the SNI hostname and traffic patterns instead; they answer most
-"what is this app talking to?" questions.
+Yes — if *you* supply the keys. netscope never breaks encryption; it only uses
+key material you already have:
+
+- **Key log — TLS 1.3** — set `SSLKEYLOGFILE` to the file your browser or `curl`
+  writes, then run netscope with that variable set:
+  ```bash
+  export SSLKEYLOGFILE=~/tls-keys.log   # your browser writes this
+  netscope-tui -i eth0
+  ```
+- **RSA private key — classic TLS 1.2 RSA handshakes** — point
+  `TLS_RSA_PRIVATE_KEY` at a PEM file (PKCS#1 or PKCS#8):
+  ```bash
+  export TLS_RSA_PRIVATE_KEY=/path/to/server.key
+  ```
+
+This is the same mechanism Wireshark uses. Keys are read locally and never
+leave your machine, and without them nothing is decrypted.
+
+**Current limits:** TLS 1.2 sessions are only decrypted via a server RSA key,
+so forward-secret TLS 1.2 (ECDHE — the common case today) is not covered;
+reading it from a key log (`CLIENT_RANDOM`) isn't implemented yet. QUIC
+decryption isn't supported either. Wireshark handles both.
+
+If you have no keys, the SNI hostname, JA3/JA4 fingerprints and traffic
+patterns still answer most "what is this app talking to?" questions.
 
 ### Does netscope work over SSH?
 
