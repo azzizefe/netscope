@@ -1,68 +1,258 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+pub mod aarp;
+pub mod adsb;
+pub mod aerospike;
+pub mod afp;
 pub mod amqp;
+pub mod aoe;
+pub mod aprs;
 pub mod arp;
+pub mod atalk;
+pub mod att;
+pub mod avtp;
+pub mod babel;
 pub mod bacnet;
+pub mod beanstalk;
+pub mod beats;
+pub mod bfcp;
+pub mod bfd;
 pub mod bgp;
+pub mod bittorrent;
 pub mod bluetooth;
+pub mod bmp;
+pub mod bolt;
 pub mod can;
+pub mod capwap;
 pub mod cassandra;
+pub mod cdp;
+pub mod chap;
+pub mod clamav;
+pub mod cldap;
+pub mod clickhouse;
 pub mod coap;
+pub mod collectd;
+pub mod dccp;
+pub mod dcerpc;
+pub mod decnet;
 pub mod dhcp;
+pub mod dhcpfo;
+pub mod dhcpv6;
+pub mod dht;
+pub mod diameter;
+pub mod dicom;
 pub mod dnp3;
 pub mod dns;
+pub mod doip;
+pub mod drda;
+pub mod dtls;
+pub mod dtp;
+pub mod eap;
+pub mod eapol;
+pub mod edonkey;
+pub mod eigrp;
+pub mod elasticsearch;
 pub mod enip;
+pub mod erspan;
+pub mod ethercat;
 pub mod ethernet;
+pub mod fcip;
+pub mod fcoe;
+pub mod finger;
+pub mod firebird;
+pub mod fix;
+pub mod fluentd;
 pub mod ftp;
+pub mod ganglia;
+pub mod gearman;
+pub mod gelf;
+pub mod geneve;
+pub mod git;
+pub mod glbp;
+pub mod gnutella;
+pub mod goose;
+pub mod gopher;
+pub mod graphite;
+pub mod gre;
+pub mod gtp;
+pub mod gtpprime;
+pub mod gvcp;
+pub mod h225ras;
+pub mod hadooprpc;
+pub mod hartip;
+pub mod hl7;
+pub mod hsrp;
 pub mod http;
 pub mod http2;
+pub mod iax2;
+pub mod ica;
 pub mod icmp;
+pub mod ident;
+pub mod iec104;
+pub mod igmp;
 pub mod imap;
+pub mod influxdb;
 pub mod ip;
+pub mod ipp;
 pub mod ipsec;
+pub mod ipx;
+pub mod irc;
+pub mod isakmp;
+pub mod iscsi;
+pub mod jaeger;
 pub mod kafka;
 pub mod kerberos;
+pub mod knxip;
+pub mod l2cap;
+pub mod l2tp;
+pub mod l2tpv3;
 pub mod lacp;
 pub mod ldap;
+pub mod ldp;
+pub mod lisp;
 pub mod lldp;
+pub mod lpd;
+pub mod macsec;
+pub mod managesieve;
+pub mod matter;
+pub mod megaco;
+pub mod memcached;
+pub mod mgcp;
+pub mod minecraft;
+pub mod mms;
 pub mod modbus;
 pub mod mongodb;
 pub mod mpls;
 pub mod mqtt;
+pub mod mqttsn;
+pub mod msrp;
+pub mod mssqlbrowser;
+pub mod mumble;
 pub mod mysql;
+pub mod mysqlx;
+pub mod nats;
+pub mod nbd;
+pub mod nbds;
+pub mod nbns;
+pub mod ndmp;
+pub mod netflow;
+pub mod nmea;
+pub mod nntp;
+pub mod nrpe;
+pub mod nsq;
 pub mod ntlm;
 pub mod ntp;
+pub mod nvmeof;
 pub mod opcua;
+pub mod openflow;
 pub mod openvpn;
+pub mod openwire;
 pub mod ospf;
+pub mod pagp;
+pub mod pap;
+pub mod pcoip;
+pub mod pcp;
+pub mod pfcp;
+pub mod pim;
 pub mod pop3;
 pub mod postgres;
+pub mod powerlink;
+pub mod ppp;
+pub mod pppoe;
+pub mod pptp;
+pub mod profinet;
+pub mod ptp;
+pub mod pulsar;
+pub mod q931;
 pub mod qpack;
 pub mod radiotap;
 pub mod radius;
+pub mod radmin;
+pub mod rarp;
 pub mod rdp;
 pub mod redis;
+pub mod relp;
+pub mod rethinkdb;
+pub mod rexec;
+pub mod rfb;
+pub mod riak;
+pub mod rip;
+pub mod rlogin;
+pub mod rmcp;
+pub mod roce;
+pub mod rpc;
+pub mod rpkirtr;
+pub mod rsh;
+pub mod rsvp;
+pub mod rsync;
+pub mod rtmp;
 pub mod rtp;
+pub mod rtps;
+pub mod rtsp;
+pub mod rwho;
+pub mod s7comm;
+pub mod sane;
+pub mod sctp;
+pub mod sercos;
+pub mod sflow;
 pub mod sip;
+pub mod skinny;
 pub mod sll;
 pub mod smb;
+pub mod smp;
+pub mod smpp;
 pub mod smtp;
+pub mod snap;
 pub mod snmp;
+pub mod socks;
+pub mod someip;
+pub mod source_query;
+pub mod spamd;
+pub mod spice;
 pub mod srt;
+pub mod ssdp;
 pub mod ssh;
+pub mod statsd;
+pub mod stomp;
 pub mod stp;
+pub mod stun;
+pub mod sv;
+pub mod svn;
+pub mod syslog;
+pub mod tacacs;
 pub mod tcp;
 pub mod tcp_analysis;
 pub mod tds;
 pub mod telnet;
+pub mod teredo;
+pub mod tftp;
 pub mod tls;
+pub mod tns;
+pub mod turn;
+pub mod udld;
 pub mod udp;
 pub mod usb;
+pub mod vines;
+pub mod vrrp;
+pub mod vtp;
 pub mod vxlan;
+pub mod vxlangpe;
+pub mod wccp;
 pub mod websocket;
+pub mod whois;
 pub mod wireguard;
 pub mod wlan;
+pub mod wol;
+pub mod wsd;
+pub mod x11;
+pub mod xcp;
+pub mod xdmcp;
+pub mod xmpp;
+pub mod zabbix;
 pub mod zigbee;
+pub mod zmtp;
+pub mod zookeeper;
+pub mod zrtp;
 
 use std::net::IpAddr;
 
@@ -173,6 +363,28 @@ const ETHERTYPE_QINQ_88A8: u16 = 0x88A8; // 802.1ad service tag
 const ETHERTYPE_QINQ_9100: u16 = 0x9100; // legacy double-tag
 const ETHERTYPE_LLDP: u16 = 0x88CC; // Link Layer Discovery Protocol
 const ETHERTYPE_SLOW: u16 = 0x8809; // 802.3 slow protocols (LACP/Marker/OAM)
+const ETHERTYPE_PPPOE_DISC: u16 = 0x8863; // PPPoE discovery stage
+const ETHERTYPE_PPPOE_SESS: u16 = 0x8864; // PPPoE session stage
+const ETHERTYPE_EAPOL: u16 = 0x888E; // 802.1X port authentication (EAPOL)
+const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
+const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
+const ETHERTYPE_AOE: u16 = 0x88A2; // ATA over Ethernet
+const ETHERTYPE_ROCE: u16 = 0x8915; // RDMA over Converged Ethernet
+const ETHERTYPE_DECNET: u16 = 0x6003; // DECnet Phase IV
+const ETHERTYPE_VINES: u16 = 0x0BAD; // Banyan VINES
+const ETHERTYPE_IPX: u16 = 0x8137; // Novell NetWare IPX
+const ETHERTYPE_ATALK: u16 = 0x809B; // AppleTalk DDP
+const ETHERTYPE_AARP: u16 = 0x80F3; // AppleTalk ARP
+const ETHERTYPE_GOOSE: u16 = 0x88B8; // IEC 61850 GOOSE substation events
+const ETHERTYPE_PTP: u16 = 0x88F7; // IEEE 1588 Precision Time Protocol
+const ETHERTYPE_AVTP: u16 = 0x22F0; // IEEE 1722 Audio/Video Transport
+const ETHERTYPE_SV: u16 = 0x88BA; // IEC 61850-9-2 Sampled Values
+const ETHERTYPE_POWERLINK: u16 = 0x88AB; // Ethernet POWERLINK real-time
+const ETHERTYPE_SERCOS: u16 = 0x88CD; // SERCOS III motion control
+const ETHERTYPE_RARP: u16 = 0x8035; // Reverse ARP
+const ETHERTYPE_ETHERCAT: u16 = 0x88A4; // EtherCAT industrial fieldbus
+const ETHERTYPE_MACSEC: u16 = 0x88E5; // 802.1AE MACsec link encryption
+const ETHERTYPE_FCOE: u16 = 0x8906; // Fibre Channel over Ethernet
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
@@ -195,10 +407,46 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         }
         ETHERTYPE_LLDP => lldp::dissect_lldp(payload),
         ETHERTYPE_SLOW => lacp::dissect_slow(payload),
+        ETHERTYPE_PPPOE_DISC => pppoe::dissect_pppoe(payload, false),
+        ETHERTYPE_PPPOE_SESS => pppoe::dissect_pppoe(payload, true),
+        ETHERTYPE_EAPOL => eapol::dissect_eapol(payload),
+        ETHERTYPE_PROFINET => profinet::dissect_profinet(payload),
+        ETHERTYPE_WOL => wol::dissect_wol(payload),
+        ETHERTYPE_GOOSE => goose::dissect_goose(payload),
+        ETHERTYPE_PTP => ptp::dissect_ptp_l2(payload),
+        ETHERTYPE_AVTP => avtp::dissect_avtp(payload),
+        ETHERTYPE_SV => sv::dissect_sv(payload),
+        ETHERTYPE_POWERLINK => powerlink::dissect_powerlink(payload),
+        ETHERTYPE_SERCOS => sercos::dissect_sercos(payload),
+        ETHERTYPE_RARP => rarp::dissect_rarp(payload),
+        ETHERTYPE_ETHERCAT => ethercat::dissect_ethercat(payload),
+        ETHERTYPE_MACSEC => macsec::dissect_macsec(payload),
+        ETHERTYPE_FCOE => fcoe::dissect_fcoe(payload),
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
+        ETHERTYPE_AOE => aoe::dissect_aoe(payload),
+        ETHERTYPE_ROCE => roce::dissect_roce(payload),
+        ETHERTYPE_DECNET => decnet::dissect_decnet(payload),
+        ETHERTYPE_VINES => vines::dissect_vines(payload),
+        ETHERTYPE_IPX => ipx::dissect_ipx(payload),
+        ETHERTYPE_ATALK => atalk::dissect_atalk(payload),
+        ETHERTYPE_AARP => aarp::dissect_aarp(payload),
         et if et <= ETHERTYPE_MAX_LENGTH && stp::is_stp(payload) => stp::dissect_stp(payload),
+        // Other 802.3 length-form frames carry an LLC header; when it is SNAP,
+        // the vendor OUI + protocol id select a dissector (Cisco's CDP, VTP,
+        // DTP, PAgP and UDLD all live there).
+        et if et <= ETHERTYPE_MAX_LENGTH => match snap::dissect_snap(payload) {
+            Some(r) => r,
+            None => DissectedResult {
+                src_addr: None,
+                dst_addr: None,
+                src_port: None,
+                dst_port: None,
+                protocol: Protocol::Unknown(format!("802.3 LLC frame (length {et})")),
+                summary: format!("IEEE 802.3 LLC frame ({et} bytes)"),
+            },
+        },
         ETHERTYPE_VLAN | ETHERTYPE_QINQ_88A8 | ETHERTYPE_QINQ_9100 if vlan_depth < 2 => {
             // 802.1Q tag: 2 bytes TCI (PCP/DEI/VID) + 2 bytes inner EtherType.
             if payload.len() < 4 {
@@ -309,6 +557,18 @@ fn dispatch_transport(
         Some(51) => ipsec::dissect_ah(src_ip, dst_ip, &payload),
         // OSPF interior routing (ROADMAP §3.3).
         Some(89) => ospf::dissect_ospf(src_ip, dst_ip, &payload),
+        // IGMP multicast group membership, GRE tunnels and SCTP transport all
+        // ride directly on IP (protocols 2, 47 and 132).
+        Some(2) => igmp::dissect_igmp(src_ip, dst_ip, &payload),
+        Some(47) => gre::dissect_gre(src_ip, dst_ip, &payload),
+        Some(132) => sctp::dissect_sctp(src_ip, dst_ip, &payload),
+        Some(33) => dccp::dissect_dccp(src_ip, dst_ip, &payload),
+        Some(46) => rsvp::dissect_rsvp(src_ip, dst_ip, &payload),
+        Some(115) => l2tpv3::dissect_l2tpv3(src_ip, dst_ip, &payload),
+        // Interior routing (EIGRP 88, PIM 103) and gateway redundancy (VRRP 112).
+        Some(88) => eigrp::dissect_eigrp(src_ip, dst_ip, &payload),
+        Some(103) => pim::dissect_pim(src_ip, dst_ip, &payload),
+        Some(112) => vrrp::dissect_vrrp(src_ip, dst_ip, &payload),
         Some(p) => {
             let name = ip_protocol_name(p);
             DissectedResult {
@@ -703,6 +963,280 @@ mod tests {
     }
 
     #[test]
+    fn end_to_end_syslog_via_dissect() {
+        // Syslog PRI <34> (facility 4, severity 2 = Critical) to UDP 514.
+        let data = build_udp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            40000,
+            514,
+            b"<34>disk failing",
+        );
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Syslog);
+        assert!(r.summary.contains("Critical"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_stun_via_dissect() {
+        // STUN Binding Request (with the magic cookie) to UDP 3478.
+        let mut stun = vec![0x00, 0x01, 0x00, 0x00];
+        stun.extend_from_slice(&0x2112_A442u32.to_be_bytes());
+        stun.extend_from_slice(&[0u8; 12]);
+        let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 50000, 3478, &stun);
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Stun);
+        assert_eq!(r.summary, "STUN Binding Request");
+    }
+
+    #[test]
+    fn end_to_end_rtsp_via_dissect() {
+        super::tcp::clear_tcp_reassembler();
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            40000,
+            554,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            b"OPTIONS rtsp://cam/stream RTSP/1.0\r\n",
+        );
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Rtsp);
+        assert!(r.summary.starts_with("RTSP OPTIONS"), "{}", r.summary);
+    }
+
+    /// Build Ethernet + a minimal 20-byte IPv4 header with a chosen IP protocol
+    /// number, wrapping `payload`. Mirrors the hand-rolled frame in the OSPF test.
+    fn build_ipv4_proto(proto: u8, payload: &[u8]) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+        buf.extend_from_slice(&[0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb]);
+        buf.extend_from_slice(&0x0800u16.to_be_bytes());
+        let total_len = (20 + payload.len()) as u16;
+        let mut ip = vec![0x45, 0x00];
+        ip.extend_from_slice(&total_len.to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00, 0x00, 0x00, 0x40, proto, 0x00, 0x00]);
+        ip.extend_from_slice(&[10, 0, 0, 1]);
+        ip.extend_from_slice(&[10, 0, 0, 2]);
+        buf.extend_from_slice(&ip);
+        buf.extend_from_slice(payload);
+        buf
+    }
+
+    #[test]
+    fn end_to_end_sctp_via_dissect() {
+        let mut sctp = Vec::new();
+        sctp.extend_from_slice(&1234u16.to_be_bytes());
+        sctp.extend_from_slice(&38412u16.to_be_bytes());
+        sctp.extend_from_slice(&[0u8; 8]); // vtag + checksum
+        sctp.push(1); // INIT chunk
+        let r = dissect(&build_ipv4_proto(132, &sctp));
+        assert_eq!(r.protocol, Protocol::Sctp);
+        assert!(r.summary.contains("INIT"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_igmp_via_dissect() {
+        let mut igmp = vec![0x16, 0x00, 0x00, 0x00];
+        igmp.extend_from_slice(&[239, 1, 2, 3]);
+        let r = dissect(&build_ipv4_proto(2, &igmp));
+        assert_eq!(r.protocol, Protocol::Igmp);
+        assert!(r.summary.contains("239.1.2.3"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_gre_via_dissect() {
+        let r = dissect(&build_ipv4_proto(47, &[0x00, 0x00, 0x08, 0x00]));
+        assert_eq!(r.protocol, Protocol::Gre);
+        assert!(r.summary.contains("IPv4"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_eapol_via_dissect() {
+        // EtherType 0x888E, version 2, type 3 (Key / WPA handshake).
+        let r = dissect(&build_eth_frame(0x888E, &[0x02, 0x03, 0x00, 0x5F]));
+        assert_eq!(r.protocol, Protocol::Eapol);
+        assert!(r.summary.contains("Key"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_pppoe_via_dissect() {
+        // EtherType 0x8863 (discovery), code 0x09 (PADI).
+        let r = dissect(&build_eth_frame(0x8863, &[0x11, 0x09, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Pppoe);
+        assert!(r.summary.contains("PADI"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_vrrp_via_dissect() {
+        let r = dissect(&build_ipv4_proto(112, &[0x31, 0x0A, 0x64, 0x00]));
+        assert_eq!(r.protocol, Protocol::Vrrp);
+        assert!(r.summary.contains("VRID 10"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_dccp_via_dissect() {
+        let mut dccp = Vec::new();
+        dccp.extend_from_slice(&5001u16.to_be_bytes());
+        dccp.extend_from_slice(&5002u16.to_be_bytes());
+        dccp.extend_from_slice(&[0u8; 4]); // offset, ccval, checksum
+        dccp.push(0x00); // type 0 (Request)
+        dccp.extend_from_slice(&[0u8; 3]);
+        let r = dissect(&build_ipv4_proto(33, &dccp));
+        assert_eq!(r.protocol, Protocol::Dccp);
+        assert!(r.summary.contains("5001 → 5002"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_dtls_via_dissect() {
+        // DTLS 1.2 Handshake record on an arbitrary UDP port — recognised
+        // structurally, not by port.
+        let mut dtls = vec![22, 0xFE, 0xFD, 0x00, 0x00];
+        dtls.extend_from_slice(&[0u8; 8]);
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 50000, 50001, &dtls);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Dtls);
+        assert!(r.summary.contains("Handshake"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_profinet_via_dissect() {
+        // EtherType 0x8892, FrameID 0xFEFC (DCP Identify).
+        let r = dissect(&build_eth_frame(0x8892, &[0xFE, 0xFC, 0x05, 0x00]));
+        assert_eq!(r.protocol, Protocol::Profinet);
+        assert!(r.summary.contains("DCP Identify"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_wol_via_dissect() {
+        // EtherType 0x0842 Wake-on-LAN magic packet.
+        let mac = [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01];
+        let mut magic = vec![0xFF; 6];
+        for _ in 0..16 {
+            magic.extend_from_slice(&mac);
+        }
+        let r = dissect(&build_eth_frame(0x0842, &magic));
+        assert_eq!(r.protocol, Protocol::Wol);
+    }
+
+    #[test]
+    fn end_to_end_fix_structural_via_dissect() {
+        // FIX recognised by its "8=FIX" prefix on an arbitrary TCP port.
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            50000,
+            9999,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            b"8=FIX.4.4\x0135=D\x0149=A\x01",
+        );
+        let r = dissect(&data);
+        assert_eq!(r.protocol, Protocol::Fix);
+        assert!(r.summary.contains("NewOrderSingle"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_avtp_via_dissect() {
+        let r = dissect(&build_eth_frame(0x22F0, &[0x22, 0x00, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Avtp);
+    }
+
+    #[test]
+    fn end_to_end_dht_via_dissect() {
+        let msg = b"d1:ad2:id20:aaaaaaaaaaaaaaaaaaaae1:q9:get_peers1:y1:qe";
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 50000, 51000, msg);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Dht);
+    }
+
+    #[test]
+    fn end_to_end_source_query_via_dissect() {
+        let mut q = vec![0xFF, 0xFF, 0xFF, 0xFF, b'T'];
+        q.extend_from_slice(b"Source Engine Query\0");
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 27015, &q);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::SourceQuery);
+    }
+
+    #[test]
+    fn end_to_end_sampled_values_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88BA, &[0x40, 0x00, 0x00, 0x20]));
+        assert_eq!(r.protocol, Protocol::Sv);
+    }
+
+    #[test]
+    fn end_to_end_powerlink_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88AB, &[0x04, 0x01, 0xF0, 0x00]));
+        assert_eq!(r.protocol, Protocol::Powerlink);
+        assert!(r.summary.contains("PRes"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_sercos_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88CD, &[0x00, 0x00, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Sercos);
+    }
+
+    #[test]
+    fn end_to_end_rarp_via_dissect() {
+        let r = dissect(&build_eth_frame(
+            0x8035,
+            &[0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x03],
+        ));
+        assert_eq!(r.protocol, Protocol::Rarp);
+        assert_eq!(r.summary, "RARP Request");
+    }
+
+    #[test]
+    fn end_to_end_ethercat_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88A4, &[0x10, 0x10, 12, 0x00]));
+        assert_eq!(r.protocol, Protocol::Ethercat);
+    }
+
+    #[test]
+    fn end_to_end_macsec_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88E5, &[0x0D, 0x00, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Macsec);
+    }
+
+    #[test]
+    fn end_to_end_rtps_via_dissect() {
+        let mut rtps = b"RTPS".to_vec();
+        rtps.extend_from_slice(&[0x02, 0x03]);
+        rtps.extend_from_slice(&[0u8; 14]);
+        rtps.push(0x15); // DATA submessage
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 7400, 7401, &rtps);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Rtps);
+    }
+
+    #[test]
+    fn end_to_end_rsvp_via_dissect() {
+        let r = dissect(&build_ipv4_proto(46, &[0x10, 0x01, 0x00, 0x00]));
+        assert_eq!(r.protocol, Protocol::Rsvp);
+        assert_eq!(r.summary, "RSVP Path");
+    }
+
+    #[test]
+    fn end_to_end_goose_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88B8, &[0x00, 0x01, 0x00, 0x10]));
+        assert_eq!(r.protocol, Protocol::Goose);
+    }
+
+    #[test]
+    fn end_to_end_ptp_l2_via_dissect() {
+        let r = dissect(&build_eth_frame(0x88F7, &[0x00, 0x02, 0x00, 0x2c]));
+        assert_eq!(r.protocol, Protocol::Ptp);
+        assert!(r.summary.contains("Sync"), "{}", r.summary);
+    }
+
+    #[test]
     fn dispatch_empty_data() {
         let result = dissect(&[]);
         assert!(matches!(result.protocol, Protocol::Unknown(_)));
@@ -789,7 +1323,43 @@ mod bench {
         packets
     }
 
+    fn parse_failures(packets: &[Vec<u8>]) -> usize {
+        packets
+            .iter()
+            .filter(|pkt| {
+                matches!(dissect(pkt).protocol,
+                    Protocol::Unknown(ref s) if s == "failed to parse ethernet")
+            })
+            .count()
+    }
+
+    /// The correctness half of the old benchmark, and the half worth running on
+    /// every `cargo test`: it is deterministic. The throughput test below used
+    /// to count these failures and then never assert on them, so a dissector
+    /// that failed to parse everything very quickly would have passed it.
     #[test]
+    fn bench_corpus_dissects_without_failures() {
+        let packets = build_mixed_packets(10_000);
+        assert_eq!(
+            parse_failures(&packets),
+            0,
+            "mixed corpus should dissect cleanly"
+        );
+    }
+
+    /// Throughput measurement — ignored by default.
+    ///
+    /// It asserts on wall-clock rate, so under `cargo test`'s parallel load it
+    /// measures how busy the machine is rather than what the dissector costs,
+    /// and fails intermittently for reasons that have nothing to do with the
+    /// code. Measured standalone on this machine: ~338k pkt/s in debug,
+    /// ~1.77M in release — so the 100k floor below only catches a collapse,
+    /// not a gradual regression.
+    ///
+    /// Run it on its own:
+    ///   cargo test --release bench_dissect_throughput -- --ignored --nocapture
+    #[test]
+    #[ignore = "timing-sensitive: measures machine load when run in parallel"]
     fn bench_dissect_throughput() {
         const COUNT: usize = 10_000;
         let packets = build_mixed_packets(COUNT);
@@ -800,14 +1370,7 @@ mod bench {
         }
 
         let start = std::time::Instant::now();
-        let mut total = 0;
-        for pkt in &packets {
-            let result = dissect(pkt);
-            total += match result.protocol {
-                Protocol::Unknown(ref s) if s == "failed to parse ethernet" => 1,
-                _ => 0,
-            };
-        }
+        let failures = parse_failures(&packets);
         let elapsed = start.elapsed();
         let rate = COUNT as f64 / elapsed.as_secs_f64();
 
@@ -816,14 +1379,294 @@ mod bench {
             COUNT,
             elapsed.as_secs_f64(),
             rate,
-            total
+            failures
         );
 
+        assert_eq!(failures, 0, "corpus should dissect cleanly");
         // Ensure we can handle at least 100k pps
         assert!(
             rate > 100_000.0,
             "Performance too low: {:.0} pkt/s (need > 100k)",
             rate
         );
+    }
+}
+#[cfg(test)]
+mod batch16_dispatch_check {
+    use crate::dissectors::{tcp::dissect_tcp, udp::dissect_udp};
+    use crate::models::Protocol;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    fn ip() -> Option<IpAddr> {
+        Some(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)))
+    }
+
+    fn udp(sport: u16, dport: u16, body: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&sport.to_be_bytes());
+        v.extend_from_slice(&dport.to_be_bytes());
+        v.extend_from_slice(&((8 + body.len()) as u16).to_be_bytes());
+        v.extend_from_slice(&[0, 0]);
+        v.extend_from_slice(body);
+        v
+    }
+
+    fn tcp(sport: u16, dport: u16, body: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&sport.to_be_bytes());
+        v.extend_from_slice(&dport.to_be_bytes());
+        v.extend_from_slice(&[0, 0, 0, 1]);
+        v.extend_from_slice(&[0, 0, 0, 1]);
+        v.extend_from_slice(&[0x50, 0x18, 0xff, 0xff, 0, 0, 0, 0]);
+        v.extend_from_slice(body);
+        v
+    }
+
+    #[test]
+    fn batch16_routes() {
+        let body = [0u8; 32];
+        for (port, want) in [
+            (4569u16, Protocol::Iax2),
+            (1434, Protocol::MssqlBrowser),
+            (1719, Protocol::H225Ras),
+            (4341, Protocol::Lisp),
+            (4790, Protocol::VxlanGpe),
+            (5351, Protocol::Pcp),
+            (513, Protocol::Rwho),
+        ] {
+            let p = udp(40000, port, &body);
+            let r = dissect_udp(ip(), ip(), &p);
+            assert_eq!(r.protocol, want, "udp {port} -> {:?}", r.protocol);
+        }
+        for (port, want) in [
+            (1720u16, Protocol::Q931),
+            (3238, Protocol::Bfcp),
+            (647, Protocol::DhcpFailover),
+        ] {
+            let p = tcp(40000, port, &body);
+            let r = dissect_tcp(ip(), ip(), &p);
+            assert_eq!(r.protocol, want, "tcp {port} -> {:?}", r.protocol);
+        }
+        // ZRTP is recognised structurally, on any port.
+        let mut z = vec![0x10, 0x00, 0x00, 0x00];
+        z.extend_from_slice(b"ZRTP");
+        z.extend_from_slice(&[0u8; 24]);
+        let r = dissect_udp(ip(), ip(), &udp(40000, 40001, &z));
+        assert_eq!(r.protocol, Protocol::Zrtp, "zrtp -> {:?}", r.protocol);
+        // …and does not swallow ordinary RTP.
+        let mut rtp = vec![0x80, 0x00];
+        rtp.extend_from_slice(&[0u8; 30]);
+        let r = dissect_udp(ip(), ip(), &udp(40000, 40001, &rtp));
+        assert_ne!(r.protocol, Protocol::Zrtp);
+    }
+}
+
+/// Guards a defect class found in iax2.rs and then in four more dissectors:
+/// a match arm whose "unknown" fallback is a word the surrounding format
+/// string already prints, producing summaries like "IAX2 full frame — full
+/// frame", "collectd — part part" or "SPICE link — channel channel".
+///
+/// The unit tests of each dissector all passed while this was live, because
+/// they only ever exercised the *recognised* values. These cases deliberately
+/// feed values no arm matches.
+#[cfg(test)]
+mod unknown_value_summaries {
+    use super::*;
+
+    #[test]
+    fn unknown_values_do_not_repeat_the_label() {
+        let cases: Vec<(&str, String)> = vec![
+            (
+                "collectd — unknown part type 0x0999",
+                collectd::dissect_collectd(None, None, 25826, 25826, &[0x09, 0x99, 0, 4]).summary,
+            ),
+            (
+                "NBD request — command 99",
+                nbd::dissect_nbd(
+                    None,
+                    None,
+                    10809,
+                    10809,
+                    &[0x25, 0x60, 0x95, 0x13, 0, 0, 0x00, 0x63],
+                )
+                .summary,
+            ),
+            (
+                "Source Query message",
+                source_query::dissect_source_query(
+                    None,
+                    None,
+                    27015,
+                    27015,
+                    &[0xff, 0xff, 0xff, 0xff, b'Z'],
+                )
+                .summary,
+            ),
+            (
+                "SPICE link — channel type 9",
+                spice::dissect_spice(None, None, 5900, 5900, &{
+                    let mut p = b"REDQ".to_vec();
+                    p.extend_from_slice(&[0u8; 16]);
+                    p.push(9);
+                    p
+                })
+                .summary,
+            ),
+            (
+                "IAX2 full frame — unknown type 0",
+                iax2::dissect_iax2(None, None, 4569, 4569, &{
+                    let mut p = vec![0x80, 0x01];
+                    p.extend_from_slice(&[0u8; 9]);
+                    p
+                })
+                .summary,
+            ),
+        ];
+
+        for (want, got) in cases {
+            assert_eq!(got, want);
+            let words: Vec<String> = got
+                .split_whitespace()
+                .map(|w| {
+                    w.trim_matches(|c: char| !c.is_alphanumeric())
+                        .to_lowercase()
+                })
+                .filter(|w| w.len() > 2)
+                .collect();
+            for pair in words.windows(2) {
+                assert_ne!(pair[0], pair[1], "summary repeats a word: {got:?}");
+            }
+        }
+    }
+}
+
+/// CONTRIBUTING states dissectors must never panic on malformed input, but
+/// nothing enforced it: every dissector's own tests feed it well-formed bytes.
+/// These sweeps feed deliberately malformed ones through the real dispatch.
+#[cfg(test)]
+mod robustness {
+    use super::tcp::dissect_tcp;
+    use super::udp::dissect_udp;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    fn ip() -> Option<IpAddr> {
+        Some(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)))
+    }
+
+    fn udp_pkt(sport: u16, dport: u16, body: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&sport.to_be_bytes());
+        v.extend_from_slice(&dport.to_be_bytes());
+        v.extend_from_slice(&((8 + body.len()) as u16).to_be_bytes());
+        v.extend_from_slice(&[0, 0]);
+        v.extend_from_slice(body);
+        v
+    }
+
+    fn tcp_pkt(sport: u16, dport: u16, body: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&sport.to_be_bytes());
+        v.extend_from_slice(&dport.to_be_bytes());
+        v.extend_from_slice(&[0, 0, 0, 1, 0, 0, 0, 1]);
+        v.extend_from_slice(&[0x50, 0x18, 0xff, 0xff, 0, 0, 0, 0]);
+        v.extend_from_slice(body);
+        v
+    }
+
+    /// Deterministic pseudo-random bytes (xorshift), so any failure reproduces
+    /// exactly rather than depending on when the test happened to run.
+    fn noise(seed: u64, len: usize) -> Vec<u8> {
+        let mut x = seed | 1;
+        (0..len)
+            .map(|_| {
+                x ^= x << 13;
+                x ^= x >> 7;
+                x ^= x << 17;
+                (x >> 24) as u8
+            })
+            .collect()
+    }
+
+    fn malformed_payloads() -> Vec<Vec<u8>> {
+        let mut out: Vec<Vec<u8>> = vec![Vec::new()];
+        for len in [
+            1usize, 2, 3, 4, 5, 7, 8, 11, 12, 15, 16, 20, 23, 24, 31, 40, 63, 64,
+        ] {
+            out.push(vec![0x00; len]);
+            out.push(vec![0xff; len]);
+            out.push(noise(len as u64 * 7919, len));
+            out.push((0..len).map(|i| i as u8).collect());
+        }
+        out
+    }
+
+    /// Ports the dispatch tables actually claim, read out of the dispatch
+    /// source itself. Parsing rather than hardcoding means a newly added
+    /// `on(1234)` is swept automatically — a hand-maintained list would drift
+    /// out of date on the first batch that forgot to update it.
+    fn dispatched_ports() -> Vec<u16> {
+        let mut ports = Vec::new();
+        for src in [
+            include_str!("dissectors/tcp.rs"),
+            include_str!("dissectors/udp.rs"),
+        ] {
+            let mut rest = src;
+            while let Some(i) = rest.find("on(") {
+                rest = &rest[i + 3..];
+                if let Some(j) = rest.find(')') {
+                    if let Ok(p) = rest[..j].trim().parse::<u16>() {
+                        ports.push(p);
+                    }
+                }
+            }
+        }
+        ports.sort_unstable();
+        ports.dedup();
+        ports
+    }
+
+    #[test]
+    fn dispatched_ports_are_found() {
+        // Guards the parser above: if `on(..)` is ever renamed or restructured,
+        // this fails loudly instead of silently sweeping nothing.
+        let ports = dispatched_ports();
+        assert!(
+            ports.len() > 150,
+            "only found {} dispatched ports — has the dispatch shape changed?",
+            ports.len()
+        );
+    }
+
+    #[test]
+    fn dispatched_ports_never_panic_on_malformed_input() {
+        let bodies = malformed_payloads();
+        for port in dispatched_ports() {
+            for body in &bodies {
+                let _ = dissect_udp(ip(), ip(), &udp_pkt(40000, port, body));
+                let _ = dissect_tcp(ip(), ip(), &tcp_pkt(40000, port, body));
+                // Also exercise the port as the source, which some dissectors
+                // treat differently (request vs response).
+                let _ = dissect_udp(ip(), ip(), &udp_pkt(port, 40000, body));
+                let _ = dissect_tcp(ip(), ip(), &tcp_pkt(port, 40000, body));
+            }
+        }
+    }
+
+    /// The exhaustive version: every one of the 65536 ports, which also covers
+    /// the structural (portless) dissectors that can claim traffic on any port.
+    /// Ignored because it is ~5 minutes; the run that introduced this module
+    /// passed it clean over 9.5M dissect calls.
+    ///
+    ///   cargo test --release dissectors::robustness::every_port -- --ignored
+    #[test]
+    #[ignore = "exhaustive: ~5 minutes, run on demand"]
+    fn every_port_never_panics_on_malformed_input() {
+        let bodies = malformed_payloads();
+        for port in 0u16..=u16::MAX {
+            for body in &bodies {
+                let _ = dissect_udp(ip(), ip(), &udp_pkt(40000, port, body));
+                let _ = dissect_tcp(ip(), ip(), &tcp_pkt(40000, port, body));
+            }
+        }
     }
 }

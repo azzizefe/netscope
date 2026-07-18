@@ -522,6 +522,1548 @@ traffic paths. Labels can stack (an outer one for the tunnel, an inner one for t
 service). netscope unwraps the labels and shows the real packet inside.",
             look_for: "\"MPLS label 16 (TTL 64) · IPv4 …\" — the part after the dot is the actual packet being carried.",
         },
+        Protocol::Syslog => Lesson {
+            title: "Syslog — the system's diary",
+            summary: "Devices and servers send their log messages to a central collector.",
+            body: "Routers, firewalls and servers can ship their log lines over the \
+network to one place. Each message carries a priority that encodes a facility \
+(which subsystem) and a severity (how bad), from Emergency down to Debug. It's \
+usually plaintext over UDP 514 — handy for ops, but readable by anyone capturing.",
+            look_for: "\"Syslog Error (facility 4) — …\" on UDP 514.",
+        },
+        Protocol::Tftp => Lesson {
+            title: "TFTP — tiny file transfer",
+            summary: "A bare-bones file copy used to boot devices and load firmware.",
+            body: "TFTP is FTP stripped to the bone: no login, no listing, just read \
+or write a file in fixed blocks over UDP 69. It's how switches, phones and \
+diskless machines pull their config and firmware at boot. No encryption and no \
+auth, so it's strictly for trusted local networks.",
+            look_for: "\"TFTP Read Request — firmware.bin\" on UDP 69.",
+        },
+        Protocol::Ssdp => Lesson {
+            title: "SSDP — 'who's on my network?'",
+            summary: "The discovery chatter behind UPnP — smart TVs, printers, speakers.",
+            body: "SSDP is how consumer gadgets find each other. A device shouts an \
+M-SEARCH to a multicast address asking 'any media renderers out there?', and \
+others answer or announce themselves with NOTIFY. It looks like HTTP but rides \
+UDP 1900. Lots of it is normal on home/office LANs.",
+            look_for: "\"SSDP M-SEARCH — device discovery\" on UDP 1900.",
+        },
+        Protocol::Stun => Lesson {
+            title: "STUN — finding your way through NAT",
+            summary: "Helps voice/video calls discover their public address behind a router.",
+            body: "When two people make a WebRTC or VoIP call, each sits behind a home \
+router (NAT) and doesn't know its own public address. STUN asks a public server \
+'what address do you see me coming from?' so the two sides can connect directly. \
+A magic-cookie value in the header identifies it — netscope checks that so it \
+only labels real STUN.",
+            look_for: "\"STUN Binding Request\" on UDP 3478, around a video call.",
+        },
+        Protocol::Llmnr => Lesson {
+            title: "LLMNR — DNS's little local cousin",
+            summary: "Windows machines resolving names on the local link without a DNS server.",
+            body: "LLMNR lets computers on the same LAN ask 'who is called PRINTER?' \
+without a configured DNS server, using the DNS message format on UDP 5355. It's \
+convenient but a known security footgun: attackers can answer these queries to \
+impersonate hosts, so many networks disable it.",
+            look_for: "\"LLMNR — Query PRINTER\" on UDP 5355.",
+        },
+        Protocol::Rtsp => Lesson {
+            title: "RTSP — the remote control for streams",
+            summary: "The 'play/pause' signalling for IP cameras and streaming media.",
+            body: "RTSP is like HTTP but for controlling a live media stream: DESCRIBE \
+asks what's available, SETUP prepares it, then PLAY and PAUSE act like a remote. \
+The actual audio/video usually flows separately as RTP. It's the backbone of IP \
+security cameras.",
+            look_for: "\"RTSP DESCRIBE — rtsp://cam/stream\" on TCP 554.",
+        },
+        Protocol::Irc => Lesson {
+            title: "IRC — classic text chat",
+            summary: "One of the internet's oldest group-chat protocols, still widely used.",
+            body: "IRC is plain-text chat: you JOIN a channel and PRIVMSG messages to \
+it. Simple and human-readable on TCP 6667 (or TLS on 6697). Because it's easy to \
+script, it's also historically been used to control botnets — so unexpected IRC \
+from a server is worth a second look.",
+            look_for: "\"IRC PRIVMSG — :nick … #channel\" on TCP 6667.",
+        },
+        Protocol::Rfb => Lesson {
+            title: "RFB / VNC — sharing a screen",
+            summary: "The remote-desktop protocol behind VNC — see and control another PC.",
+            body: "RFB (Remote Framebuffer), better known as VNC, streams one machine's \
+screen to another and sends back mouse and keyboard events. A session opens with \
+a version banner like 'RFB 003.008'. Plain VNC is unencrypted, so it's often \
+tunnelled over SSH or a VPN.",
+            look_for: "\"VNC/RFB handshake — RFB 003.008\" on TCP 5900.",
+        },
+        Protocol::Whois => Lesson {
+            title: "WHOIS — who owns this domain?",
+            summary: "A plain-text lookup for who registered a domain or IP range.",
+            body: "WHOIS is dead simple: connect to a registry on TCP 43, send one line \
+(a domain or IP), and read back a text record of who registered it and when. \
+Investigators use it to attribute domains and IP blocks.",
+            look_for: "\"WHOIS — example.com\" on TCP 43.",
+        },
+        Protocol::Nntp => Lesson {
+            title: "NNTP — Usenet newsgroups",
+            summary: "The protocol behind Usenet discussion groups and binary downloads.",
+            body: "NNTP moves articles between news servers and to readers, organised \
+into newsgroups. Commands like GROUP and ARTICLE fetch content; servers answer \
+with 3-digit status codes, much like FTP or SMTP. Still used for both discussion \
+and large binary downloads.",
+            look_for: "\"NNTP — GROUP comp.lang.rust\" on TCP 119.",
+        },
+        Protocol::Sctp => Lesson {
+            title: "SCTP — TCP's multi-streaming cousin",
+            summary: "A reliable transport used heavily in telecom (4G/5G) signalling.",
+            body: "SCTP does what TCP does — reliable, ordered delivery — but adds \
+multiple independent streams in one connection (so one lost message doesn't \
+stall the rest) and multi-homing for failover. You'll mostly see it carrying \
+mobile-core signalling like Diameter and S1AP.",
+            look_for: "\"SCTP INIT — 1234 → 38412\" — the chunk type names the action.",
+        },
+        Protocol::Gre => Lesson {
+            title: "GRE — a plain tunnel",
+            summary: "Wraps one packet inside another to build tunnels and VPNs.",
+            body: "GRE is a simple envelope: it takes a whole packet and puts it inside \
+another IP packet so it can cross a network that otherwise couldn't route it. \
+It's the basis of PPTP VPNs and many router-to-router tunnels. netscope shows \
+what kind of packet is riding inside.",
+            look_for: "\"GRE — tunnelling IPv4\" — the inner protocol being carried.",
+        },
+        Protocol::Igmp => Lesson {
+            title: "IGMP — joining multicast groups",
+            summary: "How a device says 'send me this multicast stream' (IPTV, discovery).",
+            body: "Multicast lets one sender reach many receivers efficiently. IGMP is \
+how your device tells the local router 'I want the traffic for group 239.1.2.3' \
+(a Membership Report) or 'stop sending it' (a Leave). Common around IPTV and \
+service discovery.",
+            look_for: "\"IGMP v2 Membership Report — group 239.1.2.3\".",
+        },
+        Protocol::Dhcpv6 => Lesson {
+            title: "DHCPv6 — addresses for IPv6",
+            summary: "The IPv6 version of DHCP — handing out addresses and settings.",
+            body: "Just like DHCP does for IPv4, DHCPv6 assigns IPv6 addresses and \
+config (DNS servers, etc.). A device Solicits, servers Advertise, and it \
+Requests and gets a Reply. Runs on UDP 546/547.",
+            look_for: "\"DHCPv6 Solicit\" / \"DHCPv6 Reply\" on UDP 546-547.",
+        },
+        Protocol::Rip => Lesson {
+            title: "RIP — the simplest router chatter",
+            summary: "An old distance-vector routing protocol still seen on small networks.",
+            body: "RIP is routing at its most basic: routers periodically tell each \
+other 'I can reach network X in N hops'. Simple but slow to react and limited to \
+15 hops, so it survives mostly on small or legacy networks. Runs on UDP 520.",
+            look_for: "\"RIPv2 Response\" on UDP 520.",
+        },
+        Protocol::Nbns => Lesson {
+            title: "NBNS — old-school Windows name lookup",
+            summary: "NetBIOS name resolution — the pre-DNS way Windows hosts found each other.",
+            body: "Before DNS took over everywhere, Windows machines used NetBIOS names \
+and this service to resolve them on the local network. Like LLMNR, it's a known \
+spoofing target and is often disabled in hardened environments. Runs on UDP 137.",
+            look_for: "\"NBNS Name Query\" on UDP 137.",
+        },
+        Protocol::Socks => Lesson {
+            title: "SOCKS — a generic proxy",
+            summary: "A proxy that forwards any TCP/UDP connection — used by Tor and tunnels.",
+            body: "SOCKS is a proxy that doesn't care what protocol you're speaking: \
+it just relays your connection to wherever you ask. SOCKS5 adds authentication \
+and UDP. It's what tools like Tor and SSH dynamic port-forwarding expose.",
+            look_for: "\"SOCKS5 Connect\" on TCP 1080.",
+        },
+        Protocol::Memcached => Lesson {
+            title: "Memcached — a memory cache",
+            summary: "A fast in-memory key-value store apps use to cache results.",
+            body: "Memcached keeps frequently used data in RAM so applications don't \
+have to hit a slower database every time. Simple get/set commands over TCP 11211. \
+Left exposed to the internet it has been abused for huge amplification attacks, \
+so seeing it on a public interface is worth noting.",
+            look_for: "\"Memcached get — session:42\" on TCP 11211.",
+        },
+        Protocol::BitTorrent => Lesson {
+            title: "BitTorrent — peer-to-peer file sharing",
+            summary: "Downloads a file in pieces from many peers at once.",
+            body: "Instead of one server, BitTorrent gets a file from lots of peers \
+simultaneously, each sharing the pieces they have. Connections open with a fixed \
+handshake naming the 'BitTorrent protocol'. Common on ports 6881-6889 but peers \
+use many ports.",
+            look_for: "\"BitTorrent handshake\" — the start of a peer connection.",
+        },
+        Protocol::Git => Lesson {
+            title: "Git — the native git:// transport",
+            summary: "The unencrypted protocol behind `git clone git://…`.",
+            body: "Git can move repositories over its own lightweight protocol on TCP \
+9418. It names a service — upload-pack for clone/fetch, receive-pack for push. \
+It has no encryption or authentication, so it's read-only and mostly superseded \
+by SSH and HTTPS.",
+            look_for: "\"Git — upload-pack (clone/fetch)\" on TCP 9418.",
+        },
+        Protocol::Xmpp => Lesson {
+            title: "XMPP — open instant messaging",
+            summary: "The Jabber chat protocol — an XML stream of messages and presence.",
+            body: "XMPP (formerly Jabber) is an open standard for chat: an ongoing XML \
+stream where <message> carries chat, <presence> says who's online, and <iq> does \
+requests. Used by some messaging apps and lots of IoT/push backends. Runs on TCP \
+5222.",
+            look_for: "\"XMPP message\" / \"XMPP presence\" on TCP 5222.",
+        },
+        Protocol::Finger => Lesson {
+            title: "Finger — 'who is this user?'",
+            summary: "A very old service that reports who's logged in on a machine.",
+            body: "Finger dates to the early internet: connect to TCP 79, send a \
+username, and get back details about that user or everyone logged in. It leaks \
+information and is essentially obsolete, so seeing it today is unusual.",
+            look_for: "\"Finger — alice\" on TCP 79.",
+        },
+        Protocol::Vrrp => Lesson {
+            title: "VRRP — a shared backup gateway",
+            summary: "Lets two routers share one virtual IP so the gateway never goes down.",
+            body: "If your default gateway is a single router and it dies, everyone \
+loses internet. VRRP has several routers share one virtual IP: one is master, \
+the others stand by, and if the master fails a backup takes over in seconds. \
+The advertisements you see are the master saying 'I'm still here'.",
+            look_for: "\"VRRPv3 Advertisement — VRID 10, priority 100\" (IP protocol 112).",
+        },
+        Protocol::Pim => Lesson {
+            title: "PIM — routing multicast",
+            summary: "How routers build delivery trees for multicast traffic.",
+            body: "Where IGMP is how a host joins a multicast group, PIM is how the \
+routers between the source and the receivers agree on a path to carry that \
+stream — without flooding it everywhere. Common wherever IPTV or market-data \
+multicast is routed across a network.",
+            look_for: "\"PIMv2 Join/Prune\" (IP protocol 103).",
+        },
+        Protocol::Eigrp => Lesson {
+            title: "EIGRP — Cisco's routing protocol",
+            summary: "A fast interior routing protocol used inside Cisco networks.",
+            body: "EIGRP is how Cisco routers inside one organisation learn which \
+networks each other can reach and pick good paths. Hello messages keep neighbours \
+alive; Update/Query/Reply exchange routes. It reacts quickly to changes.",
+            look_for: "\"EIGRPv2 Hello\" (IP protocol 88).",
+        },
+        Protocol::Pppoe => Lesson {
+            title: "PPPoE — how DSL logs in",
+            summary: "Wraps a dial-up-style session over Ethernet — common on DSL links.",
+            body: "Many home broadband links (especially DSL) authenticate with PPPoE: \
+a short discovery handshake (PADI/PADO/PADR/PADS) finds the access concentrator, \
+then a session carries your traffic with a username/password login. It's why your \
+router has a 'PPPoE username' field.",
+            look_for: "\"PPPoE PADI (discovery init)\" then \"PPPoE session\".",
+        },
+        Protocol::Eapol => Lesson {
+            title: "EAPOL / 802.1X — port access control",
+            summary: "The login at the network's edge — and the Wi-Fi WPA handshake.",
+            body: "802.1X decides whether a device is even allowed onto the network, \
+before it gets an IP. EAPOL carries that conversation. You also see it as the \
+WPA/WPA2 4-way 'Key' handshake every time a device joins a protected Wi-Fi.",
+            look_for: "\"EAPOL Key (WPA handshake)\" when a device joins Wi-Fi.",
+        },
+        Protocol::L2tp => Lesson {
+            title: "L2TP — a VPN tunnel",
+            summary: "Builds a tunnel between sites or clients, usually secured by IPsec.",
+            body: "L2TP carries one network's traffic across another by tunnelling it. \
+On its own it has no encryption, so it's almost always paired with IPsec (you'll \
+see 'L2TP/IPsec' in VPN settings). Control messages set the tunnel up; data \
+messages carry the payload.",
+            look_for: "\"L2TPv2 control message\" on UDP 1701.",
+        },
+        Protocol::Gtp => Lesson {
+            title: "GTP — the mobile network's tunnel",
+            summary: "Carries your phone's data through the 4G/5G core network.",
+            body: "When you browse on mobile data, your packets are tunnelled across \
+the carrier's core with GTP: a control part (GTP-C) sets up your session, and a \
+user part (GTP-U) carries the actual traffic. Central to how 3G/4G/5G data works.",
+            look_for: "\"GTP G-PDU (user data)\" on UDP 2152.",
+        },
+        Protocol::Rmcp => Lesson {
+            title: "RMCP / IPMI — managing servers out-of-band",
+            summary: "Talks to a server's management chip (BMC/iLO/iDRAC) even when it's off.",
+            body: "Servers have a small always-on management processor (a BMC, branded \
+iLO or iDRAC) that lets admins power-cycle and monitor the machine remotely, even \
+when the OS is down. RMCP/IPMI is how that's reached over the network. Exposed to \
+the internet it's a serious risk, so seeing it there matters.",
+            look_for: "\"RMCP/IPMI (out-of-band management)\" on UDP 623.",
+        },
+        Protocol::WsDiscovery => Lesson {
+            title: "WS-Discovery — finding printers and cameras",
+            summary: "How Windows and ONVIF IP cameras announce and find each other.",
+            body: "WS-Discovery is a SOAP/XML discovery protocol: a device sends a \
+Probe ('any printers here?') and others answer or announce with Hello/Bye. It's \
+what makes network printers and ONVIF security cameras appear automatically.",
+            look_for: "\"WS-Discovery Probe (searching)\" on UDP 3702.",
+        },
+        Protocol::Tacacs => Lesson {
+            title: "TACACS+ — who can touch the routers",
+            summary: "Cisco's protocol for logging admins into network devices.",
+            body: "When an engineer logs into a router or switch, TACACS+ checks their \
+username/password (authentication), what commands they're allowed (authorization), \
+and logs what they did (accounting) — all against a central server. Unlike RADIUS \
+it encrypts the whole body.",
+            look_for: "\"TACACS+ Authentication\" on TCP 49.",
+        },
+        Protocol::Diameter => Lesson {
+            title: "Diameter — RADIUS's big successor",
+            summary: "The AAA protocol behind mobile-network authentication and billing.",
+            body: "Diameter replaced RADIUS for large carriers: it authenticates \
+subscribers, authorises services, and drives billing across the mobile core. \
+Requests and Answers carry command codes like Credit-Control for charging.",
+            look_for: "\"Diameter Device-Watchdog Request\" on TCP/SCTP 3868.",
+        },
+        Protocol::Rlogin => Lesson {
+            title: "rlogin — an obsolete remote login",
+            summary: "A BSD-era remote shell — cleartext, insecure, replaced by SSH.",
+            body: "rlogin let you log into another Unix machine over the network — but \
+it sends everything, including what you type, in the clear, and trusts hosts by \
+name. SSH replaced it decades ago, so seeing rlogin today is a red flag.",
+            look_for: "\"rlogin — login alice/bob\" on TCP 513.",
+        },
+        Protocol::Dccp => Lesson {
+            title: "DCCP — TCP without the retransmits",
+            summary: "A transport for streaming: congestion control, but no re-sending lost data.",
+            body: "Some real-time apps want TCP's politeness (not flooding the network) \
+but not its insistence on redelivering old data — by the time it arrives, it's \
+too late to be useful. DCCP gives congestion control without reliability, aimed \
+at streaming and gaming.",
+            look_for: "\"DCCP Request — 5001 → 5002\" (IP protocol 33).",
+        },
+        Protocol::Dtls => Lesson {
+            title: "DTLS — TLS for UDP",
+            summary: "The encryption behind WebRTC media and some VPNs.",
+            body: "TLS needs the reliable, ordered stream that TCP gives it. DTLS is a \
+version of TLS redesigned to run over UDP's unreliable datagrams, so real-time \
+traffic (video calls, some VPNs) can be encrypted without TCP's delays. Same \
+privacy guarantees, datagram-friendly.",
+            look_for: "\"DTLS 1.2 Handshake\" / \"DTLS 1.2 Application Data\".",
+        },
+        Protocol::Netflow => Lesson {
+            title: "NetFlow / IPFIX — traffic accounting",
+            summary: "Routers summarising 'who talked to whom' and exporting it to a collector.",
+            body: "Instead of capturing every packet, a router can keep a running tally \
+of flows — source, destination, ports, byte counts — and export those summaries \
+with NetFlow (or its standard successor, IPFIX). It's how networks do capacity \
+planning and spot anomalies without storing full traffic.",
+            look_for: "\"IPFIX flow export\" on UDP 2055/4739.",
+        },
+        Protocol::Sflow => Lesson {
+            title: "sFlow — sampled traffic",
+            summary: "Switches sending a random sample of packets plus counters to a collector.",
+            body: "sFlow takes a different approach to NetFlow: rather than track every \
+flow, it randomly samples 1-in-N packets and ships them, along with interface \
+counters, to a collector. Cheap enough to run at line rate on big switches, and \
+statistically good enough to see the big picture.",
+            look_for: "\"sFlow v5 sample datagram\" on UDP 6343.",
+        },
+        Protocol::Bfd => Lesson {
+            title: "BFD — is the link still up?",
+            summary: "A very fast heartbeat between routers so failover happens in milliseconds.",
+            body: "Routing protocols can take seconds to notice a dead neighbour. BFD is \
+a lightweight, rapid hello between two devices whose only job is to detect a \
+broken path in milliseconds and tell the routing protocol to reroute. You'll see \
+a steady stream of tiny control packets.",
+            look_for: "\"BFDv1 control — state Up\" on UDP 3784.",
+        },
+        Protocol::Hsrp => Lesson {
+            title: "HSRP — Cisco's backup gateway",
+            summary: "Cisco's version of VRRP: two routers sharing one gateway IP.",
+            body: "Like VRRP, HSRP lets several routers present one virtual gateway so a \
+failure is invisible to hosts. One router is Active, another Standby; Hello \
+messages keep them in sync and trigger a takeover when the Active one goes quiet.",
+            look_for: "\"HSRP Hello (Active)\" on UDP 1985.",
+        },
+        Protocol::Iscsi => Lesson {
+            title: "iSCSI — disks over the network",
+            summary: "Carries raw SCSI storage commands over TCP, so a server's 'disk' is remote.",
+            body: "iSCSI lets a server use a disk that physically lives on a storage \
+array across the network, as if it were local. It wraps the same low-level SCSI \
+commands a real disk uses inside TCP. Common in data centres for shared storage.",
+            look_for: "\"iSCSI Login Request\" / \"iSCSI SCSI Command\" on TCP 3260.",
+        },
+        Protocol::Rtmp => Lesson {
+            title: "RTMP — live video ingest",
+            summary: "The Flash-era streaming protocol, still used to push live video to servers.",
+            body: "RTMP was built for Flash but outlived it: it's still how many \
+streamers push live video into platforms (which then transcode it to modern \
+formats). A session starts with a distinctive handshake, then carries chunked \
+audio/video.",
+            look_for: "\"RTMP handshake\" on TCP 1935.",
+        },
+        Protocol::Smpp => Lesson {
+            title: "SMPP — sending SMS",
+            summary: "The protocol apps and gateways use to send and receive text messages.",
+            body: "When an app sends you an SMS (a login code, a delivery alert), it \
+usually reaches an SMS gateway over SMPP. It binds as transmitter/receiver, then \
+submit_sm sends a message and deliver_sm brings replies back.",
+            look_for: "\"SMPP submit_sm\" on TCP 2775.",
+        },
+        Protocol::OpenFlow => Lesson {
+            title: "OpenFlow — software-defined networking",
+            summary: "How a central controller programs switches' forwarding tables.",
+            body: "In SDN, switches don't decide routing on their own — a central \
+controller does, and pushes the decisions down as flow rules over OpenFlow. \
+Packet-In asks the controller 'what do I do with this?', Flow-Mod installs the \
+answer. It decouples the network's brains from the hardware.",
+            look_for: "\"OpenFlow Packet-In\" / \"OpenFlow Flow-Mod\" on TCP 6653.",
+        },
+        Protocol::Nats => Lesson {
+            title: "NATS — cloud messaging",
+            summary: "A fast publish/subscribe system tying microservices together.",
+            body: "NATS is a lightweight message bus: services PUBlish to subjects and \
+SUBscribe to the ones they care about, and the server fans messages out. Its \
+text protocol (PUB/SUB/MSG/PING) is simple and very fast, popular in \
+cloud-native systems.",
+            look_for: "\"NATS PUB — events.orders\" on TCP 4222.",
+        },
+        Protocol::Stomp => Lesson {
+            title: "STOMP — simple broker messaging",
+            summary: "A plain-text protocol for talking to message brokers like ActiveMQ.",
+            body: "STOMP is deliberately simple: a handful of text commands (CONNECT, \
+SEND, SUBSCRIBE, MESSAGE) let almost any language talk to a message broker \
+without a heavy client library. Human-readable on the wire.",
+            look_for: "\"STOMP SEND\" / \"STOMP MESSAGE\" on TCP 61613.",
+        },
+        Protocol::Profinet => Lesson {
+            title: "PROFINET — factory-floor real-time",
+            summary: "Runs the sensors, motors and PLCs on an industrial network in real time.",
+            body: "PROFINET carries the tightly-timed data that keeps a production line \
+running — a controller reading sensors and driving actuators, often every few \
+milliseconds. It rides directly on Ethernet (no IP) for speed. DCP messages \
+discover and name devices; RT frames carry the cyclic process data.",
+            look_for: "\"PROFINET RT Class 1 (cyclic data)\" or \"PROFINET DCP Identify\".",
+        },
+        Protocol::Wol => Lesson {
+            title: "Wake-on-LAN — powering a machine on remotely",
+            summary: "A special broadcast that turns a sleeping computer on over the network.",
+            body: "A 'magic packet' contains the target's MAC address repeated 16 times. \
+A powered-off-but-plugged-in machine's network card watches for it and boots the \
+system when it arrives. Handy for remote admin — and worth noticing if unexpected.",
+            look_for: "\"Wake-on-LAN — magic packet for de:ad:be:ef:00:01\".",
+        },
+        Protocol::Glbp => Lesson {
+            title: "GLBP — sharing the load across gateways",
+            summary: "Cisco redundancy that also load-balances across several routers.",
+            body: "Where HSRP/VRRP keep a backup gateway ready, GLBP goes further and \
+lets multiple routers actively share the traffic at the same time, not just stand \
+by. Hello messages coordinate which router handles which hosts.",
+            look_for: "\"GLBP Hello\" on UDP 3222.",
+        },
+        Protocol::Wccp => Lesson {
+            title: "WCCP — steering traffic to a cache",
+            summary: "Lets a router hand web requests to a caching proxy transparently.",
+            body: "WCCP is how a router transparently redirects traffic (classically web \
+requests) to a nearby cache or security appliance, without reconfiguring clients. \
+The router and cache exchange Here-I-Am / I-See-You to stay in sync.",
+            look_for: "\"WCCP Here-I-Am\" on UDP 2048.",
+        },
+        Protocol::Mgcp => Lesson {
+            title: "MGCP — controlling VoIP gateways",
+            summary: "A call agent telling media gateways how to set up phone calls.",
+            body: "In some VoIP designs the intelligence is central: a call agent uses \
+MGCP to command simple media gateways to create connections, play tones and \
+report events. Commands are four-letter verbs like CRCX (create connection).",
+            look_for: "\"MGCP CRCX (command)\" on UDP 2427.",
+        },
+        Protocol::Nbds => Lesson {
+            title: "NetBIOS Datagram — legacy Windows broadcast",
+            summary: "The connectionless side of old Windows networking (browsing/announcements).",
+            body: "NetBIOS Datagram Service carries the broadcast chatter of classic \
+Windows networking — network browsing, host announcements. Like its NBNS cousin \
+it's noisy, legacy, and often disabled in modern/hardened networks.",
+            look_for: "\"NetBIOS-DGM Broadcast\" on UDP 138.",
+        },
+        Protocol::Dicom => Lesson {
+            title: "DICOM — medical images on the wire",
+            summary: "How scanners, PACS and viewers exchange X-rays, CTs and MRIs.",
+            body: "DICOM is the standard for medical imaging: a scanner associates with \
+an archive (A-ASSOCIATE), then ships images and metadata (P-DATA-TF). Because it \
+carries patient data, seeing it in a capture is sensitive by nature.",
+            look_for: "\"DICOM A-ASSOCIATE-RQ\" / \"DICOM P-DATA-TF\" on TCP 104/11112.",
+        },
+        Protocol::Hl7 => Lesson {
+            title: "HL7 — hospital data exchange",
+            summary: "The text format hospitals use to share admissions, orders and lab results.",
+            body: "HL7 v2 is how hospital systems talk: an ADT^A01 message admits a \
+patient, ORU^R01 delivers lab results, and so on. It's pipe-delimited text, often \
+wrapped in MLLP framing over TCP. Like DICOM, it carries protected health data.",
+            look_for: "\"HL7 ADT^A01 (MLLP)\" on TCP 2575.",
+        },
+        Protocol::Fix => Lesson {
+            title: "FIX — the language of trading",
+            summary: "How trading systems and exchanges send orders and market data.",
+            body: "FIX is the lingua franca of electronic finance: tag=value pairs \
+(8=FIX.4.2…35=D…) carry orders (NewOrderSingle), fills (ExecutionReport) and \
+market data between brokers, funds and exchanges. Latency-sensitive and \
+high-value, so it's tightly monitored.",
+            look_for: "\"FIX FIX.4.2 — NewOrderSingle\" — tag 35 is the message type.",
+        },
+        Protocol::S7comm => Lesson {
+            title: "S7comm — talking to Siemens PLCs",
+            summary: "The protocol used to program and read Siemens S7 industrial controllers.",
+            body: "S7comm is how engineering software and SCADA systems read and write \
+the memory of Siemens S7 PLCs — the controllers running physical processes. It \
+rides on ISO-on-TCP (port 102). It has no built-in authentication, which is why \
+industrial-network monitoring cares about it (recall Stuxnet).",
+            look_for: "\"S7comm Job request\" on TCP 102.",
+        },
+        Protocol::Iec104 => Lesson {
+            title: "IEC 60870-5-104 — power-grid telecontrol",
+            summary: "SCADA commands and measurements for electrical substations.",
+            body: "IEC-104 carries the telemetry and control for power utilities: a \
+control centre reads measurements and sends commands (open/close a breaker) to \
+substation equipment over TCP. Critical infrastructure, so unexpected IEC-104 \
+traffic is a serious flag.",
+            look_for: "\"IEC 60870-5-104 I-frame (information)\" on TCP 2404.",
+        },
+        Protocol::Ldp => Lesson {
+            title: "LDP — handing out MPLS labels",
+            summary: "How MPLS routers agree on the labels that build forwarding paths.",
+            body: "MPLS forwards packets by short labels instead of IP lookups. LDP is \
+how routers tell each other 'use label N to reach network X', building the \
+label-switched paths. Hello messages find neighbours; Label Mapping messages \
+distribute the labels.",
+            look_for: "\"LDP Hello\" / \"LDP Label Mapping\" on TCP/UDP 646.",
+        },
+        Protocol::Goose => Lesson {
+            title: "GOOSE — substation trip signals",
+            summary: "Ultra-fast IEC 61850 messages that trip breakers in a power substation.",
+            body: "When a fault happens in an electrical substation, protection relays \
+must act in milliseconds. GOOSE carries those trip/status signals directly over \
+Ethernet (no IP) for minimum delay, repeating them for reliability. Seeing \
+unexpected GOOSE is a serious grid-security signal.",
+            look_for: "\"GOOSE — APPID 0x0001 (IEC 61850 substation event)\".",
+        },
+        Protocol::Ptp => Lesson {
+            title: "PTP — clocks in lockstep",
+            summary: "Sub-microsecond time sync for finance, telecom, power and broadcast.",
+            body: "Some systems need clocks aligned far tighter than NTP can manage — \
+trading timestamps, 5G radios, power-grid measurements, live video. PTP (IEEE \
+1588) syncs them to sub-microsecond accuracy by carefully measuring message \
+delays. Sync/Follow_Up/Delay_Req are the exchange.",
+            look_for: "\"PTP Sync\" / \"PTP Announce\" on Ethernet or UDP 319/320.",
+        },
+        Protocol::Rsvp => Lesson {
+            title: "RSVP — reserving bandwidth",
+            summary: "Signals QoS reservations and sets up MPLS traffic-engineering tunnels.",
+            body: "RSVP lets a device ask the network to guarantee bandwidth along a \
+path (a Path message going out, a Resv coming back). Its main modern use is \
+MPLS-TE: building label-switched tunnels with reserved capacity across a \
+provider's core.",
+            look_for: "\"RSVP Path\" / \"RSVP Resv\" (IP protocol 46).",
+        },
+        Protocol::Isakmp => Lesson {
+            title: "ISAKMP / IKE — negotiating a VPN",
+            summary: "The handshake that sets up the keys for an IPsec VPN tunnel.",
+            body: "Before IPsec can encrypt traffic, both ends must agree on keys and \
+parameters. IKE (carried by ISAKMP) is that negotiation: IKE_SA_INIT and IKE_AUTH \
+in IKEv2 establish the secure tunnel. On UDP 500, or 4500 when NAT is in the way.",
+            look_for: "\"ISAKMP/IKEv2 IKE_SA_INIT\" on UDP 500/4500.",
+        },
+        Protocol::Geneve => Lesson {
+            title: "Geneve — a flexible overlay",
+            summary: "Wraps whole Ethernet frames to build virtual networks (a VXLAN successor).",
+            body: "Cloud and data-centre networks build many virtual networks on top of \
+one physical fabric. Geneve tunnels a tenant's Ethernet frame inside UDP, tagged \
+with a VNI identifying which virtual network it belongs to — like VXLAN, but with \
+room for extensible options.",
+            look_for: "\"Geneve — VNI 100, carrying Ethernet\" on UDP 6081.",
+        },
+        Protocol::Capwap => Lesson {
+            title: "CAPWAP — controller-managed Wi-Fi",
+            summary: "How a wireless controller manages many thin access points.",
+            body: "In enterprise Wi-Fi the access points are 'thin' — a central \
+controller does the thinking. CAPWAP is the tunnel between them: a control channel \
+(usually DTLS-encrypted) configures the APs, and a data channel carries client \
+traffic back to the controller.",
+            look_for: "\"CAPWAP control (DTLS-encrypted)\" on UDP 5246/5247.",
+        },
+        Protocol::Teredo => Lesson {
+            title: "Teredo — IPv6 through a NAT",
+            summary: "Tunnels IPv6 inside IPv4/UDP so it can cross home NAT routers.",
+            body: "Teredo is a transition technology: it lets a host with only IPv4 (and \
+behind a NAT) still reach the IPv6 internet by wrapping IPv6 packets in IPv4 UDP. \
+Handy historically, but also a way traffic can slip past IPv4-only controls, so \
+it's worth noticing.",
+            look_for: "\"Teredo — tunnelled IPv6 packet\" on UDP 3544.",
+        },
+        Protocol::Gvcp => Lesson {
+            title: "GVCP — machine-vision cameras",
+            summary: "Discovers and configures industrial GigE Vision cameras.",
+            body: "Factory inspection and robotics use GigE Vision cameras. GVCP is the \
+control side: discovering cameras on the network and reading/writing their \
+registers (exposure, triggering, IP settings). The high-rate image data rides a \
+separate stream.",
+            look_for: "\"GVCP Discovery\" / \"GVCP WriteReg\" on UDP 3956.",
+        },
+        Protocol::Rpc => Lesson {
+            title: "ONC RPC / NFS — remote file access",
+            summary: "The plumbing behind NFS network file shares and the portmapper.",
+            body: "ONC RPC lets a program call a procedure on another machine. Its most \
+familiar user is NFS — mounting a remote directory as if it were local. The \
+Portmapper (port 111) tells clients which port each RPC service is on; NFS itself \
+is program 100003.",
+            look_for: "\"NFS call\" / \"Portmap call\" on TCP/UDP 111 and 2049.",
+        },
+        Protocol::Graphite => Lesson {
+            title: "Graphite — pushing metrics",
+            summary: "A dead-simple line format apps use to report time-series metrics.",
+            body: "Graphite/Carbon accepts metrics as plain text lines — \
+`path value timestamp` — which makes almost anything able to emit them. A \
+monitoring backend stores and graphs the series. If you see it, something is \
+reporting operational metrics.",
+            look_for: "\"Graphite — servers.web1.cpu\" on TCP 2003.",
+        },
+        Protocol::Gearman => Lesson {
+            title: "Gearman — farming out jobs",
+            summary: "A job server that hands work from clients to worker processes.",
+            body: "Gearman lets an application offload work: a client submits a job, the \
+server queues it, and an available worker picks it up and returns the result. \
+Requests and responses use a small binary framing ('\\0REQ' / '\\0RES').",
+            look_for: "\"Gearman request\" / \"Gearman response\" on TCP 4730.",
+        },
+        Protocol::Beanstalk => Lesson {
+            title: "beanstalkd — a simple work queue",
+            summary: "A lightweight queue for background jobs, with a plain-text protocol.",
+            body: "beanstalkd is a minimal work queue: producers `put` jobs, workers \
+`reserve` and then `delete` them when done. Its text protocol is easy to read on \
+the wire and easy to speak from any language.",
+            look_for: "\"Beanstalk put\" / \"Beanstalk reserve\" on TCP 11300.",
+        },
+        Protocol::Ethercat => Lesson {
+            title: "EtherCAT — a fieldbus on Ethernet",
+            summary: "Real-time industrial control that passes one frame down a chain of devices.",
+            body: "EtherCAT wires up motors, drives and IO in machines and factories. \
+Cleverly, one Ethernet frame flies through every slave device 'on the fly' — each \
+reads and writes its slice as the frame passes — giving very low, predictable \
+latency. Runs directly on Ethernet, no IP.",
+            look_for: "\"EtherCAT LRW (logical read/write)\" (EtherType 0x88A4).",
+        },
+        Protocol::Fcoe => Lesson {
+            title: "FCoE — storage over Ethernet",
+            summary: "Carries Fibre Channel storage traffic on a converged Ethernet network.",
+            body: "Data centres traditionally ran a separate Fibre Channel network just \
+for storage. FCoE puts those same FC frames onto the regular Ethernet fabric, so \
+one set of cables carries both LAN and storage. Seeing it means SAN traffic on \
+the wire.",
+            look_for: "\"FCoE — Fibre Channel device data\" (EtherType 0x8906).",
+        },
+        Protocol::Macsec => Lesson {
+            title: "MACsec — encrypting the wire itself",
+            summary: "802.1AE encryption between two directly-connected devices.",
+            body: "MACsec encrypts Ethernet frames hop by hop — between a device and \
+the switch it plugs into — so even someone tapping that cable sees only ciphertext. \
+Unlike a VPN it protects the local link, including traffic that never leaves the \
+building.",
+            look_for: "\"MACsec — encrypted (AN 1)\" (EtherType 0x88E5).",
+        },
+        Protocol::Rarp => Lesson {
+            title: "RARP — ARP in reverse",
+            summary: "A diskless device asking 'I know my MAC — what's my IP?'",
+            body: "RARP is the mirror image of ARP: instead of finding a MAC for a known \
+IP, a device that only knows its own hardware address asks a server for an IP. \
+It's largely obsolete (BOOTP/DHCP replaced it), so it's rare and worth a glance \
+when it appears.",
+            look_for: "\"RARP Request\" / \"RARP Reply\" (EtherType 0x8035).",
+        },
+        Protocol::Rtps => Lesson {
+            title: "RTPS / DDS — robots' nervous system",
+            summary: "The real-time pub/sub bus behind ROS 2, vehicles and defence systems.",
+            body: "DDS is a data-distribution middleware where components publish and \
+subscribe to topics without knowing each other directly; RTPS is its wire \
+protocol. It's the backbone of ROS 2 robotics, autonomous vehicles and many \
+industrial/defence systems. Seeing it maps out a control system.",
+            look_for: "\"RTPS/DDS DATA\" / \"RTPS/DDS HEARTBEAT\" (magic \"RTPS\").",
+        },
+        Protocol::Influxdb => Lesson {
+            title: "InfluxDB — time-series metrics",
+            summary: "A simple text line format for writing measurements to a time-series DB.",
+            body: "InfluxDB's line protocol lets anything report metrics as text: a \
+measurement name, tags, fields and a timestamp. Monitoring and IoT systems push \
+huge volumes of these points. If you see it, something is recording operational \
+data.",
+            look_for: "\"InfluxDB — cpu\" on UDP 8089.",
+        },
+        Protocol::MqttSn => Lesson {
+            title: "MQTT-SN — MQTT for tiny sensors",
+            summary: "A UDP-based variant of MQTT for constrained wireless sensor devices.",
+            body: "Plain MQTT needs a TCP connection, which is heavy for a battery \
+sensor on a flaky radio. MQTT-SN keeps MQTT's publish/subscribe model but runs \
+over UDP with smaller messages and gateways, so very constrained devices can \
+still play.",
+            look_for: "\"MQTT-SN PUBLISH\" / \"MQTT-SN CONNECT\" on UDP 1883.",
+        },
+        Protocol::Babel => Lesson {
+            title: "Babel — routing for mesh networks",
+            summary: "A robust distance-vector routing protocol popular in community meshes.",
+            body: "Babel is a routing protocol designed to work well on messy, changing \
+networks — wireless mesh and community networks especially — avoiding the loops \
+that trip up simpler schemes. Routers periodically exchange updates about which \
+destinations they can reach.",
+            look_for: "\"Babel routing update (v2)\" on UDP 6696.",
+        },
+        Protocol::X11 => Lesson {
+            title: "X11 — the Unix display protocol",
+            summary: "How a Unix GUI app draws on a screen, possibly across the network.",
+            body: "On Unix/Linux, the X Window System separates the app from the display: \
+an app sends drawing requests to an X server, which can be on the same machine or \
+another one. That network-transparency is why you can run a graphical app remotely \
+over SSH. It's unencrypted on its own.",
+            look_for: "\"X11 connection setup (little-endian)\" on TCP 6000+.",
+        },
+        Protocol::Rsync => Lesson {
+            title: "rsync — efficient file sync",
+            summary: "Copies only the changed parts of files between machines.",
+            body: "rsync is the classic tool for syncing files and backups: instead of \
+resending whole files, it works out which blocks changed and transfers just those. \
+Its native daemon transport (port 873) opens with an \"@RSYNCD:\" greeting; it's \
+also often tunnelled over SSH.",
+            look_for: "\"rsync daemon — @RSYNCD: 31.0\" on TCP 873.",
+        },
+        Protocol::Svn => Lesson {
+            title: "Subversion — centralised version control",
+            summary: "The svn:// protocol for a Subversion source-code repository.",
+            body: "Subversion is a version-control system (an older, centralised \
+alternative to Git). Its svnserve protocol speaks a Lisp-like tuple syntax; a \
+session opens with a server greeting. Still common in enterprises with long-lived \
+codebases.",
+            look_for: "\"SVN — server greeting\" on TCP 3690.",
+        },
+        Protocol::Rethinkdb => Lesson {
+            title: "RethinkDB — a realtime document DB",
+            summary: "A JSON document database built around live, pushed query results.",
+            body: "RethinkDB stores JSON documents and is known for changefeeds — queries \
+that keep pushing updates as the data changes, handy for realtime apps. Clients \
+open the connection with a version magic number before running queries.",
+            look_for: "\"RethinkDB V1.0 handshake\" on TCP 28015.",
+        },
+        Protocol::Sv => Lesson {
+            title: "Sampled Values — digital measurements",
+            summary: "Streams of digitised current/voltage from substation sensors (IEC 61850-9-2).",
+            body: "Modern substations replace thick copper wiring from sensors with a \
+network: merging units digitise the current and voltage waveforms and stream them \
+as Sampled Values many thousands of times a second, directly over Ethernet, to \
+the protection relays that watch them.",
+            look_for: "\"Sampled Values — APPID 0x4000 (IEC 61850-9-2)\".",
+        },
+        Protocol::Powerlink => Lesson {
+            title: "POWERLINK — deterministic Ethernet",
+            summary: "A real-time industrial protocol for tightly-timed motion control.",
+            body: "Standard Ethernet is non-deterministic — you can't guarantee exactly \
+when a frame arrives. Ethernet POWERLINK adds a strict cyclic schedule (a managing \
+node polls each device in turn) so machines and robots get the predictable timing \
+that motion control needs.",
+            look_for: "\"POWERLINK PRes (Poll Response)\" (EtherType 0x88AB).",
+        },
+        Protocol::Sercos => Lesson {
+            title: "SERCOS III — servo motion bus",
+            summary: "A real-time Ethernet bus that commands servo drives in machinery.",
+            body: "SERCOS III is a motion-control bus: a controller sends setpoints to \
+servo drives and reads back positions, all on a tightly-timed Ethernet ring. \
+Master data (MDT) goes out to the drives; drive data (AT) comes back.",
+            look_for: "\"SERCOS III MDT (master data)\" (EtherType 0x88CD).",
+        },
+        Protocol::Knxip => Lesson {
+            title: "KNXnet/IP — smart buildings",
+            summary: "Carries KNX building-automation commands (lights, HVAC, blinds) over IP.",
+            body: "KNX is a widespread building-automation standard: switches, thermostats \
+and actuators on a bus. KNXnet/IP tunnels or routes that bus over the IP network, \
+so a building controller or app can drive the lights and heating remotely.",
+            look_for: "\"KNXnet/IP Routing Indication\" on UDP 3671.",
+        },
+        Protocol::Statsd => Lesson {
+            title: "StatsD — fire-and-forget metrics",
+            summary: "Tiny UDP packets an app sends to count events and time operations.",
+            body: "StatsD makes instrumenting code cheap: send a one-line UDP packet like \
+`api.requests:1|c` and forget about it — no connection, no waiting. An aggregator \
+collects and summarises them. Because it's UDP, a lost packet just means a slightly \
+undercounted metric.",
+            look_for: "\"StatsD — api.requests (counter)\" on UDP 8125.",
+        },
+        Protocol::Gelf => Lesson {
+            title: "GELF — structured logs to Graylog",
+            summary: "Ships application logs as structured messages (often to Graylog).",
+            body: "Plain syslog lines are hard to search. GELF sends logs as structured \
+JSON (with fields, levels and source), optionally compressed or split into chunks \
+for UDP. A log server like Graylog collects and indexes them.",
+            look_for: "\"GELF (Graylog) — chunked\" on UDP 12201.",
+        },
+        Protocol::Hartip => Lesson {
+            title: "HART-IP — smart field instruments",
+            summary: "Brings HART process-instrument data (flow, pressure) onto the IP network.",
+            body: "HART is the long-standing protocol for smart field instruments in \
+process plants — reading a flow meter, configuring a valve positioner. HART-IP \
+carries that same data over Ethernet/IP so modern asset-management systems can \
+reach the instruments.",
+            look_for: "\"HART-IP Session Initiate\" on UDP/TCP 5094.",
+        },
+        Protocol::Elasticsearch => Lesson {
+            title: "Elasticsearch — cluster transport",
+            summary: "The internal binary protocol Elasticsearch nodes use among themselves.",
+            body: "Elasticsearch clients usually talk to it over HTTP (port 9200), but the \
+nodes of a cluster talk to *each other* over a separate binary transport protocol \
+on 9300 — replicating shards, running distributed searches. Seeing it maps the \
+cluster's internal chatter.",
+            look_for: "\"Elasticsearch transport message\" on TCP 9300.",
+        },
+        Protocol::Zabbix => Lesson {
+            title: "Zabbix — monitoring agents",
+            summary: "How Zabbix agents and server exchange monitoring data.",
+            body: "Zabbix watches servers and network gear. Agents on the monitored hosts \
+send metrics to (or answer requests from) the Zabbix server using this protocol, \
+framed with a \"ZBXD\" header. Seeing it means infrastructure monitoring is running.",
+            look_for: "\"Zabbix protocol data\" on TCP 10050/10051.",
+        },
+        Protocol::Nsq => Lesson {
+            title: "NSQ — realtime message queue",
+            summary: "A distributed messaging platform for decoupling services.",
+            body: "NSQ moves messages between producers and consumers at scale, with no \
+single broker to bottleneck. Clients open with a \"  V2\" handshake, then PUB to \
+publish and SUB to consume topics. Popular in Go-based microservice systems.",
+            look_for: "\"NSQ PUB\" / \"NSQ handshake (V2)\" on TCP 4150.",
+        },
+        Protocol::Zmtp => Lesson {
+            title: "ZMTP / ZeroMQ — brokerless messaging",
+            summary: "The wire protocol of ZeroMQ, a library for connecting code directly.",
+            body: "ZeroMQ isn't a server — it's a library that gives sockets superpowers \
+(pub/sub, request/reply, pipelines) with no central broker. ZMTP is what those \
+sockets speak on the wire; a connection opens with a recognisable greeting before \
+exchanging framed messages.",
+            look_for: "\"ZMTP/ZeroMQ greeting (v3.x)\" on arbitrary TCP ports.",
+        },
+        Protocol::Aerospike => Lesson {
+            title: "Aerospike — a fast key-value store",
+            summary: "A low-latency database built for huge, real-time workloads.",
+            body: "Aerospike is a key-value/document database designed for very high \
+throughput and sub-millisecond reads (ad-tech, fraud detection, recommendation). \
+Clients talk to it with this binary protocol — Info messages for cluster state, \
+AS_MSG for data operations.",
+            look_for: "\"Aerospike Message (AS_MSG)\" on TCP 3000.",
+        },
+        Protocol::Avtp => Lesson {
+            title: "AVTP — audio/video over the car network",
+            summary: "IEEE 1722 media streaming, big in automotive Ethernet and pro AV.",
+            body: "As cars replace bundles of dedicated wires with a single Ethernet \
+network, they need to carry synchronised audio and video (cameras, microphones, \
+displays) with tight timing. AVTP does exactly that — time-aligned media streams \
+— and the same standard powers professional AV installations.",
+            look_for: "\"AVTP — AVTP Audio (AAF)\" (EtherType 0x22F0).",
+        },
+        Protocol::SomeIp => Lesson {
+            title: "SOME/IP — services inside a car",
+            summary: "How software components (ECUs) call each other in modern vehicles.",
+            body: "Modern cars run distributed software across many ECUs. SOME/IP lets one \
+component offer a service and others call it or subscribe to its events — remote \
+procedure calls and pub/sub for the vehicle. Its Service Discovery variant \
+advertises what's available.",
+            look_for: "\"SOME/IP Request — service 0x1234\" on UDP/TCP 30490+.",
+        },
+        Protocol::Doip => Lesson {
+            title: "DoIP — plugging into a car over Ethernet",
+            summary: "Carries vehicle diagnostics (fault codes, flashing) over IP.",
+            body: "When a garage tool reads your car's fault codes or updates an ECU's \
+firmware, it increasingly does so over Ethernet using DoIP: it finds the vehicle, \
+activates a diagnostic route, then tunnels the UDS diagnostic messages to the \
+target ECU.",
+            look_for: "\"DoIP Diagnostic message\" on UDP/TCP 13400.",
+        },
+        Protocol::Xcp => Lesson {
+            title: "XCP — tuning an ECU live",
+            summary: "Reads and calibrates ECU variables while the engine runs.",
+            body: "Engineers developing an engine or controller need to watch internal \
+variables and tweak calibration constants in real time. XCP is the standard \
+measurement-and-calibration protocol for that, running over CAN, Ethernet (as \
+here) and other links.",
+            look_for: "\"XCP CONNECT / positive response\" on UDP/TCP 5555.",
+        },
+        Protocol::Matter => Lesson {
+            title: "Matter — smart home, one standard",
+            summary: "The cross-vendor protocol so smart-home devices finally interoperate.",
+            body: "Matter (backed by Apple, Google, Amazon and others) aims to end the \
+smart-home tower of Babel: a lamp, lock or sensor from any vendor speaks the same \
+secure protocol over IP, so any hub can control it. You'll see it around smart-home \
+gear and Thread border routers.",
+            look_for: "\"Matter message (format v0)\" on UDP 5540.",
+        },
+        Protocol::Afp => Lesson {
+            title: "AFP — Mac file sharing",
+            summary: "Apple's file-sharing protocol for mounting shared volumes on a Mac.",
+            body: "AFP is how Macs traditionally shared files and mounted network volumes \
+(before Apple moved toward SMB). It's framed by DSI and opens with a session \
+handshake. Seeing it means Apple file sharing, often to a NAS or older macOS \
+server.",
+            look_for: "\"AFP/DSI OpenSession request\" on TCP 548.",
+        },
+        Protocol::Dht => Lesson {
+            title: "BitTorrent DHT — trackerless torrents",
+            summary: "A distributed hash table that lets peers find each other with no tracker.",
+            body: "Torrents originally needed a central tracker to introduce peers. The DHT \
+removes it: every client is a node in a giant distributed lookup table, so peers \
+find each other directly. It's a lot of small UDP queries — ping, find_node, \
+get_peers, announce_peer.",
+            look_for: "\"BitTorrent DHT get_peers\" on random UDP ports.",
+        },
+        Protocol::Gnutella => Lesson {
+            title: "Gnutella — decentralised file sharing",
+            summary: "An early fully-decentralised peer-to-peer file-sharing network.",
+            body: "Gnutella was one of the first file-sharing networks with no central \
+server at all — peers connect to each other and flood search queries across the \
+mesh. A connection opens with a recognisable \"GNUTELLA CONNECT\" handshake.",
+            look_for: "\"Gnutella handshake — GNUTELLA CONNECT\" on TCP 6346.",
+        },
+        Protocol::Edonkey => Lesson {
+            title: "eDonkey / eMule — P2P file sharing",
+            summary: "A once-huge peer-to-peer network for sharing large files.",
+            body: "The eDonkey network (and its popular eMule client) let users share and \
+reassemble large files from many peers, coordinated by servers and later a Kademlia \
+DHT. The protocol marker byte distinguishes plain eDonkey from eMule's extensions.",
+            look_for: "\"eMule extended message\" on TCP 4662.",
+        },
+        Protocol::SourceQuery => Lesson {
+            title: "Source Query (A2S) — game server info",
+            summary: "How game clients and server browsers ask what's running on a server.",
+            body: "The A2S query protocol lets a client or a server browser ask a game \
+server for its name, map, player list and rules — the data you see in a server \
+browser. Used by Valve's Source engine and many other games. It's a small \
+connectionless UDP request/response.",
+            look_for: "\"Source Query A2S_INFO request\" on UDP (often 27015).",
+        },
+        Protocol::Minecraft => Lesson {
+            title: "Minecraft — the Java Edition protocol",
+            summary: "How the Minecraft client and server talk (logins, world updates, chat).",
+            body: "Minecraft Java Edition speaks its own TCP protocol: length-prefixed \
+packets that start with a handshake, then move through login into play — carrying \
+world chunks, entity movement and chat. The legacy server-list ping is a special \
+older format.",
+            look_for: "\"Minecraft handshake\" on TCP 25565.",
+        },
+        Protocol::Mumble => Lesson {
+            title: "Mumble — low-latency voice chat",
+            summary: "A voice-chat protocol (control over TCP, audio over UDP).",
+            body: "Mumble is a voice-chat system popular with gamers and teams for its low \
+latency. A TLS-protected TCP control channel handles logins, channels and text; the \
+actual voice audio travels over a separate UDP path. You'll see the control messages \
+here.",
+            look_for: "\"Mumble Authenticate\" / \"Mumble UserState\" on TCP 64738.",
+        },
+        Protocol::Pfcp => Lesson {
+            title: "PFCP — the 5G core's control lever",
+            summary: "Lets the mobile control plane program how user traffic is forwarded.",
+            body: "In 4G/5G the 'brains' (control plane) and the 'pipes' (user plane) are \
+separate boxes. PFCP is how the brain tells the pipe what to do with a \
+subscriber's traffic — set up a session, apply rules, report usage. It's the N4 \
+interface, and it's where mobile sessions are born and die.",
+            look_for: "\"PFCP Session Establishment Request\" on UDP 8805.",
+        },
+        Protocol::GtpPrime => Lesson {
+            title: "GTP' — the billing feed",
+            summary: "Ships Call Detail Records from network nodes to the billing system.",
+            body: "Every mobile session produces usage records. GTP prime is the variant \
+of GTP dedicated to hauling those Call Detail Records off to the charging \
+gateway, so subscribers get billed. Distinct from the GTP that carries your \
+actual data.",
+            look_for: "\"GTP' (charging) Data Record Transfer Request\" on UDP 3386.",
+        },
+        Protocol::Megaco => Lesson {
+            title: "Megaco / H.248 — driving media gateways",
+            summary: "A call agent telling gateways to connect, bridge or tear down media.",
+            body: "In carrier VoIP the call logic lives in a softswitch while the actual \
+audio passes through media gateways. Megaco (also standardised as H.248) is the \
+command channel between them: add this endpoint, connect these two, drop the \
+call. The successor to MGCP.",
+            look_for: "\"Megaco/H.248 — MEGACO/1 …\" on UDP/TCP 2944.",
+        },
+        Protocol::Msrp => Lesson {
+            title: "MSRP — chat inside a call",
+            summary: "Carries instant messages and file transfers in SIP/IMS sessions.",
+            body: "SIP sets up sessions; MSRP is what carries the actual text messages and \
+files inside one. It's how operator messaging (RCS) and enterprise IMS chat move \
+content, negotiated by SIP just like audio would be.",
+            look_for: "\"MSRP SEND\" on TCP 2855.",
+        },
+        Protocol::Pcoip => Lesson {
+            title: "PCoIP — a desktop over the network",
+            summary: "Teradici/VMware Horizon's protocol for streaming a remote desktop.",
+            body: "PCoIP delivers a virtual desktop's screen to a thin client or laptop, \
+adapting image quality to the available bandwidth. The payload is encrypted, so \
+netscope identifies it by its port rather than decoding the pixels.",
+            look_for: "\"PCoIP remote display\" on UDP/TCP 4172.",
+        },
+        Protocol::Spice => Lesson {
+            title: "SPICE — a VM's console",
+            summary: "The remote-display protocol for virtual machines (oVirt/QEMU).",
+            body: "SPICE gives you a virtual machine's screen, keyboard, mouse, sound and \
+USB redirection over the network — the console you open from a virtualisation \
+manager. It splits work across separate channels (display, inputs, cursor…), each \
+opening with a \"REDQ\" link message.",
+            look_for: "\"SPICE link — display channel\".",
+        },
+        Protocol::Ica => Lesson {
+            title: "Citrix ICA — published apps",
+            summary: "The thin-client protocol delivering a Citrix desktop or single app.",
+            body: "ICA streams the screen of an application or desktop running on a Citrix \
+server down to the user's device, sending keystrokes and clicks back. It's the \
+core of Citrix's virtual-app delivery, and the session opens with a recognisable \
+handshake.",
+            look_for: "\"Citrix ICA handshake\" on TCP 1494.",
+        },
+        Protocol::Ndmp => Lesson {
+            title: "NDMP — backing up a NAS",
+            summary: "Lets backup software drive a storage appliance's own backup engine.",
+            body: "Backing up a big NAS by pulling every file over the network is slow. \
+NDMP instead lets the backup server *orchestrate* the NAS to stream data straight \
+to a tape or disk target — the control conversation is what you see here.",
+            look_for: "\"NDMP CONNECT_OPEN request\" on TCP 10000.",
+        },
+        Protocol::Dcerpc => Lesson {
+            title: "DCE/RPC — Windows' remote calls",
+            summary: "The RPC layer under the endpoint mapper, WMI and much of Active Directory.",
+            body: "A great deal of Windows administration is remote procedure calls: \
+querying WMI, managing services, talking to a domain controller. DCE/RPC (MSRPC) \
+is that layer. A client Binds to an interface on port 135 or a dynamic port, then \
+issues Requests. It's also a well-trodden lateral-movement path, so it's worth \
+watching.",
+            look_for: "\"DCE/RPC Bind\" / \"DCE/RPC Request\" on TCP 135.",
+        },
+        Protocol::Pptp => Lesson {
+            title: "PPTP — the legacy VPN",
+            summary: "An old Microsoft VPN: control on TCP 1723, data in GRE.",
+            body: "PPTP was the classic 'built into Windows' VPN. A TCP control channel \
+negotiates the tunnel and the actual traffic rides GRE alongside it. Its \
+encryption has known weaknesses and it's considered obsolete, so seeing it today \
+is a security note worth raising.",
+            look_for: "\"PPTP Start-Control-Connection-Request\" on TCP 1723.",
+        },
+        Protocol::Radmin => Lesson {
+            title: "Radmin — remote control",
+            summary: "A Windows remote-administration tool's session traffic.",
+            body: "Radmin lets an administrator take over a Windows desktop remotely. The \
+session is encrypted, so netscope flags it by port rather than decoding it. Like \
+any remote-control tool, unexpected Radmin traffic is worth confirming was \
+authorised.",
+            look_for: "\"Radmin remote control\" on TCP 4899.",
+        },
+        Protocol::Skinny => Lesson {
+            title: "Skinny (SCCP) — Cisco IP phones",
+            summary: "The lightweight signalling between Cisco phones and CallManager.",
+            body: "Before SIP took over, Cisco IP phones registered and made calls using \
+Skinny (SCCP): a compact binary protocol where the phone reports off-hook, keypad \
+presses and call state to CallManager, which drives the display and rings. Still \
+common in Cisco voice estates.",
+            look_for: "\"Skinny (SCCP) Register\" / \"CallState\" on TCP 2000.",
+        },
+        Protocol::Cldap => Lesson {
+            title: "CLDAP — finding a domain controller",
+            summary: "Connectionless LDAP, used by Windows to locate the nearest DC.",
+            body: "Before a Windows machine can log you in it must find a domain \
+controller. It asks over CLDAP — LDAP in a single UDP round trip. Because a tiny \
+query gets a large reply, exposed CLDAP servers are also abused for DDoS \
+amplification, so seeing it from the internet is a red flag.",
+            look_for: "\"CLDAP searchRequest\" on UDP 389.",
+        },
+        Protocol::Bmp => Lesson {
+            title: "BMP — watching BGP from the outside",
+            summary: "A router streaming its BGP tables and peer events to a collector.",
+            body: "Rather than logging into routers to inspect BGP, operators have them \
+push their view out: BMP streams route updates, peer up/down events and \
+statistics to a monitoring system. It's how you see route hijacks and flapping \
+across a whole network.",
+            look_for: "\"BMP Route Monitoring\" / \"BMP Peer Up\" on TCP 11019.",
+        },
+        Protocol::RpkiRtr => Lesson {
+            title: "RPKI-RTR — checking BGP routes are legitimate",
+            summary: "Feeds a router the cryptographically validated list of who may announce what.",
+            body: "BGP has no built-in way to know whether a network is allowed to \
+announce a prefix — the root of route hijacking. RPKI publishes signed \
+authorisations, and RPKI-RTR is how a router pulls that validated data from a \
+local cache so it can drop invalid announcements.",
+            look_for: "\"RPKI-RTR Cache Response\" / \"IPv4 Prefix\" on TCP 323.",
+        },
+        Protocol::Mms => Lesson {
+            title: "MMS — reading a substation's data model",
+            summary: "The client/server half of IEC 61850, alongside GOOSE and Sampled Values.",
+            body: "Where GOOSE carries urgent trip signals, MMS is the conversational \
+side of a substation: a control system browsing a device's data model, reading \
+measurements, receiving reports and issuing controls. It shares port 102 with \
+Siemens S7comm, so netscope tells them apart by the framing.",
+            look_for: "\"MMS — session CONNECT\" / \"data transfer\" on TCP 102.",
+        },
+        Protocol::Nrpe => Lesson {
+            title: "NRPE — running a Nagios check remotely",
+            summary: "A monitoring server asking a host to execute a health check.",
+            body: "Nagios-style monitoring often needs data only the host itself can see \
+— disk space, process counts. NRPE is the agent that runs those check scripts on \
+request and returns the status. Historically it has had command-injection issues, \
+so it's worth knowing where it's exposed.",
+            look_for: "\"NRPE v2 query\" / \"response\" on TCP 5666.",
+        },
+        Protocol::Collectd => Lesson {
+            title: "collectd — system metrics on the wire",
+            summary: "A daemon shipping CPU, memory, disk and network statistics.",
+            body: "collectd gathers system statistics and sends them to a central server \
+in a compact binary format made of typed parts (host, time, plugin, values). \
+Unauthenticated and UDP-based, it has also been used for amplification attacks \
+when left open.",
+            look_for: "\"collectd — values part\" on UDP 25826.",
+        },
+        Protocol::Jaeger => Lesson {
+            title: "Jaeger — distributed tracing",
+            summary: "Services reporting timing spans so a request can be followed across them.",
+            body: "When one user request fans out across a dozen microservices, tracing \
+is how you find where the time went. Instrumented services emit spans to a local \
+Jaeger agent over UDP, encoded with Thrift; the agent forwards them to a collector \
+that stitches the trace together.",
+            look_for: "\"Jaeger spans (Thrift compact)\" on UDP 6831.",
+        },
+        Protocol::Ganglia => Lesson {
+            title: "Ganglia — cluster monitoring",
+            summary: "Nodes multicasting their metrics across an HPC or compute cluster.",
+            body: "Ganglia was built for large clusters: each node's gmond announces its \
+metrics, and every node can hear them, so the cluster's state is visible without a \
+central poller. Values are XDR-encoded, with metadata packets describing each \
+metric.",
+            look_for: "\"Ganglia gmond — metric metadata\" on UDP 8649.",
+        },
+        Protocol::Bolt => Lesson {
+            title: "Bolt — talking to Neo4j",
+            summary: "The binary protocol carrying Cypher graph queries.",
+            body: "Bolt is Neo4j's client protocol: a connection opens with a magic \
+preamble and version negotiation, then carries Cypher queries and streamed result \
+records in a compact binary packing. Seeing it means an application is querying a \
+graph database.",
+            look_for: "\"Bolt handshake (offering v5.1)\" on TCP 7687.",
+        },
+        Protocol::Clickhouse => Lesson {
+            title: "ClickHouse — columnar analytics",
+            summary: "The native protocol of a very fast analytical database.",
+            body: "ClickHouse answers analytical queries over huge tables by storing data \
+in columns. Its native protocol (faster than the HTTP interface) opens with a \
+Hello naming the client, then ships queries and columnar result blocks.",
+            look_for: "\"ClickHouse handshake (Hello)\" on TCP 9000.",
+        },
+        Protocol::Pulsar => Lesson {
+            title: "Apache Pulsar — messaging with tiered storage",
+            summary: "A distributed pub/sub system that separates serving from storage.",
+            body: "Pulsar is a messaging platform in Kafka's space, but it splits brokers \
+from the storage layer so it can scale and offload older data. Its binary protocol \
+frames a protobuf command, optionally followed by the message payload.",
+            look_for: "\"Pulsar command\" on TCP 6650.",
+        },
+        Protocol::Openwire => Lesson {
+            title: "OpenWire — Apache ActiveMQ's native protocol",
+            summary: "The binary wire format ActiveMQ clients and brokers use.",
+            body: "ActiveMQ speaks several protocols; OpenWire is its native, most \
+efficient one. A connection opens with a WireFormatInfo negotiation, then carries \
+broker/connection/consumer info and the messages themselves. A deserialisation \
+flaw in it caused a well-known critical CVE, so its exposure matters.",
+            look_for: "\"OpenWire WireFormatInfo\" / \"ActiveMQMessage\" on TCP 61616.",
+        },
+        Protocol::Zookeeper => Lesson {
+            title: "ZooKeeper — keeping a cluster in agreement",
+            summary: "The coordination service behind Kafka, HBase and many clusters.",
+            body: "Distributed systems need somewhere to agree on who is the leader, what \
+the config is and which nodes are alive. ZooKeeper is that shared source of \
+truth, exposing a small filesystem-like tree of znodes with watches. If it's \
+struggling, the systems on top of it struggle too.",
+            look_for: "\"ZooKeeper getData\" / \"ZooKeeper ping\" on TCP 2181.",
+        },
+        Protocol::HadoopRpc => Lesson {
+            title: "Hadoop RPC — talking to HDFS",
+            summary: "The call protocol between clients and the HDFS NameNode.",
+            body: "Reading a file from HDFS starts with asking the NameNode where its \
+blocks live. That conversation is Hadoop RPC, which opens with an \"hrpc\" magic \
+and a version, then carries protobuf-encoded calls.",
+            look_for: "\"Hadoop RPC handshake (v9)\" on TCP 8020.",
+        },
+        Protocol::Fluentd => Lesson {
+            title: "Fluentd — collecting logs",
+            summary: "Agents forwarding structured log events to a collector.",
+            body: "Fluentd unifies logging: agents on each host tag events and forward \
+them, MessagePack-encoded, to aggregators that route them onward to storage or \
+search. Seeing this is your logging pipeline at work.",
+            look_for: "\"Fluentd forward (3 fields, msgpack)\" on TCP 24224.",
+        },
+        Protocol::Beats => Lesson {
+            title: "Elastic Beats — shipping logs to Logstash",
+            summary: "Filebeat and friends sending events into the Elastic stack.",
+            body: "Beats are lightweight shippers that tail logs or collect metrics and \
+send them to Logstash or Elasticsearch. The protocol batches events in windows \
+and waits for acknowledgements, so nothing is lost if the far end is slow.",
+            look_for: "\"Beats v2 JSON event\" / \"window size\" on TCP 5044.",
+        },
+        Protocol::Clamav => Lesson {
+            title: "ClamAV — scanning content for malware",
+            summary: "A mail or file gateway handing data to the clamd daemon.",
+            body: "Rather than every application embedding a scanner, they stream content \
+to clamd and get a verdict back. A reply ending in FOUND means a signature \
+matched — worth noticing in a capture, because it means something malicious was \
+in the traffic.",
+            look_for: "\"ClamAV INSTREAM\", or a reply containing FOUND, on TCP 3310.",
+        },
+        Protocol::Spamd => Lesson {
+            title: "spamd — scoring mail for spam",
+            summary: "A mail server asking SpamAssassin to judge a message.",
+            body: "When mail arrives, the server can hand it to spamd, which applies \
+rules and returns a spam score and symbols. The client speaks SPAMC and the \
+daemon answers SPAMD, with the message body in between.",
+            look_for: "\"spamd CHECK request\" on TCP 783.",
+        },
+        Protocol::ManageSieve => Lesson {
+            title: "ManageSieve — server-side mail rules",
+            summary: "A mail client uploading the filters that sort your inbox.",
+            body: "Sieve scripts move, file and reject mail on the server, so the rules \
+apply even when your client is closed. ManageSieve is the small text protocol a \
+client uses to list, upload and activate those scripts.",
+            look_for: "\"ManageSieve PUTSCRIPT\" on TCP 4190.",
+        },
+        Protocol::Relp => Lesson {
+            title: "RELP — syslog that doesn't lose messages",
+            summary: "rsyslog's acknowledged transport for reliable log delivery.",
+            body: "Plain syslog over UDP silently drops messages under load — bad when \
+the logs are evidence. RELP adds transaction numbers and acknowledgements over \
+TCP, so the sender knows a message was accepted and can retry if not.",
+            look_for: "\"RELP syslog message (txn 3)\" on TCP 2514.",
+        },
+        Protocol::Lpd => Lesson {
+            title: "LPD — the classic print protocol",
+            summary: "Sending a job to a print queue, Unix-style.",
+            body: "LPD is the long-standing line-printer protocol still spoken by many \
+network printers and print servers: a one-byte command selects the action (send a \
+job, query the queue, remove jobs) and names the queue. No authentication or \
+encryption.",
+            look_for: "\"LPD — receive a printer job on lp\" on TCP 515.",
+        },
+        Protocol::Ident => Lesson {
+            title: "Ident — who owns this connection?",
+            summary: "A legacy service naming the local user behind a TCP connection.",
+            body: "Ident lets a remote server ask your machine which user account opened \
+a connection — historically used by IRC servers and mail relays. Since it hands \
+out local usernames on request and is trivially spoofed, it's usually disabled \
+now, so seeing it is unusual.",
+            look_for: "\"Ident query — ports 6193, 23\" on TCP 113.",
+        },
+        Protocol::Gopher => Lesson {
+            title: "Gopher — the web before the web",
+            summary: "A menu-driven document protocol that predates HTTP.",
+            body: "Gopher serves documents through nested menus: the client sends a \
+selector string and gets back either a document or a tab-separated menu where each \
+line's first character says what type the item is. Largely historical, with a \
+small enthusiast revival.",
+            look_for: "\"Gopher — root menu request\" on TCP 70.",
+        },
+        Protocol::Rsh => Lesson {
+            title: "rsh — an obsolete remote shell",
+            summary: "Runs a command on another machine, entirely in the clear.",
+            body: "rsh executes a command on a remote host, trusting the client purely by \
+hostname and a local user list. The username and the command — and anything it \
+prints — cross the network unencrypted. SSH replaced it decades ago, so rsh \
+traffic today is a genuine finding.",
+            look_for: "\"rsh — alice runs \\\"cat /etc/passwd\\\"\" on TCP 514.",
+        },
+        Protocol::Cdp => Lesson {
+            title: "CDP — Cisco's neighbour discovery",
+            summary: "Switches and phones announcing their identity to the device next door.",
+            body: "CDP lets a Cisco device tell its direct neighbour who it is: hostname, \
+port, model and software version. Great for mapping a network — and equally useful \
+to an attacker who plugs in, which is why it's often disabled on user-facing ports.",
+            look_for: "\"CDP — sw-core port Gi0/1\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Vtp => Lesson {
+            title: "VTP — syncing the VLAN list",
+            summary: "Propagates the VLAN database from one switch to the rest.",
+            body: "Rather than defining VLANs on every switch, VTP has a server push the \
+list to the others. Convenient, but famously dangerous: a switch joining with a \
+higher revision number can wipe the whole domain's VLANs.",
+            look_for: "\"VTP Summary Advertisement\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Dtp => Lesson {
+            title: "DTP — negotiating a trunk",
+            summary: "Two switch ports agreeing to carry every VLAN instead of one.",
+            body: "DTP decides automatically whether a link becomes a trunk. Left enabled \
+on a port a user can reach, an attacker's device can negotiate a trunk and see \
+every VLAN — the classic VLAN-hopping attack. DTP on an access port is a finding.",
+            look_for: "\"DTP v1 — trunk negotiation\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Pagp => Lesson {
+            title: "PAgP — bundling links, Cisco-style",
+            summary: "Cisco's proprietary alternative to LACP for building an EtherChannel.",
+            body: "To gain bandwidth and redundancy, several physical links are bundled \
+into one logical channel. PAgP negotiates that bundle between Cisco devices; LACP \
+is the vendor-neutral standard doing the same job.",
+            look_for: "\"PAgP v1 — EtherChannel negotiation\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Udld => Lesson {
+            title: "UDLD — catching a one-way link",
+            summary: "Detects fibre links that carry traffic in only one direction.",
+            body: "A fibre pair can fail so traffic flows one way but not the other. \
+Spanning tree then makes bad decisions and can create a loop. UDLD sends probes and \
+expects to see itself echoed back; when it doesn't, it shuts the port down.",
+            look_for: "\"UDLD probe\" / \"UDLD echo\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Eap => Lesson {
+            title: "EAP — how you prove who you are",
+            summary: "The authentication method negotiated inside 802.1X and enterprise Wi-Fi.",
+            body: "802.1X decides whether a device may join the network; EAP is the \
+conversation that actually proves identity — and it comes in flavours. PEAP and \
+TTLS wrap a password inside TLS, EAP-TLS uses a client certificate, and the ancient \
+MD5-Challenge is trivially broken. Which method you see tells you how strong the \
+authentication really is.",
+            look_for: "\"EAP Response — PEAP\" / \"EAP Success\" inside EAPOL.",
+        },
+        Protocol::Ipx => Lesson {
+            title: "IPX — Novell NetWare's network layer",
+            summary: "The protocol that ran most office LANs before TCP/IP won.",
+            body: "Through the late 80s and 90s, NetWare file and print servers spoke IPX \
+rather than IP, with SAP broadcasting available services and NCP carrying file \
+access. Essentially extinct now, so IPX on a modern network means very old kit — or \
+something odd.",
+            look_for: "\"IPX SAP (service advertisement)\" (EtherType 0x8137).",
+        },
+        Protocol::Atalk => Lesson {
+            title: "AppleTalk — classic Mac networking",
+            summary: "Apple's pre-TCP/IP stack for file and printer sharing.",
+            body: "AppleTalk let Macs find each other and share printers with zero \
+configuration long before Bonjour, using zones and name binding instead of IP \
+addresses. Apple dropped it in Mac OS X 10.6, so it's now purely historical.",
+            look_for: "\"AppleTalk DDP — NBP (name binding)\" (EtherType 0x809B).",
+        },
+        Protocol::Aarp => Lesson {
+            title: "AARP — AppleTalk's address resolution",
+            summary: "The AppleTalk equivalent of ARP, mapping addresses to hardware.",
+            body: "Just as ARP maps an IP address to a MAC address, AARP maps an AppleTalk \
+node address to one. It also carries the probe a Mac sends when picking an address, \
+to check nobody else already has it.",
+            look_for: "\"AARP Probe\" / \"AARP Request\" (EtherType 0x80F3).",
+        },
+        Protocol::Ipp => Lesson {
+            title: "IPP — how modern printing works",
+            summary: "The protocol behind CUPS, AirPrint and network printers.",
+            body: "IPP carries print jobs and printer queries over HTTP: the client POSTs \
+an operation like Print-Job or Get-Printer-Attributes and the printer answers. It's \
+what your laptop uses when a printer just appears and works.",
+            look_for: "\"IPP 2.0 Print-Job\" on TCP 631.",
+        },
+        Protocol::Rexec => Lesson {
+            title: "rexec — remote execution with a cleartext password",
+            summary: "Runs a command on another host, sending the password in the clear.",
+            body: "rexec is rsh's authenticating sibling: it asks for a username and \
+password before running the command — but sends that password unencrypted, so anyone \
+capturing the traffic gets working credentials. If you see rexec, treat the password \
+as compromised.",
+            look_for: "\"rexec — alice runs … (cleartext password)\" on TCP 512.",
+        },
+        Protocol::Sane => Lesson {
+            title: "SANE — sharing a scanner",
+            summary: "Lets one machine use a scanner attached to another.",
+            body: "SANE is the Unix scanner stack; its network side (saned) exposes a \
+scanner so other hosts can list devices, set options and pull images. It's \
+unauthenticated by default, so it belongs on a trusted network only.",
+            look_for: "\"SANE GET_DEVICES\" / \"SANE START\" on TCP 6566.",
+        },
+        Protocol::Tns => Lesson {
+            title: "Oracle TNS — reaching an Oracle database",
+            summary: "The transport every Oracle client uses to talk to the listener.",
+            body: "Before any SQL flows, an Oracle client connects to the listener over \
+TNS, which negotiates the session and routes it to a database instance. Almost all \
+Oracle traffic you'll see rides inside TNS Data packets.",
+            look_for: "\"Oracle TNS Connect\" / \"Oracle TNS Data\" on TCP 1521.",
+        },
+        Protocol::Drda => Lesson {
+            title: "DRDA — IBM Db2's database protocol",
+            summary: "How Db2 clients send SQL and receive result sets.",
+            body: "DRDA is IBM's standard for distributed database access, used by Db2. \
+Its messages are DDM objects identified by code points — EXCSAT to introduce the \
+client, ACCRDB to open a database, SQLSTT to carry a statement.",
+            look_for: "\"DRDA EXCSAT\" / \"DRDA SQLSTT\" on TCP 50000.",
+        },
+        Protocol::Firebird => Lesson {
+            title: "Firebird — an open-source SQL database",
+            summary: "The wire protocol of Firebird and its InterBase ancestor.",
+            body: "Firebird is a lightweight relational database descended from Borland \
+InterBase, still embedded in plenty of business software. Its protocol is a simple \
+sequence of numbered operations: connect, attach, compile a statement, fetch rows.",
+            look_for: "\"Firebird attach\" / \"Firebird fetch\" on TCP 3050.",
+        },
+        Protocol::MysqlX => Lesson {
+            title: "MySQL X — the document-store protocol",
+            summary: "MySQL's newer protobuf-based protocol, separate from the classic one.",
+            body: "Alongside the classic protocol on 3306, MySQL speaks X Protocol on \
+33060 for the X DevAPI and its document store — CRUD operations on JSON documents \
+as well as SQL, encoded with protocol buffers.",
+            look_for: "\"MySQL X StmtExecute\" / \"CrudFind\" on TCP 33060.",
+        },
+        Protocol::Riak => Lesson {
+            title: "Riak — a distributed key-value store",
+            summary: "A highly available database designed to survive node failure.",
+            body: "Riak spreads data across a cluster so it keeps serving even when nodes \
+drop out. Its protocol-buffers interface is the efficient way clients read and write \
+keys, each frame a length followed by a message code.",
+            look_for: "\"Riak Put request\" / \"Get response\" on TCP 8087.",
+        },
+        Protocol::Nmea => Lesson {
+            title: "NMEA 0183 — GPS and marine sentences",
+            summary: "The text format navigation instruments use to report position.",
+            body: "A GPS receiver emits a steady stream of comma-separated sentences: GGA \
+carries a position fix, RMC the recommended minimum data, GSV the satellites in \
+view. Marine networks carry vessel AIS reports the same way, which is how ship \
+tracking works.",
+            look_for: "\"NMEA GPGGA — position fix\" on TCP 10110.",
+        },
+        Protocol::Adsb => Lesson {
+            title: "ADS-B — aircraft broadcasting their position",
+            summary: "Planes reporting identity, altitude and position; Beast is the feed format.",
+            body: "Modern aircraft continuously broadcast where they are. A receiver \
+(dump1090 and similar) decodes those transponder messages and republishes them in \
+the Beast binary format — which is what flight-tracking sites are built on.",
+            look_for: "\"ADS-B Beast — Mode S long (ADS-B)\" on TCP 30005.",
+        },
+        Protocol::Aprs => Lesson {
+            title: "APRS — amateur radio's position network",
+            summary: "Ham operators sharing position, weather and telemetry beacons.",
+            body: "APRS started on radio and gained an internet backbone, APRS-IS, which \
+relays those beacons worldwide as text. Each packet names the sending callsign and \
+a path, followed by position or telemetry data.",
+            look_for: "\"APRS-IS packet from TA1ABC\" on TCP 14580.",
+        },
+        Protocol::Turn => Lesson {
+            title: "TURN — relaying a call that can't connect directly",
+            summary: "When NAT defeats a direct path, media is bounced through a relay.",
+            body: "STUN tries to find a direct path between two peers. When it can't — \
+symmetric NAT, restrictive firewalls — TURN gives up on directness and relays the \
+media through a server instead. It costs bandwidth, so a call falling back to TURN \
+often explains poor quality or high server load.",
+            look_for: "\"TURN relayed data — channel 0x4001\" alongside STUN.",
+        },
+        Protocol::Decnet => Lesson {
+            title: "DECnet — Digital's networking stack",
+            summary: "The protocol suite of DEC's VAX/VMS systems, from before TCP/IP won.",
+            body: "DECnet connected the VAX and PDP machines that ran much of research and \
+industry in the 70s and 80s, with its own routing and node addressing. It survives \
+only in museums and a few very long-lived industrial systems.",
+            look_for: "\"DECnet Phase IV — endnode hello\" (EtherType 0x6003).",
+        },
+        Protocol::Vines => Lesson {
+            title: "Banyan VINES — an early network OS",
+            summary: "A Unix-based server platform that competed with NetWare.",
+            body: "VINES offered file, print and directory services across wide-area \
+networks, and was notable for StreetTalk, a global directory ahead of its time. The \
+company folded in the 90s, so VINES traffic today means genuinely ancient equipment.",
+            look_for: "\"Banyan VINES — RTP (routing)\" (EtherType 0x0BAD).",
+        },
+        Protocol::Erspan => Lesson {
+            title: "ERSPAN — mirrored traffic sent across the network",
+            summary: "A switch copying traffic and tunnelling it to a remote analyser.",
+            body: "Port mirroring normally feeds a monitor plugged into the same switch. \
+ERSPAN wraps those copies in GRE so they can travel to an analyser anywhere on the \
+network. That means the payload is *someone else's* traffic, deliberately \
+duplicated — useful to know, both for capacity and for who is watching what.",
+            look_for: "\"ERSPAN v1 — mirrored traffic, session 5\" inside GRE.",
+        },
+        Protocol::Ppp => Lesson {
+            title: "PPP — the link inside your broadband session",
+            summary: "Carries IP over a point-to-point link and negotiates the connection.",
+            body: "Inside a PPPoE broadband session, PPP is what actually runs: LCP brings \
+the link up, an authentication protocol proves who you are, IPCP assigns your IP \
+address, and then your traffic flows. Each of those is a different PPP protocol \
+number.",
+            look_for: "\"PPP — LCP (link control)\" / \"IPCP\" inside a PPPoE session.",
+        },
+        Protocol::Pap => Lesson {
+            title: "PAP — a password sent in the clear",
+            summary: "PPP authentication that transmits the username and password unencrypted.",
+            body: "PAP proves who you are by simply sending your credentials. Anyone who \
+captures the exchange has them. It survives because it's simple and some ISPs still \
+accept it, but CHAP or EAP should be used instead — and a PAP login in a capture \
+should be treated as a leaked password.",
+            look_for: "\"PAP Authenticate-Request — user … (cleartext password)\".",
+        },
+        Protocol::Chap => Lesson {
+            title: "CHAP — proving a secret without sending it",
+            summary: "PPP authentication by hashed challenge, so the password never crosses the wire.",
+            body: "Instead of transmitting the password, CHAP has the server send a random \
+challenge; the client replies with a hash of the challenge plus the shared secret. \
+An eavesdropper learns neither the secret nor anything reusable. A clear improvement \
+on PAP.",
+            look_for: "\"CHAP Challenge from gateway\" then \"CHAP Response\".",
+        },
+        Protocol::L2cap => Lesson {
+            title: "L2CAP — Bluetooth's multiplexer",
+            summary: "Splits a Bluetooth connection into channels for the layers above.",
+            body: "Every Bluetooth connection carries several conversations at once — \
+attribute reads, pairing, audio control. L2CAP is the layer that keeps them apart, \
+tagging each with a channel id. Fixed ids mark the important ones: 0x0004 is ATT, \
+0x0006 is pairing.",
+            look_for: "\"L2CAP signalling (CID 0x0001)\" inside HCI ACL data.",
+        },
+        Protocol::Att => Lesson {
+            title: "ATT — where BLE data actually flows",
+            summary: "Reading and writing the characteristics a Bluetooth LE device exposes.",
+            body: "A BLE device presents its data as a table of attributes: a heart rate, \
+a battery level, a lock state. ATT is how a phone reads them, writes them, or \
+subscribes to notifications. If you want to know what a BLE gadget is really doing, \
+this is the layer to read.",
+            look_for: "\"ATT Handle Value Notification — handle 0x002a\".",
+        },
+        Protocol::Smp => Lesson {
+            title: "SMP — pairing two Bluetooth devices",
+            summary: "Negotiates how a BLE link is secured, and exchanges the keys.",
+            body: "Pairing is where BLE security is decided: the two devices agree on \
+what protection they can manage given their input and output capabilities. Weak \
+options like \"Just Works\" pair without any user confirmation and can be \
+intercepted, so the pairing exchange tells you how trustworthy the link is.",
+            look_for: "\"SMP Pairing Request (BLE pairing)\" on L2CAP CID 0x0006.",
+        },
+        Protocol::NvmeOf => Lesson {
+            title: "NVMe/TCP — fast flash over the network",
+            summary: "Puts NVMe SSDs on the network with far less overhead than iSCSI.",
+            body: "NVMe was designed for flash, not spinning disks, and NVMe over Fabrics \
+extends it across a network so servers can use remote SSDs at close to local speed. \
+The TCP transport needs no special hardware, which is why it's displacing iSCSI in \
+new deployments.",
+            look_for: "\"NVMe/TCP Command Capsule\" on TCP 4420.",
+        },
+        Protocol::Nbd => Lesson {
+            title: "NBD — a remote disk as a local device",
+            summary: "Exports a raw block device over the network.",
+            body: "Network Block Device hands a client a remote disk that behaves like a \
+local one — read and write blocks, put any filesystem on it. It's widely used to \
+back virtual-machine disks. Plain NBD has no authentication, so it's meant for a \
+trusted network or a tunnel.",
+            look_for: "\"NBD write request\" on TCP 10809.",
+        },
+        Protocol::Fcip => Lesson {
+            title: "FCIP — stretching a SAN across a WAN",
+            summary: "Tunnels Fibre Channel storage traffic between two sites over IP.",
+            body: "Fibre Channel doesn't route across the internet, but replicating \
+storage between data centres requires exactly that. FCIP wraps FC frames in TCP so \
+two SANs can be joined over a wide-area link, typically for disaster-recovery \
+replication.",
+            look_for: "\"FCIP — Fibre Channel frame over IP\" on TCP 3225.",
+        },
+        Protocol::Aoe => Lesson {
+            title: "AoE — a disk straight onto the LAN",
+            summary: "ATA over Ethernet: storage with no IP layer at all.",
+            body: "AoE puts disk commands directly in Ethernet frames — no TCP, no IP, \
+almost no overhead. That makes it fast and very simple, but also unroutable and \
+unauthenticated: anything on the same LAN segment can reach the disk. Strictly a \
+trusted-network technology.",
+            look_for: "\"AoE ATA command — shelf 1, slot 0\" (EtherType 0x88A2).",
+        },
+        Protocol::Roce => Lesson {
+            title: "RoCE — reading another machine's memory",
+            summary: "RDMA over Ethernet, bypassing the kernel for very low latency.",
+            body: "RDMA lets one machine write directly into another's memory without \
+either CPU handling the transfer, which is why HPC clusters and high-end storage \
+use it. RoCE carries InfiniBand's transport over ordinary Ethernet — fast, but it \
+depends on a lossless, carefully tuned network.",
+            look_for: "\"RoCE — InfiniBand RDMA READ Request\" (EtherType 0x8915).",
+        },
+        Protocol::Xdmcp => Lesson {
+            title: "XDMCP — logging in to a remote X session",
+            summary: "Lets a thin X terminal ask a server for a graphical login.",
+            body: "XDMCP is how an X terminal finds a host willing to give it a desktop \
+session: it queries, a display manager answers Willing, and a session is negotiated. \
+It's unencrypted and long superseded by SSH X-forwarding, so it mostly appears on \
+legacy Unix networks.",
+            look_for: "\"XDMCP Query\" / \"XDMCP Willing\" on UDP 177.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -605,6 +2147,106 @@ capture like any NIC.",
             body: "Kafka protocol handles read/write requests between clients and broker clusters.",
             look_for: "Kafka messages and API requests on port 9092.",
         },
+        Protocol::Iax2 => Lesson {
+            title: "IAX2 — trunking Asterisk boxes together",
+            summary: "Carries VoIP signalling and audio over a single UDP port.",
+            body: "IAX2 links Asterisk PBXs to each other. Unlike SIP, which negotiates a separate RTP \
+stream on its own random port, IAX2 multiplexes call setup and the audio itself onto UDP \
+4569 — which is why it survives NAT and restrictive firewalls so much more easily.",
+            look_for: "\"IAX2 NEW\" / \"IAX2 ACK\" on UDP 4569.",
+        },
+        Protocol::Zrtp => Lesson {
+            title: "ZRTP — agreeing on a key inside the call itself",
+            summary: "Derives SRTP keys in the media stream, with no certificate authority.",
+            body: "ZRTP runs a Diffie-Hellman exchange in the same path the audio takes, so the signalling \
+server never sees the key. To rule out a man in the middle the two parties read a short \
+authentication string to each other out loud and check that it matches.",
+            look_for: "\"ZRTP Hello\" / \"ZRTP Commit\" — the magic sits where RTP keeps its timestamp.",
+        },
+        Protocol::MssqlBrowser => Lesson {
+            title: "SQL Server Browser — finding the right instance",
+            summary: "Tells a client which TCP port a named SQL Server instance listens on.",
+            body: "A host can run several named SQL Server instances, each on a dynamic port. The Browser \
+service listens on UDP 1434 and answers a one-byte query with the full list. That is \
+convenient for clients and equally convenient for anyone enumerating your database \
+servers, so it is a common scan target.",
+            look_for: "\"SQL Browser request\" and instance-name responses on UDP 1434.",
+        },
+        Protocol::H225Ras => Lesson {
+            title: "H.225 RAS — registering with the gatekeeper",
+            summary: "How H.323 endpoints register, ask permission to call, and report status.",
+            body: "RAS (Registration, Admission, Status) is the first conversation in an H.323 network: a \
+phone or codec registers with the gatekeeper, then asks admission before each call so \
+the gatekeeper can apply bandwidth and dial-plan policy.",
+            look_for: "\"H.225 RAS RRQ/RCF\" (registration) and \"ARQ/ACF\" (admission) on UDP 1719.",
+        },
+        Protocol::Q931 => Lesson {
+            title: "Q.931 — setting up an H.323 call",
+            summary: "The ISDN-derived call signalling that H.323 carries over TCP 1720.",
+            body: "Q.931 drives the call state machine: SETUP starts it, ALERTING means ringing, CONNECT \
+means answered, and RELEASE COMPLETE tears it down carrying a cause code that says why. \
+H.323 kept the ISDN message set and wrapped it in a TPKT header.",
+            look_for: "\"Q.931 SETUP\" / \"Q.931 CONNECT\" on TCP 1720; the cause code explains failed calls.",
+        },
+        Protocol::Bfcp => Lesson {
+            title: "BFCP — deciding whose turn it is",
+            summary: "Arbitrates a shared conference resource such as screen sharing.",
+            body: "A conference has resources only one participant can hold at a time — the presenter \
+screen, for instance. BFCP calls each of these a floor; clients request it, the floor \
+control server grants or denies, and everyone is told who holds it.",
+            look_for: "\"BFCP FloorRequest\" / \"FloorStatus\" on TCP 3238.",
+        },
+        Protocol::Lisp => Lesson {
+            title: "LISP — splitting who you are from where you are",
+            summary: "Separates an endpoint's identity (EID) from its network location (RLOC).",
+            body: "In plain IP an address means both identity and location, so moving a host means \
+renumbering it. LISP keeps the EID stable and maps it to whichever RLOC currently \
+reaches it, encapsulating traffic between the two. UDP 4341 carries data, 4342 the \
+mapping control.",
+            look_for: "\"LISP data\" on UDP 4341 and \"Map-Request/Map-Reply\" on 4342.",
+        },
+        Protocol::L2tpv3 => Lesson {
+            title: "L2TPv3 — a pseudowire straight over IP",
+            summary: "Tunnels raw layer-2 frames using IP protocol 115, with no UDP underneath.",
+            body: "L2TPv3 carries Ethernet (or Frame Relay, or PPP) frames inside IP so two distant switch \
+ports behave as if they were patched together. Each direction is identified by a session \
+ID in the header.",
+            look_for: "IP protocol 115 with a session ID — netscope reports the session and payload size.",
+        },
+        Protocol::VxlanGpe => Lesson {
+            title: "VXLAN-GPE — VXLAN that isn't only Ethernet",
+            summary: "Adds a next-protocol field so the overlay can carry IPv4, IPv6 or NSH.",
+            body: "Classic VXLAN always encapsulates an Ethernet frame. GPE (Generic Protocol Extension) \
+adds a next-protocol byte, which is what lets service-chaining designs push an NSH \
+header or a bare IP packet through the same tunnel. It uses UDP 4790 to stay distinct \
+from VXLAN's 4789.",
+            look_for: "\"VXLAN-GPE\" on UDP 4790, with the inner protocol named.",
+        },
+        Protocol::Pcp => Lesson {
+            title: "PCP / NAT-PMP — asking the NAT to open a port",
+            summary: "Lets a client request an inbound mapping through its router.",
+            body: "Games, P2P and VoIP need someone outside to be able to reach in. PCP is the modern \
+replacement for UPnP IGD: the client asks for a mapping and a lifetime, and the gateway \
+answers with the external address and port it actually got.",
+            look_for: "\"PCP MAP request\" / \"NAT-PMP\" on UDP 5351.",
+        },
+        Protocol::Rwho => Lesson {
+            title: "rwho — broadcasting who is logged in",
+            summary: "A BSD-era service where each host announces its users and load.",
+            body: "Every rwho host periodically broadcasts its uptime, load average and logged-in users so \
+any machine on the segment can print them. There is no authentication of any kind, and \
+it leaks usernames to the whole broadcast domain — seeing it today means something very \
+old is still running.",
+            look_for: "Periodic broadcasts on UDP 513 (TCP 513 is rlogin, a different protocol).",
+        },
+        Protocol::DhcpFailover => Lesson {
+            title: "DHCP failover — keeping two servers in step",
+            summary: "The channel a DHCP server pair uses to share lease state.",
+            body: "Two DHCP servers serving one pool must agree on who holds which lease, or they will hand \
+the same address to two clients. The failover channel on TCP 647 carries binding updates \
+and pool balancing so either server can take over alone.",
+            look_for: "\"DHCP failover BNDUPD\" / \"POOLREQ\" on TCP 647.",
+        },
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail — shown safely anyway.",
@@ -675,6 +2317,196 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Usb,
         Protocol::Bluetooth,
         Protocol::Can,
+        Protocol::Syslog,
+        Protocol::Tftp,
+        Protocol::Ssdp,
+        Protocol::Stun,
+        Protocol::Llmnr,
+        Protocol::Rtsp,
+        Protocol::Irc,
+        Protocol::Rfb,
+        Protocol::Whois,
+        Protocol::Nntp,
+        Protocol::Sctp,
+        Protocol::Gre,
+        Protocol::Igmp,
+        Protocol::Dhcpv6,
+        Protocol::Rip,
+        Protocol::Nbns,
+        Protocol::Socks,
+        Protocol::Memcached,
+        Protocol::BitTorrent,
+        Protocol::Git,
+        Protocol::Xmpp,
+        Protocol::Finger,
+        Protocol::Vrrp,
+        Protocol::Pim,
+        Protocol::Eigrp,
+        Protocol::Pppoe,
+        Protocol::Eapol,
+        Protocol::L2tp,
+        Protocol::Gtp,
+        Protocol::Rmcp,
+        Protocol::WsDiscovery,
+        Protocol::Tacacs,
+        Protocol::Diameter,
+        Protocol::Rlogin,
+        Protocol::Dccp,
+        Protocol::Dtls,
+        Protocol::Netflow,
+        Protocol::Sflow,
+        Protocol::Bfd,
+        Protocol::Hsrp,
+        Protocol::Iscsi,
+        Protocol::Rtmp,
+        Protocol::Smpp,
+        Protocol::OpenFlow,
+        Protocol::Nats,
+        Protocol::Stomp,
+        Protocol::Profinet,
+        Protocol::Wol,
+        Protocol::Glbp,
+        Protocol::Wccp,
+        Protocol::Mgcp,
+        Protocol::Nbds,
+        Protocol::Dicom,
+        Protocol::Hl7,
+        Protocol::Fix,
+        Protocol::S7comm,
+        Protocol::Iec104,
+        Protocol::Ldp,
+        Protocol::Goose,
+        Protocol::Ptp,
+        Protocol::Rsvp,
+        Protocol::Isakmp,
+        Protocol::Geneve,
+        Protocol::Capwap,
+        Protocol::Teredo,
+        Protocol::Gvcp,
+        Protocol::Rpc,
+        Protocol::Graphite,
+        Protocol::Gearman,
+        Protocol::Beanstalk,
+        Protocol::Ethercat,
+        Protocol::Fcoe,
+        Protocol::Macsec,
+        Protocol::Rarp,
+        Protocol::Rtps,
+        Protocol::Influxdb,
+        Protocol::MqttSn,
+        Protocol::Babel,
+        Protocol::X11,
+        Protocol::Rsync,
+        Protocol::Svn,
+        Protocol::Rethinkdb,
+        Protocol::Sv,
+        Protocol::Powerlink,
+        Protocol::Sercos,
+        Protocol::Knxip,
+        Protocol::Statsd,
+        Protocol::Gelf,
+        Protocol::Hartip,
+        Protocol::Elasticsearch,
+        Protocol::Zabbix,
+        Protocol::Nsq,
+        Protocol::Zmtp,
+        Protocol::Aerospike,
+        Protocol::Avtp,
+        Protocol::SomeIp,
+        Protocol::Doip,
+        Protocol::Xcp,
+        Protocol::Matter,
+        Protocol::Afp,
+        Protocol::Dht,
+        Protocol::Gnutella,
+        Protocol::Edonkey,
+        Protocol::SourceQuery,
+        Protocol::Minecraft,
+        Protocol::Mumble,
+        Protocol::Pfcp,
+        Protocol::GtpPrime,
+        Protocol::Megaco,
+        Protocol::Msrp,
+        Protocol::Pcoip,
+        Protocol::Spice,
+        Protocol::Ica,
+        Protocol::Ndmp,
+        Protocol::Dcerpc,
+        Protocol::Pptp,
+        Protocol::Radmin,
+        Protocol::Skinny,
+        Protocol::Cldap,
+        Protocol::Bmp,
+        Protocol::RpkiRtr,
+        Protocol::Mms,
+        Protocol::Nrpe,
+        Protocol::Collectd,
+        Protocol::Jaeger,
+        Protocol::Ganglia,
+        Protocol::Bolt,
+        Protocol::Clickhouse,
+        Protocol::Pulsar,
+        Protocol::Openwire,
+        Protocol::Zookeeper,
+        Protocol::HadoopRpc,
+        Protocol::Fluentd,
+        Protocol::Beats,
+        Protocol::Clamav,
+        Protocol::Spamd,
+        Protocol::ManageSieve,
+        Protocol::Relp,
+        Protocol::Lpd,
+        Protocol::Ident,
+        Protocol::Gopher,
+        Protocol::Rsh,
+        Protocol::Cdp,
+        Protocol::Vtp,
+        Protocol::Dtp,
+        Protocol::Pagp,
+        Protocol::Udld,
+        Protocol::Eap,
+        Protocol::Ipx,
+        Protocol::Atalk,
+        Protocol::Aarp,
+        Protocol::Ipp,
+        Protocol::Rexec,
+        Protocol::Sane,
+        Protocol::Tns,
+        Protocol::Drda,
+        Protocol::Firebird,
+        Protocol::MysqlX,
+        Protocol::Riak,
+        Protocol::Nmea,
+        Protocol::Adsb,
+        Protocol::Aprs,
+        Protocol::Turn,
+        Protocol::Decnet,
+        Protocol::Vines,
+        Protocol::Erspan,
+        Protocol::Ppp,
+        Protocol::Pap,
+        Protocol::Chap,
+        Protocol::L2cap,
+        Protocol::Att,
+        Protocol::Smp,
+        Protocol::NvmeOf,
+        Protocol::Nbd,
+        Protocol::Fcip,
+        Protocol::Aoe,
+        Protocol::Roce,
+        Protocol::Xdmcp,
+        Protocol::Iax2,
+        Protocol::Zrtp,
+        Protocol::MssqlBrowser,
+        Protocol::H225Ras,
+        Protocol::Q931,
+        Protocol::Bfcp,
+        Protocol::Lisp,
+        Protocol::L2tpv3,
+        Protocol::VxlanGpe,
+        Protocol::Pcp,
+        Protocol::Rwho,
+        Protocol::DhcpFailover,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -821,7 +2653,197 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Tds => "A Tabular Data Stream (TDS) database message over TCP 1433.",
         Protocol::Amqp => "An Advanced Message Queuing Protocol (AMQP) message on TCP 5672.",
         Protocol::Kafka => "An Apache Kafka message queuing request/response on TCP 9092.",
+        Protocol::Syslog => "A system log message shipped to a central collector (UDP 514) — usually plaintext.",
+        Protocol::Tftp => "A trivial file transfer (UDP 69) — often a device pulling firmware or config at boot.",
+        Protocol::Ssdp => "UPnP device-discovery chatter (UDP 1900) — gadgets finding each other on the LAN.",
+        Protocol::Stun => "A NAT-traversal probe (UDP 3478) used by voice/video calls to find a public path.",
+        Protocol::Llmnr => "A link-local name lookup (UDP 5355) — like DNS, but for the local network only.",
+        Protocol::Rtsp => "Streaming-media control (TCP 554) — play/pause signalling for an IP camera or stream.",
+        Protocol::Irc => "An Internet Relay Chat message (TCP 6667) — plain-text group chat.",
+        Protocol::Rfb => "A VNC / remote-framebuffer session (TCP 5900) — one screen shared to another.",
+        Protocol::Whois => "A WHOIS registration lookup (TCP 43) — who owns a domain or IP.",
+        Protocol::Nntp => "A Usenet news transfer (TCP 119) — fetching or moving newsgroup articles.",
+        Protocol::Sctp => "An SCTP transport packet (IP proto 132) — reliable multi-stream, common in telecom signalling.",
+        Protocol::Gre => "A GRE tunnel (IP proto 47) — one packet wrapped inside another to cross a network.",
+        Protocol::Igmp => "An IGMP message (IP proto 2) — a host joining or leaving an IPv4 multicast group.",
+        Protocol::Dhcpv6 => "A DHCPv6 message (UDP 546/547) — IPv6 address assignment, like DHCP for IPv4.",
+        Protocol::Rip => "A RIP routing update (UDP 520) — routers telling each other which networks they can reach.",
+        Protocol::Nbns => "A NetBIOS name lookup (UDP 137) — the old Windows way of resolving names locally.",
+        Protocol::Socks => "A SOCKS proxy negotiation (TCP 1080) — relaying a connection through a proxy.",
+        Protocol::Memcached => "A Memcached cache operation (TCP 11211) — reading or writing an in-memory key.",
+        Protocol::BitTorrent => "A BitTorrent peer connection (TCP 6881+) — peer-to-peer file sharing.",
+        Protocol::Git => "A native Git transfer (TCP 9418) — cloning, fetching or pushing a repository.",
+        Protocol::Xmpp => "An XMPP / Jabber message (TCP 5222) — open-standard instant messaging.",
+        Protocol::Finger => "A Finger lookup (TCP 79) — an old service reporting who is logged in.",
+        Protocol::Vrrp => "A VRRP advertisement (IP proto 112) — routers sharing a virtual gateway IP for failover.",
+        Protocol::Pim => "A PIM message (IP proto 103) — routers building paths to deliver multicast.",
+        Protocol::Eigrp => "An EIGRP routing message (IP proto 88) — Cisco routers exchanging routes.",
+        Protocol::Pppoe => "A PPPoE frame — a DSL-style login/session carried over Ethernet.",
+        Protocol::Eapol => "An 802.1X / EAPOL frame — port authentication, or the Wi-Fi WPA key handshake.",
+        Protocol::L2tp => "An L2TP tunnel message (UDP 1701) — usually the L2TP/IPsec VPN transport.",
+        Protocol::Gtp => "A GTP message (UDP 2123/2152) — carrying mobile data through the 4G/5G core.",
+        Protocol::Rmcp => "An RMCP/IPMI message (UDP 623) — out-of-band management of a server's BMC.",
+        Protocol::WsDiscovery => "A WS-Discovery message (UDP 3702) — devices like printers/cameras finding each other.",
+        Protocol::Tacacs => "A TACACS+ message (TCP 49) — admin login/authorization for network gear.",
+        Protocol::Diameter => "A Diameter message (TCP/SCTP 3868) — carrier AAA and billing.",
+        Protocol::Rlogin => "An rlogin session (TCP 513) — a legacy cleartext remote login; prefer SSH.",
+        Protocol::Dccp => "A DCCP packet (IP proto 33) — congestion-controlled but unreliable transport for streaming.",
+        Protocol::Dtls => "A DTLS record — TLS encryption over UDP, as used by WebRTC media and some VPNs.",
+        Protocol::Netflow => "A NetFlow/IPFIX export (UDP 2055/4739) — a router reporting traffic-flow summaries.",
+        Protocol::Sflow => "An sFlow datagram (UDP 6343) — a switch exporting sampled packets and counters.",
+        Protocol::Bfd => "A BFD heartbeat (UDP 3784) — a fast liveness check between routers for quick failover.",
+        Protocol::Hsrp => "An HSRP message (UDP 1985) — Cisco routers sharing a virtual gateway IP.",
+        Protocol::Iscsi => "An iSCSI PDU (TCP 3260) — SCSI storage commands carried over the network.",
+        Protocol::Rtmp => "An RTMP message (TCP 1935) — the streaming protocol used to ingest live video.",
+        Protocol::Smpp => "An SMPP PDU (TCP 2775) — an app or gateway sending/receiving SMS text messages.",
+        Protocol::OpenFlow => "An OpenFlow message (TCP 6653) — an SDN controller programming a switch.",
+        Protocol::Nats => "A NATS message (TCP 4222) — publish/subscribe messaging between services.",
+        Protocol::Stomp => "A STOMP frame (TCP 61613) — simple text messaging with a broker.",
+        Protocol::Profinet => "A PROFINET frame (EtherType 0x8892) — real-time industrial automation data.",
+        Protocol::Wol => "A Wake-on-LAN magic packet — a broadcast that powers a sleeping machine on.",
+        Protocol::Glbp => "A GLBP message (UDP 3222) — Cisco routers load-sharing a virtual gateway.",
+        Protocol::Wccp => "A WCCP message (UDP 2048) — a router redirecting traffic to a cache/proxy.",
+        Protocol::Mgcp => "An MGCP message (UDP 2427) — a call agent controlling a VoIP media gateway.",
+        Protocol::Nbds => "A NetBIOS datagram (UDP 138) — legacy Windows broadcast/browsing traffic.",
+        Protocol::Dicom => "A DICOM message (TCP 104/11112) — medical imaging devices exchanging studies (patient data).",
+        Protocol::Hl7 => "An HL7 v2 message (TCP 2575) — hospital systems exchanging patient/lab data.",
+        Protocol::Fix => "A FIX message — a trading system sending orders or market data; tag 35 is the type.",
+        Protocol::S7comm => "An S7comm message (TCP 102) — reading/writing a Siemens PLC's memory.",
+        Protocol::Iec104 => "An IEC 60870-5-104 message (TCP 2404) — power-grid SCADA telecontrol.",
+        Protocol::Ldp => "An LDP message (TCP/UDP 646) — MPLS routers distributing forwarding labels.",
+        Protocol::Goose => "A GOOSE frame (EtherType 0x88B8) — fast IEC 61850 substation protection signalling.",
+        Protocol::Ptp => "A PTP message (IEEE 1588) — sub-microsecond clock synchronisation.",
+        Protocol::Rsvp => "An RSVP message (IP proto 46) — reserving bandwidth / signalling an MPLS-TE tunnel.",
+        Protocol::Isakmp => "An ISAKMP/IKE message (UDP 500/4500) — negotiating the keys for an IPsec VPN.",
+        Protocol::Geneve => "A Geneve packet (UDP 6081) — a network-virtualisation overlay carrying an inner frame.",
+        Protocol::Capwap => "A CAPWAP message (UDP 5246/5247) — a wireless controller managing access points.",
+        Protocol::Teredo => "A Teredo packet (UDP 3544) — IPv6 tunnelled through IPv4/NAT.",
+        Protocol::Gvcp => "A GVCP message (UDP 3956) — controlling an industrial GigE Vision camera.",
+        Protocol::Rpc => "An ONC RPC message (TCP/UDP 111/2049) — the plumbing behind NFS file sharing.",
+        Protocol::Graphite => "A Graphite metric (TCP 2003) — an app pushing a time-series data point.",
+        Protocol::Gearman => "A Gearman message (TCP 4730) — handing a background job to a worker.",
+        Protocol::Beanstalk => "A beanstalkd command (TCP 11300) — a simple background-job work queue.",
+        Protocol::Ethercat => "An EtherCAT frame (EtherType 0x88A4) — real-time industrial fieldbus control.",
+        Protocol::Fcoe => "An FCoE frame (EtherType 0x8906) — Fibre Channel storage carried over Ethernet.",
+        Protocol::Macsec => "A MACsec frame (EtherType 0x88E5) — 802.1AE hop-by-hop link encryption.",
+        Protocol::Rarp => "A RARP packet (EtherType 0x8035) — a host asking for its IP given its MAC.",
+        Protocol::Rtps => "An RTPS/DDS message — real-time pub/sub middleware (ROS 2, vehicles, industrial).",
+        Protocol::Influxdb => "An InfluxDB metric (UDP 8089) — a time-series data point written in line protocol.",
+        Protocol::MqttSn => "An MQTT-SN message (UDP 1883) — MQTT for constrained sensor devices over UDP.",
+        Protocol::Babel => "A Babel routing update (UDP 6696) — mesh-friendly distance-vector routing.",
+        Protocol::X11 => "An X11 message (TCP 6000+) — the Unix display protocol drawing a GUI.",
+        Protocol::Rsync => "An rsync transfer (TCP 873) — efficient file synchronisation.",
+        Protocol::Svn => "A Subversion message (TCP 3690) — centralised version-control traffic.",
+        Protocol::Rethinkdb => "A RethinkDB message (TCP 28015) — a realtime JSON document database.",
+        Protocol::Sv => "A Sampled Values frame (EtherType 0x88BA) — digitised substation measurements.",
+        Protocol::Powerlink => "An Ethernet POWERLINK frame (0x88AB) — deterministic real-time industrial control.",
+        Protocol::Sercos => "A SERCOS III frame (EtherType 0x88CD) — real-time servo motion control.",
+        Protocol::Knxip => "A KNXnet/IP message (UDP 3671) — building automation (lights/HVAC) over IP.",
+        Protocol::Statsd => "A StatsD metric (UDP 8125) — a fire-and-forget counter/gauge/timer.",
+        Protocol::Gelf => "A GELF message (UDP 12201) — a structured application log, often to Graylog.",
+        Protocol::Hartip => "A HART-IP message (UDP/TCP 5094) — smart process-instrument data over IP.",
+        Protocol::Elasticsearch => "An Elasticsearch transport message (TCP 9300) — internal cluster traffic.",
+        Protocol::Zabbix => "A Zabbix message (TCP 10050/10051) — infrastructure monitoring data.",
+        Protocol::Nsq => "An NSQ message (TCP 4150) — a realtime distributed message queue.",
+        Protocol::Zmtp => "A ZMTP/ZeroMQ message — brokerless messaging between applications.",
+        Protocol::Aerospike => "An Aerospike message (TCP 3000) — a low-latency key-value database.",
+        Protocol::Avtp => "An AVTP frame (EtherType 0x22F0) — time-synced audio/video (automotive Ethernet / pro AV).",
+        Protocol::SomeIp => "A SOME/IP message (UDP/TCP 30490+) — service-oriented communication between car ECUs.",
+        Protocol::Doip => "A DoIP message (UDP/TCP 13400) — vehicle diagnostics carried over Ethernet.",
+        Protocol::Xcp => "An XCP message (UDP/TCP 5555) — live ECU measurement and calibration.",
+        Protocol::Matter => "A Matter message (UDP 5540) — the cross-vendor smart-home standard.",
+        Protocol::Afp => "An AFP message (TCP 548) — Apple Filing Protocol for Mac file sharing.",
+        Protocol::Dht => "A BitTorrent DHT message — trackerless peer discovery over UDP.",
+        Protocol::Gnutella => "A Gnutella message (TCP 6346) — decentralised peer-to-peer file sharing.",
+        Protocol::Edonkey => "An eDonkey/eMule message (TCP 4662) — peer-to-peer file sharing.",
+        Protocol::SourceQuery => "A Source A2S query — a game client/browser asking a server for its info.",
+        Protocol::Minecraft => "A Minecraft message (TCP 25565) — the Java Edition client/server protocol.",
+        Protocol::Mumble => "A Mumble control message (TCP 64738) — low-latency voice-chat signalling.",
+        Protocol::Pfcp => "A PFCP message (UDP 8805) — the 5G/4G control plane programming user-plane forwarding.",
+        Protocol::GtpPrime => "A GTP' message (UDP 3386) — mobile Call Detail Records heading to billing.",
+        Protocol::Megaco => "A Megaco/H.248 message (UDP/TCP 2944) — a call agent controlling a media gateway.",
+        Protocol::Msrp => "An MSRP message (TCP 2855) — instant messaging/file transfer inside a SIP session.",
+        Protocol::Pcoip => "PCoIP traffic (UDP/TCP 4172) — an encrypted remote-desktop display stream.",
+        Protocol::Spice => "A SPICE message — the remote console of a virtual machine.",
+        Protocol::Ica => "Citrix ICA traffic (TCP 1494) — a published app or virtual desktop session.",
+        Protocol::Ndmp => "An NDMP message (TCP 10000) — backup software driving a NAS backup.",
+        Protocol::Dcerpc => "A DCE/RPC message (TCP 135) — Windows remote procedure calls (WMI, AD, services).",
+        Protocol::Pptp => "A PPTP control message (TCP 1723) — the legacy Microsoft VPN; weak crypto.",
+        Protocol::Radmin => "Radmin traffic (TCP 4899) — an encrypted Windows remote-control session.",
+        Protocol::Skinny => "A Skinny/SCCP message (TCP 2000) — Cisco IP-phone call signalling.",
+        Protocol::Cldap => "A CLDAP query (UDP 389) — a Windows client locating a domain controller.",
+        Protocol::Bmp => "A BMP message (TCP 11019) — a router streaming its BGP state to a collector.",
+        Protocol::RpkiRtr => "An RPKI-RTR message (TCP 323) — validated route origins feeding BGP security.",
+        Protocol::Mms => "An MMS message (TCP 102) — IEC 61850 substation data-model access.",
+        Protocol::Nrpe => "An NRPE message (TCP 5666) — a monitoring server running a check on a host.",
+        Protocol::Collectd => "A collectd packet (UDP 25826) — system metrics being shipped to a server.",
+        Protocol::Jaeger => "Jaeger tracing spans (UDP 6831) — a service reporting request timings.",
+        Protocol::Ganglia => "A Ganglia gmond packet (UDP 8649) — cluster monitoring metrics.",
+        Protocol::Bolt => "A Bolt message (TCP 7687) — a Cypher query to a Neo4j graph database.",
+        Protocol::Clickhouse => "A ClickHouse native message (TCP 9000) — columnar analytics query or data.",
+        Protocol::Pulsar => "An Apache Pulsar command (TCP 6650) — distributed pub/sub messaging.",
+        Protocol::Openwire => "An OpenWire message (TCP 61616) — Apache ActiveMQ's native protocol.",
+        Protocol::Zookeeper => "A ZooKeeper message (TCP 2181) — cluster coordination and leader election.",
+        Protocol::HadoopRpc => "A Hadoop RPC call (TCP 8020) — a client talking to the HDFS NameNode.",
+        Protocol::Fluentd => "A Fluentd forward message (TCP 24224) — structured logs heading to a collector.",
+        Protocol::Beats => "An Elastic Beats frame (TCP 5044) — Filebeat shipping events to Logstash.",
+        Protocol::Clamav => "A ClamAV daemon message (TCP 3310) — content being scanned for malware.",
+        Protocol::Spamd => "A spamd message (TCP 783) — SpamAssassin scoring a mail message.",
+        Protocol::ManageSieve => "A ManageSieve message (TCP 4190) — managing server-side mail filters.",
+        Protocol::Relp => "A RELP frame (TCP 2514) — reliable, acknowledged syslog delivery.",
+        Protocol::Lpd => "An LPD message (TCP 515) — a print job or queue query.",
+        Protocol::Ident => "An Ident message (TCP 113) — a legacy lookup of the user behind a connection.",
+        Protocol::Gopher => "A Gopher message (TCP 70) — the pre-web menu/document protocol.",
+        Protocol::Rsh => "An rsh session (TCP 514) — a cleartext remote command; prefer SSH.",
+        Protocol::Cdp => "A CDP announcement — a Cisco device naming itself to its neighbour.",
+        Protocol::Vtp => "A VTP message — switches syncing the VLAN database.",
+        Protocol::Dtp => "A DTP message — ports negotiating a trunk; a VLAN-hopping risk on access ports.",
+        Protocol::Pagp => "A PAgP message — Cisco negotiating an EtherChannel link bundle.",
+        Protocol::Udld => "A UDLD message — checking a link isn't passing traffic one way only.",
+        Protocol::Eap => "An EAP packet — the authentication method being negotiated for 802.1X/Wi-Fi.",
+        Protocol::Ipx => "An IPX packet (EtherType 0x8137) — legacy Novell NetWare networking.",
+        Protocol::Atalk => "An AppleTalk DDP packet (EtherType 0x809B) — classic Mac networking.",
+        Protocol::Aarp => "An AARP packet (EtherType 0x80F3) — AppleTalk address resolution.",
+        Protocol::Ipp => "An IPP message (TCP 631) — a print job or printer query.",
+        Protocol::Rexec => "An rexec session (TCP 512) — remote execution with a cleartext password.",
+        Protocol::Sane => "A SANE message (TCP 6566) — controlling a scanner shared over the network.",
+        Protocol::Tns => "An Oracle TNS packet (TCP 1521) — a client talking to an Oracle database.",
+        Protocol::Drda => "A DRDA message (TCP 50000) — SQL heading to an IBM Db2 database.",
+        Protocol::Firebird => "A Firebird message (TCP 3050) — a query to a Firebird/InterBase database.",
+        Protocol::MysqlX => "A MySQL X message (TCP 33060) — the document-store/X DevAPI protocol.",
+        Protocol::Riak => "A Riak message (TCP 8087) — a read or write to a distributed key-value store.",
+        Protocol::Nmea => "An NMEA 0183 sentence (TCP 10110) — GPS or marine instrument data.",
+        Protocol::Adsb => "An ADS-B Beast frame (TCP 30005) — decoded aircraft transponder data.",
+        Protocol::Aprs => "An APRS-IS packet (TCP 14580) — an amateur-radio position or telemetry beacon.",
+        Protocol::Turn => "A TURN ChannelData message — call media being relayed because NAT blocked a direct path.",
+        Protocol::Decnet => "A DECnet Phase IV packet (EtherType 0x6003) — legacy DEC VAX/VMS networking.",
+        Protocol::Vines => "A Banyan VINES packet (EtherType 0x0BAD) — a long-obsolete network OS.",
+        Protocol::Erspan => "An ERSPAN header inside GRE — mirrored traffic tunnelled to a remote analyser.",
+        Protocol::Ppp => "A PPP frame — the link layer inside a PPPoE broadband session.",
+        Protocol::Pap => "A PAP exchange — PPP authentication with the password in the clear.",
+        Protocol::Chap => "A CHAP exchange — PPP authentication by hashed challenge, no password sent.",
+        Protocol::L2cap => "An L2CAP frame — Bluetooth's channel multiplexing layer.",
+        Protocol::Att => "An ATT PDU — a Bluetooth LE device's data being read, written or notified.",
+        Protocol::Smp => "An SMP PDU — two Bluetooth LE devices pairing and agreeing on security.",
+        Protocol::NvmeOf => "An NVMe/TCP PDU (TCP 4420) — remote flash storage at near-local speed.",
+        Protocol::Nbd => "An NBD message (TCP 10809) — a remote block device being read or written.",
+        Protocol::Fcip => "An FCIP frame (TCP 3225) — Fibre Channel storage tunnelled between sites.",
+        Protocol::Aoe => "An AoE frame (EtherType 0x88A2) — a disk exported directly onto the LAN.",
+        Protocol::Roce => "A RoCE frame (EtherType 0x8915) — RDMA writing straight into remote memory.",
+        Protocol::Xdmcp => "An XDMCP message (UDP 177) — an X terminal asking for a remote login session.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
+        Protocol::Iax2 => "An IAX2 message (UDP 4569) — Asterisk PBXs trunking calls over a single port.",
+        Protocol::Zrtp => "A ZRTP handshake — endpoints agreeing on an SRTP key inside the media stream.",
+        Protocol::MssqlBrowser => "A SQL Server Browser exchange (UDP 1434) — a client asking which port an instance uses.",
+        Protocol::H225Ras => "An H.225 RAS message (UDP 1719) — an H.323 endpoint registering with its gatekeeper.",
+        Protocol::Q931 => "A Q.931 message (TCP 1720) — H.323 call signalling: setup, ringing, answer or release.",
+        Protocol::Bfcp => "A BFCP message (TCP 3238) — conference floor control deciding who may share.",
+        Protocol::Lisp => "A LISP packet — overlay traffic separating an endpoint's identity from its location.",
+        Protocol::L2tpv3 => "An L2TPv3 pseudowire packet (IP protocol 115) — layer-2 frames tunnelled over IP.",
+        Protocol::VxlanGpe => "A VXLAN-GPE packet (UDP 4790) — an overlay that names the protocol it carries.",
+        Protocol::Pcp => "A PCP / NAT-PMP message (UDP 5351) — a client asking the NAT to open an inbound port.",
+        Protocol::Rwho => "An rwho broadcast (UDP 513) — a legacy BSD host announcing its users and load.",
+        Protocol::DhcpFailover => "A DHCP failover message (TCP 647) — two DHCP servers synchronising lease state.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
 }
@@ -867,7 +2889,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 56);
+        assert_eq!(all_lessons().len(), 246);
     }
 
     #[test]

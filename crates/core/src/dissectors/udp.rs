@@ -5,8 +5,12 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bacnet, coap, dhcp, dnp3, dns, enip, kerberos, ntp, openvpn, qpack, radius, rtp, sip, snmp,
-    vxlan, wireguard, DissectedResult,
+    babel, bacnet, bfd, capwap, cldap, coap, collectd, dhcp, dhcpv6, dht, dnp3, dns, doip, dtls,
+    enip, ganglia, gelf, geneve, glbp, gtp, gtpprime, gvcp, h225ras, hartip, hsrp, iax2, influxdb,
+    isakmp, jaeger, kerberos, knxip, l2tp, lisp, matter, megaco, mgcp, mqttsn, mssqlbrowser, nbds,
+    nbns, netflow, ntp, openvpn, pcoip, pcp, pfcp, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps,
+    rwho, sflow, sip, snmp, someip, source_query, ssdp, statsd, stun, syslog, teredo, tftp, turn,
+    vxlan, vxlangpe, wccp, wireguard, wol, wsd, xcp, xdmcp, zrtp, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -87,6 +91,185 @@ pub fn dissect_udp(
     if on(5683) {
         return coap::dissect_coap(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
+    // Infrastructure / discovery / logging services carried over UDP.
+    if on(514) {
+        return syslog::dissect_syslog(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(69) {
+        return tftp::dissect_tftp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1900) {
+        return ssdp::dissect_ssdp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3478) || on(3479) {
+        return stun::dissect_stun(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5355) {
+        // LLMNR uses the DNS wire format; reuse the DNS dissector, then relabel.
+        let mut r = dns::dissect_dns(src_ip, dst_ip, src_port, dst_port, udp_payload);
+        r.protocol = Protocol::Llmnr;
+        r.summary = format!("LLMNR — {}", r.summary.trim_start_matches("DNS ").trim());
+        return r;
+    }
+    if on(546) || on(547) {
+        return dhcpv6::dissect_dhcpv6(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(520) {
+        return rip::dissect_rip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(137) {
+        return nbns::dissect_nbns(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Tunnelling, mobile-core and out-of-band management over UDP.
+    if on(1701) {
+        return l2tp::dissect_l2tp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(2152) || on(2123) {
+        return gtp::dissect_gtp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(623) {
+        return rmcp::dissect_rmcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3702) {
+        return wsd::dissect_wsd(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Flow telemetry and router liveness/redundancy.
+    if on(2055) || on(4739) || on(9995) {
+        return netflow::dissect_netflow(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(6343) {
+        return sflow::dissect_sflow(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3784) {
+        return bfd::dissect_bfd(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1985) {
+        return hsrp::dissect_hsrp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Cisco load-balancing, web-cache redirection, VoIP gateway control and
+    // legacy NetBIOS datagrams.
+    if on(3222) {
+        return glbp::dissect_glbp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(2048) {
+        return wccp::dissect_wccp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(2427) || on(2727) {
+        return mgcp::dissect_mgcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(138) {
+        return nbds::dissect_nbds(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // VPN key exchange, overlays, wireless AP control, IPv6 transition, timing,
+    // machine vision and RPC.
+    if on(500) || on(4500) {
+        return isakmp::dissect_isakmp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(6081) {
+        return geneve::dissect_geneve(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5246) || on(5247) {
+        return capwap::dissect_capwap(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3544) {
+        return teredo::dissect_teredo(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(319) || on(320) {
+        return ptp::dissect_ptp_udp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3956) {
+        return gvcp::dissect_gvcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(111) || on(2049) {
+        return rpc::dissect_rpc(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Metrics, sensor MQTT and mesh routing.
+    if on(8089) {
+        return influxdb::dissect_influxdb(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1883) {
+        return mqttsn::dissect_mqttsn(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(6696) {
+        return babel::dissect_babel(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Building automation, metrics, structured logs and industrial process.
+    if on(3671) {
+        return knxip::dissect_knxip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(8125) {
+        return statsd::dissect_statsd(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(12201) {
+        return gelf::dissect_gelf(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5094) {
+        return hartip::dissect_hartip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Automotive / IoT: service middleware, diagnostics, calibration, smart home.
+    if (30490..=30510).contains(&src_port) || (30490..=30510).contains(&dst_port) {
+        return someip::dissect_someip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(13400) {
+        return doip::dissect_doip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5555) {
+        return xcp::dissect_xcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5540) {
+        return matter::dissect_matter(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Mobile-core control/charging, media gateway control and remote display.
+    if on(8805) {
+        return pfcp::dissect_pfcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(3386) {
+        return gtpprime::dissect_gtpprime(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(2944) || on(2945) {
+        return megaco::dissect_megaco(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(4172) {
+        return pcoip::dissect_pcoip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Directory discovery, metrics and tracing.
+    if on(389) {
+        return cldap::dissect_cldap(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(25826) {
+        return collectd::dissect_collectd(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(6831) {
+        return jaeger::dissect_jaeger(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(8649) {
+        return ganglia::dissect_ganglia(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(177) {
+        return xdmcp::dissect_xdmcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // VoIP (IAX2, H.323 RAS), overlays, port control and legacy broadcasts.
+    if on(4569) {
+        return iax2::dissect_iax2(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1719) {
+        return h225ras::dissect_h225ras(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1434) {
+        return mssqlbrowser::dissect_mssqlbrowser(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(4341) || on(4342) {
+        return lisp::dissect_lisp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(4790) {
+        return vxlangpe::dissect_vxlangpe(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5351) {
+        return pcp::dissect_pcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(513) {
+        return rwho::dissect_rwho(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
@@ -96,6 +279,36 @@ pub fn dissect_udp(
         if let Some(r) = vxlan::dissect_vxlan(src_ip, dst_ip, src_port, dst_port, udp_payload) {
             return r;
         }
+    }
+    // Wake-on-LAN magic packets are sent to assorted UDP ports (7/9/…), so match
+    // the unmistakable payload rather than a port.
+    if wol::looks_like_wol(udp_payload) {
+        return wol::dissect_wol(udp_payload);
+    }
+    // DTLS rides dynamically negotiated ports (WebRTC/VPN media), so recognise
+    // it structurally from its record header before falling through to plugins.
+    if dtls::looks_like_dtls(udp_payload) {
+        return dtls::dissect_dtls(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // RTPS/DDS uses dynamic ports; recognise it by its "RTPS" magic.
+    if rtps::looks_like_rtps(udp_payload) {
+        return rtps::dissect_rtps(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // BitTorrent DHT and Source-engine queries also ride arbitrary UDP ports.
+    if dht::looks_like_dht(udp_payload) {
+        return dht::dissect_dht(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if source_query::looks_like_source(udp_payload) {
+        return source_query::dissect_source_query(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // ZRTP negotiates SRTP keys inside the media stream; its magic cookie sits
+    // where RTP would put a timestamp.
+    if zrtp::looks_like_zrtp(udp_payload) {
+        return zrtp::dissect_zrtp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // TURN relays share STUN's ports but use a disjoint channel-number range.
+    if turn::looks_like_turn(udp_payload) {
+        return turn::dissect_turn(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     // User-defined plugins claim what no built-in dissector recognised
     // (see crate::plugins) — they never shadow the protocols above.

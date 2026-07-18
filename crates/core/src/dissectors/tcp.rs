@@ -8,9 +8,16 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    amqp, bgp, cassandra, dnp3, enip, ftp, http, http2, imap, kafka, kerberos, ldap, modbus,
-    mongodb, mqtt, mysql, ntlm, opcua, openvpn, pop3, postgres, rdp, redis, smb, smtp, ssh, tds,
-    telnet, tls, websocket, DissectedResult,
+    adsb, aerospike, afp, amqp, aprs, beanstalk, beats, bfcp, bgp, bittorrent, bmp, bolt,
+    cassandra, clamav, clickhouse, dcerpc, dhcpfo, diameter, dicom, dnp3, doip, drda, edonkey,
+    elasticsearch, enip, fcip, finger, firebird, fix, fluentd, ftp, gearman, git, gnutella, gopher,
+    graphite, hadooprpc, hl7, http, http2, ica, ident, iec104, imap, ipp, irc, iscsi, kafka,
+    kerberos, ldap, ldp, lpd, managesieve, megaco, memcached, minecraft, mms, modbus, mongodb,
+    mqtt, msrp, mumble, mysql, mysqlx, nats, nbd, ndmp, nmea, nntp, nrpe, nsq, ntlm, nvmeof, opcua,
+    openflow, openvpn, openwire, pcoip, pop3, postgres, pptp, pulsar, q931, radmin, rdp, redis,
+    relp, rethinkdb, rexec, rfb, riak, rlogin, rpc, rpkirtr, rsh, rsync, rtmp, rtsp, s7comm, sane,
+    skinny, smb, smpp, smtp, socks, someip, spamd, spice, ssh, stomp, svn, tacacs, tds, telnet,
+    tls, tns, websocket, whois, x11, xmpp, zabbix, zmtp, zookeeper, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -335,6 +342,327 @@ fn dissect_tcp_inner(
         }
         if on(9092) {
             return kafka::dissect_kafka(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Media, chat, remote-desktop and legacy text services over TCP.
+        if on(554) {
+            return rtsp::dissect_rtsp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6667) || on(6697) {
+            return irc::dissect_irc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5900) {
+            return rfb::dissect_rfb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(43) {
+            return whois::dissect_whois(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(119) {
+            return nntp::dissect_nntp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Legacy text services, proxies, chat, caching and version control.
+        if on(79) {
+            return finger::dissect_finger(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1080) {
+            return socks::dissect_socks(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5222) || on(5269) {
+            return xmpp::dissect_xmpp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(9418) {
+            return git::dissect_git(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(11211) {
+            return memcached::dissect_memcached(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // BitTorrent uses a port range and an unmistakable handshake, so match
+        // either the well-known ports or the handshake bytes on any port.
+        if (6881..=6889).contains(&src_port)
+            || (6881..=6889).contains(&dst_port)
+            || bittorrent::looks_like_bittorrent(tcp_payload)
+        {
+            return bittorrent::dissect_bittorrent(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // AAA (TACACS+, Diameter) and legacy remote login.
+        if on(49) {
+            return tacacs::dissect_tacacs(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3868) {
+            return diameter::dissect_diameter(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(513) {
+            return rlogin::dissect_rlogin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Storage, streaming, SMS gateways, SDN and message brokers.
+        if on(3260) {
+            return iscsi::dissect_iscsi(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1935) {
+            return rtmp::dissect_rtmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2775) {
+            return smpp::dissect_smpp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6653) {
+            return openflow::dissect_openflow(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4222) {
+            return nats::dissect_nats(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(61613) {
+            return stomp::dissect_stomp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Industrial control, healthcare, finance and MPLS label signalling.
+        if on(102) {
+            // S7comm and IEC 61850 MMS share port 102 over TPKT/COTP; the byte
+            // after the COTP header tells them apart.
+            if mms::looks_like_mms(tcp_payload) {
+                return mms::dissect_mms(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+            }
+            return s7comm::dissect_s7comm(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2404) {
+            return iec104::dissect_iec104(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(104) || on(11112) {
+            return dicom::dissect_dicom(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(646) {
+            return ldp::dissect_ldp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // HL7 (MLLP) and FIX ride assorted ports; recognise them by content too.
+        if on(2575) || hl7::looks_like_hl7(tcp_payload) {
+            return hl7::dissect_hl7(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if fix::looks_like_fix(tcp_payload) {
+            return fix::dissect_fix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // RPC/NFS, metrics and job queues.
+        if on(111) || on(2049) {
+            return rpc::dissect_rpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2003) {
+            return graphite::dissect_graphite(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4730) {
+            return gearman::dissect_gearman(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(11300) {
+            return beanstalk::dissect_beanstalk(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Display, file sync, version control and document DB.
+        if (6000..=6005).contains(&src_port) || (6000..=6005).contains(&dst_port) {
+            return x11::dissect_x11(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(873) {
+            return rsync::dissect_rsync(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3690) {
+            return svn::dissect_svn(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(28015) {
+            return rethinkdb::dissect_rethinkdb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Search, monitoring, messaging and key-value DB.
+        if on(9300) {
+            return elasticsearch::dissect_elasticsearch(
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                tcp_payload,
+            );
+        }
+        if on(10050) || on(10051) {
+            return zabbix::dissect_zabbix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4150) {
+            return nsq::dissect_nsq(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3000) {
+            return aerospike::dissect_aerospike(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Automotive (SOME/IP, DoIP), Apple filing, P2P, gaming and voice.
+        if (30490..=30510).contains(&src_port) || (30490..=30510).contains(&dst_port) {
+            return someip::dissect_someip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(13400) {
+            return doip::dissect_doip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(548) {
+            return afp::dissect_afp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6346) {
+            return gnutella::dissect_gnutella(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4662) {
+            return edonkey::dissect_edonkey(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(25565) {
+            return minecraft::dissect_minecraft(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(64738) {
+            return mumble::dissect_mumble(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Carrier VoIP, remote desktop/thin client, backup and Windows RPC.
+        if on(2944) || on(2945) {
+            return megaco::dissect_megaco(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2855) {
+            return msrp::dissect_msrp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4172) {
+            return pcoip::dissect_pcoip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1494) {
+            return ica::dissect_ica(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(10000) {
+            return ndmp::dissect_ndmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(135) {
+            return dcerpc::dissect_dcerpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1723) {
+            return pptp::dissect_pptp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4899) {
+            return radmin::dissect_radmin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2000) {
+            return skinny::dissect_skinny(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Routing telemetry/security, monitoring and data platforms.
+        if on(11019) {
+            return bmp::dissect_bmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(323) {
+            return rpkirtr::dissect_rpkirtr(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5666) {
+            return nrpe::dissect_nrpe(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(7687) {
+            return bolt::dissect_bolt(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(9000) {
+            return clickhouse::dissect_clickhouse(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6650) {
+            return pulsar::dissect_pulsar(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(61616) {
+            return openwire::dissect_openwire(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Coordination, big-data RPC and log shipping.
+        if on(2181) {
+            return zookeeper::dissect_zookeeper(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(8020) {
+            return hadooprpc::dissect_hadooprpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(24224) {
+            return fluentd::dissect_fluentd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5044) {
+            return beats::dissect_beats(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2514) {
+            return relp::dissect_relp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Mail-side scanning/filtering and classic Unix services.
+        if on(3310) {
+            return clamav::dissect_clamav(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(783) {
+            return spamd::dissect_spamd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4190) {
+            return managesieve::dissect_managesieve(
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                tcp_payload,
+            );
+        }
+        if on(515) {
+            return lpd::dissect_lpd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(113) {
+            return ident::dissect_ident(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(70) {
+            return gopher::dissect_gopher(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(631) {
+            return ipp::dissect_ipp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(512) {
+            return rexec::dissect_rexec(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6566) {
+            return sane::dissect_sane(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Enterprise databases.
+        if on(1521) {
+            return tns::dissect_tns(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // 50000 and 33060 sit inside the ephemeral port range, so these also
+        // require the protocol's own framing before claiming a flow.
+        if on(50000) && drda::looks_like_drda(tcp_payload) {
+            return drda::dissect_drda(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3050) {
+            return firebird::dissect_firebird(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(33060) && mysqlx::looks_like_mysqlx(tcp_payload) {
+            return mysqlx::dissect_mysqlx(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(8087) {
+            return riak::dissect_riak(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Storage networking.
+        if on(4420) {
+            return nvmeof::dissect_nvmeof(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(10809) {
+            return nbd::dissect_nbd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3225) {
+            return fcip::dissect_fcip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // H.323 call signalling, conference floor control and DHCP failover.
+        if on(1720) {
+            return q931::dissect_q931(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3238) {
+            return bfcp::dissect_bfcp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(647) {
+            return dhcpfo::dissect_dhcpfo(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Telemetry feeds: navigation, aviation and amateur radio.
+        if on(10110) && nmea::looks_like_nmea(tcp_payload) {
+            return nmea::dissect_nmea(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(30005) && adsb::looks_like_adsb(tcp_payload) {
+            return adsb::dissect_adsb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(14580) {
+            return aprs::dissect_aprs(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // TCP 514 is rsh; syslog's 514 is UDP and handled in the UDP dissector.
+        if on(514) {
+            return rsh::dissect_rsh(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // SPICE consoles use varied ports; recognise the link magic structurally.
+        if spice::looks_like_spice(tcp_payload) {
+            return spice::dissect_spice(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // ZMTP/ZeroMQ uses arbitrary ports; recognise its greeting structurally.
+        if zmtp::looks_like_zmtp(tcp_payload) {
+            return zmtp::dissect_zmtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their
