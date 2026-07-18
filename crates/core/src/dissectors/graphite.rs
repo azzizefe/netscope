@@ -38,7 +38,13 @@ mod tests {
 
     #[test]
     fn metric_line() {
-        let r = dissect_graphite(None, None, 40000, 2003, b"servers.web1.cpu 0.42 1700000000\n");
+        let r = dissect_graphite(
+            None,
+            None,
+            40000,
+            2003,
+            b"servers.web1.cpu 0.42 1700000000\n",
+        );
         assert_eq!(r.protocol, Protocol::Graphite);
         assert_eq!(r.summary, "Graphite — servers.web1.cpu");
     }

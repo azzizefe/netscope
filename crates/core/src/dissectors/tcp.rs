@@ -8,13 +8,14 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    aerospike, afp, amqp, beanstalk, bgp, bittorrent, cassandra, dcerpc, diameter, dicom, dnp3,
-    doip, edonkey, elasticsearch, enip, finger, fix, ftp, gearman, git, gnutella, graphite, hl7,
-    http, http2, ica, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp, megaco, memcached,
-    minecraft, modbus, mongodb, mqtt, msrp, mumble, mysql, nats, ndmp, nntp, nsq, ntlm, opcua,
-    openflow, openvpn, pcoip, pop3, postgres, pptp, radmin, rdp, redis, rethinkdb, rfb, rlogin,
-    rpc, rsync, rtmp, rtsp, s7comm, skinny, smb, smpp, smtp, socks, someip, spice, ssh, stomp, svn,
-    tacacs, tds, telnet, tls, websocket, whois, x11, xmpp, zabbix, zmtp, DissectedResult,
+    aerospike, afp, amqp, beanstalk, bgp, bittorrent, bmp, bolt, cassandra, clickhouse, dcerpc,
+    diameter, dicom, dnp3, doip, edonkey, elasticsearch, enip, finger, fix, ftp, gearman, git,
+    gnutella, graphite, hl7, http, http2, ica, iec104, imap, irc, iscsi, kafka, kerberos, ldap,
+    ldp, megaco, memcached, minecraft, mms, modbus, mongodb, mqtt, msrp, mumble, mysql, nats, ndmp,
+    nntp, nrpe, nsq, ntlm, opcua, openflow, openvpn, openwire, pcoip, pop3, postgres, pptp, pulsar,
+    radmin, rdp, redis, rethinkdb, rfb, rlogin, rpc, rpkirtr, rsync, rtmp, rtsp, s7comm, skinny,
+    smb, smpp, smtp, socks, someip, spice, ssh, stomp, svn, tacacs, tds, telnet, tls, websocket,
+    whois, x11, xmpp, zabbix, zmtp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -411,6 +412,11 @@ fn dissect_tcp_inner(
         }
         // Industrial control, healthcare, finance and MPLS label signalling.
         if on(102) {
+            // S7comm and IEC 61850 MMS share port 102 over TPKT/COTP; the byte
+            // after the COTP header tells them apart.
+            if mms::looks_like_mms(tcp_payload) {
+                return mms::dissect_mms(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+            }
             return s7comm::dissect_s7comm(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         if on(2404) {
@@ -458,7 +464,11 @@ fn dissect_tcp_inner(
         // Search, monitoring, messaging and key-value DB.
         if on(9300) {
             return elasticsearch::dissect_elasticsearch(
-                src_ip, dst_ip, src_port, dst_port, tcp_payload,
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                tcp_payload,
             );
         }
         if on(10050) || on(10051) {
@@ -519,6 +529,28 @@ fn dissect_tcp_inner(
         }
         if on(2000) {
             return skinny::dissect_skinny(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Routing telemetry/security, monitoring and data platforms.
+        if on(11019) {
+            return bmp::dissect_bmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(323) {
+            return rpkirtr::dissect_rpkirtr(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5666) {
+            return nrpe::dissect_nrpe(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(7687) {
+            return bolt::dissect_bolt(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(9000) {
+            return clickhouse::dissect_clickhouse(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(6650) {
+            return pulsar::dissect_pulsar(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(61616) {
+            return openwire::dissect_openwire(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // SPICE consoles use varied ports; recognise the link magic structurally.
         if spice::looks_like_spice(tcp_payload) {

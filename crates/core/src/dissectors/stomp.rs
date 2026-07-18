@@ -56,7 +56,13 @@ mod tests {
 
     #[test]
     fn send_frame() {
-        let r = dissect_stomp(None, None, 40000, 61613, b"SEND\r\ndestination:/queue/a\r\n\r\nhi\0");
+        let r = dissect_stomp(
+            None,
+            None,
+            40000,
+            61613,
+            b"SEND\r\ndestination:/queue/a\r\n\r\nhi\0",
+        );
         assert_eq!(r.protocol, Protocol::Stomp);
         assert_eq!(r.summary, "STOMP SEND");
     }

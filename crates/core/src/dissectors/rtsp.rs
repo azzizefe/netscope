@@ -33,7 +33,11 @@ pub fn dissect_rtsp(
     let line = super::first_text_line(payload);
     let summary = if line.starts_with("RTSP/") {
         format!("RTSP Response — {}", super::truncate(&line, 50))
-    } else if let Some(method) = line.split_whitespace().next().filter(|m| METHODS.contains(m)) {
+    } else if let Some(method) = line
+        .split_whitespace()
+        .next()
+        .filter(|m| METHODS.contains(m))
+    {
         format!("RTSP {method} — {}", super::truncate(&line, 50))
     } else if line.is_empty() {
         format!("RTSP ({} bytes)", payload.len())
@@ -56,7 +60,13 @@ mod tests {
 
     #[test]
     fn describe_request() {
-        let r = dissect_rtsp(None, None, 40000, 554, b"DESCRIBE rtsp://cam/stream RTSP/1.0\r\n");
+        let r = dissect_rtsp(
+            None,
+            None,
+            40000,
+            554,
+            b"DESCRIBE rtsp://cam/stream RTSP/1.0\r\n",
+        );
         assert_eq!(r.protocol, Protocol::Rtsp);
         assert!(r.summary.starts_with("RTSP DESCRIBE —"), "{}", r.summary);
     }

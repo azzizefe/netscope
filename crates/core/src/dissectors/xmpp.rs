@@ -46,14 +46,26 @@ mod tests {
 
     #[test]
     fn stream_open() {
-        let r = dissect_xmpp(None, None, 40000, 5222, b"<stream:stream xmlns='jabber:client'>");
+        let r = dissect_xmpp(
+            None,
+            None,
+            40000,
+            5222,
+            b"<stream:stream xmlns='jabber:client'>",
+        );
         assert_eq!(r.protocol, Protocol::Xmpp);
         assert_eq!(r.summary, "XMPP — stream open");
     }
 
     #[test]
     fn message_stanza() {
-        let r = dissect_xmpp(None, None, 40000, 5222, b"<message to='a@b'><body>hi</body></message>");
+        let r = dissect_xmpp(
+            None,
+            None,
+            40000,
+            5222,
+            b"<message to='a@b'><body>hi</body></message>",
+        );
         assert_eq!(r.summary, "XMPP message");
     }
 }

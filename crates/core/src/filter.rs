@@ -209,6 +209,20 @@ const KNOWN_PROTOS: &[&str] = &[
     "radmin",
     "skinny",
     "sccp",
+    "cldap",
+    "bmp",
+    "rpkirtr",
+    "mms",
+    "nrpe",
+    "collectd",
+    "jaeger",
+    "ganglia",
+    "bolt",
+    "neo4j",
+    "clickhouse",
+    "pulsar",
+    "openwire",
+    "activemq",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -385,6 +399,9 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "h248" => pkt.protocol == Protocol::Megaco,
         "msrpc" => pkt.protocol == Protocol::Dcerpc,
         "sccp" => pkt.protocol == Protocol::Skinny,
+        "rpkirtr" => pkt.protocol == Protocol::RpkiRtr,
+        "neo4j" => pkt.protocol == Protocol::Bolt,
+        "activemq" => pkt.protocol == Protocol::Openwire,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

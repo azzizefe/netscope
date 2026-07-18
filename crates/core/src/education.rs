@@ -1549,6 +1549,112 @@ presses and call state to CallManager, which drives the display and rings. Still
 common in Cisco voice estates.",
             look_for: "\"Skinny (SCCP) Register\" / \"CallState\" on TCP 2000.",
         },
+        Protocol::Cldap => Lesson {
+            title: "CLDAP — finding a domain controller",
+            summary: "Connectionless LDAP, used by Windows to locate the nearest DC.",
+            body: "Before a Windows machine can log you in it must find a domain \
+controller. It asks over CLDAP — LDAP in a single UDP round trip. Because a tiny \
+query gets a large reply, exposed CLDAP servers are also abused for DDoS \
+amplification, so seeing it from the internet is a red flag.",
+            look_for: "\"CLDAP searchRequest\" on UDP 389.",
+        },
+        Protocol::Bmp => Lesson {
+            title: "BMP — watching BGP from the outside",
+            summary: "A router streaming its BGP tables and peer events to a collector.",
+            body: "Rather than logging into routers to inspect BGP, operators have them \
+push their view out: BMP streams route updates, peer up/down events and \
+statistics to a monitoring system. It's how you see route hijacks and flapping \
+across a whole network.",
+            look_for: "\"BMP Route Monitoring\" / \"BMP Peer Up\" on TCP 11019.",
+        },
+        Protocol::RpkiRtr => Lesson {
+            title: "RPKI-RTR — checking BGP routes are legitimate",
+            summary: "Feeds a router the cryptographically validated list of who may announce what.",
+            body: "BGP has no built-in way to know whether a network is allowed to \
+announce a prefix — the root of route hijacking. RPKI publishes signed \
+authorisations, and RPKI-RTR is how a router pulls that validated data from a \
+local cache so it can drop invalid announcements.",
+            look_for: "\"RPKI-RTR Cache Response\" / \"IPv4 Prefix\" on TCP 323.",
+        },
+        Protocol::Mms => Lesson {
+            title: "MMS — reading a substation's data model",
+            summary: "The client/server half of IEC 61850, alongside GOOSE and Sampled Values.",
+            body: "Where GOOSE carries urgent trip signals, MMS is the conversational \
+side of a substation: a control system browsing a device's data model, reading \
+measurements, receiving reports and issuing controls. It shares port 102 with \
+Siemens S7comm, so netscope tells them apart by the framing.",
+            look_for: "\"MMS — session CONNECT\" / \"data transfer\" on TCP 102.",
+        },
+        Protocol::Nrpe => Lesson {
+            title: "NRPE — running a Nagios check remotely",
+            summary: "A monitoring server asking a host to execute a health check.",
+            body: "Nagios-style monitoring often needs data only the host itself can see \
+— disk space, process counts. NRPE is the agent that runs those check scripts on \
+request and returns the status. Historically it has had command-injection issues, \
+so it's worth knowing where it's exposed.",
+            look_for: "\"NRPE v2 query\" / \"response\" on TCP 5666.",
+        },
+        Protocol::Collectd => Lesson {
+            title: "collectd — system metrics on the wire",
+            summary: "A daemon shipping CPU, memory, disk and network statistics.",
+            body: "collectd gathers system statistics and sends them to a central server \
+in a compact binary format made of typed parts (host, time, plugin, values). \
+Unauthenticated and UDP-based, it has also been used for amplification attacks \
+when left open.",
+            look_for: "\"collectd — values part\" on UDP 25826.",
+        },
+        Protocol::Jaeger => Lesson {
+            title: "Jaeger — distributed tracing",
+            summary: "Services reporting timing spans so a request can be followed across them.",
+            body: "When one user request fans out across a dozen microservices, tracing \
+is how you find where the time went. Instrumented services emit spans to a local \
+Jaeger agent over UDP, encoded with Thrift; the agent forwards them to a collector \
+that stitches the trace together.",
+            look_for: "\"Jaeger spans (Thrift compact)\" on UDP 6831.",
+        },
+        Protocol::Ganglia => Lesson {
+            title: "Ganglia — cluster monitoring",
+            summary: "Nodes multicasting their metrics across an HPC or compute cluster.",
+            body: "Ganglia was built for large clusters: each node's gmond announces its \
+metrics, and every node can hear them, so the cluster's state is visible without a \
+central poller. Values are XDR-encoded, with metadata packets describing each \
+metric.",
+            look_for: "\"Ganglia gmond — metric metadata\" on UDP 8649.",
+        },
+        Protocol::Bolt => Lesson {
+            title: "Bolt — talking to Neo4j",
+            summary: "The binary protocol carrying Cypher graph queries.",
+            body: "Bolt is Neo4j's client protocol: a connection opens with a magic \
+preamble and version negotiation, then carries Cypher queries and streamed result \
+records in a compact binary packing. Seeing it means an application is querying a \
+graph database.",
+            look_for: "\"Bolt handshake (offering v5.1)\" on TCP 7687.",
+        },
+        Protocol::Clickhouse => Lesson {
+            title: "ClickHouse — columnar analytics",
+            summary: "The native protocol of a very fast analytical database.",
+            body: "ClickHouse answers analytical queries over huge tables by storing data \
+in columns. Its native protocol (faster than the HTTP interface) opens with a \
+Hello naming the client, then ships queries and columnar result blocks.",
+            look_for: "\"ClickHouse handshake (Hello)\" on TCP 9000.",
+        },
+        Protocol::Pulsar => Lesson {
+            title: "Apache Pulsar — messaging with tiered storage",
+            summary: "A distributed pub/sub system that separates serving from storage.",
+            body: "Pulsar is a messaging platform in Kafka's space, but it splits brokers \
+from the storage layer so it can scale and offload older data. Its binary protocol \
+frames a protobuf command, optionally followed by the message payload.",
+            look_for: "\"Pulsar command\" on TCP 6650.",
+        },
+        Protocol::Openwire => Lesson {
+            title: "OpenWire — Apache ActiveMQ's native protocol",
+            summary: "The binary wire format ActiveMQ clients and brokers use.",
+            body: "ActiveMQ speaks several protocols; OpenWire is its native, most \
+efficient one. A connection opens with a WireFormatInfo negotiation, then carries \
+broker/connection/consumer info and the messages themselves. A deserialisation \
+flaw in it caused a well-known critical CVE, so its exposure matters.",
+            look_for: "\"OpenWire WireFormatInfo\" / \"ActiveMQMessage\" on TCP 61616.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1820,6 +1926,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Pptp,
         Protocol::Radmin,
         Protocol::Skinny,
+        Protocol::Cldap,
+        Protocol::Bmp,
+        Protocol::RpkiRtr,
+        Protocol::Mms,
+        Protocol::Nrpe,
+        Protocol::Collectd,
+        Protocol::Jaeger,
+        Protocol::Ganglia,
+        Protocol::Bolt,
+        Protocol::Clickhouse,
+        Protocol::Pulsar,
+        Protocol::Openwire,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -2084,6 +2202,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Pptp => "A PPTP control message (TCP 1723) — the legacy Microsoft VPN; weak crypto.",
         Protocol::Radmin => "Radmin traffic (TCP 4899) — an encrypted Windows remote-control session.",
         Protocol::Skinny => "A Skinny/SCCP message (TCP 2000) — Cisco IP-phone call signalling.",
+        Protocol::Cldap => "A CLDAP query (UDP 389) — a Windows client locating a domain controller.",
+        Protocol::Bmp => "A BMP message (TCP 11019) — a router streaming its BGP state to a collector.",
+        Protocol::RpkiRtr => "An RPKI-RTR message (TCP 323) — validated route origins feeding BGP security.",
+        Protocol::Mms => "An MMS message (TCP 102) — IEC 61850 substation data-model access.",
+        Protocol::Nrpe => "An NRPE message (TCP 5666) — a monitoring server running a check on a host.",
+        Protocol::Collectd => "A collectd packet (UDP 25826) — system metrics being shipped to a server.",
+        Protocol::Jaeger => "Jaeger tracing spans (UDP 6831) — a service reporting request timings.",
+        Protocol::Ganglia => "A Ganglia gmond packet (UDP 8649) — cluster monitoring metrics.",
+        Protocol::Bolt => "A Bolt message (TCP 7687) — a Cypher query to a Neo4j graph database.",
+        Protocol::Clickhouse => "A ClickHouse native message (TCP 9000) — columnar analytics query or data.",
+        Protocol::Pulsar => "An Apache Pulsar command (TCP 6650) — distributed pub/sub messaging.",
+        Protocol::Openwire => "An OpenWire message (TCP 61616) — Apache ActiveMQ's native protocol.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -2130,7 +2260,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 174);
+        assert_eq!(all_lessons().len(), 186);
     }
 
     #[test]

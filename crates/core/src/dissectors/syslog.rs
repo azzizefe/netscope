@@ -67,9 +67,19 @@ mod tests {
     #[test]
     fn parses_pri_severity_and_facility() {
         // <34> = facility 4 (auth), severity 2 (Critical).
-        let r = dissect_syslog(None, None, 40000, 514, b"<34>Oct 11 22:14:15 host su: failed");
+        let r = dissect_syslog(
+            None,
+            None,
+            40000,
+            514,
+            b"<34>Oct 11 22:14:15 host su: failed",
+        );
         assert_eq!(r.protocol, Protocol::Syslog);
-        assert!(r.summary.starts_with("Syslog Critical (facility 4)"), "{}", r.summary);
+        assert!(
+            r.summary.starts_with("Syslog Critical (facility 4)"),
+            "{}",
+            r.summary
+        );
         assert!(r.summary.contains("failed"));
     }
 

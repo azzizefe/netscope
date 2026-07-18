@@ -18,7 +18,11 @@ pub fn dissect_nbns(
 ) -> DissectedResult {
     let summary = if payload.len() >= 4 {
         let flags = u16::from_be_bytes([payload[2], payload[3]]);
-        let kind = if flags & 0x8000 != 0 { "Response" } else { "Query" };
+        let kind = if flags & 0x8000 != 0 {
+            "Response"
+        } else {
+            "Query"
+        };
         let op = match (flags >> 11) & 0x0F {
             0 => "Name",
             5 => "Registration",

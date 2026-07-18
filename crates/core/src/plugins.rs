@@ -683,7 +683,10 @@ mod lua_tests {
         let p = plugin_with_script(
             r#"return string.format("%s op=%d len=%d", name, payload:byte(1), #payload)"#,
         );
-        assert_eq!(p.summary(1000, 9999, &[0x07, 0xaa, 0xbb]), "Demo op=7 len=3");
+        assert_eq!(
+            p.summary(1000, 9999, &[0x07, 0xaa, 0xbb]),
+            "Demo op=7 len=3"
+        );
     }
 
     #[test]
@@ -720,7 +723,17 @@ mod lua_tests {
 
     #[test]
     fn sandbox_hides_io_os_and_package() {
-        for global in ["io", "os", "package", "require", "dofile", "loadfile", "load", "loadstring", "debug"] {
+        for global in [
+            "io",
+            "os",
+            "package",
+            "require",
+            "dofile",
+            "loadfile",
+            "load",
+            "loadstring",
+            "debug",
+        ] {
             let p = plugin_with_script(&format!("return tostring({global})"));
             assert_eq!(
                 p.summary(1000, 9999, b"x"),

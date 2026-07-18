@@ -46,7 +46,13 @@ mod tests {
     #[test]
     fn info_frame() {
         // Start 0x68, length, control octet 0x00 (I-frame).
-        let r = dissect_iec104(None, None, 40000, 2404, &[0x68, 0x04, 0x00, 0x00, 0x00, 0x00]);
+        let r = dissect_iec104(
+            None,
+            None,
+            40000,
+            2404,
+            &[0x68, 0x04, 0x00, 0x00, 0x00, 0x00],
+        );
         assert_eq!(r.protocol, Protocol::Iec104);
         assert!(r.summary.contains("I-frame"), "{}", r.summary);
     }

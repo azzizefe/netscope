@@ -1786,7 +1786,10 @@ mod tests {
             assert_eq!((p.key_len, p.iv_len, p.sha384), (32, 12, false));
         }
 
-        assert!(tls12_suite_params(0x1301).is_none(), "TLS 1.3 is a separate path");
+        assert!(
+            tls12_suite_params(0x1301).is_none(),
+            "TLS 1.3 is a separate path"
+        );
     }
 
     /// ChaCha20-Poly1305 has no explicit nonce: the nonce is the fixed IV XORed

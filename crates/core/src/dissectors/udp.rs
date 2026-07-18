@@ -5,11 +5,12 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    babel, bacnet, bfd, capwap, coap, dhcp, dhcpv6, dht, dnp3, dns, doip, dtls, enip, gelf, geneve,
-    glbp, gtp, gtpprime, gvcp, hartip, hsrp, influxdb, isakmp, kerberos, knxip, l2tp, matter,
-    megaco, mgcp, mqttsn, nbds, nbns, netflow, ntp, openvpn, pcoip, pfcp, ptp, qpack, radius, rip,
-    rmcp, rpc, rtp, rtps, sflow, sip, snmp, someip, source_query, ssdp, statsd, stun, syslog,
-    teredo, tftp, vxlan, wccp, wireguard, wol, wsd, xcp, DissectedResult,
+    babel, bacnet, bfd, capwap, cldap, coap, collectd, dhcp, dhcpv6, dht, dnp3, dns, doip, dtls,
+    enip, ganglia, gelf, geneve, glbp, gtp, gtpprime, gvcp, hartip, hsrp, influxdb, isakmp, jaeger,
+    kerberos, knxip, l2tp, matter, megaco, mgcp, mqttsn, nbds, nbns, netflow, ntp, openvpn, pcoip,
+    pfcp, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip, snmp, someip, source_query,
+    ssdp, statsd, stun, syslog, teredo, tftp, vxlan, wccp, wireguard, wol, wsd, xcp,
+    DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -230,6 +231,19 @@ pub fn dissect_udp(
     }
     if on(4172) {
         return pcoip::dissect_pcoip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Directory discovery, metrics and tracing.
+    if on(389) {
+        return cldap::dissect_cldap(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(25826) {
+        return collectd::dissect_collectd(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(6831) {
+        return jaeger::dissect_jaeger(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(8649) {
+        return ganglia::dissect_ganglia(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);

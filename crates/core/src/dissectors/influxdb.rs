@@ -39,7 +39,13 @@ mod tests {
 
     #[test]
     fn line_point() {
-        let r = dissect_influxdb(None, None, 40000, 8089, b"cpu,host=web1 usage=0.6 1700000000\n");
+        let r = dissect_influxdb(
+            None,
+            None,
+            40000,
+            8089,
+            b"cpu,host=web1 usage=0.6 1700000000\n",
+        );
         assert_eq!(r.protocol, Protocol::Influxdb);
         assert_eq!(r.summary, "InfluxDB — cpu");
     }

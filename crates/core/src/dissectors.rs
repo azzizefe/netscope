@@ -12,10 +12,15 @@ pub mod bfd;
 pub mod bgp;
 pub mod bittorrent;
 pub mod bluetooth;
+pub mod bmp;
+pub mod bolt;
 pub mod can;
 pub mod capwap;
 pub mod cassandra;
+pub mod cldap;
+pub mod clickhouse;
 pub mod coap;
+pub mod collectd;
 pub mod dccp;
 pub mod dcerpc;
 pub mod dhcp;
@@ -38,6 +43,7 @@ pub mod fcoe;
 pub mod finger;
 pub mod fix;
 pub mod ftp;
+pub mod ganglia;
 pub mod gearman;
 pub mod gelf;
 pub mod geneve;
@@ -62,10 +68,11 @@ pub mod igmp;
 pub mod imap;
 pub mod influxdb;
 pub mod ip;
-pub mod irc;
 pub mod ipsec;
+pub mod irc;
 pub mod isakmp;
 pub mod iscsi;
+pub mod jaeger;
 pub mod kafka;
 pub mod kerberos;
 pub mod knxip;
@@ -80,6 +87,7 @@ pub mod megaco;
 pub mod memcached;
 pub mod mgcp;
 pub mod minecraft;
+pub mod mms;
 pub mod modbus;
 pub mod mongodb;
 pub mod mpls;
@@ -94,12 +102,14 @@ pub mod nbns;
 pub mod ndmp;
 pub mod netflow;
 pub mod nntp;
+pub mod nrpe;
 pub mod nsq;
 pub mod ntlm;
 pub mod ntp;
 pub mod opcua;
 pub mod openflow;
 pub mod openvpn;
+pub mod openwire;
 pub mod ospf;
 pub mod pcoip;
 pub mod pfcp;
@@ -111,6 +121,7 @@ pub mod pppoe;
 pub mod pptp;
 pub mod profinet;
 pub mod ptp;
+pub mod pulsar;
 pub mod qpack;
 pub mod radiotap;
 pub mod radius;
@@ -124,6 +135,7 @@ pub mod rip;
 pub mod rlogin;
 pub mod rmcp;
 pub mod rpc;
+pub mod rpkirtr;
 pub mod rsvp;
 pub mod rsync;
 pub mod rtmp;
@@ -863,7 +875,13 @@ mod tests {
     #[test]
     fn end_to_end_syslog_via_dissect() {
         // Syslog PRI <34> (facility 4, severity 2 = Critical) to UDP 514.
-        let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 514, b"<34>disk failing");
+        let data = build_udp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            40000,
+            514,
+            b"<34>disk failing",
+        );
         let r = dissect(&data);
         assert_eq!(r.protocol, Protocol::Syslog);
         assert!(r.summary.contains("Critical"), "{}", r.summary);

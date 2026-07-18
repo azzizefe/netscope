@@ -352,6 +352,30 @@ pub enum Protocol {
     Radmin,
     /// Skinny / SCCP Cisco IP-phone signalling (TCP 2000).
     Skinny,
+    /// CLDAP — connectionless LDAP for AD discovery (UDP 389).
+    Cldap,
+    /// BMP — BGP Monitoring Protocol (TCP 11019).
+    Bmp,
+    /// RPKI-RTR — validated route origins for BGP security (TCP 323).
+    RpkiRtr,
+    /// MMS — IEC 61850 substation client/server messaging (TCP 102).
+    Mms,
+    /// NRPE — Nagios remote plugin executor (TCP 5666).
+    Nrpe,
+    /// collectd binary metric protocol (UDP 25826).
+    Collectd,
+    /// Jaeger distributed-tracing spans (UDP 6831).
+    Jaeger,
+    /// Ganglia gmond cluster metrics (UDP 8649).
+    Ganglia,
+    /// Neo4j Bolt graph-database protocol (TCP 7687).
+    Bolt,
+    /// ClickHouse native protocol (TCP 9000).
+    Clickhouse,
+    /// Apache Pulsar broker protocol (TCP 6650).
+    Pulsar,
+    /// OpenWire — Apache ActiveMQ native protocol (TCP 61616).
+    Openwire,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -556,6 +580,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Pptp => write!(f, "PPTP"),
             Protocol::Radmin => write!(f, "Radmin"),
             Protocol::Skinny => write!(f, "Skinny"),
+            Protocol::Cldap => write!(f, "CLDAP"),
+            Protocol::Bmp => write!(f, "BMP"),
+            Protocol::RpkiRtr => write!(f, "RPKI-RTR"),
+            Protocol::Mms => write!(f, "MMS"),
+            Protocol::Nrpe => write!(f, "NRPE"),
+            Protocol::Collectd => write!(f, "collectd"),
+            Protocol::Jaeger => write!(f, "Jaeger"),
+            Protocol::Ganglia => write!(f, "Ganglia"),
+            Protocol::Bolt => write!(f, "Bolt"),
+            Protocol::Clickhouse => write!(f, "ClickHouse"),
+            Protocol::Pulsar => write!(f, "Pulsar"),
+            Protocol::Openwire => write!(f, "OpenWire"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
