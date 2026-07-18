@@ -97,31 +97,63 @@ fn prf_sha384(secret: &[u8], label: &str, seed: &[u8], length: usize) -> Vec<u8>
     out
 }
 
-/// The TLS 1.2 AEAD suites netscope can decrypt, as (write-key length, PRF is
-/// SHA-384). The ECDHE suites are the common ones on the wire today; they can
-/// only be decrypted from a key log, never from a server private key.
-fn tls12_suite_params(cipher_suite: u16) -> Option<(usize, bool)> {
-    match cipher_suite {
-        0x009c => Some((16, false)), // TLS_RSA_WITH_AES_128_GCM_SHA256
-        0x009d => Some((32, true)),  // TLS_RSA_WITH_AES_256_GCM_SHA384
-        0xc02b => Some((16, false)), // TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-        0xc02c => Some((32, true)),  // TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-        0xc02f => Some((16, false)), // TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-        0xc030 => Some((32, true)),  // TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-        _ => None,
-    }
+/// The AEAD a TLS 1.2 suite uses. GCM splits its nonce into a 4-byte salt plus
+/// an explicit per-record nonce; ChaCha20-Poly1305 instead derives the nonce by
+/// XOR-ing a 12-byte fixed IV with the sequence number (RFC 7905).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Tls12Aead {
+    Aes128Gcm,
+    Aes256Gcm,
+    ChaCha20Poly1305,
+}
+
+/// How to decrypt a TLS 1.2 suite: which AEAD, how long the write key and fixed
+/// IV are, and whether the PRF uses SHA-384.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct Tls12SuiteParams {
+    aead: Tls12Aead,
+    key_len: usize,
+    iv_len: usize,
+    sha384: bool,
+}
+
+/// The TLS 1.2 AEAD suites netscope can decrypt. The ECDHE ones are what's
+/// actually on the wire today; they can only be decrypted from a key log,
+/// never from a server private key.
+fn tls12_suite_params(cipher_suite: u16) -> Option<Tls12SuiteParams> {
+    use Tls12Aead::*;
+    let (aead, key_len, iv_len, sha384) = match cipher_suite {
+        0x009c => (Aes128Gcm, 16, 4, false), // TLS_RSA_WITH_AES_128_GCM_SHA256
+        0x009d => (Aes256Gcm, 32, 4, true),  // TLS_RSA_WITH_AES_256_GCM_SHA384
+        0xc02b => (Aes128Gcm, 16, 4, false), // TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        0xc02c => (Aes256Gcm, 32, 4, true),  // TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        0xc02f => (Aes128Gcm, 16, 4, false), // TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        0xc030 => (Aes256Gcm, 32, 4, true),  // TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        // RFC 7905 — 32-byte key, 12-byte fixed IV, no explicit nonce.
+        0xcca8 => (ChaCha20Poly1305, 32, 12, false), // ECDHE_RSA_WITH_CHACHA20_POLY1305
+        0xcca9 => (ChaCha20Poly1305, 32, 12, false), // ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        0xccaa => (ChaCha20Poly1305, 32, 12, false), // DHE_RSA_WITH_CHACHA20_POLY1305
+        _ => return None,
+    };
+    Some(Tls12SuiteParams {
+        aead,
+        key_len,
+        iv_len,
+        sha384,
+    })
 }
 
 /// Run the TLS 1.2 PRF with the hash the cipher suite mandates.
 fn tls12_prf(cipher_suite: u16, secret: &[u8], label: &str, seed: &[u8], len: usize) -> Vec<u8> {
     match tls12_suite_params(cipher_suite) {
-        Some((_, true)) => prf_sha384(secret, label, seed, len),
+        Some(p) if p.sha384 => prf_sha384(secret, label, seed, len),
         _ => prf_sha256(secret, label, seed, len),
     }
 }
 
-/// The per-direction write keys and GCM salts expanded from a TLS 1.2 master
-/// secret.
+/// The per-direction write keys and fixed IVs expanded from a TLS 1.2 master
+/// secret. For GCM the IV is the 4-byte salt; for ChaCha20-Poly1305 it is the
+/// full 12-byte nonce base.
 struct Tls12Keys {
     client_key: Vec<u8>,
     server_key: Vec<u8>,
@@ -129,14 +161,14 @@ struct Tls12Keys {
     server_salt: Vec<u8>,
 }
 
-/// Expand a TLS 1.2 master secret into the write keys and GCM salts.
+/// Expand a TLS 1.2 master secret into the write keys and fixed IVs.
 fn derive_tls12_keys(
     master_secret: &[u8],
     client_random: &[u8; 32],
     server_random: &[u8; 32],
     cipher_suite: u16,
 ) -> Option<Tls12Keys> {
-    let (key_len, _) = tls12_suite_params(cipher_suite)?;
+    let p = tls12_suite_params(cipher_suite)?;
     // Key expansion seeds with server_random || client_random (RFC 5246 §6.3).
     let mut seed = server_random.to_vec();
     seed.extend_from_slice(client_random);
@@ -145,60 +177,92 @@ fn derive_tls12_keys(
         master_secret,
         "key expansion",
         &seed,
-        key_len * 2 + 8,
+        p.key_len * 2 + p.iv_len * 2,
     );
+    let iv0 = p.key_len * 2;
     Some(Tls12Keys {
-        client_key: key_block[..key_len].to_vec(),
-        server_key: key_block[key_len..key_len * 2].to_vec(),
-        client_salt: key_block[key_len * 2..key_len * 2 + 4].to_vec(),
-        server_salt: key_block[key_len * 2 + 4..key_len * 2 + 8].to_vec(),
+        client_key: key_block[..p.key_len].to_vec(),
+        server_key: key_block[p.key_len..iv0].to_vec(),
+        client_salt: key_block[iv0..iv0 + p.iv_len].to_vec(),
+        server_salt: key_block[iv0 + p.iv_len..iv0 + p.iv_len * 2].to_vec(),
     })
 }
 
-fn decrypt_tls12_gcm_record(
+fn decrypt_tls12_record(
     key: &[u8],
-    salt: &[u8],
+    iv: &[u8],
     seq_num: u64,
     record_header: &[u8; 5],
     payload: &[u8],
     cipher_suite: u16,
 ) -> Option<Vec<u8>> {
-    if payload.len() < 24 {
+    // Reject key/IV material that doesn't match what the suite mandates.
+    let p = tls12_suite_params(cipher_suite)?;
+    if key.len() != p.key_len || iv.len() != p.iv_len {
         return None;
     }
-    let explicit_nonce = &payload[..8];
-    let ciphertext_and_tag = &payload[8..];
 
-    let mut nonce = [0u8; 12];
-    nonce[..4].copy_from_slice(salt);
-    nonce[4..].copy_from_slice(explicit_nonce);
+    // GCM prefixes each record with an 8-byte explicit nonce; ChaCha20-Poly1305
+    // has none and instead XORs the sequence number into its fixed IV.
+    let (nonce, ciphertext_and_tag) = if p.aead == Tls12Aead::ChaCha20Poly1305 {
+        let mut n = [0u8; 12];
+        n.copy_from_slice(iv);
+        for (i, b) in seq_num.to_be_bytes().iter().enumerate() {
+            n[4 + i] ^= b;
+        }
+        (n, payload)
+    } else {
+        if payload.len() < 8 {
+            return None;
+        }
+        let mut n = [0u8; 12];
+        n[..4].copy_from_slice(iv);
+        n[4..].copy_from_slice(&payload[..8]);
+        (n, &payload[8..])
+    };
 
-    let plaintext_len = (ciphertext_and_tag.len() - 16) as u16;
+    // The AAD length field counts the plaintext, i.e. without the 16-byte tag.
+    let plaintext_len = u16::try_from(ciphertext_and_tag.len().checked_sub(16)?).ok()?;
     let mut aad = [0u8; 13];
     aad[..8].copy_from_slice(&seq_num.to_be_bytes());
     aad[8] = record_header[0];
     aad[9..11].copy_from_slice(&record_header[1..3]);
     aad[11..13].copy_from_slice(&plaintext_len.to_be_bytes());
 
-    // The suite decides AES-128 vs AES-256; reject a key that doesn't match it.
-    let (key_len, _) = tls12_suite_params(cipher_suite)?;
-    if key.len() != key_len {
-        return None;
-    }
-    let aead_payload = aes_gcm::aead::Payload {
-        msg: ciphertext_and_tag,
-        aad: &aad,
-    };
-    if key_len == 16 {
-        Aes128Gcm::new_from_slice(key)
+    match p.aead {
+        Tls12Aead::Aes128Gcm => Aes128Gcm::new_from_slice(key)
             .ok()?
-            .decrypt(nonce.as_ref().into(), aead_payload)
-            .ok()
-    } else {
-        Aes256Gcm::new_from_slice(key)
+            .decrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: ciphertext_and_tag,
+                    aad: &aad,
+                },
+            )
+            .ok(),
+        Tls12Aead::Aes256Gcm => Aes256Gcm::new_from_slice(key)
             .ok()?
-            .decrypt(nonce.as_ref().into(), aead_payload)
-            .ok()
+            .decrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: ciphertext_and_tag,
+                    aad: &aad,
+                },
+            )
+            .ok(),
+        Tls12Aead::ChaCha20Poly1305 => {
+            use chacha20poly1305::aead::{Aead as _, KeyInit as _};
+            chacha20poly1305::ChaCha20Poly1305::new_from_slice(key)
+                .ok()?
+                .decrypt(
+                    nonce.as_ref().into(),
+                    chacha20poly1305::aead::Payload {
+                        msg: ciphertext_and_tag,
+                        aad: &aad,
+                    },
+                )
+                .ok()
+        }
     }
 }
 
@@ -464,7 +528,7 @@ fn decrypt_tls_record_stream(
             // TLS 1.2 GCM
             if typ == 23 {
                 if let Some(plaintext) =
-                    decrypt_tls12_gcm_record(key, iv, *seq_num, &header, record_body, cipher_suite)
+                    decrypt_tls12_record(key, iv, *seq_num, &header, record_body, cipher_suite)
                 {
                     decrypted_stream.extend_from_slice(&plaintext);
                     *seq_num += 1;
@@ -1637,7 +1701,7 @@ mod tests {
         assert_eq!(client_key.len(), 16);
         assert_eq!(client_salt.len(), 4);
 
-        // Build a record exactly the way decrypt_tls12_gcm_record expects one.
+        // Build a record exactly the way decrypt_tls12_record expects one.
         let plaintext = b"GET /secret HTTP/1.1\r\n\r\n";
         let seq_num: u64 = 0;
         let explicit_nonce = [0x11u8; 8];
@@ -1666,7 +1730,7 @@ mod tests {
         let mut record_payload = explicit_nonce.to_vec();
         record_payload.extend_from_slice(&ciphertext);
 
-        let out = decrypt_tls12_gcm_record(
+        let out = decrypt_tls12_record(
             &client_key,
             &client_salt,
             seq_num,
@@ -1703,14 +1767,88 @@ mod tests {
         }
     }
 
-    /// The ECDHE suites common on the wire today must be recognised.
+    /// The ECDHE and ChaCha20 suites common on the wire today must be recognised,
+    /// with the right AEAD, key length and IV length for each.
     #[test]
-    fn tls12_suite_table_covers_common_ecdhe_suites() {
-        assert_eq!(tls12_suite_params(0xc02b), Some((16, false)));
-        assert_eq!(tls12_suite_params(0xc02c), Some((32, true)));
-        assert_eq!(tls12_suite_params(0xc02f), Some((16, false)));
-        assert_eq!(tls12_suite_params(0xc030), Some((32, true)));
-        assert_eq!(tls12_suite_params(0x1301), None, "TLS 1.3 is a separate path");
+    fn tls12_suite_table_covers_common_suites() {
+        let p = tls12_suite_params(0xc02f).unwrap();
+        assert_eq!(p.aead, Tls12Aead::Aes128Gcm);
+        assert_eq!((p.key_len, p.iv_len, p.sha384), (16, 4, false));
+
+        let p = tls12_suite_params(0xc030).unwrap();
+        assert_eq!(p.aead, Tls12Aead::Aes256Gcm);
+        assert_eq!((p.key_len, p.iv_len, p.sha384), (32, 4, true));
+
+        // ChaCha20-Poly1305 uses a full 12-byte IV, not a 4-byte GCM salt.
+        for suite in [0xcca8u16, 0xcca9, 0xccaa] {
+            let p = tls12_suite_params(suite).unwrap();
+            assert_eq!(p.aead, Tls12Aead::ChaCha20Poly1305, "suite 0x{suite:04x}");
+            assert_eq!((p.key_len, p.iv_len, p.sha384), (32, 12, false));
+        }
+
+        assert!(tls12_suite_params(0x1301).is_none(), "TLS 1.3 is a separate path");
+    }
+
+    /// ChaCha20-Poly1305 has no explicit nonce: the nonce is the fixed IV XORed
+    /// with the sequence number (RFC 7905). Prove a record built that way
+    /// round-trips, and that the sequence number actually participates.
+    #[test]
+    fn tls12_chacha20_record_roundtrips() {
+        use chacha20poly1305::aead::{Aead as _, KeyInit as _};
+
+        let master_secret = [0x7e; 48];
+        let client_random = [0xa1; 32];
+        let server_random = [0xb2; 32];
+        let suite = 0xcca8; // TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+
+        let k = derive_tls12_keys(&master_secret, &client_random, &server_random, suite).unwrap();
+        assert_eq!(k.client_key.len(), 32);
+        assert_eq!(k.client_salt.len(), 12);
+
+        let plaintext = b"POST /login HTTP/1.1\r\n\r\n";
+        let seq_num: u64 = 3;
+
+        let mut nonce = [0u8; 12];
+        nonce.copy_from_slice(&k.client_salt);
+        for (i, b) in seq_num.to_be_bytes().iter().enumerate() {
+            nonce[4 + i] ^= b;
+        }
+
+        let header = [23u8, 3, 3, 0, (plaintext.len() + 16) as u8];
+        let mut aad = [0u8; 13];
+        aad[..8].copy_from_slice(&seq_num.to_be_bytes());
+        aad[8] = header[0];
+        aad[9..11].copy_from_slice(&header[1..3]);
+        aad[11..13].copy_from_slice(&(plaintext.len() as u16).to_be_bytes());
+
+        let record = chacha20poly1305::ChaCha20Poly1305::new_from_slice(&k.client_key)
+            .unwrap()
+            .encrypt(
+                nonce.as_ref().into(),
+                chacha20poly1305::aead::Payload {
+                    msg: plaintext.as_slice(),
+                    aad: &aad,
+                },
+            )
+            .unwrap();
+
+        let out = decrypt_tls12_record(
+            &k.client_key,
+            &k.client_salt,
+            seq_num,
+            &header,
+            &record,
+            suite,
+        )
+        .expect("ChaCha20 record should decrypt");
+        assert_eq!(out, plaintext);
+
+        // The wrong sequence number must not authenticate.
+        assert!(
+            decrypt_tls12_record(&k.client_key, &k.client_salt, 4, &header, &record, suite)
+                .is_none(),
+            "sequence number must be bound into the nonce and AAD"
+        );
     }
 
     #[test]
