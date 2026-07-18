@@ -17,6 +17,7 @@
 
 import { $, state, esc, els } from '../app.js';
 import { macVendor, isRandomizedMac } from './oui.js';
+import { fingerprintPacket, mergeIdentity, identityLabel } from './fingerprint.js';
 import { invoke } from './api.js';
 
 const BROADCAST = 'ff:ff:ff:ff:ff:ff';
@@ -56,6 +57,7 @@ function touch(mac) {
       packets: 0,
       bytes: 0,
       protocols: new Map(),
+      identity: null,
       viaScan: false,
     };
     d.set(mac, dev);
@@ -80,6 +82,10 @@ export function observeDevice(pkt) {
     if (pkt.protocol) dev.protocols.set(pkt.protocol, (dev.protocols.get(pkt.protocol) || 0) + 1);
     if (isPrivateV4(pkt.src_addr)) dev.ips.add(pkt.src_addr);
     if (pkt.src_host && !dev.hostname) dev.hostname = pkt.src_host;
+    // The transmitter is the device we can fingerprint: its mDNS/NBNS/DHCP
+    // broadcasts and its packets' TTL all describe it.
+    const fp = fingerprintPacket(pkt);
+    if (fp.name || fp.deviceType || fp.os || fp.model) dev.identity = mergeIdentity(dev.identity, fp);
   }
   // The receiver's MAC + IP is a valid mapping too (its own traffic may not have
   // been captured yet), but don't credit it with the sender's bytes/protocol.
@@ -139,6 +145,26 @@ function fmtAge(ms) {
   return `${Math.round(s / 3600)}sa önce`;
 }
 
+// A glyph for a device type/OS so the list is scannable at a glance.
+function deviceIcon(id) {
+  const t = (id && id.deviceType) || '';
+  const os = (id && id.os) || '';
+  if (/iPhone|Android telefon/i.test(t)) return '📱';
+  if (/iPad/i.test(t)) return '📱';
+  if (/MacBook|Mac\b|iMac|Mac mini|Mac Pro/i.test(t)) return '💻';
+  if (/Apple Watch/i.test(t)) return '⌚';
+  if (/HomePod|Sonos|AirPlay|Spotify|hoparlör|Alexa/i.test(t)) return '🔊';
+  if (/Apple TV|Chromecast|Android TV|Roku|Google TV|Fire/i.test(t)) return '📺';
+  if (/Yazıcı|Tarayıcı/i.test(t)) return '🖨';
+  if (/HomeKit|Hue|IoT/i.test(t)) return '💡';
+  if (/NAS|Dosya sunucusu/i.test(t)) return '🗄';
+  if (/router|Ağ cihazı/i.test(t) || /router/i.test(os)) return '🛜';
+  if (/workstation|Bilgisayar/i.test(t)) return '🖥';
+  if (/Windows/i.test(os)) return '🖥';
+  if (/Apple|Linux|Android/i.test(os)) return '💻';
+  return '❔';
+}
+
 export function renderWifi() {
   const host = $('#wifi-list');
   if (!host) return;
@@ -161,17 +187,36 @@ export function renderWifi() {
   const rows = list.map((d) => {
     const ip = [...d.ips].sort()[0] || '—';
     const extraIps = d.ips.size > 1 ? ` +${d.ips.size - 1}` : '';
-    const vendor = d.vendor || (d.randomized ? 'Rastgele MAC (gizlilik)' : 'Bilinmeyen üretici');
+    const vendor = d.vendor || (d.randomized ? 'Rastgele MAC' : '—');
     const topProto = [...d.protocols.entries()].sort((a, b) => b[1] - a[1])[0];
     const proto = topProto ? topProto[0] : (d.viaScan ? 'sessiz' : '—');
     const seen = d.packets ? fmtAge(d.lastSeen) : (d.viaScan ? 'tarama' : '—');
     const tag = d.viaScan && !d.packets ? '<span class="wifi-tag wifi-tag-scan">tarama</span>' : '';
     const rnd = d.randomized ? '<span class="wifi-tag wifi-tag-rnd" title="Rastgele/geçici MAC">🎲</span>' : '';
+
+    // The "device" cell is the headline: an icon, the best type/name guess, and
+    // the exact model when mDNS gave us one.
+    const id = d.identity;
+    const label = identityLabel(id);
+    const name = (id && id.name) || d.hostname;
+    const icon = deviceIcon(id);
+    let devCell;
+    if (label || name) {
+      const main = esc(name || label);
+      const sub = name && label && label !== name ? `<span class="wifi-dim"> · ${esc(label)}</span>` : '';
+      const model = id && id.model ? `<span class="wifi-dim" title="mDNS model"> (${esc(id.model)})</span>` : '';
+      devCell = `<span class="wifi-dev-icon">${icon}</span> ${main}${sub}${model}`;
+    } else {
+      devCell = `<span class="wifi-dev-icon">${icon}</span> <span class="wifi-dim">bilinmiyor</span>`;
+    }
+    const os = id && id.os ? esc(id.os) : '—';
+
     return `<tr>
-      <td class="wifi-mac mono">${esc(d.mac)} ${rnd}</td>
-      <td class="wifi-vendor">${esc(vendor)}</td>
+      <td class="wifi-dev">${devCell} ${tag}</td>
+      <td class="wifi-os">${os}</td>
       <td class="mono">${esc(ip)}${extraIps ? `<span class="wifi-dim">${esc(extraIps)}</span>` : ''}</td>
-      <td>${esc(d.hostname || '—')} ${tag}</td>
+      <td class="wifi-mac mono">${esc(d.mac)} ${rnd}</td>
+      <td class="wifi-vendor wifi-dim">${esc(vendor)}</td>
       <td class="wifi-proto">${esc(proto)}</td>
       <td class="wifi-num">${d.packets || '—'}</td>
       <td class="wifi-num">${d.bytes ? fmtBytes(d.bytes) : '—'}</td>
@@ -181,7 +226,7 @@ export function renderWifi() {
 
   host.innerHTML = `<table class="wifi-table">
     <thead><tr>
-      <th>MAC adresi</th><th>Üretici</th><th>IP</th><th>Ad</th>
+      <th>Cihaz</th><th>İşletim sistemi</th><th>IP</th><th>MAC adresi</th><th>Üretici (çip)</th>
       <th>Baskın protokol</th><th>Paket</th><th>Trafik</th><th>Son görülme</th>
     </tr></thead>
     <tbody>${rows}</tbody>

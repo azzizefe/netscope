@@ -964,3 +964,10 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 }
 .wifi-tag-scan { background: rgba(74,158,245,.15); color: var(--accent); }
 .wifi-tag-rnd { background: transparent; }
+.wifi-dev { color: var(--text); font-weight: 500; }
+.wifi-dev-icon { display: inline-block; width: 1.3em; text-align: center; }
+.wifi-os { color: var(--text-muted); }
+.wifi-note code {
+  background: var(--bg-elev-2); padding: 0 4px; border-radius: 3px;
+  font-size: 11px; color: var(--text);
+}
