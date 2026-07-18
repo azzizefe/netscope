@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 pub mod aarp;
+pub mod adsb;
 pub mod aerospike;
 pub mod afp;
 pub mod amqp;
+pub mod aprs;
 pub mod arp;
 pub mod atalk;
 pub mod avtp;
@@ -28,6 +30,7 @@ pub mod coap;
 pub mod collectd;
 pub mod dccp;
 pub mod dcerpc;
+pub mod decnet;
 pub mod dhcp;
 pub mod dhcpv6;
 pub mod dht;
@@ -36,6 +39,7 @@ pub mod dicom;
 pub mod dnp3;
 pub mod dns;
 pub mod doip;
+pub mod drda;
 pub mod dtls;
 pub mod dtp;
 pub mod eap;
@@ -44,10 +48,12 @@ pub mod edonkey;
 pub mod eigrp;
 pub mod elasticsearch;
 pub mod enip;
+pub mod erspan;
 pub mod ethercat;
 pub mod ethernet;
 pub mod fcoe;
 pub mod finger;
+pub mod firebird;
 pub mod fix;
 pub mod fluentd;
 pub mod ftp;
@@ -111,11 +117,13 @@ pub mod mqttsn;
 pub mod msrp;
 pub mod mumble;
 pub mod mysql;
+pub mod mysqlx;
 pub mod nats;
 pub mod nbds;
 pub mod nbns;
 pub mod ndmp;
 pub mod netflow;
+pub mod nmea;
 pub mod nntp;
 pub mod nrpe;
 pub mod nsq;
@@ -149,6 +157,7 @@ pub mod relp;
 pub mod rethinkdb;
 pub mod rexec;
 pub mod rfb;
+pub mod riak;
 pub mod rip;
 pub mod rlogin;
 pub mod rmcp;
@@ -197,9 +206,12 @@ pub mod telnet;
 pub mod teredo;
 pub mod tftp;
 pub mod tls;
+pub mod tns;
+pub mod turn;
 pub mod udld;
 pub mod udp;
 pub mod usb;
+pub mod vines;
 pub mod vrrp;
 pub mod vtp;
 pub mod vxlan;
@@ -332,6 +344,8 @@ const ETHERTYPE_PPPOE_SESS: u16 = 0x8864; // PPPoE session stage
 const ETHERTYPE_EAPOL: u16 = 0x888E; // 802.1X port authentication (EAPOL)
 const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
+const ETHERTYPE_DECNET: u16 = 0x6003; // DECnet Phase IV
+const ETHERTYPE_VINES: u16 = 0x0BAD; // Banyan VINES
 const ETHERTYPE_IPX: u16 = 0x8137; // Novell NetWare IPX
 const ETHERTYPE_ATALK: u16 = 0x809B; // AppleTalk DDP
 const ETHERTYPE_AARP: u16 = 0x80F3; // AppleTalk ARP
@@ -385,6 +399,8 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
+        ETHERTYPE_DECNET => decnet::dissect_decnet(payload),
+        ETHERTYPE_VINES => vines::dissect_vines(payload),
         ETHERTYPE_IPX => ipx::dissect_ipx(payload),
         ETHERTYPE_ATALK => atalk::dissect_atalk(payload),
         ETHERTYPE_AARP => aarp::dissect_aarp(payload),

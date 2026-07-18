@@ -251,6 +251,20 @@ const KNOWN_PROTOS: &[&str] = &[
     "ipp",
     "rexec",
     "sane",
+    "tns",
+    "oracle",
+    "drda",
+    "db2",
+    "firebird",
+    "mysqlx",
+    "riak",
+    "nmea",
+    "adsb",
+    "aprs",
+    "turn",
+    "decnet",
+    "vines",
+    "erspan",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -434,6 +448,9 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "hadooprpc" | "hdfs" => pkt.protocol == Protocol::HadoopRpc,
         "sieve" => pkt.protocol == Protocol::ManageSieve,
         "appletalk" | "atalk" => pkt.protocol == Protocol::Atalk,
+        "tns" | "oracle" => pkt.protocol == Protocol::Tns,
+        "drda" | "db2" => pkt.protocol == Protocol::Drda,
+        "mysqlx" => pkt.protocol == Protocol::MysqlX,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

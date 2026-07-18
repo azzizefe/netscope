@@ -9,7 +9,7 @@ use super::{
     enip, ganglia, gelf, geneve, glbp, gtp, gtpprime, gvcp, hartip, hsrp, influxdb, isakmp, jaeger,
     kerberos, knxip, l2tp, matter, megaco, mgcp, mqttsn, nbds, nbns, netflow, ntp, openvpn, pcoip,
     pfcp, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip, snmp, someip, source_query,
-    ssdp, statsd, stun, syslog, teredo, tftp, vxlan, wccp, wireguard, wol, wsd, xcp,
+    ssdp, statsd, stun, syslog, teredo, tftp, turn, vxlan, wccp, wireguard, wol, wsd, xcp,
     DissectedResult,
 };
 
@@ -275,6 +275,10 @@ pub fn dissect_udp(
     }
     if source_query::looks_like_source(udp_payload) {
         return source_query::dissect_source_query(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // TURN relays share STUN's ports but use a disjoint channel-number range.
+    if turn::looks_like_turn(udp_payload) {
+        return turn::dissect_turn(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     // User-defined plugins claim what no built-in dissector recognised
     // (see crate::plugins) — they never shadow the protocols above.
