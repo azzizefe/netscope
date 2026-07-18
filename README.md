@@ -37,7 +37,7 @@
 | **Interprets your capture** | ✅ Automatic security & privacy findings, JA3/JA4, per-site X-ray | ❌ Shows everything, interprets nothing |
 | **Acts on traffic** | ✅ Block a host live via a real OS firewall rule | ❌ Passive only, by design |
 | **Protocol coverage** | ⚪ **178 protocols** — the common ones, plus industrial/automotive/telecom | ✅ **~3000** — unmatched breadth and decode depth |
-| **TLS decryption** | ⚪ TLS 1.3 via `SSLKEYLOGFILE`; TLS 1.2 via an RSA key | ✅ Broader — incl. TLS 1.2 key logs and QUIC |
+| **TLS decryption** | ✅ TLS 1.3 + 1.2 (incl. ECDHE) via `SSLKEYLOGFILE`, or an RSA key | ✅ Broader — also CBC/ChaCha suites and QUIC |
 | **Deep analysis** | ⚪ Summaries, Follow Stream, protocol tree | ✅ Decode-as, VoIP playback, IO graphs, Lua/C plugins |
 | **Speed** | ✅ 100k+ pkt/s dissect throughput | ⚪ Can slow down on very large captures |
 
@@ -74,10 +74,10 @@ decryption or forensic depth, Wireshark is still the reference.
 - **🛡 Insights — automatic security & privacy scan** — The thing Wireshark won't do: it shows you everything but interprets nothing. The **🛡 Insights** tab reads your capture and surfaces plain-language findings — cleartext passwords, unencrypted HTTP, possible port scans, connection-reset bursts, suspicious/DGA-looking domains, plaintext DNS exposure, and an encrypted-vs-cleartext ratio — each rated high / warning / info. No rules to write, no columns to configure.
 - **🔑 TLS fingerprinting (JA3 / JA4 / JA3S)** — Every TLS handshake is fingerprinted: **JA3** and the modern **JA4** for the client, **JA3S** for the server. They show up in the packet summary and are first-class filter fields (`ja3 == …`, `ja4 contains "t13d"`, `ja3s == …`), so you can hunt a malicious client or C2 server by *how* it speaks TLS — even though the payload is encrypted. Wireshark needs a plugin for this; netscope does it out of the box, offline.
 - **🔓 TLS decryption (opt-in, local)** — Supply the keys and netscope reads the plaintext:
-  set `SSLKEYLOGFILE` to the key log your browser or `curl` already writes (**TLS 1.3**),
-  or `TLS_RSA_PRIVATE_KEY` to a PEM private key for classic **TLS 1.2 RSA** handshakes.
-  Same approach Wireshark uses — keys are read locally, never leave your machine, and
-  nothing is decrypted unless you provide them.
+  set `SSLKEYLOGFILE` to the key log your browser or `curl` already writes — covering
+  **TLS 1.3 and TLS 1.2, including forward-secret ECDHE** — or `TLS_RSA_PRIVATE_KEY` to a
+  PEM private key for classic TLS 1.2 RSA handshakes. Same approach Wireshark uses: keys
+  are read locally, never leave your machine, and nothing is decrypted without them.
 - **↻ Replay (Repeater)** — Open a packet and press **↻ Replay** to reload its payload into an editor, tweak it, point it at a host/port, and resend it over a fresh socket — the response comes back in the same window. No exporting to Packet Sender or Burp Repeater. *Sends real traffic — for authorised testing only.*
 - **⚡ Script console** — An in-app **⚡ Script** tab runs JavaScript directly over the captured packet stream. Instead of exporting a `.pcap` and re-reading it with Python/Scapy, every packet is already a `packets` array you can filter, aggregate, and flag anomalies on — with `Ctrl+Enter` to run and built-in examples (connection-reset anomalies, top talkers, unencrypted-secret scanning, suspicious DNS domains).
 - **🗂 Profiles** — The **🗂 Profile** button (top right) saves task presets — a filter, a starting view, and display settings — the way Wireshark's Configuration Profiles do. Ships with **HTTP Analysis**, **VoIP**, and **Security Review** presets, plus "Save current as…" for your own. Persists across restarts.

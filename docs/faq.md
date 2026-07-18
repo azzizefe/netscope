@@ -127,8 +127,8 @@ Any of: press `u` on it in the Connections view, run
 Yes — if *you* supply the keys. netscope never breaks encryption; it only uses
 key material you already have:
 
-- **Key log — TLS 1.3** — set `SSLKEYLOGFILE` to the file your browser or `curl`
-  writes, then run netscope with that variable set:
+- **Key log — TLS 1.3 and 1.2** — set `SSLKEYLOGFILE` to the file your browser
+  or `curl` writes, then run netscope with that variable set:
   ```bash
   export SSLKEYLOGFILE=~/tls-keys.log   # your browser writes this
   netscope-tui -i eth0
@@ -142,10 +142,14 @@ key material you already have:
 This is the same mechanism Wireshark uses. Keys are read locally and never
 leave your machine, and without them nothing is decrypted.
 
-**Current limits:** TLS 1.2 sessions are only decrypted via a server RSA key,
-so forward-secret TLS 1.2 (ECDHE — the common case today) is not covered;
-reading it from a key log (`CLIENT_RANDOM`) isn't implemented yet. QUIC
-decryption isn't supported either. Wireshark handles both.
+Key-log decryption covers TLS 1.3 (`CLIENT_TRAFFIC_SECRET_0`) and TLS 1.2
+(`CLIENT_RANDOM`), including forward-secret **ECDHE** suites — which a server
+private key can never recover.
+
+**Supported TLS 1.2 suites:** AES-128/256-GCM with RSA or ECDHE key exchange
+(`0x009c`, `0x009d`, `0xc02b`, `0xc02c`, `0xc02f`, `0xc030`). CBC and
+ChaCha20-Poly1305 suites aren't decrypted yet, and QUIC decryption isn't
+supported. Wireshark covers both.
 
 If you have no keys, the SNI hostname, JA3/JA4 fingerprints and traffic
 patterns still answer most "what is this app talking to?" questions.

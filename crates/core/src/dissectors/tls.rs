@@ -79,6 +79,82 @@ fn prf_sha256(secret: &[u8], label: &str, seed: &[u8], length: usize) -> Vec<u8>
     out
 }
 
+/// TLS 1.2 PRF built on HMAC-SHA384, used by the SHA384 cipher suites.
+fn prf_sha384(secret: &[u8], label: &str, seed: &[u8], length: usize) -> Vec<u8> {
+    let mut label_seed = label.as_bytes().to_vec();
+    label_seed.extend_from_slice(seed);
+
+    let mut out = Vec::new();
+    let mut a = label_seed.clone();
+    while out.len() < length {
+        a = hmac_sha384(secret, &a).to_vec();
+        let mut data = a.clone();
+        data.extend_from_slice(&label_seed);
+        let block = hmac_sha384(secret, &data);
+        out.extend_from_slice(&block);
+    }
+    out.truncate(length);
+    out
+}
+
+/// The TLS 1.2 AEAD suites netscope can decrypt, as (write-key length, PRF is
+/// SHA-384). The ECDHE suites are the common ones on the wire today; they can
+/// only be decrypted from a key log, never from a server private key.
+fn tls12_suite_params(cipher_suite: u16) -> Option<(usize, bool)> {
+    match cipher_suite {
+        0x009c => Some((16, false)), // TLS_RSA_WITH_AES_128_GCM_SHA256
+        0x009d => Some((32, true)),  // TLS_RSA_WITH_AES_256_GCM_SHA384
+        0xc02b => Some((16, false)), // TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        0xc02c => Some((32, true)),  // TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        0xc02f => Some((16, false)), // TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        0xc030 => Some((32, true)),  // TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        _ => None,
+    }
+}
+
+/// Run the TLS 1.2 PRF with the hash the cipher suite mandates.
+fn tls12_prf(cipher_suite: u16, secret: &[u8], label: &str, seed: &[u8], len: usize) -> Vec<u8> {
+    match tls12_suite_params(cipher_suite) {
+        Some((_, true)) => prf_sha384(secret, label, seed, len),
+        _ => prf_sha256(secret, label, seed, len),
+    }
+}
+
+/// The per-direction write keys and GCM salts expanded from a TLS 1.2 master
+/// secret.
+struct Tls12Keys {
+    client_key: Vec<u8>,
+    server_key: Vec<u8>,
+    client_salt: Vec<u8>,
+    server_salt: Vec<u8>,
+}
+
+/// Expand a TLS 1.2 master secret into the write keys and GCM salts.
+fn derive_tls12_keys(
+    master_secret: &[u8],
+    client_random: &[u8; 32],
+    server_random: &[u8; 32],
+    cipher_suite: u16,
+) -> Option<Tls12Keys> {
+    let (key_len, _) = tls12_suite_params(cipher_suite)?;
+    // Key expansion seeds with server_random || client_random (RFC 5246 §6.3).
+    let mut seed = server_random.to_vec();
+    seed.extend_from_slice(client_random);
+    let key_block = tls12_prf(
+        cipher_suite,
+        master_secret,
+        "key expansion",
+        &seed,
+        key_len * 2 + 8,
+    );
+    Some(Tls12Keys {
+        client_key: key_block[..key_len].to_vec(),
+        server_key: key_block[key_len..key_len * 2].to_vec(),
+        client_salt: key_block[key_len * 2..key_len * 2 + 4].to_vec(),
+        server_salt: key_block[key_len * 2 + 4..key_len * 2 + 8].to_vec(),
+    })
+}
+
 fn decrypt_tls12_gcm_record(
     key: &[u8],
     salt: &[u8],
@@ -104,30 +180,25 @@ fn decrypt_tls12_gcm_record(
     aad[9..11].copy_from_slice(&record_header[1..3]);
     aad[11..13].copy_from_slice(&plaintext_len.to_be_bytes());
 
-    if cipher_suite == 0x009c {
-        let cipher = Aes128Gcm::new_from_slice(key).ok()?;
-        cipher
-            .decrypt(
-                nonce.as_ref().into(),
-                aes_gcm::aead::Payload {
-                    msg: ciphertext_and_tag,
-                    aad: &aad,
-                },
-            )
-            .ok()
-    } else if cipher_suite == 0x009d {
-        let cipher = Aes256Gcm::new_from_slice(key).ok()?;
-        cipher
-            .decrypt(
-                nonce.as_ref().into(),
-                aes_gcm::aead::Payload {
-                    msg: ciphertext_and_tag,
-                    aad: &aad,
-                },
-            )
+    // The suite decides AES-128 vs AES-256; reject a key that doesn't match it.
+    let (key_len, _) = tls12_suite_params(cipher_suite)?;
+    if key.len() != key_len {
+        return None;
+    }
+    let aead_payload = aes_gcm::aead::Payload {
+        msg: ciphertext_and_tag,
+        aad: &aad,
+    };
+    if key_len == 16 {
+        Aes128Gcm::new_from_slice(key)
+            .ok()?
+            .decrypt(nonce.as_ref().into(), aead_payload)
             .ok()
     } else {
-        None
+        Aes256Gcm::new_from_slice(key)
+            .ok()?
+            .decrypt(nonce.as_ref().into(), aead_payload)
+            .ok()
     }
 }
 
@@ -515,6 +586,22 @@ pub fn dissect_tls(
                                     Some(hkdf_expand_label_sha384(server_secret, "iv", &[], 12));
                             }
                         }
+                        // TLS 1.2: the key log stores the 48-byte master secret under
+                        // CLIENT_RANDOM. This is the only way to read forward-secret
+                        // (ECDHE) sessions — a server RSA key cannot recover them.
+                        if let Some(master_secret) = secrets.get("CLIENT_RANDOM") {
+                            if let Some(k) = derive_tls12_keys(
+                                master_secret,
+                                &state.client_random,
+                                &s.random,
+                                s.cipher_suite,
+                            ) {
+                                state.client_key = Some(k.client_key);
+                                state.server_key = Some(k.server_key);
+                                state.client_iv = Some(k.client_salt);
+                                state.server_iv = Some(k.server_salt);
+                            }
+                        }
                     }
                 }
             });
@@ -535,35 +622,22 @@ pub fn dissect_tls(
                                 if let (Some(cs), Some(srv_rand)) =
                                     (state.cipher_suite, state.server_random)
                                 {
-                                    if cs == 0x009c || cs == 0x009d {
-                                        let mut seed = state.client_random.to_vec();
-                                        seed.extend_from_slice(&srv_rand);
-                                        let master_secret =
-                                            prf_sha256(&pm_secret, "master secret", &seed, 48);
-
-                                        let mut seed2 = srv_rand.to_vec();
-                                        seed2.extend_from_slice(&state.client_random);
-
-                                        let key_len = if cs == 0x009c { 16 } else { 32 };
-                                        let key_block_len = key_len * 2 + 4 * 2;
-                                        let key_block = prf_sha256(
-                                            &master_secret,
-                                            "key expansion",
-                                            &seed2,
-                                            key_block_len,
-                                        );
-
-                                        let client_key = key_block[..key_len].to_vec();
-                                        let server_key = key_block[key_len..key_len * 2].to_vec();
-                                        let client_salt =
-                                            key_block[key_len * 2..key_len * 2 + 4].to_vec();
-                                        let server_salt =
-                                            key_block[key_len * 2 + 4..key_len * 2 + 8].to_vec();
-
-                                        state.client_key = Some(client_key);
-                                        state.server_key = Some(server_key);
-                                        state.client_iv = Some(client_salt);
-                                        state.server_iv = Some(server_salt);
+                                    // master_secret = PRF(pre_master, "master secret",
+                                    //                     client_random || server_random)
+                                    let mut seed = state.client_random.to_vec();
+                                    seed.extend_from_slice(&srv_rand);
+                                    let master_secret =
+                                        tls12_prf(cs, &pm_secret, "master secret", &seed, 48);
+                                    if let Some(k) = derive_tls12_keys(
+                                        &master_secret,
+                                        &state.client_random,
+                                        &srv_rand,
+                                        cs,
+                                    ) {
+                                        state.client_key = Some(k.client_key);
+                                        state.server_key = Some(k.server_key);
+                                        state.client_iv = Some(k.client_salt);
+                                        state.server_iv = Some(k.server_salt);
                                     }
                                 }
                             }
@@ -1545,6 +1619,98 @@ mod tests {
 
         std::env::remove_var("SSLKEYLOGFILE");
         std::fs::remove_file(keylog_path).ok();
+    }
+
+    /// A forward-secret ECDHE session can only be decrypted from a key log's
+    /// master secret. Derive the keys that way and prove a GCM record made with
+    /// them round-trips back to plaintext.
+    #[test]
+    fn tls12_ecdhe_keys_from_master_secret_roundtrip() {
+        let master_secret = [0x3c; 48];
+        let client_random = [0xaa; 32];
+        let server_random = [0xbb; 32];
+        let suite = 0xc02f; // TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+
+        let k = derive_tls12_keys(&master_secret, &client_random, &server_random, suite)
+            .expect("ECDHE suite must be supported");
+        let (client_key, client_salt) = (k.client_key, k.client_salt);
+        assert_eq!(client_key.len(), 16);
+        assert_eq!(client_salt.len(), 4);
+
+        // Build a record exactly the way decrypt_tls12_gcm_record expects one.
+        let plaintext = b"GET /secret HTTP/1.1\r\n\r\n";
+        let seq_num: u64 = 0;
+        let explicit_nonce = [0x11u8; 8];
+        let mut nonce = [0u8; 12];
+        nonce[..4].copy_from_slice(&client_salt);
+        nonce[4..].copy_from_slice(&explicit_nonce);
+
+        let header = [23u8, 3, 3, 0, (plaintext.len() + 16 + 8) as u8];
+        let mut aad = [0u8; 13];
+        aad[..8].copy_from_slice(&seq_num.to_be_bytes());
+        aad[8] = header[0];
+        aad[9..11].copy_from_slice(&header[1..3]);
+        aad[11..13].copy_from_slice(&(plaintext.len() as u16).to_be_bytes());
+
+        let ciphertext = Aes128Gcm::new_from_slice(&client_key)
+            .unwrap()
+            .encrypt(
+                nonce.as_ref().into(),
+                aes_gcm::aead::Payload {
+                    msg: plaintext.as_slice(),
+                    aad: &aad,
+                },
+            )
+            .unwrap();
+
+        let mut record_payload = explicit_nonce.to_vec();
+        record_payload.extend_from_slice(&ciphertext);
+
+        let out = decrypt_tls12_gcm_record(
+            &client_key,
+            &client_salt,
+            seq_num,
+            &header,
+            &record_payload,
+            suite,
+        )
+        .expect("record should decrypt");
+        assert_eq!(out, plaintext);
+    }
+
+    /// SHA-384 suites must run the PRF with SHA-384. This previously used
+    /// SHA-256 for 0x009d, which silently produced the wrong keys.
+    #[test]
+    fn tls12_sha384_suites_use_the_sha384_prf() {
+        let master_secret = [0x5a; 48];
+        let client_random = [0x01; 32];
+        let server_random = [0x02; 32];
+
+        for suite in [0x009du16, 0xc030] {
+            let key = derive_tls12_keys(&master_secret, &client_random, &server_random, suite)
+                .unwrap()
+                .client_key;
+            assert_eq!(key.len(), 32, "suite 0x{suite:04x} is AES-256");
+
+            let mut seed = server_random.to_vec();
+            seed.extend_from_slice(&client_random);
+            let sha256_block = prf_sha256(&master_secret, "key expansion", &seed, 72);
+            assert_ne!(
+                key.as_slice(),
+                &sha256_block[..32],
+                "suite 0x{suite:04x} must not derive keys with the SHA-256 PRF"
+            );
+        }
+    }
+
+    /// The ECDHE suites common on the wire today must be recognised.
+    #[test]
+    fn tls12_suite_table_covers_common_ecdhe_suites() {
+        assert_eq!(tls12_suite_params(0xc02b), Some((16, false)));
+        assert_eq!(tls12_suite_params(0xc02c), Some((32, true)));
+        assert_eq!(tls12_suite_params(0xc02f), Some((16, false)));
+        assert_eq!(tls12_suite_params(0xc030), Some((32, true)));
+        assert_eq!(tls12_suite_params(0x1301), None, "TLS 1.3 is a separate path");
     }
 
     #[test]
