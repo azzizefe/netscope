@@ -33,15 +33,25 @@ pub fn dissect_turn(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let channel = u16::from_be_bytes([payload[0], payload[1]]);
-    let len = u16::from_be_bytes([payload[2], payload[3]]);
+    // Dispatch only reaches this after `looks_like_turn`, which requires four
+    // bytes — but this is a `pub fn`, so it must not depend on its caller for
+    // memory safety. Indexing directly here would panic if the guard were ever
+    // reordered away or the function called from elsewhere.
+    let summary = match payload.get(..4) {
+        Some(head) => {
+            let channel = u16::from_be_bytes([head[0], head[1]]);
+            let len = u16::from_be_bytes([head[2], head[3]]);
+            format!("TURN relayed data — channel 0x{channel:04x}, {len} bytes")
+        }
+        None => format!("TURN ChannelData (truncated, {} bytes)", payload.len()),
+    };
     DissectedResult {
         src_addr: src_ip,
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::Turn,
-        summary: format!("TURN relayed data — channel 0x{channel:04x}, {len} bytes"),
+        summary,
     }
 }
 
@@ -58,6 +68,18 @@ mod tests {
         let r = dissect_turn(None, None, 50000, 3478, &p);
         assert_eq!(r.protocol, Protocol::Turn);
         assert!(r.summary.contains("channel 0x4001"), "{}", r.summary);
+    }
+
+    /// `dissect_turn` is public, so it must not rely on `looks_like_turn`
+    /// having run for memory safety. It used to index the first four bytes
+    /// unconditionally and would panic on anything shorter.
+    #[test]
+    fn short_input_does_not_panic() {
+        for len in 0..4 {
+            let r = dissect_turn(None, None, 50000, 3478, &vec![0xff; len]);
+            assert_eq!(r.protocol, Protocol::Turn);
+            assert!(r.summary.contains("truncated"), "{}", r.summary);
+        }
     }
 
     #[test]
