@@ -23,16 +23,18 @@ pub fn dissect_spice(
 ) -> DissectedResult {
     // Link header: magic(4) major(4) minor(4) size(4) connection_id(4) channel_type(1)
     let summary = if payload.starts_with(b"REDQ") {
-        let channel = match payload.get(20) {
-            Some(1) => "main",
-            Some(2) => "display",
-            Some(3) => "inputs",
-            Some(4) => "cursor",
-            Some(5) => "playback",
-            Some(6) => "record",
-            _ => "channel",
-        };
-        format!("SPICE link — {channel} channel")
+        // A generic "channel" would render as "SPICE link — channel channel",
+        // so an unrecognised channel type reports its number instead.
+        match payload.get(20) {
+            Some(1) => "SPICE link — main channel".to_string(),
+            Some(2) => "SPICE link — display channel".to_string(),
+            Some(3) => "SPICE link — inputs channel".to_string(),
+            Some(4) => "SPICE link — cursor channel".to_string(),
+            Some(5) => "SPICE link — playback channel".to_string(),
+            Some(6) => "SPICE link — record channel".to_string(),
+            Some(other) => format!("SPICE link — channel type {other}"),
+            None => "SPICE link (truncated)".to_string(),
+        }
     } else {
         format!("SPICE channel data ({} bytes)", payload.len())
     };

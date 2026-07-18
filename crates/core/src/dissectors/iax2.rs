@@ -34,7 +34,7 @@ pub fn dissect_iax2(
                 Some(9) => "IAX2 full frame — HTML".to_string(),
                 Some(10) => "IAX2 full frame — comfort noise".to_string(),
                 Some(12) => "IAX2 full frame — DTMF begin".to_string(),
-                Some(&t) => format!("IAX2 full frame — frame type {t}"),
+                Some(&t) => format!("IAX2 full frame — unknown type {t}"),
                 None => "IAX2 full frame (truncated)".to_string(),
             }
         }
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn unknown_frame_type_does_not_repeat_itself() {
         let r = dissect_iax2(None, None, 4569, 4569, &full_frame(0));
-        assert_eq!(r.summary, "IAX2 full frame — frame type 0");
+        assert_eq!(r.summary, "IAX2 full frame — unknown type 0");
     }
 
     #[test]

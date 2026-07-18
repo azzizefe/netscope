@@ -26,15 +26,16 @@ pub fn dissect_nbd(
         match magic {
             0x2560_9513 => {
                 let cmd = u16::from_be_bytes([payload[6], payload[7]]);
-                let name = match cmd {
-                    0 => "read",
-                    1 => "write",
-                    2 => "disconnect",
-                    3 => "flush",
-                    4 => "trim",
-                    _ => "request",
-                };
-                format!("NBD {name} request")
+                // A generic "request" here would render as "NBD request
+                // request", so unknown commands report their number instead.
+                match cmd {
+                    0 => "NBD read request".to_string(),
+                    1 => "NBD write request".to_string(),
+                    2 => "NBD disconnect request".to_string(),
+                    3 => "NBD flush request".to_string(),
+                    4 => "NBD trim request".to_string(),
+                    other => format!("NBD request — command {other}"),
+                }
             }
             0x6744_6698 => "NBD reply".to_string(),
             _ => format!("NBD data ({} bytes)", payload.len()),

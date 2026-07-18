@@ -19,19 +19,24 @@ pub fn dissect_collectd(
     let summary = if payload.len() >= 4 {
         let part = u16::from_be_bytes([payload[0], payload[1]]);
         let name = match part {
-            0x0000 => "host",
-            0x0001 => "time",
-            0x0002 => "plugin",
-            0x0003 => "plugin instance",
-            0x0004 => "type",
-            0x0005 => "type instance",
-            0x0006 => "values",
-            0x0008 => "time (high-res)",
-            0x0100 => "message",
-            0x0101 => "severity",
-            _ => "part",
+            0x0000 => Some("host"),
+            0x0001 => Some("time"),
+            0x0002 => Some("plugin"),
+            0x0003 => Some("plugin instance"),
+            0x0004 => Some("type"),
+            0x0005 => Some("type instance"),
+            0x0006 => Some("values"),
+            0x0008 => Some("time (high-res)"),
+            0x0100 => Some("message"),
+            0x0101 => Some("severity"),
+            _ => None,
         };
-        format!("collectd — {name} part")
+        // Naming the raw type beats a generic "part", which the template would
+        // otherwise render as the self-repeating "collectd — part part".
+        match name {
+            Some(n) => format!("collectd — {n} part"),
+            None => format!("collectd — unknown part type 0x{part:04x}"),
+        }
     } else {
         format!("collectd ({} bytes)", payload.len())
     };
