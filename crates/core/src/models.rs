@@ -448,6 +448,30 @@ pub enum Protocol {
     Vines,
     /// ERSPAN mirrored traffic tunnelled in GRE.
     Erspan,
+    /// PPP inside a PPPoE session (LCP/IPCP/auth).
+    Ppp,
+    /// PAP — PPP authentication with a cleartext password.
+    Pap,
+    /// CHAP — PPP challenge-handshake authentication.
+    Chap,
+    /// L2CAP — the Bluetooth multiplexing layer.
+    L2cap,
+    /// ATT — the Bluetooth attribute protocol (BLE data).
+    Att,
+    /// SMP — Bluetooth LE pairing and bonding.
+    Smp,
+    /// NVMe over Fabrics on TCP (TCP 4420).
+    NvmeOf,
+    /// Network Block Device (TCP 10809).
+    Nbd,
+    /// FCIP — Fibre Channel over IP (TCP 3225).
+    Fcip,
+    /// ATA over Ethernet (EtherType 0x88A2).
+    Aoe,
+    /// RoCE — RDMA over Converged Ethernet (EtherType 0x8915).
+    Roce,
+    /// XDMCP — X Display Manager Control Protocol (UDP 177).
+    Xdmcp,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -700,6 +724,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Decnet => write!(f, "DECnet"),
             Protocol::Vines => write!(f, "VINES"),
             Protocol::Erspan => write!(f, "ERSPAN"),
+            Protocol::Ppp => write!(f, "PPP"),
+            Protocol::Pap => write!(f, "PAP"),
+            Protocol::Chap => write!(f, "CHAP"),
+            Protocol::L2cap => write!(f, "L2CAP"),
+            Protocol::Att => write!(f, "ATT"),
+            Protocol::Smp => write!(f, "SMP"),
+            Protocol::NvmeOf => write!(f, "NVMeTCP"),
+            Protocol::Nbd => write!(f, "NBD"),
+            Protocol::Fcip => write!(f, "FCIP"),
+            Protocol::Aoe => write!(f, "AoE"),
+            Protocol::Roce => write!(f, "RoCE"),
+            Protocol::Xdmcp => write!(f, "XDMCP"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }

@@ -9,7 +9,7 @@ use super::{
     enip, ganglia, gelf, geneve, glbp, gtp, gtpprime, gvcp, hartip, hsrp, influxdb, isakmp, jaeger,
     kerberos, knxip, l2tp, matter, megaco, mgcp, mqttsn, nbds, nbns, netflow, ntp, openvpn, pcoip,
     pfcp, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip, snmp, someip, source_query,
-    ssdp, statsd, stun, syslog, teredo, tftp, turn, vxlan, wccp, wireguard, wol, wsd, xcp,
+    ssdp, statsd, stun, syslog, teredo, tftp, turn, vxlan, wccp, wireguard, wol, wsd, xcp, xdmcp,
     DissectedResult,
 };
 
@@ -244,6 +244,9 @@ pub fn dissect_udp(
     }
     if on(8649) {
         return ganglia::dissect_ganglia(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(177) {
+        return xdmcp::dissect_xdmcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);

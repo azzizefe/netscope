@@ -265,6 +265,19 @@ const KNOWN_PROTOS: &[&str] = &[
     "decnet",
     "vines",
     "erspan",
+    "ppp",
+    "pap",
+    "chap",
+    "l2cap",
+    "att",
+    "smp",
+    "nvmeof",
+    "nvme",
+    "nbd",
+    "fcip",
+    "aoe",
+    "roce",
+    "xdmcp",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -451,6 +464,7 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "tns" | "oracle" => pkt.protocol == Protocol::Tns,
         "drda" | "db2" => pkt.protocol == Protocol::Drda,
         "mysqlx" => pkt.protocol == Protocol::MysqlX,
+        "nvmeof" | "nvme" => pkt.protocol == Protocol::NvmeOf,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

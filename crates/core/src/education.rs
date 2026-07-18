@@ -1956,6 +1956,114 @@ network. That means the payload is *someone else's* traffic, deliberately \
 duplicated — useful to know, both for capacity and for who is watching what.",
             look_for: "\"ERSPAN v1 — mirrored traffic, session 5\" inside GRE.",
         },
+        Protocol::Ppp => Lesson {
+            title: "PPP — the link inside your broadband session",
+            summary: "Carries IP over a point-to-point link and negotiates the connection.",
+            body: "Inside a PPPoE broadband session, PPP is what actually runs: LCP brings \
+the link up, an authentication protocol proves who you are, IPCP assigns your IP \
+address, and then your traffic flows. Each of those is a different PPP protocol \
+number.",
+            look_for: "\"PPP — LCP (link control)\" / \"IPCP\" inside a PPPoE session.",
+        },
+        Protocol::Pap => Lesson {
+            title: "PAP — a password sent in the clear",
+            summary: "PPP authentication that transmits the username and password unencrypted.",
+            body: "PAP proves who you are by simply sending your credentials. Anyone who \
+captures the exchange has them. It survives because it's simple and some ISPs still \
+accept it, but CHAP or EAP should be used instead — and a PAP login in a capture \
+should be treated as a leaked password.",
+            look_for: "\"PAP Authenticate-Request — user … (cleartext password)\".",
+        },
+        Protocol::Chap => Lesson {
+            title: "CHAP — proving a secret without sending it",
+            summary: "PPP authentication by hashed challenge, so the password never crosses the wire.",
+            body: "Instead of transmitting the password, CHAP has the server send a random \
+challenge; the client replies with a hash of the challenge plus the shared secret. \
+An eavesdropper learns neither the secret nor anything reusable. A clear improvement \
+on PAP.",
+            look_for: "\"CHAP Challenge from gateway\" then \"CHAP Response\".",
+        },
+        Protocol::L2cap => Lesson {
+            title: "L2CAP — Bluetooth's multiplexer",
+            summary: "Splits a Bluetooth connection into channels for the layers above.",
+            body: "Every Bluetooth connection carries several conversations at once — \
+attribute reads, pairing, audio control. L2CAP is the layer that keeps them apart, \
+tagging each with a channel id. Fixed ids mark the important ones: 0x0004 is ATT, \
+0x0006 is pairing.",
+            look_for: "\"L2CAP signalling (CID 0x0001)\" inside HCI ACL data.",
+        },
+        Protocol::Att => Lesson {
+            title: "ATT — where BLE data actually flows",
+            summary: "Reading and writing the characteristics a Bluetooth LE device exposes.",
+            body: "A BLE device presents its data as a table of attributes: a heart rate, \
+a battery level, a lock state. ATT is how a phone reads them, writes them, or \
+subscribes to notifications. If you want to know what a BLE gadget is really doing, \
+this is the layer to read.",
+            look_for: "\"ATT Handle Value Notification — handle 0x002a\".",
+        },
+        Protocol::Smp => Lesson {
+            title: "SMP — pairing two Bluetooth devices",
+            summary: "Negotiates how a BLE link is secured, and exchanges the keys.",
+            body: "Pairing is where BLE security is decided: the two devices agree on \
+what protection they can manage given their input and output capabilities. Weak \
+options like \"Just Works\" pair without any user confirmation and can be \
+intercepted, so the pairing exchange tells you how trustworthy the link is.",
+            look_for: "\"SMP Pairing Request (BLE pairing)\" on L2CAP CID 0x0006.",
+        },
+        Protocol::NvmeOf => Lesson {
+            title: "NVMe/TCP — fast flash over the network",
+            summary: "Puts NVMe SSDs on the network with far less overhead than iSCSI.",
+            body: "NVMe was designed for flash, not spinning disks, and NVMe over Fabrics \
+extends it across a network so servers can use remote SSDs at close to local speed. \
+The TCP transport needs no special hardware, which is why it's displacing iSCSI in \
+new deployments.",
+            look_for: "\"NVMe/TCP Command Capsule\" on TCP 4420.",
+        },
+        Protocol::Nbd => Lesson {
+            title: "NBD — a remote disk as a local device",
+            summary: "Exports a raw block device over the network.",
+            body: "Network Block Device hands a client a remote disk that behaves like a \
+local one — read and write blocks, put any filesystem on it. It's widely used to \
+back virtual-machine disks. Plain NBD has no authentication, so it's meant for a \
+trusted network or a tunnel.",
+            look_for: "\"NBD write request\" on TCP 10809.",
+        },
+        Protocol::Fcip => Lesson {
+            title: "FCIP — stretching a SAN across a WAN",
+            summary: "Tunnels Fibre Channel storage traffic between two sites over IP.",
+            body: "Fibre Channel doesn't route across the internet, but replicating \
+storage between data centres requires exactly that. FCIP wraps FC frames in TCP so \
+two SANs can be joined over a wide-area link, typically for disaster-recovery \
+replication.",
+            look_for: "\"FCIP — Fibre Channel frame over IP\" on TCP 3225.",
+        },
+        Protocol::Aoe => Lesson {
+            title: "AoE — a disk straight onto the LAN",
+            summary: "ATA over Ethernet: storage with no IP layer at all.",
+            body: "AoE puts disk commands directly in Ethernet frames — no TCP, no IP, \
+almost no overhead. That makes it fast and very simple, but also unroutable and \
+unauthenticated: anything on the same LAN segment can reach the disk. Strictly a \
+trusted-network technology.",
+            look_for: "\"AoE ATA command — shelf 1, slot 0\" (EtherType 0x88A2).",
+        },
+        Protocol::Roce => Lesson {
+            title: "RoCE — reading another machine's memory",
+            summary: "RDMA over Ethernet, bypassing the kernel for very low latency.",
+            body: "RDMA lets one machine write directly into another's memory without \
+either CPU handling the transfer, which is why HPC clusters and high-end storage \
+use it. RoCE carries InfiniBand's transport over ordinary Ethernet — fast, but it \
+depends on a lossless, carefully tuned network.",
+            look_for: "\"RoCE — InfiniBand RDMA READ Request\" (EtherType 0x8915).",
+        },
+        Protocol::Xdmcp => Lesson {
+            title: "XDMCP — logging in to a remote X session",
+            summary: "Lets a thin X terminal ask a server for a graphical login.",
+            body: "XDMCP is how an X terminal finds a host willing to give it a desktop \
+session: it queries, a display manager answers Willing, and a session is negotiated. \
+It's unencrypted and long superseded by SSH X-forwarding, so it mostly appears on \
+legacy Unix networks.",
+            look_for: "\"XDMCP Query\" / \"XDMCP Willing\" on UDP 177.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -2275,6 +2383,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Decnet,
         Protocol::Vines,
         Protocol::Erspan,
+        Protocol::Ppp,
+        Protocol::Pap,
+        Protocol::Chap,
+        Protocol::L2cap,
+        Protocol::Att,
+        Protocol::Smp,
+        Protocol::NvmeOf,
+        Protocol::Nbd,
+        Protocol::Fcip,
+        Protocol::Aoe,
+        Protocol::Roce,
+        Protocol::Xdmcp,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -2587,6 +2707,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Decnet => "A DECnet Phase IV packet (EtherType 0x6003) — legacy DEC VAX/VMS networking.",
         Protocol::Vines => "A Banyan VINES packet (EtherType 0x0BAD) — a long-obsolete network OS.",
         Protocol::Erspan => "An ERSPAN header inside GRE — mirrored traffic tunnelled to a remote analyser.",
+        Protocol::Ppp => "A PPP frame — the link layer inside a PPPoE broadband session.",
+        Protocol::Pap => "A PAP exchange — PPP authentication with the password in the clear.",
+        Protocol::Chap => "A CHAP exchange — PPP authentication by hashed challenge, no password sent.",
+        Protocol::L2cap => "An L2CAP frame — Bluetooth's channel multiplexing layer.",
+        Protocol::Att => "An ATT PDU — a Bluetooth LE device's data being read, written or notified.",
+        Protocol::Smp => "An SMP PDU — two Bluetooth LE devices pairing and agreeing on security.",
+        Protocol::NvmeOf => "An NVMe/TCP PDU (TCP 4420) — remote flash storage at near-local speed.",
+        Protocol::Nbd => "An NBD message (TCP 10809) — a remote block device being read or written.",
+        Protocol::Fcip => "An FCIP frame (TCP 3225) — Fibre Channel storage tunnelled between sites.",
+        Protocol::Aoe => "An AoE frame (EtherType 0x88A2) — a disk exported directly onto the LAN.",
+        Protocol::Roce => "A RoCE frame (EtherType 0x8915) — RDMA writing straight into remote memory.",
+        Protocol::Xdmcp => "An XDMCP message (UDP 177) — an X terminal asking for a remote login session.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -2633,7 +2765,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 222);
+        assert_eq!(all_lessons().len(), 234);
     }
 
     #[test]

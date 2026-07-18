@@ -5,9 +5,11 @@ pub mod adsb;
 pub mod aerospike;
 pub mod afp;
 pub mod amqp;
+pub mod aoe;
 pub mod aprs;
 pub mod arp;
 pub mod atalk;
+pub mod att;
 pub mod avtp;
 pub mod babel;
 pub mod bacnet;
@@ -23,6 +25,7 @@ pub mod can;
 pub mod capwap;
 pub mod cassandra;
 pub mod cdp;
+pub mod chap;
 pub mod clamav;
 pub mod cldap;
 pub mod clickhouse;
@@ -51,6 +54,7 @@ pub mod enip;
 pub mod erspan;
 pub mod ethercat;
 pub mod ethernet;
+pub mod fcip;
 pub mod fcoe;
 pub mod finger;
 pub mod firebird;
@@ -95,6 +99,7 @@ pub mod jaeger;
 pub mod kafka;
 pub mod kerberos;
 pub mod knxip;
+pub mod l2cap;
 pub mod l2tp;
 pub mod lacp;
 pub mod ldap;
@@ -119,6 +124,7 @@ pub mod mumble;
 pub mod mysql;
 pub mod mysqlx;
 pub mod nats;
+pub mod nbd;
 pub mod nbds;
 pub mod nbns;
 pub mod ndmp;
@@ -129,18 +135,21 @@ pub mod nrpe;
 pub mod nsq;
 pub mod ntlm;
 pub mod ntp;
+pub mod nvmeof;
 pub mod opcua;
 pub mod openflow;
 pub mod openvpn;
 pub mod openwire;
 pub mod ospf;
 pub mod pagp;
+pub mod pap;
 pub mod pcoip;
 pub mod pfcp;
 pub mod pim;
 pub mod pop3;
 pub mod postgres;
 pub mod powerlink;
+pub mod ppp;
 pub mod pppoe;
 pub mod pptp;
 pub mod profinet;
@@ -161,6 +170,7 @@ pub mod riak;
 pub mod rip;
 pub mod rlogin;
 pub mod rmcp;
+pub mod roce;
 pub mod rpc;
 pub mod rpkirtr;
 pub mod rsh;
@@ -179,6 +189,7 @@ pub mod sip;
 pub mod skinny;
 pub mod sll;
 pub mod smb;
+pub mod smp;
 pub mod smpp;
 pub mod smtp;
 pub mod snap;
@@ -224,6 +235,7 @@ pub mod wol;
 pub mod wsd;
 pub mod x11;
 pub mod xcp;
+pub mod xdmcp;
 pub mod xmpp;
 pub mod zabbix;
 pub mod zigbee;
@@ -344,6 +356,8 @@ const ETHERTYPE_PPPOE_SESS: u16 = 0x8864; // PPPoE session stage
 const ETHERTYPE_EAPOL: u16 = 0x888E; // 802.1X port authentication (EAPOL)
 const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
+const ETHERTYPE_AOE: u16 = 0x88A2; // ATA over Ethernet
+const ETHERTYPE_ROCE: u16 = 0x8915; // RDMA over Converged Ethernet
 const ETHERTYPE_DECNET: u16 = 0x6003; // DECnet Phase IV
 const ETHERTYPE_VINES: u16 = 0x0BAD; // Banyan VINES
 const ETHERTYPE_IPX: u16 = 0x8137; // Novell NetWare IPX
@@ -399,6 +413,8 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
+        ETHERTYPE_AOE => aoe::dissect_aoe(payload),
+        ETHERTYPE_ROCE => roce::dissect_roce(payload),
         ETHERTYPE_DECNET => decnet::dissect_decnet(payload),
         ETHERTYPE_VINES => vines::dissect_vines(payload),
         ETHERTYPE_IPX => ipx::dissect_ipx(payload),

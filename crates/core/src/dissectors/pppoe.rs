@@ -8,6 +8,11 @@ use super::DissectedResult;
 /// Session (0x8864) carries the PPP payload. Byte 1 is the code, bytes 2..4
 /// the session id (RFC 2516).
 pub fn dissect_pppoe(payload: &[u8], session_stage: bool) -> DissectedResult {
+    // In the session stage the payload after the 6-byte header is PPP, whose
+    // protocol field names the real layer (LCP, IPCP, PAP, CHAP…).
+    if session_stage && payload.len() > 6 {
+        return super::ppp::dissect_ppp(&payload[6..]);
+    }
     let summary = if payload.len() >= 4 {
         let code = payload[1];
         let session_id = u16::from_be_bytes([payload[2], payload[3]]);
