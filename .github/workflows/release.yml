@@ -30,8 +30,19 @@ jobs:
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             binary: netscope-tui.exe
+            # arm64 Windows is a cross-compile that CI never exercises and that
+            # needs both the arm64 MSVC toolchain and an arm64 Npcap lib. Mark it
+            # best-effort so a failure here can't block the whole release; when it
+            # succeeds the binary is still published.
+            experimental: true
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental || false }}
     timeout-minutes: 30
+    # Same opt-in Authenticode secrets the desktop job uses, so the standalone
+    # TUI .exe is signed with the same certificate as the installers.
+    env:
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -60,20 +71,46 @@ jobs:
 
       - run: cargo build -p netscope-tui --release --target ${{ matrix.target }}
 
-      # Code signing template for EV certificate (ROADMAP §8.3)
-      - name: Code Sign Binary (Windows EV Cert)
-        if: runner.os == 'Windows' && env.SIGNING_CERTIFICATE_PFX != ''
+      # Authenticode-sign the TUI binary (ROADMAP §8.3). Opt-in on the same two
+      # secrets as the desktop job; unset -> step skipped -> unsigned binary and
+      # the build still succeeds. signtool.exe ships with the Windows SDK but is
+      # not on PATH, so resolve the newest x64 one under Windows Kits.
+      # A failure here is fatal on purpose: if signing was asked for and could
+      # not be done, publishing an unsigned .exe under the same release would be
+      # worse than failing.
+      - name: Sign TUI binary (Windows)
+        if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
         shell: pwsh
         run: |
-          # Example using signtool with EV Cert from GitHub Secrets
-          # signtool sign /f "$env:SIGNING_CERTIFICATE_PFX" /p "$env:SIGNING_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 target/${{ matrix.target }}/release/${{ matrix.binary }}
-          Write-Host "Code signing placeholder run completed for Windows EV Certificate."
+          $binary = "target/${{ matrix.target }}/release/${{ matrix.binary }}"
+          $signtool = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin" `
+              -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\x64\\' } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signtool) { throw "signtool.exe not found on this runner" }
 
-      - name: Notarize Binary (macOS Apple Developer EV Cert)
-        if: runner.os == 'macOS' && env.APPLE_DEVELOPER_IDENTITY != ''
+          $pfx = Join-Path $env:RUNNER_TEMP "tui-code-sign.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          try {
+            & $signtool.FullName sign /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD `
+              /tr http://timestamp.digicert.com /td sha256 /fd sha256 $binary
+            if ($LASTEXITCODE -ne 0) { throw "signtool sign failed ($LASTEXITCODE)" }
+          } finally {
+            Remove-Item $pfx -Force -ErrorAction SilentlyContinue
+          }
+
+          # Prove the signature actually landed rather than trusting the exit code.
+          & $signtool.FullName verify /pa /v $binary
+          if ($LASTEXITCODE -ne 0) { throw "signature verification failed ($LASTEXITCODE)" }
+
+      # NOT IMPLEMENTED — macOS notarization is deferred along with the rest of
+      # the macOS/Linux release work. macOS binaries in a release are unsigned
+      # and Gatekeeper will warn on them. Left as a marker, not a working step.
+      - name: Notarize binary (macOS) — placeholder, does nothing
+        if: runner.os == 'macOS'
         run: |
-          # codesign -s "$APPLE_DEVELOPER_IDENTITY" --timestamp target/${{ matrix.target }}/release/${{ matrix.binary }}
-          echo "Notarization placeholder run completed for macOS."
+          echo "macOS notarization is not implemented; this binary is unsigned."
 
       - name: Upload TUI binary
         uses: actions/upload-artifact@v4
@@ -96,9 +133,17 @@ jobs:
             bundles: "dmg"
           - os: windows-latest
             name: Windows
-            bundles: "nsis"
+            bundles: "nsis,msi"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    # Windows Authenticode signing is opt-in: set these two repo secrets to sign
+    # the .msi/.exe (and the app exe inside them). Left unset, the signing step is
+    # skipped and unsigned installers are produced — the build still succeeds.
+    #   WINDOWS_CERTIFICATE          = base64 of the code-signing .pfx
+    #   WINDOWS_CERTIFICATE_PASSWORD = that .pfx's password
+    env:
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -130,17 +175,58 @@ jobs:
         with:
           tool: tauri-cli@2
 
+      # Derive the package version from the pushed tag (e.g. v1.2.3 -> 1.2.3)
+      # so the produced installers carry the release version without any manual
+      # bump of tauri.conf.json. Runs on every OS via bash (available on all runners).
+      - name: Derive version from tag
+        shell: bash
+        working-directory: desktop/src-tauri
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Building version: $VERSION"
+          echo "{\"version\": \"$VERSION\"}" > version.conf.json
+
+      # Enable Tauri's native Authenticode signing when the cert secrets are set.
+      # We import the .pfx into the runner's cert store, grab its thumbprint, and
+      # merge bundle.windows.certificateThumbprint into version.conf.json so the
+      # unchanged build step below signs both the installers and the app exe.
+      # No secrets -> step is skipped -> installers are produced unsigned.
+      - name: Enable Windows code signing
+        if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
+        shell: pwsh
+        working-directory: desktop/src-tauri
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "code-sign.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $securePwd = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePwd
+          Remove-Item $pfx -Force
+          $cfg = Get-Content version.conf.json -Raw | ConvertFrom-Json
+          $windows = [pscustomobject]@{
+            certificateThumbprint = $cert.Thumbprint
+            digestAlgorithm       = "sha256"
+            timestampUrl          = "http://timestamp.digicert.com"
+          }
+          $cfg | Add-Member -NotePropertyName bundle -NotePropertyValue ([pscustomobject]@{ windows = $windows }) -Force
+          $cfg | ConvertTo-Json -Depth 10 | Set-Content version.conf.json
+          Write-Host "Signing enabled with certificate thumbprint $($cert.Thumbprint)"
+
       - name: Build desktop
-        run: cargo tauri build --ci --bundles "${{ matrix.bundles }}"
+        run: cargo tauri build --ci --bundles "${{ matrix.bundles }}" --config version.conf.json
         working-directory: desktop/src-tauri
 
+      # netscope-desktop is a member of the root Cargo workspace, so Tauri emits
+      # the bundles under the workspace-root target dir, NOT desktop/src-tauri/target.
+      # The path below is relative to the workspace root (this step has no
+      # working-directory), and `error` makes a future path drift fail loudly
+      # instead of silently publishing a release with no installers.
       - name: Upload desktop bundle
         uses: actions/upload-artifact@v4
         with:
           name: netscope-desktop-${{ matrix.name }}
           path: |
-            desktop/src-tauri/target/release/bundle/**
-          if-no-files-found: warn
+            target/release/bundle/**
+          if-no-files-found: error
 
       - name: Find bundle fallback
         if: failure()
@@ -174,5 +260,20 @@ jobs:
             netscope-desktop-Linux/**
             netscope-desktop-macOS/**
             netscope-desktop-Windows/**
+          # Static preamble; with generate_release_notes the auto changelog is
+          # appended below this body.
+          body: |
+            ## Installation requirements
+
+            ### Windows — Npcap required
+            The desktop app and TUI capture packets through **Npcap**, which is
+            **not bundled** in the installer. Install it before running netscope:
+
+            1. Download and run the installer from https://npcap.com/#download
+            2. Keep **"Install Npcap in WinPcap API-compatible Mode"** checked
+
+            Without Npcap, packet capture fails to start.
+
+            ---
           generate_release_notes: true
           fail_on_unmatched_files: false
