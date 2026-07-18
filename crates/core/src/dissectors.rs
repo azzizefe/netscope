@@ -1539,3 +1539,134 @@ mod unknown_value_summaries {
         }
     }
 }
+
+/// CONTRIBUTING states dissectors must never panic on malformed input, but
+/// nothing enforced it: every dissector's own tests feed it well-formed bytes.
+/// These sweeps feed deliberately malformed ones through the real dispatch.
+#[cfg(test)]
+mod robustness {
+    use super::tcp::dissect_tcp;
+    use super::udp::dissect_udp;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    fn ip() -> Option<IpAddr> {
+        Some(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)))
+    }
+
+    fn udp_pkt(sport: u16, dport: u16, body: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&sport.to_be_bytes());
+        v.extend_from_slice(&dport.to_be_bytes());
+        v.extend_from_slice(&((8 + body.len()) as u16).to_be_bytes());
+        v.extend_from_slice(&[0, 0]);
+        v.extend_from_slice(body);
+        v
+    }
+
+    fn tcp_pkt(sport: u16, dport: u16, body: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&sport.to_be_bytes());
+        v.extend_from_slice(&dport.to_be_bytes());
+        v.extend_from_slice(&[0, 0, 0, 1, 0, 0, 0, 1]);
+        v.extend_from_slice(&[0x50, 0x18, 0xff, 0xff, 0, 0, 0, 0]);
+        v.extend_from_slice(body);
+        v
+    }
+
+    /// Deterministic pseudo-random bytes (xorshift), so any failure reproduces
+    /// exactly rather than depending on when the test happened to run.
+    fn noise(seed: u64, len: usize) -> Vec<u8> {
+        let mut x = seed | 1;
+        (0..len)
+            .map(|_| {
+                x ^= x << 13;
+                x ^= x >> 7;
+                x ^= x << 17;
+                (x >> 24) as u8
+            })
+            .collect()
+    }
+
+    fn malformed_payloads() -> Vec<Vec<u8>> {
+        let mut out: Vec<Vec<u8>> = vec![Vec::new()];
+        for len in [
+            1usize, 2, 3, 4, 5, 7, 8, 11, 12, 15, 16, 20, 23, 24, 31, 40, 63, 64,
+        ] {
+            out.push(vec![0x00; len]);
+            out.push(vec![0xff; len]);
+            out.push(noise(len as u64 * 7919, len));
+            out.push((0..len).map(|i| i as u8).collect());
+        }
+        out
+    }
+
+    /// Ports the dispatch tables actually claim, read out of the dispatch
+    /// source itself. Parsing rather than hardcoding means a newly added
+    /// `on(1234)` is swept automatically — a hand-maintained list would drift
+    /// out of date on the first batch that forgot to update it.
+    fn dispatched_ports() -> Vec<u16> {
+        let mut ports = Vec::new();
+        for src in [
+            include_str!("dissectors/tcp.rs"),
+            include_str!("dissectors/udp.rs"),
+        ] {
+            let mut rest = src;
+            while let Some(i) = rest.find("on(") {
+                rest = &rest[i + 3..];
+                if let Some(j) = rest.find(')') {
+                    if let Ok(p) = rest[..j].trim().parse::<u16>() {
+                        ports.push(p);
+                    }
+                }
+            }
+        }
+        ports.sort_unstable();
+        ports.dedup();
+        ports
+    }
+
+    #[test]
+    fn dispatched_ports_are_found() {
+        // Guards the parser above: if `on(..)` is ever renamed or restructured,
+        // this fails loudly instead of silently sweeping nothing.
+        let ports = dispatched_ports();
+        assert!(
+            ports.len() > 150,
+            "only found {} dispatched ports — has the dispatch shape changed?",
+            ports.len()
+        );
+    }
+
+    #[test]
+    fn dispatched_ports_never_panic_on_malformed_input() {
+        let bodies = malformed_payloads();
+        for port in dispatched_ports() {
+            for body in &bodies {
+                let _ = dissect_udp(ip(), ip(), &udp_pkt(40000, port, body));
+                let _ = dissect_tcp(ip(), ip(), &tcp_pkt(40000, port, body));
+                // Also exercise the port as the source, which some dissectors
+                // treat differently (request vs response).
+                let _ = dissect_udp(ip(), ip(), &udp_pkt(port, 40000, body));
+                let _ = dissect_tcp(ip(), ip(), &tcp_pkt(port, 40000, body));
+            }
+        }
+    }
+
+    /// The exhaustive version: every one of the 65536 ports, which also covers
+    /// the structural (portless) dissectors that can claim traffic on any port.
+    /// Ignored because it is ~5 minutes; the run that introduced this module
+    /// passed it clean over 9.5M dissect calls.
+    ///
+    ///   cargo test --release dissectors::robustness::every_port -- --ignored
+    #[test]
+    #[ignore = "exhaustive: ~5 minutes, run on demand"]
+    fn every_port_never_panics_on_malformed_input() {
+        let bodies = malformed_payloads();
+        for port in 0u16..=u16::MAX {
+            for body in &bodies {
+                let _ = dissect_udp(ip(), ip(), &udp_pkt(40000, port, body));
+                let _ = dissect_tcp(ip(), ip(), &tcp_pkt(40000, port, body));
+            }
+        }
+    }
+}
