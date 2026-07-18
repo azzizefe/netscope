@@ -19,7 +19,11 @@ anyhow = "1"
 rpassword = "7.3"
 crossbeam-channel = "0.5"
 chrono = "0.4"
-netscope-core = { path = "../core", version = "0.1.0" }
+# The `version` is what crates.io would resolve against on publish; the `path`
+# is what builds here. It must be bumped in step with [workspace.package]
+# version or the workspace stops building — the other crates that depend on
+# netscope-core omit it for exactly that reason.
+netscope-core = { path = "../core", version = "0.2.0" }
 
 [dev-dependencies]
 # Frame-byte fixtures in the detail-tree / stream / insights unit tests build
