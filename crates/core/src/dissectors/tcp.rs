@@ -8,13 +8,13 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    aerospike, afp, amqp, beanstalk, bgp, bittorrent, cassandra, diameter, dicom, dnp3, doip,
-    edonkey, elasticsearch, enip, finger, fix, ftp, gearman, git, gnutella, graphite, hl7, http,
-    http2, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp, memcached, minecraft, modbus,
-    mongodb, mqtt, mumble, mysql, nats, nntp, nsq, ntlm, opcua, openflow, openvpn, pop3, postgres,
-    rdp, redis, rethinkdb, rfb, rlogin, rpc, rsync, rtmp, rtsp, s7comm, smb, smpp, smtp, socks,
-    someip, ssh, stomp, svn, tacacs, tds, telnet, tls, websocket, whois, x11, xmpp, zabbix, zmtp,
-    DissectedResult,
+    aerospike, afp, amqp, beanstalk, bgp, bittorrent, cassandra, dcerpc, diameter, dicom, dnp3,
+    doip, edonkey, elasticsearch, enip, finger, fix, ftp, gearman, git, gnutella, graphite, hl7,
+    http, http2, ica, iec104, imap, irc, iscsi, kafka, kerberos, ldap, ldp, megaco, memcached,
+    minecraft, modbus, mongodb, mqtt, msrp, mumble, mysql, nats, ndmp, nntp, nsq, ntlm, opcua,
+    openflow, openvpn, pcoip, pop3, postgres, pptp, radmin, rdp, redis, rethinkdb, rfb, rlogin,
+    rpc, rsync, rtmp, rtsp, s7comm, skinny, smb, smpp, smtp, socks, someip, spice, ssh, stomp, svn,
+    tacacs, tds, telnet, tls, websocket, whois, x11, xmpp, zabbix, zmtp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -491,6 +491,38 @@ fn dissect_tcp_inner(
         }
         if on(64738) {
             return mumble::dissect_mumble(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Carrier VoIP, remote desktop/thin client, backup and Windows RPC.
+        if on(2944) || on(2945) {
+            return megaco::dissect_megaco(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2855) {
+            return msrp::dissect_msrp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4172) {
+            return pcoip::dissect_pcoip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1494) {
+            return ica::dissect_ica(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(10000) {
+            return ndmp::dissect_ndmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(135) {
+            return dcerpc::dissect_dcerpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(1723) {
+            return pptp::dissect_pptp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(4899) {
+            return radmin::dissect_radmin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2000) {
+            return skinny::dissect_skinny(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // SPICE consoles use varied ports; recognise the link magic structurally.
+        if spice::looks_like_spice(tcp_payload) {
+            return spice::dissect_spice(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // ZMTP/ZeroMQ uses arbitrary ports; recognise its greeting structurally.
         if zmtp::looks_like_zmtp(tcp_payload) {

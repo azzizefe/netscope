@@ -100,7 +100,15 @@ impl Transport {
             | Protocol::Gnutella
             | Protocol::Edonkey
             | Protocol::Minecraft
-            | Protocol::Mumble => Transport::Tcp,
+            | Protocol::Mumble
+            | Protocol::Msrp
+            | Protocol::Spice
+            | Protocol::Ica
+            | Protocol::Ndmp
+            | Protocol::Dcerpc
+            | Protocol::Pptp
+            | Protocol::Radmin
+            | Protocol::Skinny => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -187,7 +195,11 @@ impl Transport {
             | Protocol::Xcp
             | Protocol::Matter
             | Protocol::Dht
-            | Protocol::SourceQuery => Transport::Udp,
+            | Protocol::SourceQuery
+            | Protocol::Pfcp
+            | Protocol::GtpPrime
+            | Protocol::Megaco
+            | Protocol::Pcoip => Transport::Udp,
             Protocol::Icmp => Transport::Icmp,
             Protocol::Arp => Transport::Arp,
             // A plugin-recognised protocol groups by the transport it declared,
@@ -430,7 +442,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Edonkey
         | Protocol::SourceQuery
         | Protocol::Minecraft
-        | Protocol::Mumble => 3,
+        | Protocol::Mumble
+        | Protocol::Pfcp
+        | Protocol::GtpPrime
+        | Protocol::Megaco
+        | Protocol::Msrp
+        | Protocol::Pcoip
+        | Protocol::Spice
+        | Protocol::Ica
+        | Protocol::Ndmp
+        | Protocol::Dcerpc
+        | Protocol::Pptp
+        | Protocol::Radmin
+        | Protocol::Skinny => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,

@@ -194,6 +194,21 @@ const KNOWN_PROTOS: &[&str] = &[
     "a2s",
     "minecraft",
     "mumble",
+    "pfcp",
+    "gtpprime",
+    "megaco",
+    "h248",
+    "msrp",
+    "pcoip",
+    "spice",
+    "ica",
+    "ndmp",
+    "dcerpc",
+    "msrpc",
+    "pptp",
+    "radmin",
+    "skinny",
+    "sccp",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -366,6 +381,10 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "dht" => pkt.protocol == Protocol::Dht,
         "sourcequery" | "a2s" => pkt.protocol == Protocol::SourceQuery,
         "emule" => pkt.protocol == Protocol::Edonkey,
+        "gtpprime" => pkt.protocol == Protocol::GtpPrime,
+        "h248" => pkt.protocol == Protocol::Megaco,
+        "msrpc" => pkt.protocol == Protocol::Dcerpc,
+        "sccp" => pkt.protocol == Protocol::Skinny,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }
