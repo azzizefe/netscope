@@ -291,6 +291,7 @@
       <button class="tab" role="tab" aria-selected="false" data-view="connections" data-i18n="tab.connections">Connections</button>
       <button class="tab" role="tab" aria-selected="false" data-view="dashboard" data-i18n="tab.dashboard">Dashboard</button>
       <button class="tab" role="tab" aria-selected="false" data-view="topology" data-i18n="tab.topology">🕸 Topology</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="wifi" data-i18n="tab.wifi">📶 WiFi</button>
       <button class="tab" role="tab" aria-selected="false" data-view="insights" data-i18n="tab.insights">🛡 Insights</button>
       <button class="tab" role="tab" aria-selected="false" data-view="privacy" data-i18n="tab.privacy">🔎 Privacy</button>
       <button class="tab" role="tab" aria-selected="false" data-view="diff" data-i18n="tab.diff">🔀 Diff</button>
@@ -462,6 +463,23 @@
           <div id="topology-labels"></div>
           <div id="topology-legend" class="topo-legend"></div>
         </div>
+      </section>
+
+      <!-- WiFi / LAN device discovery — who is on the same network -->
+      <section id="view-wifi" class="view">
+        <div class="view-toolbar wifi-toolbar">
+          <button id="wifi-scan" class="btn btn-small btn-primary">📡 Ağı tara (ARP)</button>
+          <button id="wifi-clear" class="btn btn-small">🗑 Temizle</button>
+          <span id="wifi-summary" class="insights-summary"></span>
+          <span class="spacer"></span>
+          <span id="wifi-status" class="wifi-status"></span>
+        </div>
+        <div class="wifi-note">
+          Yalnızca <b>aynı WiFi/LAN</b> üzerindeki cihazlar görünür. Şifreli trafiğin
+          <b>içeriği</b> okunamaz; trafik sütunu yalnızca bu makinenin gördüğü (kendi +
+          yayın) paketleri sayar. Yalnızca kendi ağınızı tarayın.
+        </div>
+        <div id="wifi-list"></div>
       </section>
 
       <!-- Privacy View — "what is this site taking from me, and what runs in the background?" -->
@@ -713,7 +731,10 @@
   </div>
 
   <script src="i18n.js"></script>
-  <script src="filter.js"></script>
+  <!-- filter.js imports the wasm glue, so it must load as a module; as a
+       classic script the `import` on its first line is a SyntaxError that
+       aborts the whole file and leaves NetscopeFilter undefined. -->
+  <script type="module" src="filter.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

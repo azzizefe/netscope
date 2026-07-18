@@ -3,6 +3,13 @@
 // netscope Desktop — VoIP and RTP View Module
 // Handles VoIP SIP Flow ladders and RTP audio player simulations.
 
+// Shared application scope. These modules were split out of app.js but never
+// received its bindings, so every function here that touched `els`, `state` or
+// a helper threw ReferenceError at runtime. The cycle with app.js is safe:
+// the imports are only dereferenced inside function bodies, long after both
+// modules have finished evaluating.
+import { $, $$, activePackets, computeVoipCalls, esc, toolTable } from '../../app.js';
+
 let voipActiveTab = 'log';
 let audioCtx = null;
 let audioInterval = null;

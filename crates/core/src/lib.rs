@@ -8,6 +8,7 @@ pub mod config;
 pub mod crypto;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod db;
+pub mod discover;
 pub mod dissectors;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;

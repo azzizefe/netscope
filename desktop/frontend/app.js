@@ -7,6 +7,7 @@ import { invoke, listen, loadInterfaces, startCapture, stopCapture, onCaptureSto
 import { packetRowHtml, renderPacketRows, renderPacketList, transportName, fieldRanges, treeNode, buildDetailTree, showDetail, hideDetail, hexDump, highlightBytes } from './modules/views/packets.js';
 import { closeVoipModal, switchVoipTab, renderVoipFlow, playVoipAudio, stopVoipAudio, renderVoipPlayer, showVoip } from './modules/views/voip.js';
 import initWasm from './wasm/netscope_wasm.js';
+import { observeDevice, renderWifi, initWifi } from './modules/wifi.js';
 
 const PROTOCOL_COLORS = {
   TCP: '#4a9ef5', UDP: '#45d1c5', DNS: '#a78bfa', HTTP: '#34d399',
@@ -30,17 +31,17 @@ const CVD_COLORS = {
   TCP: '#0072b2', UDP: '#56b4e9', DNS: '#cc79a7', HTTP: '#009e73', TLS: '#e69f00',
   ICMP: '#d55e00', ARP: '#999999', QUIC: '#f0e442', 'HTTP/2': '#009e73', DHCP: '#e69f00',
 };
-const protoColor = (p) =>
+export const protoColor = (p) =>
   ((typeof state !== 'undefined' && state.settings && state.settings.cvd && CVD_COLORS[p]) ||
     PROTOCOL_COLORS[p] || '#f87171');
 
-const STATES = { IDLE: 'Idle', CAPTURING: 'Capturing' };
+export const STATES = { IDLE: 'Idle', CAPTURING: 'Capturing' };
 
 // ---- Persisted settings & profiles (localStorage — survives app restarts) ----
 function loadJSON(key, fallback) {
   try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch { return fallback; }
 }
-function saveJSON(key, value) {
+export function saveJSON(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable — settings just won't persist */ }
 }
 // Pick a sensible starting UI language from the browser locale, falling back to
@@ -143,7 +144,7 @@ const DEFAULT_COLOR_RULES = [
   { name: 'ARP', filter: 'arp', color: '#9ca3af', enabled: true },
 ];
 
-const state = {
+export const state = {
   view: 'packets',
   packets: [],
   filteredPackets: [],
@@ -197,12 +198,16 @@ const LIVE_HISTORY = 60; // seconds of sparkline history
 
 
 
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => document.querySelectorAll(s);
-const els = {};
+export const $ = (s) => document.querySelector(s);
+export const $$ = (s) => document.querySelectorAll(s);
+// Click-wiring helper. Module-scoped because both initMenuBar() and init()
+// use it — it was local to initMenuBar, which made init()'s two uses a
+// ReferenceError that only surfaced once the earlier init failures were fixed.
+const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
+export const els = {};
 
 // ---- Helpers ----
-function esc(s) {
+export function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
@@ -212,7 +217,7 @@ function formatBytes(b) {
   if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`;
   return `${(b / 1048576).toFixed(1)} MB`;
 }
-function endpointLabel(addr, host, port) {
+export function endpointLabel(addr, host, port) {
   if (!addr) return '?';
   const useHost = state.settings.showHostnames && !!host;
   const name = useHost ? host : addr;
@@ -224,7 +229,7 @@ function endpointLabel(addr, host, port) {
 
 // ---- Time Display Format (Wireshark: View > Time Display Format) ----
 function pad(n, len = 2) { return String(n).padStart(len, '0'); }
-function formatPacketTime(pkt) {
+export function formatPacketTime(pkt) {
   const fmt = state.settings.timeFormat;
   if (fmt === 'time' || pkt.epoch_ms == null) return pkt.timestamp; // "HH:MM:SS.mmm", backend-formatted
   if (fmt === 'relative') {
@@ -243,7 +248,7 @@ function formatPacketTime(pkt) {
 const NPCAP_URL = 'https://npcap.com';
 
 /** Show/hide the "capture driver missing" badge. Clicking it opens setup help. */
-function showNpcapWarning(show, detail) {
+export function showNpcapWarning(show, detail) {
   const badge = $('#npcap-badge');
   if (!badge) return;
   badge.classList.toggle('hidden', !show);
@@ -266,7 +271,7 @@ function openNpcapHelp() {
 // ---- Capture control ----
 
 /** Reset per-session analysis state before a new capture starts. */
-function resetSession() {
+export function resetSession() {
   state.packets = []; state.flows.clear(); state.packetCount = 0;
   state.stats = { totalPackets: 0, totalBytes: 0, perProtocol: {}, topTalkersSent: [], topDomains: [], errorPackets: 0 };
   state.hostsSeen.clear();
@@ -275,7 +280,7 @@ function resetSession() {
   ioReset();
 }
 
-function markCapturing() {
+export function markCapturing() {
   setStatus(STATES.CAPTURING);
   els.startBtn.disabled = true;
   els.stopBtn.disabled = false;
@@ -284,7 +289,7 @@ function markCapturing() {
 
 /** The Capture>Options values as the backend's `options` argument (camelCase
  *  keys match the Rust CaptureOptionsArg). Empty fields are omitted. */
-function buildCaptureOptions() {
+export function buildCaptureOptions() {
   const o = state.captureOpts;
   const num = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) && n > 0 ? n : null; };
   const opts = {
@@ -300,7 +305,7 @@ function buildCaptureOptions() {
 }
 
 
-function setStatus(s) {
+export function setStatus(s) {
   state.status = s;
   els.statusText.textContent = s === STATES.CAPTURING ? I18N.t('status.capturing') : I18N.t('status.idle');
   els.statusText.className = s === STATES.CAPTURING ? 'status-capturing' : 'status-idle';
@@ -316,6 +321,7 @@ function ingestPacket(pkt) {
 
   updateStats(pkt);
   updateFlow(pkt);
+  observeDevice(pkt);
   ioRecord(pkt);
   if (state.triggers.length) evaluateTriggers(pkt);
 }
@@ -328,6 +334,7 @@ function refreshAfterIngest() {
   else if (state.view === 'dashboard') renderStats();
   else if (state.view === 'topology') renderTopology();
   else if (state.view === 'script') updateScriptCount();
+  else if (state.view === 'wifi') renderWifi();
 }
 
 function onPacket(event) {
@@ -401,7 +408,7 @@ function updateFlow(pkt) {
   }
 }
 
-function renderConnections() {
+export function renderConnections() {
   const flows = [...state.flows.values()].sort((a, b) => b.bytes - a.bytes);
   els.connSummary.innerHTML = flows.length
     ? `${flows.length} connections · <b>${state.blocked.size}</b> blocked` +
@@ -440,7 +447,7 @@ function renderConnections() {
 // Strips Ethernet + IP + TCP/UDP headers from a captured frame to get the
 // application payload. Best-effort: handles a single 802.1Q VLAN tag and
 // variable-length IPv4/TCP headers; does not walk IPv6 extension headers.
-function extractPayload(raw) {
+export function extractPayload(raw) {
   if (!raw || raw.length < 14) return null;
   let o = 14;
   let etherType = (raw[12] << 8) | raw[13];
@@ -475,7 +482,7 @@ function extractPayload(raw) {
   return o <= raw.length ? raw.slice(o) : new Uint8Array(0);
 }
 
-function decodeStreamText(bytes, proto) {
+export function decodeStreamText(bytes, proto) {
   if (proto === 'HTTP/2') {
     return decodeHttp2Stream(bytes);
   } else if (proto === 'TLS') {
@@ -1030,7 +1037,7 @@ function compileColorRules() {
 
 /** First enabled coloring rule that matches `pkt`, or null. Memoized per
  * packet (field extraction parses frame bytes) until the rules change. */
-function colorRuleFor(pkt) {
+export function colorRuleFor(pkt) {
   if (!state._colorMatchers) compileColorRules();
   if (pkt._crGen === colorRuleGen) return pkt._crHit;
   let hit = null;
@@ -1073,7 +1080,7 @@ function openColoring() {
 function closeColoring() { $('#coloring-modal').classList.add('hidden'); }
 
 // ---- Expert Info — plain-language flags for notable packets, from real dissector output only ----
-function expertInfo(pkt) {
+export function expertInfo(pkt) {
   const s = pkt.summary || '';
   if (s.includes('Malformed')) return { icon: '⛔', label: 'Malformed packet', cls: 'expert-danger' };
   if (s.includes('reset (RST)')) return { icon: '⚠', label: 'Connection reset', cls: 'expert-warn' };
@@ -1083,7 +1090,7 @@ function expertInfo(pkt) {
 
 
 // ---- Packets view ----
-function matchesFilter(pkt, text) {
+export function matchesFilter(pkt, text) {
   const l = text.toLowerCase();
   return (
     pkt.summary.toLowerCase().includes(l) ||
@@ -1103,7 +1110,7 @@ function matchesFilter(pkt, text) {
 // at most one request per unique remote host you actually inspect.
 const geoCache = new Map(); // ip -> { status: 'ok'|'failed', data? }
 
-function isPublicIp(ip) {
+export function isPublicIp(ip) {
   if (!ip) return false;
   if (ip.includes(':')) {
     const l = ip.toLowerCase();
@@ -1231,7 +1238,7 @@ function threatIntelRow(ip) {
     `</span></div>`;
 }
 
-async function enrichGeo(pkt) {
+export async function enrichGeo(pkt) {
   // Works only when an offline GeoIP database is loaded — fully local, no
   // network call. Without a database, locations simply stay unresolved.
   if (!state.geoDb) return;
@@ -1275,7 +1282,7 @@ function updateStats(pkt) {
     }
   }
 }
-function renderStats() {
+export function renderStats() {
   const s = state.stats;
   els.statTotalPackets.textContent = s.totalPackets.toLocaleString();
   els.statTotalBytes.textContent = formatBytes(s.totalBytes);
@@ -3004,7 +3011,7 @@ function shannonEntropy(bytes) {
   for (const f of freq) { if (!f) continue; const p = f / bytes.length; e -= p * Math.log2(p); }
   return e; // bits per byte, 0..8
 }
-function guessProtocol(pkt) {
+export function guessProtocol(pkt) {
   const payload = extractPayload(pkt.raw || []);
   const reasons = [];
   let best = null, conf = 0;
@@ -3065,7 +3072,7 @@ const HTTP_STATUS_MEANING = {
   '404': 'was not found', '429': 'was rate-limited', '500': 'hit a server error',
   '502': 'got a bad gateway', '503': 'found the service unavailable',
 };
-function semanticEvents(pkt) {
+export function semanticEvents(pkt) {
   const out = [];
   const payload = extractPayload(pkt.raw || []);
   const text = payload && payload.length ? decodeStreamText(payload) : '';
@@ -3112,7 +3119,7 @@ function jsonTree(value, key) {
   const disp = typeof value === 'string' ? `"${value}"` : String(value);
   return `<div class="jt-row">${keyHtml}<span class="${cls}">${esc(disp)}</span></div>`;
 }
-function beautifyPayload(text) {
+export function beautifyPayload(text) {
   if (!text) return null;
   const body = text.includes('\r\n\r\n') ? text.slice(text.indexOf('\r\n\r\n') + 4) : text;
   const trimmed = body.trim();
@@ -3305,7 +3312,7 @@ const NOISE_PATTERNS = [
   /ubuntu\.com|archive\.ubuntu|canonical|debian\.org/i,
 ];
 const NOISE_PORTS = new Set([1900, 5353, 5355, 137, 138, 3702]); // SSDP, mDNS, LLMNR, NetBIOS, WS-Discovery
-function isNoise(pkt) {
+export function isNoise(pkt) {
   if (NOISE_PORTS.has(pkt.dst_port) || NOISE_PORTS.has(pkt.src_port)) return true;
   const hay = `${pkt.dst_host || ''} ${pkt.src_host || ''} ${pkt.summary || ''}`;
   return NOISE_PATTERNS.some((rx) => rx.test(hay));
@@ -3623,6 +3630,7 @@ function renderAll() {
   else if (state.view === 'privacy') renderPrivacy();
   else if (state.view === 'script') updateScriptCount();
   else if (state.view === 'insights') renderInsights();
+  else if (state.view === 'wifi') renderWifi();
 }
 
 // ==== Wireshark-style menu bar =========================================
@@ -3664,7 +3672,7 @@ function computeEndpoints(packets) {
 }
 
 /** SIP signalling events, as a simple call log. */
-function computeVoipCalls(packets) {
+export function computeVoipCalls(packets) {
   return packets
     .filter((p) => p.protocol === 'SIP')
     .map((p) => ({
@@ -3843,7 +3851,7 @@ function firewallRulesText(ips) {
 }
 
 // ---- Tool modal + table rendering ----
-function openToolModal(title, bodyHtml, copyText) {
+export function openToolModal(title, bodyHtml, copyText) {
   const modal = $('#tool-modal');
   $('#tool-title').textContent = title;
   $('#tool-body').innerHTML = bodyHtml;
@@ -3854,9 +3862,9 @@ function openToolModal(title, bodyHtml, copyText) {
     : null;
   modal.classList.remove('hidden');
 }
-function closeToolModal() { $('#tool-modal').classList.add('hidden'); }
+export function closeToolModal() { $('#tool-modal').classList.add('hidden'); }
 
-function toolTable(headers, rows) {
+export function toolTable(headers, rows) {
   if (!rows.length) return `<div class="tool-empty">${esc(I18N.t('empty.capture') || 'Nothing to show yet.')}</div>`;
   const head = headers.map((h) => `<th>${esc(h.label)}</th>`).join('');
   const body = rows.map((r) => '<tr>' + headers.map((h) =>
@@ -3871,7 +3879,7 @@ const fmtBytes = (n) => {
 };
 
 // ---- Menu action handlers ----
-function activePackets() {
+export function activePackets() {
   return (state.filteredPackets && state.filteredPackets.length) ? state.filteredPackets : state.packets;
 }
 
@@ -3983,7 +3991,6 @@ function initMenuBar() {
   // View navigation items.
   $$('[data-goview]').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.goview)));
 
-  const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
   const dialog = () => (window.__TAURI__ && window.__TAURI__.dialog) || null;
   const captureFilters = [{ name: 'Capture', extensions: ['pcap', 'pcapng', 'cap'] }];
   // File
@@ -4156,7 +4163,7 @@ function looksLikeFilter(text) {
   return /(==|!=|>=|<=|>|<|\bcontains\b|&&|\|\||[()])/.test(text) || /[a-z0-9]+\.[a-z]/i.test(text);
 }
 
-function updateFilterFeedback() {
+export function updateFilterFeedback() {
   const el = els.filterInput;
   const text = state.filterText.trim();
   el.classList.remove('filter-valid', 'filter-error', 'filter-text', 'filter-miss');
@@ -4729,6 +4736,7 @@ async function init() {
   });
   document.addEventListener('keydown', handleKeydown);
   initMenuBar();
+  initWifi();
 
   // Bind custom desktop layout events
   const miNewWindow = $('#mi-new-window');
