@@ -57,6 +57,11 @@ pub fn dissect_hci_h4(data: &[u8]) -> DissectedResult {
             }
             let handle = u16::from_le_bytes([rest[0], rest[1]]) & 0x0FFF;
             let len = u16::from_le_bytes([rest[2], rest[3]]);
+            // ACL carries L2CAP, which multiplexes ATT, SMP and the rest — so
+            // hand it on rather than stopping at "ACL data".
+            if data.len() > 5 {
+                return super::l2cap::dissect_l2cap(&data[5..]);
+            }
             result(format!("HCI ACL data: handle 0x{handle:03x}, {len} bytes"))
         }
         0x03 => {
