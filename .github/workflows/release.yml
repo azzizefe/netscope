@@ -38,6 +38,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental || false }}
     timeout-minutes: 30
+    # Same opt-in Authenticode secrets the desktop job uses, so the standalone
+    # TUI .exe is signed with the same certificate as the installers.
+    env:
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -66,20 +71,46 @@ jobs:
 
       - run: cargo build -p netscope-tui --release --target ${{ matrix.target }}
 
-      # Code signing template for EV certificate (ROADMAP §8.3)
-      - name: Code Sign Binary (Windows EV Cert)
-        if: runner.os == 'Windows' && env.SIGNING_CERTIFICATE_PFX != ''
+      # Authenticode-sign the TUI binary (ROADMAP §8.3). Opt-in on the same two
+      # secrets as the desktop job; unset -> step skipped -> unsigned binary and
+      # the build still succeeds. signtool.exe ships with the Windows SDK but is
+      # not on PATH, so resolve the newest x64 one under Windows Kits.
+      # A failure here is fatal on purpose: if signing was asked for and could
+      # not be done, publishing an unsigned .exe under the same release would be
+      # worse than failing.
+      - name: Sign TUI binary (Windows)
+        if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
         shell: pwsh
         run: |
-          # Example using signtool with EV Cert from GitHub Secrets
-          # signtool sign /f "$env:SIGNING_CERTIFICATE_PFX" /p "$env:SIGNING_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 target/${{ matrix.target }}/release/${{ matrix.binary }}
-          Write-Host "Code signing placeholder run completed for Windows EV Certificate."
+          $binary = "target/${{ matrix.target }}/release/${{ matrix.binary }}"
+          $signtool = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin" `
+              -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\x64\\' } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signtool) { throw "signtool.exe not found on this runner" }
 
-      - name: Notarize Binary (macOS Apple Developer EV Cert)
-        if: runner.os == 'macOS' && env.APPLE_DEVELOPER_IDENTITY != ''
+          $pfx = Join-Path $env:RUNNER_TEMP "tui-code-sign.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          try {
+            & $signtool.FullName sign /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD `
+              /tr http://timestamp.digicert.com /td sha256 /fd sha256 $binary
+            if ($LASTEXITCODE -ne 0) { throw "signtool sign failed ($LASTEXITCODE)" }
+          } finally {
+            Remove-Item $pfx -Force -ErrorAction SilentlyContinue
+          }
+
+          # Prove the signature actually landed rather than trusting the exit code.
+          & $signtool.FullName verify /pa /v $binary
+          if ($LASTEXITCODE -ne 0) { throw "signature verification failed ($LASTEXITCODE)" }
+
+      # NOT IMPLEMENTED — macOS notarization is deferred along with the rest of
+      # the macOS/Linux release work. macOS binaries in a release are unsigned
+      # and Gatekeeper will warn on them. Left as a marker, not a working step.
+      - name: Notarize binary (macOS) — placeholder, does nothing
+        if: runner.os == 'macOS'
         run: |
-          # codesign -s "$APPLE_DEVELOPER_IDENTITY" --timestamp target/${{ matrix.target }}/release/${{ matrix.binary }}
-          echo "Notarization placeholder run completed for macOS."
+          echo "macOS notarization is not implemented; this binary is unsigned."
 
       - name: Upload TUI binary
         uses: actions/upload-artifact@v4
