@@ -1443,6 +1443,112 @@ actual voice audio travels over a separate UDP path. You'll see the control mess
 here.",
             look_for: "\"Mumble Authenticate\" / \"Mumble UserState\" on TCP 64738.",
         },
+        Protocol::Pfcp => Lesson {
+            title: "PFCP — the 5G core's control lever",
+            summary: "Lets the mobile control plane program how user traffic is forwarded.",
+            body: "In 4G/5G the 'brains' (control plane) and the 'pipes' (user plane) are \
+separate boxes. PFCP is how the brain tells the pipe what to do with a \
+subscriber's traffic — set up a session, apply rules, report usage. It's the N4 \
+interface, and it's where mobile sessions are born and die.",
+            look_for: "\"PFCP Session Establishment Request\" on UDP 8805.",
+        },
+        Protocol::GtpPrime => Lesson {
+            title: "GTP' — the billing feed",
+            summary: "Ships Call Detail Records from network nodes to the billing system.",
+            body: "Every mobile session produces usage records. GTP prime is the variant \
+of GTP dedicated to hauling those Call Detail Records off to the charging \
+gateway, so subscribers get billed. Distinct from the GTP that carries your \
+actual data.",
+            look_for: "\"GTP' (charging) Data Record Transfer Request\" on UDP 3386.",
+        },
+        Protocol::Megaco => Lesson {
+            title: "Megaco / H.248 — driving media gateways",
+            summary: "A call agent telling gateways to connect, bridge or tear down media.",
+            body: "In carrier VoIP the call logic lives in a softswitch while the actual \
+audio passes through media gateways. Megaco (also standardised as H.248) is the \
+command channel between them: add this endpoint, connect these two, drop the \
+call. The successor to MGCP.",
+            look_for: "\"Megaco/H.248 — MEGACO/1 …\" on UDP/TCP 2944.",
+        },
+        Protocol::Msrp => Lesson {
+            title: "MSRP — chat inside a call",
+            summary: "Carries instant messages and file transfers in SIP/IMS sessions.",
+            body: "SIP sets up sessions; MSRP is what carries the actual text messages and \
+files inside one. It's how operator messaging (RCS) and enterprise IMS chat move \
+content, negotiated by SIP just like audio would be.",
+            look_for: "\"MSRP SEND\" on TCP 2855.",
+        },
+        Protocol::Pcoip => Lesson {
+            title: "PCoIP — a desktop over the network",
+            summary: "Teradici/VMware Horizon's protocol for streaming a remote desktop.",
+            body: "PCoIP delivers a virtual desktop's screen to a thin client or laptop, \
+adapting image quality to the available bandwidth. The payload is encrypted, so \
+netscope identifies it by its port rather than decoding the pixels.",
+            look_for: "\"PCoIP remote display\" on UDP/TCP 4172.",
+        },
+        Protocol::Spice => Lesson {
+            title: "SPICE — a VM's console",
+            summary: "The remote-display protocol for virtual machines (oVirt/QEMU).",
+            body: "SPICE gives you a virtual machine's screen, keyboard, mouse, sound and \
+USB redirection over the network — the console you open from a virtualisation \
+manager. It splits work across separate channels (display, inputs, cursor…), each \
+opening with a \"REDQ\" link message.",
+            look_for: "\"SPICE link — display channel\".",
+        },
+        Protocol::Ica => Lesson {
+            title: "Citrix ICA — published apps",
+            summary: "The thin-client protocol delivering a Citrix desktop or single app.",
+            body: "ICA streams the screen of an application or desktop running on a Citrix \
+server down to the user's device, sending keystrokes and clicks back. It's the \
+core of Citrix's virtual-app delivery, and the session opens with a recognisable \
+handshake.",
+            look_for: "\"Citrix ICA handshake\" on TCP 1494.",
+        },
+        Protocol::Ndmp => Lesson {
+            title: "NDMP — backing up a NAS",
+            summary: "Lets backup software drive a storage appliance's own backup engine.",
+            body: "Backing up a big NAS by pulling every file over the network is slow. \
+NDMP instead lets the backup server *orchestrate* the NAS to stream data straight \
+to a tape or disk target — the control conversation is what you see here.",
+            look_for: "\"NDMP CONNECT_OPEN request\" on TCP 10000.",
+        },
+        Protocol::Dcerpc => Lesson {
+            title: "DCE/RPC — Windows' remote calls",
+            summary: "The RPC layer under the endpoint mapper, WMI and much of Active Directory.",
+            body: "A great deal of Windows administration is remote procedure calls: \
+querying WMI, managing services, talking to a domain controller. DCE/RPC (MSRPC) \
+is that layer. A client Binds to an interface on port 135 or a dynamic port, then \
+issues Requests. It's also a well-trodden lateral-movement path, so it's worth \
+watching.",
+            look_for: "\"DCE/RPC Bind\" / \"DCE/RPC Request\" on TCP 135.",
+        },
+        Protocol::Pptp => Lesson {
+            title: "PPTP — the legacy VPN",
+            summary: "An old Microsoft VPN: control on TCP 1723, data in GRE.",
+            body: "PPTP was the classic 'built into Windows' VPN. A TCP control channel \
+negotiates the tunnel and the actual traffic rides GRE alongside it. Its \
+encryption has known weaknesses and it's considered obsolete, so seeing it today \
+is a security note worth raising.",
+            look_for: "\"PPTP Start-Control-Connection-Request\" on TCP 1723.",
+        },
+        Protocol::Radmin => Lesson {
+            title: "Radmin — remote control",
+            summary: "A Windows remote-administration tool's session traffic.",
+            body: "Radmin lets an administrator take over a Windows desktop remotely. The \
+session is encrypted, so netscope flags it by port rather than decoding it. Like \
+any remote-control tool, unexpected Radmin traffic is worth confirming was \
+authorised.",
+            look_for: "\"Radmin remote control\" on TCP 4899.",
+        },
+        Protocol::Skinny => Lesson {
+            title: "Skinny (SCCP) — Cisco IP phones",
+            summary: "The lightweight signalling between Cisco phones and CallManager.",
+            body: "Before SIP took over, Cisco IP phones registered and made calls using \
+Skinny (SCCP): a compact binary protocol where the phone reports off-hook, keypad \
+presses and call state to CallManager, which drives the display and rings. Still \
+common in Cisco voice estates.",
+            look_for: "\"Skinny (SCCP) Register\" / \"CallState\" on TCP 2000.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -1702,6 +1808,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::SourceQuery,
         Protocol::Minecraft,
         Protocol::Mumble,
+        Protocol::Pfcp,
+        Protocol::GtpPrime,
+        Protocol::Megaco,
+        Protocol::Msrp,
+        Protocol::Pcoip,
+        Protocol::Spice,
+        Protocol::Ica,
+        Protocol::Ndmp,
+        Protocol::Dcerpc,
+        Protocol::Pptp,
+        Protocol::Radmin,
+        Protocol::Skinny,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -1954,6 +2072,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::SourceQuery => "A Source A2S query — a game client/browser asking a server for its info.",
         Protocol::Minecraft => "A Minecraft message (TCP 25565) — the Java Edition client/server protocol.",
         Protocol::Mumble => "A Mumble control message (TCP 64738) — low-latency voice-chat signalling.",
+        Protocol::Pfcp => "A PFCP message (UDP 8805) — the 5G/4G control plane programming user-plane forwarding.",
+        Protocol::GtpPrime => "A GTP' message (UDP 3386) — mobile Call Detail Records heading to billing.",
+        Protocol::Megaco => "A Megaco/H.248 message (UDP/TCP 2944) — a call agent controlling a media gateway.",
+        Protocol::Msrp => "An MSRP message (TCP 2855) — instant messaging/file transfer inside a SIP session.",
+        Protocol::Pcoip => "PCoIP traffic (UDP/TCP 4172) — an encrypted remote-desktop display stream.",
+        Protocol::Spice => "A SPICE message — the remote console of a virtual machine.",
+        Protocol::Ica => "Citrix ICA traffic (TCP 1494) — a published app or virtual desktop session.",
+        Protocol::Ndmp => "An NDMP message (TCP 10000) — backup software driving a NAS backup.",
+        Protocol::Dcerpc => "A DCE/RPC message (TCP 135) — Windows remote procedure calls (WMI, AD, services).",
+        Protocol::Pptp => "A PPTP control message (TCP 1723) — the legacy Microsoft VPN; weak crypto.",
+        Protocol::Radmin => "Radmin traffic (TCP 4899) — an encrypted Windows remote-control session.",
+        Protocol::Skinny => "A Skinny/SCCP message (TCP 2000) — Cisco IP-phone call signalling.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -2000,7 +2130,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 162);
+        assert_eq!(all_lessons().len(), 174);
     }
 
     #[test]

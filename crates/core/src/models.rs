@@ -328,6 +328,30 @@ pub enum Protocol {
     Minecraft,
     /// Mumble voice-chat control (TCP 64738).
     Mumble,
+    /// PFCP 4G/5G user-plane control, the N4 interface (UDP 8805).
+    Pfcp,
+    /// GTP' charging / CDR transfer (UDP 3386).
+    GtpPrime,
+    /// Megaco / H.248 media gateway control (UDP/TCP 2944).
+    Megaco,
+    /// MSRP instant messaging in SIP/IMS sessions (TCP 2855).
+    Msrp,
+    /// PCoIP remote display (UDP/TCP 4172).
+    Pcoip,
+    /// SPICE virtual-machine console (TCP, "REDQ" magic).
+    Spice,
+    /// Citrix ICA thin-client session (TCP 1494).
+    Ica,
+    /// NDMP network backup management (TCP 10000).
+    Ndmp,
+    /// DCE/RPC — Windows MSRPC (TCP 135 and dynamic ports).
+    Dcerpc,
+    /// PPTP VPN control channel (TCP 1723).
+    Pptp,
+    /// Radmin remote control (TCP 4899).
+    Radmin,
+    /// Skinny / SCCP Cisco IP-phone signalling (TCP 2000).
+    Skinny,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -520,6 +544,18 @@ impl std::fmt::Display for Protocol {
             Protocol::SourceQuery => write!(f, "Source Query"),
             Protocol::Minecraft => write!(f, "Minecraft"),
             Protocol::Mumble => write!(f, "Mumble"),
+            Protocol::Pfcp => write!(f, "PFCP"),
+            Protocol::GtpPrime => write!(f, "GTP-prime"),
+            Protocol::Megaco => write!(f, "Megaco"),
+            Protocol::Msrp => write!(f, "MSRP"),
+            Protocol::Pcoip => write!(f, "PCoIP"),
+            Protocol::Spice => write!(f, "SPICE"),
+            Protocol::Ica => write!(f, "ICA"),
+            Protocol::Ndmp => write!(f, "NDMP"),
+            Protocol::Dcerpc => write!(f, "DCERPC"),
+            Protocol::Pptp => write!(f, "PPTP"),
+            Protocol::Radmin => write!(f, "Radmin"),
+            Protocol::Skinny => write!(f, "Skinny"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
