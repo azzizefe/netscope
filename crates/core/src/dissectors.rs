@@ -1323,7 +1323,43 @@ mod bench {
         packets
     }
 
+    fn parse_failures(packets: &[Vec<u8>]) -> usize {
+        packets
+            .iter()
+            .filter(|pkt| {
+                matches!(dissect(pkt).protocol,
+                    Protocol::Unknown(ref s) if s == "failed to parse ethernet")
+            })
+            .count()
+    }
+
+    /// The correctness half of the old benchmark, and the half worth running on
+    /// every `cargo test`: it is deterministic. The throughput test below used
+    /// to count these failures and then never assert on them, so a dissector
+    /// that failed to parse everything very quickly would have passed it.
     #[test]
+    fn bench_corpus_dissects_without_failures() {
+        let packets = build_mixed_packets(10_000);
+        assert_eq!(
+            parse_failures(&packets),
+            0,
+            "mixed corpus should dissect cleanly"
+        );
+    }
+
+    /// Throughput measurement — ignored by default.
+    ///
+    /// It asserts on wall-clock rate, so under `cargo test`'s parallel load it
+    /// measures how busy the machine is rather than what the dissector costs,
+    /// and fails intermittently for reasons that have nothing to do with the
+    /// code. Measured standalone on this machine: ~338k pkt/s in debug,
+    /// ~1.77M in release — so the 100k floor below only catches a collapse,
+    /// not a gradual regression.
+    ///
+    /// Run it on its own:
+    ///   cargo test --release bench_dissect_throughput -- --ignored --nocapture
+    #[test]
+    #[ignore = "timing-sensitive: measures machine load when run in parallel"]
     fn bench_dissect_throughput() {
         const COUNT: usize = 10_000;
         let packets = build_mixed_packets(COUNT);
@@ -1334,14 +1370,7 @@ mod bench {
         }
 
         let start = std::time::Instant::now();
-        let mut total = 0;
-        for pkt in &packets {
-            let result = dissect(pkt);
-            total += match result.protocol {
-                Protocol::Unknown(ref s) if s == "failed to parse ethernet" => 1,
-                _ => 0,
-            };
-        }
+        let failures = parse_failures(&packets);
         let elapsed = start.elapsed();
         let rate = COUNT as f64 / elapsed.as_secs_f64();
 
@@ -1350,9 +1379,10 @@ mod bench {
             COUNT,
             elapsed.as_secs_f64(),
             rate,
-            total
+            failures
         );
 
+        assert_eq!(failures, 0, "corpus should dissect cleanly");
         // Ensure we can handle at least 100k pps
         assert!(
             rate > 100_000.0,
