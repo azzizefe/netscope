@@ -238,6 +238,19 @@ const KNOWN_PROTOS: &[&str] = &[
     "ident",
     "gopher",
     "rsh",
+    "cdp",
+    "vtp",
+    "dtp",
+    "pagp",
+    "udld",
+    "eap",
+    "ipx",
+    "appletalk",
+    "atalk",
+    "aarp",
+    "ipp",
+    "rexec",
+    "sane",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -420,6 +433,7 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "zk" => pkt.protocol == Protocol::Zookeeper,
         "hadooprpc" | "hdfs" => pkt.protocol == Protocol::HadoopRpc,
         "sieve" => pkt.protocol == Protocol::ManageSieve,
+        "appletalk" | "atalk" => pkt.protocol == Protocol::Atalk,
         other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
     }
 }

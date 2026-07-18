@@ -8,6 +8,11 @@ use super::DissectedResult;
 /// including the WPA/WPA2 4-way key handshake. Byte 0 is the version, byte 1
 /// the packet type (IEEE 802.1X).
 pub fn dissect_eapol(payload: &[u8]) -> DissectedResult {
+    // Type 0 encapsulates an EAP packet — hand it to the EAP dissector so the
+    // authentication method (PEAP, TLS, …) is named rather than hidden.
+    if payload.get(1) == Some(&0) && payload.len() > 4 {
+        return super::eap::dissect_eap(&payload[4..]);
+    }
     let summary = match payload.get(1) {
         Some(&t) => {
             let name = match t {

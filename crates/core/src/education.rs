@@ -1757,6 +1757,106 @@ prints — cross the network unencrypted. SSH replaced it decades ago, so rsh \
 traffic today is a genuine finding.",
             look_for: "\"rsh — alice runs \\\"cat /etc/passwd\\\"\" on TCP 514.",
         },
+        Protocol::Cdp => Lesson {
+            title: "CDP — Cisco's neighbour discovery",
+            summary: "Switches and phones announcing their identity to the device next door.",
+            body: "CDP lets a Cisco device tell its direct neighbour who it is: hostname, \
+port, model and software version. Great for mapping a network — and equally useful \
+to an attacker who plugs in, which is why it's often disabled on user-facing ports.",
+            look_for: "\"CDP — sw-core port Gi0/1\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Vtp => Lesson {
+            title: "VTP — syncing the VLAN list",
+            summary: "Propagates the VLAN database from one switch to the rest.",
+            body: "Rather than defining VLANs on every switch, VTP has a server push the \
+list to the others. Convenient, but famously dangerous: a switch joining with a \
+higher revision number can wipe the whole domain's VLANs.",
+            look_for: "\"VTP Summary Advertisement\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Dtp => Lesson {
+            title: "DTP — negotiating a trunk",
+            summary: "Two switch ports agreeing to carry every VLAN instead of one.",
+            body: "DTP decides automatically whether a link becomes a trunk. Left enabled \
+on a port a user can reach, an attacker's device can negotiate a trunk and see \
+every VLAN — the classic VLAN-hopping attack. DTP on an access port is a finding.",
+            look_for: "\"DTP v1 — trunk negotiation\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Pagp => Lesson {
+            title: "PAgP — bundling links, Cisco-style",
+            summary: "Cisco's proprietary alternative to LACP for building an EtherChannel.",
+            body: "To gain bandwidth and redundancy, several physical links are bundled \
+into one logical channel. PAgP negotiates that bundle between Cisco devices; LACP \
+is the vendor-neutral standard doing the same job.",
+            look_for: "\"PAgP v1 — EtherChannel negotiation\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Udld => Lesson {
+            title: "UDLD — catching a one-way link",
+            summary: "Detects fibre links that carry traffic in only one direction.",
+            body: "A fibre pair can fail so traffic flows one way but not the other. \
+Spanning tree then makes bad decisions and can create a loop. UDLD sends probes and \
+expects to see itself echoed back; when it doesn't, it shuts the port down.",
+            look_for: "\"UDLD probe\" / \"UDLD echo\" (LLC/SNAP, Cisco OUI).",
+        },
+        Protocol::Eap => Lesson {
+            title: "EAP — how you prove who you are",
+            summary: "The authentication method negotiated inside 802.1X and enterprise Wi-Fi.",
+            body: "802.1X decides whether a device may join the network; EAP is the \
+conversation that actually proves identity — and it comes in flavours. PEAP and \
+TTLS wrap a password inside TLS, EAP-TLS uses a client certificate, and the ancient \
+MD5-Challenge is trivially broken. Which method you see tells you how strong the \
+authentication really is.",
+            look_for: "\"EAP Response — PEAP\" / \"EAP Success\" inside EAPOL.",
+        },
+        Protocol::Ipx => Lesson {
+            title: "IPX — Novell NetWare's network layer",
+            summary: "The protocol that ran most office LANs before TCP/IP won.",
+            body: "Through the late 80s and 90s, NetWare file and print servers spoke IPX \
+rather than IP, with SAP broadcasting available services and NCP carrying file \
+access. Essentially extinct now, so IPX on a modern network means very old kit — or \
+something odd.",
+            look_for: "\"IPX SAP (service advertisement)\" (EtherType 0x8137).",
+        },
+        Protocol::Atalk => Lesson {
+            title: "AppleTalk — classic Mac networking",
+            summary: "Apple's pre-TCP/IP stack for file and printer sharing.",
+            body: "AppleTalk let Macs find each other and share printers with zero \
+configuration long before Bonjour, using zones and name binding instead of IP \
+addresses. Apple dropped it in Mac OS X 10.6, so it's now purely historical.",
+            look_for: "\"AppleTalk DDP — NBP (name binding)\" (EtherType 0x809B).",
+        },
+        Protocol::Aarp => Lesson {
+            title: "AARP — AppleTalk's address resolution",
+            summary: "The AppleTalk equivalent of ARP, mapping addresses to hardware.",
+            body: "Just as ARP maps an IP address to a MAC address, AARP maps an AppleTalk \
+node address to one. It also carries the probe a Mac sends when picking an address, \
+to check nobody else already has it.",
+            look_for: "\"AARP Probe\" / \"AARP Request\" (EtherType 0x80F3).",
+        },
+        Protocol::Ipp => Lesson {
+            title: "IPP — how modern printing works",
+            summary: "The protocol behind CUPS, AirPrint and network printers.",
+            body: "IPP carries print jobs and printer queries over HTTP: the client POSTs \
+an operation like Print-Job or Get-Printer-Attributes and the printer answers. It's \
+what your laptop uses when a printer just appears and works.",
+            look_for: "\"IPP 2.0 Print-Job\" on TCP 631.",
+        },
+        Protocol::Rexec => Lesson {
+            title: "rexec — remote execution with a cleartext password",
+            summary: "Runs a command on another host, sending the password in the clear.",
+            body: "rexec is rsh's authenticating sibling: it asks for a username and \
+password before running the command — but sends that password unencrypted, so anyone \
+capturing the traffic gets working credentials. If you see rexec, treat the password \
+as compromised.",
+            look_for: "\"rexec — alice runs … (cleartext password)\" on TCP 512.",
+        },
+        Protocol::Sane => Lesson {
+            title: "SANE — sharing a scanner",
+            summary: "Lets one machine use a scanner attached to another.",
+            body: "SANE is the Unix scanner stack; its network side (saned) exposes a \
+scanner so other hosts can list devices, set options and pull images. It's \
+unauthenticated by default, so it belongs on a trusted network only.",
+            look_for: "\"SANE GET_DEVICES\" / \"SANE START\" on TCP 6566.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -2052,6 +2152,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Ident,
         Protocol::Gopher,
         Protocol::Rsh,
+        Protocol::Cdp,
+        Protocol::Vtp,
+        Protocol::Dtp,
+        Protocol::Pagp,
+        Protocol::Udld,
+        Protocol::Eap,
+        Protocol::Ipx,
+        Protocol::Atalk,
+        Protocol::Aarp,
+        Protocol::Ipp,
+        Protocol::Rexec,
+        Protocol::Sane,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -2340,6 +2452,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Ident => "An Ident message (TCP 113) — a legacy lookup of the user behind a connection.",
         Protocol::Gopher => "A Gopher message (TCP 70) — the pre-web menu/document protocol.",
         Protocol::Rsh => "An rsh session (TCP 514) — a cleartext remote command; prefer SSH.",
+        Protocol::Cdp => "A CDP announcement — a Cisco device naming itself to its neighbour.",
+        Protocol::Vtp => "A VTP message — switches syncing the VLAN database.",
+        Protocol::Dtp => "A DTP message — ports negotiating a trunk; a VLAN-hopping risk on access ports.",
+        Protocol::Pagp => "A PAgP message — Cisco negotiating an EtherChannel link bundle.",
+        Protocol::Udld => "A UDLD message — checking a link isn't passing traffic one way only.",
+        Protocol::Eap => "An EAP packet — the authentication method being negotiated for 802.1X/Wi-Fi.",
+        Protocol::Ipx => "An IPX packet (EtherType 0x8137) — legacy Novell NetWare networking.",
+        Protocol::Atalk => "An AppleTalk DDP packet (EtherType 0x809B) — classic Mac networking.",
+        Protocol::Aarp => "An AARP packet (EtherType 0x80F3) — AppleTalk address resolution.",
+        Protocol::Ipp => "An IPP message (TCP 631) — a print job or printer query.",
+        Protocol::Rexec => "An rexec session (TCP 512) — remote execution with a cleartext password.",
+        Protocol::Sane => "A SANE message (TCP 6566) — controlling a scanner shared over the network.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -2386,7 +2510,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 198);
+        assert_eq!(all_lessons().len(), 210);
     }
 
     #[test]
