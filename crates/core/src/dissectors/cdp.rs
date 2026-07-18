@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn device_and_port() {
         let mut b = vec![0x02, 0xB4, 0x00, 0x00]; // version, TTL, checksum
-        // TLV length counts the 4-byte header too: 4 + 7 = 11.
+                                                  // TLV length counts the 4-byte header too: 4 + 7 = 11.
         b.extend_from_slice(&[0x00, 0x01, 0x00, 0x0b]); // Device ID TLV
         b.extend_from_slice(b"sw-core");
         b.extend_from_slice(&[0x00, 0x03, 0x00, 0x09]); // Port ID TLV, len 9

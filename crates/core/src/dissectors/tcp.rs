@@ -8,15 +8,16 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    aerospike, afp, amqp, beanstalk, beats, bgp, bittorrent, bmp, bolt, cassandra, clamav,
-    clickhouse, dcerpc, diameter, dicom, dnp3, doip, edonkey, elasticsearch, enip, finger, fix,
-    fluentd, ftp, gearman, git, gnutella, gopher, graphite, hadooprpc, hl7, http, http2, ica,
-    ident, iec104, imap, ipp, irc, iscsi, kafka, kerberos, ldap, ldp, lpd, managesieve, megaco,
-    memcached, minecraft, mms, modbus, mongodb, mqtt, msrp, mumble, mysql, nats, ndmp, nntp, nrpe,
-    nsq, ntlm, opcua, openflow, openvpn, openwire, pcoip, pop3, postgres, pptp, pulsar, radmin,
-    rdp, redis, relp, rethinkdb, rexec, rfb, rlogin, rpc, rpkirtr, rsh, rsync, rtmp, rtsp, s7comm,
-    sane, skinny, smb, smpp, smtp, socks, someip, spamd, spice, ssh, stomp, svn, tacacs, tds,
-    telnet, tls, websocket, whois, x11, xmpp, zabbix, zmtp, zookeeper, DissectedResult,
+    adsb, aerospike, afp, amqp, aprs, beanstalk, beats, bgp, bittorrent, bmp, bolt, cassandra,
+    clamav, clickhouse, dcerpc, diameter, dicom, dnp3, doip, drda, edonkey, elasticsearch, enip,
+    finger, firebird, fix, fluentd, ftp, gearman, git, gnutella, gopher, graphite, hadooprpc, hl7,
+    http, http2, ica, ident, iec104, imap, ipp, irc, iscsi, kafka, kerberos, ldap, ldp, lpd,
+    managesieve, megaco, memcached, minecraft, mms, modbus, mongodb, mqtt, msrp, mumble, mysql,
+    mysqlx, nats, ndmp, nmea, nntp, nrpe, nsq, ntlm, opcua, openflow, openvpn, openwire, pcoip,
+    pop3, postgres, pptp, pulsar, radmin, rdp, redis, relp, rethinkdb, rexec, rfb, riak, rlogin,
+    rpc, rpkirtr, rsh, rsync, rtmp, rtsp, s7comm, sane, skinny, smb, smpp, smtp, socks, someip,
+    spamd, spice, ssh, stomp, svn, tacacs, tds, telnet, tls, tns, websocket, whois, x11, xmpp,
+    zabbix, zmtp, zookeeper, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -602,6 +603,34 @@ fn dissect_tcp_inner(
         }
         if on(6566) {
             return sane::dissect_sane(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Enterprise databases.
+        if on(1521) {
+            return tns::dissect_tns(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // 50000 and 33060 sit inside the ephemeral port range, so these also
+        // require the protocol's own framing before claiming a flow.
+        if on(50000) && drda::looks_like_drda(tcp_payload) {
+            return drda::dissect_drda(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(3050) {
+            return firebird::dissect_firebird(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(33060) && mysqlx::looks_like_mysqlx(tcp_payload) {
+            return mysqlx::dissect_mysqlx(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(8087) {
+            return riak::dissect_riak(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Telemetry feeds: navigation, aviation and amateur radio.
+        if on(10110) && nmea::looks_like_nmea(tcp_payload) {
+            return nmea::dissect_nmea(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(30005) && adsb::looks_like_adsb(tcp_payload) {
+            return adsb::dissect_adsb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(14580) {
+            return aprs::dissect_aprs(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // TCP 514 is rsh; syslog's 514 is UDP and handled in the UDP dissector.
         if on(514) {

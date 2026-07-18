@@ -26,6 +26,27 @@ pub fn dissect_gre(
     dst_ip: Option<IpAddr>,
     payload: &[u8],
 ) -> DissectedResult {
+    if payload.len() >= 4 {
+        let flags = u16::from_be_bytes([payload[0], payload[1]]);
+        let proto_type = u16::from_be_bytes([payload[2], payload[3]]);
+        // ERSPAN rides GRE with its own protocol types; hand it the payload
+        // past the optional checksum/key/sequence fields.
+        if proto_type == 0x88BE || proto_type == 0x22EB {
+            let mut hdr = 4;
+            if flags & 0x8000 != 0 {
+                hdr += 4; // checksum present
+            }
+            if flags & 0x2000 != 0 {
+                hdr += 4; // key present
+            }
+            if flags & 0x1000 != 0 {
+                hdr += 4; // sequence number present
+            }
+            if payload.len() > hdr {
+                return super::erspan::dissect_erspan(src_ip, dst_ip, &payload[hdr..]);
+            }
+        }
+    }
     let summary = if payload.len() >= 4 {
         let proto_type = u16::from_be_bytes([payload[2], payload[3]]);
         format!("GRE — tunnelling {}", inner_name(proto_type))

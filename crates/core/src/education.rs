@@ -1857,6 +1857,105 @@ scanner so other hosts can list devices, set options and pull images. It's \
 unauthenticated by default, so it belongs on a trusted network only.",
             look_for: "\"SANE GET_DEVICES\" / \"SANE START\" on TCP 6566.",
         },
+        Protocol::Tns => Lesson {
+            title: "Oracle TNS — reaching an Oracle database",
+            summary: "The transport every Oracle client uses to talk to the listener.",
+            body: "Before any SQL flows, an Oracle client connects to the listener over \
+TNS, which negotiates the session and routes it to a database instance. Almost all \
+Oracle traffic you'll see rides inside TNS Data packets.",
+            look_for: "\"Oracle TNS Connect\" / \"Oracle TNS Data\" on TCP 1521.",
+        },
+        Protocol::Drda => Lesson {
+            title: "DRDA — IBM Db2's database protocol",
+            summary: "How Db2 clients send SQL and receive result sets.",
+            body: "DRDA is IBM's standard for distributed database access, used by Db2. \
+Its messages are DDM objects identified by code points — EXCSAT to introduce the \
+client, ACCRDB to open a database, SQLSTT to carry a statement.",
+            look_for: "\"DRDA EXCSAT\" / \"DRDA SQLSTT\" on TCP 50000.",
+        },
+        Protocol::Firebird => Lesson {
+            title: "Firebird — an open-source SQL database",
+            summary: "The wire protocol of Firebird and its InterBase ancestor.",
+            body: "Firebird is a lightweight relational database descended from Borland \
+InterBase, still embedded in plenty of business software. Its protocol is a simple \
+sequence of numbered operations: connect, attach, compile a statement, fetch rows.",
+            look_for: "\"Firebird attach\" / \"Firebird fetch\" on TCP 3050.",
+        },
+        Protocol::MysqlX => Lesson {
+            title: "MySQL X — the document-store protocol",
+            summary: "MySQL's newer protobuf-based protocol, separate from the classic one.",
+            body: "Alongside the classic protocol on 3306, MySQL speaks X Protocol on \
+33060 for the X DevAPI and its document store — CRUD operations on JSON documents \
+as well as SQL, encoded with protocol buffers.",
+            look_for: "\"MySQL X StmtExecute\" / \"CrudFind\" on TCP 33060.",
+        },
+        Protocol::Riak => Lesson {
+            title: "Riak — a distributed key-value store",
+            summary: "A highly available database designed to survive node failure.",
+            body: "Riak spreads data across a cluster so it keeps serving even when nodes \
+drop out. Its protocol-buffers interface is the efficient way clients read and write \
+keys, each frame a length followed by a message code.",
+            look_for: "\"Riak Put request\" / \"Get response\" on TCP 8087.",
+        },
+        Protocol::Nmea => Lesson {
+            title: "NMEA 0183 — GPS and marine sentences",
+            summary: "The text format navigation instruments use to report position.",
+            body: "A GPS receiver emits a steady stream of comma-separated sentences: GGA \
+carries a position fix, RMC the recommended minimum data, GSV the satellites in \
+view. Marine networks carry vessel AIS reports the same way, which is how ship \
+tracking works.",
+            look_for: "\"NMEA GPGGA — position fix\" on TCP 10110.",
+        },
+        Protocol::Adsb => Lesson {
+            title: "ADS-B — aircraft broadcasting their position",
+            summary: "Planes reporting identity, altitude and position; Beast is the feed format.",
+            body: "Modern aircraft continuously broadcast where they are. A receiver \
+(dump1090 and similar) decodes those transponder messages and republishes them in \
+the Beast binary format — which is what flight-tracking sites are built on.",
+            look_for: "\"ADS-B Beast — Mode S long (ADS-B)\" on TCP 30005.",
+        },
+        Protocol::Aprs => Lesson {
+            title: "APRS — amateur radio's position network",
+            summary: "Ham operators sharing position, weather and telemetry beacons.",
+            body: "APRS started on radio and gained an internet backbone, APRS-IS, which \
+relays those beacons worldwide as text. Each packet names the sending callsign and \
+a path, followed by position or telemetry data.",
+            look_for: "\"APRS-IS packet from TA1ABC\" on TCP 14580.",
+        },
+        Protocol::Turn => Lesson {
+            title: "TURN — relaying a call that can't connect directly",
+            summary: "When NAT defeats a direct path, media is bounced through a relay.",
+            body: "STUN tries to find a direct path between two peers. When it can't — \
+symmetric NAT, restrictive firewalls — TURN gives up on directness and relays the \
+media through a server instead. It costs bandwidth, so a call falling back to TURN \
+often explains poor quality or high server load.",
+            look_for: "\"TURN relayed data — channel 0x4001\" alongside STUN.",
+        },
+        Protocol::Decnet => Lesson {
+            title: "DECnet — Digital's networking stack",
+            summary: "The protocol suite of DEC's VAX/VMS systems, from before TCP/IP won.",
+            body: "DECnet connected the VAX and PDP machines that ran much of research and \
+industry in the 70s and 80s, with its own routing and node addressing. It survives \
+only in museums and a few very long-lived industrial systems.",
+            look_for: "\"DECnet Phase IV — endnode hello\" (EtherType 0x6003).",
+        },
+        Protocol::Vines => Lesson {
+            title: "Banyan VINES — an early network OS",
+            summary: "A Unix-based server platform that competed with NetWare.",
+            body: "VINES offered file, print and directory services across wide-area \
+networks, and was notable for StreetTalk, a global directory ahead of its time. The \
+company folded in the 90s, so VINES traffic today means genuinely ancient equipment.",
+            look_for: "\"Banyan VINES — RTP (routing)\" (EtherType 0x0BAD).",
+        },
+        Protocol::Erspan => Lesson {
+            title: "ERSPAN — mirrored traffic sent across the network",
+            summary: "A switch copying traffic and tunnelling it to a remote analyser.",
+            body: "Port mirroring normally feeds a monitor plugged into the same switch. \
+ERSPAN wraps those copies in GRE so they can travel to an analyser anywhere on the \
+network. That means the payload is *someone else's* traffic, deliberately \
+duplicated — useful to know, both for capacity and for who is watching what.",
+            look_for: "\"ERSPAN v1 — mirrored traffic, session 5\" inside GRE.",
+        },
         Protocol::Plugin(_) => Lesson {
             title: "Custom protocol (plugin)",
             summary: "Traffic named by a user-defined protocol plugin, not a built-in dissector.",
@@ -2164,6 +2263,18 @@ pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
         Protocol::Ipp,
         Protocol::Rexec,
         Protocol::Sane,
+        Protocol::Tns,
+        Protocol::Drda,
+        Protocol::Firebird,
+        Protocol::MysqlX,
+        Protocol::Riak,
+        Protocol::Nmea,
+        Protocol::Adsb,
+        Protocol::Aprs,
+        Protocol::Turn,
+        Protocol::Decnet,
+        Protocol::Vines,
+        Protocol::Erspan,
         Protocol::Unknown(String::new()),
     ]
     .into_iter()
@@ -2464,6 +2575,18 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Ipp => "An IPP message (TCP 631) — a print job or printer query.",
         Protocol::Rexec => "An rexec session (TCP 512) — remote execution with a cleartext password.",
         Protocol::Sane => "A SANE message (TCP 6566) — controlling a scanner shared over the network.",
+        Protocol::Tns => "An Oracle TNS packet (TCP 1521) — a client talking to an Oracle database.",
+        Protocol::Drda => "A DRDA message (TCP 50000) — SQL heading to an IBM Db2 database.",
+        Protocol::Firebird => "A Firebird message (TCP 3050) — a query to a Firebird/InterBase database.",
+        Protocol::MysqlX => "A MySQL X message (TCP 33060) — the document-store/X DevAPI protocol.",
+        Protocol::Riak => "A Riak message (TCP 8087) — a read or write to a distributed key-value store.",
+        Protocol::Nmea => "An NMEA 0183 sentence (TCP 10110) — GPS or marine instrument data.",
+        Protocol::Adsb => "An ADS-B Beast frame (TCP 30005) — decoded aircraft transponder data.",
+        Protocol::Aprs => "An APRS-IS packet (TCP 14580) — an amateur-radio position or telemetry beacon.",
+        Protocol::Turn => "A TURN ChannelData message — call media being relayed because NAT blocked a direct path.",
+        Protocol::Decnet => "A DECnet Phase IV packet (EtherType 0x6003) — legacy DEC VAX/VMS networking.",
+        Protocol::Vines => "A Banyan VINES packet (EtherType 0x0BAD) — a long-obsolete network OS.",
+        Protocol::Erspan => "An ERSPAN header inside GRE — mirrored traffic tunnelled to a remote analyser.",
         Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
         Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
     }
@@ -2510,7 +2633,7 @@ mod tests {
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 210);
+        assert_eq!(all_lessons().len(), 222);
     }
 
     #[test]

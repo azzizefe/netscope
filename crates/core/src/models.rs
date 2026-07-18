@@ -424,6 +424,30 @@ pub enum Protocol {
     Rexec,
     /// SANE network scanner access (TCP 6566).
     Sane,
+    /// Oracle TNS database transport (TCP 1521).
+    Tns,
+    /// DRDA — IBM Db2 database protocol (TCP 50000).
+    Drda,
+    /// Firebird / InterBase database protocol (TCP 3050).
+    Firebird,
+    /// MySQL X Protocol / document store (TCP 33060).
+    MysqlX,
+    /// Riak protocol-buffers client interface (TCP 8087).
+    Riak,
+    /// NMEA 0183 navigation sentences (TCP 10110).
+    Nmea,
+    /// ADS-B Beast aircraft telemetry (TCP 30005).
+    Adsb,
+    /// APRS-IS amateur-radio packet reporting (TCP 14580).
+    Aprs,
+    /// TURN relayed media (RFC 8656 ChannelData).
+    Turn,
+    /// DECnet Phase IV (EtherType 0x6003).
+    Decnet,
+    /// Banyan VINES (EtherType 0x0BAD).
+    Vines,
+    /// ERSPAN mirrored traffic tunnelled in GRE.
+    Erspan,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -664,6 +688,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Ipp => write!(f, "IPP"),
             Protocol::Rexec => write!(f, "rexec"),
             Protocol::Sane => write!(f, "SANE"),
+            Protocol::Tns => write!(f, "OracleTNS"),
+            Protocol::Drda => write!(f, "DRDA"),
+            Protocol::Firebird => write!(f, "Firebird"),
+            Protocol::MysqlX => write!(f, "MySQLX"),
+            Protocol::Riak => write!(f, "Riak"),
+            Protocol::Nmea => write!(f, "NMEA"),
+            Protocol::Adsb => write!(f, "ADSB"),
+            Protocol::Aprs => write!(f, "APRS"),
+            Protocol::Turn => write!(f, "TURN"),
+            Protocol::Decnet => write!(f, "DECnet"),
+            Protocol::Vines => write!(f, "VINES"),
+            Protocol::Erspan => write!(f, "ERSPAN"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
