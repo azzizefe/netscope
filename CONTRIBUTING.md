@@ -36,6 +36,41 @@ cargo run -p netscope-tui
 cargo run -p netscope-tui -- -r fixtures/mixed.pcap --headless
 ```
 
+### Known issue: `cargo test --workspace` on Windows
+
+On Windows, `cargo test --workspace` fails while linking/loading the
+`netscope-desktop` lib test harness:
+
+```
+process didn't exit successfully: netscope_desktop_lib-<hash>.exe
+(exit code: 0xc0000139, STATUS_ENTRYPOINT_NOT_FOUND)
+```
+
+This is not a netscope bug and not a broken test — the harness dies before any
+test runs. `rfd`, pulled in through `tauri-plugin-dialog`, statically imports
+`TaskDialogIndirect` from `comctl32.dll`. That symbol only exists in
+Common-Controls **v6**, and a binary gets v6 only if it carries an application
+manifest asking for it. `build.rs` attaches such a manifest to the *app binary
+in release builds* — the test harness is neither, so the loader binds it to the
+v5 `comctl32.dll` in System32, cannot resolve the import, and kills the process
+at startup.
+
+It only shows up under `--workspace` because building alongside the other
+crates changes feature unification enough to pull the dialog path into the test
+binary.
+
+**Workaround** — run the crates separately, which is what CI does:
+
+```bash
+cargo test -p netscope-core -p netscope-tui
+cargo test -p netscope-desktop   # passes on its own
+```
+
+A proper fix means embedding a Common-Controls v6 manifest into the test
+harness, and needs two implementations — `/MANIFEST:EMBED` for the MSVC linker,
+a `windres`-compiled resource object for the GNU one — so it should not be
+merged until it has been verified on both toolchains.
+
 ## Code Style
 
 - **No panics** — dissectors must never panic on malformed input. Use graceful fallbacks.
