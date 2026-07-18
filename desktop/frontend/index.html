@@ -475,9 +475,13 @@
           <span id="wifi-status" class="wifi-status"></span>
         </div>
         <div class="wifi-note">
-          Yalnızca <b>aynı WiFi/LAN</b> üzerindeki cihazlar görünür. Şifreli trafiğin
-          <b>içeriği</b> okunamaz; trafik sütunu yalnızca bu makinenin gördüğü (kendi +
-          yayın) paketleri sayar. Yalnızca kendi ağınızı tarayın.
+          <b>Cihaz</b> sütunu, cihazların yayınladığı sinyallerden tahmin edilir:
+          mDNS/Bonjour (Apple <code>model=</code>, <code>_airplay</code>/<code>_googlecast</code>…),
+          NetBIOS adı, DHCP parmak izi ve TTL. Bu yüzden MAC üreticisi bilinmese
+          (rastgele MAC) bile “iPhone / MacBook / Android TV / yazıcı” çıkabilir.
+          Sessiz bir cihaz hiç yayın yapmıyorsa <i>bilinmiyor</i> kalır.
+          Yalnızca <b>aynı WiFi/LAN</b> görünür; şifreli trafiğin <b>içeriği</b> okunamaz;
+          trafik yalnızca bu makinenin gördüğü paketleri sayar. Yalnızca kendi ağınızı tarayın.
         </div>
         <div id="wifi-list"></div>
       </section>
