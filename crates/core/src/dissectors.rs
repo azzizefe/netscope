@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+pub mod aarp;
 pub mod aerospike;
 pub mod afp;
 pub mod amqp;
 pub mod arp;
+pub mod atalk;
 pub mod avtp;
 pub mod babel;
 pub mod bacnet;
@@ -18,6 +20,7 @@ pub mod bolt;
 pub mod can;
 pub mod capwap;
 pub mod cassandra;
+pub mod cdp;
 pub mod clamav;
 pub mod cldap;
 pub mod clickhouse;
@@ -34,6 +37,8 @@ pub mod dnp3;
 pub mod dns;
 pub mod doip;
 pub mod dtls;
+pub mod dtp;
+pub mod eap;
 pub mod eapol;
 pub mod edonkey;
 pub mod eigrp;
@@ -74,7 +79,9 @@ pub mod igmp;
 pub mod imap;
 pub mod influxdb;
 pub mod ip;
+pub mod ipp;
 pub mod ipsec;
+pub mod ipx;
 pub mod irc;
 pub mod isakmp;
 pub mod iscsi;
@@ -119,6 +126,7 @@ pub mod openflow;
 pub mod openvpn;
 pub mod openwire;
 pub mod ospf;
+pub mod pagp;
 pub mod pcoip;
 pub mod pfcp;
 pub mod pim;
@@ -139,6 +147,7 @@ pub mod rdp;
 pub mod redis;
 pub mod relp;
 pub mod rethinkdb;
+pub mod rexec;
 pub mod rfb;
 pub mod rip;
 pub mod rlogin;
@@ -153,6 +162,7 @@ pub mod rtp;
 pub mod rtps;
 pub mod rtsp;
 pub mod s7comm;
+pub mod sane;
 pub mod sctp;
 pub mod sercos;
 pub mod sflow;
@@ -162,6 +172,7 @@ pub mod sll;
 pub mod smb;
 pub mod smpp;
 pub mod smtp;
+pub mod snap;
 pub mod snmp;
 pub mod socks;
 pub mod someip;
@@ -186,9 +197,11 @@ pub mod telnet;
 pub mod teredo;
 pub mod tftp;
 pub mod tls;
+pub mod udld;
 pub mod udp;
 pub mod usb;
 pub mod vrrp;
+pub mod vtp;
 pub mod vxlan;
 pub mod wccp;
 pub mod websocket;
@@ -319,6 +332,9 @@ const ETHERTYPE_PPPOE_SESS: u16 = 0x8864; // PPPoE session stage
 const ETHERTYPE_EAPOL: u16 = 0x888E; // 802.1X port authentication (EAPOL)
 const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
+const ETHERTYPE_IPX: u16 = 0x8137; // Novell NetWare IPX
+const ETHERTYPE_ATALK: u16 = 0x809B; // AppleTalk DDP
+const ETHERTYPE_AARP: u16 = 0x80F3; // AppleTalk ARP
 const ETHERTYPE_GOOSE: u16 = 0x88B8; // IEC 61850 GOOSE substation events
 const ETHERTYPE_PTP: u16 = 0x88F7; // IEEE 1588 Precision Time Protocol
 const ETHERTYPE_AVTP: u16 = 0x22F0; // IEEE 1722 Audio/Video Transport
@@ -369,7 +385,24 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
+        ETHERTYPE_IPX => ipx::dissect_ipx(payload),
+        ETHERTYPE_ATALK => atalk::dissect_atalk(payload),
+        ETHERTYPE_AARP => aarp::dissect_aarp(payload),
         et if et <= ETHERTYPE_MAX_LENGTH && stp::is_stp(payload) => stp::dissect_stp(payload),
+        // Other 802.3 length-form frames carry an LLC header; when it is SNAP,
+        // the vendor OUI + protocol id select a dissector (Cisco's CDP, VTP,
+        // DTP, PAgP and UDLD all live there).
+        et if et <= ETHERTYPE_MAX_LENGTH => match snap::dissect_snap(payload) {
+            Some(r) => r,
+            None => DissectedResult {
+                src_addr: None,
+                dst_addr: None,
+                src_port: None,
+                dst_port: None,
+                protocol: Protocol::Unknown(format!("802.3 LLC frame (length {et})")),
+                summary: format!("IEEE 802.3 LLC frame ({et} bytes)"),
+            },
+        },
         ETHERTYPE_VLAN | ETHERTYPE_QINQ_88A8 | ETHERTYPE_QINQ_9100 if vlan_depth < 2 => {
             // 802.1Q tag: 2 bytes TCI (PCP/DEI/VID) + 2 bytes inner EtherType.
             if payload.len() < 4 {

@@ -128,7 +128,10 @@ impl Transport {
             | Protocol::Lpd
             | Protocol::Ident
             | Protocol::Gopher
-            | Protocol::Rsh => Transport::Tcp,
+            | Protocol::Rsh
+            | Protocol::Ipp
+            | Protocol::Rexec
+            | Protocol::Sane => Transport::Tcp,
             Protocol::Bacnet
             | Protocol::Kerberos
             | Protocol::Radius
@@ -164,7 +167,16 @@ impl Transport {
             | Protocol::Sv
             | Protocol::Powerlink
             | Protocol::Sercos
-            | Protocol::Avtp => Transport::Other,
+            | Protocol::Avtp
+            | Protocol::Cdp
+            | Protocol::Vtp
+            | Protocol::Dtp
+            | Protocol::Pagp
+            | Protocol::Udld
+            | Protocol::Eap
+            | Protocol::Ipx
+            | Protocol::Atalk
+            | Protocol::Aarp => Transport::Other,
             Protocol::Udp
             | Protocol::Dns
             | Protocol::Dhcp
@@ -502,7 +514,19 @@ fn protocol_rank(proto: &Protocol) -> u8 {
         | Protocol::Lpd
         | Protocol::Ident
         | Protocol::Gopher
-        | Protocol::Rsh => 3,
+        | Protocol::Rsh
+        | Protocol::Cdp
+        | Protocol::Vtp
+        | Protocol::Dtp
+        | Protocol::Pagp
+        | Protocol::Udld
+        | Protocol::Eap
+        | Protocol::Ipx
+        | Protocol::Atalk
+        | Protocol::Aarp
+        | Protocol::Ipp
+        | Protocol::Rexec
+        | Protocol::Sane => 3,
         // A plugin naming the traffic is more specific than bare TCP/UDP, so
         // it wins the flow label — but yields to a built-in app protocol.
         Protocol::Plugin(_) => 4,

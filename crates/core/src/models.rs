@@ -400,6 +400,30 @@ pub enum Protocol {
     Gopher,
     /// rsh BSD remote shell (TCP 514).
     Rsh,
+    /// CDP — Cisco Discovery Protocol (LLC/SNAP).
+    Cdp,
+    /// VTP — Cisco VLAN Trunking Protocol (LLC/SNAP).
+    Vtp,
+    /// DTP — Cisco Dynamic Trunking Protocol (LLC/SNAP).
+    Dtp,
+    /// PAgP — Cisco Port Aggregation Protocol (LLC/SNAP).
+    Pagp,
+    /// UDLD — Cisco UniDirectional Link Detection (LLC/SNAP).
+    Udld,
+    /// EAP — the authentication method inside 802.1X / EAPOL.
+    Eap,
+    /// IPX — Novell NetWare network layer (EtherType 0x8137).
+    Ipx,
+    /// AppleTalk DDP (EtherType 0x809B).
+    Atalk,
+    /// AARP — AppleTalk address resolution (EtherType 0x80F3).
+    Aarp,
+    /// IPP — Internet Printing Protocol / CUPS (TCP 631).
+    Ipp,
+    /// rexec BSD remote execution, cleartext password (TCP 512).
+    Rexec,
+    /// SANE network scanner access (TCP 6566).
+    Sane,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -628,6 +652,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Ident => write!(f, "Ident"),
             Protocol::Gopher => write!(f, "Gopher"),
             Protocol::Rsh => write!(f, "rsh"),
+            Protocol::Cdp => write!(f, "CDP"),
+            Protocol::Vtp => write!(f, "VTP"),
+            Protocol::Dtp => write!(f, "DTP"),
+            Protocol::Pagp => write!(f, "PAgP"),
+            Protocol::Udld => write!(f, "UDLD"),
+            Protocol::Eap => write!(f, "EAP"),
+            Protocol::Ipx => write!(f, "IPX"),
+            Protocol::Atalk => write!(f, "AppleTalk"),
+            Protocol::Aarp => write!(f, "AARP"),
+            Protocol::Ipp => write!(f, "IPP"),
+            Protocol::Rexec => write!(f, "rexec"),
+            Protocol::Sane => write!(f, "SANE"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }
