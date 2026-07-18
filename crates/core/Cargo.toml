@@ -25,8 +25,10 @@ toml = "0.8"
 memchr = "2"
 rayon = "1"
 tokio = { version = "1", features = ["rt", "sync"], optional = true }
+mlua = { version = "0.10", features = ["lua54", "vendored"], optional = true }
 # Capture encryption (ROADMAP §5.4) and TLS-inspection CA foundation (§5.1).
 aes-gcm = "0.10"
+chacha20poly1305 = "0.10"
 argon2 = "0.5"
 getrandom = "0.2"
 sha2 = "0.10"
@@ -47,6 +49,10 @@ ureq = { version = "2.9", default-features = false, features = ["tls", "json"] }
 # Async facade over the capture pipeline (see `capture::AsyncCaptureEngine`).
 # Off by default so the TUI/desktop builds stay tokio-free.
 async = ["dep:tokio"]
+# Lua scripting for user plugins (see `plugins`). Off by default because it
+# vendors and compiles Lua from source, which needs a C toolchain; without it
+# plugins still work, they just use the declarative summary template.
+lua = ["dep:mlua"]
 
 [dev-dependencies]
 criterion = "0.5"
