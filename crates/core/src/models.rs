@@ -472,6 +472,30 @@ pub enum Protocol {
     Roce,
     /// XDMCP — X Display Manager Control Protocol (UDP 177).
     Xdmcp,
+    /// IAX2 — Asterisk inter-exchange VoIP trunking (UDP 4569).
+    Iax2,
+    /// ZRTP — in-band key agreement for encrypted voice.
+    Zrtp,
+    /// SQL Server Browser instance discovery (UDP 1434).
+    MssqlBrowser,
+    /// H.225 RAS — H.323 gatekeeper registration/admission (UDP 1719).
+    H225Ras,
+    /// H.225 / Q.931 call signalling (TCP 1720).
+    Q931,
+    /// BFCP — conference floor control (TCP 3238).
+    Bfcp,
+    /// LISP — Locator/ID Separation Protocol (UDP 4341/4342).
+    Lisp,
+    /// L2TPv3 pseudowire carried on IP (protocol 115).
+    L2tpv3,
+    /// VXLAN-GPE overlay with a next-protocol field (UDP 4790).
+    VxlanGpe,
+    /// PCP / NAT-PMP port mapping (UDP 5351).
+    Pcp,
+    /// rwho host broadcasts (UDP 513).
+    Rwho,
+    /// DHCP failover peer synchronisation (TCP 647).
+    DhcpFailover,
     /// A protocol recognised by a user-defined plugin (see [`crate::plugins`]).
     /// Carries the plugin's display name and the transport it rode on, so the
     /// protocol column shows the name and flows still group by transport.
@@ -736,6 +760,18 @@ impl std::fmt::Display for Protocol {
             Protocol::Aoe => write!(f, "AoE"),
             Protocol::Roce => write!(f, "RoCE"),
             Protocol::Xdmcp => write!(f, "XDMCP"),
+            Protocol::Iax2 => write!(f, "IAX2"),
+            Protocol::Zrtp => write!(f, "ZRTP"),
+            Protocol::MssqlBrowser => write!(f, "SQLBrowser"),
+            Protocol::H225Ras => write!(f, "H225RAS"),
+            Protocol::Q931 => write!(f, "Q931"),
+            Protocol::Bfcp => write!(f, "BFCP"),
+            Protocol::Lisp => write!(f, "LISP"),
+            Protocol::L2tpv3 => write!(f, "L2TPv3"),
+            Protocol::VxlanGpe => write!(f, "VXLANGPE"),
+            Protocol::Pcp => write!(f, "PCP"),
+            Protocol::Rwho => write!(f, "rwho"),
+            Protocol::DhcpFailover => write!(f, "DHCPFailover"),
             Protocol::Plugin(p) => write!(f, "{}", p.name),
             Protocol::Unknown(s) => write!(f, "Unknown({s})"),
         }

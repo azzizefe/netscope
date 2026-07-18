@@ -6,11 +6,11 @@ use crate::models::Protocol;
 
 use super::{
     babel, bacnet, bfd, capwap, cldap, coap, collectd, dhcp, dhcpv6, dht, dnp3, dns, doip, dtls,
-    enip, ganglia, gelf, geneve, glbp, gtp, gtpprime, gvcp, hartip, hsrp, influxdb, isakmp, jaeger,
-    kerberos, knxip, l2tp, matter, megaco, mgcp, mqttsn, nbds, nbns, netflow, ntp, openvpn, pcoip,
-    pfcp, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps, sflow, sip, snmp, someip, source_query,
-    ssdp, statsd, stun, syslog, teredo, tftp, turn, vxlan, wccp, wireguard, wol, wsd, xcp, xdmcp,
-    DissectedResult,
+    enip, ganglia, gelf, geneve, glbp, gtp, gtpprime, gvcp, h225ras, hartip, hsrp, iax2, influxdb,
+    isakmp, jaeger, kerberos, knxip, l2tp, lisp, matter, megaco, mgcp, mqttsn, mssqlbrowser, nbds,
+    nbns, netflow, ntp, openvpn, pcoip, pcp, pfcp, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps,
+    rwho, sflow, sip, snmp, someip, source_query, ssdp, statsd, stun, syslog, teredo, tftp, turn,
+    vxlan, vxlangpe, wccp, wireguard, wol, wsd, xcp, xdmcp, zrtp, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -248,6 +248,28 @@ pub fn dissect_udp(
     if on(177) {
         return xdmcp::dissect_xdmcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
+    // VoIP (IAX2, H.323 RAS), overlays, port control and legacy broadcasts.
+    if on(4569) {
+        return iax2::dissect_iax2(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1719) {
+        return h225ras::dissect_h225ras(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(1434) {
+        return mssqlbrowser::dissect_mssqlbrowser(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(4341) || on(4342) {
+        return lisp::dissect_lisp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(4790) {
+        return vxlangpe::dissect_vxlangpe(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(5351) {
+        return pcp::dissect_pcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if on(513) {
+        return rwho::dissect_rwho(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
@@ -278,6 +300,11 @@ pub fn dissect_udp(
     }
     if source_query::looks_like_source(udp_payload) {
         return source_query::dissect_source_query(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // ZRTP negotiates SRTP keys inside the media stream; its magic cookie sits
+    // where RTP would put a timestamp.
+    if zrtp::looks_like_zrtp(udp_payload) {
+        return zrtp::dissect_zrtp(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     // TURN relays share STUN's ports but use a disjoint channel-number range.
     if turn::looks_like_turn(udp_payload) {

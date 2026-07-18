@@ -15,6 +15,7 @@ pub mod babel;
 pub mod bacnet;
 pub mod beanstalk;
 pub mod beats;
+pub mod bfcp;
 pub mod bfd;
 pub mod bgp;
 pub mod bittorrent;
@@ -35,6 +36,7 @@ pub mod dccp;
 pub mod dcerpc;
 pub mod decnet;
 pub mod dhcp;
+pub mod dhcpfo;
 pub mod dhcpv6;
 pub mod dht;
 pub mod diameter;
@@ -75,12 +77,14 @@ pub mod gre;
 pub mod gtp;
 pub mod gtpprime;
 pub mod gvcp;
+pub mod h225ras;
 pub mod hadooprpc;
 pub mod hartip;
 pub mod hl7;
 pub mod hsrp;
 pub mod http;
 pub mod http2;
+pub mod iax2;
 pub mod ica;
 pub mod icmp;
 pub mod ident;
@@ -101,9 +105,11 @@ pub mod kerberos;
 pub mod knxip;
 pub mod l2cap;
 pub mod l2tp;
+pub mod l2tpv3;
 pub mod lacp;
 pub mod ldap;
 pub mod ldp;
+pub mod lisp;
 pub mod lldp;
 pub mod lpd;
 pub mod macsec;
@@ -120,6 +126,7 @@ pub mod mpls;
 pub mod mqtt;
 pub mod mqttsn;
 pub mod msrp;
+pub mod mssqlbrowser;
 pub mod mumble;
 pub mod mysql;
 pub mod mysqlx;
@@ -144,6 +151,7 @@ pub mod ospf;
 pub mod pagp;
 pub mod pap;
 pub mod pcoip;
+pub mod pcp;
 pub mod pfcp;
 pub mod pim;
 pub mod pop3;
@@ -155,6 +163,7 @@ pub mod pptp;
 pub mod profinet;
 pub mod ptp;
 pub mod pulsar;
+pub mod q931;
 pub mod qpack;
 pub mod radiotap;
 pub mod radius;
@@ -180,6 +189,7 @@ pub mod rtmp;
 pub mod rtp;
 pub mod rtps;
 pub mod rtsp;
+pub mod rwho;
 pub mod s7comm;
 pub mod sane;
 pub mod sctp;
@@ -226,6 +236,7 @@ pub mod vines;
 pub mod vrrp;
 pub mod vtp;
 pub mod vxlan;
+pub mod vxlangpe;
 pub mod wccp;
 pub mod websocket;
 pub mod whois;
@@ -241,6 +252,7 @@ pub mod zabbix;
 pub mod zigbee;
 pub mod zmtp;
 pub mod zookeeper;
+pub mod zrtp;
 
 use std::net::IpAddr;
 
@@ -552,6 +564,7 @@ fn dispatch_transport(
         Some(132) => sctp::dissect_sctp(src_ip, dst_ip, &payload),
         Some(33) => dccp::dissect_dccp(src_ip, dst_ip, &payload),
         Some(46) => rsvp::dissect_rsvp(src_ip, dst_ip, &payload),
+        Some(115) => l2tpv3::dissect_l2tpv3(src_ip, dst_ip, &payload),
         // Interior routing (EIGRP 88, PIM 103) and gateway redundancy (VRRP 112).
         Some(88) => eigrp::dissect_eigrp(src_ip, dst_ip, &payload),
         Some(103) => pim::dissect_pim(src_ip, dst_ip, &payload),
@@ -1346,5 +1359,74 @@ mod bench {
             "Performance too low: {:.0} pkt/s (need > 100k)",
             rate
         );
+    }
+}
+#[cfg(test)]
+mod batch16_dispatch_check {
+    use crate::dissectors::{tcp::dissect_tcp, udp::dissect_udp};
+    use crate::models::Protocol;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    fn ip() -> Option<IpAddr> {
+        Some(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)))
+    }
+
+    fn udp(sport: u16, dport: u16, body: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&sport.to_be_bytes());
+        v.extend_from_slice(&dport.to_be_bytes());
+        v.extend_from_slice(&((8 + body.len()) as u16).to_be_bytes());
+        v.extend_from_slice(&[0, 0]);
+        v.extend_from_slice(body);
+        v
+    }
+
+    fn tcp(sport: u16, dport: u16, body: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&sport.to_be_bytes());
+        v.extend_from_slice(&dport.to_be_bytes());
+        v.extend_from_slice(&[0, 0, 0, 1]);
+        v.extend_from_slice(&[0, 0, 0, 1]);
+        v.extend_from_slice(&[0x50, 0x18, 0xff, 0xff, 0, 0, 0, 0]);
+        v.extend_from_slice(body);
+        v
+    }
+
+    #[test]
+    fn batch16_routes() {
+        let body = [0u8; 32];
+        for (port, want) in [
+            (4569u16, Protocol::Iax2),
+            (1434, Protocol::MssqlBrowser),
+            (1719, Protocol::H225Ras),
+            (4341, Protocol::Lisp),
+            (4790, Protocol::VxlanGpe),
+            (5351, Protocol::Pcp),
+            (513, Protocol::Rwho),
+        ] {
+            let p = udp(40000, port, &body);
+            let r = dissect_udp(ip(), ip(), &p);
+            assert_eq!(r.protocol, want, "udp {port} -> {:?}", r.protocol);
+        }
+        for (port, want) in [
+            (1720u16, Protocol::Q931),
+            (3238, Protocol::Bfcp),
+            (647, Protocol::DhcpFailover),
+        ] {
+            let p = tcp(40000, port, &body);
+            let r = dissect_tcp(ip(), ip(), &p);
+            assert_eq!(r.protocol, want, "tcp {port} -> {:?}", r.protocol);
+        }
+        // ZRTP is recognised structurally, on any port.
+        let mut z = vec![0x10, 0x00, 0x00, 0x00];
+        z.extend_from_slice(b"ZRTP");
+        z.extend_from_slice(&[0u8; 24]);
+        let r = dissect_udp(ip(), ip(), &udp(40000, 40001, &z));
+        assert_eq!(r.protocol, Protocol::Zrtp, "zrtp -> {:?}", r.protocol);
+        // …and does not swallow ordinary RTP.
+        let mut rtp = vec![0x80, 0x00];
+        rtp.extend_from_slice(&[0u8; 30]);
+        let r = dissect_udp(ip(), ip(), &udp(40000, 40001, &rtp));
+        assert_ne!(r.protocol, Protocol::Zrtp);
     }
 }
