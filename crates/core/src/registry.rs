@@ -640,6 +640,42 @@ protocols! {
         aliases:   [],
         blurb:     "A link-aggregation message (LACP) — two switches bonding several cables into one link.",
     }
+    Mka {
+        doc:       "MACsec Key Agreement (IEEE 802.1X-2010), carried in EAPOL.",
+        display:   "MKA",
+        color:     0x6EA8C4,
+        transport: Other,
+        rank:      3,
+        aliases:   ["mka"],
+        blurb:     "The key agreement MACsec needs before it encrypts anything — and where that agreement quietly fails.",
+    }
+    Kpasswd {
+        doc:       "Kerberos password change and administrative set (RFC 3244, port 464).",
+        display:   "kpasswd",
+        color:     0xC4956E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["kpasswd"],
+        blurb:     "A Kerberos password being changed by its owner, or reset by an administrator.",
+    }
+    Milter {
+        doc:       "Sendmail mail filter protocol (TCP 8891).",
+        display:   "Milter",
+        color:     0x9E7BB5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["milter"],
+        blurb:     "A mail filter's verdict on a message — including the silent discard that makes mail vanish without a bounce.",
+    }
+    Lmtp {
+        doc:       "LMTP local mail delivery (RFC 2033, TCP 24).",
+        display:   "LMTP",
+        color:     0x7BB58E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["lmtp"],
+        blurb:     "Mail being filed into mailboxes (LMTP) — with one delivery status per recipient, so partial failures are visible.",
+    }
     LinkOam {
         doc:       "IEEE 802.3ah link OAM — link health, and a device's dying gasp.",
         display:   "Link OAM",

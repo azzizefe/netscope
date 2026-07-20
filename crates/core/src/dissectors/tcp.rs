@@ -8,9 +8,9 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    adsb, amqp1, bindings, bitcoin, bittorrent, ceph, drda, fix, hl7, http, http2, ibmmq, lustre,
-    mbus, memcached_bin, mms, mysqlx, nmea, ntlm, openvpn, redis_cluster, s7comm, someip, spice,
-    syslog, thrift, websocket, x11, zmtp, DissectedResult,
+    adsb, amqp1, bindings, bitcoin, bittorrent, ceph, drda, fix, hl7, http, http2, ibmmq, lmtp,
+    lustre, mbus, memcached_bin, mms, mysqlx, nmea, ntlm, openvpn, redis_cluster, s7comm, someip,
+    spice, syslog, thrift, websocket, x11, zmtp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -302,6 +302,12 @@ fn dissect_tcp_inner(
         // to anything, so the framing has to agree before the flow is claimed.
         if on(10001) && mbus::looks_like_mbus(tcp_payload) {
             return mbus::dissect_mbus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // LMTP is SMTP with one verb changed, and after the greeting the two
+        // are indistinguishable — so it is claimed on that verb rather than on
+        // the port, which SMTP submission also uses in some deployments.
+        if on(24) && lmtp::looks_like_lmtp(tcp_payload) {
+            return lmtp::dissect_lmtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
 
         // TCP 514 is assigned to rsh, but syslog-over-TCP squats there in
