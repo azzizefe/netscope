@@ -525,6 +525,57 @@ is still valid. It's one of the 802.3 'slow protocols', sent a couple of times a
 second on the link itself.",
             look_for: "\"LACP v1 — link aggregation\" exchanged periodically between two switches forming a bundle.",
         },
+        Protocol::Mka => Lesson {
+            title: "MKA — the handshake MACsec needs before it encrypts anything",
+            summary: "Key agreement for MACsec, and a very quiet way for it to fail.",
+            body: "MACsec encrypts a link at layer 2, but only after both ends agree a \
+key. MKA is that agreement: peers announce themselves, elect a key server, and \
+the server distributes the session key.\n\n\
+Failure here is silent. If key agreement never completes the link does not \
+encrypt — and depending on configuration it either carries traffic in the clear \
+or carries nothing at all, with no error anywhere above. The tell is the peer \
+lists: a peer that stays in the potential list and never reaches the live list \
+is one whose messages arrive but whose answers are not accepted, which is almost \
+always a mismatched connectivity association key.",
+            look_for: "\"MKA key server (priority 0) — live peer list\" when healthy; a peer stuck on \"potential peer list\", or \"MACsec not desired\", when it is not.",
+        },
+        Protocol::Kpasswd => Lesson {
+            title: "kpasswd — changing a Kerberos password, or resetting someone else's",
+            summary: "Two very different operations sharing one port.",
+            body: "A change is a user replacing their own password, having proved they \
+know the old one. A set is an administrator overwriting somebody else's without \
+knowing it. Same wire protocol, same port, different version number — and quite \
+a different thing to find in a capture you did not expect it in.\n\n\
+What netscope cannot tell you is whether it worked. The result code lives inside \
+the KRB-PRIV structure, which is encrypted with the session key, so the summary \
+stops where the encryption does rather than guessing.",
+            look_for: "\"kpasswd password change — request\" for the routine case; \"password set (an administrator overwriting an account's password)\" for the one worth asking about.",
+        },
+        Protocol::Milter => Lesson {
+            title: "Milter — where mail quietly disappears",
+            summary: "A mail server asking its filters what to do with each message.",
+            body: "A mail server hands each message to its filters — spam scoring, \
+signing, virus scanning, policy — and each one answers. Most answers are dull.\n\n\
+One is not. A discard tells the server to accept the message and then throw it \
+away: the sender is told it succeeded, the recipient never receives anything, and \
+no bounce is generated. Mail that vanishes leaving no trace in any log is usually \
+this, and the capture is the only place it is visible. A reject, by contrast, \
+bounces and is therefore visible to the sender.",
+            look_for: "\"milter — discard silently (the sender is told it was accepted)\" — the answer that explains mail nobody can find.",
+        },
+        Protocol::Lmtp => Lesson {
+            title: "LMTP — the last hop, where mail is actually filed",
+            summary: "Like SMTP, but with one delivery status per recipient.",
+            body: "LMTP looks like SMTP and shares most of its verbs, but it does a \
+different job: handing a message from the mail server to whatever stores it. \
+Dovecot, Cyrus and Postfix's local delivery all speak it.\n\n\
+The difference that matters is at the end. SMTP answers with a single status for \
+the whole message; LMTP answers with one status per recipient. That is the whole \
+reason it exists — a message to five mailboxes can succeed for four and fail for \
+the fifth, and only here is that visible. A message that 'was delivered' but is \
+missing from one mailbox is exactly this.",
+            look_for: "\"LMTP 1 of 3 recipients failed\" — a partial delivery that no single status upstream could have expressed.",
+        },
         Protocol::LinkOam => Lesson {
             title: "Link OAM — a link reporting its own health, and its own death",
             summary: "Mostly dull keepalives, with two exceptions worth knowing.",

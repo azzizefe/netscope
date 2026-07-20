@@ -22,6 +22,9 @@ pub fn dissect_eapol(payload: &[u8]) -> DissectedResult {
             Some(text) => format!("EAPOL {text}"),
             None => "EAPOL Key (WPA handshake)".to_string(),
         },
+        // Type 5 is MACsec key agreement, which has its own state worth
+        // reading — a link that never encrypts fails here and nowhere else.
+        Some(&5) if payload.len() > 4 => return super::mka::result(&payload[4..]),
         Some(&t) => {
             let name = match t {
                 0 => "EAP packet",
