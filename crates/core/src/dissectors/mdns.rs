@@ -272,10 +272,29 @@ mod tests {
         assert!(split_instance("_tcp.local").is_none());
     }
 
-    /// An instance label may contain dots and spaces; the split has to work
-    /// from the right, not the left.
+    /// The service type is the *last* underscore label, not the first. DNS-SD
+    /// subtype browsing puts another one in front — `_universal._sub._ipp._tcp`
+    /// asks for printers supporting a subtype — and searching from the left
+    /// would report the service as `_sub._ipp`, which is not a service at all.
     #[test]
-    fn the_split_works_from_the_right() {
+    fn the_split_takes_the_last_underscore_label_not_the_first() {
+        let parsed = split_instance("_universal._sub._ipp._tcp.local").unwrap();
+        assert_eq!(parsed.service, "_ipp");
+        assert_eq!(parsed.label.unwrap(), "_universal._sub");
+
+        let r = dissect_mdns(
+            None,
+            None,
+            5353,
+            5353,
+            &query("_universal._sub._ipp._tcp.local"),
+        );
+        assert!(r.summary.contains("printing"), "{}", r.summary);
+    }
+
+    /// An instance label may contain dots and spaces of its own.
+    #[test]
+    fn an_instance_label_may_contain_dots() {
         let parsed = split_instance("Ed's MacBook Pro (2).._airplay._tcp.local").unwrap();
         assert_eq!(parsed.service, "_airplay");
         assert!(parsed.label.unwrap().starts_with("Ed's MacBook Pro"));
