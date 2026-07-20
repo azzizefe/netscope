@@ -2138,6 +2138,31 @@ about. On Linux, SocketCAN exposes canN/vcanN interfaces netscope can \
 capture like any NIC.",
             look_for: "\"CAN 0x244 [8]  12 0A 00 F3 …\" — the ID, the byte count, and the raw data bytes.",
         },
+        Protocol::J1939 => Lesson {
+            title: "J1939 — the language trucks speak over CAN",
+            summary: "Turns a 29-bit CAN identifier into a message name and a sender.",
+            body: "Plain CAN gives you an identifier and eight bytes. J1939, which \
+every heavy truck, bus and agricultural machine runs, divides that identifier \
+into a priority, a parameter group number naming the message, and the address \
+of the ECU that sent it. So a frame stops being hex and becomes 'engine \
+temperature, from the engine'. The one to look for is DM1 — the check-engine \
+light itself, carrying the code for every fault currently active.\n\n\
+Not every 29-bit frame is J1939, so netscope only claims one whose parameter \
+group the standard actually defines; anything else stays a plain CAN frame.",
+            look_for: "\"J1939 engine speed (from engine)\"; and \"J1939 DM1 — fault lamp lit, SPN 100 FMI 1\" when something is wrong.",
+        },
+        Protocol::Obd2 => Lesson {
+            title: "OBD-II — what the garage's scan tool asks your car",
+            summary: "Diagnostic requests and replies, decoded into real units.",
+            body: "Every car since the mid-90s has a diagnostic port, and what comes \
+out of it is OBD-II over CAN. It is the rare CAN protocol you can identify with \
+certainty, because the standard reserves the identifiers: 0x7DF asks whichever \
+ECU can answer, 0x7E0-0x7E7 ask one directly, and 0x7E8-0x7EF are the replies. \
+The encodings are fixed too, so netscope converts them into the numbers a \
+mechanic reads — engine speed in rpm, coolant in degrees — rather than leaving \
+two bytes of hex.",
+            look_for: "\"OBD-II request engine speed\" then \"OBD-II engine speed — 750 rpm\"; \"OBD-II stored fault codes\" when reading why the light is on.",
+        },
         Protocol::Ntlm => Lesson {
             title: "NTLM — Windows network authentication",
             summary: "Microsoft's legacy authentication protocol used to log in to servers.",
