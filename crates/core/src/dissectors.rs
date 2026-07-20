@@ -123,6 +123,7 @@ pub mod isakmp;
 pub mod iscsi;
 pub mod isis;
 pub mod isup;
+pub mod j1939;
 pub mod jaeger;
 pub mod kafka;
 pub mod kerberos;
@@ -190,6 +191,7 @@ pub mod nsq;
 pub mod ntlm;
 pub mod ntp;
 pub mod nvmeof;
+pub mod obd2;
 pub mod olsr;
 pub mod opcua;
 pub mod openflow;
@@ -2699,6 +2701,8 @@ mod robustness {
             include_str!("dissectors/bluetooth.rs"),
             include_str!("dissectors/l2cap.rs"),
             include_str!("dissectors/wlan.rs"),
+            // A CAN frame's identifier selects the bus protocol above it.
+            include_str!("dissectors/can.rs"),
         ];
 
         let mut unreachable = Vec::new();

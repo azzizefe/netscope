@@ -685,6 +685,24 @@ protocols! {
         aliases:   ["can"],
         blurb:     "A CAN bus frame — broadcast data on a vehicle or industrial controller network.",
     }
+    J1939 {
+        doc:       "SAE J1939 — the message layer heavy vehicles run over CAN.",
+        display:   "J1939",
+        color:     0xC2874A,
+        transport: Other,
+        rank:      2,
+        aliases:   ["j1939"],
+        blurb:     "A truck or bus ECU message (SAE J1939) — the identifier names both the message and the box that sent it.",
+    }
+    Obd2 {
+        doc:       "OBD-II over CAN — diagnostic requests and replies on the identifiers the standard reserves.",
+        display:   "OBD-II",
+        color:     0xE0A33A,
+        transport: Other,
+        rank:      2,
+        aliases:   ["obd2", "obdii", "obd"],
+        blurb:     "A diagnostic scan-tool exchange (OBD-II) — asking a car for engine speed, coolant temperature or fault codes.",
+    }
     Ntlm {
         doc:       "NT LAN Manager Security Support Provider (NTLMSSP).",
         display:   "NTLM",

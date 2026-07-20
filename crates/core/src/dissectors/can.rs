@@ -83,6 +83,22 @@ pub fn dissect_can(data: &[u8]) -> DissectedResult {
         format!("  {}{}", hex.join(" "), ellipsis)
     };
 
+    // An identifier is not an opaque number. A 29-bit one whose parameter group
+    // the J1939 standard defines, or an 11-bit one in the range OBD-II owns,
+    // says what the frame is about — which beats a line of hex.
+    //
+    // Neither is claimed on shape alone: J1939 needs a group number the
+    // standard actually lists, and OBD-II's identifiers are reserved by it. A
+    // proprietary bus using extended identifiers stays a plain CAN frame.
+    if !rtr && !error {
+        if extended && super::j1939::looks_like_j1939(id) {
+            return super::j1939::result(id, payload);
+        }
+        if !extended && super::obd2::owns_id(id) {
+            return super::obd2::result(id, payload);
+        }
+    }
+
     let width = if extended { 8 } else { 3 };
     DissectedResult {
         summary: format!("CAN 0x{id:0width$X} [{len}]{notes}{data_part}"),
@@ -140,5 +156,49 @@ mod tests {
     fn truncated_frame_is_malformed() {
         let r = dissect_can(&[0, 0, 1]);
         assert!(matches!(r.protocol, Protocol::Unknown(_)));
+    }
+
+    /// An extended frame whose parameter group the standard defines is a truck
+    /// message, and saying which one beats printing its identifier.
+    #[test]
+    fn a_known_j1939_frame_is_lifted_out_of_the_hex() {
+        // 0x18FEEE00: engine temperature, from the engine.
+        let r = dissect_can(&frame(0x18FE_EE00 | CAN_EFF_FLAG, &[0u8; 8]));
+        assert_eq!(r.protocol, Protocol::J1939);
+        assert_eq!(r.summary, "J1939 engine temperature 1 (from engine)");
+    }
+
+    /// An extended frame that is not J1939 must keep its identifier rather than
+    /// be given an invented message name.
+    #[test]
+    fn an_unknown_extended_frame_stays_a_can_frame() {
+        let r = dissect_can(&frame(0x18AB_0001 | CAN_EFF_FLAG, &[0x01, 0x02]));
+        assert_eq!(r.protocol, Protocol::Can);
+        assert!(r.summary.starts_with("CAN 0x18AB0001"), "{}", r.summary);
+    }
+
+    /// OBD-II owns its identifiers outright, so a scanner's traffic resolves to
+    /// the value a mechanic would read.
+    #[test]
+    fn an_obd2_reply_is_lifted_out_of_the_hex() {
+        let r = dissect_can(&frame(0x7E8, &[0x04, 0x41, 0x0C, 0x0B, 0xB8]));
+        assert_eq!(r.protocol, Protocol::Obd2);
+        assert_eq!(r.summary, "OBD-II engine speed — 750 rpm");
+    }
+
+    /// An ordinary 11-bit frame outside that range is still just a CAN frame.
+    #[test]
+    fn an_ordinary_standard_frame_stays_a_can_frame() {
+        let r = dissect_can(&frame(0x123, &[0xDE, 0xAD]));
+        assert_eq!(r.protocol, Protocol::Can);
+        assert!(r.summary.starts_with("CAN 0x123"), "{}", r.summary);
+    }
+
+    /// A remote request carries no data, so there is nothing to interpret and
+    /// it must not be handed to a higher dissector.
+    #[test]
+    fn a_remote_request_is_not_interpreted() {
+        let r = dissect_can(&frame(0x7E8 | CAN_RTR_FLAG, &[]));
+        assert_eq!(r.protocol, Protocol::Can);
     }
 }
