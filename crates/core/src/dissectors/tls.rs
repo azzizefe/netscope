@@ -781,6 +781,8 @@ pub fn dissect_tls(
         }
     } else if let Some(s) = server_hello {
         format!("TLS ServerHello · JA3S {}", ja3s_hash(&s))
+    } else if let Some(alert) = alert_summary(payload) {
+        alert
     } else {
         if payload.len() > 5 && payload[0] == 0x16 && payload[1] == 0x03 {
             "TLS Handshake".into()
@@ -799,6 +801,86 @@ pub fn dissect_tls(
         protocol: Protocol::Tls,
         summary,
     }
+}
+
+/// The record type carrying an alert.
+const CONTENT_TYPE_ALERT: u8 = 21;
+/// A fatal alert ends the connection; a warning need not.
+const ALERT_LEVEL_FATAL: u8 = 2;
+
+/// Why a TLS connection was torn down.
+///
+/// This is the answer to "why does HTTPS not work here", and it is otherwise
+/// invisible — a failed handshake looks like a connection that simply stopped.
+/// A few are worth knowing on sight: `unknown_ca` is a certificate whose issuer
+/// the client does not trust (a self-signed certificate, or a corporate root
+/// that was never installed), `certificate_expired` speaks for itself, and
+/// `unrecognized_name` means the server had no certificate for the name the
+/// client asked for.
+fn alert_description(code: u8) -> Option<&'static str> {
+    Some(match code {
+        0 => "close notify",
+        10 => "unexpected message",
+        20 => "bad record MAC",
+        21 => "decryption failed",
+        22 => "record overflow",
+        30 => "decompression failure",
+        40 => "handshake failure (no cipher in common)",
+        41 => "no certificate",
+        42 => "bad certificate",
+        43 => "unsupported certificate",
+        44 => "certificate revoked",
+        45 => "certificate expired",
+        46 => "certificate unknown",
+        47 => "illegal parameter",
+        48 => "unknown certificate authority (untrusted issuer)",
+        49 => "access denied",
+        50 => "decode error",
+        51 => "decrypt error",
+        70 => "protocol version not supported",
+        71 => "insufficient security",
+        80 => "internal error",
+        86 => "inappropriate fallback",
+        90 => "user cancelled",
+        100 => "no renegotiation",
+        109 => "missing extension",
+        110 => "unsupported extension",
+        112 => "unrecognized server name",
+        113 => "bad certificate status response",
+        115 => "unknown PSK identity",
+        116 => "certificate required",
+        120 => "no application protocol in common",
+        _ => return None,
+    })
+}
+
+/// Read an alert record, if this payload is one.
+///
+/// Only alerts sent in the clear are readable — in TLS 1.3 everything after the
+/// handshake is encrypted, so a `close notify` at the end of a session will not
+/// appear here. The ones that explain a failure are sent during the handshake
+/// and are visible.
+fn alert_summary(payload: &[u8]) -> Option<String> {
+    if *payload.first()? != CONTENT_TYPE_ALERT || *payload.get(1)? != 0x03 {
+        return None;
+    }
+    // The record length must agree, which is what keeps an encrypted record
+    // whose first byte happens to be 21 from being read as an alert.
+    let len = u16::from_be_bytes([*payload.get(3)?, *payload.get(4)?]) as usize;
+    if len != 2 || payload.len() < 7 {
+        return None;
+    }
+    let level = payload[5];
+    let code = payload[6];
+    let severity = if level == ALERT_LEVEL_FATAL {
+        "fatal"
+    } else {
+        "warning"
+    };
+    Some(match alert_description(code) {
+        Some(text) => format!("TLS alert ({severity}) — {text}"),
+        None => format!("TLS alert ({severity}) — description {code}"),
+    })
 }
 
 /// The fields of a TLS ClientHello that JA3 and JA4 fingerprints are computed
@@ -1987,5 +2069,75 @@ mod tests {
         let cert_pem = sign_host_cert("example.com", &ca, &ca_key).unwrap();
         assert!(cert_pem.contains("-----BEGIN CERTIFICATE-----"));
         assert!(cert_pem.contains("-----END CERTIFICATE-----"));
+    }
+
+    /// Build an alert record.
+    fn alert(level: u8, description: u8) -> Vec<u8> {
+        vec![
+            CONTENT_TYPE_ALERT,
+            0x03,
+            0x03,
+            0x00,
+            0x02,
+            level,
+            description,
+        ]
+    }
+
+    /// A failed handshake otherwise looks like a connection that simply
+    /// stopped. The alert is the only thing that says why.
+    #[test]
+    fn an_alert_explains_why_the_connection_failed() {
+        let r = dissect_tls(None, None, 40000, 443, &alert(ALERT_LEVEL_FATAL, 48));
+        assert_eq!(r.protocol, Protocol::Tls);
+        assert_eq!(
+            r.summary,
+            "TLS alert (fatal) — unknown certificate authority (untrusted issuer)"
+        );
+        assert_eq!(
+            dissect_tls(None, None, 443, 1, &alert(ALERT_LEVEL_FATAL, 45)).summary,
+            "TLS alert (fatal) — certificate expired"
+        );
+        assert_eq!(
+            dissect_tls(None, None, 443, 1, &alert(ALERT_LEVEL_FATAL, 40)).summary,
+            "TLS alert (fatal) — handshake failure (no cipher in common)"
+        );
+    }
+
+    /// A fatal alert ends the connection; a warning does not, and a close
+    /// notify is an ordinary shutdown rather than a problem.
+    #[test]
+    fn severity_is_distinguished() {
+        assert!(dissect_tls(None, None, 443, 1, &alert(1, 0))
+            .summary
+            .contains("(warning) — close notify"));
+        assert!(dissect_tls(None, None, 443, 1, &alert(2, 80))
+            .summary
+            .contains("(fatal) — internal error"));
+    }
+
+    /// The length field has to agree, so an encrypted record whose first byte
+    /// happens to be 21 is not read as an alert.
+    #[test]
+    fn an_encrypted_record_is_not_misread_as_an_alert() {
+        // Content type 21 but a body far longer than an alert's two bytes.
+        let mut record = vec![CONTENT_TYPE_ALERT, 0x03, 0x03, 0x01, 0x00];
+        record.extend_from_slice(&[0xAB; 256]);
+        let summary = dissect_tls(None, None, 443, 1, &record).summary;
+        assert!(!summary.contains("alert"), "{summary}");
+        assert!(summary.contains("encrypted data"), "{summary}");
+
+        assert!(alert_summary(b"GET / HTTP/1.1\r\n\r\n").is_none());
+        assert!(alert_summary(&[]).is_none());
+    }
+
+    /// A description outside the standard keeps its number rather than being
+    /// mapped to whichever alert was nearest.
+    #[test]
+    fn an_unknown_description_keeps_its_number() {
+        assert_eq!(
+            dissect_tls(None, None, 443, 1, &alert(2, 200)).summary,
+            "TLS alert (fatal) — description 200"
+        );
     }
 }

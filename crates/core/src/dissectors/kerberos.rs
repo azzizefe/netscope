@@ -144,8 +144,129 @@ pub fn dissect_kerberos(
     };
 
     match tag {
+        // An error message carries the reason it failed, and that reason is the
+        // only useful thing in it — "KRB-ERROR" alone says a login did not work
+        // without saying whether the password was wrong, the account locked or
+        // the clocks simply disagree.
+        Some(0x7E) => {
+            let body = if payload.first() == Some(&0x7E) {
+                payload
+            } else {
+                payload.get(4..).unwrap_or(payload)
+            };
+            match error_code(body) {
+                Some(code) => result(format!("Kerberos error — {}", error_text(code))),
+                None => result("Kerberos KRB-ERROR".into()),
+            }
+        }
         Some(t) => result(format!("Kerberos {}", message_name(t))),
         None => result("Kerberos (encrypted/continuation)".into()),
+    }
+}
+
+/// Read a DER length, returning it and how many bytes it occupied.
+fn der_length(data: &[u8], at: usize) -> Option<(usize, usize)> {
+    let first = *data.get(at)?;
+    if first < 0x80 {
+        return Some((first as usize, 1));
+    }
+    // The long form encodes the number of length bytes in the low seven bits.
+    let count = (first & 0x7F) as usize;
+    if count == 0 || count > 4 {
+        return None;
+    }
+    let mut len = 0usize;
+    for i in 0..count {
+        len = (len << 8) | *data.get(at + 1 + i)? as usize;
+    }
+    Some((len, count + 1))
+}
+
+/// The `error-code` field of a KRB-ERROR, which is context tag 6.
+///
+/// This walks the top-level fields rather than scanning for a byte pattern: the
+/// fields that precede it encode identically, so a scan would return whichever
+/// came first — the protocol version, not the error.
+fn error_code(body: &[u8]) -> Option<i64> {
+    // [APPLICATION 30] wrapping a SEQUENCE.
+    if *body.first()? != 0x7E {
+        return None;
+    }
+    let (_, header) = der_length(body, 1)?;
+    let seq_at = 1 + header;
+    if *body.get(seq_at)? != 0x30 {
+        return None;
+    }
+    let (seq_len, seq_header) = der_length(body, seq_at + 1)?;
+    let mut at = seq_at + 1 + seq_header;
+    let end = (at + seq_len).min(body.len());
+
+    while at < end {
+        let tag = *body.get(at)?;
+        let (len, header) = der_length(body, at + 1)?;
+        let value_at = at + 1 + header;
+        // Context tag 6 holds the error code, as an INTEGER.
+        if tag == 0xA6 {
+            let inner = body.get(value_at..value_at + len)?;
+            if *inner.first()? != 0x02 {
+                return None;
+            }
+            let (int_len, int_header) = der_length(inner, 1)?;
+            let digits = inner.get(1 + int_header..1 + int_header + int_len)?;
+            let mut value = 0i64;
+            for &b in digits {
+                value = (value << 8) | b as i64;
+            }
+            return Some(value);
+        }
+        at = value_at + len;
+    }
+    None
+}
+
+/// What a Kerberos error means.
+///
+/// Restricted to the codes that come up in practice, because the point is to
+/// separate the ones that need different responses: a wrong password, a locked
+/// account and a clock that has drifted all present as "login failed".
+fn error_name(code: i64) -> Option<&'static str> {
+    Some(match code {
+        6 => "the user does not exist",
+        7 => "the service does not exist (missing service principal name)",
+        8 => "multiple principal entries",
+        9 => "the client has no key",
+        10 => "the service has no key",
+        11 => "the request could not be satisfied",
+        12 => "policy forbids this logon (time of day, or workstation)",
+        13 => "bad option",
+        14 => "no encryption type in common",
+        15 => "no checksum type in common",
+        16 => "unsupported checksum for this key type",
+        17 => "no matching padata type",
+        18 => "the account is disabled, locked or expired",
+        19 => "the service is not permitted",
+        20 => "the ticket-granting ticket has been revoked",
+        21 => "the ticket is not yet valid",
+        22 => "the ticket has expired",
+        23 => "the password has expired",
+        24 => "pre-authentication failed (usually a wrong password)",
+        25 => "pre-authentication required",
+        26 => "the server is not permitted",
+        32 => "the ticket has expired",
+        33 => "the ticket is not yet valid",
+        34 => "the request is a replay",
+        35 => "the ticket is not for this server",
+        37 => "clock skew too great (the two machines disagree on the time)",
+        41 => "the message was modified (often a keytab or SPN mismatch)",
+        52 => "the response is too large for UDP — retry over TCP",
+        _ => return None,
+    })
+}
+
+fn error_text(code: i64) -> String {
+    match error_name(code) {
+        Some(text) => format!("{text} (code {code})"),
+        None => format!("code {code}"),
     }
 }
 
@@ -247,5 +368,90 @@ mod tests {
         let res = dissect_kerberos(None, None, 88, 50000, &krb_data);
         assert!(res.summary.contains("[Kerberos Decrypted]"));
         assert!(res.summary.contains("admin/admin@REALM"));
+    }
+
+    /// Build a KRB-ERROR carrying the given code, with the fields that precede
+    /// error-code present so the walk has to step over them.
+    fn error_message(code: u8) -> Vec<u8> {
+        let mut seq = vec![
+            0xA0, 0x03, 0x02, 0x01, 0x05, // pvno = 5
+            0xA1, 0x03, 0x02, 0x01, 0x1E, // msg-type = 30
+        ];
+        seq.extend_from_slice(&[0xA4, 0x03, 0x02, 0x01, 0x00]); // stime
+        seq.extend_from_slice(&[0xA5, 0x03, 0x02, 0x01, 0x00]); // susec
+        seq.extend_from_slice(&[0xA6, 0x03, 0x02, 0x01, code]); // error-code
+        let mut body = vec![0x30, seq.len() as u8];
+        body.extend_from_slice(&seq);
+        let mut out = vec![0x7E, body.len() as u8];
+        out.extend_from_slice(&body);
+        out
+    }
+
+    /// "KRB-ERROR" alone says a login failed without saying why, and the three
+    /// commonest causes need completely different responses.
+    #[test]
+    fn an_error_says_which_failure_it_was() {
+        assert_eq!(
+            dissect_kerberos(None, None, 88, 50000, &error_message(24)).summary,
+            "Kerberos error — pre-authentication failed (usually a wrong password) (code 24)"
+        );
+        assert!(dissect_kerberos(None, None, 88, 50000, &error_message(18))
+            .summary
+            .contains("disabled, locked or expired"));
+        assert!(dissect_kerberos(None, None, 88, 50000, &error_message(37))
+            .summary
+            .contains("clock skew"));
+    }
+
+    /// Pre-authentication required is the normal first step of a login, not a
+    /// failure, and reading it as one would make every successful logon look
+    /// broken.
+    #[test]
+    fn the_routine_preauth_challenge_is_named_plainly() {
+        let summary = dissect_kerberos(None, None, 88, 50000, &error_message(25)).summary;
+        assert!(summary.contains("pre-authentication required"), "{summary}");
+    }
+
+    /// A missing service principal name is the classic cause of a service that
+    /// authenticates everywhere except one host.
+    #[test]
+    fn a_missing_service_principal_is_named() {
+        assert!(dissect_kerberos(None, None, 88, 50000, &error_message(7))
+            .summary
+            .contains("missing service principal name"));
+    }
+
+    /// The code is found by walking the fields, not by scanning for a byte
+    /// pattern: the fields before it encode identically, and a scan would
+    /// return the protocol version instead.
+    #[test]
+    fn the_walk_skips_the_fields_before_the_error_code() {
+        let summary = dissect_kerberos(None, None, 88, 50000, &error_message(24)).summary;
+        assert!(summary.contains("code 24"), "{summary}");
+        assert!(
+            !summary.contains("code 5"),
+            "returned a preceding field instead"
+        );
+    }
+
+    /// A code outside the table keeps its number rather than being mapped to
+    /// whichever error was nearest.
+    #[test]
+    fn an_unknown_error_code_keeps_its_number() {
+        assert_eq!(
+            dissect_kerberos(None, None, 88, 50000, &error_message(99)).summary,
+            "Kerberos error — code 99"
+        );
+    }
+
+    /// A malformed or truncated error must fall back rather than panic.
+    #[test]
+    fn a_malformed_error_falls_back() {
+        assert_eq!(
+            dissect_kerberos(None, None, 88, 50000, &[0x7E, 0x02, 0x30, 0x00]).summary,
+            "Kerberos KRB-ERROR"
+        );
+        assert!(error_code(&[0x7E]).is_none());
+        assert!(error_code(&[]).is_none());
     }
 }
