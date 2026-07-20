@@ -20,7 +20,12 @@ pub fn dissect_someip(
         let service_id = u16::from_be_bytes([payload[0], payload[1]]);
         let method_id = u16::from_be_bytes([payload[2], payload[3]]);
         if service_id == 0xFFFF && method_id == 0x8100 {
-            "SOME/IP-SD (service discovery)".to_string()
+            // Service discovery is where the interesting failures live — an
+            // offer that never arrives, a subscription refused — so it gets its
+            // own dissector rather than a flat label.
+            return super::someip_sd::dissect_someip_sd(
+                src_ip, dst_ip, src_port, dst_port, payload,
+            );
         } else {
             let kind = match payload[14] {
                 0x00 => "Request",

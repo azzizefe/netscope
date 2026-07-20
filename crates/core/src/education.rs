@@ -320,6 +320,18 @@ issue commands. That's why spotting Modbus on a network — especially crossing 
 IT segments — matters for OT security.",
             look_for: "\"Modbus Read Holding Registers (fn 3)\" (a read) and \"Modbus Write Single Coil (fn 5)\" (a command); \"Modbus Exception\" when the device refuses.",
         },
+        Protocol::MBus => Lesson {
+            title: "M-Bus — reading the meters in a building",
+            summary: "One gateway polling every water, gas, heat and electricity meter.",
+            body: "A block of flats has a gateway that walks round every meter in the \
+building asking for a reading, and this is that conversation once it has been put \
+onto TCP. The reply carries the meter's serial number and, more usefully, what kind \
+of meter it is — so a capture tells you what is actually installed.\n\n\
+It is worth watching because a meter that has stopped answering is invisible \
+otherwise: the gateway keeps asking, the billing system keeps showing the last \
+value it received, and nothing looks wrong until someone gets an estimated bill.",
+            look_for: "\"M-Bus reply — water meter, serial 12345678\"; a request to a meter with no reply following it.",
+        },
         Protocol::Dnp3 => Lesson {
             title: "DNP3 — the grid's control protocol",
             summary: "Used by electric utilities and water systems to run remote equipment.",
@@ -1376,6 +1388,21 @@ procedure calls and pub/sub for the vehicle. Its Service Discovery variant \
 advertises what's available.",
             look_for: "\"SOME/IP Request — service 0x1234\" on UDP/TCP 30490+.",
         },
+        Protocol::SomeIpSd => Lesson {
+            title: "SOME/IP-SD — how a car's ECUs find each other",
+            summary: "The offers and subscriptions that have to happen before any call can.",
+            body: "Before one ECU can call another, the provider has to announce its \
+service and the consumer has to subscribe. That negotiation is SOME/IP-SD, and it \
+is where the interesting failures live: a feature that 'doesn't work' usually means \
+the offer never arrived or the subscription was refused — and neither shows up in \
+the calls themselves, because there aren't any.\n\n\
+Watch the time-to-live rather than just the message name. An OfferService with a \
+TTL of zero is not an offer, it is the withdrawal of one: an ECU announcing it is \
+going away. A subscribe with TTL zero is an unsubscribe, and an acknowledgement \
+with TTL zero is a refusal. Reading the type without the TTL tells you the \
+opposite of what happened.",
+            look_for: "\"SOME/IP-SD offering service 0x1234\" normally; \"withdrawing\" or \"refused subscription to\" when something has gone wrong.",
+        },
         Protocol::Doip => Lesson {
             title: "DoIP — plugging into a car over Ethernet",
             summary: "Carries vehicle diagnostics (fault codes, flashing) over IP.",
@@ -1384,6 +1411,19 @@ firmware, it increasingly does so over Ethernet using DoIP: it finds the vehicle
 activates a diagnostic route, then tunnels the UDS diagnostic messages to the \
 target ECU.",
             look_for: "\"DoIP Diagnostic message\" on UDP/TCP 13400.",
+        },
+        Protocol::Uds => Lesson {
+            title: "UDS — what the diagnostic tool actually said",
+            summary: "The command inside a DoIP message: read a code, unlock an ECU, flash firmware.",
+            body: "DoIP is the envelope; UDS is the letter. A capture full of \
+'diagnostic message' has told you nothing, because every interesting difference is \
+one byte further in.\n\n\
+Two exchanges are worth knowing on sight. SecurityAccess is an ECU being unlocked — \
+the tool asks for a seed, sends back a computed key, and the ECU either accepts it \
+or refuses with 'invalid key' or 'too many failed attempts'. RequestDownload \
+followed by TransferData is firmware being written to an ECU, which is the most \
+consequential thing that can happen on a vehicle network.",
+            look_for: "\"UDS read fault codes\" for routine work; \"UDS security access — seed request\" and \"UDS download to ECU requested\" when something is being changed.",
         },
         Protocol::Xcp => Lesson {
             title: "XCP — tuning an ECU live",

@@ -457,6 +457,15 @@ protocols! {
         aliases:   [],
         blurb:     "An industrial-control command (Modbus) — reading or writing PLC registers over TCP 502.",
     }
+    MBus {
+        doc:       "M-Bus meter reading (EN 13757), carried over TCP.",
+        display:   "M-Bus",
+        color:     0x14B8A6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["m-bus", "mbus"],
+        blurb:     "A utility meter being read (M-Bus) — the water, gas, heat or electricity meters in a building reporting to a gateway.",
+    }
     Dnp3 {
         doc:       "DNP3 SCADA protocol for utilities (TCP/UDP 20000).",
         display:   "DNP3",
@@ -1630,6 +1639,15 @@ protocols! {
         aliases:   ["someip"],
         blurb:     "A SOME/IP message (UDP/TCP 30490+) — service-oriented communication between car ECUs.",
     }
+    SomeIpSd {
+        doc:       "SOME/IP service discovery — offers, subscriptions and their withdrawal.",
+        display:   "SOME/IP-SD",
+        color:     0x8B95A8,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["someip-sd", "someipsd", "sd"],
+        blurb:     "Car ECUs finding each other (SOME/IP-SD) — announcing a service, subscribing to one, or withdrawing it.",
+    }
     Doip {
         doc:       "DoIP diagnostics over IP (UDP/TCP 13400).",
         display:   "DoIP",
@@ -1638,6 +1656,15 @@ protocols! {
         rank:      3,
         aliases:   [],
         blurb:     "A DoIP message (UDP/TCP 13400) — vehicle diagnostics carried over Ethernet.",
+    }
+    Uds {
+        doc:       "UDS diagnostic services (ISO 14229), carried inside a DoIP message.",
+        display:   "UDS",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["uds", "iso14229"],
+        blurb:     "A vehicle diagnostic command (UDS) — reading a fault code, unlocking an ECU, or writing new firmware to one.",
     }
     Xcp {
         doc:       "XCP ECU measurement/calibration (UDP/TCP 5555).",
