@@ -5,7 +5,7 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bindings, dht, dns, dtls, mpegts, openvpn, qpack, roughtime, rtp, rtps, source_query,
+    bindings, dht, dns, dtls, mdns, mpegts, openvpn, qpack, roughtime, rtp, rtps, source_query,
     srt_transport, turn, utp, vxlan, wol, zrtp, DissectedResult,
 };
 
@@ -44,11 +44,11 @@ pub fn dissect_udp(
         return r;
     }
     if on(5353) {
-        // mDNS uses the DNS wire format; reuse the DNS dissector, then relabel.
-        let mut r = dns::dissect_dns(src_ip, dst_ip, src_port, dst_port, udp_payload);
-        r.protocol = Protocol::Mdns;
-        r.summary = format!("mDNS — {}", r.summary.trim_start_matches("DNS ").trim());
-        return r;
+        // mDNS shares the DNS wire format, but relabelling a DNS summary wastes
+        // what makes it useful: the names carry a device's own description of
+        // itself, and splitting them back into instance and service turns a
+        // record into "Kitchen Speaker (AirPlay)".
+        return mdns::dissect_mdns(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     if on(5355) {
         // LLMNR uses the DNS wire format; reuse the DNS dissector, then relabel.

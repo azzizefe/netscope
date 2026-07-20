@@ -151,6 +151,7 @@ pub mod macsec;
 pub mod managesieve;
 pub mod matter;
 pub mod mbus;
+pub mod mdns;
 pub mod megaco;
 pub mod memcached;
 pub mod memcached_bin;
