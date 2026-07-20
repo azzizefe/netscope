@@ -21,7 +21,7 @@ pub fn dissect_x11(
         Some(0x6C) if payload.get(1) == Some(&0) => {
             "X11 connection setup (little-endian)".to_string()
         }
-        Some(_) => format!("X11 request/data ({} bytes)", payload.len()),
+        Some(_) => format!("X11 request/data ({})", super::bytes(payload.len() as u64)),
         None => "X11 (empty)".to_string(),
     };
     DissectedResult {

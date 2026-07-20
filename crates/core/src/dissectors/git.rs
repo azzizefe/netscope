@@ -22,7 +22,7 @@ pub fn dissect_git(
     } else if text.contains("git-receive-pack") {
         "Git — receive-pack (push)".to_string()
     } else {
-        format!("Git peer message ({} bytes)", payload.len())
+        format!("Git peer message ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

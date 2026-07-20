@@ -46,7 +46,7 @@ pub fn dissect_mysqlx(
             };
             format!("MySQL X {name}")
         }
-        None => format!("MySQL X ({} bytes)", payload.len()),
+        None => format!("MySQL X ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

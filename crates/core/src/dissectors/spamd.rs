@@ -22,7 +22,10 @@ pub fn dissect_spamd(
     } else {
         match line.split_whitespace().next() {
             Some(cmd) if line.contains("SPAMC/") => format!("spamd {cmd} request"),
-            _ => format!("spamd message data ({} bytes)", payload.len()),
+            _ => format!(
+                "spamd message data ({})",
+                super::bytes(payload.len() as u64)
+            ),
         }
     };
     DissectedResult {

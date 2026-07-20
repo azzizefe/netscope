@@ -21,7 +21,10 @@ pub fn dissect_radmin(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::Radmin,
-        summary: format!("Radmin remote control ({} bytes)", payload.len()),
+        summary: format!(
+            "Radmin remote control ({})",
+            super::bytes(payload.len() as u64)
+        ),
     }
 }
 

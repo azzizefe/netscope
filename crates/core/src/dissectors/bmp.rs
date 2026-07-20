@@ -29,7 +29,7 @@ pub fn dissect_bmp(
         };
         format!("BMP {name}")
     } else {
-        format!("BMP ({} bytes)", payload.len())
+        format!("BMP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

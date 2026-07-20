@@ -18,7 +18,7 @@ pub fn dissect_graphite(
     let line = super::first_text_line(payload);
     let metric = line.split_whitespace().next().unwrap_or("");
     let summary = if metric.is_empty() {
-        format!("Graphite ({} bytes)", payload.len())
+        format!("Graphite ({})", super::bytes(payload.len() as u64))
     } else {
         format!("Graphite — {}", super::truncate(metric, 48))
     };

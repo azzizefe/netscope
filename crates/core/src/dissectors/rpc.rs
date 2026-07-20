@@ -11,6 +11,7 @@ fn program_name(prog: u32) -> &'static str {
     match prog {
         100000 => "Portmap",
         100003 => "NFS",
+        1298437 => "GlusterFS",
         100005 => "Mount",
         100021 => "NLM (lock manager)",
         100024 => "status",
@@ -19,26 +20,39 @@ fn program_name(prog: u32) -> &'static str {
     }
 }
 
-/// Try to read (msg_type, program) from an RPC message starting at `off`.
-/// `msg_type` 0 is a CALL (program follows), 1 is a REPLY.
-fn parse(payload: &[u8], off: usize) -> Option<(u32, u32)> {
-    let mt = u32::from_be_bytes([
-        *payload.get(off + 4)?,
-        *payload.get(off + 5)?,
-        *payload.get(off + 6)?,
-        *payload.get(off + 7)?,
-    ]);
-    match mt {
-        0 => {
-            let prog = u32::from_be_bytes([
-                *payload.get(off + 12)?,
-                *payload.get(off + 13)?,
-                *payload.get(off + 14)?,
-                *payload.get(off + 15)?,
-            ]);
-            Some((0, prog))
-        }
-        1 => Some((1, 0)),
+/// The call header after the transaction id and message type: RPC version,
+/// program, program version, procedure.
+struct Call {
+    program: u32,
+    /// Absent when the capture was snapped short of the full call header.
+    detail: Option<(u32, u32)>,
+}
+
+fn be32(payload: &[u8], at: usize) -> Option<u32> {
+    Some(u32::from_be_bytes([
+        *payload.get(at)?,
+        *payload.get(at + 1)?,
+        *payload.get(at + 2)?,
+        *payload.get(at + 3)?,
+    ]))
+}
+
+/// Try to read a call or reply from an RPC message starting at `off`.
+///
+/// `msg_type` 0 is a CALL, which is the one that names what is being asked;
+/// 1 is a REPLY, which carries only a status.
+fn parse(payload: &[u8], off: usize) -> Option<(u32, Option<Call>)> {
+    match be32(payload, off + 4)? {
+        0 => Some((
+            0,
+            Some(Call {
+                program: be32(payload, off + 12)?,
+                // The version and procedure sit further in, and a short snap
+                // length can cut them off. The program alone is still useful.
+                detail: be32(payload, off + 16).zip(be32(payload, off + 20)),
+            }),
+        )),
+        1 => Some((1, None)),
         _ => None,
     }
 }
@@ -55,9 +69,25 @@ pub fn dissect_rpc(
     // TCP prefixes a record marker; UDP does not — try offset 4 then 0.
     let parsed = parse(payload, 4).or_else(|| parse(payload, 0));
     let summary = match parsed {
-        Some((0, prog)) => format!("{} call", program_name(prog)),
+        // The program alone says little: whether a call is a LOOKUP or a WRITE
+        // is the question worth answering, so hand the numbers on.
+        Some((0, Some(call))) => {
+            if let Some((protocol, summary)) = call.detail.and_then(|(version, procedure)| {
+                super::nfs::describe(call.program, version, procedure)
+            }) {
+                return DissectedResult {
+                    src_addr: src_ip,
+                    dst_addr: dst_ip,
+                    src_port: Some(src_port),
+                    dst_port: Some(dst_port),
+                    protocol,
+                    summary,
+                };
+            }
+            format!("{} call", program_name(call.program))
+        }
         Some((1, _)) => "RPC reply".to_string(),
-        _ => format!("ONC RPC ({} bytes)", payload.len()),
+        _ => format!("ONC RPC ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,
@@ -72,6 +102,36 @@ pub fn dissect_rpc(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The whole point of the hand-off: a full call header should name the
+    /// operation, not merely the program.
+    #[test]
+    fn full_call_header_names_the_operation() {
+        let mut p = vec![0x80, 0x00, 0x00, 0x64]; // record marker
+        p.extend_from_slice(&1u32.to_be_bytes()); // xid
+        p.extend_from_slice(&0u32.to_be_bytes()); // msg_type: CALL
+        p.extend_from_slice(&2u32.to_be_bytes()); // rpcvers
+        p.extend_from_slice(&100_003u32.to_be_bytes()); // program: NFS
+        p.extend_from_slice(&3u32.to_be_bytes()); // version
+        p.extend_from_slice(&7u32.to_be_bytes()); // procedure: WRITE
+        let r = dissect_rpc(None, None, 40000, 2049, &p);
+        assert_eq!(r.protocol, Protocol::Nfs);
+        assert_eq!(r.summary, "NFS v3 WRITE");
+    }
+
+    /// A capture snapped before the procedure number should still report the
+    /// program rather than giving up on the packet.
+    #[test]
+    fn short_snap_falls_back_to_the_program() {
+        let mut p = vec![0x80, 0x00, 0x00, 0x64];
+        p.extend_from_slice(&1u32.to_be_bytes());
+        p.extend_from_slice(&0u32.to_be_bytes());
+        p.extend_from_slice(&2u32.to_be_bytes());
+        p.extend_from_slice(&100_003u32.to_be_bytes()); // program, then nothing
+        let r = dissect_rpc(None, None, 40000, 2049, &p);
+        assert_eq!(r.protocol, Protocol::Rpc);
+        assert_eq!(r.summary, "NFS call");
+    }
 
     #[test]
     fn nfs_call_over_tcp() {

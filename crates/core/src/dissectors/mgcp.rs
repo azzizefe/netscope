@@ -28,7 +28,7 @@ pub fn dissect_mgcp(
     } else if !tok.is_empty() && tok.chars().all(|c| c.is_ascii_digit()) {
         format!("MGCP response {tok}")
     } else {
-        format!("MGCP ({} bytes)", payload.len())
+        format!("MGCP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

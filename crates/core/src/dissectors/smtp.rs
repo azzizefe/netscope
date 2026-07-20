@@ -18,7 +18,7 @@ pub fn dissect_smtp(
 ) -> DissectedResult {
     let line = first_text_line(payload);
     let summary = if line.is_empty() {
-        format!("SMTP — {} bytes", payload.len())
+        format!("SMTP — {}", super::bytes(payload.len() as u64))
     } else if line.len() >= 4 && line[..4].eq_ignore_ascii_case("AUTH") {
         "SMTP AUTH ⋯".into()
     } else {

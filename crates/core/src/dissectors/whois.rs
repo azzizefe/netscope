@@ -18,7 +18,7 @@ pub fn dissect_whois(
 ) -> DissectedResult {
     let line = super::first_text_line(payload);
     let summary = if line.is_empty() {
-        format!("WHOIS ({} bytes)", payload.len())
+        format!("WHOIS ({})", super::bytes(payload.len() as u64))
     } else {
         format!("WHOIS — {}", super::truncate(&line, 60))
     };

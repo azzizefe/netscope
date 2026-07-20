@@ -28,272 +28,27 @@
 //! - **Logic**: `&&`/`and`, `||`/`or`, `!`/`not`, and parentheses.
 
 use std::net::IpAddr;
+use std::sync::OnceLock;
 
 use crate::flows::Transport;
 use crate::models::{Packet, Protocol};
 
 /// Protocol tokens accepted as bare predicates (e.g. `tcp`, `dns`).
-const KNOWN_PROTOS: &[&str] = &[
-    "ip",
-    "ipv4",
-    "ipv6",
-    "tcp",
-    "udp",
-    "icmp",
-    "arp",
-    "dns",
-    "http",
-    "tls",
-    "dhcp",
-    "ntp",
-    "mdns",
-    "snmp",
-    "quic",
-    "sip",
-    "ssh",
-    "ftp",
-    "smtp",
-    "imap",
-    "pop3",
-    "telnet",
-    "rdp",
-    "wlan",
-    "wifi",
-    "802.11",
-    "usb",
-    "bluetooth",
-    "hci",
-    "can",
-    "websocket",
-    "ws",
-    "vxlan",
-    "http2",
-    "grpc",
-    "ntlm",
-    "rtp",
-    "rtcp",
-    "qpack",
-    "http3",
-    "syslog",
-    "tftp",
-    "ssdp",
-    "stun",
-    "llmnr",
-    "rtsp",
-    "irc",
-    "rfb",
-    "vnc",
-    "whois",
-    "nntp",
-    "sctp",
-    "gre",
-    "igmp",
-    "dhcpv6",
-    "rip",
-    "nbns",
-    "socks",
-    "memcached",
-    "bittorrent",
-    "git",
-    "xmpp",
-    "finger",
-    "vrrp",
-    "pim",
-    "eigrp",
-    "pppoe",
-    "eapol",
-    "l2tp",
-    "gtp",
-    "rmcp",
-    "ipmi",
-    "wsd",
-    "tacacs",
-    "diameter",
-    "rlogin",
-    "dccp",
-    "dtls",
-    "netflow",
-    "ipfix",
-    "sflow",
-    "bfd",
-    "hsrp",
-    "iscsi",
-    "rtmp",
-    "smpp",
-    "openflow",
-    "nats",
-    "stomp",
-    "profinet",
-    "wol",
-    "glbp",
-    "wccp",
-    "mgcp",
-    "nbds",
-    "dicom",
-    "hl7",
-    "fix",
-    "s7comm",
-    "iec104",
-    "ldp",
-    "goose",
-    "ptp",
-    "rsvp",
-    "isakmp",
-    "ike",
-    "geneve",
-    "capwap",
-    "teredo",
-    "gvcp",
-    "rpc",
-    "nfs",
-    "portmap",
-    "graphite",
-    "gearman",
-    "beanstalk",
-    "ethercat",
-    "fcoe",
-    "macsec",
-    "rarp",
-    "rtps",
-    "dds",
-    "influxdb",
-    "mqttsn",
-    "babel",
-    "x11",
-    "rsync",
-    "svn",
-    "rethinkdb",
-    "sv",
-    "powerlink",
-    "sercos",
-    "knx",
-    "knxip",
-    "statsd",
-    "gelf",
-    "hartip",
-    "hart",
-    "elasticsearch",
-    "es",
-    "zabbix",
-    "nsq",
-    "zmtp",
-    "zeromq",
-    "zmq",
-    "aerospike",
-    "avtp",
-    "someip",
-    "doip",
-    "xcp",
-    "matter",
-    "afp",
-    "dht",
-    "gnutella",
-    "edonkey",
-    "emule",
-    "sourcequery",
-    "a2s",
-    "minecraft",
-    "mumble",
-    "pfcp",
-    "gtpprime",
-    "megaco",
-    "h248",
-    "msrp",
-    "pcoip",
-    "spice",
-    "ica",
-    "ndmp",
-    "dcerpc",
-    "msrpc",
-    "pptp",
-    "radmin",
-    "skinny",
-    "sccp",
-    "cldap",
-    "bmp",
-    "rpkirtr",
-    "mms",
-    "nrpe",
-    "collectd",
-    "jaeger",
-    "ganglia",
-    "bolt",
-    "neo4j",
-    "clickhouse",
-    "pulsar",
-    "openwire",
-    "activemq",
-    "zookeeper",
-    "zk",
-    "hadooprpc",
-    "hdfs",
-    "fluentd",
-    "beats",
-    "clamav",
-    "spamd",
-    "managesieve",
-    "sieve",
-    "relp",
-    "lpd",
-    "ident",
-    "gopher",
-    "rsh",
-    "cdp",
-    "vtp",
-    "dtp",
-    "pagp",
-    "udld",
-    "eap",
-    "ipx",
-    "appletalk",
-    "atalk",
-    "aarp",
-    "ipp",
-    "rexec",
-    "sane",
-    "tns",
-    "oracle",
-    "drda",
-    "db2",
-    "firebird",
-    "mysqlx",
-    "riak",
-    "nmea",
-    "adsb",
-    "aprs",
-    "turn",
-    "decnet",
-    "vines",
-    "erspan",
-    "ppp",
-    "pap",
-    "chap",
-    "l2cap",
-    "att",
-    "smp",
-    "nvmeof",
-    "nvme",
-    "nbd",
-    "fcip",
-    "aoe",
-    "roce",
-    "xdmcp",
-    "iax2",
-    "iax",
-    "zrtp",
-    "sqlbrowser",
-    "h225ras",
-    "q931",
-    "h323",
-    "bfcp",
-    "lisp",
-    "l2tpv3",
-    "vxlangpe",
-    "pcp",
-    "natpmp",
-    "rwho",
-    "dhcpfailover",
-];
+///
+/// Derived from the protocol registry, plus the handful below whose meaning
+/// isn't "the packet's protocol equals X": `ip`/`ipv4`/`ipv6` test the address
+/// family, and `tcp`/`udp`/`icmp`/`arp` test the flow's transport class, so
+/// `tcp` also matches an HTTP packet.
+fn known_protos() -> &'static [String] {
+    static TOKENS: OnceLock<Vec<String>> = OnceLock::new();
+    TOKENS.get_or_init(|| {
+        let mut tokens = crate::registry::filter_tokens();
+        tokens.extend(["ip", "ipv4", "ipv6"].iter().map(|s| s.to_string()));
+        tokens.sort();
+        tokens.dedup();
+        tokens
+    })
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FilterError(pub String);
@@ -420,74 +175,24 @@ impl Expr {
 /// Match a bare protocol predicate against a packet. Transport names (`tcp`,
 /// `udp`, `icmp`, `arp`) match by transport class, so `tcp` also matches HTTP
 /// and TLS — as in Wireshark. Everything else matches the protocol's own name.
+/// Evaluate a bare protocol predicate against a packet.
+///
+/// The transport and address-family tokens are broader than protocol equality
+/// and are handled first; everything else resolves through the registry, so a
+/// new protocol row is filterable by its name and aliases with no edit here.
 fn proto_matches(pkt: &Packet, name: &str) -> bool {
     let transport = Transport::from_protocol(&pkt.protocol);
     match name {
         "ip" => pkt.src_addr.is_some() || pkt.dst_addr.is_some(),
         "ipv4" => is_v4(pkt.src_addr) || is_v4(pkt.dst_addr),
         "ipv6" => is_v6(pkt.src_addr) || is_v6(pkt.dst_addr),
+        // These name a transport, not an application protocol: `tcp` matches
+        // every packet in a TCP flow, HTTP and TLS included.
         "tcp" => transport == Transport::Tcp,
         "udp" => transport == Transport::Udp,
         "icmp" => transport == Transport::Icmp,
         "arp" => transport == Transport::Arp,
-        "wlan" | "wifi" => pkt.protocol.to_string() == "802.11",
-        // Hardware-bus captures: display names differ from the bare tokens.
-        "usb" => pkt.protocol == Protocol::Usb,
-        "bluetooth" | "hci" => pkt.protocol == Protocol::Bluetooth,
-        "can" => pkt.protocol == Protocol::Can,
-        "ws" => pkt.protocol == Protocol::WebSocket,
-        // Display is "HTTP/2", which the lexer can't produce as a bare word.
-        "http2" => pkt.protocol == Protocol::Http2,
-        // Short aliases for protocols whose display name is longer/branded.
-        "postgres" | "psql" | "pgsql" => pkt.protocol == Protocol::Postgres,
-        "mongo" => pkt.protocol == Protocol::Mongodb,
-        // Display is "VNC/RFB", which the lexer can't produce as a bare word.
-        "rfb" | "vnc" => pkt.protocol == Protocol::Rfb,
-        // Display names carry a "+" or hyphen the fallback can't match verbatim.
-        "tacacs" | "tacacs+" => pkt.protocol == Protocol::Tacacs,
-        "ipmi" => pkt.protocol == Protocol::Rmcp,
-        "wsd" | "wsdiscovery" => pkt.protocol == Protocol::WsDiscovery,
-        "ipfix" => pkt.protocol == Protocol::Netflow,
-        "wol" | "wakeonlan" => pkt.protocol == Protocol::Wol,
-        "nbds" => pkt.protocol == Protocol::Nbds,
-        "iec104" => pkt.protocol == Protocol::Iec104,
-        "ike" => pkt.protocol == Protocol::Isakmp,
-        "nfs" | "portmap" => pkt.protocol == Protocol::Rpc,
-        "rtps" | "dds" => pkt.protocol == Protocol::Rtps,
-        "mqttsn" => pkt.protocol == Protocol::MqttSn,
-        "sv" => pkt.protocol == Protocol::Sv,
-        "sercos" => pkt.protocol == Protocol::Sercos,
-        "knx" | "knxip" => pkt.protocol == Protocol::Knxip,
-        "hart" | "hartip" => pkt.protocol == Protocol::Hartip,
-        "es" => pkt.protocol == Protocol::Elasticsearch,
-        "zeromq" | "zmq" => pkt.protocol == Protocol::Zmtp,
-        "someip" => pkt.protocol == Protocol::SomeIp,
-        "dht" => pkt.protocol == Protocol::Dht,
-        "sourcequery" | "a2s" => pkt.protocol == Protocol::SourceQuery,
-        "emule" => pkt.protocol == Protocol::Edonkey,
-        "gtpprime" => pkt.protocol == Protocol::GtpPrime,
-        "h248" => pkt.protocol == Protocol::Megaco,
-        "msrpc" => pkt.protocol == Protocol::Dcerpc,
-        "sccp" => pkt.protocol == Protocol::Skinny,
-        "rpkirtr" => pkt.protocol == Protocol::RpkiRtr,
-        "neo4j" => pkt.protocol == Protocol::Bolt,
-        "activemq" => pkt.protocol == Protocol::Openwire,
-        "zk" => pkt.protocol == Protocol::Zookeeper,
-        "hadooprpc" | "hdfs" => pkt.protocol == Protocol::HadoopRpc,
-        "sieve" => pkt.protocol == Protocol::ManageSieve,
-        "appletalk" | "atalk" => pkt.protocol == Protocol::Atalk,
-        "tns" | "oracle" => pkt.protocol == Protocol::Tns,
-        "drda" | "db2" => pkt.protocol == Protocol::Drda,
-        "mysqlx" => pkt.protocol == Protocol::MysqlX,
-        "nvmeof" | "nvme" => pkt.protocol == Protocol::NvmeOf,
-        "iax" => pkt.protocol == Protocol::Iax2,
-        "sqlbrowser" => pkt.protocol == Protocol::MssqlBrowser,
-        "h225ras" => pkt.protocol == Protocol::H225Ras,
-        "h323" | "q931" => pkt.protocol == Protocol::Q931,
-        "vxlangpe" => pkt.protocol == Protocol::VxlanGpe,
-        "natpmp" => pkt.protocol == Protocol::Pcp,
-        "dhcpfailover" => pkt.protocol == Protocol::DhcpFailover,
-        other => pkt.protocol.to_string().eq_ignore_ascii_case(other),
+        other => crate::registry::Protocol::from_filter_token(other) == Some(pkt.protocol.clone()),
     }
 }
 
@@ -1079,7 +784,7 @@ impl Parser {
         }
         // Bare predicate — must be a known protocol, else fall back to substring.
         let lower = word.to_ascii_lowercase();
-        if KNOWN_PROTOS.contains(&lower.as_str()) {
+        if known_protos().contains(&lower) {
             Ok(Expr::Proto(lower))
         } else {
             Err(FilterError(format!("unknown protocol '{word}'")))
@@ -1195,6 +900,47 @@ mod tests {
         assert!(!matches("udp", &tcp443()));
         assert!(matches("dns", &dns()));
         assert!(matches("udp", &dns()));
+    }
+
+    /// Regression: these all had working match logic but were missing from the
+    /// hand-maintained keyword list, so they failed to parse and the UI quietly
+    /// fell back to a substring search over the summary. Deriving the list from
+    /// the registry fixed all of them at once.
+    #[test]
+    fn every_registry_protocol_parses_as_a_predicate() {
+        for token in [
+            "redis",
+            "kafka",
+            "mongodb",
+            "bgp",
+            "smb",
+            "modbus",
+            "ospf",
+            "wireguard",
+        ] {
+            assert!(
+                Filter::parse(token).is_ok(),
+                "{token:?} should parse as a protocol predicate"
+            );
+        }
+    }
+
+    /// `http3` and `qpack` were accepted keywords that resolved to no protocol
+    /// at all, so filtering on them matched nothing. They belong to QUIC.
+    #[test]
+    fn http3_and_qpack_resolve_to_quic() {
+        assert_eq!(Protocol::from_filter_token("http3"), Some(Protocol::Quic));
+        assert_eq!(Protocol::from_filter_token("qpack"), Some(Protocol::Quic));
+    }
+
+    /// Protocols whose display name can't be typed as one word reach the filter
+    /// through an alias.
+    #[test]
+    fn unlexable_display_names_match_via_alias() {
+        assert_eq!(Protocol::from_filter_token("opcua"), Some(Protocol::OpcUa));
+        assert_eq!(Protocol::from_filter_token("enip"), Some(Protocol::Enip));
+        assert!(Filter::parse("opcua").is_ok());
+        assert!(Filter::parse("enip").is_ok());
     }
 
     #[test]

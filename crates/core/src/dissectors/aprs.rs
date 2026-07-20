@@ -24,7 +24,7 @@ pub fn dissect_aprs(
     } else if let Some((call, _)) = line.split_once('>') {
         format!("APRS-IS packet from {}", super::truncate(call, 24))
     } else {
-        format!("APRS-IS ({} bytes)", payload.len())
+        format!("APRS-IS ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

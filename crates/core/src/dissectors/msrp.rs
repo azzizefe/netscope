@@ -22,7 +22,7 @@ pub fn dissect_msrp(
         let what = line.split_whitespace().nth(2).unwrap_or("");
         format!("MSRP {what}")
     } else {
-        format!("MSRP data ({} bytes)", payload.len())
+        format!("MSRP data ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

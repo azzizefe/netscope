@@ -163,7 +163,7 @@ fn describe(frame: &Frame) -> String {
     match frame.opcode {
         OP_TEXT => match text_preview(&frame.payload) {
             Some(t) => format!("WebSocket Text — \"{t}\""),
-            None => format!("WebSocket Text — {} bytes", frame.declared_len),
+            None => format!("WebSocket Text — {}", super::bytes(frame.declared_len)),
         },
         OP_CLOSE => {
             if frame.payload.len() >= 2 {

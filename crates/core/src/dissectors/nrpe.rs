@@ -25,7 +25,7 @@ pub fn dissect_nrpe(
         };
         format!("NRPE v{version} {name}")
     } else {
-        format!("NRPE ({} bytes)", payload.len())
+        format!("NRPE ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

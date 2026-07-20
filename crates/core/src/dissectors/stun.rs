@@ -19,7 +19,8 @@ pub fn dissect_stun(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary = parse(payload).unwrap_or_else(|| format!("STUN ({} bytes)", payload.len()));
+    let summary =
+        parse(payload).unwrap_or_else(|| format!("STUN ({})", super::bytes(payload.len() as u64)));
     DissectedResult {
         src_addr: src_ip,
         dst_addr: dst_ip,

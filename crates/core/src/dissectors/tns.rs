@@ -34,7 +34,7 @@ pub fn dissect_tns(
             };
             format!("Oracle TNS {name}")
         }
-        None => format!("Oracle TNS ({} bytes)", payload.len()),
+        None => format!("Oracle TNS ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

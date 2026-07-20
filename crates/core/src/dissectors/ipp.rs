@@ -43,9 +43,9 @@ pub fn dissect_ipp(
         let op = u16::from_be_bytes([body[2], body[3]]);
         format!("IPP {}.{} {}", body[0], body[1], operation_name(op))
     } else if payload.starts_with(b"HTTP/") {
-        format!("IPP response ({} bytes)", payload.len())
+        format!("IPP response ({})", super::bytes(payload.len() as u64))
     } else {
-        format!("IPP ({} bytes)", payload.len())
+        format!("IPP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

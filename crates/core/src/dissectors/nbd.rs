@@ -38,10 +38,10 @@ pub fn dissect_nbd(
                 }
             }
             0x6744_6698 => "NBD reply".to_string(),
-            _ => format!("NBD data ({} bytes)", payload.len()),
+            _ => format!("NBD data ({})", super::bytes(payload.len() as u64)),
         }
     } else {
-        format!("NBD ({} bytes)", payload.len())
+        format!("NBD ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,
