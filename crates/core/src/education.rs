@@ -525,6 +525,87 @@ is still valid. It's one of the 802.3 'slow protocols', sent a couple of times a
 second on the link itself.",
             look_for: "\"LACP v1 — link aggregation\" exchanged periodically between two switches forming a bundle.",
         },
+        Protocol::LinkOam => Lesson {
+            title: "Link OAM — a link reporting its own health, and its own death",
+            summary: "Mostly dull keepalives, with two exceptions worth knowing.",
+            body: "Two devices either end of a link exchange these continuously, and \
+almost all of them say nothing. The value is in the exceptions.\n\n\
+A dying gasp is the last thing a device sends as its power fails — a modem, an \
+ONT or a remote switch gets one frame out before it stops. That single frame is \
+the difference between 'the site went down at 04:12' and 'the site's power went \
+at 04:12'; nothing else in a capture separates a power cut from a cut fibre.\n\n\
+Event notifications carry error counters, so a link that is degrading says so \
+before it fails outright. Errored symbols climbing over hours is a transceiver \
+or a fibre going bad while everything still nominally works.",
+            look_for: "\"Ethernet OAM — dying gasp\" at the moment a remote site goes dark; \"Ethernet OAM event — errored symbol period\" on a link that is about to.",
+        },
+        Protocol::Esmc => Lesson {
+            title: "ESMC — how good is the clock this network is using?",
+            summary: "Synchronous Ethernet's way of announcing timing quality hop by hop.",
+            body: "Synchronous Ethernet carries frequency in the physical layer, but a \
+receiver cannot tell from a clock signal how good that clock is. ESMC carries \
+that judgement separately: each hop announces the quality of the source it is \
+locked to, and downstream equipment uses it to pick which port to take timing \
+from.\n\n\
+Watch it degrade. A chain announcing a primary reference clock is locked to a \
+caesium-grade source; the same chain announcing a local equipment clock has \
+fallen back to its own oscillator and will drift. Mobile basestations notice \
+this long before anything else does.\n\n\
+One caveat: the quality numbers mean different things under Option 1 (ITU/ETSI) \
+and Option 2 (ANSI), and the frame does not say which the network runs. \
+netscope names the Option 1 meanings and always shows the raw code too.",
+            look_for: "\"ESMC heartbeat — primary reference clock (QL 2)\" when healthy; \"local equipment clock (will drift)\" or \"do not use\" when the sync chain has broken.",
+        },
+        Protocol::Mrp => Lesson {
+            title: "MRP — the ring that keeps a factory running",
+            summary: "Industrial redundancy: one cut cable must not stop the line.",
+            body: "Factory networks are wired as rings so a single cable fault does not \
+halt production. A manager sits at the top of the ring, sends test frames both \
+ways round, and keeps one port blocked so the ring is not a loop. When the tests \
+stop arriving it opens that port and the network reconverges in tens of \
+milliseconds — fast enough that the machines never notice.\n\n\
+The reconvergence is what to look for. One topology change is a cable being \
+replaced. A stream of them is a connection failing intermittently, and the \
+machines on that ring will be dropping cycles without anything else in the \
+capture saying so.",
+            look_for: "\"MRP test — ring closed\" as the steady state; \"MRP topology change\" when something broke, especially repeatedly.",
+        },
+        Protocol::Hsr => Lesson {
+            title: "HSR — sending everything twice so nothing is ever lost",
+            summary: "Zero-recovery-time redundancy for substations and power grids.",
+            body: "MRP heals a broken ring in tens of milliseconds. For a protection \
+relay in an electrical substation that is far too slow, so HSR does not heal at \
+all: every frame goes both ways round the ring simultaneously, and the receiver \
+keeps whichever copy arrives first. A cut cable costs nothing, because the other \
+copy was already in flight.\n\n\
+Both copies carry the same sequence number in their tag — that is how the \
+receiver spots the duplicate. It is also how you spot a ring that has already \
+lost one path: you stop seeing pairs. HSR is designed to hide that from the \
+application, so nothing else will tell you until the second path fails too.",
+            look_for: "\"HSR path 0, seq 1234 · …\" and \"HSR path 1, seq 1234 · …\" as a pair; a capture with only one path is a ring already running on one leg.",
+        },
+        Protocol::Mvrp => Lesson {
+            title: "MVRP — switches agreeing which VLANs to carry",
+            summary: "Automatic VLAN registration, and a common cause of odd one-way faults.",
+            body: "A switch does not need to carry a VLAN that nothing downstream is \
+using. MVRP is how ports tell each other what they want, so VLANs propagate \
+automatically instead of being configured on every trunk by hand.\n\n\
+It is worth reading because the symptom of it going wrong is confusing: traffic \
+works in one direction, or works until a link flaps and then does not. A Leave \
+for a VLAN that should be there explains that immediately, where the switch \
+configuration looks perfectly correct.",
+            look_for: "\"MVRP JoinIn — VLAN 100\" as ports register; \"MVRP Leave — VLAN 100\" when one stops wanting it.",
+        },
+        Protocol::Mmrp => Lesson {
+            title: "MMRP — registering multicast so it is not flooded everywhere",
+            summary: "The multicast counterpart to MVRP, using the same encoding.",
+            body: "Without registration, a switch floods multicast out of every port, \
+which wastes capacity on every link that did not want it. MMRP lets ports say \
+which groups and MAC addresses they actually need, so the switch can forward \
+rather than flood. It shares MVRP's attribute encoding — the difference is what \
+is being registered.",
+            look_for: "\"MMRP JoinIn — MAC address …\" as a receiver subscribes to a group.",
+        },
         Protocol::Stp => Lesson {
             title: "STP — stopping network loops",
             summary: "The protocol that keeps redundant switch links from melting the network.",

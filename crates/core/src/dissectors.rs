@@ -69,6 +69,7 @@ pub mod eigrp;
 pub mod elasticsearch;
 pub mod enip;
 pub mod erspan;
+pub mod esmc;
 pub mod ethercat;
 pub mod ethernet;
 pub mod f1ap;
@@ -102,6 +103,7 @@ pub mod hartip;
 pub mod hl7;
 pub mod hnbap;
 pub mod hsms;
+pub mod hsr;
 pub mod hsrp;
 pub mod http;
 pub mod http2;
@@ -135,6 +137,7 @@ pub mod lacp;
 pub mod lcsap;
 pub mod ldap;
 pub mod ldp;
+pub mod link_oam;
 pub mod linktypes;
 pub mod lisp;
 pub mod lldp;
@@ -165,6 +168,8 @@ pub mod mpegts;
 pub mod mpls;
 pub mod mqtt;
 pub mod mqttsn;
+pub mod mrp;
+pub mod mrp_registration;
 pub mod msdp;
 pub mod msrp;
 pub mod mssqlbrowser;
@@ -558,6 +563,10 @@ const ETHERTYPE_AVTP: u16 = 0x22F0; // IEEE 1722 Audio/Video Transport
 const ETHERTYPE_SV: u16 = 0x88BA; // IEC 61850-9-2 Sampled Values
 const ETHERTYPE_POWERLINK: u16 = 0x88AB; // Ethernet POWERLINK real-time
 const ETHERTYPE_SERCOS: u16 = 0x88CD; // SERCOS III motion control
+const ETHERTYPE_MRP: u16 = 0x88E3; // IEC 62439-2 media redundancy ring
+const ETHERTYPE_HSR: u16 = 0x892F; // IEC 62439-3 seamless redundancy tag
+const ETHERTYPE_MVRP: u16 = 0x88F5; // 802.1ak VLAN registration
+const ETHERTYPE_MMRP: u16 = 0x88F6; // 802.1ak multicast registration
 const ETHERTYPE_RARP: u16 = 0x8035; // Reverse ARP
 const ETHERTYPE_ETHERCAT: u16 = 0x88A4; // EtherCAT industrial fieldbus
 const ETHERTYPE_MACSEC: u16 = 0x88E5; // 802.1AE MACsec link encryption
@@ -590,6 +599,10 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         }
         ETHERTYPE_LLDP => lldp::dissect_lldp(payload),
         ETHERTYPE_SLOW => lacp::dissect_slow(payload),
+        ETHERTYPE_MRP => mrp::dissect_mrp(payload),
+        ETHERTYPE_HSR => hsr::dissect_hsr(payload),
+        ETHERTYPE_MVRP => mrp_registration::dissect(payload, Protocol::Mvrp),
+        ETHERTYPE_MMRP => mrp_registration::dissect(payload, Protocol::Mmrp),
         ETHERTYPE_PPPOE_DISC => pppoe::dissect_pppoe(payload, false),
         ETHERTYPE_PPPOE_SESS => pppoe::dissect_pppoe(payload, true),
         ETHERTYPE_EAPOL => eapol::dissect_eapol(payload),
@@ -2707,6 +2720,8 @@ mod robustness {
             include_str!("dissectors/wlan.rs"),
             // A CAN frame's identifier selects the bus protocol above it.
             include_str!("dissectors/can.rs"),
+            // The slow-protocol subtype selects link OAM or ESMC.
+            include_str!("dissectors/lacp.rs"),
             // Both of these carry another protocol as their body: SOME/IP's
             // discovery messages, and the UDS command inside a DoIP envelope.
             include_str!("dissectors/someip.rs"),
