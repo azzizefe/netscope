@@ -30,7 +30,7 @@ pub fn dissect_relp(
             other => format!("RELP {other} (txn {txnr})"),
         }
     } else {
-        format!("RELP ({} bytes)", payload.len())
+        format!("RELP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

@@ -19,7 +19,7 @@ pub fn dissect_gnutella(
         let line = super::first_text_line(payload);
         format!("Gnutella handshake — {}", super::truncate(&line, 32))
     } else {
-        format!("Gnutella message ({} bytes)", payload.len())
+        format!("Gnutella message ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

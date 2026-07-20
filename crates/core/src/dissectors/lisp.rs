@@ -6,6 +6,9 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
+/// Flags, nonce or map version, then the instance id.
+const DATA_HEADER: usize = 8;
+
 /// Dissect a LISP message (UDP 4342 control / 4341 data) — Locator/ID
 /// Separation Protocol, which splits "who a host is" from "where it currently
 /// is" so endpoints can move without renumbering. The control plane's message
@@ -18,6 +21,25 @@ pub fn dissect_lisp(
     payload: &[u8],
 ) -> DissectedResult {
     let is_control = src_port == 4342 || dst_port == 4342;
+    // A data packet carries an inner IP packet directly after the eight-byte
+    // header, and that packet is the traffic the overlay exists to move.
+    if !is_control {
+        if let Some(inner) = payload.get(DATA_HEADER..) {
+            let ethertype = match inner.first().map(|b| b >> 4) {
+                Some(4) => Some(0x0800u16),
+                Some(6) => Some(0x86DDu16),
+                _ => None,
+            };
+            if let Some(et) = ethertype {
+                let mut r = super::dispatch_l3(et, inner, 0);
+                r.summary = format!("LISP · {}", r.summary);
+                r.src_port = Some(src_port);
+                r.dst_port = Some(dst_port);
+                return r;
+            }
+        }
+    }
+
     let summary = if is_control {
         match payload.first() {
             Some(&b) => {
@@ -34,7 +56,10 @@ pub fn dissect_lisp(
             None => "LISP control (empty)".to_string(),
         }
     } else {
-        format!("LISP data — encapsulated packet ({} bytes)", payload.len())
+        format!(
+            "LISP data — encapsulated packet ({})",
+            super::bytes(payload.len() as u64)
+        )
     };
     DissectedResult {
         src_addr: src_ip,

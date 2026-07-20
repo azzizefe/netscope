@@ -24,7 +24,7 @@ pub fn dissect_fcip(
     {
         "FCIP — Fibre Channel frame over IP".to_string()
     } else {
-        format!("FCIP ({} bytes)", payload.len())
+        format!("FCIP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

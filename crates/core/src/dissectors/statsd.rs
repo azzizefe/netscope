@@ -19,7 +19,7 @@ pub fn dissect_statsd(
     let name: String = line.chars().take_while(|&c| c != ':').collect();
     let kind = line.rsplit('|').next().filter(|_| line.contains('|'));
     let summary = if name.is_empty() || !line.contains(':') {
-        format!("StatsD ({} bytes)", payload.len())
+        format!("StatsD ({})", super::bytes(payload.len() as u64))
     } else {
         let type_note = match kind {
             Some("c") => " (counter)",

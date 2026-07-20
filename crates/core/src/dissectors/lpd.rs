@@ -32,7 +32,7 @@ pub fn dissect_lpd(
                 format!("LPD — {name} on {}", super::truncate(&queue, 32))
             }
         }
-        _ => format!("LPD data ({} bytes)", payload.len()),
+        _ => format!("LPD data ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

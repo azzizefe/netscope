@@ -35,7 +35,7 @@ pub fn dissect_socks(
                 None => "SOCKS5".to_string(),
             }
         }
-        _ => format!("SOCKS ({} bytes)", payload.len()),
+        _ => format!("SOCKS ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

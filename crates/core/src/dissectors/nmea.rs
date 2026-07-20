@@ -36,7 +36,7 @@ pub fn dissect_nmea(
             };
             format!("NMEA {id}{what}")
         }
-        _ => format!("NMEA stream ({} bytes)", payload.len()),
+        _ => format!("NMEA stream ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

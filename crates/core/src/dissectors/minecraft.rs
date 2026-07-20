@@ -23,7 +23,7 @@ pub fn dissect_minecraft(
         Some(&len) if len < 0x80 && payload.get(1) == Some(&0x00) => {
             "Minecraft handshake".to_string()
         }
-        _ => format!("Minecraft packet ({} bytes)", payload.len()),
+        _ => format!("Minecraft packet ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

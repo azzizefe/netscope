@@ -18,7 +18,7 @@ pub fn dissect_pop3(
 ) -> DissectedResult {
     let line = first_text_line(payload);
     let summary = if line.is_empty() {
-        format!("POP3 — {} bytes", payload.len())
+        format!("POP3 — {}", super::bytes(payload.len() as u64))
     } else if line.len() >= 4 && line[..4].eq_ignore_ascii_case("PASS") {
         "POP3 PASS ⋯".into()
     } else {

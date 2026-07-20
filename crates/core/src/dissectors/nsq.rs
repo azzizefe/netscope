@@ -28,7 +28,7 @@ pub fn dissect_nsq(
         if COMMANDS.contains(&tok) {
             format!("NSQ {tok}")
         } else {
-            format!("NSQ frame ({} bytes)", payload.len())
+            format!("NSQ frame ({})", super::bytes(payload.len() as u64))
         }
     };
     DissectedResult {

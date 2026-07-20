@@ -38,7 +38,7 @@ pub fn dissect_drda(
         };
         format!("DRDA {name}")
     } else {
-        format!("DRDA ({} bytes)", payload.len())
+        format!("DRDA ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

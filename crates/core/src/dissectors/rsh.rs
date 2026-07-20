@@ -35,7 +35,7 @@ pub fn dissect_rsh(
         _ => {
             let line = super::first_text_line(payload);
             if line.is_empty() {
-                format!("rsh session data ({} bytes)", payload.len())
+                format!("rsh session data ({})", super::bytes(payload.len() as u64))
             } else {
                 format!("rsh — {}", super::truncate(&line, 40))
             }

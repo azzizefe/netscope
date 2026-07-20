@@ -32,7 +32,7 @@ pub fn dissect_firebird(
         };
         format!("Firebird {name}")
     } else {
-        format!("Firebird ({} bytes)", payload.len())
+        format!("Firebird ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

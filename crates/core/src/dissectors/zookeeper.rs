@@ -41,7 +41,7 @@ pub fn dissect_zookeeper(
             }
         }
     } else {
-        format!("ZooKeeper ({} bytes)", payload.len())
+        format!("ZooKeeper ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

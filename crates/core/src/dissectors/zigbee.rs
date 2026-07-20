@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! IEEE 802.15.4 and Zigbee/ZCL protocol dissector (DLT 195).
 //!
@@ -56,6 +56,18 @@ pub fn dissect_ieee802154(data: &[u8]) -> DissectedResult {
             let nwk_ctrl = u16::from_le_bytes([data[nwk_offset], data[nwk_offset + 1]]);
             let nwk_type = nwk_ctrl & 0x0003;
             let protocol_version = (nwk_ctrl >> 2) & 0x000f;
+
+            // Zigbee and 6LoWPAN both ride 802.15.4 data frames and are told
+            // apart by this first payload byte. Zigbee claims it only when the
+            // protocol version matches, so anything else that carries a valid
+            // 6LoWPAN dispatch pattern is 6LoWPAN — that is how Thread and
+            // Matter traffic appears on the same radio.
+            if protocol_version != 2 && super::sixlowpan::looks_like_sixlowpan(&data[nwk_offset..])
+            {
+                let mut r = super::sixlowpan::dissect_sixlowpan(&data[nwk_offset..]);
+                r.summary = format!("{} (802.15.4 Seq: {seq_num})", r.summary);
+                return r;
+            }
 
             if protocol_version == 2 {
                 // Zigbee 2007 / PRO

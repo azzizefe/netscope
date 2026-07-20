@@ -39,7 +39,7 @@ pub fn dissect_pcp(
             let dir = if is_response { "response" } else { "request" };
             format!("PCP {name} {dir}")
         }
-        _ => format!("PCP/NAT-PMP ({} bytes)", payload.len()),
+        _ => format!("PCP/NAT-PMP ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

@@ -27,7 +27,7 @@ pub fn dissect_iec104(
         };
         format!("IEC 60870-5-104 {fmt}")
     } else {
-        format!("IEC-104 ({} bytes)", payload.len())
+        format!("IEC-104 ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

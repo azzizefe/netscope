@@ -53,7 +53,7 @@ pub fn dissect_cldap(
             };
             format!("CLDAP {name}")
         }
-        None => format!("CLDAP ({} bytes)", payload.len()),
+        None => format!("CLDAP ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

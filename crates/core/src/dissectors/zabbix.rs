@@ -26,7 +26,7 @@ pub fn dissect_zabbix(
     } else {
         let line = super::first_text_line(payload);
         if line.is_empty() {
-            format!("Zabbix ({} bytes)", payload.len())
+            format!("Zabbix ({})", super::bytes(payload.len() as u64))
         } else {
             format!("Zabbix — {}", super::truncate(&line, 40))
         }

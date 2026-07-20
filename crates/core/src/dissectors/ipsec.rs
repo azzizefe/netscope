@@ -145,6 +145,46 @@ pub fn dissect_esp(
 /// next-header(1), payload-len(1), reserved(2), SPI(4), sequence(4), then the
 /// integrity check value. We report the SPI, sequence and the protocol AH is
 /// protecting.
+/// The four zero bytes that mark a key-exchange message on the NAT traversal
+/// port, distinguishing it from encapsulated ESP (RFC 3948 §2.2).
+const NON_ESP_MARKER: [u8; 4] = [0, 0, 0, 0];
+
+/// Dissect whatever arrives on the NAT traversal port (UDP 4500).
+///
+/// That one port carries two different things. Key exchange messages are
+/// prefixed with four zero bytes precisely so they can be told apart from
+/// encapsulated ESP, whose first field is a security parameter index that is
+/// never zero. Binding the port to one of the two would mislabel the other,
+/// and on a working VPN the encapsulated traffic is the overwhelming majority.
+pub fn dissect_nat_traversal(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    payload: &[u8],
+) -> DissectedResult {
+    if payload.starts_with(&NON_ESP_MARKER) {
+        return super::isakmp::dissect_isakmp(src_ip, dst_ip, src_port, dst_port, &payload[4..]);
+    }
+    // A single zero byte is the keepalive NAT traversal sends to hold the
+    // mapping open, and it is neither of the two real message types.
+    if payload == [0xFF] {
+        return DissectedResult {
+            src_addr: src_ip,
+            dst_addr: dst_ip,
+            src_port: Some(src_port),
+            dst_port: Some(dst_port),
+            protocol: Protocol::Esp,
+            summary: "IPsec NAT keepalive".to_string(),
+        };
+    }
+    let mut r = dissect_esp(src_ip, dst_ip, payload);
+    r.src_port = Some(src_port);
+    r.dst_port = Some(dst_port);
+    r.summary = format!("{} [NAT traversal]", r.summary);
+    r
+}
+
 pub fn dissect_ah(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
@@ -168,6 +208,26 @@ pub fn dissect_ah(
     let next_header = payload[0];
     let spi = u32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]);
     let seq = u32::from_be_bytes([payload[8], payload[9], payload[10], payload[11]]);
+
+    // AH authenticates but does not encrypt, so unlike ESP the packet it
+    // protects is entirely readable. Reporting only the SPI would hide a
+    // perfectly visible conversation behind a label.
+    //
+    // The header length is counted in 4-byte units and excludes two of them,
+    // which is the same unusual rule the IPv6 extension walk has to follow.
+    let header_len = (payload[1] as usize + 2) * 4;
+    if let Some(inner) = payload.get(header_len..) {
+        if !inner.is_empty() {
+            let mut r = super::dispatch_transport(
+                (src_ip, dst_ip, Some(next_header)),
+                inner.to_vec(),
+                inner.len(),
+            );
+            r.summary = format!("AH (SPI 0x{spi:08x}) · {}", r.summary);
+            return r;
+        }
+    }
+
     DissectedResult {
         summary: format!(
             "AH (IPsec) — SPI 0x{spi:08x}, seq {seq}, protects {}",
@@ -190,6 +250,40 @@ fn next_header_name(p: u8) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    /// UDP 4500 carries two different protocols, told apart by four zero bytes
+    /// in front of the key-exchange messages. Binding the port to one of them
+    /// would mislabel the other, and on a working VPN the encapsulated traffic
+    /// is nearly all of it.
+    #[test]
+    fn nat_traversal_port_splits_key_exchange_from_encapsulated_esp() {
+        // Key exchange: the non-ESP marker, then an ISAKMP header.
+        let mut ike = vec![0u8, 0, 0, 0];
+        ike.extend_from_slice(&[0xAA; 8]); // initiator cookie
+        ike.extend_from_slice(&[0u8; 8]); // responder cookie
+        ike.extend_from_slice(&[0x00, 0x20, 0x22, 0x08]);
+        ike.extend_from_slice(&[0u8; 12]);
+        let r = dissect_nat_traversal(None, None, 4500, 4500, &ike);
+        assert_eq!(r.protocol, Protocol::Isakmp);
+
+        // Encapsulated ESP: no marker, and the security parameter index is
+        // never zero.
+        let mut esp = 0xDEAD_BEEFu32.to_be_bytes().to_vec();
+        esp.extend_from_slice(&1u32.to_be_bytes());
+        esp.extend_from_slice(&[0u8; 16]);
+        let r = dissect_nat_traversal(None, None, 4500, 4500, &esp);
+        assert_eq!(r.protocol, Protocol::Esp);
+        assert!(r.summary.contains("NAT traversal"), "got {}", r.summary);
+        assert_eq!(r.src_port, Some(4500));
+    }
+
+    /// The keepalive is a single byte and is neither of the two real message
+    /// types; reading it as ESP would report a nonsense security index.
+    #[test]
+    fn the_nat_keepalive_is_recognised() {
+        let r = dissect_nat_traversal(None, None, 4500, 4500, &[0xFF]);
+        assert_eq!(r.summary, "IPsec NAT keepalive");
+    }
     use super::*;
 
     #[test]

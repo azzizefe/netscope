@@ -15,7 +15,8 @@ pub fn dissect_tftp(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary = parse(payload).unwrap_or_else(|| format!("TFTP ({} bytes)", payload.len()));
+    let summary =
+        parse(payload).unwrap_or_else(|| format!("TFTP ({})", super::bytes(payload.len() as u64)));
     DissectedResult {
         src_addr: src_ip,
         dst_addr: dst_ip,

@@ -30,7 +30,7 @@ pub fn dissect_smpp(
         };
         format!("SMPP {name}")
     } else {
-        format!("SMPP ({} bytes)", payload.len())
+        format!("SMPP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

@@ -30,7 +30,7 @@ pub fn dissect_diameter(
         let dir = if is_request { "Request" } else { "Answer" };
         format!("Diameter {name} {dir} (code {code})")
     } else {
-        format!("Diameter ({} bytes)", payload.len())
+        format!("Diameter ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

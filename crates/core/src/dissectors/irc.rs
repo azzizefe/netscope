@@ -23,7 +23,7 @@ pub fn dissect_irc(
         .unwrap_or(&line);
     let command = body.split_whitespace().next().unwrap_or("");
     let summary = if command.is_empty() {
-        format!("IRC ({} bytes)", payload.len())
+        format!("IRC ({})", super::bytes(payload.len() as u64))
     } else {
         format!("IRC {command} — {}", super::truncate(&line, 50))
     };

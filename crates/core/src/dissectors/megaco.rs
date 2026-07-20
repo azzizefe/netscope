@@ -20,7 +20,7 @@ pub fn dissect_megaco(
     let summary = if line.starts_with("MEGACO/") || line.starts_with("!/") {
         format!("Megaco/H.248 — {}", super::truncate(&line, 40))
     } else {
-        format!("Megaco/H.248 ({} bytes)", payload.len())
+        format!("Megaco/H.248 ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

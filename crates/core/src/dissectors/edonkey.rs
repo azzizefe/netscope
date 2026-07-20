@@ -19,7 +19,7 @@ pub fn dissect_edonkey(
         Some(0xE3) => "eDonkey message".to_string(),
         Some(0xC5) => "eMule extended message".to_string(),
         Some(0xD4) => "eMule compressed message".to_string(),
-        _ => format!("eDonkey/eMule ({} bytes)", payload.len()),
+        _ => format!("eDonkey/eMule ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,
