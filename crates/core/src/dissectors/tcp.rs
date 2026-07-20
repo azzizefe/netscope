@@ -9,8 +9,8 @@ use crate::models::Protocol;
 
 use super::{
     adsb, amqp1, bindings, bitcoin, bittorrent, ceph, drda, fix, hl7, http, http2, ibmmq, lustre,
-    memcached_bin, mms, mysqlx, nmea, ntlm, openvpn, redis_cluster, s7comm, someip, spice, syslog,
-    thrift, websocket, x11, zmtp, DissectedResult,
+    mbus, memcached_bin, mms, mysqlx, nmea, ntlm, openvpn, redis_cluster, s7comm, someip, spice,
+    syslog, thrift, websocket, x11, zmtp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -284,8 +284,8 @@ fn dissect_tcp_inner(
                 tcp_payload,
             );
         }
-        // 50000, 33060, 10110 and 30005 all fall inside the ephemeral range, so
-        // a port match alone would mislabel ordinary client sockets.
+        // 50000, 33060, 10110, 10001 and 30005 all fall inside the ephemeral
+        // range, so a port match alone would mislabel ordinary client sockets.
         if on(50000) && drda::looks_like_drda(tcp_payload) {
             return drda::dissect_drda(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
@@ -297,6 +297,11 @@ fn dissect_tcp_inner(
         }
         if on(30005) && adsb::looks_like_adsb(tcp_payload) {
             return adsb::dissect_adsb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Meter gateways conventionally listen on 10001, which is not assigned
+        // to anything, so the framing has to agree before the flow is claimed.
+        if on(10001) && mbus::looks_like_mbus(tcp_payload) {
+            return mbus::dissect_mbus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
 
         // TCP 514 is assigned to rsh, but syslog-over-TCP squats there in

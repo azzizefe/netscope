@@ -150,6 +150,7 @@ pub mod macctrl;
 pub mod macsec;
 pub mod managesieve;
 pub mod matter;
+pub mod mbus;
 pub mod megaco;
 pub mod memcached;
 pub mod memcached_bin;
@@ -278,6 +279,7 @@ pub mod snap;
 pub mod snmp;
 pub mod socks;
 pub mod someip;
+pub mod someip_sd;
 pub mod source_query;
 pub mod spamd;
 pub mod spice;
@@ -310,6 +312,7 @@ pub mod turn;
 pub mod twamp;
 pub mod udld;
 pub mod udp;
+pub mod uds;
 pub mod usb;
 pub mod utp;
 pub mod vines;
@@ -2703,6 +2706,10 @@ mod robustness {
             include_str!("dissectors/wlan.rs"),
             // A CAN frame's identifier selects the bus protocol above it.
             include_str!("dissectors/can.rs"),
+            // Both of these carry another protocol as their body: SOME/IP's
+            // discovery messages, and the UDS command inside a DoIP envelope.
+            include_str!("dissectors/someip.rs"),
+            include_str!("dissectors/doip.rs"),
         ];
 
         let mut unreachable = Vec::new();
