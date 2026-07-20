@@ -85,13 +85,38 @@ jobs:
           echo "LIB=$libDir;$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "LIBPCAP_LIBDIR=$libDir"| Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # Build & test the core + TUI crates (desktop is excluded because it
-      # needs Tauri system deps that differ per-OS and are tested in release.yml)
+      # Build & test the core + TUI crates. The desktop crate is built and
+      # tested separately below rather than added here — see that step.
       - name: Build
         run: cargo build -p netscope-core -p netscope-tui
 
       - name: Test
         run: cargo test -p netscope-core -p netscope-tui
+
+      # The desktop crate's tests exercise `replay_packet`, which puts real
+      # packets on the wire, so they are worth running. They get their own
+      # invocation for two reasons.
+      #
+      # Linux is skipped because Tauri needs seven apt packages there
+      # (libwebkit2gtk and friends — see release.yml), which is a lot of setup
+      # time on every push for two tests. Windows and macOS need nothing extra.
+      #
+      # It is a separate `cargo test` rather than another `-p` on the line
+      # above because adding the desktop crate to a larger build breaks it on
+      # Windows, with `STATUS_ENTRYPOINT_NOT_FOUND` (0xc0000139) before `main`
+      # runs. The cause: rfd — reached through tauri-plugin-dialog — imports
+      # `TaskDialogIndirect`, which only exists in version 6 of comctl32.
+      # Claiming v6 requires an application manifest, which the real app has
+      # and a `cargo test` binary does not, so Windows loads comctl32 5.82 from
+      # System32 and the process dies on the missing export. In a smaller build
+      # the linker drops the dialog code and the import never appears, which is
+      # why this is invisible until something else is added to the build.
+      #
+      # `cargo test --workspace` hits this locally on Windows. That is a
+      # pre-existing trap, not a regression.
+      - name: Test desktop
+        if: runner.os != 'Linux'
+        run: cargo test -p netscope-desktop
 
   # ── 3. Frontend tests (vitest) ─────────────────────────────────────────────
   frontend:
