@@ -24,7 +24,7 @@ pub fn dissect_svn(
     } else if t.starts_with('(') {
         "SVN command".to_string()
     } else {
-        format!("SVN data ({} bytes)", payload.len())
+        format!("SVN data ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

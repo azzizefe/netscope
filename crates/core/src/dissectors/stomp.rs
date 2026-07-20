@@ -36,7 +36,7 @@ pub fn dissect_stomp(
     let summary = if COMMANDS.contains(&line.as_str()) {
         format!("STOMP {line}")
     } else if line.is_empty() {
-        format!("STOMP ({} bytes)", payload.len())
+        format!("STOMP ({})", super::bytes(payload.len() as u64))
     } else {
         format!("STOMP — {}", super::truncate(&line, 48))
     };

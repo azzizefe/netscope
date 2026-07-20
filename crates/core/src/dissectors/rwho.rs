@@ -23,12 +23,12 @@ pub fn dissect_rwho(
             .trim()
             .to_string();
         if host.is_empty() {
-            format!("rwho broadcast ({} bytes)", payload.len())
+            format!("rwho broadcast ({})", super::bytes(payload.len() as u64))
         } else {
             format!("rwho broadcast from {}", super::truncate(&host, 24))
         }
     } else {
-        format!("rwho broadcast ({} bytes)", payload.len())
+        format!("rwho broadcast ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

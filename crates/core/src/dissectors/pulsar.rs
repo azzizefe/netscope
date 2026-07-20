@@ -23,10 +23,10 @@ pub fn dissect_pulsar(
         if cmd as usize + 4 <= total as usize {
             format!("Pulsar command ({cmd} byte command, {total} byte frame)")
         } else {
-            format!("Pulsar payload ({} bytes)", payload.len())
+            format!("Pulsar payload ({})", super::bytes(payload.len() as u64))
         }
     } else {
-        format!("Pulsar ({} bytes)", payload.len())
+        format!("Pulsar ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

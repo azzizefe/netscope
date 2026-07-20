@@ -1,10 +1,54 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
 use crate::models::Protocol;
 
-use super::DissectedResult;
+use super::{cip, DissectedResult};
+
+/// The two encapsulation commands that carry a CIP message.
+const CMD_SEND_RR_DATA: u16 = 0x006F;
+const CMD_SEND_UNIT_DATA: u16 = 0x0070;
+
+/// Common Packet Format item types that hold the CIP message itself: connected
+/// data rides an established connection, unconnected data does not.
+const ITEM_CONNECTED_DATA: u16 = 0x00B1;
+const ITEM_UNCONNECTED_DATA: u16 = 0x00B2;
+
+/// Find the CIP message inside an encapsulation body.
+///
+/// The body is a 4-byte interface handle and a 2-byte timeout, then a Common
+/// Packet Format list: an item count followed by that many type/length/value
+/// items. The address item comes first and is usually empty; the data item that
+/// follows is what holds CIP.
+fn cip_payload(body: &[u8]) -> Option<&[u8]> {
+    // interface handle (4) + timeout (2) + item count (2)
+    let count = u16::from_le_bytes([*body.get(6)?, *body.get(7)?]) as usize;
+    // A wild count would just fail on the bounds checks below, but capping it
+    // keeps the loop obviously finite.
+    if count > 16 {
+        return None;
+    }
+    let mut offset = 8;
+    for _ in 0..count {
+        let type_id = u16::from_le_bytes([*body.get(offset)?, *body.get(offset + 1)?]);
+        let len = u16::from_le_bytes([*body.get(offset + 2)?, *body.get(offset + 3)?]) as usize;
+        let from = offset + 4;
+        let to = from.checked_add(len)?;
+        if matches!(type_id, ITEM_CONNECTED_DATA | ITEM_UNCONNECTED_DATA) {
+            let data = body.get(from..to)?;
+            // A connected data item begins with a 2-byte sequence count before
+            // the CIP message proper.
+            return if type_id == ITEM_CONNECTED_DATA {
+                data.get(2..)
+            } else {
+                Some(data)
+            };
+        }
+        offset = to;
+    }
+    None
+}
 
 /// Dissect an EtherNet/IP encapsulation message (TCP/UDP 44818).
 ///
@@ -38,6 +82,25 @@ pub fn dissect_enip(
     let status = u32::from_le_bytes([payload[8], payload[9], payload[10], payload[11]]);
 
     let name = command_name(command);
+
+    // SendRRData and SendUnitData exist to carry a CIP message. What CIP says
+    // is the useful part — "CIP Stop" rather than "EtherNet/IP SendRRData" —
+    // so hand it on and report that instead when it is recognised.
+    if matches!(command, CMD_SEND_RR_DATA | CMD_SEND_UNIT_DATA) {
+        if let Some(cip_data) = cip_payload(&payload[24..]) {
+            if let Some((protocol, inner)) = cip::describe(cip_data) {
+                return DissectedResult {
+                    src_addr: src_ip,
+                    dst_addr: dst_ip,
+                    src_port: Some(src_port),
+                    dst_port: Some(dst_port),
+                    protocol,
+                    summary: format!("{inner} — session 0x{session:08x}"),
+                };
+            }
+        }
+    }
+
     let summary = if status != 0 {
         format!("EtherNet/IP {name} — status 0x{status:08x}, session 0x{session:08x}")
     } else {

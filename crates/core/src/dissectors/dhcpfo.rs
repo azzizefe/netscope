@@ -34,7 +34,7 @@ pub fn dissect_dhcpfo(
             };
             format!("DHCP failover {name}")
         }
-        None => format!("DHCP failover ({} bytes)", payload.len()),
+        None => format!("DHCP failover ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

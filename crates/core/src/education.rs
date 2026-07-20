@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Plain-language explanations of what netscope shows.
 //!
@@ -290,6 +290,17 @@ prefixed by a single character (+ ok, - error, : number). You can almost read it
 straight off the wire.",
             look_for: "\"Redis command — GET foo\" / \"Redis command — SET key value\" and \"Redis reply — +OK\".",
         },
+        Protocol::RedisCluster => Lesson {
+            title: "Redis cluster bus — how nodes watch each other",
+            summary: "The gossip that decides which members of a cluster are alive.",
+            body: "Separate from the client protocol and on its own port (the data port \
+plus 10000, so 16379 for a default install), this is where the nodes of a Redis \
+cluster keep track of each other. Most of it is routine PING and PONG. The messages \
+worth spotting are FAIL, where a node is declared down, and the failover auth \
+request and grant that follow — a cluster votes on which replica gets promoted. \
+Those are the cause of the errors clients see, not a symptom of them.",
+            look_for: "\"Redis cluster FAIL (a node declared down)\" and \"failover auth request\" on TCP 16379.",
+        },
         Protocol::Cassandra => Lesson {
             title: "Cassandra — the distributed database",
             summary: "The CQL binary protocol used by Apache Cassandra clusters.",
@@ -308,6 +319,18 @@ in 1979 with no authentication or encryption, so anyone who can reach TCP 502 ca
 issue commands. That's why spotting Modbus on a network — especially crossing into \
 IT segments — matters for OT security.",
             look_for: "\"Modbus Read Holding Registers (fn 3)\" (a read) and \"Modbus Write Single Coil (fn 5)\" (a command); \"Modbus Exception\" when the device refuses.",
+        },
+        Protocol::MBus => Lesson {
+            title: "M-Bus — reading the meters in a building",
+            summary: "One gateway polling every water, gas, heat and electricity meter.",
+            body: "A block of flats has a gateway that walks round every meter in the \
+building asking for a reading, and this is that conversation once it has been put \
+onto TCP. The reply carries the meter's serial number and, more usefully, what kind \
+of meter it is — so a capture tells you what is actually installed.\n\n\
+It is worth watching because a meter that has stopped answering is invisible \
+otherwise: the gateway keeps asking, the billing system keeps showing the last \
+value it received, and nothing looks wrong until someone gets an estimated bill.",
+            look_for: "\"M-Bus reply — water meter, serial 12345678\"; a request to a meter with no reply following it.",
         },
         Protocol::Dnp3 => Lesson {
             title: "DNP3 — the grid's control protocol",
@@ -679,6 +702,16 @@ have to hit a slower database every time. Simple get/set commands over TCP 11211
 Left exposed to the internet it has been abused for huge amplification attacks, \
 so seeing it on a public interface is worth noting.",
             look_for: "\"Memcached get — session:42\" on TCP 11211.",
+        },
+        Protocol::MemcachedBin => Lesson {
+            title: "Memcached (binary) — the same cache, a different protocol",
+            summary: "What client libraries send, as opposed to the text form typed by hand.",
+            body: "Memcached speaks two protocols on the same port. The text one is what \
+you can type at a telnet prompt; the binary one is what real client libraries use, \
+so it is what a production capture is full of. The reply carries a status code, \
+which is where cache misses become visible — a capture that is mostly misses \
+explains a slow application better than any latency graph.",
+            look_for: "\"Memcached Get response — not found (cache miss)\" on TCP 11211.",
         },
         Protocol::BitTorrent => Lesson {
             title: "BitTorrent — peer-to-peer file sharing",
@@ -1355,6 +1388,21 @@ procedure calls and pub/sub for the vehicle. Its Service Discovery variant \
 advertises what's available.",
             look_for: "\"SOME/IP Request — service 0x1234\" on UDP/TCP 30490+.",
         },
+        Protocol::SomeIpSd => Lesson {
+            title: "SOME/IP-SD — how a car's ECUs find each other",
+            summary: "The offers and subscriptions that have to happen before any call can.",
+            body: "Before one ECU can call another, the provider has to announce its \
+service and the consumer has to subscribe. That negotiation is SOME/IP-SD, and it \
+is where the interesting failures live: a feature that 'doesn't work' usually means \
+the offer never arrived or the subscription was refused — and neither shows up in \
+the calls themselves, because there aren't any.\n\n\
+Watch the time-to-live rather than just the message name. An OfferService with a \
+TTL of zero is not an offer, it is the withdrawal of one: an ECU announcing it is \
+going away. A subscribe with TTL zero is an unsubscribe, and an acknowledgement \
+with TTL zero is a refusal. Reading the type without the TTL tells you the \
+opposite of what happened.",
+            look_for: "\"SOME/IP-SD offering service 0x1234\" normally; \"withdrawing\" or \"refused subscription to\" when something has gone wrong.",
+        },
         Protocol::Doip => Lesson {
             title: "DoIP — plugging into a car over Ethernet",
             summary: "Carries vehicle diagnostics (fault codes, flashing) over IP.",
@@ -1363,6 +1411,19 @@ firmware, it increasingly does so over Ethernet using DoIP: it finds the vehicle
 activates a diagnostic route, then tunnels the UDS diagnostic messages to the \
 target ECU.",
             look_for: "\"DoIP Diagnostic message\" on UDP/TCP 13400.",
+        },
+        Protocol::Uds => Lesson {
+            title: "UDS — what the diagnostic tool actually said",
+            summary: "The command inside a DoIP message: read a code, unlock an ECU, flash firmware.",
+            body: "DoIP is the envelope; UDS is the letter. A capture full of \
+'diagnostic message' has told you nothing, because every interesting difference is \
+one byte further in.\n\n\
+Two exchanges are worth knowing on sight. SecurityAccess is an ECU being unlocked — \
+the tool asks for a seed, sends back a computed key, and the ECU either accepts it \
+or refuses with 'invalid key' or 'too many failed attempts'. RequestDownload \
+followed by TransferData is firmware being written to an ECU, which is the most \
+consequential thing that can happen on a vehicle network.",
+            look_for: "\"UDS read fault codes\" for routine work; \"UDS security access — seed request\" and \"UDS download to ECU requested\" when something is being changed.",
         },
         Protocol::Xcp => Lesson {
             title: "XCP — tuning an ECU live",
@@ -2117,6 +2178,31 @@ about. On Linux, SocketCAN exposes canN/vcanN interfaces netscope can \
 capture like any NIC.",
             look_for: "\"CAN 0x244 [8]  12 0A 00 F3 …\" — the ID, the byte count, and the raw data bytes.",
         },
+        Protocol::J1939 => Lesson {
+            title: "J1939 — the language trucks speak over CAN",
+            summary: "Turns a 29-bit CAN identifier into a message name and a sender.",
+            body: "Plain CAN gives you an identifier and eight bytes. J1939, which \
+every heavy truck, bus and agricultural machine runs, divides that identifier \
+into a priority, a parameter group number naming the message, and the address \
+of the ECU that sent it. So a frame stops being hex and becomes 'engine \
+temperature, from the engine'. The one to look for is DM1 — the check-engine \
+light itself, carrying the code for every fault currently active.\n\n\
+Not every 29-bit frame is J1939, so netscope only claims one whose parameter \
+group the standard actually defines; anything else stays a plain CAN frame.",
+            look_for: "\"J1939 engine speed (from engine)\"; and \"J1939 DM1 — fault lamp lit, SPN 100 FMI 1\" when something is wrong.",
+        },
+        Protocol::Obd2 => Lesson {
+            title: "OBD-II — what the garage's scan tool asks your car",
+            summary: "Diagnostic requests and replies, decoded into real units.",
+            body: "Every car since the mid-90s has a diagnostic port, and what comes \
+out of it is OBD-II over CAN. It is the rare CAN protocol you can identify with \
+certainty, because the standard reserves the identifiers: 0x7DF asks whichever \
+ECU can answer, 0x7E0-0x7E7 ask one directly, and 0x7E8-0x7EF are the replies. \
+The encodings are fixed too, so netscope converts them into the numbers a \
+mechanic reads — engine speed in rpm, coolant in degrees — rather than leaving \
+two bytes of hex.",
+            look_for: "\"OBD-II request engine speed\" then \"OBD-II engine speed — 750 rpm\"; \"OBD-II stored fault codes\" when reading why the light is on.",
+        },
         Protocol::Ntlm => Lesson {
             title: "NTLM — Windows network authentication",
             summary: "Microsoft's legacy authentication protocol used to log in to servers.",
@@ -2140,6 +2226,17 @@ capture like any NIC.",
             summary: "Message broker queuing protocol.",
             body: "AMQP is an open standard protocol for passing business messages between applications or organizations.",
             look_for: "AMQP broker connection headers on port 5672.",
+        },
+        Protocol::Amqp1 => Lesson {
+            title: "AMQP 1.0 — a different protocol with the same name",
+            summary: "The OASIS standard behind Azure Service Bus and Qpid, sharing port 5672.",
+            body: "AMQP 1.0 and AMQP 0-9-1 are related only by name; they are separate \
+protocols that happen to share a port. 0-9-1 is what RabbitMQ speaks natively, while \
+1.0 is the ISO standard used by Azure Service Bus, Qpid and ActiveMQ Artemis. Each \
+frame carries a 'performative' — the verb — and the useful distinction is between \
+'transfer', which moves a message, and 'flow', which is a receiver saying how many \
+more it will accept. Lots of flow and little transfer is back-pressure.",
+            look_for: "\"AMQP 1.0 transfer (message)\" or \"flow (credit)\" on TCP 5672.",
         },
         Protocol::Kafka => Lesson {
             title: "Kafka — Apache Kafka messaging",
@@ -2247,6 +2344,443 @@ the same address to two clients. The failover channel on TCP 647 carries binding
 and pool balancing so either server can take over alone.",
             look_for: "\"DHCP failover BNDUPD\" / \"POOLREQ\" on TCP 647.",
         },
+        Protocol::Ngap => Lesson {
+            title: "NGAP — the 5G core's signalling language",
+            summary: "How a 5G cell tower and the mobile core talk about your phone.",
+            body: "When your phone connects to 5G, the cell tower (gNB) and the core network (the AMF) exchange NGAP messages to register it, set up a data session, page it when a call arrives, and hand it to another tower as you move. NGAP carries no user data — it is pure control, the paperwork that makes the data path exist. It rides on SCTP and is identified by a payload identifier rather than a port, so operators run it wherever they like.",
+            look_for: "\"NGAP InitialUEMessage\" (a phone appearing), \"NGAP PDUSessionResourceSetup\" (data session being built), \"NGAP Paging\" (the network looking for a phone).",
+        },
+        Protocol::S1ap => Lesson {
+            title: "S1AP — NGAP's 4G predecessor",
+            summary: "The same job as NGAP, on an LTE network.",
+            body: "S1AP is what NGAP replaced. It connects an LTE cell tower (eNB) to the core (the MME) and does the same work: attach a phone, build a bearer for its data, page it, hand it over. The message layout is close enough to NGAP that they look alike on the wire — but the procedure numbers mean different things, so the two are decoded separately. Plenty of live networks still run both side by side.",
+            look_for: "\"S1AP InitialUEMessage\", \"S1AP S1Setup (success)\" when a tower comes online, \"S1AP E-RABSetup\" for a data bearer.",
+        },
+        Protocol::Xnap => Lesson {
+            title: "XnAP — one 5G tower talking to the next",
+            summary: "Lets neighbouring cells hand your phone over directly.",
+            body: "When you walk or drive out of one 5G cell and into another, the two base stations can arrange the handover between themselves over the Xn link instead of asking the core network to broker it. That is faster and is why a call does not drop as you move. XnAP is that conversation.",
+            look_for: "\"XnAP HandoverPreparation\" as a phone moves between cells; \"XnAP XnSetup (success)\" when two towers first learn about each other.",
+        },
+        Protocol::F1ap => Lesson {
+            title: "F1AP — inside a single 5G base station",
+            summary: "A modern base station is split in two; this joins the halves.",
+            body: "A 5G base station is usually not one box. A central unit does the thinking and sits in a data centre, while distributed units sit at the actual antennas. F1AP is the link between them. Seeing it means you are capturing inside an operator's radio network, not on a link between operators.",
+            look_for: "\"F1AP F1Setup\" when a radio unit registers with its central unit; \"F1AP UEContextSetup\" when a phone is given radio resources.",
+        },
+        Protocol::E1ap => Lesson {
+            title: "E1AP — splitting control from data",
+            summary: "The 5G central unit is itself split; this joins those halves.",
+            body: "The central unit of a 5G base station is divided again: a control-plane half that makes decisions and a user-plane half that actually moves your data. Separating them lets an operator scale data capacity without scaling signalling. E1AP is how the two coordinate — mostly about setting up and tearing down the bearers that carry traffic.",
+            look_for: "\"E1AP BearerContextSetup\" when a data path is created; \"E1AP DataUsageReport\" for accounting.",
+        },
+        Protocol::M3ua => Lesson {
+            title: "M3UA — SS7 telephony moved onto IP",
+            summary: "How phone networks still route calls and texts, now over IP.",
+            body: "Before mobile networks ran on IP, operators used SS7 — a separate signalling network for setting up calls, delivering SMS and answering roaming queries. Those SS7 links are mostly gone, but the protocol on top of them was kept, wrapped in M3UA and carried over IP. It is why a text message still reaches you abroad. SS7 was designed for a world of a few trusted operators, so it carries very little authentication, which is why access to it is tightly controlled.",
+            look_for: "\"M3UA DATA — SCCP 1001 → 2002\" (a message travelling between two switches), \"M3UA ASPUP\" when a link comes up.",
+        },
+        Protocol::M2ua => Lesson {
+            title: "M2UA — a remote SS7 link, made local",
+            summary: "Lets equipment use an SS7 link that is physically somewhere else.",
+            body: "M2UA sits one layer below M3UA. A signalling gateway holds the real SS7 link and uses M2UA to present it to a controller elsewhere on the network, so the controller behaves as though the link were plugged into it directly.",
+            look_for: "\"M2UA Data\" carrying link traffic; \"M2UA State Indication\" when the link changes state.",
+        },
+        Protocol::M2pa => Lesson {
+            title: "M2PA — two signalling points, straight over IP",
+            summary: "Replaces an SS7 link rather than relaying one.",
+            body: "M2PA and M2UA look similar but do different jobs. M2UA relays a remote link to a controller; M2PA replaces the link itself, so two signalling points exchange routing messages directly over IP with no SS7 hardware anywhere in the path.",
+            look_for: "\"M2PA User Data\" for ordinary traffic; \"M2PA Link Status\" for link housekeeping.",
+        },
+        Protocol::Sua => Lesson {
+            title: "SUA — reaching SS7 without an SS7 stack",
+            summary: "Lets a normal server talk to a telephony network.",
+            body: "SUA replaces two SS7 layers at once, so an application can query a telephony network — asking where a subscriber is, say — without implementing the SS7 stack underneath. Most of what rides on it is connectionless: one question, one answer.",
+            look_for: "\"SUA CLDT\" (a query or its data) and \"SUA CLDR\" (the response).",
+        },
+        Protocol::Gtpv2 => Lesson {
+            title: "GTPv2-C — building your phone's data path",
+            summary: "Creates and moves the tunnel your mobile data travels through.",
+            body: "When your phone gets mobile data, the core network builds a tunnel for it. GTPv2-C is the control conversation that creates that tunnel, moves it as you travel between cells, and tears it down when you disconnect. The data itself flows through a different protocol (GTP-U); this is only the paperwork. A Create Session Request is roughly the moment your phone gets online.",
+            look_for: "\"GTPv2-C Create Session Request\" when data starts, \"Modify Bearer Request\" as you move, \"Delete Session Request\" when it ends.",
+        },
+        Protocol::Rua => Lesson {
+            title: "RUA — carrying 3G signalling from a femtocell",
+            summary: "The transport a home base station uses to reach the operator.",
+            body: "A femtocell is a small operator-supplied base station that improves coverage inside a building by backhauling over your own broadband. RUA is how it carries 3G control messages to the operator gateway across that ordinary internet connection.",
+            look_for: "\"RUA Connect\" when a phone attaches through the femtocell; \"RUA DirectTransfer\" for ongoing signalling.",
+        },
+        Protocol::Hnbap => Lesson {
+            title: "HNBAP — a femtocell checking in",
+            summary: "Registers a home base station and its phones with the operator.",
+            body: "Before a femtocell can carry traffic it has to register with the operator: prove which unit it is, say where it is, and list which phones are allowed to use it. HNBAP is that registration conversation.",
+            look_for: "\"HNBAP HNBRegister\" when the unit comes online; \"HNBAP UERegister\" as a phone attaches to it.",
+        },
+        Protocol::Nbap => Lesson {
+            title: "NBAP — running a 3G base station",
+            summary: "How a controller drives the radio hardware on a 3G cell.",
+            body: "In 3G the radio hardware (the NodeB) is not very smart on its own — a separate controller tells it which cells to run and which radio links to set up for which phones. NBAP is that instruction channel. 4G and 5G moved most of this intelligence into the base station itself, so NBAP is mostly seen in older networks.",
+            look_for: "\"NBAP CellSetup\" when a cell is brought up; \"NBAP RadioLinkSetup\" as a phone is given radio resources.",
+        },
+        Protocol::SbcAp => Lesson {
+            title: "SBc-AP — emergency alerts to LTE phones",
+            summary: "The path a public warning takes to reach every phone in an area.",
+            body: "When an earthquake, tsunami or missing-child alert is broadcast to every phone in a region, SBc-AP is how the warning reaches the LTE cells that will transmit it. It is broadcast, not addressed — the cell sends it and every phone in range picks it up, so no subscriber list is involved.",
+            look_for: "\"SBc-AP WriteReplaceWarning\" when an alert is issued; \"SBc-AP StopWarning\" when it is withdrawn.",
+        },
+        Protocol::Sabp => Lesson {
+            title: "SABP — the 3G version of cell broadcast",
+            summary: "Same job as SBc-AP, on an older network generation.",
+            body: "SABP delivers area-wide broadcast messages to 3G cells: emergency alerts, and in some countries the area name your phone displays. It predates SBc-AP and does the same work for UMTS networks.",
+            look_for: "\"SABP Write-Replace\" when a broadcast starts; \"SABP Kill\" when it is cancelled.",
+        },
+        Protocol::LcsAp => Lesson {
+            title: "LCS-AP — working out where a phone is",
+            summary: "The network locating a handset, usually for an emergency call.",
+            body: "When you dial an emergency number, the network has to tell the dispatcher where you are, and it can be far more precise than the cell tower alone — combining timing measurements, satellite positioning and known cell positions. LCS-AP carries those requests and results. The same machinery is used for lawful intercept, which is why it is a sensitive protocol to see in a capture.",
+            look_for: "\"LCS-AP LocationService\" when a position is requested; \"LCS-AP LocationAbort\" when a request is cancelled.",
+        },
+        Protocol::M2ap => Lesson {
+            title: "M2AP — broadcasting to many phones at once",
+            summary: "Sets up a single transmission that thousands of phones share.",
+            body: "Normally each phone gets its own data stream. For something everyone wants at the same moment — a live event, a mass software update — that wastes radio capacity. eMBMS sends it once and lets every phone in the cell receive the same transmission. M2AP is how a base station and the coordinating node agree on those sessions.",
+            look_for: "\"M2AP SessionStart\" when a broadcast begins; \"M2AP SchedulingInformation\" for its timing.",
+        },
+        Protocol::M3ap => Lesson {
+            title: "M3AP — the core side of mobile broadcast",
+            summary: "Connects the broadcast coordinator to the gateway feeding it.",
+            body: "M3AP is M2AP's partner one step deeper into the network: where M2AP talks to base stations, M3AP connects the coordinating node to the gateway that actually sources the broadcast content.",
+            look_for: "\"M3AP SessionStart\" as a broadcast session is created; \"M3AP M3Setup\" when the two nodes first connect.",
+        },
+        Protocol::Sccp => Lesson {
+            title: "SCCP — addressing inside the phone network",
+            summary: "Works out which network element a query should reach.",
+            body: "SS7 point codes identify a switch, but not what you want to talk to inside it. SCCP adds a subsystem number that names the actual element — the subscriber database (HLR), the visitor register (VLR), the switch itself (MSC). That is the useful part of an SCCP header: it tells you a query is heading for a subscriber database rather than just to some node.",
+            look_for: "\"SCCP UDT — MSC → HLR\", meaning a switch is querying the subscriber database. When the contents are recognised, netscope shows the TCAP operation instead.",
+        },
+        Protocol::Tcap => Lesson {
+            title: "TCAP — what the phone network is actually asking",
+            summary: "Pairs a question with its answer, and names the question.",
+            body: "TCAP matches a request to its response across the network. On its own that says little, but the operation code it carries names the real work: registering a phone in a new area, fetching authentication keys, or finding out where to deliver a text message. Two of those operations are worth recognising on sight. sendRoutingInfoForSM asks where a subscriber is so a message can be delivered, and anyTimeInterrogation asks where a subscriber physically is. Both are legitimate operations that are also the basis of well-known SS7 tracking and interception abuse, which is why netscope names them rather than leaving them as numbers.",
+            look_for: "\"TCAP Begin Invoke — sendRoutingInfoForSM — MSC → HLR\" for SMS routing; \"anyTimeInterrogation\" for a location query; \"updateLocation\" when a phone registers somewhere new.",
+        },
+        Protocol::Isup => Lesson {
+            title: "ISUP — setting up a phone call",
+            summary: "The messages that ring a phone, connect it and hang it up.",
+            body: "When a call crosses between switches, ISUP carries its state: an Initial Address message starts it and carries the dialled number, Address Complete means the far end is ringing, Answer means it was picked up, and Release ends it. Each message names the circuit it belongs to, so several calls on the same link stay distinguishable.",
+            look_for: "\"ISUP IAM (Initial Address) — CIC 42\" starting a call, then \"ACM\" (ringing), \"ANM\" (answered) and \"REL\" (hung up) on the same circuit.",
+        },
+        Protocol::Ranap => Lesson {
+            title: "RANAP — the 3G core's signalling language",
+            summary: "The 3G equivalent of NGAP and S1AP.",
+            body: "RANAP connects a 3G radio network controller to the core network. It does the same work its 4G and 5G successors do: attach a phone, set up a bearer for its data or voice, page it, hand it between controllers. Unlike NGAP and S1AP it has no transport of its own — it travels inside SCCP, addressed to subsystem 142.",
+            look_for: "\"RANAP InitialUE-Message\" when a phone appears; \"RANAP RAB-Assignment\" when a data or voice bearer is set up.",
+        },
+        Protocol::Rnsap => Lesson {
+            title: "RNSAP — two 3G controllers cooperating",
+            summary: "Lets a phone be served by two radio controllers at once.",
+            body: "In 3G a phone can be connected to cells belonging to two different controllers at the same time — the connection is anchored at one and extended over the Iur link to the other. RNSAP is that link. It is the 3G ancestor of what XnAP does between 5G base stations.",
+            look_for: "\"RNSAP RadioLinkSetup\" when a second controller adds a radio link; \"RNSAP RadioLinkFailure\" when one drops.",
+        },
+        Protocol::Bssap => Lesson {
+            title: "BSSAP — the 2G interface, and messages passing through it",
+            summary: "Carries base-station control and relays messages meant for the phone.",
+            body: "BSSAP is really two protocols behind one byte. BSSMAP messages are between the base station controller and the switch: assigning a channel, ordering encryption, paging. DTAP messages are not for the base station at all — they are between the phone and the switch, with the base station simply relaying them, which is why netscope labels them as relayed and names the protocol inside. Seeing a DTAP SMS message means a text is in transit.",
+            look_for: "\"BSSMAP PAGING\" or \"BSSMAP CIPHER MODE COMMAND\" for base-station control; \"BSSAP DTAP — SMS (relayed to the phone)\" for a text message passing through.",
+        },
+        Protocol::Fins => Lesson {
+            title: "FINS — talking to an Omron factory controller",
+            summary: "Reads and writes the memory of a PLC on a factory floor.",
+            body: "A PLC is the small computer that actually runs a machine — opening a valve, moving a robot arm, stopping a conveyor. FINS is how Omron PLCs are read and commanded over the network. Like most factory protocols it has no authentication at all: a command to write memory or stop the controller is obeyed because it arrived, not because the sender proved who they were. That is normal on an isolated plant network and alarming anywhere else.",
+            look_for: "\"FINS MEMORY AREA READ (command)\" for ordinary polling; \"FINS STOP (command)\" or \"MEMORY AREA WRITE\" for anything that changes what the machine does.",
+        },
+        Protocol::Slmp => Lesson {
+            title: "SLMP / MELSEC — Mitsubishi's PLC protocol",
+            summary: "The Mitsubishi equivalent of FINS.",
+            body: "SLMP does for Mitsubishi controllers what FINS does for Omron: read and write the memory that holds a machine's state, and start or stop the controller. It comes in two frame formats, one of which adds a serial number so replies can be matched to requests. It is likewise unauthenticated.",
+            look_for: "\"SLMP Read — station 0.255\" for polling; \"SLMP Remote Stop\" or \"Remote Reset\" for commands that halt a machine.",
+        },
+        Protocol::Ads => Lesson {
+            title: "ADS — Beckhoff TwinCAT automation",
+            summary: "How PC-based industrial controllers are read and commanded.",
+            body: "Beckhoff builds controllers that are really PCs running real-time software. ADS is the protocol used to reach them. Its unusual feature is addressing: devices are named by an AMS NetId rather than by IP address, so the NetId is what actually identifies which controller you are talking to — two controllers behind the same IP have different NetIds.",
+            look_for: "\"ADS Read (request) — 192.168.1.10.1.1:851\", where the dotted number is the AMS NetId, not an IP address; \"ADS Write Control\" changes the controller's run state.",
+        },
+        Protocol::Hsms => Lesson {
+            title: "HSMS / SECS — chip factory equipment",
+            summary: "How semiconductor manufacturing tools report to their host.",
+            body: "Every tool in a chip fab — the machines that etch, deposit and inspect wafers — talks to a host system using SECS-II messages carried over HSMS. Messages are named by stream and function, so S1F1 is \"are you there\" and S5F1 is an alarm report. A fab capture is mostly the host polling status and tools reporting events, so alarms stand out.",
+            look_for: "\"HSMS S1F1 Are You There\" for a health check; \"HSMS S5F1 Alarm Report Send\" when a tool raises an alarm; \"HSMS Linktest.req\" keeping the link alive.",
+        },
+        Protocol::Cip => Lesson {
+            title: "CIP — what the EtherNet/IP envelope is carrying",
+            summary: "The actual command sent to a factory controller.",
+            body: "EtherNet/IP is only the wrapper. The message inside is CIP, and that is where the meaning lives: reading a tag holding a temperature, writing one that opens a valve, or telling the controller to stop. Every CIP request names both a service (what to do) and an object class (which part of the device), so a single line tells you a Logix controller was asked to halt rather than merely that some EtherNet/IP traffic went past. Like other factory protocols it carries no authentication.",
+            look_for: "\"CIP Read Tag — Symbol\" for ordinary polling; \"CIP Write Tag\" when a value is changed; \"CIP Stop — Logix Controller\" for a command that halts the machine.",
+        },
+        Protocol::Dlms => Lesson {
+            title: "DLMS/COSEM — reading the meter on your wall",
+            summary: "How electricity, gas and water meters report and are configured.",
+            body: "Smart meters send their readings and accept configuration over DLMS/COSEM. The part worth watching is whether the message is encrypted: the standard defines the same operations twice, once in the clear and once ciphered. A GET-Request in the clear means readings are visible to anyone on the path, and a SET-Request in the clear means the meter can be reconfigured without the traffic being protected. netscope marks which form is in use.",
+            look_for: "\"DLMS GET-Request — client 1 → server 17\" reading a meter; \"DLMS SET-Request (encrypted)\" reconfiguring one with the body protected.",
+        },
+        Protocol::Fox => Lesson {
+            title: "Niagara Fox — the building's control system",
+            summary: "Runs heating, lighting, lifts and door access in large buildings.",
+            body: "Tridium Niagara is one of the most widely deployed building-management platforms, and Fox is how its controllers talk. Its opening greeting is unusually revealing: before any login it announces the station name, the product version and the host operating system. That makes it easy to inventory a building's control system from a single packet, which is exactly why it is worth surfacing what the greeting gives away.",
+            look_for: "\"Fox hello — BMS-TOWER-3 · Tridium · QNX (x86)\", naming the station, the product and the operating system it runs on.",
+        },
+        Protocol::SrtpGe => Lesson {
+            title: "GE-SRTP — GE Fanuc factory controllers",
+            summary: "Reads and writes PLCs made by GE Fanuc and Emerson.",
+            body: "SRTP is how GE Fanuc controllers are polled and commanded. It has no published specification, so what is decoded here comes from reverse engineering and is deliberately limited to the fields that are well established — the direction of the message and which service was requested. Requests that write memory or change the privilege level are the ones that alter what a machine is doing.",
+            look_for: "\"GE-SRTP Read System Memory (request)\" for polling; \"Write System Memory\" or \"Change PLC Privilege Level\" for anything that changes the controller.",
+        },
+        Protocol::Pccc => Lesson {
+            title: "PCCC — a 1980s command set on a modern network",
+            summary: "How older Allen-Bradley controllers are still reached today.",
+            body: "Rockwell's newer controllers speak CIP, but a great many PLC-5 and SLC-500 units are still running plants, and they speak PCCC. Rather than replace them, CIP tunnels PCCC through an Execute PCCC service — so a modern EtherNet/IP capture often contains a decades-old command set two layers down. The PCCC function is what tells you whether a controller is being read, written, or told to change processor mode.",
+            look_for: "\"PCCC Protected Typed Logical Read\" for polling; \"Protected Typed Logical Write\" or \"Change Processor Mode\" for commands that alter the machine.",
+        },
+        Protocol::Isis => Lesson {
+            title: "IS-IS — the routing protocol that ignores IP",
+            summary: "How large carrier networks work out where everything is.",
+            body: "Routers have to agree on the shape of the network before they can forward anything. IS-IS is one of the two protocols that does this inside a single operator (OSPF is the other), and it is the one most large carriers chose. Its unusual trait is that it does not run over IP at all — it rides directly on the link layer, so the routing protocol keeps working even while the IP addressing underneath it is broken or being renumbered. Routing is split into two levels: within an area, and between areas.",
+            look_for: "\"IS-IS L1 LAN Hello\" as routers find each other; \"L2 Link State PDU\" carrying the map of the network between areas.",
+        },
+        Protocol::Msdp => Lesson {
+            title: "MSDP — multicast across a border",
+            summary: "Lets a viewer in one network find a source in another.",
+            body: "Multicast normally stops at the edge of a network, because each operator runs its own rendezvous point and knows only about its own sources. MSDP is the bridge: operators peer with each other and announce which multicast sources they have. Without it, multicast video from one provider could not reach subscribers of another.",
+            look_for: "\"MSDP Source-Active — 3 sources from RP 10.0.0.1\", one network announcing sources to another; \"MSDP KeepAlive\" holding the peering up.",
+        },
+        Protocol::Pgm => Lesson {
+            title: "PGM — multicast that does not lose data",
+            summary: "Adds retransmission to multicast, which normally has none.",
+            body: "Plain multicast has no recovery: a packet lost on the way to one receiver is simply gone for that receiver. PGM adds a repair mechanism — receivers notice a gap in the sequence numbers and ask for the missing piece, and the source or a nearby router resends it. That makes it usable for things where loss is unacceptable, like market data feeds. A capture full of NAKs is the signature of a lossy multicast path.",
+            look_for: "\"PGM ODATA (original data)\" for the normal flow; a run of \"PGM NAK\" and \"RDATA (repair data)\" means receivers are missing packets and asking for them again.",
+        },
+        Protocol::Srt => Lesson {
+            title: "SRT — live television over the open internet",
+            summary: "Carries broadcast video between studios without a dedicated line.",
+            body: "Getting live video from a camera in the field back to a studio used to need an expensive dedicated circuit, because the public internet loses packets and a lost packet is a glitch on air. SRT changed that: it adds retransmission and pacing on top of UDP, so a missing piece is asked for again and arrives in time to be used. What to watch is the ratio of data to loss reports. An almost pure stream of data packets means the feed is healthy; a run of NAKs means the path is losing packets and the encoder is working to keep the picture clean.",
+            look_for: "\"SRT data — seq 4211, socket 0x12345678\" for the video itself; a burst of \"SRT NAK (loss report)\" means packets are going missing.",
+        },
+        Protocol::MpegTs => Lesson {
+            title: "MPEG-TS — the container television travels in",
+            summary: "The packet format behind broadcast TV and IPTV.",
+            body: "Almost all broadcast and IPTV video is carried as MPEG transport stream: a relentless run of 188-byte packets, each starting with the same sync byte. Streams inside it are identified by a packet identifier, and a few fixed identifiers carry the tables that describe what the stream contains — which channels exist, what the programme guide says, what the time is. A UDP datagram usually holds seven of these packets, which is where the familiar 1316-byte payload comes from.",
+            look_for: "\"MPEG-TS PID 0x0000 PAT (program association) — 7 packets\" listing the channels; a \"transport error\" note means the sender itself flagged the packet as corrupt.",
+        },
+        Protocol::Thrift => Lesson {
+            title: "Thrift — one service calling another",
+            summary: "The RPC framing behind HBase, Hive and a lot of internal traffic.",
+            body: "Before gRPC became the default, Thrift was how many companies had their services talk to each other, and a great deal of that traffic is still running. Its useful property in a capture is that the method name travels in the clear at the front of every call. So a single packet tells you which operation was requested, not merely that two services exchanged bytes. Thrift is used both with and without a length prefix on each message, and both forms appear in the wild.",
+            look_for: "\"Thrift call — getRegionInfo\" for a request; \"Thrift reply\" or \"Thrift exception\" with the same method name for what came back.",
+        },
+        Protocol::Pcep => Lesson {
+            title: "PCEP — asking a controller where to route",
+            summary: "Central path computation for traffic-engineered networks.",
+            body: "Normally each router works out its own paths. In a traffic-engineered network that is not good enough, because a good path depends on what every other flow is doing. PCEP lets a router ask a controller with a full view of the topology instead, and the controller answers. Later extensions turned this around: the controller can update an existing path or create a new one on its own initiative, which is what makes a segment-routing network centrally steerable.",
+            look_for: "\"PCEP Path Computation Request\" and its Reply for the classic exchange; \"PCEP Initiate\" or \"Update\" when the controller is driving.",
+        },
+        Protocol::Dlsw => Lesson {
+            title: "DLSw — mainframe traffic over a modern network",
+            summary: "Carries IBM SNA across IP without it noticing.",
+            body: "SNA was designed for reliable leased lines and does not cope with the delay and packet loss of a routed network — it will drop a session that goes quiet for a moment. DLSw works around that by ending the SNA link locally at each end and tunnelling between the two switches over TCP, so the mainframe and the terminal each believe they are on a direct, well-behaved link. It is why decades-old terminal traffic still runs over ordinary corporate networks.",
+            look_for: "\"DLSw CAP_EXCHANGE\" when two switches meet; \"CANUREACH\" and \"ICANREACH\" locating a mainframe; \"INFOFRAME\" carrying the session data.",
+        },
+        Protocol::Ceph => Lesson {
+            title: "Ceph — storage spread across many machines",
+            summary: "How a cluster of ordinary servers becomes one pool of storage.",
+            body: "Ceph turns a rack of commodity servers into a single storage system, replicating every object across several machines so losing one loses nothing. The daemons and their clients talk over a messenger protocol that opens with a fixed banner, which is handy because storage daemons spread themselves across hundreds of ports. Most of what you see is either cluster state being agreed or objects being written and read.",
+            look_for: "\"Ceph banner — messenger v1\" opening a connection; \"Ceph MSG\" for the traffic itself; \"Ceph BADAUTHORIZER\" when a client is refused.",
+        },
+        Protocol::Trill => Lesson {
+            title: "TRILL — Ethernet that actually routes",
+            summary: "Uses every link in a data centre instead of switching some off.",
+            body: "Spanning tree keeps a switched network from looping by disabling links until only one path remains, which means expensive links sit idle. TRILL replaces that: each switch gets a nickname, and frames are routed between nicknames using IS-IS, so every link carries traffic and the shortest path is really used. Because it is genuine routing, frames carry a hop count — without one a loop would be fatal rather than merely wasteful.",
+            look_for: "\"TRILL 100 → 200, 30 hops left\" for a routed frame; \"TRILL multi-destination\" for one being flooded to a distribution tree.",
+        },
+        Protocol::Cfm => Lesson {
+            title: "CFM — proving a carrier circuit is healthy",
+            summary: "The monitoring behind an Ethernet service level agreement.",
+            body: "A carrier selling an Ethernet circuit has to show it is up and meeting its promised latency. CFM does that: continuity check messages flow constantly so a break is spotted in milliseconds, and delay and loss measurement exchanges produce the numbers the agreement is judged on. The maintenance level keeps everyone's monitoring separate — the customer, the carrier and any intermediate operator each work at their own level and ignore the others, so nobody sees or interferes with anyone else's checks.",
+            look_for: "\"CFM CCM (continuity check) — level 5\" flowing steadily; \"DMM (delay measurement message)\" timing the circuit; \"AIS (alarm indication)\" when something upstream has failed.",
+        },
+        Protocol::Rpl => Lesson {
+            title: "RPL — routing for things that run on batteries",
+            summary: "How a mesh of sensors works out where to send data.",
+            body: "A sensor on a mesh wakes for a moment, sends a few bytes and sleeps again. It cannot run a routing protocol that floods the state of every link everywhere — that would flatten its battery in days. RPL builds a tree towards a root instead: each node only needs to know how far it is from the root (its rank) and which neighbour is its parent. Traffic climbs the tree and comes back down. A node whose rank keeps changing is one that cannot settle on a parent, which usually means a flapping radio link.",
+            look_for: "\"RPL DIO (advertise routing information) — instance 1, version 2, rank 256\" building the tree; \"RPL DAO\" telling a parent which destinations lie below.",
+        },
+        Protocol::SixLowpan => Lesson {
+            title: "6LoWPAN — IPv6 that fits in a radio packet",
+            summary: "Compresses a 40-byte IPv6 header down to a handful of bytes.",
+            body: "An 802.15.4 radio frame holds at most 127 bytes in total, and an IPv6 header alone is 40 of them before any payload. Sending IPv6 unchanged would leave almost nothing for the data. 6LoWPAN compresses the header by leaving out everything that can be worked out from the link-layer addresses, and splits into fragments whatever still does not fit. It is the layer that lets a battery-powered sensor have a real internet address, and it is what Thread and Matter are built on.",
+            look_for: "\"6LoWPAN IPHC compressed header\" for the usual case; \"6LoWPAN fragment 1 of datagram 66 (256 bytes total)\" when a packet was too big for one frame.",
+        },
+        Protocol::Roughtime => Lesson {
+            title: "Roughtime — a clock you can check",
+            summary: "Time you do not have to take the server's word for.",
+            body: "NTP has an awkward gap: if a time server lies to you, there is no way to prove it. A machine given the wrong time will accept expired certificates or reject valid ones, and nothing in the protocol lets you show what happened. Roughtime closes that. Every answer is signed, and clients chain servers together — each request carries a hash of the previous server's reply, so a server that lies gets caught by the next one and you are left holding cryptographic proof. The times are deliberately coarse, because the goal is catching dishonesty rather than microsecond accuracy.",
+            look_for: "\"Roughtime request\" carrying a nonce; \"Roughtime response — signed time\" carrying the signature and the certificate for the key that made it.",
+        },
+        Protocol::Mle => Lesson {
+            title: "MLE — how a Thread mesh holds itself together",
+            summary: "Smart-home devices finding a parent and keeping the network alive.",
+            body: "A Thread network has no fixed shape. Devices appear, attach to whichever neighbour will parent them, take on a role, and vanish again when a battery dies or someone moves a sensor. MLE is the conversation that runs all of it. Watching a device join is a readable sequence: it asks for a parent, one answers, the device requests an address and is given one. Most live traffic is encrypted with the network key, in which case the command itself is inside the encrypted part and netscope says so rather than guessing.",
+            look_for: "\"MLE Parent Request\" then \"Parent Response\", \"Child ID Request\" and \"Child ID Response\" as a device joins; \"MLE encrypted\" for the everyday secured traffic.",
+        },
+        Protocol::Olsr => Lesson {
+            title: "OLSR — how a community mesh stays connected",
+            summary: "Routing for networks of rooftop radios with no central owner.",
+            body: "A wireless mesh cannot flood link-state the way a wired network does: every node hears every broadcast, so the radio channel would fill with routing chatter and leave nothing for traffic. OLSR's answer is multipoint relays. Each node picks a small set of neighbours that between them can reach everyone two hops away, and only those relay. That reduction is what makes the protocol work on meshes of hundreds of nodes, which is why most large community networks run it.",
+            look_for: "\"OLSR HELLO — from 10.0.0.5, 0 hops, TTL 1\" describing a direct link; \"OLSR TC (topology control)\" with a higher hop count, carrying the map of the mesh across it.",
+        },
+        Protocol::Batman => Lesson {
+            title: "batman-adv — a mesh pretending to be one LAN",
+            summary: "Routes at the Ethernet layer, so the whole mesh looks like one network.",
+            body: "Most mesh protocols route IP packets, which means anything that relies on being on the same LAN stops working across the mesh. batman-adv works a layer lower: it routes Ethernet frames, so the entire mesh appears as one flat network segment and DHCP, local discovery and even non-IP protocols work across it unchanged. The price is that every node must learn about every other node, which is what the originator messages are constantly doing. Nodes on different compatibility versions cannot mesh at all, so seeing two versions in one capture explains a lot.",
+            look_for: "\"batman-adv IV OGM (originator message) — v15, TTL 50\" spreading knowledge of who exists; \"batman-adv unicast\" carrying actual traffic.",
+        },
+        Protocol::Aodv => Lesson {
+            title: "AODV — routes found only when needed",
+            summary: "Does nothing until someone actually wants to reach somewhere.",
+            body: "OLSR keeps a map of the whole mesh up to date at all times. AODV takes the opposite bet: it stores nothing until a node actually needs to send something, then floods a request asking who can reach the destination, and keeps the answer only while it is in use. On a network where most nodes talk to almost nobody that saves a great deal of chatter, at the cost of a pause the first time a conversation starts. A route error is the interesting one — it means a link has just died and the news is spreading.",
+            look_for: "\"AODV RREQ — 10.0.0.1 looking for 10.0.0.9\" starting a search; \"AODV RREP\" answering it; \"AODV RERR — 2 destinations unreachable\" when a link breaks.",
+        },
+        Protocol::Nsh => Lesson {
+            title: "NSH — a packet carrying its own itinerary",
+            summary: "Steers traffic through a chain of firewalls and inspection boxes.",
+            body: "Sending traffic through several appliances in a fixed order used to mean physically cabling them in that order, or fighting with policy routing to fake it. NSH puts the itinerary in the packet instead: a service path identifier names the chain, and a service index counts down as each appliance handles the packet. Watching the index fall tells you exactly how far through its chain a packet has got, and an index that stops falling points at the appliance that swallowed it.",
+            look_for: "\"NSH path 42, index 255 — carrying Ethernet\" entering a chain, with the index lower at each subsequent hop.",
+        },
+        Protocol::Nhrp => Lesson {
+            title: "NHRP — VPN branches finding each other",
+            summary: "Lets two branch offices talk directly instead of via head office.",
+            body: "In a typical multi-site VPN every branch holds one tunnel to a hub. That works, but traffic between two branches then travels to head office and back, wasting bandwidth and adding delay — bad for a phone call between two shops in the same city. NHRP fixes it: a branch asks the hub for the other branch's real public address, then builds a tunnel straight there. Registration messages are how each branch keeps the hub informed of its current address, which matters because most branches have a dynamic one.",
+            look_for: "\"NHRP Resolution Request\" then \"Resolution Reply\" just before two sites start talking directly; \"Registration Request\" when a branch checks in with the hub.",
+        },
+        Protocol::Ovsdb => Lesson {
+            title: "OVSDB — configuring the switch inside a server",
+            summary: "Manages Open vSwitch, the software switch in most cloud hosts.",
+            body: "Virtual machines and containers do not plug into a physical switch; they plug into a software one running on the host, and in most OpenStack and container platforms that switch is Open vSwitch. OVSDB is how its configuration is read and changed — which ports exist, which bridges they belong to, where the tunnels point. Most traffic is a controller subscribing to changes and being notified of them; a transaction is the message that actually alters the switch, so that is the one worth noticing.",
+            look_for: "\"OVSDB transact — changing the switch\" when configuration is altered; \"monitor_cond — subscribing to changes\" and \"update3 — reporting a change\" for the steady state.",
+        },
+        Protocol::IbmMq => Lesson {
+            title: "IBM MQ — the queue banks run on",
+            summary: "Guarantees a message arrives exactly once, even days later.",
+            body: "IBM MQ's promise is narrow and valuable: hand it a message and it will be delivered exactly once, even if the receiving system is down for a week. That is why so much banking, insurance and retail back-office traffic runs through it — a payment that arrives twice or not at all is worse than one that arrives slowly. In a capture the API calls are what matter: a put is a message being handed over, a get is one being collected, and a rollback means work is being undone.",
+            look_for: "\"IBM MQ MQPUT (send a message)\" and \"MQGET (read a message)\" for the normal flow; \"MQBACK (roll back)\" when a transaction is abandoned.",
+        },
+        Protocol::Lustre => Lesson {
+            title: "Lustre — storage for supercomputers",
+            summary: "One filesystem spread across hundreds of servers at once.",
+            body: "When thousands of compute nodes all need to read and write the same dataset, a normal file server becomes the bottleneck immediately. Lustre spreads one filesystem across hundreds of storage servers so the load spreads with it. Its network layer is deliberately one-sided: a put writes straight into a remote node's memory and a get reads out of it, without the far side taking part in each transfer. That is what keeps the servers from spending all their time on bookkeeping.",
+            look_for: "\"Lustre LNet PUT (write)\" and \"GET (read)\" for data movement; \"LNet connection request\" when a node joins.",
+        },
+        Protocol::SapAnnounce => Lesson {
+            title: "SAP — the channel guide for multicast",
+            summary: "How a receiver discovers which multicast streams exist.",
+            body: "A multicast stream has no directory. A receiver that does not already know the group address and the codec simply cannot join — there is nothing to browse. SAP fills that gap: sources periodically announce themselves to a well-known multicast group, carrying an SDP body describing where their media is and what it is. It is how IPTV set-top boxes and broadcast receivers find their channels. A deletion is the opposite message, withdrawing a session that has ended.",
+            look_for: "\"SAP announcement — SDP — video on 5004 to 239.1.1.1\" advertising a channel; \"SAP deletion\" when one goes off air.",
+        },
+        Protocol::Nfs => Lesson {
+            title: "NFS — files that live on another machine",
+            summary: "Reading and writing a disk that is not in your computer.",
+            body: "NFS lets a machine use a filesystem that physically lives elsewhere as though it were local. What matters in a capture is which operation is being performed, because the performance problems look completely different: one large READ is a bandwidth question, while a directory walk that turns into thousands of LOOKUPs is a latency question and will be slow no matter how fast the link is. A burst of WRITEs followed by COMMITs is an application flushing data it cares about. Version 4 folded almost every operation into a single COMPOUND call, so older captures are often easier to read than newer ones.",
+            look_for: "\"NFS v3 LOOKUP\" and \"READDIRPLUS\" while browsing; \"NFS v3 READ\" and \"WRITE\" for data; \"Mount v3 MNT (mount a share)\" when a share is first attached.",
+        },
+        Protocol::NineP => Lesson {
+            title: "9P — the Plan 9 filesystem protocol",
+            summary: "An old, small protocol that now carries WSL2 and QEMU file shares.",
+            body: "9P came from Plan 9, an operating system where everything was a file \
+reachable over the network. The idea outlived the system: WSL2 serves the Windows \
+filesystem to Linux over 9P, QEMU shares directories with virtual machines over it, \
+and several container runtimes use it too. So a developer complaining that files are \
+slow inside WSL is describing a 9P problem, and every operation is visible here in \
+the clear. Each message carries a tag pairing a request with its reply, which is how \
+you find the slow one.",
+            look_for: "\"9P Twalk (look up a path)\" and \"9P Tread\" on TCP 564; \"9P Rerror — file does not exist\" when something fails.",
+        },
+        Protocol::Rx => Lesson {
+            title: "RX/AFS — the other network filesystem",
+            summary: "The RPC transport underneath AFS, which predates NFS and still runs.",
+            body: "AFS is unrelated to NFS and older than most of what replaced it, but \
+universities and research sites still run home directories on it. It rides on RX, an \
+RPC protocol using ten UDP ports from 7000 up — and the port is what says which \
+server you are watching: 7000 is the fileserver, 7003 the volume location server, \
+7004 authentication. An abort packet is an RPC failing outright and carries the \
+reason as a numeric code.",
+            look_for: "\"RX/AFS data (fileserver)\" for normal traffic; \"RX/AFS abort — code -102\" when a call fails.",
+        },
+        Protocol::GlusterFs => Lesson {
+            title: "GlusterFS — one filesystem from many servers",
+            summary: "Pools the disks of several machines into a single share.",
+            body: "GlusterFS joins the storage of several ordinary servers into one filesystem, replicating or striping files across them so that losing a server does not lose data. It reuses the same ONC RPC framing NFS does, with its own program numbers, so its traffic looks structurally familiar but means something different.",
+            look_for: "\"GlusterFS handshake\" when a client attaches to the cluster; \"GlusterFS\" calls carrying the file operations themselves.",
+        },
+        Protocol::Lwapp => Lesson {
+            title: "LWAPP — access points on a leash",
+            summary: "A wireless controller steering access points that cannot think for themselves.",
+            body: "A thin access point has almost no intelligence of its own. It does not decide which clients to admit, which channel to use or how to hand a phone to the next radio — a central controller decides all of that for the whole site, and the access point simply does as it is told and forwards traffic back. LWAPP is that leash. CAPWAP later standardised the same idea, so LWAPP now mostly turns up in older installations that were never upgraded.",
+            look_for: "\"LWAPP Discovery Request\" then \"Join Request\" when an access point comes online and finds its controller; \"WLAN Config Request\" when its wireless networks are pushed to it.",
+        },
+        Protocol::Twamp => Lesson {
+            title: "TWAMP — proving a link is as fast as promised",
+            summary: "The measurement behind a network service level agreement.",
+            body: "When an operator sells a circuit with a latency and loss commitment, TWAMP is how both sides check it. The control channel on this port negotiates a test — which ports the probes will use, when to start, when to stop — and the probes themselves then run over UDP on whatever ports were agreed. That is why the control exchange is the part worth watching: the measurement traffic is on negotiated ports and hard to find, but the setup says a test is happening and whether it was accepted at all.",
+            look_for: "\"TWAMP server greeting\" opening the conversation, then \"Request-TW-Session\" and \"Start-Sessions — accepted\" when a measurement begins; \"rejected\" when the far end refuses.",
+        },
+        Protocol::Slp => Lesson {
+            title: "SLP — asking the network who offers what",
+            summary: "Service discovery with no central directory.",
+            body: "SLP lets a machine broadcast \"who here offers this service?\" and collect the answers, with no directory server needed. It is best known now for where it turns up rather than what it does: VMware ESXi exposes it, and because a small unauthenticated request can produce a large reply it became a favourite for traffic amplification, and in 2023 an entry point for a wave of ransomware. Seeing it answerable from an untrusted network is worth noticing.",
+            look_for: "\"SLP Service Request — service:VMwareInfrastructure\" asking who offers a service; \"Service Reply\" and \"DA Advertisement\" answering.",
+        },
+        Protocol::CoapTcp => Lesson {
+            title: "CoAP over TCP — the same IoT protocol, reframed",
+            summary: "CoAP without the reliability machinery it needed on UDP.",
+            body: "CoAP was built for UDP, where it has to provide its own message ids and acknowledgements because the transport does not. Over TCP all of that is redundant, so the framing was redesigned: no message id, no message type, and a length field in front instead. The methods and response codes are unchanged, so a GET is still a GET, but a parser written for the UDP form sees nothing it recognises. The TCP form also adds signalling codes that negotiate the connection itself, which have no equivalent on UDP.",
+            look_for: "\"CoAP/TCP GET\" and \"2.05 Content\" for ordinary resource access; \"7.01 CSM (capabilities)\" when a connection opens.",
+        },
+        Protocol::Utp => Lesson {
+            title: "µTP — file sharing that gets out of the way",
+            summary: "BitTorrent's transport, designed to yield to everything else.",
+            body: "Running BitTorrent over ordinary TCP is antisocial: TCP competes on equal terms with every other connection, so a few torrents will starve a video call sharing the same line. µTP was built to fix that. It runs over UDP with a congestion controller that watches how long packets are taking rather than waiting for loss, and backs off the moment a queue starts to build — so it fills spare capacity and steps aside when something interactive needs it. That matters when reading a capture: a link saturated by µTP is a different diagnosis from one saturated by TCP, because µTP is supposed to be giving way.",
+            look_for: "\"µTP data — connection 4242, seq 7, 1000 bytes\" for a transfer in progress; a window of 0 means the receiving side has stopped accepting and the transfer has stalled.",
+        },
+        Protocol::Nflog => Lesson {
+            title: "NFLOG — what the firewall decided, and why",
+            summary: "A Linux firewall's own log of the packets it acted on.",
+            body: "A firewall rule on Linux can hand a packet to a log group as well as dropping it, and a capture can read that group directly. What makes this more useful than watching the traffic itself is the prefix: whoever wrote the rule can attach a name to it, and that name travels with every packet the rule matches. So the capture does not only show that something was blocked — it names the rule that blocked it, which is the question anyone debugging a firewall actually has.",
+            look_for: "\"NFLOG [DROP-INBOUND] · TCP Connection opened\" — the text in brackets is the rule's own label, followed by the packet it matched.",
+        },
+        Protocol::ZeroTier => Lesson {
+            title: "ZeroTier — one network across many places",
+            summary: "Makes machines in different buildings behave as if they share a switch.",
+            body: "ZeroTier builds a virtual Ethernet network over the internet, so a laptop at home and a server in a data centre can behave as though they are plugged into the same switch. The contents are encrypted, but the header is not, and it carries the two ZeroTier node addresses — identifiers of their own, unrelated to any IP address — plus a hop count. That hop count is the useful part when a link feels slow: zero means the two nodes reached each other directly, and anything higher means traffic is being relayed through ZeroTier's infrastructure instead.",
+            look_for: "\"ZeroTier deadbeef01 → cafebabe02 — direct\" for a peer-to-peer path; \"2 hops\" means it is being relayed.",
+        },
+        Protocol::Nebula => Lesson {
+            title: "Nebula — a mesh that introduces itself",
+            summary: "Hosts find each other through a lighthouse, then talk directly.",
+            body: "Nebula avoids the usual VPN bottleneck of routing everything through a central hub. Hosts register with a lighthouse, which tells them where to find each other, and from then on they talk directly. The payload is encrypted but the message type is not, and that exposes the interesting failure: a pair that keeps exchanging handshakes without ever settling into ordinary messages has not managed to reach each other directly, usually because something between them is blocking it.",
+            look_for: "\"Nebula message\" for a working tunnel; a run of \"Nebula handshake stage 1\" with no messages following means the direct connection never came up.",
+        },
+        Protocol::Bitcoin => Lesson {
+            title: "Bitcoin — how nodes gossip a blockchain",
+            summary: "Peers announcing what they have and fetching what they lack.",
+            body: "A Bitcoin node has no central server to sync from. It connects to a handful of peers and they gossip: each announces what it has just heard about, and the others ask for anything they are missing. That is the rhythm you see — an announcement, a request, then the transaction or block itself. One field is worth reading on every line: the network magic. A node accidentally pointed at a test network behaves perfectly normally and looks healthy, and this is the only thing that gives it away.",
+            look_for: "\"Bitcoin inv — announcing what it has\" followed by \"getdata\" and then \"tx\" or \"block\"; anything marked [testnet3] or [signet] is not on the real network.",
+        },
+        Protocol::MacControl => Lesson {
+            title: "Ethernet PAUSE — the link asking for a moment",
+            summary: "One end telling the other to stop sending, briefly.",
+            body: "When a switch or network card runs short of buffer space it can send a PAUSE frame asking the far end to hold off for a moment. That makes these unusually valuable to spot, because the slowdown they cause is invisible from the application's point of view: nothing is lost, nothing is retransmitted, traffic is simply being held. A burst of PAUSE frames explains latency that otherwise looks inexplicable. The newer priority form pauses individual traffic classes rather than the whole link, which is how storage and general traffic can share one wire without one starving the other.",
+            look_for: "\"Ethernet PAUSE — 65535 quanta\" asking for the longest possible hold; \"PAUSE — resume\" releasing it; \"Priority flow control — pausing class 3\" for one traffic class only.",
+        },
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail — shown safely anyway.",
@@ -2259,262 +2793,16 @@ number) and moves on. This includes things like IGMP, GRE tunnels, or IPsec.",
 }
 
 /// Every protocol lesson, in a sensible teaching order, paired with its
-/// protocol so callers can colour or group them.
+/// Every protocol paired with its lesson, for the education browser.
+///
+/// Derived from the registry rather than hand-listed — the old list had
+/// drifted and was missing SMB, Kafka, AMQP, NTLM and TDS, whose lessons
+/// existed but were unreachable from the index.
 pub fn all_lessons() -> Vec<(Protocol, Lesson)> {
-    [
-        Protocol::Dns,
-        Protocol::Tcp,
-        Protocol::Tls,
-        Protocol::Http,
-        Protocol::Udp,
-        Protocol::Icmp,
-        Protocol::Arp,
-        Protocol::Dhcp,
-        Protocol::Ntp,
-        Protocol::Mdns,
-        Protocol::Snmp,
-        Protocol::Quic,
-        Protocol::Sip,
-        Protocol::Ssh,
-        Protocol::Ftp,
-        Protocol::Smtp,
-        Protocol::Imap,
-        Protocol::Pop3,
-        Protocol::Telnet,
-        Protocol::Rdp,
-        Protocol::WebSocket,
-        Protocol::Http2,
-        Protocol::Grpc,
-        Protocol::Vxlan,
-        Protocol::Postgres,
-        Protocol::Mysql,
-        Protocol::Mongodb,
-        Protocol::Redis,
-        Protocol::Cassandra,
-        Protocol::Modbus,
-        Protocol::Dnp3,
-        Protocol::Bacnet,
-        Protocol::Enip,
-        Protocol::OpcUa,
-        Protocol::Rtp,
-        Protocol::Rtcp,
-        Protocol::Kerberos,
-        Protocol::Ldap,
-        Protocol::Radius,
-        Protocol::OpenVpn,
-        Protocol::WireGuard,
-        Protocol::Esp,
-        Protocol::Ah,
-        Protocol::Mqtt,
-        Protocol::Coap,
-        Protocol::Bgp,
-        Protocol::Ospf,
-        Protocol::Lldp,
-        Protocol::Lacp,
-        Protocol::Stp,
-        Protocol::Mpls,
-        Protocol::Wlan,
-        Protocol::Usb,
-        Protocol::Bluetooth,
-        Protocol::Can,
-        Protocol::Syslog,
-        Protocol::Tftp,
-        Protocol::Ssdp,
-        Protocol::Stun,
-        Protocol::Llmnr,
-        Protocol::Rtsp,
-        Protocol::Irc,
-        Protocol::Rfb,
-        Protocol::Whois,
-        Protocol::Nntp,
-        Protocol::Sctp,
-        Protocol::Gre,
-        Protocol::Igmp,
-        Protocol::Dhcpv6,
-        Protocol::Rip,
-        Protocol::Nbns,
-        Protocol::Socks,
-        Protocol::Memcached,
-        Protocol::BitTorrent,
-        Protocol::Git,
-        Protocol::Xmpp,
-        Protocol::Finger,
-        Protocol::Vrrp,
-        Protocol::Pim,
-        Protocol::Eigrp,
-        Protocol::Pppoe,
-        Protocol::Eapol,
-        Protocol::L2tp,
-        Protocol::Gtp,
-        Protocol::Rmcp,
-        Protocol::WsDiscovery,
-        Protocol::Tacacs,
-        Protocol::Diameter,
-        Protocol::Rlogin,
-        Protocol::Dccp,
-        Protocol::Dtls,
-        Protocol::Netflow,
-        Protocol::Sflow,
-        Protocol::Bfd,
-        Protocol::Hsrp,
-        Protocol::Iscsi,
-        Protocol::Rtmp,
-        Protocol::Smpp,
-        Protocol::OpenFlow,
-        Protocol::Nats,
-        Protocol::Stomp,
-        Protocol::Profinet,
-        Protocol::Wol,
-        Protocol::Glbp,
-        Protocol::Wccp,
-        Protocol::Mgcp,
-        Protocol::Nbds,
-        Protocol::Dicom,
-        Protocol::Hl7,
-        Protocol::Fix,
-        Protocol::S7comm,
-        Protocol::Iec104,
-        Protocol::Ldp,
-        Protocol::Goose,
-        Protocol::Ptp,
-        Protocol::Rsvp,
-        Protocol::Isakmp,
-        Protocol::Geneve,
-        Protocol::Capwap,
-        Protocol::Teredo,
-        Protocol::Gvcp,
-        Protocol::Rpc,
-        Protocol::Graphite,
-        Protocol::Gearman,
-        Protocol::Beanstalk,
-        Protocol::Ethercat,
-        Protocol::Fcoe,
-        Protocol::Macsec,
-        Protocol::Rarp,
-        Protocol::Rtps,
-        Protocol::Influxdb,
-        Protocol::MqttSn,
-        Protocol::Babel,
-        Protocol::X11,
-        Protocol::Rsync,
-        Protocol::Svn,
-        Protocol::Rethinkdb,
-        Protocol::Sv,
-        Protocol::Powerlink,
-        Protocol::Sercos,
-        Protocol::Knxip,
-        Protocol::Statsd,
-        Protocol::Gelf,
-        Protocol::Hartip,
-        Protocol::Elasticsearch,
-        Protocol::Zabbix,
-        Protocol::Nsq,
-        Protocol::Zmtp,
-        Protocol::Aerospike,
-        Protocol::Avtp,
-        Protocol::SomeIp,
-        Protocol::Doip,
-        Protocol::Xcp,
-        Protocol::Matter,
-        Protocol::Afp,
-        Protocol::Dht,
-        Protocol::Gnutella,
-        Protocol::Edonkey,
-        Protocol::SourceQuery,
-        Protocol::Minecraft,
-        Protocol::Mumble,
-        Protocol::Pfcp,
-        Protocol::GtpPrime,
-        Protocol::Megaco,
-        Protocol::Msrp,
-        Protocol::Pcoip,
-        Protocol::Spice,
-        Protocol::Ica,
-        Protocol::Ndmp,
-        Protocol::Dcerpc,
-        Protocol::Pptp,
-        Protocol::Radmin,
-        Protocol::Skinny,
-        Protocol::Cldap,
-        Protocol::Bmp,
-        Protocol::RpkiRtr,
-        Protocol::Mms,
-        Protocol::Nrpe,
-        Protocol::Collectd,
-        Protocol::Jaeger,
-        Protocol::Ganglia,
-        Protocol::Bolt,
-        Protocol::Clickhouse,
-        Protocol::Pulsar,
-        Protocol::Openwire,
-        Protocol::Zookeeper,
-        Protocol::HadoopRpc,
-        Protocol::Fluentd,
-        Protocol::Beats,
-        Protocol::Clamav,
-        Protocol::Spamd,
-        Protocol::ManageSieve,
-        Protocol::Relp,
-        Protocol::Lpd,
-        Protocol::Ident,
-        Protocol::Gopher,
-        Protocol::Rsh,
-        Protocol::Cdp,
-        Protocol::Vtp,
-        Protocol::Dtp,
-        Protocol::Pagp,
-        Protocol::Udld,
-        Protocol::Eap,
-        Protocol::Ipx,
-        Protocol::Atalk,
-        Protocol::Aarp,
-        Protocol::Ipp,
-        Protocol::Rexec,
-        Protocol::Sane,
-        Protocol::Tns,
-        Protocol::Drda,
-        Protocol::Firebird,
-        Protocol::MysqlX,
-        Protocol::Riak,
-        Protocol::Nmea,
-        Protocol::Adsb,
-        Protocol::Aprs,
-        Protocol::Turn,
-        Protocol::Decnet,
-        Protocol::Vines,
-        Protocol::Erspan,
-        Protocol::Ppp,
-        Protocol::Pap,
-        Protocol::Chap,
-        Protocol::L2cap,
-        Protocol::Att,
-        Protocol::Smp,
-        Protocol::NvmeOf,
-        Protocol::Nbd,
-        Protocol::Fcip,
-        Protocol::Aoe,
-        Protocol::Roce,
-        Protocol::Xdmcp,
-        Protocol::Iax2,
-        Protocol::Zrtp,
-        Protocol::MssqlBrowser,
-        Protocol::H225Ras,
-        Protocol::Q931,
-        Protocol::Bfcp,
-        Protocol::Lisp,
-        Protocol::L2tpv3,
-        Protocol::VxlanGpe,
-        Protocol::Pcp,
-        Protocol::Rwho,
-        Protocol::DhcpFailover,
-        Protocol::Unknown(String::new()),
-    ]
-    .into_iter()
-    .map(|p| {
-        let l = lesson(&p);
-        (p, l)
-    })
-    .collect()
+    Protocol::ALL
+        .iter()
+        .map(|p| (p.clone(), lesson(p)))
+        .collect()
 }
 
 /// A networking term and its plain-language meaning.
@@ -2566,6 +2854,9 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
     if s.contains("unreachable") {
         return "A router is reporting it couldn't deliver the packet to that destination.";
     }
+    // Specific events first: a DNS *query* reads differently from a DNS
+    // *response*. Anything without a special case falls through to the
+    // protocol's own one-liner, which lives in the registry.
     match pkt.protocol {
         Protocol::Dns if s.contains("Query") => {
             "Your device is asking a DNS server for the IP address behind a name."
@@ -2573,278 +2864,13 @@ pub fn explain_packet(pkt: &Packet) -> &'static str {
         Protocol::Dns if s.contains("Response") => {
             "The DNS server answered with the IP address for the name that was asked."
         }
-        Protocol::Dns => "A name-lookup message (DNS).",
         Protocol::Tls if s.contains("HTTPS") => {
             "The start of an encrypted visit to this site — the name is visible, the content isn't."
         }
-        Protocol::Tls => "Encrypted web traffic — the content can't be read, by design.",
         Protocol::Http if s.contains("GET") || s.contains("POST") => {
             "A web request sent in plain text — visible to anyone capturing."
         }
-        Protocol::Http => "Unencrypted web traffic (HTTP).",
-        Protocol::Tcp => "Reliable data transfer over a TCP connection.",
-        Protocol::Udp => "A fast, connectionless UDP message (no delivery guarantee).",
-        Protocol::Icmp => "A network status/diagnostic message (ICMP).",
-        Protocol::Arp => "A local-network lookup matching an IP to a hardware address.",
-        Protocol::Dhcp => {
-            "Your device is getting (or renewing) its IP address from the network's DHCP server."
-        }
-        Protocol::Ntp => "A clock-sync message — your device checking the time with a time server.",
-        Protocol::Mdns => {
-            "Local service discovery (mDNS/Bonjour) — devices finding printers, speakers, etc. on the LAN."
-        }
-        Protocol::Snmp => "A network-management query/response (SNMP) used to monitor devices.",
-        Protocol::Quic => {
-            "Encrypted QUIC traffic — the modern transport behind HTTP/3, carried over UDP."
-        }
-        Protocol::Sip => "VoIP call signalling (SIP) — setting up, ringing, or ending a voice call.",
-        Protocol::Ssh => "An encrypted remote-shell session (SSH) — you can see it happens, not what's typed.",
-        Protocol::Ftp => "An old-style file transfer (FTP) — commands and passwords travel in plain text.",
-        Protocol::Smtp => "Email being handed between mail servers (SMTP).",
-        Protocol::Imap => "A mail client reading a mailbox on the server (IMAP).",
-        Protocol::Pop3 => "A mail client downloading messages from the server (POP3).",
-        Protocol::Telnet => "An unencrypted remote terminal (Telnet) — everything, including passwords, is visible.",
-        Protocol::Rdp => "A Windows Remote Desktop session (RDP).",
-        Protocol::WebSocket => {
-            "A live two-way message on an upgraded web connection (WebSocket) — used by chat, live feeds and dev tools."
-        }
-        Protocol::Http2 => {
-            "Binary web traffic (HTTP/2) — many requests multiplexed as frames on one connection."
-        }
-        Protocol::Grpc => {
-            "One service calling another (gRPC) — a binary remote-procedure call riding on HTTP/2."
-        }
-        Protocol::Vxlan => {
-            "Tunnelled overlay-network traffic (VXLAN) — another network's frames carried inside UDP; the summary shows what's inside."
-        }
-        Protocol::Postgres => "A PostgreSQL database conversation — SQL queries and their results over TCP 5432.",
-        Protocol::Mysql => "A MySQL/MariaDB database conversation — queries and results over TCP 3306.",
-        Protocol::Mongodb => "A MongoDB database conversation — document commands (find/insert/update) over TCP 27017.",
-        Protocol::Redis => "A Redis command or reply — the in-memory key-value store on TCP 6379.",
-        Protocol::Cassandra => "A Cassandra CQL conversation — distributed-database queries over TCP 9042.",
-        Protocol::Modbus => "An industrial-control command (Modbus) — reading or writing PLC registers over TCP 502.",
-        Protocol::Dnp3 => "A utility SCADA message (DNP3) — grid/water control between a master and remote stations.",
-        Protocol::Bacnet => "A building-automation message (BACnet) — HVAC, lighting or access control on UDP 47808.",
-        Protocol::Enip => "An industrial-control message (EtherNet/IP) — CIP commands to a PLC over TCP/UDP 44818.",
-        Protocol::OpcUa => "An Industry 4.0 data-exchange message (OPC UA) — factory equipment talking to IT systems.",
-        Protocol::Rtp => "The live audio/video of a call (RTP) — the media stream SIP set up, carried over UDP.",
-        Protocol::Rtcp => "A call-quality report (RTCP) — loss and jitter statistics riding alongside an RTP stream.",
-        Protocol::Kerberos => "An enterprise authentication message (Kerberos) — requesting or presenting a login ticket.",
-        Protocol::Ldap => "A directory query or login (LDAP) — looking up users/groups, or binding with credentials.",
-        Protocol::Radius => "A network-access authentication message (RADIUS) — allowing or denying Wi-Fi/VPN logins.",
-        Protocol::OpenVpn => "An OpenVPN tunnel packet — encrypted VPN traffic; the type shows handshake vs. data.",
-        Protocol::WireGuard => "A WireGuard tunnel packet — a modern encrypted VPN; the type shows handshake vs. data.",
-        Protocol::Esp => "Encrypted IPsec traffic (ESP) — a VPN payload identified only by its SPI tunnel number.",
-        Protocol::Ah => "An authenticated IPsec packet (AH) — integrity-protected but not encrypted.",
-        Protocol::Mqtt => "An IoT messaging packet (MQTT) — a device publishing to or subscribing on a broker topic.",
-        Protocol::Coap => "A constrained-device request/response (CoAP) — HTTP-like IoT traffic over UDP.",
-        Protocol::Bgp => "An internet routing message (BGP) — networks telling each other which addresses they reach.",
-        Protocol::Ospf => "An interior routing message (OSPF) — routers inside one network sharing link-state maps.",
-        Protocol::Lldp => "A neighbour announcement (LLDP) — a switch advertising its identity and port for topology maps.",
-        Protocol::Lacp => "A link-aggregation message (LACP) — two switches bonding several cables into one link.",
-        Protocol::Stp => "A Spanning Tree message (STP) — switches electing a root bridge to keep the network loop-free.",
-        Protocol::Mpls => "A label-switched packet (MPLS) — carrier/backbone forwarding; the inner packet is shown after the label.",
-        Protocol::Wlan => "A raw Wi-Fi (802.11) frame — the radio layer beneath your network traffic.",
-        Protocol::Usb => "USB bus traffic — a request or data moving between your PC and a USB device.",
-        Protocol::Bluetooth => "A Bluetooth HCI packet — your OS talking to the Bluetooth radio (commands, events, data).",
-        Protocol::Can => "A CAN bus frame — broadcast data on a vehicle or industrial controller network.",
-        Protocol::Ntlm => "NTLM authentication handshake message.",
-        Protocol::Smb => "An SMB file-sharing transaction over TCP 445.",
-        Protocol::Tds => "A Tabular Data Stream (TDS) database message over TCP 1433.",
-        Protocol::Amqp => "An Advanced Message Queuing Protocol (AMQP) message on TCP 5672.",
-        Protocol::Kafka => "An Apache Kafka message queuing request/response on TCP 9092.",
-        Protocol::Syslog => "A system log message shipped to a central collector (UDP 514) — usually plaintext.",
-        Protocol::Tftp => "A trivial file transfer (UDP 69) — often a device pulling firmware or config at boot.",
-        Protocol::Ssdp => "UPnP device-discovery chatter (UDP 1900) — gadgets finding each other on the LAN.",
-        Protocol::Stun => "A NAT-traversal probe (UDP 3478) used by voice/video calls to find a public path.",
-        Protocol::Llmnr => "A link-local name lookup (UDP 5355) — like DNS, but for the local network only.",
-        Protocol::Rtsp => "Streaming-media control (TCP 554) — play/pause signalling for an IP camera or stream.",
-        Protocol::Irc => "An Internet Relay Chat message (TCP 6667) — plain-text group chat.",
-        Protocol::Rfb => "A VNC / remote-framebuffer session (TCP 5900) — one screen shared to another.",
-        Protocol::Whois => "A WHOIS registration lookup (TCP 43) — who owns a domain or IP.",
-        Protocol::Nntp => "A Usenet news transfer (TCP 119) — fetching or moving newsgroup articles.",
-        Protocol::Sctp => "An SCTP transport packet (IP proto 132) — reliable multi-stream, common in telecom signalling.",
-        Protocol::Gre => "A GRE tunnel (IP proto 47) — one packet wrapped inside another to cross a network.",
-        Protocol::Igmp => "An IGMP message (IP proto 2) — a host joining or leaving an IPv4 multicast group.",
-        Protocol::Dhcpv6 => "A DHCPv6 message (UDP 546/547) — IPv6 address assignment, like DHCP for IPv4.",
-        Protocol::Rip => "A RIP routing update (UDP 520) — routers telling each other which networks they can reach.",
-        Protocol::Nbns => "A NetBIOS name lookup (UDP 137) — the old Windows way of resolving names locally.",
-        Protocol::Socks => "A SOCKS proxy negotiation (TCP 1080) — relaying a connection through a proxy.",
-        Protocol::Memcached => "A Memcached cache operation (TCP 11211) — reading or writing an in-memory key.",
-        Protocol::BitTorrent => "A BitTorrent peer connection (TCP 6881+) — peer-to-peer file sharing.",
-        Protocol::Git => "A native Git transfer (TCP 9418) — cloning, fetching or pushing a repository.",
-        Protocol::Xmpp => "An XMPP / Jabber message (TCP 5222) — open-standard instant messaging.",
-        Protocol::Finger => "A Finger lookup (TCP 79) — an old service reporting who is logged in.",
-        Protocol::Vrrp => "A VRRP advertisement (IP proto 112) — routers sharing a virtual gateway IP for failover.",
-        Protocol::Pim => "A PIM message (IP proto 103) — routers building paths to deliver multicast.",
-        Protocol::Eigrp => "An EIGRP routing message (IP proto 88) — Cisco routers exchanging routes.",
-        Protocol::Pppoe => "A PPPoE frame — a DSL-style login/session carried over Ethernet.",
-        Protocol::Eapol => "An 802.1X / EAPOL frame — port authentication, or the Wi-Fi WPA key handshake.",
-        Protocol::L2tp => "An L2TP tunnel message (UDP 1701) — usually the L2TP/IPsec VPN transport.",
-        Protocol::Gtp => "A GTP message (UDP 2123/2152) — carrying mobile data through the 4G/5G core.",
-        Protocol::Rmcp => "An RMCP/IPMI message (UDP 623) — out-of-band management of a server's BMC.",
-        Protocol::WsDiscovery => "A WS-Discovery message (UDP 3702) — devices like printers/cameras finding each other.",
-        Protocol::Tacacs => "A TACACS+ message (TCP 49) — admin login/authorization for network gear.",
-        Protocol::Diameter => "A Diameter message (TCP/SCTP 3868) — carrier AAA and billing.",
-        Protocol::Rlogin => "An rlogin session (TCP 513) — a legacy cleartext remote login; prefer SSH.",
-        Protocol::Dccp => "A DCCP packet (IP proto 33) — congestion-controlled but unreliable transport for streaming.",
-        Protocol::Dtls => "A DTLS record — TLS encryption over UDP, as used by WebRTC media and some VPNs.",
-        Protocol::Netflow => "A NetFlow/IPFIX export (UDP 2055/4739) — a router reporting traffic-flow summaries.",
-        Protocol::Sflow => "An sFlow datagram (UDP 6343) — a switch exporting sampled packets and counters.",
-        Protocol::Bfd => "A BFD heartbeat (UDP 3784) — a fast liveness check between routers for quick failover.",
-        Protocol::Hsrp => "An HSRP message (UDP 1985) — Cisco routers sharing a virtual gateway IP.",
-        Protocol::Iscsi => "An iSCSI PDU (TCP 3260) — SCSI storage commands carried over the network.",
-        Protocol::Rtmp => "An RTMP message (TCP 1935) — the streaming protocol used to ingest live video.",
-        Protocol::Smpp => "An SMPP PDU (TCP 2775) — an app or gateway sending/receiving SMS text messages.",
-        Protocol::OpenFlow => "An OpenFlow message (TCP 6653) — an SDN controller programming a switch.",
-        Protocol::Nats => "A NATS message (TCP 4222) — publish/subscribe messaging between services.",
-        Protocol::Stomp => "A STOMP frame (TCP 61613) — simple text messaging with a broker.",
-        Protocol::Profinet => "A PROFINET frame (EtherType 0x8892) — real-time industrial automation data.",
-        Protocol::Wol => "A Wake-on-LAN magic packet — a broadcast that powers a sleeping machine on.",
-        Protocol::Glbp => "A GLBP message (UDP 3222) — Cisco routers load-sharing a virtual gateway.",
-        Protocol::Wccp => "A WCCP message (UDP 2048) — a router redirecting traffic to a cache/proxy.",
-        Protocol::Mgcp => "An MGCP message (UDP 2427) — a call agent controlling a VoIP media gateway.",
-        Protocol::Nbds => "A NetBIOS datagram (UDP 138) — legacy Windows broadcast/browsing traffic.",
-        Protocol::Dicom => "A DICOM message (TCP 104/11112) — medical imaging devices exchanging studies (patient data).",
-        Protocol::Hl7 => "An HL7 v2 message (TCP 2575) — hospital systems exchanging patient/lab data.",
-        Protocol::Fix => "A FIX message — a trading system sending orders or market data; tag 35 is the type.",
-        Protocol::S7comm => "An S7comm message (TCP 102) — reading/writing a Siemens PLC's memory.",
-        Protocol::Iec104 => "An IEC 60870-5-104 message (TCP 2404) — power-grid SCADA telecontrol.",
-        Protocol::Ldp => "An LDP message (TCP/UDP 646) — MPLS routers distributing forwarding labels.",
-        Protocol::Goose => "A GOOSE frame (EtherType 0x88B8) — fast IEC 61850 substation protection signalling.",
-        Protocol::Ptp => "A PTP message (IEEE 1588) — sub-microsecond clock synchronisation.",
-        Protocol::Rsvp => "An RSVP message (IP proto 46) — reserving bandwidth / signalling an MPLS-TE tunnel.",
-        Protocol::Isakmp => "An ISAKMP/IKE message (UDP 500/4500) — negotiating the keys for an IPsec VPN.",
-        Protocol::Geneve => "A Geneve packet (UDP 6081) — a network-virtualisation overlay carrying an inner frame.",
-        Protocol::Capwap => "A CAPWAP message (UDP 5246/5247) — a wireless controller managing access points.",
-        Protocol::Teredo => "A Teredo packet (UDP 3544) — IPv6 tunnelled through IPv4/NAT.",
-        Protocol::Gvcp => "A GVCP message (UDP 3956) — controlling an industrial GigE Vision camera.",
-        Protocol::Rpc => "An ONC RPC message (TCP/UDP 111/2049) — the plumbing behind NFS file sharing.",
-        Protocol::Graphite => "A Graphite metric (TCP 2003) — an app pushing a time-series data point.",
-        Protocol::Gearman => "A Gearman message (TCP 4730) — handing a background job to a worker.",
-        Protocol::Beanstalk => "A beanstalkd command (TCP 11300) — a simple background-job work queue.",
-        Protocol::Ethercat => "An EtherCAT frame (EtherType 0x88A4) — real-time industrial fieldbus control.",
-        Protocol::Fcoe => "An FCoE frame (EtherType 0x8906) — Fibre Channel storage carried over Ethernet.",
-        Protocol::Macsec => "A MACsec frame (EtherType 0x88E5) — 802.1AE hop-by-hop link encryption.",
-        Protocol::Rarp => "A RARP packet (EtherType 0x8035) — a host asking for its IP given its MAC.",
-        Protocol::Rtps => "An RTPS/DDS message — real-time pub/sub middleware (ROS 2, vehicles, industrial).",
-        Protocol::Influxdb => "An InfluxDB metric (UDP 8089) — a time-series data point written in line protocol.",
-        Protocol::MqttSn => "An MQTT-SN message (UDP 1883) — MQTT for constrained sensor devices over UDP.",
-        Protocol::Babel => "A Babel routing update (UDP 6696) — mesh-friendly distance-vector routing.",
-        Protocol::X11 => "An X11 message (TCP 6000+) — the Unix display protocol drawing a GUI.",
-        Protocol::Rsync => "An rsync transfer (TCP 873) — efficient file synchronisation.",
-        Protocol::Svn => "A Subversion message (TCP 3690) — centralised version-control traffic.",
-        Protocol::Rethinkdb => "A RethinkDB message (TCP 28015) — a realtime JSON document database.",
-        Protocol::Sv => "A Sampled Values frame (EtherType 0x88BA) — digitised substation measurements.",
-        Protocol::Powerlink => "An Ethernet POWERLINK frame (0x88AB) — deterministic real-time industrial control.",
-        Protocol::Sercos => "A SERCOS III frame (EtherType 0x88CD) — real-time servo motion control.",
-        Protocol::Knxip => "A KNXnet/IP message (UDP 3671) — building automation (lights/HVAC) over IP.",
-        Protocol::Statsd => "A StatsD metric (UDP 8125) — a fire-and-forget counter/gauge/timer.",
-        Protocol::Gelf => "A GELF message (UDP 12201) — a structured application log, often to Graylog.",
-        Protocol::Hartip => "A HART-IP message (UDP/TCP 5094) — smart process-instrument data over IP.",
-        Protocol::Elasticsearch => "An Elasticsearch transport message (TCP 9300) — internal cluster traffic.",
-        Protocol::Zabbix => "A Zabbix message (TCP 10050/10051) — infrastructure monitoring data.",
-        Protocol::Nsq => "An NSQ message (TCP 4150) — a realtime distributed message queue.",
-        Protocol::Zmtp => "A ZMTP/ZeroMQ message — brokerless messaging between applications.",
-        Protocol::Aerospike => "An Aerospike message (TCP 3000) — a low-latency key-value database.",
-        Protocol::Avtp => "An AVTP frame (EtherType 0x22F0) — time-synced audio/video (automotive Ethernet / pro AV).",
-        Protocol::SomeIp => "A SOME/IP message (UDP/TCP 30490+) — service-oriented communication between car ECUs.",
-        Protocol::Doip => "A DoIP message (UDP/TCP 13400) — vehicle diagnostics carried over Ethernet.",
-        Protocol::Xcp => "An XCP message (UDP/TCP 5555) — live ECU measurement and calibration.",
-        Protocol::Matter => "A Matter message (UDP 5540) — the cross-vendor smart-home standard.",
-        Protocol::Afp => "An AFP message (TCP 548) — Apple Filing Protocol for Mac file sharing.",
-        Protocol::Dht => "A BitTorrent DHT message — trackerless peer discovery over UDP.",
-        Protocol::Gnutella => "A Gnutella message (TCP 6346) — decentralised peer-to-peer file sharing.",
-        Protocol::Edonkey => "An eDonkey/eMule message (TCP 4662) — peer-to-peer file sharing.",
-        Protocol::SourceQuery => "A Source A2S query — a game client/browser asking a server for its info.",
-        Protocol::Minecraft => "A Minecraft message (TCP 25565) — the Java Edition client/server protocol.",
-        Protocol::Mumble => "A Mumble control message (TCP 64738) — low-latency voice-chat signalling.",
-        Protocol::Pfcp => "A PFCP message (UDP 8805) — the 5G/4G control plane programming user-plane forwarding.",
-        Protocol::GtpPrime => "A GTP' message (UDP 3386) — mobile Call Detail Records heading to billing.",
-        Protocol::Megaco => "A Megaco/H.248 message (UDP/TCP 2944) — a call agent controlling a media gateway.",
-        Protocol::Msrp => "An MSRP message (TCP 2855) — instant messaging/file transfer inside a SIP session.",
-        Protocol::Pcoip => "PCoIP traffic (UDP/TCP 4172) — an encrypted remote-desktop display stream.",
-        Protocol::Spice => "A SPICE message — the remote console of a virtual machine.",
-        Protocol::Ica => "Citrix ICA traffic (TCP 1494) — a published app or virtual desktop session.",
-        Protocol::Ndmp => "An NDMP message (TCP 10000) — backup software driving a NAS backup.",
-        Protocol::Dcerpc => "A DCE/RPC message (TCP 135) — Windows remote procedure calls (WMI, AD, services).",
-        Protocol::Pptp => "A PPTP control message (TCP 1723) — the legacy Microsoft VPN; weak crypto.",
-        Protocol::Radmin => "Radmin traffic (TCP 4899) — an encrypted Windows remote-control session.",
-        Protocol::Skinny => "A Skinny/SCCP message (TCP 2000) — Cisco IP-phone call signalling.",
-        Protocol::Cldap => "A CLDAP query (UDP 389) — a Windows client locating a domain controller.",
-        Protocol::Bmp => "A BMP message (TCP 11019) — a router streaming its BGP state to a collector.",
-        Protocol::RpkiRtr => "An RPKI-RTR message (TCP 323) — validated route origins feeding BGP security.",
-        Protocol::Mms => "An MMS message (TCP 102) — IEC 61850 substation data-model access.",
-        Protocol::Nrpe => "An NRPE message (TCP 5666) — a monitoring server running a check on a host.",
-        Protocol::Collectd => "A collectd packet (UDP 25826) — system metrics being shipped to a server.",
-        Protocol::Jaeger => "Jaeger tracing spans (UDP 6831) — a service reporting request timings.",
-        Protocol::Ganglia => "A Ganglia gmond packet (UDP 8649) — cluster monitoring metrics.",
-        Protocol::Bolt => "A Bolt message (TCP 7687) — a Cypher query to a Neo4j graph database.",
-        Protocol::Clickhouse => "A ClickHouse native message (TCP 9000) — columnar analytics query or data.",
-        Protocol::Pulsar => "An Apache Pulsar command (TCP 6650) — distributed pub/sub messaging.",
-        Protocol::Openwire => "An OpenWire message (TCP 61616) — Apache ActiveMQ's native protocol.",
-        Protocol::Zookeeper => "A ZooKeeper message (TCP 2181) — cluster coordination and leader election.",
-        Protocol::HadoopRpc => "A Hadoop RPC call (TCP 8020) — a client talking to the HDFS NameNode.",
-        Protocol::Fluentd => "A Fluentd forward message (TCP 24224) — structured logs heading to a collector.",
-        Protocol::Beats => "An Elastic Beats frame (TCP 5044) — Filebeat shipping events to Logstash.",
-        Protocol::Clamav => "A ClamAV daemon message (TCP 3310) — content being scanned for malware.",
-        Protocol::Spamd => "A spamd message (TCP 783) — SpamAssassin scoring a mail message.",
-        Protocol::ManageSieve => "A ManageSieve message (TCP 4190) — managing server-side mail filters.",
-        Protocol::Relp => "A RELP frame (TCP 2514) — reliable, acknowledged syslog delivery.",
-        Protocol::Lpd => "An LPD message (TCP 515) — a print job or queue query.",
-        Protocol::Ident => "An Ident message (TCP 113) — a legacy lookup of the user behind a connection.",
-        Protocol::Gopher => "A Gopher message (TCP 70) — the pre-web menu/document protocol.",
-        Protocol::Rsh => "An rsh session (TCP 514) — a cleartext remote command; prefer SSH.",
-        Protocol::Cdp => "A CDP announcement — a Cisco device naming itself to its neighbour.",
-        Protocol::Vtp => "A VTP message — switches syncing the VLAN database.",
-        Protocol::Dtp => "A DTP message — ports negotiating a trunk; a VLAN-hopping risk on access ports.",
-        Protocol::Pagp => "A PAgP message — Cisco negotiating an EtherChannel link bundle.",
-        Protocol::Udld => "A UDLD message — checking a link isn't passing traffic one way only.",
-        Protocol::Eap => "An EAP packet — the authentication method being negotiated for 802.1X/Wi-Fi.",
-        Protocol::Ipx => "An IPX packet (EtherType 0x8137) — legacy Novell NetWare networking.",
-        Protocol::Atalk => "An AppleTalk DDP packet (EtherType 0x809B) — classic Mac networking.",
-        Protocol::Aarp => "An AARP packet (EtherType 0x80F3) — AppleTalk address resolution.",
-        Protocol::Ipp => "An IPP message (TCP 631) — a print job or printer query.",
-        Protocol::Rexec => "An rexec session (TCP 512) — remote execution with a cleartext password.",
-        Protocol::Sane => "A SANE message (TCP 6566) — controlling a scanner shared over the network.",
-        Protocol::Tns => "An Oracle TNS packet (TCP 1521) — a client talking to an Oracle database.",
-        Protocol::Drda => "A DRDA message (TCP 50000) — SQL heading to an IBM Db2 database.",
-        Protocol::Firebird => "A Firebird message (TCP 3050) — a query to a Firebird/InterBase database.",
-        Protocol::MysqlX => "A MySQL X message (TCP 33060) — the document-store/X DevAPI protocol.",
-        Protocol::Riak => "A Riak message (TCP 8087) — a read or write to a distributed key-value store.",
-        Protocol::Nmea => "An NMEA 0183 sentence (TCP 10110) — GPS or marine instrument data.",
-        Protocol::Adsb => "An ADS-B Beast frame (TCP 30005) — decoded aircraft transponder data.",
-        Protocol::Aprs => "An APRS-IS packet (TCP 14580) — an amateur-radio position or telemetry beacon.",
-        Protocol::Turn => "A TURN ChannelData message — call media being relayed because NAT blocked a direct path.",
-        Protocol::Decnet => "A DECnet Phase IV packet (EtherType 0x6003) — legacy DEC VAX/VMS networking.",
-        Protocol::Vines => "A Banyan VINES packet (EtherType 0x0BAD) — a long-obsolete network OS.",
-        Protocol::Erspan => "An ERSPAN header inside GRE — mirrored traffic tunnelled to a remote analyser.",
-        Protocol::Ppp => "A PPP frame — the link layer inside a PPPoE broadband session.",
-        Protocol::Pap => "A PAP exchange — PPP authentication with the password in the clear.",
-        Protocol::Chap => "A CHAP exchange — PPP authentication by hashed challenge, no password sent.",
-        Protocol::L2cap => "An L2CAP frame — Bluetooth's channel multiplexing layer.",
-        Protocol::Att => "An ATT PDU — a Bluetooth LE device's data being read, written or notified.",
-        Protocol::Smp => "An SMP PDU — two Bluetooth LE devices pairing and agreeing on security.",
-        Protocol::NvmeOf => "An NVMe/TCP PDU (TCP 4420) — remote flash storage at near-local speed.",
-        Protocol::Nbd => "An NBD message (TCP 10809) — a remote block device being read or written.",
-        Protocol::Fcip => "An FCIP frame (TCP 3225) — Fibre Channel storage tunnelled between sites.",
-        Protocol::Aoe => "An AoE frame (EtherType 0x88A2) — a disk exported directly onto the LAN.",
-        Protocol::Roce => "A RoCE frame (EtherType 0x8915) — RDMA writing straight into remote memory.",
-        Protocol::Xdmcp => "An XDMCP message (UDP 177) — an X terminal asking for a remote login session.",
-        Protocol::Plugin(_) => "Traffic recognised by a user-defined protocol plugin — named by a rule you configured.",
-        Protocol::Iax2 => "An IAX2 message (UDP 4569) — Asterisk PBXs trunking calls over a single port.",
-        Protocol::Zrtp => "A ZRTP handshake — endpoints agreeing on an SRTP key inside the media stream.",
-        Protocol::MssqlBrowser => "A SQL Server Browser exchange (UDP 1434) — a client asking which port an instance uses.",
-        Protocol::H225Ras => "An H.225 RAS message (UDP 1719) — an H.323 endpoint registering with its gatekeeper.",
-        Protocol::Q931 => "A Q.931 message (TCP 1720) — H.323 call signalling: setup, ringing, answer or release.",
-        Protocol::Bfcp => "A BFCP message (TCP 3238) — conference floor control deciding who may share.",
-        Protocol::Lisp => "A LISP packet — overlay traffic separating an endpoint's identity from its location.",
-        Protocol::L2tpv3 => "An L2TPv3 pseudowire packet (IP protocol 115) — layer-2 frames tunnelled over IP.",
-        Protocol::VxlanGpe => "A VXLAN-GPE packet (UDP 4790) — an overlay that names the protocol it carries.",
-        Protocol::Pcp => "A PCP / NAT-PMP message (UDP 5351) — a client asking the NAT to open an inbound port.",
-        Protocol::Rwho => "An rwho broadcast (UDP 513) — a legacy BSD host announcing its users and load.",
-        Protocol::DhcpFailover => "A DHCP failover message (TCP 647) — two DHCP servers synchronising lease state.",
-        Protocol::Unknown(_) => "Traffic netscope doesn't decode in detail — shown safely anyway.",
+        ref other => other.blurb(),
     }
 }
 
@@ -2867,29 +2893,45 @@ mod tests {
         }
     }
 
+    /// Despite its name this used to check eight protocols. Now it checks all
+    /// of them, so a new registry row cannot ship with a placeholder lesson.
     #[test]
     fn every_protocol_has_a_nonempty_lesson() {
-        for proto in [
-            Protocol::Dns,
-            Protocol::Tcp,
-            Protocol::Udp,
-            Protocol::Tls,
-            Protocol::Http,
-            Protocol::Icmp,
-            Protocol::Arp,
-            Protocol::Unknown("x".into()),
-        ] {
-            let l = lesson(&proto);
-            assert!(!l.title.is_empty());
-            assert!(!l.summary.is_empty());
-            assert!(!l.body.is_empty());
-            assert!(!l.look_for.is_empty());
+        for proto in Protocol::ALL.iter().chain([&Protocol::Unknown("x".into())]) {
+            let l = lesson(proto);
+            assert!(!l.title.is_empty(), "{proto:?} lesson has no title");
+            assert!(!l.summary.is_empty(), "{proto:?} lesson has no summary");
+            assert!(!l.body.is_empty(), "{proto:?} lesson has no body");
+            assert!(!l.look_for.is_empty(), "{proto:?} lesson has no look_for");
         }
     }
 
     #[test]
     fn all_lessons_covers_every_protocol() {
-        assert_eq!(all_lessons().len(), 246);
+        let lessons = all_lessons();
+        assert_eq!(lessons.len(), Protocol::ALL.len());
+        for p in Protocol::ALL {
+            assert!(
+                lessons.iter().any(|(q, _)| q == p),
+                "{p:?} is missing from the lesson index"
+            );
+        }
+    }
+
+    /// Regression: SMB, Kafka, AMQP, NTLM and TDS had lessons that the
+    /// hand-maintained index never listed, so they were unreachable.
+    #[test]
+    fn previously_unindexed_protocols_are_listed() {
+        let lessons = all_lessons();
+        for p in [
+            Protocol::Smb,
+            Protocol::Kafka,
+            Protocol::Amqp,
+            Protocol::Ntlm,
+            Protocol::Tds,
+        ] {
+            assert!(lessons.iter().any(|(q, _)| *q == p), "{p:?} not indexed");
+        }
     }
 
     #[test]

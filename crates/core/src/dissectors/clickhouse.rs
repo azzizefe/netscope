@@ -22,9 +22,12 @@ pub fn dissect_clickhouse(
     } else {
         // Packet 0 is a client Query; 1 is Data.
         match payload.first() {
-            Some(1) => format!("ClickHouse query ({} bytes)", payload.len()),
-            Some(2) => format!("ClickHouse data block ({} bytes)", payload.len()),
-            _ => format!("ClickHouse native ({} bytes)", payload.len()),
+            Some(1) => format!("ClickHouse query ({})", super::bytes(payload.len() as u64)),
+            Some(2) => format!(
+                "ClickHouse data block ({})",
+                super::bytes(payload.len() as u64)
+            ),
+            _ => format!("ClickHouse native ({})", super::bytes(payload.len() as u64)),
         }
     };
     DissectedResult {

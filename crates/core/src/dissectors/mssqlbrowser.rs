@@ -35,7 +35,7 @@ pub fn dissect_mssqlbrowser(
                 format!("SQL Browser — instance {}", super::truncate(&name, 24))
             }
         }
-        _ => format!("SQL Browser ({} bytes)", payload.len()),
+        _ => format!("SQL Browser ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

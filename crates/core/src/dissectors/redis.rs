@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
@@ -37,12 +37,15 @@ pub fn dissect_redis(
     let summary = match payload[0] {
         b'+' => format!(
             "Redis reply — +{}",
-            truncate(&first_line(&payload[1..]), 60)
+            truncate(&super::first_text_line(&payload[1..]), 60)
         ),
-        b'-' => format!("Redis error — {}", truncate(&first_line(&payload[1..]), 60)),
+        b'-' => format!(
+            "Redis error — {}",
+            truncate(&super::first_text_line(&payload[1..]), 60)
+        ),
         b':' => format!(
             "Redis integer — {}",
-            truncate(&first_line(&payload[1..]), 40)
+            truncate(&super::first_text_line(&payload[1..]), 40)
         ),
         b'$' => "Redis bulk string reply".to_string(),
         b'*' => match redis_command(payload) {
@@ -51,10 +54,10 @@ pub fn dissect_redis(
         },
         _ => {
             // Inline command form: the first word is the command verb.
-            let line = first_line(payload);
+            let line = super::first_text_line(payload);
             let verb = line.split_whitespace().next().unwrap_or("").to_uppercase();
             if verb.is_empty() {
-                format!("Redis — {} bytes", payload.len())
+                format!("Redis — {}", super::bytes(payload.len() as u64))
             } else {
                 format!("Redis command — {}", truncate(&line, 60))
             }
@@ -95,14 +98,6 @@ fn redis_command(payload: &[u8]) -> Option<String> {
         *first = first.to_uppercase();
     }
     Some(parts.join(" "))
-}
-
-fn first_line(payload: &[u8]) -> String {
-    let end = payload
-        .iter()
-        .position(|&b| b == b'\r' || b == b'\n')
-        .unwrap_or(payload.len());
-    String::from_utf8_lossy(&payload[..end]).trim().to_string()
 }
 
 #[cfg(test)]

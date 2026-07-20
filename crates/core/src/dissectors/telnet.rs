@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
@@ -20,7 +20,10 @@ pub fn dissect_telnet(
     payload: &[u8],
 ) -> DissectedResult {
     let summary = if payload.first() == Some(&IAC) {
-        format!("Telnet — option negotiation ({} bytes)", payload.len())
+        format!(
+            "Telnet — option negotiation ({})",
+            super::bytes(payload.len() as u64)
+        )
     } else {
         let text: String = payload
             .iter()
@@ -29,7 +32,7 @@ pub fn dissect_telnet(
             .map(|&b| b as char)
             .collect();
         if text.trim().is_empty() {
-            format!("Telnet — data ({} bytes)", payload.len())
+            format!("Telnet — data ({})", super::bytes(payload.len() as u64))
         } else {
             format!("Telnet — {}", truncate(text.trim(), 50))
         }

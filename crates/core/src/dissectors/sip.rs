@@ -1,10 +1,37 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
 use crate::models::Protocol;
 
 use super::DissectedResult;
+
+/// The blank line that separates SIP headers from the body. Written as byte
+/// values rather than an escaped literal so there is no ambiguity about what
+/// is actually being matched.
+const HEADER_END_CRLF: [u8; 4] = [13, 10, 13, 10];
+const HEADER_END_LF: [u8; 2] = [10, 10];
+
+/// The body of a SIP message, which follows the blank line after the headers.
+fn sdp_body(payload: &[u8]) -> Option<&[u8]> {
+    // Both line endings appear in practice, so look for either separator and
+    // take whichever comes first.
+    let crlf = payload
+        .windows(4)
+        .position(|w| w == HEADER_END_CRLF)
+        .map(|i| i + 4);
+    let lf = payload
+        .windows(2)
+        .position(|w| w == HEADER_END_LF)
+        .map(|i| i + 2);
+    let start = match (crlf, lf) {
+        (Some(a), Some(b)) => a.min(b),
+        (Some(a), None) => a,
+        (None, Some(b)) => b,
+        (None, None) => return None,
+    };
+    payload.get(start..)
+}
 
 const SIP_METHODS: &[&str] = &[
     "INVITE",
@@ -49,7 +76,14 @@ pub fn dissect_sip(
         .unwrap_or_default();
 
     let summary = parse_sip_line(&first_line).unwrap_or_else(|| "SIP message".into());
-    result(summary)
+
+    // An invite or a response often carries an SDP body saying where the media
+    // will flow. That is the fact a reader actually wants, because the RTP
+    // itself lands on a port chosen at call time.
+    match sdp_body(payload).and_then(super::sdp::describe) {
+        Some(sdp) => result(format!("{summary} — {}", sdp.trim_start_matches("SDP — "))),
+        None => result(summary),
+    }
 }
 
 fn parse_sip_line(line: &str) -> Option<String> {
@@ -78,6 +112,36 @@ fn parse_sip_line(line: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+
+    /// An invite carrying SDP should say where the media will go — that is the
+    /// fact a reader wants, because the RTP itself lands on a port chosen at
+    /// call time and is otherwise unfindable.
+    #[test]
+    fn invite_folds_in_its_sdp_body() {
+        let mut p =
+            b"INVITE sip:bob@example.com SIP/2.0\r\nVia: SIP/2.0/UDP 10.0.0.1\r\n\r\n".to_vec();
+        p.extend_from_slice(&crate::dissectors::sdp::test_helpers::audio_offer("49170"));
+        let r = dissect_sip(None, None, 5060, 5060, &p);
+        assert_eq!(r.protocol, Protocol::Sip);
+        assert!(
+            r.summary.contains("audio on 49170"),
+            "expected the media details, got {}",
+            r.summary
+        );
+    }
+
+    /// A message with no body keeps its plain summary rather than gaining an
+    /// empty suffix.
+    #[test]
+    fn message_without_a_body_is_unchanged() {
+        let p = b"SIP/2.0 100 Trying\r\nVia: SIP/2.0/UDP 10.0.0.1\r\n\r\n";
+        let r = dissect_sip(None, None, 5060, 5060, p);
+        assert!(
+            !r.summary.contains('\u{2014}'),
+            "unexpected suffix: {}",
+            r.summary
+        );
+    }
     use super::*;
 
     #[test]

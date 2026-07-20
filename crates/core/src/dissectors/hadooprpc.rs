@@ -22,7 +22,7 @@ pub fn dissect_hadooprpc(
             None => "Hadoop RPC handshake".to_string(),
         }
     } else {
-        format!("Hadoop RPC call ({} bytes)", payload.len())
+        format!("Hadoop RPC call ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

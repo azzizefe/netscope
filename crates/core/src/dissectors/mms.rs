@@ -29,7 +29,7 @@ pub fn dissect_mms(
         Some(0x0e) => "MMS — session ACCEPT (association response)".to_string(),
         Some(0x08) => "MMS — session REFUSE".to_string(),
         Some(0x01) => "MMS — data transfer".to_string(),
-        _ => format!("MMS ({} bytes)", payload.len()),
+        _ => format!("MMS ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

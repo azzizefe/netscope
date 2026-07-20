@@ -29,6 +29,7 @@ pub mod pcapng;
 pub mod pipeline;
 pub mod plugins;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod registry;
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rotate;

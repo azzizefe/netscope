@@ -40,7 +40,10 @@ pub fn dissect_q931(
             None => "H.225/Q.931 (truncated)".to_string(),
         }
     } else {
-        format!("H.225 call signalling ({} bytes)", payload.len())
+        format!(
+            "H.225 call signalling ({})",
+            super::bytes(payload.len() as u64)
+        )
     };
     DissectedResult {
         src_addr: src_ip,

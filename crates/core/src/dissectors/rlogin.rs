@@ -32,7 +32,7 @@ pub fn dissect_rlogin(
     } else {
         let line = super::first_text_line(payload);
         if line.is_empty() {
-            format!("rlogin ({} bytes)", payload.len())
+            format!("rlogin ({})", super::bytes(payload.len() as u64))
         } else {
             format!("rlogin — {}", super::truncate(&line, 40))
         }

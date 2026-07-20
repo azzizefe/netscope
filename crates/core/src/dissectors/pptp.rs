@@ -35,7 +35,7 @@ pub fn dissect_pptp(
         };
         format!("PPTP {name}")
     } else {
-        format!("PPTP ({} bytes)", payload.len())
+        format!("PPTP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

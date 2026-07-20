@@ -23,7 +23,7 @@ pub fn dissect_managesieve(
         .next()
         .unwrap_or("");
     let summary = match token.trim_matches('"') {
-        "" => format!("ManageSieve ({} bytes)", payload.len()),
+        "" => format!("ManageSieve ({})", super::bytes(payload.len() as u64)),
         "OK" | "NO" | "BYE" => format!("ManageSieve {token} response"),
         t if t.eq_ignore_ascii_case("IMPLEMENTATION") => {
             format!("ManageSieve greeting — {}", super::truncate(&line, 40))

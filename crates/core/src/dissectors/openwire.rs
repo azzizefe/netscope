@@ -28,7 +28,7 @@ pub fn dissect_openwire(
             Some(6) => "OpenWire ProducerInfo".to_string(),
             Some(21) => "OpenWire MessageDispatch".to_string(),
             Some(23) => "OpenWire ActiveMQMessage".to_string(),
-            _ => format!("OpenWire frame ({} bytes)", payload.len()),
+            _ => format!("OpenWire frame ({})", super::bytes(payload.len() as u64)),
         }
     };
     DissectedResult {

@@ -32,7 +32,7 @@ pub fn dissect_ndmp(
         let dir = if msg_type == 0 { "request" } else { "reply" };
         format!("NDMP {name} {dir}")
     } else {
-        format!("NDMP ({} bytes)", payload.len())
+        format!("NDMP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

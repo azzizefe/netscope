@@ -28,7 +28,7 @@ pub fn dissect_xmpp(
     } else if t.starts_with("<?xml") || t.starts_with('<') {
         "XMPP XML stream".to_string()
     } else {
-        format!("XMPP ({} bytes)", payload.len())
+        format!("XMPP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

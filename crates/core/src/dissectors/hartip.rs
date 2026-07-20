@@ -26,7 +26,7 @@ pub fn dissect_hartip(
         };
         format!("HART-IP {name}")
     } else {
-        format!("HART-IP ({} bytes)", payload.len())
+        format!("HART-IP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

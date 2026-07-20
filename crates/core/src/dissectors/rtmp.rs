@@ -18,7 +18,7 @@ pub fn dissect_rtmp(
 ) -> DissectedResult {
     let summary = match payload.first() {
         Some(0x03) => "RTMP handshake".to_string(),
-        Some(_) => format!("RTMP chunk ({} bytes)", payload.len()),
+        Some(_) => format!("RTMP chunk ({})", super::bytes(payload.len() as u64)),
         None => "RTMP (empty)".to_string(),
     };
     DissectedResult {

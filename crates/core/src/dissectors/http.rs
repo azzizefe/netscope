@@ -93,7 +93,7 @@ pub fn dissect_http(
             src_port: Some(src_port),
             dst_port: Some(dst_port),
             protocol: Protocol::Http,
-            summary: format!("HTTP — {} bytes of data", payload.len()),
+            summary: format!("HTTP — {} of data", super::bytes(payload.len() as u64)),
         }
     }
 }

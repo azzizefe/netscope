@@ -36,7 +36,10 @@ pub fn dissect_spice(
             None => "SPICE link (truncated)".to_string(),
         }
     } else {
-        format!("SPICE channel data ({} bytes)", payload.len())
+        format!(
+            "SPICE channel data ({})",
+            super::bytes(payload.len() as u64)
+        )
     };
     DissectedResult {
         src_addr: src_ip,

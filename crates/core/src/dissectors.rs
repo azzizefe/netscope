@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 pub mod aarp;
+pub mod ads;
 pub mod adsb;
 pub mod aerospike;
 pub mod afp;
 pub mod amqp;
+pub mod amqp1;
+pub mod aodv;
 pub mod aoe;
 pub mod aprs;
 pub mod arp;
@@ -13,24 +16,32 @@ pub mod att;
 pub mod avtp;
 pub mod babel;
 pub mod bacnet;
+pub mod batman;
 pub mod beanstalk;
 pub mod beats;
 pub mod bfcp;
 pub mod bfd;
 pub mod bgp;
+pub mod bindings;
+pub mod bitcoin;
 pub mod bittorrent;
 pub mod bluetooth;
 pub mod bmp;
 pub mod bolt;
+pub mod bssap;
 pub mod can;
 pub mod capwap;
 pub mod cassandra;
 pub mod cdp;
+pub mod ceph;
+pub mod cfm;
 pub mod chap;
+pub mod cip;
 pub mod clamav;
 pub mod cldap;
 pub mod clickhouse;
 pub mod coap;
+pub mod coap_tcp;
 pub mod collectd;
 pub mod dccp;
 pub mod dcerpc;
@@ -41,12 +52,16 @@ pub mod dhcpv6;
 pub mod dht;
 pub mod diameter;
 pub mod dicom;
+pub mod dlms;
+pub mod dlsw;
 pub mod dnp3;
 pub mod dns;
+pub mod dns_tcp;
 pub mod doip;
 pub mod drda;
 pub mod dtls;
 pub mod dtp;
+pub mod e1ap;
 pub mod eap;
 pub mod eapol;
 pub mod edonkey;
@@ -56,12 +71,15 @@ pub mod enip;
 pub mod erspan;
 pub mod ethercat;
 pub mod ethernet;
+pub mod f1ap;
 pub mod fcip;
 pub mod fcoe;
 pub mod finger;
+pub mod fins;
 pub mod firebird;
 pub mod fix;
 pub mod fluentd;
+pub mod fox;
 pub mod ftp;
 pub mod ganglia;
 pub mod gearman;
@@ -76,15 +94,19 @@ pub mod graphite;
 pub mod gre;
 pub mod gtp;
 pub mod gtpprime;
+pub mod gtpv2;
 pub mod gvcp;
 pub mod h225ras;
 pub mod hadooprpc;
 pub mod hartip;
 pub mod hl7;
+pub mod hnbap;
+pub mod hsms;
 pub mod hsrp;
 pub mod http;
 pub mod http2;
 pub mod iax2;
+pub mod ibmmq;
 pub mod ica;
 pub mod icmp;
 pub mod ident;
@@ -99,6 +121,9 @@ pub mod ipx;
 pub mod irc;
 pub mod isakmp;
 pub mod iscsi;
+pub mod isis;
+pub mod isup;
+pub mod j1939;
 pub mod jaeger;
 pub mod kafka;
 pub mod kerberos;
@@ -107,53 +132,84 @@ pub mod l2cap;
 pub mod l2tp;
 pub mod l2tpv3;
 pub mod lacp;
+pub mod lcsap;
 pub mod ldap;
 pub mod ldp;
+pub mod linktypes;
 pub mod lisp;
 pub mod lldp;
 pub mod lpd;
+pub mod lustre;
+pub mod lwapp;
+pub mod m2ap;
+pub mod m2pa;
+pub mod m2ua;
+pub mod m3ap;
+pub mod m3ua;
+pub mod macctrl;
 pub mod macsec;
 pub mod managesieve;
 pub mod matter;
+pub mod mbus;
 pub mod megaco;
 pub mod memcached;
+pub mod memcached_bin;
 pub mod mgcp;
 pub mod minecraft;
+pub mod mle;
 pub mod mms;
 pub mod modbus;
 pub mod mongodb;
+pub mod mpegts;
 pub mod mpls;
 pub mod mqtt;
 pub mod mqttsn;
+pub mod msdp;
 pub mod msrp;
 pub mod mssqlbrowser;
 pub mod mumble;
 pub mod mysql;
 pub mod mysqlx;
 pub mod nats;
+pub mod nbap;
 pub mod nbd;
 pub mod nbds;
 pub mod nbns;
 pub mod ndmp;
+pub mod nebula;
 pub mod netflow;
+pub mod nflog;
+pub mod nfs;
+pub mod ngap;
+pub mod ngap_common;
+pub mod nhrp;
+pub mod ninep;
 pub mod nmea;
 pub mod nntp;
 pub mod nrpe;
+pub mod nsh;
 pub mod nsq;
 pub mod ntlm;
 pub mod ntp;
 pub mod nvmeof;
+pub mod obd2;
+pub mod olsr;
 pub mod opcua;
 pub mod openflow;
 pub mod openvpn;
 pub mod openwire;
 pub mod ospf;
+pub mod ovsdb;
 pub mod pagp;
 pub mod pap;
+pub mod pccc;
+pub mod pcep;
 pub mod pcoip;
 pub mod pcp;
 pub mod pfcp;
+pub mod pgm;
 pub mod pim;
+pub mod pktap;
 pub mod pop3;
 pub mod postgres;
 pub mod powerlink;
@@ -168,9 +224,11 @@ pub mod qpack;
 pub mod radiotap;
 pub mod radius;
 pub mod radmin;
+pub mod ranap;
 pub mod rarp;
 pub mod rdp;
 pub mod redis;
+pub mod redis_cluster;
 pub mod relp;
 pub mod rethinkdb;
 pub mod rexec;
@@ -179,9 +237,12 @@ pub mod riak;
 pub mod rip;
 pub mod rlogin;
 pub mod rmcp;
+pub mod rnsap;
 pub mod roce;
+pub mod roughtime;
 pub mod rpc;
 pub mod rpkirtr;
+pub mod rpl;
 pub mod rsh;
 pub mod rsvp;
 pub mod rsync;
@@ -189,15 +250,27 @@ pub mod rtmp;
 pub mod rtp;
 pub mod rtps;
 pub mod rtsp;
+pub mod rua;
 pub mod rwho;
+pub mod rx;
+pub mod s1ap;
 pub mod s7comm;
+pub mod sabp;
 pub mod sane;
+pub mod sap_announce;
+pub mod sbcap;
+pub mod sccp;
 pub mod sctp;
+pub mod sdp;
 pub mod sercos;
 pub mod sflow;
+pub mod sigtran;
 pub mod sip;
+pub mod sixlowpan;
 pub mod skinny;
 pub mod sll;
+pub mod slmp;
+pub mod slp;
 pub mod smb;
 pub mod smp;
 pub mod smpp;
@@ -206,32 +279,42 @@ pub mod snap;
 pub mod snmp;
 pub mod socks;
 pub mod someip;
+pub mod someip_sd;
 pub mod source_query;
 pub mod spamd;
 pub mod spice;
 pub mod srt;
+pub mod srt_transport;
+pub mod srtp_ge;
 pub mod ssdp;
 pub mod ssh;
 pub mod statsd;
 pub mod stomp;
 pub mod stp;
 pub mod stun;
+pub mod sua;
 pub mod sv;
 pub mod svn;
 pub mod syslog;
 pub mod tacacs;
+pub mod tcap;
 pub mod tcp;
 pub mod tcp_analysis;
 pub mod tds;
 pub mod telnet;
 pub mod teredo;
 pub mod tftp;
+pub mod thrift;
 pub mod tls;
 pub mod tns;
+pub mod trill;
 pub mod turn;
+pub mod twamp;
 pub mod udld;
 pub mod udp;
+pub mod uds;
 pub mod usb;
+pub mod utp;
 pub mod vines;
 pub mod vrrp;
 pub mod vtp;
@@ -248,7 +331,9 @@ pub mod x11;
 pub mod xcp;
 pub mod xdmcp;
 pub mod xmpp;
+pub mod xnap;
 pub mod zabbix;
+pub mod zerotier;
 pub mod zigbee;
 pub mod zmtp;
 pub mod zookeeper;
@@ -262,8 +347,35 @@ use crate::models::Protocol;
 /// trimmed. Shared by the line-oriented dissectors (FTP, SMTP, IMAP, POP3).
 /// Uses SIMD-accelerated `memchr` for the line-end scan (ROADMAP §4.1).
 pub(crate) fn first_text_line(payload: &[u8]) -> String {
-    let end = memchr::memchr2(b'\r', b'\n', payload).unwrap_or(payload.len());
-    String::from_utf8_lossy(&payload[..end]).trim().to_string()
+    // A NUL ends the line too: several text protocols terminate with one
+    // instead of a newline, and treating it as content would leave a stray
+    // marker on the end of every command they send.
+    let end = memchr::memchr3(b'\r', b'\n', 0, payload).unwrap_or(payload.len());
+    sanitise(&String::from_utf8_lossy(&payload[..end]))
+}
+
+/// Replace control characters in text that came off the wire.
+///
+/// Every summary built from a payload ends up on a terminal, and an escape
+/// sequence in a server banner or an FTP reply would be interpreted rather than
+/// shown — able to recolour the display, move the cursor, or hide the lines
+/// after it. A capture is untrusted input and may have been written by whoever
+/// is being investigated, so those characters are replaced with a visible
+/// marker rather than passed through.
+pub(crate) fn sanitise(text: &str) -> String {
+    text.chars()
+        .map(|c| {
+            match c {
+                // A tab carries meaning in some text protocols but wrecks a
+                // column layout, so it becomes an ordinary space.
+                '\t' => ' ',
+                c if c.is_control() => char::REPLACEMENT_CHARACTER,
+                c => c,
+            }
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
 }
 
 /// First `max` bytes of `s`, backed off to a char boundary so the slice is
@@ -277,6 +389,24 @@ pub(crate) fn head_str(s: &str, max: usize) -> &str {
         end -= 1;
     }
     &s[..end]
+}
+
+/// Render a byte count for display, so a one-byte payload does not read as
+/// "1 bytes".
+///
+/// Small wording slips like that are exactly what makes a tool feel unfinished,
+/// and this appears in the fallback summary of nearly every dissector — so it
+/// is worth one shared helper rather than a plural check repeated 175 times.
+/// Takes a `u64` rather than a `usize` because some protocols declare a length
+/// larger than the bytes actually captured, and that declared value is what a
+/// reader wants to see.
+pub(crate) fn bytes(n: impl Into<u64>) -> String {
+    let n = n.into();
+    if n == 1 {
+        "1 byte".to_string()
+    } else {
+        format!("{n} bytes")
+    }
 }
 
 /// Truncate a display string to `max` characters, adding an ellipsis when cut.
@@ -313,12 +443,46 @@ const DLT_USB_LINUX_MMAPPED: i32 = 220; // usbmon, 64-byte header
 const DLT_CAN_SOCKETCAN: i32 = 227; // SocketCAN (can0/vcan0)
 const DLT_USBPCAP: i32 = 249; // Windows USBPcap
 const DLT_IEEE802_15_4: i32 = 195; // IEEE 802.15.4 Wireless PAN (Zigbee)
+                                   // Captures that carry IP with no Ethernet header. Treating these as Ethernet
+                                   // reads the first fourteen bytes of the IP packet as addresses and misaligns
+                                   // everything after, so they need their own paths.
+const DLT_NULL: i32 = 0; // BSD loopback: a host-order address family
+const DLT_RAW: i32 = 101; // bare IP, as tunnel and VPN interfaces produce
+const DLT_C_HDLC: i32 = 104; // Cisco HDLC on router serial links
+const DLT_LOOP: i32 = 108; // OpenBSD loopback: address family in network order
+const DLT_IPV4: i32 = 228; // a capture declared as IPv4 only
+const DLT_IPV6: i32 = 229; // a capture declared as IPv6 only
+const DLT_PPP: i32 = 9; // PPP with its full header
+const DLT_PPP_SERIAL: i32 = 50; // PPP over a serial line, with HDLC framing
+const DLT_NFLOG: i32 = 239; // Linux netfilter log group
+/// macOS packet tap, which prefixes each packet with the process that made it.
+pub(crate) const DLT_PKTAP: i32 = 258;
 
 /// Entry point that respects the capture's link-layer type. Ethernet captures
 /// (the default) go through [`dissect`]; Wi-Fi, Linux-cooked (remote
-/// `-i any`), USB, Bluetooth-HCI and CAN captures each take their own
-/// link-layer path.
+/// `-i any`), USB, Bluetooth-HCI, CAN, loopback, raw-IP and serial captures
+/// each take their own link-layer path.
+///
+/// The fallback treats an unknown type as Ethernet, which is right far more
+/// often than not — but only because the types that are definitely *not*
+/// Ethernet are listed above it.
 pub fn dissect_linktype(data: &[u8], linktype: i32) -> DissectedResult {
+    let mut result = dissect_linktype_inner(data, linktype);
+    // Sanitise once, here, rather than trusting each of three hundred
+    // dissectors to remember. Many build a summary from text that came off the
+    // wire — a hostname, a URL, a SQL statement, a server banner — and that
+    // text is written by whoever sent the packet. An escape sequence reaching a
+    // terminal would be acted on rather than shown.
+    //
+    // Doing it at the single exit means a dissector added later is covered
+    // without its author having to know this is a concern.
+    if result.summary.chars().any(|c| c.is_control()) {
+        result.summary = sanitise(&result.summary);
+    }
+    result
+}
+
+fn dissect_linktype_inner(data: &[u8], linktype: i32) -> DissectedResult {
     match linktype {
         DLT_IEEE802_11_RADIO => wlan::dissect_radiotap(data),
         DLT_IEEE802_11 => wlan::dissect_80211(data, None),
@@ -330,6 +494,18 @@ pub fn dissect_linktype(data: &[u8], linktype: i32) -> DissectedResult {
         DLT_USBPCAP => usb::dissect_usbpcap(data),
         DLT_CAN_SOCKETCAN => can::dissect_can(data),
         DLT_IEEE802_15_4 => zigbee::dissect_ieee802154(data),
+        DLT_NULL => linktypes::dissect_loopback(data),
+        DLT_LOOP => linktypes::dissect_loop(data),
+        DLT_RAW => linktypes::dissect_raw_ip(data),
+        DLT_IPV4 => linktypes::dissect_ipv4_only(data),
+        DLT_IPV6 => linktypes::dissect_ipv6_only(data),
+        DLT_C_HDLC => linktypes::dissect_cisco_hdlc(data),
+        DLT_NFLOG => nflog::dissect_nflog(data),
+        DLT_PKTAP => pktap::dissect_pktap(data),
+        DLT_PPP => ppp::dissect_ppp(data),
+        // The serial form prefixes the address and control bytes that the
+        // plain form omits, so the PPP header does not start at byte zero.
+        DLT_PPP_SERIAL => ppp::dissect_ppp(data.get(2..).unwrap_or(data)),
         DLT_EN10MB => dissect(data),
         _ => dissect(data),
     }
@@ -385,6 +561,12 @@ const ETHERTYPE_RARP: u16 = 0x8035; // Reverse ARP
 const ETHERTYPE_ETHERCAT: u16 = 0x88A4; // EtherCAT industrial fieldbus
 const ETHERTYPE_MACSEC: u16 = 0x88E5; // 802.1AE MACsec link encryption
 const ETHERTYPE_FCOE: u16 = 0x8906; // Fibre Channel over Ethernet
+const ETHERTYPE_MAC_CONTROL: u16 = 0x8808; // Ethernet flow control (PAUSE)
+const ETHERTYPE_PBB: u16 = 0x88E7; // 802.1ah provider backbone bridging
+const ETHERTYPE_NSH: u16 = 0x894F; // Service function chaining (RFC 8300)
+const ETHERTYPE_BATMAN: u16 = 0x4305; // B.A.T.M.A.N. advanced mesh
+const ETHERTYPE_TRILL: u16 = 0x22F3; // Routed Ethernet (RFC 6325)
+const ETHERTYPE_CFM: u16 = 0x8902; // Connectivity Fault Management (802.1ag)
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
@@ -425,6 +607,14 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).
+        ETHERTYPE_MAC_CONTROL => macctrl::dissect_mac_control(payload),
+        // Provider backbone bridging wraps a whole customer frame in an
+        // operator's own header, so unwrap it and report what is inside.
+        ETHERTYPE_PBB => dissect_pbb(payload, vlan_depth),
+        ETHERTYPE_NSH => nsh::dissect_nsh(payload),
+        ETHERTYPE_BATMAN => batman::dissect_batman(payload),
+        ETHERTYPE_TRILL => trill::dissect_trill(payload),
+        ETHERTYPE_CFM => cfm::dissect_cfm(payload),
         ETHERTYPE_AOE => aoe::dissect_aoe(payload),
         ETHERTYPE_ROCE => roce::dissect_roce(payload),
         ETHERTYPE_DECNET => decnet::dissect_decnet(payload),
@@ -433,6 +623,11 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_ATALK => atalk::dissect_atalk(payload),
         ETHERTYPE_AARP => aarp::dissect_aarp(payload),
         et if et <= ETHERTYPE_MAX_LENGTH && stp::is_stp(payload) => stp::dissect_stp(payload),
+        // IS-IS also arrives as an LLC frame, on its own service access
+        // point, and is confirmed by its protocol discriminator.
+        et if et <= ETHERTYPE_MAX_LENGTH && is_isis_llc(payload) => {
+            isis::dissect_isis(&payload[3..])
+        }
         // Other 802.3 length-form frames carry an LLC header; when it is SNAP,
         // the vendor OUI + protocol id select a dissector (Cisco's CDP, VTP,
         // DTP, PAgP and UDLD all live there).
@@ -474,6 +669,15 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
             summary: format!("Unknown L3 protocol (ethertype 0x{other:04x})"),
         },
     }
+}
+
+/// Whether an 802.3 LLC frame carries IS-IS: both service access points are
+/// IS-IS's, and the payload starts with the IS-IS protocol discriminator.
+fn is_isis_llc(payload: &[u8]) -> bool {
+    payload.len() > 3
+        && payload[0] == isis::LLC_SAP
+        && payload[1] == isis::LLC_SAP
+        && isis::is_isis(&payload[3..])
 }
 
 /// Unwrap an MPLS label stack and dissect the inner packet, relabelling the
@@ -528,15 +732,90 @@ fn dissect_mpls(payload: &[u8], vlan_depth: u8) -> DissectedResult {
     }
 }
 
+/// Unwrap an 802.1ah provider backbone header.
+///
+/// A carrier selling Ethernet cannot have customers' MAC addresses filling its
+/// own switches, so it wraps each customer frame in a header of its own: a
+/// service identifier, then a complete Ethernet frame inside. The customer's
+/// traffic is what a reader wants, with the service tag as context.
+fn dissect_pbb(payload: &[u8], vlan_depth: u8) -> DissectedResult {
+    // Flags and the 24-bit service identifier, then the customer's own frame.
+    const HEADER: usize = 4;
+    const CUSTOMER_FRAME: usize = HEADER + 12;
+
+    let Some(service) = payload
+        .get(1..4)
+        .map(|b| u32::from_be_bytes([0, b[0], b[1], b[2]]))
+    else {
+        return DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Unknown("truncated PBB header".into()),
+            summary: "Malformed packet (truncated PBB header)".into(),
+        };
+    };
+    // The inner frame is a complete Ethernet frame: two addresses then a type.
+    let Some(ethertype) = payload
+        .get(CUSTOMER_FRAME..CUSTOMER_FRAME + 2)
+        .map(|b| u16::from_be_bytes([b[0], b[1]]))
+    else {
+        return DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Unknown("truncated PBB frame".into()),
+            summary: format!("PBB service {service} (no customer frame)"),
+        };
+    };
+    let mut inner = dispatch_l3(ethertype, &payload[CUSTOMER_FRAME + 2..], vlan_depth);
+    inner.summary = format!("PBB service {service} · {}", inner.summary);
+    inner
+}
+
+/// Unwrap a plain IP-in-IP tunnel and dissect the packet inside.
+///
+/// The inner packet keeps its own protocol and addresses — those are the ones a
+/// reader cares about — with a note saying which tunnel carried it, the same
+/// way MPLS and VLAN are reported.
+fn dissect_ip_tunnel(inner_ethertype: u16, tunnel: &str, payload: &[u8]) -> DissectedResult {
+    if payload.is_empty() {
+        return DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Unknown(format!("empty {tunnel} tunnel")),
+            summary: format!("{tunnel} tunnel with no inner packet"),
+        };
+    }
+    let mut inner = dispatch_l3(inner_ethertype, payload, 0);
+    inner.summary = format!("{tunnel} · {}", inner.summary);
+    inner
+}
+
 /// Human-readable names for IP protocol numbers we don't dissect further.
 fn ip_protocol_name(p: u8) -> String {
     match p {
         2 => "IGMP".into(),
+        8 => "EGP".into(),
+        9 => "IGP".into(),
         47 => "GRE".into(),
         50 => "ESP (IPsec)".into(),
         51 => "AH (IPsec)".into(),
+        55 => "Mobile IP".into(),
         89 => "OSPF".into(),
+        // Compressed payloads cannot be read further without decompressing,
+        // but naming them explains why nothing else is visible.
+        108 => "IPComp (compressed payload)".into(),
         132 => "SCTP".into(),
+        135 => "Mobility header".into(),
+        139 => "HIP".into(),
+        140 => "Shim6".into(),
+        141 => "WESP".into(),
+        142 => "ROHC".into(),
         other => format!("IP protocol {other}"),
     }
 }
@@ -565,6 +844,25 @@ fn dispatch_transport(
         Some(33) => dccp::dissect_dccp(src_ip, dst_ip, &payload),
         Some(46) => rsvp::dissect_rsvp(src_ip, dst_ip, &payload),
         Some(115) => l2tpv3::dissect_l2tpv3(src_ip, dst_ip, &payload),
+        // Reliable multicast (RFC 3208) rides directly on IP.
+        Some(113) => pgm::dissect_pgm(src_ip, dst_ip, &payload),
+        // DMVPN's next-hop resolution rides directly on IP.
+        Some(54) => nhrp::dissect_nhrp(src_ip, dst_ip, &payload),
+        // Plain IP-in-IP tunnels. 6in4 (41) is how a great deal of IPv6
+        // connectivity is delivered, and IPIP (4) is what many VPNs and Linux
+        // tunnels use. Without unwrapping them the outer packet is all that is
+        // reported and everything actually being carried is invisible.
+        Some(4) => dissect_ip_tunnel(ETHERTYPE_IPV4, "IPv4-in-IPv4", &payload),
+        Some(41) => dissect_ip_tunnel(ETHERTYPE_IPV6, "6in4", &payload),
+        // MPLS carried directly over IP, which is how some providers cross a
+        // third party's network without asking it to speak MPLS.
+        Some(137) => {
+            let mut r = dissect_mpls(&payload, 0);
+            r.src_addr = src_ip;
+            r.dst_addr = dst_ip;
+            r.summary = format!("MPLS-in-IP · {}", r.summary);
+            r
+        }
         // Interior routing (EIGRP 88, PIM 103) and gateway redundancy (VRRP 112).
         Some(88) => eigrp::dissect_eigrp(src_ip, dst_ip, &payload),
         Some(103) => pim::dissect_pim(src_ip, dst_ip, &payload),
@@ -781,6 +1079,533 @@ mod tests {
             Some(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 2)))
         );
         assert_eq!(result.summary, "HTTP GET / (HTTP/1.1)");
+    }
+
+    /// The full 5G stack: Ethernet → IPv4 → SCTP → DATA chunk → PPID 60 → NGAP.
+    /// Each layer is exercised by its own tests, but only this proves they are
+    /// actually wired to each other.
+    #[test]
+    fn end_to_end_ngap_over_sctp_via_dissect() {
+        use crate::dissectors::ngap_common::test_helpers::ap_pdu;
+        use crate::dissectors::ngap_common::MessageKind;
+        use crate::dissectors::sctp::test_helpers::sctp_data;
+
+        // NGAP InitialUEMessage (procedure 15) inside an SCTP DATA chunk.
+        let ngap = ap_pdu(MessageKind::Initiating, 15);
+        let sctp = sctp_data(38412, 38412, 60, &ngap);
+
+        let mut pkt = Vec::new();
+        // Ethernet II, IPv4.
+        pkt.extend_from_slice(&[0x66; 6]);
+        pkt.extend_from_slice(&[0x11; 6]);
+        pkt.extend_from_slice(&0x0800u16.to_be_bytes());
+        // IPv4 header, protocol 132 (SCTP).
+        pkt.extend_from_slice(&[0x45, 0x00]);
+        pkt.extend_from_slice(&((20 + sctp.len()) as u16).to_be_bytes());
+        pkt.extend_from_slice(&[0x00, 0x00, 0x40, 0x00, 0x40, 132, 0x00, 0x00]);
+        pkt.extend_from_slice(&[10, 0, 0, 1]);
+        pkt.extend_from_slice(&[10, 0, 0, 2]);
+        pkt.extend_from_slice(&sctp);
+
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Ngap);
+        assert_eq!(r.summary, "NGAP InitialUEMessage");
+        assert_eq!(r.src_port, Some(38412));
+    }
+
+    /// The deepest stack netscope decodes, end to end:
+    /// Ethernet → IPv4 → SCTP → DATA chunk (PPID 3) → M3UA → Protocol Data
+    /// (service indicator 3) → SCCP → TCAP → the MAP operation code.
+    ///
+    /// Seven layers, each parsed by a different module. Every one has its own
+    /// tests; only this proves they are actually connected to each other.
+    #[test]
+    fn end_to_end_ss7_stack_via_dissect() {
+        use crate::dissectors::sccp::test_helpers::udt;
+        use crate::dissectors::sctp::test_helpers::sctp_data;
+        use crate::dissectors::sigtran::test_helpers::sigtran;
+        use crate::dissectors::tcap::test_helpers::tcap_invoke;
+
+        // A switch asking the subscriber database where to deliver a text.
+        let tcap = tcap_invoke(0x62, 46); // sendRoutingInfoForSM
+        let sccp = udt(8, 6, &tcap); // MSC → HLR
+        let mut pd = Vec::new();
+        pd.extend_from_slice(&1001u32.to_be_bytes()); // originating point code
+        pd.extend_from_slice(&2002u32.to_be_bytes()); // destination point code
+        pd.extend_from_slice(&[3, 0, 0, 0]); // service indicator 3 = SCCP
+        pd.extend_from_slice(&sccp);
+        let m3ua = sigtran(1, 1, 0x0210, &pd);
+        let sctp = sctp_data(2905, 2905, 3, &m3ua);
+
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x66; 6]);
+        pkt.extend_from_slice(&[0x11; 6]);
+        pkt.extend_from_slice(&0x0800u16.to_be_bytes());
+        pkt.extend_from_slice(&[0x45, 0x00]);
+        pkt.extend_from_slice(&((20 + sctp.len()) as u16).to_be_bytes());
+        pkt.extend_from_slice(&[0x00, 0x00, 0x40, 0x00, 0x40, 132, 0x00, 0x00]);
+        pkt.extend_from_slice(&[10, 0, 0, 1]);
+        pkt.extend_from_slice(&[10, 0, 0, 2]);
+        pkt.extend_from_slice(&sctp);
+
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Tcap);
+        assert_eq!(
+            r.summary,
+            "TCAP Begin Invoke — sendRoutingInfoForSM — MSC → HLR [1001 → 2002]"
+        );
+    }
+
+    /// GTPv2-C reaches its dissector by UDP port, not by SCTP PPID — a
+    /// different path through the dispatch than the rest of this batch.
+    #[test]
+    fn end_to_end_gtpv2_over_udp_via_dissect() {
+        let mut gtp = vec![0x48, 32, 0x00, 0x00]; // v2, T flag set, Create Session Request
+        gtp.extend_from_slice(&0xdeadbeefu32.to_be_bytes());
+        gtp.extend_from_slice(&[0, 0, 42, 0]); // sequence 42 + spare
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 2123, 2123, &gtp);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Gtpv2);
+        assert_eq!(
+            r.summary,
+            "GTPv2-C Create Session Request — TEID 0xdeadbeef, seq 42"
+        );
+    }
+
+    /// EtherNet/IP is only an envelope; the CIP request inside is what says
+    /// whether a controller was polled or halted. This walks the whole path:
+    /// Ethernet → IPv4 → TCP 44818 → encapsulation header → Common Packet
+    /// Format items → CIP.
+    #[test]
+    fn end_to_end_cip_inside_ethernet_ip_via_dissect() {
+        super::tcp::clear_tcp_reassembler();
+        let cip = crate::dissectors::cip::test_helpers::request(0x07, 0xAC); // Stop
+
+        // Encapsulation body: interface handle, timeout, then two CPF items —
+        // an empty address item and the unconnected data item holding CIP.
+        let mut body = Vec::new();
+        body.extend_from_slice(&0u32.to_le_bytes()); // interface handle
+        body.extend_from_slice(&0u16.to_le_bytes()); // timeout
+        body.extend_from_slice(&2u16.to_le_bytes()); // item count
+        body.extend_from_slice(&0x0000u16.to_le_bytes()); // null address item
+        body.extend_from_slice(&0u16.to_le_bytes());
+        body.extend_from_slice(&0x00B2u16.to_le_bytes()); // unconnected data
+        body.extend_from_slice(&(cip.len() as u16).to_le_bytes());
+        body.extend_from_slice(&cip);
+
+        let mut enip = Vec::new();
+        enip.extend_from_slice(&0x006Fu16.to_le_bytes()); // SendRRData
+        enip.extend_from_slice(&(body.len() as u16).to_le_bytes());
+        enip.extend_from_slice(&0x1234_5678u32.to_le_bytes()); // session handle
+        enip.extend_from_slice(&0u32.to_le_bytes()); // status
+        enip.extend_from_slice(&[0u8; 8]); // sender context
+        enip.extend_from_slice(&0u32.to_le_bytes()); // options
+        enip.extend_from_slice(&body);
+
+        let pkt = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            50000,
+            44818,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            &enip,
+        );
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Cip);
+        assert_eq!(
+            r.summary,
+            "CIP Stop — Logix Controller — session 0x12345678"
+        );
+    }
+
+    /// The deepest industrial path: Ethernet → IPv4 → TCP 44818 →
+    /// EtherNet/IP encapsulation → Common Packet Format → CIP Execute PCCC →
+    /// PCCC. Four protocols nested inside each other, and the innermost one is
+    /// what says a controller is being written to.
+    #[test]
+    fn end_to_end_pccc_tunnelled_through_cip_via_dissect() {
+        super::tcp::clear_tcp_reassembler();
+        let pccc = crate::dissectors::pccc::test_helpers::pccc(0x0F, 0xAA, 0x00);
+        let mut cip = vec![0x4B, 0x02, 0x20, 0x67, 0x24, 0x01]; // Execute PCCC
+        cip.extend_from_slice(&pccc);
+
+        let mut body = Vec::new();
+        body.extend_from_slice(&0u32.to_le_bytes()); // interface handle
+        body.extend_from_slice(&0u16.to_le_bytes()); // timeout
+        body.extend_from_slice(&2u16.to_le_bytes()); // item count
+        body.extend_from_slice(&0x0000u16.to_le_bytes()); // null address item
+        body.extend_from_slice(&0u16.to_le_bytes());
+        body.extend_from_slice(&0x00B2u16.to_le_bytes()); // unconnected data
+        body.extend_from_slice(&(cip.len() as u16).to_le_bytes());
+        body.extend_from_slice(&cip);
+
+        let mut enip = Vec::new();
+        enip.extend_from_slice(&0x006Fu16.to_le_bytes()); // SendRRData
+        enip.extend_from_slice(&(body.len() as u16).to_le_bytes());
+        enip.extend_from_slice(&0xAABB_CCDDu32.to_le_bytes()); // session handle
+        enip.extend_from_slice(&0u32.to_le_bytes()); // status
+        enip.extend_from_slice(&[0u8; 8]); // sender context
+        enip.extend_from_slice(&0u32.to_le_bytes()); // options
+        enip.extend_from_slice(&body);
+
+        let pkt = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            50001,
+            44818,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            &enip,
+        );
+        let r = dissect(&pkt);
+        // The innermost protocol wins the label, so the protocol column and
+        // the summary agree instead of saying CIP next to a PCCC message.
+        assert_eq!(r.protocol, Protocol::Pccc);
+        assert_eq!(
+            r.summary,
+            "PCCC Protected Typed Logical Write (3 address fields) — session 0xaabbccdd"
+        );
+    }
+
+    /// IS-IS does not run over IP; it arrives inside an 802.3 LLC frame, which
+    /// is a dispatch path only STP otherwise uses. This checks the length-form
+    /// EtherType, the service access points and the discriminator all line up.
+    #[test]
+    fn end_to_end_isis_over_llc_via_dissect() {
+        let mut isis = vec![0x83, 27, 1, 0, 15, 1, 0, 3];
+        isis.extend_from_slice(&[0x01, 0x19, 0x00, 0x01, 0x00, 0x01, 0x00, 0x07]);
+
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x01, 0x80, 0xC2, 0x00, 0x00, 0x14]); // IS-IS multicast
+        pkt.extend_from_slice(&[0x11; 6]);
+        // 802.3 length form: the EtherType field is the frame length.
+        pkt.extend_from_slice(&((3 + isis.len()) as u16).to_be_bytes());
+        pkt.extend_from_slice(&[0xFE, 0xFE, 0x03]); // LLC: IS-IS SAPs, unnumbered
+        pkt.extend_from_slice(&isis);
+
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Isis);
+        assert_eq!(r.summary, "IS-IS L1 LAN Hello — 1900.0100.0100");
+    }
+
+    /// PGM rides directly on IP as protocol 113, with no transport underneath.
+    #[test]
+    fn end_to_end_pgm_over_ip_via_dissect() {
+        let mut pgm = Vec::new();
+        pgm.extend_from_slice(&1234u16.to_be_bytes());
+        pgm.extend_from_slice(&5678u16.to_be_bytes());
+        pgm.push(0x08); // NAK
+        pgm.push(0);
+        pgm.extend_from_slice(&[0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]);
+        pgm.extend_from_slice(&[0, 0, 0, 0]);
+
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x66; 6]);
+        pkt.extend_from_slice(&[0x11; 6]);
+        pkt.extend_from_slice(&0x0800u16.to_be_bytes());
+        pkt.extend_from_slice(&[0x45, 0x00]);
+        pkt.extend_from_slice(&((20 + pgm.len()) as u16).to_be_bytes());
+        pkt.extend_from_slice(&[0x00, 0x00, 0x40, 0x00, 0x40, 113, 0x00, 0x00]);
+        pkt.extend_from_slice(&[10, 0, 0, 1]);
+        pkt.extend_from_slice(&[239, 1, 1, 1]); // a multicast destination
+        pkt.extend_from_slice(&pgm);
+
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Pgm);
+        assert_eq!(
+            r.summary,
+            "PGM NAK (negative acknowledgement) — source aa:bb:cc:dd:ee:ff"
+        );
+    }
+
+    /// RPL is a whole routing protocol carried as a single ICMPv6 type, so it
+    /// reaches its dissector through the ICMP path rather than a port.
+    #[test]
+    fn end_to_end_rpl_over_icmpv6_via_dissect() {
+        // DIO: instance 1, version 2, rank 256.
+        let icmpv6 = [155u8, 0x01, 0x00, 0x00, 1, 2, 0x01, 0x00];
+
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x33, 0x33, 0, 0, 0, 0x1A]);
+        pkt.extend_from_slice(&[0x11; 6]);
+        pkt.extend_from_slice(&0x86DDu16.to_be_bytes()); // IPv6
+        pkt.extend_from_slice(&[0x60, 0, 0, 0]); // version 6, no flow label
+        pkt.extend_from_slice(&(icmpv6.len() as u16).to_be_bytes()); // payload length
+        pkt.push(58); // next header: ICMPv6
+        pkt.push(255); // hop limit
+        pkt.extend_from_slice(&[0xFE, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        pkt.extend_from_slice(&[0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1A]);
+        pkt.extend_from_slice(&icmpv6);
+
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Rpl);
+        assert_eq!(
+            r.summary,
+            "RPL DIO (advertise routing information) — instance 1, version 2, rank 256"
+        );
+    }
+
+    /// A loopback capture has no Ethernet header, and reading one as though it
+    /// did consumes the first fourteen bytes of the IP packet. This checks the
+    /// link type is honoured — and that the Ethernet path really would have got
+    /// it wrong, so the test would notice if the routing were removed.
+    #[test]
+    fn loopback_capture_is_not_read_as_ethernet() {
+        let dns = build_dns_query("example.com", 0x1234);
+        let udp_len = 8 + dns.len();
+        let mut ip = vec![0x45, 0x00];
+        ip.extend_from_slice(&((20 + udp_len) as u16).to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00, 0x40, 0x00, 0x40, 17, 0x00, 0x00]);
+        ip.extend_from_slice(&[127, 0, 0, 1]);
+        ip.extend_from_slice(&[127, 0, 0, 1]);
+        ip.extend_from_slice(&40000u16.to_be_bytes());
+        ip.extend_from_slice(&53u16.to_be_bytes());
+        ip.extend_from_slice(&(udp_len as u16).to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00]);
+        ip.extend_from_slice(&dns);
+
+        let mut frame = 2u32.to_le_bytes().to_vec(); // AF_INET
+        frame.extend_from_slice(&ip);
+
+        let r = dissect_linktype(&frame, 0); // DLT_NULL
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(r.summary, "DNS Query — example.com");
+
+        // The same bytes down the Ethernet path produce something else
+        // entirely, which is what used to happen to every loopback capture.
+        let wrong = dissect(&frame);
+        assert_ne!(wrong.protocol, Protocol::Dns);
+    }
+
+    /// A VPN or tunnel interface hands over a bare IP packet.
+    #[test]
+    fn raw_ip_capture_is_honoured() {
+        let dns = build_dns_query("example.com", 0x1234);
+        let udp_len = 8 + dns.len();
+        let mut ip = vec![0x45, 0x00];
+        ip.extend_from_slice(&((20 + udp_len) as u16).to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00, 0x40, 0x00, 0x40, 17, 0x00, 0x00]);
+        ip.extend_from_slice(&[10, 8, 0, 1]);
+        ip.extend_from_slice(&[10, 8, 0, 2]);
+        ip.extend_from_slice(&40000u16.to_be_bytes());
+        ip.extend_from_slice(&53u16.to_be_bytes());
+        ip.extend_from_slice(&(udp_len as u16).to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00]);
+        ip.extend_from_slice(&dns);
+
+        let r = dissect_linktype(&ip, 101); // DLT_RAW
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(r.summary, "DNS Query — example.com");
+    }
+
+    /// The whole path for an MLD report: Ethernet → IPv6 → hop-by-hop
+    /// router-alert → ICMPv6 → MLDv2. Every IPv6 network carries these, and
+    /// before the extension chain was walked they showed up as "IP protocol 0".
+    #[test]
+    fn end_to_end_mld_behind_a_hop_by_hop_header_via_dissect() {
+        let hop_by_hop = [58u8, 0, 0x05, 0x02, 0x00, 0x00, 0x01, 0x00];
+        let icmpv6 = [143u8, 0, 0, 0, 0, 0, 0, 0];
+
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x33, 0x33, 0, 0, 0, 0x16]); // MLDv2 multicast MAC
+        pkt.extend_from_slice(&[0x11; 6]);
+        pkt.extend_from_slice(&0x86DDu16.to_be_bytes());
+        pkt.extend_from_slice(&[0x60, 0, 0, 0]);
+        pkt.extend_from_slice(&((hop_by_hop.len() + icmpv6.len()) as u16).to_be_bytes());
+        pkt.push(0); // next header: hop-by-hop options
+        pkt.push(1); // hop limit
+        pkt.extend_from_slice(&[0xFE, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        pkt.extend_from_slice(&[0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x16]);
+        pkt.extend_from_slice(&hop_by_hop);
+        pkt.extend_from_slice(&icmpv6);
+
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Icmp);
+        assert_eq!(r.summary, "MLDv2 report (multicast group membership)");
+    }
+
+    /// A 6in4 tunnel carries IPv6 inside an IPv4 packet, which is how a lot of
+    /// IPv6 connectivity is still delivered. Without unwrapping it, everything
+    /// the tunnel carries is invisible and only "IP protocol 41" is reported.
+    #[test]
+    fn end_to_end_six_in_four_tunnel_is_unwrapped() {
+        let dns = build_dns_query("example.com", 0x1234);
+        let udp_len = 8 + dns.len();
+
+        // The inner IPv6 packet, carrying a DNS query over UDP.
+        let mut inner = vec![0x60, 0, 0, 0];
+        inner.extend_from_slice(&(udp_len as u16).to_be_bytes());
+        inner.push(17); // next header: UDP
+        inner.push(64); // hop limit
+        inner.extend_from_slice(&[0x20, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        inner.extend_from_slice(&[0x20, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+        inner.extend_from_slice(&40000u16.to_be_bytes());
+        inner.extend_from_slice(&53u16.to_be_bytes());
+        inner.extend_from_slice(&(udp_len as u16).to_be_bytes());
+        inner.extend_from_slice(&[0x00, 0x00]);
+        inner.extend_from_slice(&dns);
+
+        // Wrapped in IPv4 with protocol 41.
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x66; 6]);
+        pkt.extend_from_slice(&[0x11; 6]);
+        pkt.extend_from_slice(&0x0800u16.to_be_bytes());
+        pkt.extend_from_slice(&[0x45, 0x00]);
+        pkt.extend_from_slice(&((20 + inner.len()) as u16).to_be_bytes());
+        pkt.extend_from_slice(&[0x00, 0x00, 0x40, 0x00, 0x40, 41, 0x00, 0x00]);
+        pkt.extend_from_slice(&[192, 0, 2, 1]);
+        pkt.extend_from_slice(&[192, 0, 2, 2]);
+        pkt.extend_from_slice(&inner);
+
+        let r = dissect(&pkt);
+        // The inner protocol and addresses are what matter; the tunnel is a note.
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(r.summary, "6in4 · DNS Query — example.com");
+        assert_eq!(r.dst_port, Some(53));
+    }
+
+    /// Build a minimal IPv4 packet carrying a DNS query, for the tunnel tests.
+    fn inner_ipv4_dns() -> Vec<u8> {
+        let dns = build_dns_query("example.com", 0x1234);
+        let udp_len = 8 + dns.len();
+        let mut ip = vec![0x45, 0x00];
+        ip.extend_from_slice(&((20 + udp_len) as u16).to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00, 0x40, 0x00, 0x40, 17, 0x00, 0x00]);
+        ip.extend_from_slice(&[10, 0, 0, 1]);
+        ip.extend_from_slice(&[10, 0, 0, 2]);
+        ip.extend_from_slice(&40000u16.to_be_bytes());
+        ip.extend_from_slice(&53u16.to_be_bytes());
+        ip.extend_from_slice(&(udp_len as u16).to_be_bytes());
+        ip.extend_from_slice(&[0x00, 0x00]);
+        ip.extend_from_slice(&dns);
+        ip
+    }
+
+    /// Wrap `body` in Ethernet and IPv4 with the given IP protocol number.
+    fn ipv4_frame(protocol: u8, body: &[u8]) -> Vec<u8> {
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x66; 6]);
+        pkt.extend_from_slice(&[0x11; 6]);
+        pkt.extend_from_slice(&0x0800u16.to_be_bytes());
+        pkt.extend_from_slice(&[0x45, 0x00]);
+        pkt.extend_from_slice(&((20 + body.len()) as u16).to_be_bytes());
+        pkt.extend_from_slice(&[0x00, 0x00, 0x40, 0x00, 0x40, protocol, 0x00, 0x00]);
+        pkt.extend_from_slice(&[192, 0, 2, 1]);
+        pkt.extend_from_slice(&[192, 0, 2, 2]);
+        pkt.extend_from_slice(body);
+        pkt
+    }
+
+    /// A GRE tunnel carrying IP — the shape of most site-to-site VPNs. The
+    /// optional key and sequence fields move the payload, so the header length
+    /// has to be computed from the flags rather than assumed.
+    #[test]
+    fn end_to_end_gre_tunnel_is_unwrapped() {
+        let mut gre = vec![0x20, 0x00]; // key present
+        gre.extend_from_slice(&0x0800u16.to_be_bytes()); // carrying IPv4
+        gre.extend_from_slice(&0xDEAD_BEEFu32.to_be_bytes()); // the key
+        gre.extend_from_slice(&inner_ipv4_dns());
+
+        let r = dissect(&ipv4_frame(47, &gre));
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(r.summary, "GRE · DNS Query — example.com");
+    }
+
+    /// AH signs but does not encrypt, so the packet it protects is fully
+    /// readable and reporting only the SPI would hide a visible conversation.
+    #[test]
+    fn end_to_end_ah_protected_packet_is_readable() {
+        let inner = inner_ipv4_dns();
+        // next header 4 (IPv4-in-IPv4), length 4 → (4 + 2) * 4 = 24 bytes.
+        let mut ah = vec![4u8, 4, 0, 0];
+        ah.extend_from_slice(&0x1234_5678u32.to_be_bytes()); // SPI
+        ah.extend_from_slice(&1u32.to_be_bytes()); // sequence
+        ah.extend_from_slice(&[0u8; 12]); // integrity check value
+        ah.extend_from_slice(&inner);
+
+        let r = dissect(&ipv4_frame(51, &ah));
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(
+            r.summary,
+            "AH (SPI 0x12345678) · IPv4-in-IPv4 · DNS Query — example.com"
+        );
+    }
+
+    /// Every byte a phone sends travels inside a GTP-U tunnel. Reporting it as
+    /// "GTP G-PDU" hides the entire contents of a mobile capture.
+    #[test]
+    fn end_to_end_gtp_user_traffic_is_unwrapped() {
+        // Flags with the sequence-number bit set, so the optional block is
+        // present and the payload does not start at byte eight.
+        let mut gtp = vec![0x32, 255];
+        gtp.extend_from_slice(&0u16.to_be_bytes()); // length
+        gtp.extend_from_slice(&0xAABB_CCDDu32.to_be_bytes()); // tunnel endpoint
+        gtp.extend_from_slice(&[0x00, 0x01, 0x00, 0x00]); // sequence, N-PDU, no extension
+        gtp.extend_from_slice(&inner_ipv4_dns());
+
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 2152, 2152, &gtp);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(r.summary, "GTP-U · DNS Query — example.com");
+    }
+
+    /// A carrier wraps a customer's whole frame in its own header so that
+    /// customer addresses never reach its switches.
+    #[test]
+    fn end_to_end_provider_backbone_frame_is_unwrapped() {
+        let mut pbb = vec![0x00]; // flags
+        pbb.extend_from_slice(&[0x01, 0x00, 0x00]); // service identifier 65536
+        pbb.extend_from_slice(&[0x66; 6]); // the customer's destination MAC
+        pbb.extend_from_slice(&[0x11; 6]); // and source
+        pbb.extend_from_slice(&0x0800u16.to_be_bytes());
+        pbb.extend_from_slice(&inner_ipv4_dns());
+
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x22; 6]);
+        pkt.extend_from_slice(&[0x33; 6]);
+        pkt.extend_from_slice(&0x88E7u16.to_be_bytes());
+        pkt.extend_from_slice(&pbb);
+
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(r.summary, "PBB service 65536 · DNS Query — example.com");
+    }
+
+    /// Geneve is the overlay most modern data centres and cloud networks run
+    /// on. Its options are variable-length, so the payload does not start at a
+    /// fixed offset — a test with options present catches that.
+    #[test]
+    fn end_to_end_geneve_overlay_is_unwrapped() {
+        let mut geneve = vec![0x01, 0x00]; // version 0, one 4-byte option
+        geneve.extend_from_slice(&0x0800u16.to_be_bytes()); // carrying IPv4
+        geneve.extend_from_slice(&[0x00, 0x00, 0x64, 0x00]); // VNI 100
+        geneve.extend_from_slice(&[0xAA; 4]); // the option itself
+        geneve.extend_from_slice(&inner_ipv4_dns());
+
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 6081, &geneve);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(r.summary, "Geneve VNI 100 · DNS Query — example.com");
+    }
+
+    /// VXLAN-GPE names what it carries rather than assuming Ethernet, so an
+    /// IP payload has to be dispatched on that field.
+    #[test]
+    fn end_to_end_vxlan_gpe_overlay_is_unwrapped() {
+        // The next-protocol field is byte 3, not byte 2.
+        let mut gpe = vec![0x0C, 0x00, 0x00, 0x01]; // next protocol: IPv4
+        gpe.extend_from_slice(&[0x00, 0x00, 0xC8, 0x00]); // VNI 200
+        gpe.extend_from_slice(&inner_ipv4_dns());
+
+        let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 4790, &gpe);
+        let r = dissect(&pkt);
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert_eq!(r.summary, "VXLAN-GPE VNI 200 · DNS Query — example.com");
     }
 
     #[test]
@@ -1600,12 +2425,13 @@ mod robustness {
         out
     }
 
-    /// Ports the dispatch tables actually claim, read out of the dispatch
-    /// source itself. Parsing rather than hardcoding means a newly added
-    /// `on(1234)` is swept automatically — a hand-maintained list would drift
-    /// out of date on the first batch that forgot to update it.
+    /// Every port the dispatch claims, from both sources: the binding tables,
+    /// plus the ports still written as `on(N)` in `tcp.rs`/`udp.rs` for the
+    /// cases that need a content guard or a non-standard call. Scraping the
+    /// latter rather than hardcoding means a newly guarded port is swept
+    /// automatically instead of drifting out of the list.
     fn dispatched_ports() -> Vec<u16> {
-        let mut ports = Vec::new();
+        let mut ports = super::bindings::all_ports();
         for src in [
             include_str!("dissectors/tcp.rs"),
             include_str!("dissectors/udp.rs"),
@@ -1620,9 +2446,292 @@ mod robustness {
                 }
             }
         }
+        // The range-dispatched protocols, which have no single port to scrape.
+        ports.extend(6881..=6889);
+        ports.extend(6000..=6005);
+        ports.extend(30490..=30510);
         ports.sort_unstable();
         ports.dedup();
         ports
+    }
+
+    /// No dissector should re-implement the shared line reader.
+    ///
+    /// Redis had its own copy, and because that copy did no sanitising it was
+    /// the one protocol that really could carry an escape sequence out of the
+    /// dispatch. The guard at the exit catches that now, but a local copy is
+    /// still worth flagging: it will drift, and the next one may differ in a
+    /// way the guard does not cover.
+    ///
+    /// Protocols whose text handling genuinely differs — SDP reads several
+    /// media lines, SIP parses a request line — are listed as exceptions rather
+    /// than forced through a helper that does not fit them.
+    #[test]
+    fn no_dissector_reimplements_the_shared_line_reader() {
+        use std::fs;
+        use std::path::Path;
+
+        /// Text handling that is deliberately its own thing.
+        const EXCEPTIONS: &[&str] = &["sdp", "sip"];
+
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/dissectors");
+        let mut offenders = Vec::new();
+        for entry in fs::read_dir(&dir).expect("dissectors directory").flatten() {
+            let path = entry.path();
+            if path.extension().is_none_or(|e| e != "rs") {
+                continue;
+            }
+            let stem = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
+            if EXCEPTIONS.contains(&stem.as_str()) {
+                continue;
+            }
+            let Ok(text) = fs::read_to_string(&path) else {
+                continue;
+            };
+            let body = text.split("#[cfg(test)]").next().unwrap_or_default();
+            // A local function that decodes bytes and stops at a line ending is
+            // the shape being looked for.
+            let decodes = body.contains("from_utf8_lossy");
+            let finds_line_end = body.contains(r"b'\r'") || body.contains(r"b'\n'");
+            let is_local_helper = body.contains("fn first_line") || body.contains("fn line(");
+            if decodes && finds_line_end && is_local_helper {
+                offenders.push(stem);
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "these dissectors re-implement `first_text_line` instead of calling \
+             it, so they skip its sanitising: {offenders:?}"
+        );
+    }
+
+    /// The guarantee that matters: whatever a dissector produces, nothing with
+    /// a control character in it reaches the caller.
+    ///
+    /// This is enforced at the exit rather than per dissector because there are
+    /// three hundred of them, several parse text with their own helpers, and a
+    /// new one should not have to know this is a concern.
+    ///
+    /// The payload is a Redis error reply carrying an ANSI sequence — Redis
+    /// echoes the server's error text into its summary through a local helper
+    /// that does no sanitising of its own, so this really does depend on the
+    /// guard at the exit.
+    #[test]
+    fn no_summary_escapes_the_dispatch_with_control_characters() {
+        let hostile = b"-ERR \x1b[2Junauthorised\x1b[0m access\r\n";
+        let pkt = crate::dissectors::test_helpers::build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            50000,
+            6379,
+            crate::dissectors::test_helpers::TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            hostile,
+        );
+        crate::dissectors::tcp::clear_tcp_reassembler();
+        let r = crate::dissectors::dissect_linktype(&pkt, 1);
+        assert!(
+            r.summary.contains("unauthorised"),
+            "the readable text should survive: {:?}",
+            r.summary
+        );
+        assert!(
+            !r.summary.chars().any(|c| c.is_control()),
+            "a control character reached the caller: {:?}",
+            r.summary
+        );
+    }
+
+    /// Text off the wire must not carry control characters into a summary.
+    ///
+    /// Summaries are printed to a terminal, so an escape sequence in a server
+    /// banner would be acted on rather than shown — able to recolour the
+    /// display, move the cursor, or hide the lines after it. A capture is
+    /// untrusted input and may have been written by whoever is under
+    /// investigation.
+    #[test]
+    fn wire_text_cannot_carry_escape_sequences() {
+        // An FTP greeting with an ANSI sequence embedded in it.
+        let hostile = b"220 \x1b[2J\x1b[1;31mowned\x1b[0m ready\r\n";
+        let line = super::first_text_line(hostile);
+        assert!(
+            !line.contains('\x1b'),
+            "escape character survived: {line:?}"
+        );
+        assert!(line.contains("owned"), "the readable text should survive");
+    }
+
+    /// A NUL ends the line, because several text protocols terminate with one
+    /// rather than a newline.
+    #[test]
+    fn a_nul_terminates_the_line() {
+        assert_eq!(super::first_text_line(b"zINSTREAM\0trailing"), "zINSTREAM");
+        assert_eq!(super::first_text_line(b"USER bob\r\nPASS x"), "USER bob");
+    }
+
+    /// A tab keeps its spacing role without breaking a column layout, and the
+    /// characters that would break one are replaced visibly rather than
+    /// dropped — so a summary never silently loses content.
+    #[test]
+    fn tabs_become_spaces_and_other_controls_stay_visible() {
+        assert_eq!(super::sanitise("a\tb"), "a b");
+        let cleaned = super::sanitise("a\x07b");
+        assert!(!cleaned.contains('\x07'));
+        assert_eq!(
+            cleaned.chars().count(),
+            3,
+            "the character is replaced, not removed"
+        );
+    }
+
+    /// A one-byte payload must not read as "1 bytes".
+    ///
+    /// This appears in the fallback summary of nearly every dissector, so the
+    /// slip would have shown up on any short or malformed packet in a capture.
+    #[test]
+    fn a_single_byte_is_singular() {
+        assert_eq!(super::bytes(0u64), "0 bytes");
+        assert_eq!(super::bytes(1u64), "1 byte");
+        assert_eq!(super::bytes(2u64), "2 bytes");
+        assert_eq!(super::bytes(1500u64), "1500 bytes");
+    }
+
+    /// The helper only helps if the dissectors use it, so check that none has
+    /// gone back to formatting a raw count.
+    #[test]
+    fn no_dissector_formats_a_bare_byte_count() {
+        use std::fs;
+        use std::path::Path;
+
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/dissectors");
+        let mut offenders = Vec::new();
+        for entry in fs::read_dir(&dir).expect("dissectors directory").flatten() {
+            let path = entry.path();
+            if path.extension().is_none_or(|e| e != "rs") {
+                continue;
+            }
+            let Ok(text) = fs::read_to_string(&path) else {
+                continue;
+            };
+            // Only production code: a test may legitimately assert on the
+            // rendered string.
+            let body = text.split("#[cfg(test)]").next().unwrap_or_default();
+            if body.contains("{} bytes\"") {
+                offenders.push(
+                    path.file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "these dissectors format a byte count directly instead of calling              `bytes()`, so they will render \"1 bytes\": {offenders:?}"
+        );
+    }
+
+    /// Modules that deliberately expose no `dissect_*` entry point.
+    ///
+    /// Each is either a shared parser (several protocols use the same header)
+    /// or a nested dissector whose parent builds the result, because the parent
+    /// holds the context the summary needs.
+    const HELPER_MODULES: &[&str] = &[
+        "bindings",
+        "cip",
+        "ngap_common",
+        "nfs",
+        "pccc",
+        "sdp",
+        "sigtran",
+        "srt",
+        "tcap",
+        "tcp_analysis",
+    ];
+
+    /// Every dissector module must be reachable from the dispatch.
+    ///
+    /// A dissector nothing calls is worse than no dissector: it compiles, its
+    /// own tests pass, and it quietly diverges from whatever path actually
+    /// runs. Because the entry points are `pub`, the dead-code lint cannot see
+    /// this, so the check has to be made deliberately.
+    ///
+    /// Two protocols were found this way — Megaco and Diameter had dissectors
+    /// but no SCTP payload identifier pointing at them, so they could never be
+    /// reached — along with four nested dissectors carrying a second entry
+    /// point their parents never called.
+    ///
+    /// If this fails: wire the module into the dispatch, or, if its parent
+    /// builds the result, drop its entry point and add it to [`HELPER_MODULES`].
+    #[test]
+    fn every_dissector_module_is_reachable() {
+        let dissectors = include_str!("dissectors.rs");
+        // Where a dissector can be reached from: the dispatch itself, the port
+        // and identifier tables, and the transports.
+        let dispatch = [
+            dissectors,
+            include_str!("dissectors/bindings.rs"),
+            include_str!("dissectors/tcp.rs"),
+            include_str!("dissectors/udp.rs"),
+            include_str!("dissectors/icmp.rs"),
+            include_str!("dissectors/sctp.rs"),
+            include_str!("dissectors/gre.rs"),
+            include_str!("dissectors/ipsec.rs"),
+            include_str!("dissectors/m3ua.rs"),
+            include_str!("dissectors/sccp.rs"),
+            include_str!("dissectors/enip.rs"),
+            include_str!("dissectors/rpc.rs"),
+            include_str!("dissectors/gtp.rs"),
+            include_str!("dissectors/zigbee.rs"),
+            include_str!("dissectors/pktap.rs"),
+            include_str!("dissectors/sip.rs"),
+            include_str!("dissectors/sap_announce.rs"),
+            include_str!("dissectors/nflog.rs"),
+            include_str!("dissectors/linktypes.rs"),
+            // Intermediate layers that dispatch further: an LLC frame selects
+            // a Cisco protocol, a PPP frame an authentication method, a
+            // Bluetooth link its own channels.
+            include_str!("dissectors/snap.rs"),
+            include_str!("dissectors/ppp.rs"),
+            include_str!("dissectors/pppoe.rs"),
+            include_str!("dissectors/eapol.rs"),
+            include_str!("dissectors/bluetooth.rs"),
+            include_str!("dissectors/l2cap.rs"),
+            include_str!("dissectors/wlan.rs"),
+            // A CAN frame's identifier selects the bus protocol above it.
+            include_str!("dissectors/can.rs"),
+            // Both of these carry another protocol as their body: SOME/IP's
+            // discovery messages, and the UDS command inside a DoIP envelope.
+            include_str!("dissectors/someip.rs"),
+            include_str!("dissectors/doip.rs"),
+        ];
+
+        let mut unreachable = Vec::new();
+        for line in dissectors.lines() {
+            let Some(module) = line
+                .strip_prefix("pub mod ")
+                .and_then(|m| m.strip_suffix(';'))
+            else {
+                continue;
+            };
+            if HELPER_MODULES.contains(&module) {
+                continue;
+            }
+            let called = format!("{module}::");
+            if !dispatch.iter().any(|text| text.contains(&called)) {
+                unreachable.push(module.to_string());
+            }
+        }
+        assert!(
+            unreachable.is_empty(),
+            "these dissectors are never reached from the dispatch: {unreachable:?}"
+        );
     }
 
     #[test]
@@ -1635,6 +2744,39 @@ mod robustness {
             "only found {} dispatched ports — has the dispatch shape changed?",
             ports.len()
         );
+        // Spot-check both sources: 443 comes from the table, 102 (S7comm/MMS)
+        // from the guarded arms still written as `on(102)`.
+        assert!(ports.contains(&443), "table ports missing from the sweep");
+        assert!(ports.contains(&102), "guarded ports missing from the sweep");
+    }
+
+    /// The binding tables are only useful if each port actually reaches the
+    /// dissector it names. Dispatching a packet through the real TCP/UDP entry
+    /// point must produce the same protocol as calling the bound function
+    /// directly — otherwise a mis-typed row would silently mislabel traffic.
+    #[test]
+    fn every_table_port_reaches_its_own_dissector() {
+        // A payload with enough structure that dissectors emit their protocol
+        // rather than bailing out early.
+        let body = b"HELLO 1234567890 abcdefghijklmnop";
+        for port in super::bindings::all_ports() {
+            if let Some(bound) = super::bindings::tcp(40000, port) {
+                let direct = bound(ip(), ip(), 40000, port, body);
+                let viaptr = dissect_tcp(ip(), ip(), &tcp_pkt(40000, port, body));
+                assert_eq!(
+                    viaptr.protocol, direct.protocol,
+                    "TCP port {port} dispatched to the wrong dissector"
+                );
+            }
+            if let Some(bound) = super::bindings::udp(40000, port) {
+                let direct = bound(ip(), ip(), 40000, port, body);
+                let viaptr = dissect_udp(ip(), ip(), &udp_pkt(40000, port, body));
+                assert_eq!(
+                    viaptr.protocol, direct.protocol,
+                    "UDP port {port} dispatched to the wrong dissector"
+                );
+            }
+        }
     }
 
     #[test]
@@ -1648,6 +2790,85 @@ mod robustness {
                 // treat differently (request vs response).
                 let _ = dissect_udp(ip(), ip(), &udp_pkt(port, 40000, body));
                 let _ = dissect_tcp(ip(), ip(), &tcp_pkt(port, 40000, body));
+            }
+        }
+    }
+
+    /// The nested dissectors need their own sweep.
+    ///
+    /// The port sweep above reaches whatever the dispatch tables point at, but
+    /// a dissector nested inside another — SCCP inside M3UA, TCAP inside that,
+    /// PCCC inside CIP — is only reached when its parent successfully parses a
+    /// header first. Malformed bytes usually fail earlier and never get there,
+    /// so those layers were untested against the input most likely to break
+    /// them: a header just valid enough to be handed on, wrapping rubbish.
+    #[test]
+    fn nested_dissectors_never_panic_on_malformed_input() {
+        let bodies = malformed_payloads();
+
+        for body in &bodies {
+            // SS7: a well-formed M3UA DATA message wrapping arbitrary bytes,
+            // so SCCP is entered and then hands whatever it finds to TCAP.
+            let mut protocol_data = Vec::new();
+            protocol_data.extend_from_slice(&1001u32.to_be_bytes()); // originating
+            protocol_data.extend_from_slice(&2002u32.to_be_bytes()); // destination
+            protocol_data.extend_from_slice(&[3, 0, 0, 0]); // service indicator: SCCP
+            protocol_data.extend_from_slice(body);
+            let m3ua = super::sigtran::test_helpers::sigtran(1, 1, 0x0210, &protocol_data);
+            let _ = super::m3ua::dissect_m3ua(ip(), ip(), 2905, 2905, &m3ua);
+
+            // The same, declaring ISUP instead, which parses differently.
+            let mut isup_data = Vec::new();
+            isup_data.extend_from_slice(&7u32.to_be_bytes());
+            isup_data.extend_from_slice(&9u32.to_be_bytes());
+            isup_data.extend_from_slice(&[5, 0, 0, 0]); // service indicator: ISUP
+            isup_data.extend_from_slice(body);
+            let m3ua = super::sigtran::test_helpers::sigtran(1, 1, 0x0210, &isup_data);
+            let _ = super::m3ua::dissect_m3ua(ip(), ip(), 2905, 2905, &m3ua);
+
+            // SCCP direct, so the subsystem dispatch is exercised with rubbish
+            // where RANAP, RNSAP or BSSAP would be.
+            for subsystem in [6u8, 142, 143, 255] {
+                let udt = super::sccp::test_helpers::udt(8, subsystem, body);
+                let _ = super::sccp::dissect_sccp(ip(), ip(), 2905, 2905, &udt);
+            }
+
+            // Industrial: an EtherNet/IP envelope carrying a CIP request whose
+            // body is arbitrary, which is how PCCC is reached.
+            let mut cip = vec![0x4B, 0x02, 0x20, 0x67, 0x24, 0x01]; // Execute PCCC
+            cip.extend_from_slice(body);
+            let mut cpf = Vec::new();
+            cpf.extend_from_slice(&0u32.to_le_bytes()); // interface handle
+            cpf.extend_from_slice(&0u16.to_le_bytes()); // timeout
+            cpf.extend_from_slice(&2u16.to_le_bytes()); // item count
+            cpf.extend_from_slice(&0x0000u16.to_le_bytes());
+            cpf.extend_from_slice(&0u16.to_le_bytes());
+            cpf.extend_from_slice(&0x00B2u16.to_le_bytes()); // unconnected data
+            cpf.extend_from_slice(&(cip.len() as u16).to_le_bytes());
+            cpf.extend_from_slice(&cip);
+            let mut enip = Vec::new();
+            enip.extend_from_slice(&0x006Fu16.to_le_bytes()); // SendRRData
+            enip.extend_from_slice(&(cpf.len() as u16).to_le_bytes());
+            enip.extend_from_slice(&[0u8; 16]); // session, status, context
+            enip.extend_from_slice(&0u32.to_le_bytes()); // options
+            enip.extend_from_slice(&cpf);
+            let _ = super::enip::dissect_enip(ip(), ip(), 50000, 44818, &enip);
+
+            // RPC, which reads a program number and hands off to the NFS family.
+            for program in [100_003u32, 100_005, 100_000, 1_298_437] {
+                let mut rpc = vec![0x80, 0x00, 0x00, 0x64]; // record marker
+                rpc.extend_from_slice(&1u32.to_be_bytes()); // xid
+                rpc.extend_from_slice(&0u32.to_be_bytes()); // CALL
+                rpc.extend_from_slice(&2u32.to_be_bytes()); // RPC version
+                rpc.extend_from_slice(&program.to_be_bytes());
+                rpc.extend_from_slice(body);
+                let _ = super::rpc::dissect_rpc(ip(), ip(), 40000, 2049, &rpc);
+            }
+
+            // The 3GPP application protocols, reached by SCTP payload id.
+            for ppid in [3u32, 18, 60, 61, 62] {
+                let sctp = super::sctp::test_helpers::sctp_data(38412, 38412, ppid, body);
+                let _ = super::sctp::dissect_sctp(ip(), ip(), &sctp);
             }
         }
     }

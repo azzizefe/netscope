@@ -32,7 +32,10 @@ pub fn dissect_rexec(
         _ => {
             let line = super::first_text_line(payload);
             if line.is_empty() {
-                format!("rexec session data ({} bytes)", payload.len())
+                format!(
+                    "rexec session data ({})",
+                    super::bytes(payload.len() as u64)
+                )
             } else {
                 format!("rexec — {}", super::truncate(&line, 40))
             }

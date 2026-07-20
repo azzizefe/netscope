@@ -23,7 +23,7 @@ pub fn dissect_gearman(
     } else {
         let line = super::first_text_line(payload);
         if line.is_empty() {
-            format!("Gearman ({} bytes)", payload.len())
+            format!("Gearman ({})", super::bytes(payload.len() as u64))
         } else {
             format!("Gearman admin — {}", super::truncate(&line, 40))
         }

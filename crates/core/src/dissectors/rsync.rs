@@ -19,7 +19,7 @@ pub fn dissect_rsync(
         let line = super::first_text_line(payload);
         format!("rsync daemon — {}", super::truncate(&line, 40))
     } else {
-        format!("rsync data ({} bytes)", payload.len())
+        format!("rsync data ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

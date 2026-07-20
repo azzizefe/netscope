@@ -32,7 +32,7 @@ pub fn dissect_ganglia(
         };
         format!("Ganglia gmond — {name}")
     } else {
-        format!("Ganglia gmond ({} bytes)", payload.len())
+        format!("Ganglia gmond ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

@@ -24,7 +24,7 @@ pub fn dissect_ssdp(
     } else if line.starts_with("HTTP/") {
         format!("SSDP Response — {}", super::truncate(&line, 50))
     } else if line.is_empty() {
-        format!("SSDP ({} bytes)", payload.len())
+        format!("SSDP ({})", super::bytes(payload.len() as u64))
     } else {
         format!("SSDP — {}", super::truncate(&line, 50))
     };

@@ -34,7 +34,7 @@ pub fn dissect_sane(
         };
         format!("SANE {name}")
     } else {
-        format!("SANE ({} bytes)", payload.len())
+        format!("SANE ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

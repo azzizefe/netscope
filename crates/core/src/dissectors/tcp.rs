@@ -8,16 +8,9 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    adsb, aerospike, afp, amqp, aprs, beanstalk, beats, bfcp, bgp, bittorrent, bmp, bolt,
-    cassandra, clamav, clickhouse, dcerpc, dhcpfo, diameter, dicom, dnp3, doip, drda, edonkey,
-    elasticsearch, enip, fcip, finger, firebird, fix, fluentd, ftp, gearman, git, gnutella, gopher,
-    graphite, hadooprpc, hl7, http, http2, ica, ident, iec104, imap, ipp, irc, iscsi, kafka,
-    kerberos, ldap, ldp, lpd, managesieve, megaco, memcached, minecraft, mms, modbus, mongodb,
-    mqtt, msrp, mumble, mysql, mysqlx, nats, nbd, ndmp, nmea, nntp, nrpe, nsq, ntlm, nvmeof, opcua,
-    openflow, openvpn, openwire, pcoip, pop3, postgres, pptp, pulsar, q931, radmin, rdp, redis,
-    relp, rethinkdb, rexec, rfb, riak, rlogin, rpc, rpkirtr, rsh, rsync, rtmp, rtsp, s7comm, sane,
-    skinny, smb, smpp, smtp, socks, someip, spamd, spice, ssh, stomp, svn, tacacs, tds, telnet,
-    tls, tns, websocket, whois, x11, xmpp, zabbix, zmtp, zookeeper, DissectedResult,
+    adsb, amqp1, bindings, bitcoin, bittorrent, ceph, drda, fix, hl7, http, http2, ibmmq, lustre,
+    mbus, memcached_bin, mms, mysqlx, nmea, ntlm, openvpn, redis_cluster, s7comm, someip, spice,
+    syslog, thrift, websocket, x11, zmtp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -251,6 +244,10 @@ fn dissect_tcp_inner(
     } else if !tcp_payload.is_empty() {
         // Try application-layer dissection by well-known port.
         let on = |p: u16| src_port == p || dst_port == p;
+        // 1. Ports that need more than a port number to decide. Each of these
+        //    either picks between two protocols that share a port, or sits in
+        //    the ephemeral range and must see its own framing before claiming
+        //    the flow. See `bindings` for the full precedence order.
         if on(80) {
             // h2c with prior knowledge sends the HTTP/2 preface straight to
             // port 80 — check for it before assuming HTTP/1.x.
@@ -259,160 +256,6 @@ fn dissect_tcp_inner(
             }
             return http::dissect_http(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        if on(443) {
-            return tls::dissect_tls(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(22) {
-            return ssh::dissect_ssh(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(21) {
-            return ftp::dissect_ftp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(25) || on(587) {
-            return smtp::dissect_smtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(143) {
-            return imap::dissect_imap(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(110) {
-            return pop3::dissect_pop3(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(23) {
-            return telnet::dissect_telnet(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(3389) {
-            return rdp::dissect_rdp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Database wire protocols (ROADMAP §3.4).
-        if on(5432) {
-            return postgres::dissect_postgres(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(3306) {
-            return mysql::dissect_mysql(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(27017) {
-            return mongodb::dissect_mongodb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(6379) {
-            return redis::dissect_redis(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(9042) {
-            return cassandra::dissect_cassandra(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Industrial / OT protocols (ROADMAP §3.5).
-        if on(502) {
-            return modbus::dissect_modbus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(20000) {
-            return dnp3::dissect_dnp3(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(44818) {
-            return enip::dissect_enip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(4840) {
-            return opcua::dissect_opcua(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Security / auth / VPN protocols (ROADMAP §3.7).
-        if on(88) {
-            return kerberos::dissect_kerberos(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(389) {
-            return ldap::dissect_ldap(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(1194) {
-            return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, tcp_payload, true);
-        }
-        // IoT messaging (ROADMAP §3.8).
-        if on(1883) {
-            return mqtt::dissect_mqtt(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Operator / routing protocols (ROADMAP §3.3).
-        if on(179) {
-            return bgp::dissect_bgp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // SMB, TDS, AMQP, Kafka
-        if on(445) {
-            return smb::dissect_smb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(1433) {
-            return tds::dissect_tds(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(5672) {
-            return amqp::dissect_amqp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(9092) {
-            return kafka::dissect_kafka(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Media, chat, remote-desktop and legacy text services over TCP.
-        if on(554) {
-            return rtsp::dissect_rtsp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(6667) || on(6697) {
-            return irc::dissect_irc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(5900) {
-            return rfb::dissect_rfb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(43) {
-            return whois::dissect_whois(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(119) {
-            return nntp::dissect_nntp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Legacy text services, proxies, chat, caching and version control.
-        if on(79) {
-            return finger::dissect_finger(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(1080) {
-            return socks::dissect_socks(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(5222) || on(5269) {
-            return xmpp::dissect_xmpp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(9418) {
-            return git::dissect_git(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(11211) {
-            return memcached::dissect_memcached(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // BitTorrent uses a port range and an unmistakable handshake, so match
-        // either the well-known ports or the handshake bytes on any port.
-        if (6881..=6889).contains(&src_port)
-            || (6881..=6889).contains(&dst_port)
-            || bittorrent::looks_like_bittorrent(tcp_payload)
-        {
-            return bittorrent::dissect_bittorrent(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // AAA (TACACS+, Diameter) and legacy remote login.
-        if on(49) {
-            return tacacs::dissect_tacacs(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(3868) {
-            return diameter::dissect_diameter(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(513) {
-            return rlogin::dissect_rlogin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Storage, streaming, SMS gateways, SDN and message brokers.
-        if on(3260) {
-            return iscsi::dissect_iscsi(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(1935) {
-            return rtmp::dissect_rtmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(2775) {
-            return smpp::dissect_smpp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(6653) {
-            return openflow::dissect_openflow(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(4222) {
-            return nats::dissect_nats(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(61613) {
-            return stomp::dissect_stomp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Industrial control, healthcare, finance and MPLS label signalling.
         if on(102) {
             // S7comm and IEC 61850 MMS share port 102 over TPKT/COTP; the byte
             // after the COTP header tells them apart.
@@ -421,51 +264,19 @@ fn dissect_tcp_inner(
             }
             return s7comm::dissect_s7comm(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        if on(2404) {
-            return iec104::dissect_iec104(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        if on(1194) {
+            // OpenVPN shares a port number across TCP and UDP; the flag says which.
+            return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, tcp_payload, true);
         }
-        if on(104) || on(11112) {
-            return dicom::dissect_dicom(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        if on(5672) && amqp1::looks_like_amqp1(tcp_payload) {
+            // AMQP 1.0 and 0-9-1 are different protocols sharing a port, and
+            // reading one as the other produces nonsense rather than nothing.
+            return amqp1::dissect_amqp1(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        if on(646) {
-            return ldp::dissect_ldp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // HL7 (MLLP) and FIX ride assorted ports; recognise them by content too.
-        if on(2575) || hl7::looks_like_hl7(tcp_payload) {
-            return hl7::dissect_hl7(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if fix::looks_like_fix(tcp_payload) {
-            return fix::dissect_fix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // RPC/NFS, metrics and job queues.
-        if on(111) || on(2049) {
-            return rpc::dissect_rpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(2003) {
-            return graphite::dissect_graphite(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(4730) {
-            return gearman::dissect_gearman(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(11300) {
-            return beanstalk::dissect_beanstalk(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Display, file sync, version control and document DB.
-        if (6000..=6005).contains(&src_port) || (6000..=6005).contains(&dst_port) {
-            return x11::dissect_x11(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(873) {
-            return rsync::dissect_rsync(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(3690) {
-            return svn::dissect_svn(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(28015) {
-            return rethinkdb::dissect_rethinkdb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Search, monitoring, messaging and key-value DB.
-        if on(9300) {
-            return elasticsearch::dissect_elasticsearch(
+        if on(11211) && memcached_bin::looks_like_binary(tcp_payload) {
+            // The binary protocol shares 11211 with the text one, and is what
+            // client libraries actually send.
+            return memcached_bin::dissect_memcached_bin(
                 src_ip,
                 dst_ip,
                 src_port,
@@ -473,194 +284,102 @@ fn dissect_tcp_inner(
                 tcp_payload,
             );
         }
-        if on(10050) || on(10051) {
-            return zabbix::dissect_zabbix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(4150) {
-            return nsq::dissect_nsq(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(3000) {
-            return aerospike::dissect_aerospike(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Automotive (SOME/IP, DoIP), Apple filing, P2P, gaming and voice.
-        if (30490..=30510).contains(&src_port) || (30490..=30510).contains(&dst_port) {
-            return someip::dissect_someip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(13400) {
-            return doip::dissect_doip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(548) {
-            return afp::dissect_afp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(6346) {
-            return gnutella::dissect_gnutella(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(4662) {
-            return edonkey::dissect_edonkey(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(25565) {
-            return minecraft::dissect_minecraft(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(64738) {
-            return mumble::dissect_mumble(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Carrier VoIP, remote desktop/thin client, backup and Windows RPC.
-        if on(2944) || on(2945) {
-            return megaco::dissect_megaco(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(2855) {
-            return msrp::dissect_msrp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(4172) {
-            return pcoip::dissect_pcoip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(1494) {
-            return ica::dissect_ica(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(10000) {
-            return ndmp::dissect_ndmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(135) {
-            return dcerpc::dissect_dcerpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(1723) {
-            return pptp::dissect_pptp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(4899) {
-            return radmin::dissect_radmin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(2000) {
-            return skinny::dissect_skinny(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Routing telemetry/security, monitoring and data platforms.
-        if on(11019) {
-            return bmp::dissect_bmp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(323) {
-            return rpkirtr::dissect_rpkirtr(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(5666) {
-            return nrpe::dissect_nrpe(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(7687) {
-            return bolt::dissect_bolt(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(9000) {
-            return clickhouse::dissect_clickhouse(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(6650) {
-            return pulsar::dissect_pulsar(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(61616) {
-            return openwire::dissect_openwire(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Coordination, big-data RPC and log shipping.
-        if on(2181) {
-            return zookeeper::dissect_zookeeper(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(8020) {
-            return hadooprpc::dissect_hadooprpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(24224) {
-            return fluentd::dissect_fluentd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(5044) {
-            return beats::dissect_beats(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(2514) {
-            return relp::dissect_relp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Mail-side scanning/filtering and classic Unix services.
-        if on(3310) {
-            return clamav::dissect_clamav(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(783) {
-            return spamd::dissect_spamd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(4190) {
-            return managesieve::dissect_managesieve(
-                src_ip,
-                dst_ip,
-                src_port,
-                dst_port,
-                tcp_payload,
-            );
-        }
-        if on(515) {
-            return lpd::dissect_lpd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(113) {
-            return ident::dissect_ident(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(70) {
-            return gopher::dissect_gopher(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(631) {
-            return ipp::dissect_ipp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(512) {
-            return rexec::dissect_rexec(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(6566) {
-            return sane::dissect_sane(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Enterprise databases.
-        if on(1521) {
-            return tns::dissect_tns(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // 50000 and 33060 sit inside the ephemeral port range, so these also
-        // require the protocol's own framing before claiming a flow.
+        // 50000, 33060, 10110, 10001 and 30005 all fall inside the ephemeral
+        // range, so a port match alone would mislabel ordinary client sockets.
         if on(50000) && drda::looks_like_drda(tcp_payload) {
             return drda::dissect_drda(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(3050) {
-            return firebird::dissect_firebird(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         if on(33060) && mysqlx::looks_like_mysqlx(tcp_payload) {
             return mysqlx::dissect_mysqlx(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        if on(8087) {
-            return riak::dissect_riak(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Storage networking.
-        if on(4420) {
-            return nvmeof::dissect_nvmeof(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(10809) {
-            return nbd::dissect_nbd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(3225) {
-            return fcip::dissect_fcip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // H.323 call signalling, conference floor control and DHCP failover.
-        if on(1720) {
-            return q931::dissect_q931(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(3238) {
-            return bfcp::dissect_bfcp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(647) {
-            return dhcpfo::dissect_dhcpfo(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Telemetry feeds: navigation, aviation and amateur radio.
         if on(10110) && nmea::looks_like_nmea(tcp_payload) {
             return nmea::dissect_nmea(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         if on(30005) && adsb::looks_like_adsb(tcp_payload) {
             return adsb::dissect_adsb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        if on(14580) {
-            return aprs::dissect_aprs(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        // Meter gateways conventionally listen on 10001, which is not assigned
+        // to anything, so the framing has to agree before the flow is claimed.
+        if on(10001) && mbus::looks_like_mbus(tcp_payload) {
+            return mbus::dissect_mbus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        // TCP 514 is rsh; syslog's 514 is UDP and handled in the UDP dissector.
-        if on(514) {
-            return rsh::dissect_rsh(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+
+        // TCP 514 is assigned to rsh, but syslog-over-TCP squats there in
+        // practice and is far more common on a modern network. The two are
+        // trivially distinguishable, so let the content decide rather than
+        // giving the port to whichever protocol was registered first.
+        if on(514) && syslog::looks_like_syslog(tcp_payload) {
+            return syslog::dissect_syslog(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        // SPICE consoles use varied ports; recognise the link magic structurally.
+
+        // 2. Exact well-known port.
+        if let Some(dissect) = bindings::tcp(src_port, dst_port) {
+            return dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+
+        // 3. Protocols that occupy a range rather than a single port.
+        let in_range =
+            |r: std::ops::RangeInclusive<u16>| r.contains(&src_port) || r.contains(&dst_port);
+        if in_range(6881..=6889) {
+            return bittorrent::dissect_bittorrent(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if in_range(6000..=6005) {
+            return x11::dissect_x11(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if in_range(30490..=30510) {
+            return someip::dissect_someip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+
+        // 4. Protocols with no fixed port at all, recognised by their framing.
+        //    These run last so a well-known port always wins over a heuristic.
+        if hl7::looks_like_hl7(tcp_payload) {
+            return hl7::dissect_hl7(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if fix::looks_like_fix(tcp_payload) {
+            return fix::dissect_fix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if bittorrent::looks_like_bittorrent(tcp_payload) {
+            return bittorrent::dissect_bittorrent(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Bitcoin nodes are commonly run on non-standard ports, and the
+        // network magic is a genuine four-byte constant, so content
+        // recognition is safe here in a way it is not for most protocols.
+        if bitcoin::looks_like_bitcoin(tcp_payload) {
+            return bitcoin::dissect_bitcoin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Queue managers and storage clusters are routinely moved off their
+        // default ports; both of these carry an unmistakable magic.
+        if ibmmq::looks_like_ibmmq(tcp_payload) {
+            return ibmmq::dissect_ibmmq(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if lustre::looks_like_lustre(tcp_payload) {
+            return lustre::dissect_lustre(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // The Redis cluster bus has no port of its own — it is the data port
+        // plus ten thousand, so it moves whenever the data port does. The
+        // "RCmb" signature is what identifies it wherever it lands.
+        if redis_cluster::looks_like_cluster_bus(tcp_payload) {
+            return redis_cluster::dissect_redis_cluster(
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                tcp_payload,
+            );
+        }
+        // Ceph storage daemons spread across the 6800-7300 range, so the
+        // opening banner is what identifies them off the monitor port.
+        if ceph::looks_like_ceph(tcp_payload) {
+            return ceph::dissect_ceph(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // Thrift is put on whatever port each service chose (HBase, Hive and
+        // others all differ), so it is recognised by its version marker.
+        if thrift::looks_like_thrift(tcp_payload) {
+            return thrift::dissect_thrift(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
         if spice::looks_like_spice(tcp_payload) {
             return spice::dissect_spice(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        // ZMTP/ZeroMQ uses arbitrary ports; recognise its greeting structurally.
         if zmtp::looks_like_zmtp(tcp_payload) {
             return zmtp::dissect_zmtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
@@ -844,6 +563,99 @@ mod tests {
         let result = dissect_tcp(None, None, &[0; 3]);
         assert_eq!(result.protocol, Protocol::Unknown("malformed TCP".into()));
         assert!(result.src_port.is_none());
+    }
+
+    /// Run a payload through the real dispatch path on a chosen port.
+    fn dissect_payload_on_port(port: u16, payload: &[u8]) -> super::DissectedResult {
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            50000,
+            port,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            payload,
+        );
+        let (_s, _d, _p, tcp_data) = crate::dissectors::ip::dissect_ipv4(&data[14..]);
+        dissect_tcp(
+            Some("10.0.0.1".parse().unwrap()),
+            Some("10.0.0.2".parse().unwrap()),
+            &tcp_data,
+        )
+    }
+
+    /// Two unrelated protocols share TCP 5672, so dispatch has to pick between
+    /// them rather than giving the port to whichever was registered first.
+    #[test]
+    fn port_5672_splits_amqp_1_0_from_0_9_1() {
+        let one_oh = dissect_payload_on_port(5672, b"AMQP\x00\x01\x00\x00");
+        assert_eq!(one_oh.protocol, Protocol::Amqp1);
+
+        // The 0-9-1 protocol header, and a 0-9-1 method frame, must both still
+        // reach the original dissector.
+        assert_eq!(
+            dissect_payload_on_port(5672, b"AMQP\x00\x00\x09\x01").protocol,
+            Protocol::Amqp
+        );
+        let method = [
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x0A, 0x00, 0x0B, 0xCE,
+        ];
+        assert_eq!(
+            dissect_payload_on_port(5672, &method).protocol,
+            Protocol::Amqp
+        );
+    }
+
+    /// Memcached's two protocols share 11211 and are told apart by a magic
+    /// byte; the text form must not be swallowed by the binary dissector.
+    #[test]
+    fn port_11211_splits_binary_memcached_from_text() {
+        let mut binary = vec![0x80, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00];
+        binary.extend_from_slice(&3u32.to_be_bytes());
+        binary.extend_from_slice(&[0u8; 12]);
+        binary.extend_from_slice(b"abc");
+        assert_eq!(
+            dissect_payload_on_port(11211, &binary).protocol,
+            Protocol::MemcachedBin
+        );
+        assert_eq!(
+            dissect_payload_on_port(11211, b"get user:42\r\n").protocol,
+            Protocol::Memcached
+        );
+    }
+
+    /// The cluster bus has no port of its own, so it is found by signature —
+    /// including on a port that belongs to something else entirely.
+    #[test]
+    fn the_redis_cluster_bus_is_found_by_signature() {
+        let mut bus = b"RCmb".to_vec();
+        bus.extend_from_slice(&2000u32.to_be_bytes());
+        bus.extend_from_slice(&1u16.to_be_bytes());
+        bus.extend_from_slice(&3u16.to_be_bytes()); // FAIL
+        bus.extend_from_slice(&[b'a'; 40]);
+        assert_eq!(
+            dissect_payload_on_port(16379, &bus).protocol,
+            Protocol::RedisCluster
+        );
+        // A well-known port still wins over the heuristic, as it must.
+        assert_eq!(
+            dissect_payload_on_port(6379, b"*1\r\n$4\r\nPING\r\n").protocol,
+            Protocol::Redis
+        );
+    }
+
+    /// 9P reaches its dissector through the port table.
+    #[test]
+    fn ninep_is_dispatched_on_its_port() {
+        let mut ninep = 11u32.to_le_bytes().to_vec();
+        ninep.push(110); // Twalk
+        ninep.extend_from_slice(&7u16.to_le_bytes());
+        ninep.extend_from_slice(&[0u8; 4]);
+        let r = dissect_payload_on_port(564, &ninep);
+        assert_eq!(r.protocol, Protocol::NineP);
+        assert!(r.summary.contains("Twalk"));
     }
 
     /// Run a payload through dissect_tcp on an arbitrary (non-well-known) port.

@@ -27,7 +27,7 @@ pub fn dissect_beanstalk(
     let summary = if KEYWORDS.contains(&tok) {
         format!("Beanstalk {tok}")
     } else if line.is_empty() {
-        format!("Beanstalk ({} bytes)", payload.len())
+        format!("Beanstalk ({})", super::bytes(payload.len() as u64))
     } else {
         format!("Beanstalk — {}", super::truncate(&line, 40))
     };

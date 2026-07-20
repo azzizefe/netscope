@@ -496,11 +496,125 @@ fn management_summary(data: &[u8], subtype: u8) -> String {
             Some(ssid) => format!("802.11 {name} — {ssid}"),
             None => format!("802.11 {name}"),
         },
+        // Deauthentication (12) and Disassociation (10) both carry a reason
+        // code, which is the whole content of the frame: without it every
+        // disconnect looks the same, and a normal roam is indistinguishable
+        // from a wrong password or a deauthentication flood.
+        // The BSSID is kept as well as the reason: it says which access point
+        // the frame claims to come from, and a deauthentication that names the
+        // real BSSID but arrives from elsewhere is a spoof rather than a fault.
+        12 | 10 => {
+            let reason = data
+                .get(24..26)
+                .map(|b| reason_text(u16::from_be_bytes([b[0], b[1]])));
+            match (reason, bssid) {
+                (Some(r), Some(b)) => format!("802.11 {name} — {r}, BSSID {b}"),
+                (Some(r), None) => format!("802.11 {name} — {r}"),
+                (None, Some(b)) => format!("802.11 {name} (BSSID {b})"),
+                (None, None) => format!("802.11 {name}"),
+            }
+        }
+        // Authentication (11) carries a status code after the algorithm and
+        // sequence number.
+        11 => match data.get(28..30) {
+            Some(b) => {
+                let code = u16::from_be_bytes([b[0], b[1]]);
+                match status_name(code) {
+                    Some("successful") => format!("802.11 {name}"),
+                    Some(text) => format!("802.11 {name} refused — {text}"),
+                    None => format!("802.11 {name} refused — status {code}"),
+                }
+            }
+            None => format!("802.11 {name}"),
+        },
+        // Association (1) and Reassociation (3) responses carry a status after
+        // the capability field.
+        1 | 3 => match data.get(26..28) {
+            Some(b) => {
+                let code = u16::from_be_bytes([b[0], b[1]]);
+                match status_name(code) {
+                    Some("successful") => match bssid {
+                        Some(b) => format!("802.11 {name} (BSSID {b})"),
+                        None => format!("802.11 {name}"),
+                    },
+                    Some(text) => format!("802.11 {name} refused — {text}"),
+                    None => format!("802.11 {name} refused — status {code}"),
+                }
+            }
+            None => format!("802.11 {name}"),
+        },
         _ => match bssid {
             Some(b) => format!("802.11 {name} (BSSID {b})"),
             None => format!("802.11 {name}"),
         },
     }
+}
+
+/// Why a station was disconnected (802.11 reason codes).
+///
+/// These are what turn "the wifi dropped" into something actionable. A few are
+/// worth knowing on sight: 15 is a four-way handshake that timed out, which in
+/// practice almost always means the password is wrong, and a flood of 1 or 7
+/// from an address that is not the real access point is a deauthentication
+/// attack rather than a fault.
+fn reason_name(code: u16) -> Option<&'static str> {
+    Some(match code {
+        1 => "unspecified",
+        2 => "previous authentication no longer valid",
+        3 => "the station is leaving",
+        4 => "inactivity",
+        5 => "the access point is out of capacity",
+        6 => "frame from an unauthenticated station",
+        7 => "frame from an unassociated station",
+        8 => "the station is leaving the network",
+        9 => "station not authenticated first",
+        10 => "power capability unacceptable",
+        11 => "supported channels unacceptable",
+        13 => "invalid element",
+        14 => "message integrity check failed",
+        15 => "four-way handshake timed out (usually a wrong password)",
+        16 => "group key handshake timed out",
+        17 => "handshake element mismatch",
+        18 => "invalid group cipher",
+        19 => "invalid pairwise cipher",
+        20 => "invalid authentication and key management",
+        21 => "unsupported security version",
+        22 => "invalid security capabilities",
+        23 => "802.1X authentication failed",
+        24 => "cipher rejected by security policy",
+        34 => "too many lost frames (weak signal)",
+        _ => return None,
+    })
+}
+
+/// The reason as text, keeping the number when it is not one of the defined
+/// codes rather than mapping it to whichever was nearest.
+fn reason_text(code: u16) -> String {
+    match reason_name(code) {
+        Some(text) => format!("{text} (reason {code})"),
+        None => format!("reason {code}"),
+    }
+}
+
+/// Why an authentication or association was refused (802.11 status codes).
+fn status_name(code: u16) -> Option<&'static str> {
+    Some(match code {
+        0 => "successful",
+        1 => "unspecified failure",
+        10 => "cannot support all requested capabilities",
+        11 => "no existing association to confirm",
+        12 => "denied for a reason outside the standard",
+        13 => "authentication algorithm not supported",
+        14 => "authentication out of sequence",
+        15 => "challenge failure",
+        16 => "authentication timed out",
+        17 => "the access point is out of capacity",
+        18 => "the station does not support the required data rates",
+        40 => "invalid element",
+        43 => "invalid pairwise cipher",
+        53 => "invalid PMKID",
+        _ => return None,
+    })
 }
 
 /// Read the SSID (tagged parameter id 0) starting at `start`, returning a
@@ -610,6 +724,100 @@ mod tests {
         b.push(ssid.len() as u8);
         b.extend_from_slice(ssid);
         b
+    }
+
+    /// A disconnect without its reason code is unusable: a normal roam, a
+    /// wrong password and a deauthentication flood all look identical.
+    #[test]
+    fn a_deauthentication_carries_the_reason_it_happened() {
+        let frame = mgmt_frame(12, &3u16.to_be_bytes());
+        assert_eq!(
+            dissect_80211(&frame, None).summary,
+            "802.11 Deauthentication — the station is leaving (reason 3), BSSID aa:bb:cc:dd:ee:ff"
+        );
+    }
+
+    /// The one worth knowing on sight: a four-way handshake that timed out is
+    /// in practice a wrong password, and it is the commonest support question
+    /// there is.
+    #[test]
+    fn a_failed_handshake_is_spelled_out() {
+        let frame = mgmt_frame(12, &15u16.to_be_bytes());
+        let summary = dissect_80211(&frame, None).summary;
+        assert!(summary.contains("wrong password"), "{summary}");
+
+        let frame = mgmt_frame(12, &23u16.to_be_bytes());
+        assert!(dissect_80211(&frame, None)
+            .summary
+            .contains("802.1X authentication failed"));
+    }
+
+    /// Disassociation carries the same codes and must be read the same way.
+    #[test]
+    fn disassociation_reads_its_reason_too() {
+        let frame = mgmt_frame(10, &4u16.to_be_bytes());
+        assert_eq!(
+            dissect_80211(&frame, None).summary,
+            "802.11 Disassociation — inactivity (reason 4), BSSID aa:bb:cc:dd:ee:ff"
+        );
+    }
+
+    /// A code outside the standard keeps its number rather than being mapped
+    /// to whichever reason happened to be nearest.
+    #[test]
+    fn an_unknown_reason_keeps_its_number() {
+        let frame = mgmt_frame(12, &200u16.to_be_bytes());
+        assert_eq!(
+            dissect_80211(&frame, None).summary,
+            "802.11 Deauthentication — reason 200, BSSID aa:bb:cc:dd:ee:ff"
+        );
+    }
+
+    /// An association that succeeded should read as an association, not as a
+    /// refusal with the reason "successful".
+    #[test]
+    fn a_successful_association_is_not_reported_as_a_refusal() {
+        let mut body = vec![0x00, 0x00]; // capability
+        body.extend_from_slice(&0u16.to_be_bytes()); // status: successful
+        body.extend_from_slice(&0xC001u16.to_be_bytes()); // association id
+        let summary = dissect_80211(&mgmt_frame(1, &body), None).summary;
+        assert!(!summary.contains("refused"), "{summary}");
+        assert!(summary.contains("BSSID"), "{summary}");
+    }
+
+    /// A refused association says why, which is what separates a full access
+    /// point from an incompatible client.
+    #[test]
+    fn a_refused_association_gives_its_status() {
+        let mut body = vec![0x00, 0x00];
+        body.extend_from_slice(&17u16.to_be_bytes());
+        body.extend_from_slice(&[0x00, 0x00]);
+        assert_eq!(
+            dissect_80211(&mgmt_frame(1, &body), None).summary,
+            "802.11 Association Response refused — the access point is out of capacity"
+        );
+    }
+
+    /// Authentication's status sits after the algorithm and sequence fields,
+    /// not immediately after the header.
+    #[test]
+    fn authentication_reads_its_status_at_the_right_offset() {
+        let mut body = 0u16.to_be_bytes().to_vec(); // algorithm: open system
+        body.extend_from_slice(&2u16.to_be_bytes()); // sequence
+        body.extend_from_slice(&15u16.to_be_bytes()); // status: challenge failure
+        assert_eq!(
+            dissect_80211(&mgmt_frame(11, &body), None).summary,
+            "802.11 Authentication refused — challenge failure"
+        );
+    }
+
+    /// A management frame with no body must not read past it.
+    #[test]
+    fn a_bodyless_management_frame_does_not_panic() {
+        for subtype in [1u8, 3, 10, 11, 12] {
+            let r = dissect_80211(&mgmt_frame(subtype, &[]), None);
+            assert!(r.summary.starts_with("802.11 "), "{}", r.summary);
+        }
     }
 
     #[test]

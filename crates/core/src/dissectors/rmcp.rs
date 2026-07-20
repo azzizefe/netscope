@@ -25,7 +25,7 @@ pub fn dissect_rmcp(
         };
         format!("RMCP/{class} (out-of-band management)")
     } else {
-        format!("RMCP ({} bytes)", payload.len())
+        format!("RMCP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

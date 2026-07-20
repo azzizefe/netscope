@@ -18,7 +18,7 @@ pub fn dissect_nats(
     let line = super::first_text_line(payload);
     let verb = line.split_whitespace().next().unwrap_or("");
     let summary = if verb.is_empty() {
-        format!("NATS ({} bytes)", payload.len())
+        format!("NATS ({})", super::bytes(payload.len() as u64))
     } else {
         format!("NATS {verb} — {}", super::truncate(&line, 48))
     };

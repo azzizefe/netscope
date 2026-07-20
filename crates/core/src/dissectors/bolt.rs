@@ -26,7 +26,7 @@ pub fn dissect_bolt(
             None => "Bolt handshake".to_string(),
         }
     } else {
-        format!("Bolt message ({} bytes)", payload.len())
+        format!("Bolt message ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

@@ -111,6 +111,71 @@ pub fn dissect_ipv4(data: &[u8]) -> (Option<IpAddr>, Option<IpAddr>, Option<u8>,
     }
 }
 
+/// IPv6 extension headers that sit between the fixed header and the transport
+/// protocol, and can simply be stepped over.
+///
+/// Each carries its own next-header byte and a length, so the chain is a linked
+/// list. Not walking it is not a harmless omission: a hop-by-hop options header
+/// is what carries the router-alert option that MLD requires, so every
+/// multicast-listener message on an IPv6 network would otherwise be reported as
+/// "IP protocol 0" with the extension header mistaken for its payload.
+const EXT_HOP_BY_HOP: u8 = 0;
+const EXT_ROUTING: u8 = 43;
+const EXT_DEST_OPTIONS: u8 = 60;
+const EXT_MOBILITY: u8 = 135;
+const EXT_HIP: u8 = 139;
+const EXT_SHIM6: u8 = 140;
+/// Authentication headers measure their length differently from the rest.
+const EXT_AUTH: u8 = 51;
+/// "No next header" ends the chain with nothing after it.
+const NO_NEXT_HEADER: u8 = 59;
+
+/// A chain longer than this is not something a real packet does; the cap keeps
+/// a malformed one from spinning.
+const MAX_EXTENSION_HEADERS: usize = 8;
+
+/// Step over the extension headers, returning the protocol that follows and the
+/// payload starting at it.
+///
+/// The fragment header is deliberately left in place: reassembly needs it, and
+/// the caller handles it.
+fn skip_extension_headers(mut next_header: u8, mut payload: &[u8]) -> (u8, &[u8]) {
+    for _ in 0..MAX_EXTENSION_HEADERS {
+        let length = match next_header {
+            EXT_HOP_BY_HOP | EXT_ROUTING | EXT_DEST_OPTIONS | EXT_MOBILITY | EXT_HIP
+            | EXT_SHIM6 => {
+                // Length is in 8-octet units, not counting the first 8 bytes.
+                match payload.get(1) {
+                    Some(&len) => (len as usize + 1) * 8,
+                    None => return (next_header, payload),
+                }
+            }
+            EXT_AUTH => {
+                // The authentication header counts 4-octet units and excludes
+                // two of them, which is a different rule from every other
+                // extension header.
+                match payload.get(1) {
+                    Some(&len) => (len as usize + 2) * 4,
+                    None => return (next_header, payload),
+                }
+            }
+            NO_NEXT_HEADER => return (next_header, &[]),
+            // Anything else is the transport protocol, or a fragment header the
+            // caller deals with.
+            _ => return (next_header, payload),
+        };
+        let Some(&following) = payload.first() else {
+            return (next_header, payload);
+        };
+        let Some(rest) = payload.get(length..) else {
+            return (following, &[]);
+        };
+        next_header = following;
+        payload = rest;
+    }
+    (next_header, payload)
+}
+
 pub fn dissect_ipv6(data: &[u8]) -> (Option<IpAddr>, Option<IpAddr>, Option<u8>, Vec<u8>) {
     let header = match etherparse::Ipv6Header::from_slice(data) {
         Ok((h, rest)) => (h, rest.to_vec()),
@@ -120,8 +185,9 @@ pub fn dissect_ipv6(data: &[u8]) -> (Option<IpAddr>, Option<IpAddr>, Option<u8>,
     let (h, rest) = header;
     let src = IpAddr::V6(Ipv6Addr::from(h.source));
     let dst = IpAddr::V6(Ipv6Addr::from(h.destination));
-    let next_header = h.next_header.0;
-    let payload = rest;
+    // Walk past any extension headers before deciding what the transport is.
+    let (next_header, stripped) = skip_extension_headers(h.next_header.0, &rest);
+    let payload = stripped.to_vec();
 
     if next_header == 44 {
         if payload.len() < 8 {
@@ -204,6 +270,90 @@ pub fn dissect_ipv6(data: &[u8]) -> (Option<IpAddr>, Option<IpAddr>, Option<u8>,
 mod tests {
     use super::*;
     use etherparse::{IpNumber, Ipv6FlowLabel};
+
+    /// MLD is IPv6's multicast group membership protocol and is on every IPv6
+    /// network. It always arrives behind a hop-by-hop router-alert header, so
+    /// without walking the extension chain it is invisible: the hop-by-hop
+    /// header would be reported as "IP protocol 0" and its own bytes mistaken
+    /// for the payload.
+    #[test]
+    fn hop_by_hop_header_is_stepped_over_to_reach_mld() {
+        // Hop-by-hop: next header 58 (ICMPv6), length 0 (meaning 8 bytes),
+        // then the router-alert option.
+        let hop_by_hop = [58u8, 0, 0x05, 0x02, 0x00, 0x00, 0x01, 0x00];
+        // MLDv2 report.
+        let icmpv6 = [143u8, 0, 0, 0];
+
+        let mut payload = hop_by_hop.to_vec();
+        payload.extend_from_slice(&icmpv6);
+
+        let (proto, rest) = skip_extension_headers(0, &payload);
+        assert_eq!(proto, 58, "should have reached ICMPv6");
+        assert_eq!(rest, &icmpv6, "payload should start at the ICMPv6 header");
+    }
+
+    /// Several extension headers can be chained, and each has to be stepped
+    /// over in turn.
+    #[test]
+    fn a_chain_of_extension_headers_is_walked() {
+        // Hop-by-hop, then destination options, then TCP.
+        let mut payload = vec![60u8, 0, 0, 0, 0, 0, 0, 0]; // hop-by-hop → dest opts
+        payload.extend_from_slice(&[6u8, 0, 0, 0, 0, 0, 0, 0]); // dest opts → TCP
+        payload.extend_from_slice(&[0xAA; 20]); // the TCP header
+        let (proto, rest) = skip_extension_headers(0, &payload);
+        assert_eq!(proto, 6, "should have reached TCP");
+        assert_eq!(rest.len(), 20);
+    }
+
+    /// The authentication header measures its length in different units from
+    /// every other extension header; using the common rule would land in the
+    /// middle of the payload.
+    #[test]
+    fn authentication_header_uses_its_own_length_rule() {
+        // AH with length 4 means (4 + 2) * 4 = 24 bytes.
+        let mut payload = vec![17u8, 4]; // next header UDP, length 4
+        payload.extend_from_slice(&[0u8; 22]);
+        payload.extend_from_slice(&[0xBB; 8]); // the UDP header
+        let (proto, rest) = skip_extension_headers(51, &payload);
+        assert_eq!(proto, 17, "should have reached UDP");
+        assert_eq!(rest.len(), 8);
+    }
+
+    /// A transport protocol is returned untouched — the walk must not consume
+    /// the header it was looking for.
+    #[test]
+    fn a_transport_protocol_is_left_alone() {
+        let tcp = [0xAA; 20];
+        let (proto, rest) = skip_extension_headers(6, &tcp);
+        assert_eq!(proto, 6);
+        assert_eq!(rest, &tcp);
+    }
+
+    /// The fragment header is deliberately not stepped over, because
+    /// reassembly needs it.
+    #[test]
+    fn fragment_header_is_left_for_the_caller() {
+        let frag = [58u8, 0, 0, 0, 0, 0, 0, 1];
+        let (proto, rest) = skip_extension_headers(44, &frag);
+        assert_eq!(proto, 44);
+        assert_eq!(rest, &frag);
+    }
+
+    /// A malformed chain must terminate rather than spin.
+    #[test]
+    fn a_malformed_chain_terminates() {
+        // Every header points at another hop-by-hop, forever.
+        let payload = vec![0u8; 256];
+        let (_, rest) = skip_extension_headers(0, &payload);
+        assert!(rest.len() <= payload.len());
+    }
+
+    #[test]
+    fn no_next_header_ends_the_chain() {
+        let (proto, rest) = skip_extension_headers(59, &[0xAA; 8]);
+        assert_eq!(proto, 59);
+        assert!(rest.is_empty());
+    }
 
     #[test]
     fn ipv4_valid() {
