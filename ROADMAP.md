@@ -27,32 +27,53 @@
 
 | Katman | Durum | Detay |
 |---|---|---|
-| **Core engine** | ✅ Production-ready | 62 yerleşik protokol dissector, BPF filtre, pcap/pcapng read/write, fuzz-tested |
+| **Core engine** | ✅ Production-ready | 329 yerleşik protokol dissector (tek kayıttan türetilir), BPF filtre, pcap/pcapng read/write, fuzz-tested |
 | **TUI** | ✅ Kullanılabilir | ratatui + crossterm, 5+ görünüm, filtre, Learn mode, fare, 5 tema |
 | **Desktop** | ✅ Beta | Tauri 2, vanilla JS frontend, 10+ görünüm, 7 dil, TCP Stream Grafikleri, VoIP Oynatıcı |
-| **CI/CD** | ✅ Mevcut | GitHub Actions, clippy clean, 414+ test, 3 benchmark |
+| **CI/CD** | ✅ Mevcut | GitHub Actions, clippy clean, 1470+ test, 3 benchmark |
 | **Dokümantasyon** | ✅ Kapsamlı | 10+ doküman, TR + EN, Wireshark karşılaştırma matrisi |
 
 ### 1.2 Mevcut Protokol Dissector'ları
 
+**Tek kaynak: `crates/core/src/registry.rs`.** Buradaki `protocols!` tablosu 329
+satır tutuyor; enum, görünen adlar, TUI renkleri, filtre token'ları, akış sınıfı
+ve eğitim metinleri hepsi ondan türetiliyor. Yeni bir protokol tek satır — eksik
+bırakırsanız derleme hatası alırsınız, sessizce eksik çalışan bir özellik değil.
+
+Bu bölüm eskiden elle tutulan bir listeydi ve tek sürüm döngüsünde 267 protokol
+geride kaldı. Onun yerine kategori özeti tutuluyor; kesin liste için kayda bakın
+(`cargo doc -p netscope-core --open`, ya da TUI'de `?` ile protokol ansiklopedisi).
+
 ```
-Link Layer:     Ethernet II, 802.1Q (VLAN), 802.1ad (QinQ), Radiotap, 802.11/WLAN,
-                LLDP, LACP/Slow, STP/RSTP/MSTP, SLL/SLL2 (Linux cooked)
-Network:        IPv4 (defragmentation), IPv6 (defragmentation), ARP, ICMP, ICMPv6,
-                IGMP, GRE, OSPF (tam), MPLS, IPsec ESP/AH (SPI takibi)
-Transport:      TCP (stateful analiz: retransmission/dup-ACK/out-of-order), UDP
-Routing/Op:     BGP
-Application:    DNS, mDNS, HTTP/1.x, HTTP/2 (h2c), gRPC, TLS (SNI + JA3/JA4/JA3S),
-                DHCP/BOOTP, NTP, SNMP, QUIC (QPACK), SIP, RTP, RTCP, SSH, FTP,
-                SMTP, IMAP, POP3, Telnet, RDP, WebSocket
-Veritabanı:     PostgreSQL, MySQL/MariaDB, MongoDB, Redis, Cassandra (CQL),
-                TDS/MSSQL
-Dosya/MQ:       SMB/SMB2/SMB3, AMQP, Kafka
-Endüstriyel/OT: Modbus/TCP, DNP3, BACnet/IP, EtherNet/IP, OPC UA
-Güvenlik/VPN:   Kerberos, LDAP, NTLM (NTLMSSP), RADIUS, OpenVPN, WireGuard
-IoT:            MQTT, CoAP
-Donanım:        USB (usbmon/USBPcap), Bluetooth HCI, CAN/CAN FD (SocketCAN)
-Tünel/Overlay:  VXLAN (iç Ethernet frame'i tam dissection ile)
+Link Layer:     Ethernet II, VLAN/QinQ, 802.11/WLAN (+ radiotap), LLDP, LACP,
+                STP/RSTP/MSTP, SLL/SLL2, CDP, MACsec, TRILL, CFM, PPP/PPPoE
+Link tipleri:   Ethernet, loopback (NULL/LOOP), ham IP, Cisco HDLC, PPP serial,
+                NFLOG, PKTAP, SocketCAN, 802.15.4, USB, Bluetooth HCI
+Network:        IPv4/IPv6 (defragmentation + uzantı başlıkları), ARP, ICMP/ICMPv6,
+                IGMP, GRE, MPLS, IPsec ESP/AH, NSH, 6LoWPAN, Teredo
+Routing:        BGP, OSPF, IS-IS, EIGRP, RIP, BFD, PIM, MSDP, LDP, RSVP, Babel,
+                OLSR, AODV, BATMAN, RPL, VRRP, HSRP, GLBP
+Transport:      TCP (retransmission/dup-ACK/out-of-order analizi), UDP, SCTP,
+                DCCP, QUIC, µTP
+Uygulama:       HTTP/1.x, HTTP/2, HTTP/3, gRPC, TLS/DTLS (SNI + JA3/JA4/JA3S +
+                alert kodları), DNS (+ RFC 8914), mDNS/DNS-SD, DHCP/DHCPv6,
+                NTP, SNMP, SIP/SDP, RTP/RTCP/SRT, SSH, FTP, SMTP, IMAP, POP3,
+                Telnet, RDP, WebSocket, LDAP, Kerberos, NTLM, RADIUS, TACACS+
+Veritabanı:     PostgreSQL, MySQL/MariaDB (+ X), MongoDB, Redis (+ cluster bus),
+                Cassandra, TDS/MSSQL, Oracle TNS, DB2 DRDA, Firebird,
+                ClickHouse, Elasticsearch, InfluxDB, Neo4j Bolt, RethinkDB,
+                Riak, Aerospike, Memcached (metin + ikili)
+Dosya/MQ:       SMB1/2/3, NFS, AFP, 9P, iSCSI, NBD, Ceph, Lustre, AMQP 0-9-1,
+                AMQP 1.0, Kafka, MQTT, NATS, Pulsar, STOMP, ZeroMQ, IBM MQ
+Endüstriyel/OT: Modbus, DNP3, BACnet, EtherNet/IP + CIP, OPC UA, S7comm, MMS,
+                IEC 104, GOOSE/SV, PROFINET, EtherCAT, POWERLINK, HART-IP,
+                KNXnet/IP, SLMP, FINS, ADS, PCCC, DLMS, M-Bus, HSMS
+Otomotiv:       CAN/CAN FD, J1939, OBD-II, DoIP + UDS, SOME/IP + SOME/IP-SD, XCP
+Telekom:        SS7 (SCCP/TCAP/ISUP/M3UA/SUA/M2PA), Diameter, GTP/GTPv2,
+                S1AP/NGAP/F1AP/E1AP/XnAP, RANAP/RNSAP/NBAP, PFCP, BSSAP, SMPP
+IoT/Gömülü:     CoAP (UDP + TCP), MQTT-SN, Matter, Thread MLE, Zigbee, Roughtime
+Güvenlik/VPN:   OpenVPN, WireGuard, IPsec/ISAKMP, ZRTP, SOCKS, Nebula, ZeroTier
+Tünel/Overlay:  VXLAN (+ GPE), Geneve, GRE, L2TP/L2TPv3, PPTP, ERSPAN, LISP, NHRP
 ```
 
 ### 1.3 Bilinen Sınırlamalar
