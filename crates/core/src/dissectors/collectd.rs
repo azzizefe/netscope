@@ -38,7 +38,7 @@ pub fn dissect_collectd(
             None => format!("collectd — unknown part type 0x{part:04x}"),
         }
     } else {
-        format!("collectd ({} bytes)", payload.len())
+        format!("collectd ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

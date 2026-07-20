@@ -28,7 +28,7 @@ pub fn dissect_beats(
             };
             format!("Beats v{} {name}", (v - b'0'))
         }
-        _ => format!("Beats ({} bytes)", payload.len()),
+        _ => format!("Beats ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

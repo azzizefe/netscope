@@ -38,7 +38,10 @@ pub fn dissect_iax2(
                 None => "IAX2 full frame (truncated)".to_string(),
             }
         }
-        Some(_) => format!("IAX2 mini frame (media, {} bytes)", payload.len()),
+        Some(_) => format!(
+            "IAX2 mini frame (media, {})",
+            super::bytes(payload.len() as u64)
+        ),
         None => "IAX2 (empty)".to_string(),
     };
     DissectedResult {

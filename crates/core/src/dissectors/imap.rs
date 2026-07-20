@@ -18,7 +18,7 @@ pub fn dissect_imap(
 ) -> DissectedResult {
     let line = first_text_line(payload);
     let summary = if line.is_empty() {
-        format!("IMAP — {} bytes", payload.len())
+        format!("IMAP — {}", super::bytes(payload.len() as u64))
     } else if let Some(tag) = login_tag(&line) {
         format!("IMAP {tag} LOGIN ⋯")
     } else {

@@ -71,7 +71,7 @@ pub fn dissect_postgres(
         other if other.is_ascii_graphic() => {
             format!("PostgreSQL message '{}'", other as char)
         }
-        _ => format!("PostgreSQL — {} bytes", payload.len()),
+        _ => format!("PostgreSQL — {}", super::bytes(payload.len() as u64)),
     };
 
     result(summary)

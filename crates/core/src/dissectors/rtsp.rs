@@ -40,7 +40,7 @@ pub fn dissect_rtsp(
     {
         format!("RTSP {method} — {}", super::truncate(&line, 50))
     } else if line.is_empty() {
-        format!("RTSP ({} bytes)", payload.len())
+        format!("RTSP ({})", super::bytes(payload.len() as u64))
     } else {
         format!("RTSP — {}", super::truncate(&line, 50))
     };

@@ -19,7 +19,7 @@ pub fn dissect_babel(
     let summary = if payload.len() >= 2 && payload[0] == 42 {
         format!("Babel routing update (v{})", payload[1])
     } else {
-        format!("Babel ({} bytes)", payload.len())
+        format!("Babel ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

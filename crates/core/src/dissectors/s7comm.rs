@@ -29,7 +29,7 @@ pub fn dissect_s7comm(
     } else if payload.first() == Some(&0x03) {
         "COTP / ISO-on-TCP (port 102)".to_string()
     } else {
-        format!("S7comm ({} bytes)", payload.len())
+        format!("S7comm ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

@@ -43,7 +43,10 @@ pub fn dissect_turn(
             let len = u16::from_be_bytes([head[2], head[3]]);
             format!("TURN relayed data — channel 0x{channel:04x}, {len} bytes")
         }
-        None => format!("TURN ChannelData (truncated, {} bytes)", payload.len()),
+        None => format!(
+            "TURN ChannelData (truncated, {})",
+            super::bytes(payload.len() as u64)
+        ),
     };
     DissectedResult {
         src_addr: src_ip,

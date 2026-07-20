@@ -33,7 +33,7 @@ pub fn dissect_riak(
             };
             format!("Riak {name}")
         }
-        None => format!("Riak ({} bytes)", payload.len()),
+        None => format!("Riak ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

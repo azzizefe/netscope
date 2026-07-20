@@ -19,7 +19,7 @@ pub fn dissect_jaeger(
     let summary = match payload.first() {
         Some(0x82) => "Jaeger spans (Thrift compact)".to_string(),
         Some(0x80) => "Jaeger spans (Thrift binary)".to_string(),
-        _ => format!("Jaeger trace data ({} bytes)", payload.len()),
+        _ => format!("Jaeger trace data ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

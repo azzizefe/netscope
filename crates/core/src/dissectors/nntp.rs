@@ -18,7 +18,7 @@ pub fn dissect_nntp(
 ) -> DissectedResult {
     let line = super::first_text_line(payload);
     let summary = if line.is_empty() {
-        format!("NNTP ({} bytes)", payload.len())
+        format!("NNTP ({})", super::bytes(payload.len() as u64))
     } else if line.len() >= 3 && line.as_bytes()[..3].iter().all(u8::is_ascii_digit) {
         format!("NNTP Response — {}", super::truncate(&line, 55))
     } else {

@@ -18,7 +18,7 @@ pub fn dissect_ssh(
     let summary = if payload.starts_with(b"SSH-") {
         format!("SSH — {}", truncate(&first_text_line(payload), 40))
     } else {
-        format!("SSH — encrypted, {} bytes", payload.len())
+        format!("SSH — encrypted, {}", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

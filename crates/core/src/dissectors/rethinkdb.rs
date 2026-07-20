@@ -23,10 +23,10 @@ pub fn dissect_rethinkdb(
             0x5f75_e831 => "RethinkDB V0.3 handshake".to_string(),
             0x400c_2d20 => "RethinkDB V0.4 handshake".to_string(),
             0x34c2_bdc3 => "RethinkDB V1.0 handshake".to_string(),
-            _ => format!("RethinkDB query ({} bytes)", payload.len()),
+            _ => format!("RethinkDB query ({})", super::bytes(payload.len() as u64)),
         }
     } else {
-        format!("RethinkDB ({} bytes)", payload.len())
+        format!("RethinkDB ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

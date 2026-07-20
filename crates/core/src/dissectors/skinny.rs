@@ -33,7 +33,7 @@ pub fn dissect_skinny(
         };
         format!("Skinny (SCCP) {name}")
     } else {
-        format!("Skinny (SCCP) ({} bytes)", payload.len())
+        format!("Skinny (SCCP) ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

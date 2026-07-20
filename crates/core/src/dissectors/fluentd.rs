@@ -22,7 +22,7 @@ pub fn dissect_fluentd(
             format!("Fluentd forward ({} fields, msgpack)", b & 0x0f)
         }
         Some(0xdc) | Some(0xdd) => "Fluentd forward (msgpack array)".to_string(),
-        _ => format!("Fluentd forward ({} bytes)", payload.len()),
+        _ => format!("Fluentd forward ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

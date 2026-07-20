@@ -36,7 +36,7 @@ pub fn dissect_xdmcp(
         };
         format!("XDMCP {name}")
     } else {
-        format!("XDMCP ({} bytes)", payload.len())
+        format!("XDMCP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

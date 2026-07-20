@@ -23,7 +23,7 @@ pub fn dissect_memcached(
             let line = super::first_text_line(payload);
             let word = line.split_whitespace().next().unwrap_or("");
             if word.is_empty() {
-                format!("Memcached ({} bytes)", payload.len())
+                format!("Memcached ({})", super::bytes(payload.len() as u64))
             } else {
                 format!("Memcached {word} — {}", super::truncate(&line, 50))
             }

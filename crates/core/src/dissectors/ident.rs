@@ -24,7 +24,7 @@ pub fn dissect_ident(
     } else if line.contains(',') {
         format!("Ident query — ports {}", super::truncate(&line, 32))
     } else {
-        format!("Ident ({} bytes)", payload.len())
+        format!("Ident ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

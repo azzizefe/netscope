@@ -23,7 +23,7 @@ pub fn dissect_ftp(
     } else if line.len() >= 4 && line[..4].eq_ignore_ascii_case("PASS") {
         "FTP PASS ⋯".into()
     } else if line.is_empty() {
-        format!("FTP — {} bytes", payload.len())
+        format!("FTP — {}", super::bytes(payload.len() as u64))
     } else {
         format!("FTP {}", truncate(&line, 50))
     };

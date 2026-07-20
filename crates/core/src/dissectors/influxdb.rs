@@ -19,7 +19,7 @@ pub fn dissect_influxdb(
     let line = super::first_text_line(payload);
     let measurement: String = line.chars().take_while(|&c| c != ',' && c != ' ').collect();
     let summary = if measurement.is_empty() {
-        format!("InfluxDB ({} bytes)", payload.len())
+        format!("InfluxDB ({})", super::bytes(payload.len() as u64))
     } else {
         format!("InfluxDB — {}", super::truncate(&measurement, 48))
     };

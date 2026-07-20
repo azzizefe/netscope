@@ -5,12 +5,8 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    babel, bacnet, bfd, capwap, cldap, coap, collectd, dhcp, dhcpv6, dht, dnp3, dns, doip, dtls,
-    enip, ganglia, gelf, geneve, glbp, gtp, gtpprime, gvcp, h225ras, hartip, hsrp, iax2, influxdb,
-    isakmp, jaeger, kerberos, knxip, l2tp, lisp, matter, megaco, mgcp, mqttsn, mssqlbrowser, nbds,
-    nbns, netflow, ntp, openvpn, pcoip, pcp, pfcp, ptp, qpack, radius, rip, rmcp, rpc, rtp, rtps,
-    rwho, sflow, sip, snmp, someip, source_query, ssdp, statsd, stun, syslog, teredo, tftp, turn,
-    vxlan, vxlangpe, wccp, wireguard, wol, wsd, xcp, xdmcp, zrtp, DissectedResult,
+    bindings, dht, dns, dtls, mpegts, openvpn, qpack, roughtime, rtp, rtps, source_query,
+    srt_transport, turn, utp, vxlan, wol, zrtp, DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -37,7 +33,9 @@ pub fn dissect_udp(
     let dst_port = udp.destination_port;
     let on = |p: u16| src_port == p || dst_port == p;
 
-    // Dispatch application-layer protocols by well-known port.
+    // 1. Ports whose dissector needs more than the standard call — a relabel
+    //    on top of a shared wire format, a service-response time to record, or
+    //    an extra argument. See `bindings` for the full precedence order.
     if on(53) {
         let mut r = dns::dissect_dns(src_ip, dst_ip, src_port, dst_port, udp_payload);
         if let Some(dur) = super::srt::record_dns(src_ip, dst_ip, src_port, dst_port, udp_payload) {
@@ -52,58 +50,6 @@ pub fn dissect_udp(
         r.summary = format!("mDNS — {}", r.summary.trim_start_matches("DNS ").trim());
         return r;
     }
-    if on(67) || on(68) {
-        return dhcp::dissect_dhcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(123) {
-        return ntp::dissect_ntp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(161) || on(162) {
-        return snmp::dissect_snmp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(5060) || on(5061) {
-        return sip::dissect_sip(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Industrial / OT protocols carried over UDP (ROADMAP §3.5).
-    if on(47808) {
-        return bacnet::dissect_bacnet(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(20000) {
-        return dnp3::dissect_dnp3(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(2222) || on(44818) {
-        return enip::dissect_enip(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Security / auth / VPN protocols (ROADMAP §3.7).
-    if on(88) {
-        return kerberos::dissect_kerberos(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(1812) || on(1813) || on(1645) || on(1646) {
-        return radius::dissect_radius(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(1194) {
-        return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, udp_payload, false);
-    }
-    if on(51820) {
-        return wireguard::dissect_wireguard(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // IoT messaging (ROADMAP §3.8).
-    if on(5683) {
-        return coap::dissect_coap(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Infrastructure / discovery / logging services carried over UDP.
-    if on(514) {
-        return syslog::dissect_syslog(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(69) {
-        return tftp::dissect_tftp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(1900) {
-        return ssdp::dissect_ssdp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(3478) || on(3479) {
-        return stun::dissect_stun(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
     if on(5355) {
         // LLMNR uses the DNS wire format; reuse the DNS dissector, then relabel.
         let mut r = dns::dissect_dns(src_ip, dst_ip, src_port, dst_port, udp_payload);
@@ -111,165 +57,16 @@ pub fn dissect_udp(
         r.summary = format!("LLMNR — {}", r.summary.trim_start_matches("DNS ").trim());
         return r;
     }
-    if on(546) || on(547) {
-        return dhcpv6::dissect_dhcpv6(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    if on(1194) {
+        // OpenVPN shares a port number across TCP and UDP; the flag says which.
+        return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, udp_payload, false);
     }
-    if on(520) {
-        return rip::dissect_rip(src_ip, dst_ip, src_port, dst_port, udp_payload);
+
+    // 2. Exact well-known port.
+    if let Some(dissect) = bindings::udp(src_port, dst_port) {
+        return dissect(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
-    if on(137) {
-        return nbns::dissect_nbns(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Tunnelling, mobile-core and out-of-band management over UDP.
-    if on(1701) {
-        return l2tp::dissect_l2tp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(2152) || on(2123) {
-        return gtp::dissect_gtp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(623) {
-        return rmcp::dissect_rmcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(3702) {
-        return wsd::dissect_wsd(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Flow telemetry and router liveness/redundancy.
-    if on(2055) || on(4739) || on(9995) {
-        return netflow::dissect_netflow(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(6343) {
-        return sflow::dissect_sflow(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(3784) {
-        return bfd::dissect_bfd(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(1985) {
-        return hsrp::dissect_hsrp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Cisco load-balancing, web-cache redirection, VoIP gateway control and
-    // legacy NetBIOS datagrams.
-    if on(3222) {
-        return glbp::dissect_glbp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(2048) {
-        return wccp::dissect_wccp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(2427) || on(2727) {
-        return mgcp::dissect_mgcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(138) {
-        return nbds::dissect_nbds(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // VPN key exchange, overlays, wireless AP control, IPv6 transition, timing,
-    // machine vision and RPC.
-    if on(500) || on(4500) {
-        return isakmp::dissect_isakmp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(6081) {
-        return geneve::dissect_geneve(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(5246) || on(5247) {
-        return capwap::dissect_capwap(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(3544) {
-        return teredo::dissect_teredo(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(319) || on(320) {
-        return ptp::dissect_ptp_udp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(3956) {
-        return gvcp::dissect_gvcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(111) || on(2049) {
-        return rpc::dissect_rpc(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Metrics, sensor MQTT and mesh routing.
-    if on(8089) {
-        return influxdb::dissect_influxdb(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(1883) {
-        return mqttsn::dissect_mqttsn(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(6696) {
-        return babel::dissect_babel(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Building automation, metrics, structured logs and industrial process.
-    if on(3671) {
-        return knxip::dissect_knxip(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(8125) {
-        return statsd::dissect_statsd(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(12201) {
-        return gelf::dissect_gelf(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(5094) {
-        return hartip::dissect_hartip(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Automotive / IoT: service middleware, diagnostics, calibration, smart home.
-    if (30490..=30510).contains(&src_port) || (30490..=30510).contains(&dst_port) {
-        return someip::dissect_someip(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(13400) {
-        return doip::dissect_doip(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(5555) {
-        return xcp::dissect_xcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(5540) {
-        return matter::dissect_matter(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Mobile-core control/charging, media gateway control and remote display.
-    if on(8805) {
-        return pfcp::dissect_pfcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(3386) {
-        return gtpprime::dissect_gtpprime(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(2944) || on(2945) {
-        return megaco::dissect_megaco(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(4172) {
-        return pcoip::dissect_pcoip(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // Directory discovery, metrics and tracing.
-    if on(389) {
-        return cldap::dissect_cldap(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(25826) {
-        return collectd::dissect_collectd(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(6831) {
-        return jaeger::dissect_jaeger(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(8649) {
-        return ganglia::dissect_ganglia(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(177) {
-        return xdmcp::dissect_xdmcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    // VoIP (IAX2, H.323 RAS), overlays, port control and legacy broadcasts.
-    if on(4569) {
-        return iax2::dissect_iax2(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(1719) {
-        return h225ras::dissect_h225ras(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(1434) {
-        return mssqlbrowser::dissect_mssqlbrowser(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(4341) || on(4342) {
-        return lisp::dissect_lisp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(4790) {
-        return vxlangpe::dissect_vxlangpe(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(5351) {
-        return pcp::dissect_pcp(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
-    if on(513) {
-        return rwho::dissect_rwho(src_ip, dst_ip, src_port, dst_port, udp_payload);
-    }
+
     if (on(443) || on(80)) && looks_like_quic(udp_payload) {
         return quic_result(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
@@ -284,6 +81,33 @@ pub fn dissect_udp(
     // the unmistakable payload rather than a port.
     if wol::looks_like_wol(udp_payload) {
         return wol::dissect_wol(udp_payload);
+    }
+    // Broadcast video picks whatever multicast port the operator chose, so
+    // both of these are recognised by their framing. MPEG-TS goes first: its
+    // check is the stricter of the two (every 188-byte boundary must carry the
+    // sync byte), so it cannot be shadowed by a looser test.
+    if mpegts::looks_like_mpegts(udp_payload) {
+        return mpegts::dissect_mpegts(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    if srt_transport::looks_like_srt(udp_payload) {
+        return srt_transport::dissect_srt_transport(
+            src_ip,
+            dst_ip,
+            src_port,
+            dst_port,
+            udp_payload,
+        );
+    }
+    // BitTorrent picks a port per client and changes it freely, so µTP is
+    // recognised by its header: the version nibble must be exactly 1 and the
+    // type at most 4, which no printable first byte satisfies.
+    if utp::looks_like_utp(udp_payload) {
+        return utp::dissect_utp(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Roughtime deployments differ on which port they use, and the framed
+    // form carries a magic string that identifies it unambiguously.
+    if roughtime::looks_like_roughtime(udp_payload) {
+        return roughtime::dissect_roughtime(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     // DTLS rides dynamically negotiated ports (WebRTC/VPN media), so recognise
     // it structurally from its record header before falling through to plugins.
@@ -391,7 +215,7 @@ fn quic_result(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::Quic,
-        summary: format!("QUIC — {phase}, {} bytes", payload.len()),
+        summary: format!("QUIC — {phase}, {}", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -430,6 +254,31 @@ mod tests {
         );
         assert_eq!(result.protocol, Protocol::Dns);
         assert!(result.summary.contains("example.com"));
+    }
+
+    /// AFS spreads its services across ten ports, and every one of them has to
+    /// reach the dissector — the port is what names the server.
+    #[test]
+    fn udp_rx_dispatches_across_the_afs_port_block() {
+        let mut rx = vec![0u8; 20];
+        rx.push(1); // data packet
+        rx.push(0x01); // client initiated
+        rx.extend_from_slice(&[0u8; 6]);
+
+        for port in 7000u16..=7009 {
+            let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, port, &rx);
+            let (_s, _d, _p, udp_data) = crate::dissectors::ip::dissect_ipv4(&data[14..]);
+            let result = dissect_udp(
+                Some("10.0.0.1".parse().unwrap()),
+                Some("10.0.0.2".parse().unwrap()),
+                &udp_data,
+            );
+            assert_eq!(
+                result.protocol,
+                Protocol::Rx,
+                "port {port} did not dispatch"
+            );
+        }
     }
 
     #[test]

@@ -32,7 +32,7 @@ pub fn dissect_nvmeof(
             };
             format!("NVMe/TCP {name}")
         }
-        None => format!("NVMe/TCP ({} bytes)", payload.len()),
+        None => format!("NVMe/TCP ({})", super::bytes(payload.len() as u64)),
     };
     DissectedResult {
         src_addr: src_ip,

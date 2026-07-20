@@ -6,6 +6,16 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
+/// Flags, reserved, next protocol, reserved, then the VNI.
+const HEADER: usize = 8;
+
+/// Next-protocol values (draft-ietf-nvo3-vxlan-gpe).
+const NEXT_IPV4: u8 = 1;
+const NEXT_IPV6: u8 = 2;
+const NEXT_ETHERNET: u8 = 3;
+const NEXT_NSH: u8 = 4;
+const NEXT_MPLS: u8 = 5;
+
 /// Dissect a VXLAN-GPE packet (UDP 4790) — Generic Protocol Extension, which
 /// adds a next-protocol field to VXLAN so an overlay can carry IP or a service
 /// header directly, not just Ethernet. Byte 3 is that next protocol, bytes
@@ -17,13 +27,36 @@ pub fn dissect_vxlangpe(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary = if payload.len() >= 8 {
+    // Unlike plain VXLAN, this one names what it carries, so there is no
+    // guessing to do — dispatch on the next-protocol field.
+    if payload.len() >= HEADER {
+        let vni = u32::from_be_bytes([0, payload[4], payload[5], payload[6]]);
+        if let Some(inner) = payload.get(HEADER..) {
+            if !inner.is_empty() {
+                let unwrapped = match payload[3] {
+                    NEXT_IPV4 => Some(super::dispatch_l3(0x0800, inner, 0)),
+                    NEXT_IPV6 => Some(super::dispatch_l3(0x86DD, inner, 0)),
+                    NEXT_ETHERNET => Some(super::dissect(inner)),
+                    NEXT_NSH => Some(super::nsh::dissect_nsh(inner)),
+                    _ => None,
+                };
+                if let Some(mut r) = unwrapped {
+                    r.summary = format!("VXLAN-GPE VNI {vni} · {}", r.summary);
+                    r.src_port = Some(src_port);
+                    r.dst_port = Some(dst_port);
+                    return r;
+                }
+            }
+        }
+    }
+
+    let summary = if payload.len() >= HEADER {
         let next = match payload[3] {
-            1 => "IPv4",
-            2 => "IPv6",
-            3 => "Ethernet",
-            4 => "NSH (service chain)",
-            5 => "MPLS",
+            NEXT_IPV4 => "IPv4",
+            NEXT_IPV6 => "IPv6",
+            NEXT_ETHERNET => "Ethernet",
+            NEXT_NSH => "NSH (service chain)",
+            NEXT_MPLS => "MPLS",
             _ => "payload",
         };
         let vni = u32::from_be_bytes([0, payload[4], payload[5], payload[6]]);

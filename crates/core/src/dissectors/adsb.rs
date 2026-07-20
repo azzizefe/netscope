@@ -32,7 +32,7 @@ pub fn dissect_adsb(
         };
         format!("ADS-B Beast — {name}")
     } else {
-        format!("ADS-B stream ({} bytes)", payload.len())
+        format!("ADS-B stream ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

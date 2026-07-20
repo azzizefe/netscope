@@ -21,7 +21,7 @@ pub fn dissect_rfb(
             String::from_utf8_lossy(&payload[..12]).trim()
         )
     } else {
-        format!("VNC/RFB — {} bytes", payload.len())
+        format!("VNC/RFB — {}", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

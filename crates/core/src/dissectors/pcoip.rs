@@ -22,7 +22,10 @@ pub fn dissect_pcoip(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::Pcoip,
-        summary: format!("PCoIP remote display ({} bytes)", payload.len()),
+        summary: format!(
+            "PCoIP remote display ({})",
+            super::bytes(payload.len() as u64)
+        ),
     }
 }
 

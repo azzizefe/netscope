@@ -31,7 +31,7 @@ pub fn dissect_clamav(
     } else if !cmd.is_empty() && cmd.chars().all(|c| c.is_ascii_uppercase()) {
         format!("ClamAV {cmd}")
     } else {
-        format!("ClamAV scan data ({} bytes)", payload.len())
+        format!("ClamAV scan data ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

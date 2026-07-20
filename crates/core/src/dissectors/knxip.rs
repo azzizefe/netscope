@@ -30,7 +30,7 @@ pub fn dissect_knxip(
         };
         format!("KNXnet/IP {name}")
     } else {
-        format!("KNXnet/IP ({} bytes)", payload.len())
+        format!("KNXnet/IP ({})", super::bytes(payload.len() as u64))
     };
     DissectedResult {
         src_addr: src_ip,

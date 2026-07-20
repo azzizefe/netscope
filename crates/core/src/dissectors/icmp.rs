@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
@@ -12,6 +12,12 @@ pub fn dissect_icmp(
     payload: &[u8],
     is_v6: bool,
 ) -> DissectedResult {
+    // RPL is a whole routing protocol carried as one ICMPv6 type; what it
+    // says about the mesh is the truer label than "ICMP message" would be.
+    if is_v6 && payload.first() == Some(&super::rpl::ICMPV6_TYPE) {
+        return super::rpl::dissect_rpl(src_ip, dst_ip, payload);
+    }
+
     let summary = match payload.first() {
         Some(&icmp_type) => {
             if is_v6 {
@@ -54,6 +60,22 @@ fn describe_icmpv6(icmp_type: u8) -> String {
         134 => "Router advertisement".into(),
         135 => "Neighbor solicitation (who has this IPv6?)".into(),
         136 => "Neighbor advertisement".into(),
+        137 => "Redirect".into(),
+        // Multicast Listener Discovery is IPv6's answer to IGMP: it is how a
+        // host says which multicast groups it wants. These arrive behind a
+        // hop-by-hop router-alert header, which is why the extension-header
+        // walk in `ip` has to run before they can be seen at all.
+        130 => "MLD query (who is listening to this group?)".into(),
+        131 => "MLD report (I am listening to this group)".into(),
+        132 => "MLD done (I have stopped listening)".into(),
+        143 => "MLDv2 report (multicast group membership)".into(),
+        // Router renumbering and inverse discovery round out the set a router
+        // will emit.
+        138 => "Router renumbering".into(),
+        141 => "Inverse neighbor discovery solicitation".into(),
+        142 => "Inverse neighbor discovery advertisement".into(),
+        2 => "Packet too big".into(),
+        4 => "Parameter problem".into(),
         t => format!("ICMPv6 message (type {t})"),
     }
 }
