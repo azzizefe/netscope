@@ -28,7 +28,13 @@ pub fn dissect_slow(payload: &[u8]) -> DissectedResult {
             format!("LACP v{version} — link aggregation")
         }
         Some(2) => "LACP Marker".to_string(),
-        Some(3) => "Ethernet OAM (slow protocol)".to_string(),
+        // Subtype 3 is link OAM, whose flags carry the two things worth
+        // stopping on: a dying gasp and a degrading link.
+        Some(3) => return super::link_oam::result(payload),
+        // The organisation-specific subtype is shared. ESMC claims it only when
+        // the ITU's identifier is present; anything else keeps the generic name
+        // rather than being read as a clock quality.
+        Some(10) if super::esmc::is_esmc(payload) => return super::esmc::result(payload),
         Some(10) => "Organisation-Specific Slow Protocol".to_string(),
         Some(other) => format!("Slow Protocol subtype {other}"),
         None => "Slow Protocol (empty)".to_string(),

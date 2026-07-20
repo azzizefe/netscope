@@ -640,6 +640,62 @@ protocols! {
         aliases:   [],
         blurb:     "A link-aggregation message (LACP) — two switches bonding several cables into one link.",
     }
+    LinkOam {
+        doc:       "IEEE 802.3ah link OAM — link health, and a device's dying gasp.",
+        display:   "Link OAM",
+        color:     0x7C8CA6,
+        transport: Other,
+        rank:      3,
+        // "oam" alone belongs to CFM (802.1ag), which is also called OAM and
+        // claimed it first — matching Wireshark, where `oam` is the CFM filter.
+        aliases:   ["link-oam", "efm"],
+        blurb:     "A link reporting its own health (802.3ah OAM) — including the dying gasp a device sends as its power fails.",
+    }
+    Esmc {
+        doc:       "ESMC synchronous Ethernet clock quality (ITU-T G.8264).",
+        display:   "ESMC",
+        color:     0x5EAAD6,
+        transport: Other,
+        rank:      3,
+        aliases:   ["esmc", "synce"],
+        blurb:     "A clock quality announcement (ESMC/SyncE) — what grade of timing reference this hop is locked to.",
+    }
+    Mrp {
+        doc:       "MRP media redundancy ring (IEC 62439-2).",
+        display:   "MRP",
+        color:     0xD97757,
+        transport: Other,
+        rank:      3,
+        aliases:   ["mrp"],
+        blurb:     "An industrial redundancy ring (MRP) testing itself, or reconverging after a break.",
+    }
+    Hsr {
+        doc:       "HSR seamless redundancy tag (IEC 62439-3).",
+        display:   "HSR",
+        color:     0xE0885F,
+        transport: Other,
+        rank:      2,
+        aliases:   ["hsr"],
+        blurb:     "A frame sent both ways round a redundancy ring at once (HSR) — so a cut cable loses nothing.",
+    }
+    Mvrp {
+        doc:       "MVRP VLAN registration (IEEE 802.1ak).",
+        display:   "MVRP",
+        color:     0x8B9DC3,
+        transport: Other,
+        rank:      3,
+        aliases:   ["mvrp"],
+        blurb:     "Switches agreeing which VLANs to carry (MVRP) — a Leave here explains traffic that stopped.",
+    }
+    Mmrp {
+        doc:       "MMRP multicast registration (IEEE 802.1ak).",
+        display:   "MMRP",
+        color:     0x9DAFD3,
+        transport: Other,
+        rank:      3,
+        aliases:   ["mmrp"],
+        blurb:     "Switches registering multicast groups (MMRP) so traffic is not flooded where nothing wants it.",
+    }
     Stp {
         doc:       "Spanning Tree Protocol BPDU — L2 loop prevention (802.3 LLC).",
         display:   "STP",
