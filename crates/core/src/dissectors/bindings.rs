@@ -414,6 +414,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (44818, enip::dissect_enip),
     (47808, bacnet::dissect_bacnet),
     (51820, wireguard::dissect_wireguard),
+    (61450, cclink_ie_field_basic::dissect_cclink_ie_field_basic),
 ];
 
 /// Every port either table claims. Used by the robustness sweep to fuzz each

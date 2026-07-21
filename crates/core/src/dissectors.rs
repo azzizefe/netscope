@@ -35,6 +35,28 @@ pub mod bssap;
 pub mod bssgp;
 pub mod can;
 pub mod capwap;
+#[cfg(feature = "ot")]
+pub mod cclink_ie_field_basic;
+#[cfg(not(feature = "ot"))]
+pub mod cclink_ie_field_basic {
+    use std::net::IpAddr;
+    pub fn dissect_cclink_ie_field_basic(
+        _src_ip: Option<IpAddr>,
+        _dst_ip: Option<IpAddr>,
+        _src_port: u16,
+        _dst_port: u16,
+        _payload: &[u8],
+    ) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::CcLinkIeFieldBasic,
+            summary: String::new(),
+        }
+    }
+}
 pub mod cassandra;
 pub mod cdp;
 pub mod ceph;

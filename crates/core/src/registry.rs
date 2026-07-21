@@ -515,6 +515,15 @@ protocols! {
         aliases:   ["uadp", "opcuapubsub"],
         blurb:     "An OPC UA publish/subscribe datagram (UADP) — publisher ID and group ID show which data stream this belongs to.",
     }
+    CcLinkIeFieldBasic {
+        doc:       "CC-Link IE Field Network Basic — Mitsubishi's industrial Ethernet protocol running on UDP 61450.",
+        display:   "CC-Link IE Field Basic",
+        color:     0xD97706,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["cclink_ie_field_basic", "cclief_basic", "cclink"],
+        blurb:     "An industrial cyclic/transient controller exchange over UDP 61450 based on SLMP framing.",
+    }
     Rtp {
         doc:       "Real-time Transport Protocol media stream (RFC 3550) — dynamic UDP ports.",
         display:   "RTP",
