@@ -403,6 +403,16 @@ and encapsulates SLMP (Seamless Message Protocol) for transient parameters, conf
 and diagnostics. It's the standard software-based fieldbus in Mitsubishi automation environments.",
             look_for: "Packets on UDP 61450 carrying SLMP request/response subheaders (0x5000 / 0xD000) for cyclic read/write commands.",
         },
+        Protocol::CcLinkIeControl => Lesson {
+            title: "CC-Link IE Control — high-speed industrial backbone",
+            summary: "Mitsubishi's high-speed controller-to-controller network on EtherType 0x890F.",
+            body: "CC-Link IE Control Network is a high-speed, deterministic Ethernet-based \
+backbone network designed for controller-to-controller communication. It operates directly \
+over Ethernet layer 2 (EtherType 0x890F) to provide real-time cyclic transmission of large volumes \
+of control data, alongside transient messaging. It utilizes a token-passing mechanism to ensure \
+highly reliable data transfer without collision.",
+            look_for: "Frames on EtherType 0x890F carrying CC-Link IE message structures (such as TokenM, CyclicData, or Transient).",
+        },
         Protocol::Rtp => Lesson {
             title: "RTP — the voice and video itself",
             summary: "The actual audio/video stream of a call, once SIP has set it up.",

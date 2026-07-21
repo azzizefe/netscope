@@ -524,6 +524,15 @@ protocols! {
         aliases:   ["cclink_ie_field_basic", "cclief_basic", "cclink"],
         blurb:     "An industrial cyclic/transient controller exchange over UDP 61450 based on SLMP framing.",
     }
+    CcLinkIeControl {
+        doc:       "CC-Link IE Control Network — Mitsubishi's high-speed controller-to-controller Ethernet protocol on EtherType 0x890F.",
+        display:   "CC-Link IE Control",
+        color:     0xEA580C,
+        transport: Other,
+        rank:      3,
+        aliases:   ["cclink_ie_control", "cc-link-control"],
+        blurb:     "A high-speed industrial control-layer frame over EtherType 0x890F (direct Ethernet).",
+    }
     Rtp {
         doc:       "Real-time Transport Protocol media stream (RFC 3550) — dynamic UDP ports.",
         display:   "RTP",

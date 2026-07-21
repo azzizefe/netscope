@@ -57,6 +57,21 @@ pub mod cclink_ie_field_basic {
         }
     }
 }
+#[cfg(feature = "ot")]
+pub mod cclink_ie;
+#[cfg(not(feature = "ot"))]
+pub mod cclink_ie {
+    pub fn dissect_cclink_ie(_payload: &[u8]) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::CcLinkIeControl,
+            summary: String::new(),
+        }
+    }
+}
 pub mod cassandra;
 pub mod cdp;
 pub mod ceph;
@@ -769,6 +784,7 @@ const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
 const ETHERTYPE_AOE: u16 = 0x88A2; // ATA over Ethernet
 const ETHERTYPE_ROCE: u16 = 0x8915; // RDMA over Converged Ethernet
+const ETHERTYPE_CCLINK_IE: u16 = 0x890F; // CC-Link IE Control/Field
 const ETHERTYPE_DECNET: u16 = 0x6003; // DECnet Phase IV
 const ETHERTYPE_VINES: u16 = 0x0BAD; // Banyan VINES
 const ETHERTYPE_IPX: u16 = 0x8137; // Novell NetWare IPX
@@ -870,6 +886,7 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_CFM => cfm::dissect_cfm(payload),
         ETHERTYPE_AOE => aoe::dissect_aoe(payload),
         ETHERTYPE_ROCE => roce::dissect_roce(payload),
+        ETHERTYPE_CCLINK_IE => cclink_ie::dissect_cclink_ie(payload),
         ETHERTYPE_DECNET => decnet::dissect_decnet(payload),
         ETHERTYPE_VINES => vines::dissect_vines(payload),
         ETHERTYPE_IPX => ipx::dissect_ipx(payload),
