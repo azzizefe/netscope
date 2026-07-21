@@ -372,8 +372,14 @@ yolları**.
       *Tanıma tamamen CRC-16/MODBUS'a dayanıyor ve algoritma **yayımlanmış
       kontrol değerine** (`123456789` → `0x4B37`) karşı sınanıyor — yani dış bir
       sabite, kendi okumama değil.*
-- [ ] Modbus ASCII ⚠️ *(E2)*
-- [ ] S7comm-plus ⚠️
+- [x] **Modbus ASCII** ✅ → [`modbus_ascii.rs`](../crates/core/src/dissectors/modbus_ascii.rs)
+      *Seri Modbus ASCII çerçevelerinin başlangıç (iki nokta ':'), sonlandırıcı
+      ('\\r\\n') ve hexadecimal karakter geçerliliği ile LRC sağlama toplamı (LRC)
+      denetlenerek hatasız tanınması sağlandı. PDU kısmı ortak Modbus motoruyla ayrıştırılır.*
+- [x] **S7comm-plus** ✅ → [`s7comm_plus.rs`](../crates/core/src/dissectors/s7comm_plus.rs)
+      *Yeni nesil Siemens S7-1200/1500 cihazlarının TPKT + ISO-COTP (TCP 102)
+      üzerinden 0x72 protokol ID'si taşıyan mesajlarının sürüm, işlem kodu (opcode)
+      ve işlev kodları (CreateObject, SetVariable, vb.) ayrıştırılarak raporlanır.*
 - [x] LonTalk / EIA-852 (LonWorks over IP) ✅ *(iki protokol: CN/IP tüneli + içindeki LonTalk)*
 - [ ] wM-Bus (wireless M-Bus, EN 13757-4) ✅
 - [x] DLR — Device Level Ring (ODVA) ✅
@@ -389,8 +395,14 @@ yolları**.
       `packet-pn-rt.c`'ye göre aralığın tamamı PN-PTCP, RT Class 3 ise düşük
       FrameID'lerde. Yanlış etiket kaldırıldı.*
 - [x] openSAFETY ✅ *(UDP 9877 / 8755)*
-- [ ] CIP Safety ⚠️
-- [ ] PROFIsafe ⚠️
+- [x] **CIP Safety** ✅ → [`cip.rs`](../crates/core/src/dissectors/cip.rs)
+      *CIP explicit mesajlarındaki sınıf kimliği (Class ID) taranarak güvenlik
+      sınıfları (Safety Validator 0x3A, Safety Supervisor 0x39, vb.) hedeflendiğinde
+      otomatik olarak CIP Safety protokolü olarak etiketlenir ve açıklanır.*
+- [x] **PROFIsafe** ✅ → [`profisafe.rs`](../crates/core/src/dissectors/profisafe.rs)
+      *PROFINET IO Real-Time cyclic data çerçevelerinde (0x8000–0xBBFF) taşınan
+      PROFIsafe SPDU'larının durum/kontrol baytı (sb/cb) ve F-IO güvenlik verileri
+      ayrıştırılarak Toggle ve Fail-Safe durumları sunulur.*
 - [x] R-GOOSE / R-SV (IEC 61850-90-5, routable) ✅ *(UDP 102 + oturum kimliği guard'ı)*
 - [x] **IEC 60870-5-101 over TCP** ✅ → [`iec101.rs`](../crates/core/src/dissectors/iec101.rs)
       *FT1.2 uzunluğunu iki kez ve başlangıç baytını tekrar gönderiyor — tanıma

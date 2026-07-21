@@ -332,6 +332,20 @@ otherwise: the gateway keeps asking, the billing system keeps showing the last \
 value it received, and nothing looks wrong until someone gets an estimated bill.",
             look_for: "\"M-Bus reply — water meter, serial 12345678\"; a request to a meter with no reply following it.",
         },
+        Protocol::Wmbus => Lesson {
+            title: "wM-Bus — the wireless meters outside",
+            summary: "Radio frames from hundreds of meters collected by a concentrator.",
+            body: "Wireless M-Bus (EN 13757-4) is how smart water, gas and heat meters \
+report over the air when there is no cable to run. A concentrator on a pole or rooftop \
+collects these radio frames — S mode for stationary residential meters, T mode for \
+frequent-transmit sensors, C mode for compact battery devices — and forwards them \
+onto TCP for the billing system.\n\n\
+The frame shares its application layer with wired M-Bus, so a variable-data reply \
+names the CI-field and the meter's serial number. Watching this is how you notice \
+a meter that has gone quiet — the concentrator still forwards everyone else, and \
+the gap is invisible until the estimate arrives.",
+            look_for: "\"wM-Bus (S) reply — variable data reply, serial …\"; mode labels and CI-field names; a missing meter in a run of regular readings.",
+        },
         Protocol::Dnp3 => Lesson {
             title: "DNP3 — the grid's control protocol",
             summary: "Used by electric utilities and water systems to run remote equipment.",
@@ -2056,6 +2070,15 @@ the memory of Siemens S7 PLCs — the controllers running physical processes. It
 rides on ISO-on-TCP (port 102). It has no built-in authentication, which is why \
 industrial-network monitoring cares about it (recall Stuxnet).",
             look_for: "\"S7comm Job request\" on TCP 102.",
+        },
+        Protocol::S7commPlus => Lesson {
+            title: "S7comm-plus — newer Siemens PLC protocol",
+            summary: "Siemens S7-1200/1500 communication protocol carried on TCP 102.",
+            body: "S7comm-plus is Siemens' modern proprietary industrial protocol for S7-1200 and \
+S7-1500 controllers. It is carried over TPKT/COTP (TCP 102) and uses Protocol ID 0x72.\n\n\
+Unlike legacy S7comm, it features cryptographic protection for integrity and session anti-replay \
+to secure PLC communications against modification and injection.",
+            look_for: "Packets on TCP 102 carrying S7comm-plus header markers (protocol ID 0x72) and safety/configuration commands.",
         },
         Protocol::Iec104 => Lesson {
             title: "IEC 60870-5-104 — power-grid telecontrol",

@@ -10,7 +10,7 @@ use crate::models::Protocol;
 use super::{
     adsb, amqp1, bindings, bitcoin, bittorrent, ceph, consul_rpc, drbd, drda, fix, hl7, http,
     http2, ibmmq, iec101, lmtp, lustre, mbus, memcached_bin, milter, mms, modbus_ascii, modbus_rtu, mysqlx, nmea,
-    ntlm, openvpn, redis_cluster, s7comm, s7comm_plus, someip, spice, syslog, thrift, websocket, x11, zmtp,
+    ntlm, openvpn, redis_cluster, s7comm, s7comm_plus, someip, spice, syslog, thrift, websocket, wmbus, x11, zmtp,
     DissectedResult,
 };
 
@@ -306,6 +306,12 @@ fn dissect_tcp_inner(
         // to anything, so the framing has to agree before the flow is claimed.
         if on(10001) && mbus::looks_like_mbus(tcp_payload) {
             return mbus::dissect_mbus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // The same gateway port also carries wireless M-Bus frames forwarded by
+        // a concentrator — recognisable by the repeated length field without the
+        // 0x68/0x16 framing that wired M-Bus uses.
+        if on(10001) && wmbus::looks_like_wmbus(tcp_payload) {
+            return wmbus::dissect_wmbus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // LMTP is SMTP with one verb changed, and after the greeting the two
         // are indistinguishable — so it is claimed on that verb rather than on

@@ -3,6 +3,17 @@
 use crate::models::Protocol;
 use super::DissectedResult;
 
+/// Heuristically check if a cyclic PROFINET payload looks like PROFIsafe.
+pub(crate) fn looks_like_profisafe(payload: &[u8]) -> bool {
+    if payload.len() < 6 || payload.len() > 32 {
+        return false;
+    }
+    let crc_len = if payload.len() <= 16 { 3 } else { 4 };
+    let sb_index = payload.len() - 1 - crc_len;
+    let sb = payload[sb_index];
+    sb & 0x80 == 0
+}
+
 /// Dissect a PROFIsafe SPDU (Safety Protocol Data Unit).
 ///
 /// A PROFIsafe SPDU contains application safety data, a Status/Control Byte,

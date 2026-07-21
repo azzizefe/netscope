@@ -1903,6 +1903,15 @@ protocols! {
         aliases:   [],
         blurb:     "An S7comm message (TCP 102) — reading/writing a Siemens PLC's memory.",
     }
+    S7commPlus {
+        doc:       "S7comm-plus — Siemens' newer S7-1200/1500 industrial protocol on TCP 102.",
+        display:   "S7comm-plus",
+        color:     0x1D4ED8,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["s7comm-plus", "s7commplus"],
+        blurb:     "The newer Generation Siemens PLC protocol over COTP/TPKT — with protocol ID 0x72.",
+    }
     Iec104 {
         doc:       "IEC 60870-5-104 SCADA telecontrol (TCP 2404).",
         display:   "IEC-104",
@@ -3777,6 +3786,15 @@ protocols! {
         rank:      2,
         aliases:   ["macctrl", "pause", "pfc"],
         blurb:     "A flow-control frame (Ethernet PAUSE) — one end telling the other to stop sending because its buffers are filling.",
+    }
+    Wmbus {
+        doc:       "Wireless M-Bus smart-meter radio frames (EN 13757-4), as forwarded by a concentrator onto TCP.",
+        display:   "wM-Bus",
+        color:     0x0F766E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["wmbus", "w-mbus"],
+        blurb:     "A wireless meter reading (wM-Bus) — water, gas, heat or electricity data collected over the air and forwarded by a gateway.",
     }
 }
 
