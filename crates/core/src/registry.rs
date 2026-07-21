@@ -985,6 +985,15 @@ protocols! {
         aliases:   ["modbus-rtu", "modbusrtu"],
         blurb:     "Serial Modbus forwarded onto TCP unchanged — which does not parse as Modbus TCP and so goes unseen.",
     }
+    ModbusAscii {
+        doc:       "Modbus ASCII framing carried over TCP, as serial-to-ethernet converters forward it.",
+        display:   "Modbus ASCII",
+        color:     0xB07850,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["modbus-ascii", "modbusascii"],
+        blurb:     "Serial Modbus ASCII forwarded onto TCP — identified by colon prefix and LRC checksum.",
+    }
     IsoTp {
         doc:       "ISO-TP transport for CAN (ISO 15765-2) — the layer UDS rides on.",
         display:   "ISO-TP",
@@ -1803,6 +1812,15 @@ protocols! {
         rank:      3,
         aliases:   [],
         blurb:     "A PROFINET frame (EtherType 0x8892) — real-time industrial automation data.",
+    }
+    Profisafe {
+        doc:       "PROFIsafe — functional safety profile (IEC 61784-3-3) running on top of PROFINET IO.",
+        display:   "PROFIsafe",
+        color:     0xEA580C,
+        transport: Other,
+        rank:      3,
+        aliases:   ["profisafe"],
+        blurb:     "The safety layer over PROFINET IO (F-IO cyclic data, Status/Control Byte, and Safety CRC).",
     }
     Wol {
         doc:       "Wake-on-LAN magic packet (EtherType 0x0842 / UDP).",
@@ -3372,6 +3390,15 @@ protocols! {
         rank:      3,
         aliases:   ["cip"],
         blurb:     "An industrial-control command (CIP) — reading or writing a PLC tag, or starting and stopping the controller.",
+    }
+    CipSafety {
+        doc:       "CIP Safety — Common Industrial Protocol Safety extensions for fail-safe communication.",
+        display:   "CIP Safety",
+        color:     0xEF4444,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cip-safety", "cipsafety"],
+        blurb:     "CIP Safety protocol message — carrying fail-safe data, validations, or supervisor controls.",
     }
     Dlms {
         doc:       "Smart-meter reading and configuration on TCP 4059 (DLMS/COSEM Green Book).",

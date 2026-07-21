@@ -9,8 +9,8 @@ use crate::models::Protocol;
 
 use super::{
     adsb, amqp1, bindings, bitcoin, bittorrent, ceph, consul_rpc, drbd, drda, fix, hl7, http,
-    http2, ibmmq, iec101, lmtp, lustre, mbus, memcached_bin, milter, mms, modbus_rtu, mysqlx, nmea,
-    ntlm, openvpn, redis_cluster, s7comm, someip, spice, syslog, thrift, websocket, x11, zmtp,
+    http2, ibmmq, iec101, lmtp, lustre, mbus, memcached_bin, milter, mms, modbus_ascii, modbus_rtu, mysqlx, nmea,
+    ntlm, openvpn, redis_cluster, s7comm, s7comm_plus, someip, spice, syslog, thrift, websocket, x11, zmtp,
     DissectedResult,
 };
 
@@ -263,6 +263,9 @@ fn dissect_tcp_inner(
             if mms::looks_like_mms(tcp_payload) {
                 return mms::dissect_mms(src_ip, dst_ip, src_port, dst_port, tcp_payload);
             }
+            if tcp_payload.first() == Some(&0x03) && tcp_payload.get(7) == Some(&0x72) {
+                return s7comm_plus::dissect_s7comm_plus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+            }
             return s7comm::dissect_s7comm(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         if on(1194) {
@@ -326,6 +329,9 @@ fn dissect_tcp_inner(
         // CRC is decisive, and a real Modbus TCP frame will not satisfy it.
         if on(502) && modbus_rtu::looks_like_modbus_rtu(tcp_payload) {
             return modbus_rtu::dissect_modbus_rtu(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(502) && modbus_ascii::looks_like_modbus_ascii(tcp_payload) {
+            return modbus_ascii::dissect_modbus_ascii(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // 8300 is Consul's convention rather than an assignment, and the type
         // byte only leads the first segment of a connection — so a mid-stream
