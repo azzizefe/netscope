@@ -696,6 +696,357 @@ protocols! {
         aliases:   ["esmc", "synce"],
         blurb:     "A clock quality announcement (ESMC/SyncE) — what grade of timing reference this hop is locked to.",
     }
+    Memberlist {
+        doc:       "HashiCorp memberlist gossip — the membership layer under Serf, Consul and Nomad (UDP 7946).",
+        display:   "memberlist",
+        color:     0xC77DBB,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["memberlist", "serf"],
+        blurb:     "Cluster nodes gossiping about each other — including which node declared which other node dead.",
+    }
+    ConsulRpc {
+        doc:       "Consul server RPC, which multiplexes Raft onto the same port (TCP 8300).",
+        display:   "Consul RPC",
+        color:     0xD4739B,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["consul", "consul-rpc"],
+        blurb:     "Consul servers talking to each other — and the Raft elections that show a cluster losing its leader.",
+    }
+    Drbd {
+        doc:       "DRBD replicated block device (Linux kernel drbd_protocol.h).",
+        display:   "DRBD",
+        color:     0x7BA05B,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["drbd"],
+        blurb:     "A disk being mirrored to another machine — and the peer-side failures that stall writes locally.",
+    }
+    Artnet {
+        doc:       "Art-Net stage lighting control (UDP 6454).",
+        display:   "Art-Net",
+        color:     0xD9A441,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["artnet", "art-net"],
+        blurb:     "DMX lighting universes over Ethernet — and the sequence gaps a rig shows as a stutter.",
+    }
+    Sacn {
+        doc:       "sACN streaming ACN lighting control (ANSI E1.31, UDP 5568).",
+        display:   "sACN",
+        color:     0xE0B85C,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["sacn", "e131"],
+        blurb:     "Standardised DMX over IP — where two consoles fighting over one universe becomes visible.",
+    }
+    Osc {
+        doc:       "Open Sound Control (no fixed port; recognised structurally).",
+        display:   "OSC",
+        color:     0x9FD1A8,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["osc"],
+        blurb:     "Studio and show control as plain-text addresses — on whichever port the application chose.",
+    }
+    RtpMidi {
+        doc:       "RTP-MIDI session control (RFC 6295, UDP 5004/5005).",
+        display:   "RTP-MIDI",
+        color:     0xC49AD1,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rtpmidi", "applemidi"],
+        blurb:     "MIDI over a network — and whether the session was refused or simply never answered.",
+    }
+    Igrp {
+        doc:       "IGRP interior routing (Cisco, IP protocol 9).",
+        display:   "IGRP",
+        color:     0x9E9E7A,
+        transport: Other,
+        rank:      3,
+        aliases:   ["igrp"],
+        blurb:     "Cisco routing that predates its own replacement — advertised with no authentication at all.",
+    }
+    Etherip {
+        doc:       "EtherIP layer-2 tunnelling (RFC 3378, IP protocol 97).",
+        display:   "EtherIP",
+        color:     0x7FA3B5,
+        transport: Other,
+        rank:      3,
+        aliases:   ["etherip"],
+        blurb:     "A whole Ethernet segment inside IP — so the far site's broadcasts arrive here too.",
+    }
+    Cmp {
+        doc:       "Certificate Management Protocol (RFC 4210, TCP 829 or an HTTP body).",
+        display:   "CMP",
+        color:     0xC48FA8,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cmp", "pkixcmp"],
+        blurb:     "Automated certificate enrolment and renewal — and the reason a device failed to get an identity.",
+    }
+    Tsp {
+        doc:       "RFC 3161 timestamping (an HTTP body, application/timestamp-query or -reply).",
+        display:   "TSP",
+        color:     0xB98FC4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tsp", "timestamp"],
+        blurb:     "A trusted third party attesting when something existed — and why a signature outlives its certificate.",
+    }
+    Aeron {
+        doc:       "Aeron low-latency messaging over UDP (no fixed port; recognised structurally).",
+        display:   "Aeron",
+        color:     0x9EC46E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["aeron"],
+        blurb:     "Low-latency messaging where the NAKs and the shrinking window are the early warning.",
+    }
+    Lorawan {
+        doc:       "LoRaWAN long-range IoT, as forwarded by a Semtech packet forwarder (UDP 1700).",
+        display:   "LoRaWAN",
+        color:     0x7FC49A,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["lorawan", "lora"],
+        blurb:     "Battery sensors on a kilometres-wide link — and the frame counter a network silently discards them on.",
+    }
+    Lin {
+        doc:       "LIN bus (DLT 212) — the low-cost automotive bus under CAN.",
+        display:   "LIN",
+        color:     0xB59F6E,
+        transport: Other,
+        rank:      3,
+        aliases:   ["lin"],
+        blurb:     "The cheap bus behind mirrors and seat motors — where \"nobody answered\" is the whole diagnosis.",
+    }
+    Iec101 {
+        doc:       "IEC 60870-5-101 serial telecontrol (FT1.2 framing), as gateways forward it.",
+        display:   "IEC-101",
+        color:     0xC4A05F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["iec101"],
+        blurb:     "Serial telecontrol on an IP capture — and the link layer that says why a poll stalled.",
+    }
+    Iser {
+        doc:       "iSER — iSCSI Extensions for RDMA (RFC 7145), carried on RDMA SEND.",
+        display:   "iSER",
+        color:     0x8FB5C4,
+        transport: Other,
+        rank:      3,
+        aliases:   ["iser"],
+        blurb:     "iSCSI with the blocks moved onto RDMA — so the commands are visible and the data never is.",
+    }
+    ModbusRtu {
+        doc:       "Modbus RTU framing carried over TCP, as serial gateways forward it.",
+        display:   "Modbus RTU",
+        color:     0xA8794F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["modbus-rtu", "modbusrtu"],
+        blurb:     "Serial Modbus forwarded onto TCP unchanged — which does not parse as Modbus TCP and so goes unseen.",
+    }
+    IsoTp {
+        doc:       "ISO-TP transport for CAN (ISO 15765-2) — the layer UDS rides on.",
+        display:   "ISO-TP",
+        color:     0xD1A05F,
+        transport: Other,
+        rank:      3,
+        aliases:   ["isotp", "iso15765"],
+        blurb:     "Diagnostic messages split across CAN frames — and the flow control that explains a stalled session.",
+    }
+    Ocsp {
+        doc:       "OCSP certificate revocation checking (RFC 6960), carried in HTTP bodies.",
+        display:   "OCSP",
+        color:     0xC46E7B,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ocsp"],
+        blurb:     "Whether a certificate has been revoked — the verdict, not the transport status that hides it.",
+    }
+    Soap {
+        doc:       "SOAP envelopes carried in HTTP bodies — ONVIF and TR-069 among them.",
+        display:   "SOAP",
+        color:     0xB58F6E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["soap", "onvif", "cwmp", "tr069"],
+        blurb:     "The operation hiding inside POST / — which camera setting or router config was actually changed.",
+    }
+    Bier {
+        doc:       "BIER stateless multicast (RFC 8296), carried under an MPLS label stack.",
+        display:   "BIER",
+        color:     0x6FBF9E,
+        transport: Other,
+        rank:      3,
+        aliases:   ["bier"],
+        blurb:     "Multicast with the delivery list inside the packet — and how many receivers this copy is still for.",
+    }
+    Srv6 {
+        doc:       "IPv6 Segment Routing Header (RFC 8754).",
+        display:   "SRv6",
+        color:     0x5FA8D3,
+        transport: Other,
+        rank:      2,
+        aliases:   ["srv6", "srh"],
+        blurb:     "A packet carrying its own list of waypoints — and how far along that path it has got.",
+    }
+    Isns {
+        doc:       "iSNS storage name service (RFC 4171, TCP/UDP 3205).",
+        display:   "iSNS",
+        color:     0x7C9EC4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["isns"],
+        blurb:     "How an iSCSI initiator finds its targets — and the refusal that explains storage that vanished.",
+    }
+    Hip {
+        doc:       "Host Identity Protocol (RFC 7401, IP protocol 139).",
+        display:   "HIP",
+        color:     0xA88FC4,
+        transport: Other,
+        rank:      3,
+        aliases:   ["hip"],
+        blurb:     "Separating who a host is from where it is — and the NOTIFY that says why the exchange was refused.",
+    }
+    Dvmrp {
+        doc:       "DVMRP multicast routing, carried as IGMP type 0x13.",
+        display:   "DVMRP",
+        color:     0x6FA8A0,
+        transport: Other,
+        rank:      3,
+        aliases:   ["dvmrp"],
+        blurb:     "The oldest multicast routing protocol — and the Prune that explains a stream nobody is receiving.",
+    }
+    PnPtcp {
+        doc:       "PROFINET PTCP clock synchronisation (FrameIDs 0xFF00-0xFF43).",
+        display:   "PROFINET PTCP",
+        color:     0xCFA05A,
+        transport: Other,
+        rank:      3,
+        aliases:   ["pn-ptcp", "ptcp"],
+        blurb:     "The clock every isochronous PROFINET cycle depends on — whose drift shows up as process faults.",
+    }
+    Echo {
+        doc:       "Echo service (RFC 862, port 7) — reflects whatever it is sent.",
+        display:   "Echo",
+        color:     0x9AA0A6,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["echo"],
+        blurb:     "A 1983 debugging service that reflects whatever it receives — and can be aimed at someone else.",
+    }
+    Discard {
+        doc:       "Discard service (RFC 863, port 9) — swallows everything, answers nothing.",
+        display:   "Discard",
+        color:     0x8A8F94,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["discard"],
+        blurb:     "A service that throws away everything sent to it — so anything coming back is worth a look.",
+    }
+    Daytime {
+        doc:       "Daytime service (RFC 867, port 13) — the time as human-readable text.",
+        display:   "Daytime",
+        color:     0xA8AEB4,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["daytime"],
+        blurb:     "The date and time as plain text — small, ancient, and reachable from anywhere it is left on.",
+    }
+    Qotd {
+        doc:       "Quote of the Day (RFC 865, port 17) — a reflection vector.",
+        display:   "QOTD",
+        color:     0xB4A0C4,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["qotd"],
+        blurb:     "A quotation returned to whoever asked — or to whoever an attacker claimed to be.",
+    }
+    Chargen {
+        doc:       "Character Generator (RFC 864, port 19) — the classic UDP amplifier.",
+        display:   "Chargen",
+        color:     0xD1707A,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["chargen"],
+        blurb:     "Up to 512 bytes returned for a datagram it does not even read — a DDoS reflector by design.",
+    }
+    Time {
+        doc:       "Time protocol (RFC 868, port 37) — seconds since 1900 as a 32-bit value.",
+        display:   "Time",
+        color:     0x7FA8C4,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["timeproto"],
+        blurb:     "The time as one 32-bit number counted from 1900 — which runs out in 2036.",
+    }
+    Tcpmux {
+        doc:       "TCP Port Service Multiplexer (RFC 1078, TCP 1).",
+        display:   "TCPMUX",
+        color:     0x8FA88F,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["tcpmux"],
+        blurb:     "Asking a host to connect you to a service by name — a port-1 listener worth explaining.",
+    }
+    Ripng {
+        doc:       "RIPng distance-vector routing for IPv6 (RFC 2080, UDP 521).",
+        display:   "RIPng",
+        color:     0x8FBF6B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ripng"],
+        blurb:     "IPv6 routes being advertised — and metric 16, which is how RIP says a destination is gone.",
+    }
+    Mip6 {
+        doc:       "Mobile IPv6 mobility header (RFC 6275, IP protocol 135).",
+        display:   "Mobile IPv6",
+        color:     0xB58FD1,
+        transport: Other,
+        rank:      3,
+        aliases:   ["mip6", "mipv6"],
+        blurb:     "A node keeping its address while it moves — and the home agent's reason for refusing to let it.",
+    }
+    Amt {
+        doc:       "AMT multicast tunnelling over unicast (RFC 7450, UDP 2268).",
+        display:   "AMT",
+        color:     0x6BB8BF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["amt"],
+        blurb:     "Multicast tunnelled across networks that will not carry it — and where the setup stopped.",
+    }
+    Prp {
+        doc:       "PRP parallel redundancy (IEC 62439-3) — supervision frames and the redundancy control trailer.",
+        display:   "PRP",
+        color:     0xE8A33D,
+        transport: Other,
+        rank:      2,
+        aliases:   ["prp"],
+        blurb:     "A frame duplicated onto two separate networks (PRP) — and which of the two this copy crossed.",
+    }
+    PnDcp {
+        doc:       "PROFINET DCP discovery and configuration (IEC 61158-6-10 §4.3).",
+        display:   "PROFINET DCP",
+        color:     0xC48A3F,
+        transport: Other,
+        rank:      3,
+        aliases:   ["pn-dcp", "dcp"],
+        blurb:     "How a PROFINET device gets its name and address — including the unauthenticated Set that breaks a controller.",
+    }
+    Ecpri {
+        doc:       "eCPRI radio fronthaul (EtherType 0xAEFE).",
+        display:   "eCPRI",
+        color:     0x5FB3B3,
+        transport: Other,
+        rank:      3,
+        aliases:   ["ecpri"],
+        blurb:     "The link between a radio and its baseband — and the fault codes that name late fronthaul data.",
+    }
     Mrp {
         doc:       "MRP media redundancy ring (IEC 62439-2).",
         display:   "MRP",

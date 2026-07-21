@@ -4,32 +4,51 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-/// CFM opcodes (IEEE 802.1ag §21.4, extended by ITU-T Y.1731 for the
+/// CFM opcodes (IEEE 802.1Q, extended by ITU-T G.8013/Y.1731 for the
 /// performance-measurement messages).
+///
+/// The numbering has a trap in it: the standard assigns the **reply the lower
+/// number** and the request the higher one, in every pair — LBR 0x02 before
+/// LBM 0x03, LMR 0x2A before LMM 0x2B, DMR 0x2E before DMM 0x2F. Anyone who
+/// writes the names out in the order they are usually *discussed* and numbers
+/// them sequentially gets a table that is wrong from the second entry on. That
+/// is exactly what this table used to be, which made netscope report a ring
+/// protection switch as a loss measurement.
 fn opcode_name(op: u8) -> Option<&'static str> {
     Some(match op {
-        1 => "CCM (continuity check)",
-        3 => "LBR (loopback reply)",
-        4 => "LBM (loopback message)",
-        5 => "LTR (linktrace reply)",
-        6 => "LTM (linktrace message)",
-        32 => "AIS (alarm indication)",
-        33 => "LCK (locked signal)",
-        35 => "TST (test signal)",
-        37 => "APS (protection switching)",
-        39 => "MCC (maintenance communication)",
-        40 => "LMM (loss measurement message)",
-        41 => "LMR (loss measurement reply)",
-        42 => "1DM (one-way delay)",
-        43 => "DMM (delay measurement message)",
-        44 => "DMR (delay measurement reply)",
-        45 => "EXM (experimental message)",
-        46 => "EXR (experimental reply)",
-        47 => "VSM (vendor-specific message)",
-        48 => "VSR (vendor-specific reply)",
+        0x01 => "CCM (continuity check)",
+        0x02 => "LBR (loopback reply)",
+        0x03 => "LBM (loopback message)",
+        0x04 => "LTR (linktrace reply)",
+        0x05 => "LTM (linktrace message)",
+        0x06 => "RFM (reflected frame)",
+        0x07 => "SFM (send frame)",
+        0x20 => "GNM (generic notification)",
+        0x21 => "AIS (alarm indication)",
+        0x23 => "LCK (locked signal)",
+        0x25 => "TST (test signal)",
+        0x27 => "APS (protection switching)",
+        // 0x28 is R-APS, which is handled as its own protocol — see `erps`.
+        0x29 => "MCC (maintenance communication)",
+        0x2A => "LMR (loss measurement reply)",
+        0x2B => "LMM (loss measurement message)",
+        0x2D => "1DM (one-way delay)",
+        0x2E => "DMR (delay measurement reply)",
+        0x2F => "DMM (delay measurement message)",
+        0x30 => "EXR (experimental reply)",
+        0x31 => "EXM (experimental message)",
+        0x32 => "VSR (vendor-specific reply)",
+        0x33 => "VSM (vendor-specific message)",
+        0x34 => "CSF (client signal fail)",
+        0x35 => "1SL (one-way synthetic loss)",
+        0x36 => "SLR (synthetic loss reply)",
+        0x37 => "SLM (synthetic loss message)",
         _ => return None,
     })
 }
+
+/// The opcode that carries ring protection, which is a protocol of its own.
+pub(crate) const OPCODE_RAPS: u8 = 0x28;
 
 /// The common header: maintenance level and version, opcode, flags, then the
 /// offset of the first TLV (802.1ag §21.4).
@@ -87,23 +106,56 @@ mod tests {
     #[test]
     fn delay_and_loss_measurement_are_named() {
         assert_eq!(
-            dissect_cfm(&cfm(3, 43)).summary,
+            dissect_cfm(&cfm(3, 0x2F)).summary,
             "CFM DMM (delay measurement message) — level 3"
         );
         assert_eq!(
-            dissect_cfm(&cfm(3, 40)).summary,
+            dissect_cfm(&cfm(3, 0x2B)).summary,
             "CFM LMM (loss measurement message) — level 3"
         );
+    }
+
+    /// In every request/reply pair the standard gives the **reply** the lower
+    /// number. Numbering the names in the order they are usually discussed
+    /// produces a table that is wrong from the second entry on — which is what
+    /// this table was, and it made a ring protection switch read as a loss
+    /// measurement.
+    #[test]
+    fn the_reply_is_numbered_below_the_request() {
+        for (reply, request) in [
+            (0x02u8, 0x03u8), // loopback
+            (0x04, 0x05),     // linktrace
+            (0x2A, 0x2B),     // loss measurement
+            (0x2E, 0x2F),     // delay measurement
+            (0x30, 0x31),     // experimental
+            (0x32, 0x33),     // vendor-specific
+            (0x36, 0x37),     // synthetic loss
+        ] {
+            let lower = opcode_name(reply).expect("a named opcode");
+            let higher = opcode_name(request).expect("a named opcode");
+            assert!(lower.contains("reply"), "{reply:#04x} is {lower}");
+            assert!(
+                higher.contains("message"),
+                "{request:#04x} is {higher}, expected the request"
+            );
+        }
+    }
+
+    /// Ring protection is not an OAM message and is not claimed here.
+    #[test]
+    fn ring_protection_is_left_to_its_own_protocol() {
+        assert_eq!(OPCODE_RAPS, 0x28);
+        assert!(opcode_name(OPCODE_RAPS).is_none());
     }
 
     #[test]
     fn fault_notifications_are_named() {
         assert_eq!(
-            dissect_cfm(&cfm(7, 32)).summary,
+            dissect_cfm(&cfm(7, 0x21)).summary,
             "CFM AIS (alarm indication) — level 7"
         );
         assert_eq!(
-            dissect_cfm(&cfm(7, 33)).summary,
+            dissect_cfm(&cfm(7, 0x23)).summary,
             "CFM LCK (locked signal) — level 7"
         );
     }

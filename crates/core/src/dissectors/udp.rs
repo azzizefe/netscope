@@ -5,8 +5,9 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    bindings, dht, dns, dtls, mdns, mpegts, openvpn, qpack, roughtime, rtp, rtps, source_query,
-    srt_transport, turn, utp, vxlan, wol, zrtp, DissectedResult,
+    aeron, bindings, dht, dns, dtls, lorawan, mdns, memberlist, mpegts, openvpn, osc, qpack,
+    roughtime, rtp, rtps, source_query, srt_transport, turn, utp, vxlan, wol, zrtp,
+    DissectedResult,
 };
 
 pub fn dissect_udp(
@@ -61,6 +62,12 @@ pub fn dissect_udp(
         // OpenVPN shares a port number across TCP and UDP; the flag says which.
         return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, udp_payload, false);
     }
+    // 7946 is Serf's convention rather than an assignment, and the same port
+    // carries a TCP stream for the bulk state sync, so the framing has to agree
+    // before the flow is claimed.
+    if on(7946) && memberlist::looks_like_memberlist(udp_payload) {
+        return memberlist::dissect_memberlist(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
 
     // 2. Exact well-known port.
     if let Some(dissect) = bindings::udp(src_port, dst_port) {
@@ -109,6 +116,19 @@ pub fn dissect_udp(
     if roughtime::looks_like_roughtime(udp_payload) {
         return roughtime::dissect_roughtime(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
+    // 1700 is the Semtech packet forwarder's convention rather than an
+    // assignment, and it wraps the radio frame in its own JSON envelope on some
+    // paths — so the framing has to agree before the flow is claimed.
+    if on(1700) && lorawan::looks_like_lorawan(udp_payload) {
+        return lorawan::dissect_lorawan(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // OSC has no assigned port at all — every application picks its own — so a
+    // capture filtered by port finds none of it. The shape is exact enough to
+    // key on instead: an address pattern starting with a slash, or a bundle
+    // tag, with everything padded to a multiple of four bytes.
+    if osc::looks_like_osc(udp_payload) {
+        return osc::dissect_osc(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
     // DTLS rides dynamically negotiated ports (WebRTC/VPN media), so recognise
     // it structurally from its record header before falling through to plugins.
     if dtls::looks_like_dtls(udp_payload) {
@@ -117,6 +137,14 @@ pub fn dissect_udp(
     // RTPS/DDS uses dynamic ports; recognise it by its "RTPS" magic.
     if rtps::looks_like_rtps(udp_payload) {
         return rtps::dissect_rtps(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // Aeron's ports are chosen per deployment, so it is recognised by its
+    // header alone: the only defined version, a listed frame type, and an
+    // aligned length that agrees with the datagram. That is weaker evidence
+    // than a magic, so it is tried *after* every protocol that has one — it
+    // claimed a DTLS record when it ran earlier.
+    if aeron::looks_like_aeron(udp_payload) {
+        return aeron::dissect_aeron(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
     // BitTorrent DHT and Source-engine queries also ride arbitrary UDP ports.
     if dht::looks_like_dht(udp_payload) {

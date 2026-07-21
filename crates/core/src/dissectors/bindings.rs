@@ -29,23 +29,23 @@ use std::net::IpAddr;
 
 use super::DissectedResult;
 use super::{
-    ads, aerospike, afp, amqp, aodv, aprs, babel, bacnet, beanstalk, beats, bfcp, bfd, bgp,
-    bitcoin, bmp, bolt, capwap, cassandra, ceph, clamav, cldap, clickhouse, coap, coap_tcp,
-    collectd, dcerpc, dhcp, dhcpfo, dhcpv6, diameter, dicom, dlms, dlsw, dnp3, dns_tcp, doip, e1ap,
-    edonkey, elasticsearch, enip, f1ap, fcip, finger, fins, firebird, fluentd, fox, ftp, ganglia,
-    gearman, gelf, geneve, git, glbp, gnutella, gopher, graphite, gtp, gtpprime, gvcp, h225ras,
-    hadooprpc, hartip, hl7, hnbap, hsms, hsrp, iax2, ibmmq, ica, ident, iec104, imap, influxdb,
-    ipp, ipsec, irc, isakmp, iscsi, jaeger, kafka, kerberos, knxip, kpasswd, l2tp, lcsap, ldap,
-    ldp, lisp, lpd, lustre, lwapp, m2ap, m2pa, m2ua, m3ap, m3ua, managesieve, matter, megaco,
-    memcached, mgcp, minecraft, mle, modbus, mongodb, mqtt, mqttsn, msdp, msrp, mssqlbrowser,
-    mumble, mysql, nats, nbap, nbd, nbds, nbns, ndmp, nebula, netflow, ngap, ninep, nntp, nrpe,
-    nsq, ntp, nvmeof, olsr, opcua, openflow, openwire, ovsdb, pcep, pcoip, pcp, pfcp, pop3,
-    postgres, pptp, ptp, pulsar, q931, radius, radmin, rdp, redis, relp, rethinkdb, rexec, rfb,
-    riak, rip, rlogin, rmcp, roughtime, rpc, rpkirtr, rsh, rsync, rtmp, rtsp, rua, rwho, rx, s1ap,
-    sabp, sane, sap_announce, sbcap, sflow, sip, skinny, slmp, slp, smb, smpp, smtp, snmp, socks,
-    spamd, srtp_ge, ssdp, ssh, statsd, stomp, stun, sua, svn, syslog, tacacs, tds, telnet, teredo,
-    tftp, tls, tns, twamp, vxlangpe, wccp, whois, wireguard, wsd, xcp, xdmcp, xmpp, xnap, zabbix,
-    zerotier, zookeeper,
+    ads, aerospike, afp, amqp, amt, aodv, aprs, babel, bacnet, beanstalk, beats, bfcp, bfd, bgp,
+    bitcoin, bmp, bolt, capwap, cassandra, ceph, clamav, cldap, clickhouse, cmp, coap, coap_tcp,
+    collectd, dcerpc, dhcp, dhcpfo, dhcpv6, diameter, dicom, dlms, dlsw, dmx, dnp3, dns_tcp, doip,
+    e1ap, edonkey, elasticsearch, enip, f1ap, fcip, finger, fins, firebird, fluentd, fox, ftp,
+    ganglia, gearman, gelf, geneve, git, glbp, gnutella, gopher, graphite, gtp, gtpprime, gvcp,
+    h225ras, hadooprpc, hartip, hl7, hnbap, hsms, hsrp, iax2, ibmmq, ica, ident, iec104, imap,
+    influxdb, ipp, ipsec, irc, isakmp, iscsi, isns, jaeger, kafka, kerberos, knxip, kpasswd, l2tp,
+    lcsap, ldap, ldp, lisp, lpd, lustre, lwapp, m2ap, m2pa, m2ua, m3ap, m3ua, managesieve, matter,
+    megaco, memcached, mgcp, minecraft, mle, modbus, mongodb, mqtt, mqttsn, msdp, msrp,
+    mssqlbrowser, mumble, mysql, nats, nbap, nbd, nbds, nbns, ndmp, nebula, netflow, ngap, ninep,
+    nntp, nrpe, nsq, ntp, nvmeof, olsr, opcua, openflow, openwire, ovsdb, pcep, pcoip, pcp, pfcp,
+    pop3, postgres, pptp, ptp, pulsar, q931, radius, radmin, rdp, redis, relp, rethinkdb, rexec,
+    rfb, riak, rip, ripng, rlogin, rmcp, roughtime, rpc, rpkirtr, rsh, rsync, rtmp, rtpmidi, rtsp,
+    rua, rwho, rx, s1ap, sabp, sane, sap_announce, sbcap, sflow, sip, skinny, slmp, slp,
+    small_services, smb, smpp, smtp, snmp, socks, spamd, srtp_ge, ssdp, ssh, statsd, stomp, stun,
+    sua, svn, syslog, tacacs, tds, telnet, teredo, tftp, tls, tns, twamp, vxlangpe, wccp, whois,
+    wireguard, wsd, xcp, xdmcp, xmpp, xnap, zabbix, zerotier, zookeeper,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -113,6 +113,14 @@ fn lookup(table: &[(u16, PortDissector)], port: u16) -> Option<PortDissector> {
 /// TCP service ports, sorted by port number so [`lookup`] can binary-search.
 /// Keep it sorted — [`tables_are_sorted_and_unique`] enforces it.
 static TCP_PORTS: &[(u16, PortDissector)] = &[
+    // The 1980s debugging services. Nothing legitimate has used them in
+    // decades, so seeing one at all is the finding — see `small_services`.
+    (1, small_services::dissect_tcpmux),
+    (7, small_services::dissect_echo),
+    (9, small_services::dissect_discard),
+    (13, small_services::dissect_daytime),
+    (17, small_services::dissect_qotd),
+    (19, small_services::dissect_chargen),
     (21, ftp::dissect_ftp),
     (22, ssh::dissect_ssh),
     (23, telnet::dissect_telnet),
@@ -153,6 +161,7 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (646, ldp::dissect_ldp),
     (647, dhcpfo::dissect_dhcpfo),
     (783, spamd::dissect_spamd),
+    (829, cmp::dissect_cmp),
     (861, twamp::dissect_twamp),
     (862, twamp::dissect_twamp),
     (873, rsync::dissect_rsync),
@@ -181,6 +190,9 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (2945, megaco::dissect_megaco),
     (3000, aerospike::dissect_aerospike),
     (3050, firebird::dissect_firebird),
+    // iSNS sits just below iSCSI's own port, and is where an initiator's
+    // targets come from in the first place.
+    (3205, isns::dissect_isns),
     (3225, fcip::dissect_fcip),
     (3238, bfcp::dissect_bfcp),
     (3260, iscsi::dissect_iscsi),
@@ -261,6 +273,15 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
 
 /// UDP service ports, sorted by port number. See [`TCP_PORTS`].
 static UDP_PORTS: &[(u16, PortDissector)] = &[
+    // The UDP variants are the reflectors: a spoofed datagram to any of these
+    // returns traffic to whoever the source address claimed to be. TCPMUX is
+    // absent because it is a TCP service by definition (RFC 1078).
+    (7, small_services::dissect_echo),
+    (9, small_services::dissect_discard),
+    (13, small_services::dissect_daytime),
+    (17, small_services::dissect_qotd),
+    (19, small_services::dissect_chargen),
+    (37, small_services::dissect_time),
     (67, dhcp::dissect_dhcp),
     (68, dhcp::dissect_dhcp),
     (69, tftp::dissect_tftp),
@@ -281,6 +302,9 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (513, rwho::dissect_rwho),
     (514, syslog::dissect_syslog),
     (520, rip::dissect_rip),
+    // RIPng shares almost nothing with RIPv2 but its shape, so it gets its own
+    // dissector rather than a version branch inside RIP's.
+    (521, ripng::dissect_ripng),
     (546, dhcpv6::dissect_dhcpv6),
     (547, dhcpv6::dissect_dhcpv6),
     (623, rmcp::dissect_rmcp),
@@ -303,10 +327,12 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (2123, gtp::dissect_gtp),
     (2152, gtp::dissect_gtp),
     (2222, enip::dissect_enip),
+    (2268, amt::dissect_amt),
     (2427, mgcp::dissect_mgcp),
     (2727, mgcp::dissect_mgcp),
     (2944, megaco::dissect_megaco),
     (2945, megaco::dissect_megaco),
+    (3205, isns::dissect_isns),
     (3222, glbp::dissect_glbp),
     (3386, gtpprime::dissect_gtpprime),
     (3478, stun::dissect_stun),
@@ -324,6 +350,8 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (4569, iax2::dissect_iax2),
     (4739, netflow::dissect_netflow),
     (4790, vxlangpe::dissect_vxlangpe),
+    (5004, rtpmidi::dissect_rtpmidi),
+    (5005, rtpmidi::dissect_rtpmidi),
     (5007, slmp::dissect_slmp),
     (5060, sip::dissect_sip),
     (5061, sip::dissect_sip),
@@ -333,9 +361,11 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (5351, pcp::dissect_pcp),
     (5540, matter::dissect_matter),
     (5555, xcp::dissect_xcp),
+    (5568, dmx::dissect_sacn),
     (5683, coap::dissect_coap),
     (6081, geneve::dissect_geneve),
     (6343, sflow::dissect_sflow),
+    (6454, dmx::dissect_artnet),
     (6696, babel::dissect_babel),
     (6831, jaeger::dissect_jaeger),
     // Each AFS service has its own port in this block, and the port is what

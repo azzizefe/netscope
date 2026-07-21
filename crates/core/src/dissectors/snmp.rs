@@ -76,20 +76,10 @@ fn tlv_total_len(data: &[u8]) -> Option<usize> {
 }
 
 /// Decode a BER length, returning (length, number-of-length-bytes-consumed).
+///
+/// Delegates to [`super::der`], which is where this rule lives now.
 fn read_len(data: &[u8]) -> Option<(usize, usize)> {
-    let first = *data.first()?;
-    if first & 0x80 == 0 {
-        return Some((first as usize, 1)); // short form
-    }
-    let n = (first & 0x7f) as usize;
-    if n == 0 || n > 4 {
-        return None; // indefinite / oversized — not expected for SNMP here
-    }
-    let mut len = 0usize;
-    for i in 0..n {
-        len = (len << 8) | *data.get(1 + i)? as usize;
-    }
-    Some((len, 1 + n))
+    super::der::length(data)
 }
 
 #[cfg(test)]

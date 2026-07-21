@@ -8,9 +8,10 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    adsb, amqp1, bindings, bitcoin, bittorrent, ceph, drda, fix, hl7, http, http2, ibmmq, lmtp,
-    lustre, mbus, memcached_bin, milter, mms, mysqlx, nmea, ntlm, openvpn, redis_cluster, s7comm,
-    someip, spice, syslog, thrift, websocket, x11, zmtp, DissectedResult,
+    adsb, amqp1, bindings, bitcoin, bittorrent, ceph, consul_rpc, drbd, drda, fix, hl7, http,
+    http2, ibmmq, iec101, lmtp, lustre, mbus, memcached_bin, milter, mms, modbus_rtu, mysqlx, nmea,
+    ntlm, openvpn, redis_cluster, s7comm, someip, spice, syslog, thrift, websocket, x11, zmtp,
+    DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -314,6 +315,25 @@ fn dissect_tcp_inner(
         if on(8891) && milter::looks_like_milter(tcp_payload) {
             return milter::dissect_milter(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
+        // The same gateway pattern as Modbus RTU: a serial telecontrol link
+        // forwarded onto the -104 port unchanged. FT1.2 repeats its length and
+        // start bytes, so the framing decides and -104 is not shadowed.
+        if on(2404) && iec101::looks_like_iec101(tcp_payload) {
+            return iec101::dissect_iec101(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // A serial gateway forwards RTU frames onto 502 unchanged. They are
+        // not Modbus TCP and do not parse as it, so RTU is tried first — its
+        // CRC is decisive, and a real Modbus TCP frame will not satisfy it.
+        if on(502) && modbus_rtu::looks_like_modbus_rtu(tcp_payload) {
+            return modbus_rtu::dissect_modbus_rtu(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // 8300 is Consul's convention rather than an assignment, and the type
+        // byte only leads the first segment of a connection — so a mid-stream
+        // segment is left to the generic TCP summary rather than having a
+        // random byte read as a protocol type.
+        if on(8300) && consul_rpc::looks_like_consul_rpc(tcp_payload) {
+            return consul_rpc::dissect_consul_rpc(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
 
         // TCP 514 is assigned to rsh, but syslog-over-TCP squats there in
         // practice and is far more common on a modern network. The two are
@@ -365,6 +385,12 @@ fn dissect_tcp_inner(
         }
         if lustre::looks_like_lustre(tcp_payload) {
             return lustre::dissect_lustre(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        // A DRBD resource is put on whatever port its configuration names,
+        // climbing from 7788 as resources are added, so there is no port to
+        // bind — but each header layout carries a genuine magic.
+        if drbd::looks_like_drbd(tcp_payload) {
+            return drbd::dissect_drbd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // The Redis cluster bus has no port of its own — it is the data port
         // plus ten thousand, so it moves whenever the data port does. The

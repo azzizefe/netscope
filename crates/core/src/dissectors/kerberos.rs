@@ -164,22 +164,14 @@ pub fn dissect_kerberos(
     }
 }
 
-/// Read a DER length, returning it and how many bytes it occupied.
+/// Read a DER length at `at`, returning it and how many bytes it occupied.
+///
+/// The rule itself lives in [`super::der`] — three copies of it had grown up
+/// independently before that module existed, and the long form's sharp edge
+/// (the low bits are a *count* of length bytes, and zero means indefinite)
+/// is exactly the kind of thing copies get wrong differently.
 fn der_length(data: &[u8], at: usize) -> Option<(usize, usize)> {
-    let first = *data.get(at)?;
-    if first < 0x80 {
-        return Some((first as usize, 1));
-    }
-    // The long form encodes the number of length bytes in the low seven bits.
-    let count = (first & 0x7F) as usize;
-    if count == 0 || count > 4 {
-        return None;
-    }
-    let mut len = 0usize;
-    for i in 0..count {
-        len = (len << 8) | *data.get(at + 1 + i)? as usize;
-    }
-    Some((len, count + 1))
+    super::der::length(data.get(at..)?)
 }
 
 /// The `error-code` field of a KRB-ERROR, which is context tag 6.

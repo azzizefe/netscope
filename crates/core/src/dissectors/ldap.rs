@@ -126,8 +126,7 @@ fn directory_reason(op: &[u8]) -> Option<&'static str> {
 /// Step over the tag-length-value starting at `at`, returning where the next
 /// one begins.
 fn skip_tlv(buf: &[u8], at: usize) -> Option<usize> {
-    let (len, size) = ber_len(buf.get(at + 1..)?)?;
-    Some(at + 1 + size + len)
+    super::der::skip(buf, at)
 }
 
 /// What an LDAP result code means.
@@ -218,21 +217,10 @@ fn ber_skip_len(buf: &[u8]) -> Option<usize> {
 }
 
 /// Parse a BER length: returns (length value, bytes the length field occupied).
+///
+/// Delegates to [`super::der`], which is where this rule lives now.
 fn ber_len(buf: &[u8]) -> Option<(usize, usize)> {
-    let first = *buf.first()?;
-    if first & 0x80 == 0 {
-        Some((first as usize, 1))
-    } else {
-        let n = (first & 0x7f) as usize;
-        if n == 0 || n > 4 || buf.len() < 1 + n {
-            return None;
-        }
-        let mut len = 0usize;
-        for &b in &buf[1..1 + n] {
-            len = (len << 8) | b as usize;
-        }
-        Some((len, 1 + n))
-    }
+    super::der::length(buf)
 }
 
 /// Skip a whole INTEGER TLV (0x02), returning bytes consumed.
