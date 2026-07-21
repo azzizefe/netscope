@@ -357,10 +357,13 @@ yolları**.
       EtherType ile dispatch edilemez (frame'in EtherType'ı iç protokolündür),
       bu yüzden frame sonundan suffix ile bulunuyor. PRP-0 **bilerek
       alınmadı** — suffix'i yok, yanlış olduğunda hayatta kalacak kanıt yok.*
-- [ ] CC-Link IE Field Basic — UDP 61450 ⚠️ *(**engellendi:** açık referans
-      implementasyon yok, CLPA spec'i kayıt gerektiriyor. Ezberden yazılmayacak
-      — §5 kuralı. Spec erişimi sağlanana kadar beklemede.)*
-- [ ] CC-Link IE Control ⚠️
+- [x] **CC-Link IE Field Basic — UDP 61450** ✅ → [`cclink_ie_field_basic.rs`](../crates/core/src/dissectors/cclink_ie_field_basic.rs)
+      *NTT'nin açık kaynak Spicy/Zeek parser'ı referans alınarak doğrulandı.
+      SLMP/MELSEC 3E/4E çerçeve yapısını UDP 61450 üzerinde taşır; ortak SLMP
+      ayrıştırıcı motoru (`slmp.rs`) kullanılarak entegre edildi.*
+- [ ] CC-Link IE Control ⚠️ *(**engellendi:** Tescilli donanım ve ASIC katmanı
+      gerektiriyor, standart IP ağlarında doğrudan koşmuyor. Açık bir referans
+      şema bulunamadı — §5 kuralı uyarınca beklemede.)*
 - [x] Foundation Fieldbus HSE — UDP/TCP 1089-1091 ✅ *(+3622)*
 - [x] **OPC UA PubSub (UADP)** ✅ → [`uadp.rs`](../crates/core/src/dissectors/uadp.rs)
 - [x] **Modbus RTU over TCP** ✅ → [`modbus_rtu.rs`](../crates/core/src/dissectors/modbus_rtu.rs)

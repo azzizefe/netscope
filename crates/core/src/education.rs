@@ -393,6 +393,16 @@ configuration is still being negotiated.",
 — that is the live process data. A gap in the sequence means a dropped datagram. \
 \"Discovery Request\" means a subscriber is still looking for its publisher.",
         },
+        Protocol::CcLinkIeFieldBasic => Lesson {
+            title: "CC-Link IE Field Basic — software-based industrial Ethernet",
+            summary: "Mitsubishi's open Ethernet protocol for cyclic device exchange based on SLMP.",
+            body: "CC-Link IE Field Network Basic brings industrial Ethernet to small-scale \
+devices by running on standard Ethernet hardware without dedicated ASICs. It uses UDP/IP \
+transmissions on port 61450 for cyclic communication (remote I/O registers RX/RY and RWw/RWr) \
+and encapsulates SLMP (Seamless Message Protocol) for transient parameters, configuration, \
+and diagnostics. It's the standard software-based fieldbus in Mitsubishi automation environments.",
+            look_for: "Packets on UDP 61450 carrying SLMP request/response subheaders (0x5000 / 0xD000) for cyclic read/write commands.",
+        },
         Protocol::Rtp => Lesson {
             title: "RTP — the voice and video itself",
             summary: "The actual audio/video stream of a call, once SIP has set it up.",
