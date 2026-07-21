@@ -6,7 +6,7 @@ use crate::models::Protocol;
 
 use super::{
     aeron, bindings, dht, dns, dtls, lorawan, mdns, memberlist, mpegts, openvpn, osc, qpack,
-    roughtime, rtp, rtps, source_query, srt_transport, turn, utp, vxlan, wol, zrtp,
+    rgoose, roughtime, rtp, rtps, source_query, srt_transport, turn, utp, vxlan, wol, zrtp,
     DissectedResult,
 };
 
@@ -67,6 +67,11 @@ pub fn dissect_udp(
     // before the flow is claimed.
     if on(7946) && memberlist::looks_like_memberlist(udp_payload) {
         return memberlist::dissect_memberlist(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // 102 is the OSI transport port, which carries more than R-GOOSE — so the
+    // session identifier has to agree before a trip message is claimed.
+    if on(102) && rgoose::looks_like_rgoose(udp_payload) {
+        return rgoose::dissect_rgoose(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
 
     // 2. Exact well-known port.

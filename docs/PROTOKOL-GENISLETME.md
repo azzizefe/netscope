@@ -5,8 +5,8 @@
 > Bu belge bir istek listesi değil; her satırı bir kabul kriterine, bir tanınma
 > yöntemine ve bir reddetme gerekçesine bağlı bir çalışma planıdır.
 
-**Durum:** 378 protokol · 1774 core + 36 TUI + 2 desktop test · `cargo test --workspace` yeşil
-**Son güncelleme:** 2026-07-21 · **Tamamlanan: 37/250 + E1, E3, E7, E8 (E2/E4 başladı, E5 engelli)** *(+4 zaten kapsanıyordu, 3 iptal, 1 hata düzeltmesi)*
+**Durum:** 390 protokol · 1889 core + 36 TUI + 2 desktop test · `cargo test --workspace` yeşil
+**Son güncelleme:** 2026-07-21 · **Tamamlanan: 49/250 + E1, E3, E7, E8 (E2/E4 başladı, E5 engelli)** *(+5 zaten kapsanıyordu, 3 iptal, 2 hata düzeltmesi)*
 
 ---
 
@@ -360,7 +360,7 @@ yolları**.
       implementasyon yok, CLPA spec'i kayıt gerektiriyor. Ezberden yazılmayacak
       — §5 kuralı. Spec erişimi sağlanana kadar beklemede.)*
 - [ ] CC-Link IE Control ⚠️
-- [ ] Foundation Fieldbus HSE — UDP/TCP 1089-1091 ✅
+- [x] Foundation Fieldbus HSE — UDP/TCP 1089-1091 ✅ *(+3622)*
 - [ ] OPC UA PubSub (UADP) — UDP 4840 ✅
 - [x] **Modbus RTU over TCP** ✅ → [`modbus_rtu.rs`](../crates/core/src/dissectors/modbus_rtu.rs)
       *Tanıma tamamen CRC-16/MODBUS'a dayanıyor ve algoritma **yayımlanmış
@@ -368,10 +368,10 @@ yolları**.
       sabite, kendi okumama değil.*
 - [ ] Modbus ASCII ⚠️ *(E2)*
 - [ ] S7comm-plus ⚠️
-- [ ] LonTalk / EIA-852 (LonWorks over IP) ✅
+- [x] LonTalk / EIA-852 (LonWorks over IP) ✅ *(iki protokol: CN/IP tüneli + içindeki LonTalk)*
 - [ ] wM-Bus (wireless M-Bus, EN 13757-4) ✅
-- [ ] DLR — Device Level Ring (ODVA) ✅
-- [ ] ERPS — ITU-T G.8032 halka koruma ✅
+- [x] DLR — Device Level Ring (ODVA) ✅
+- [x] ERPS — ITU-T G.8032 halka koruma ✅ *(R-APS; CFM opcode tablosu hatası burada yakalandı)*
 - [x] **PROFINET DCP** ✅ → [`pn_dcp.rs`](../crates/core/src/dissectors/pn_dcp.rs)
       *`profinet.rs` yalnızca FrameID'yi adlandırıyordu; DCP bloğu okunmuyordu.
       Artık ayrı protokol: blok listesi yürünüyor (istasyon adı serbest metin,
@@ -382,10 +382,10 @@ yolları**.
       aralığın tamamını "RT Class 3 (isochronous)" diye etiketliyordu; Wireshark
       `packet-pn-rt.c`'ye göre aralığın tamamı PN-PTCP, RT Class 3 ise düşük
       FrameID'lerde. Yanlış etiket kaldırıldı.*
-- [ ] openSAFETY ✅
+- [x] openSAFETY ✅ *(UDP 9877 / 8755)*
 - [ ] CIP Safety ⚠️
 - [ ] PROFIsafe ⚠️
-- [ ] R-GOOSE / R-SV (IEC 61850-90-5, routable) ✅
+- [x] R-GOOSE / R-SV (IEC 61850-90-5, routable) ✅ *(UDP 102 + oturum kimliği guard'ı)*
 - [x] **IEC 60870-5-101 over TCP** ✅ → [`iec101.rs`](../crates/core/src/dissectors/iec101.rs)
       *FT1.2 uzunluğunu iki kez ve başlangıç baytını tekrar gönderiyor — tanıma
       o fazlalığa dayanıyor, böylece 2404'te -104 gölgelenmiyor. Link katmanı
@@ -411,16 +411,16 @@ yolları**.
       *Hata bayrakları asıl içerik: "no slave response" cihazın ölü olduğunu,
       "checksum error" kablolamayı, "parity error" sorunun kendisinin bozuk
       geldiğini gösteriyor — üç farklı tamir.*
-- [ ] FlexRay ✅
+- [x] FlexRay ✅ *(DLT 210; NFI aktif-düşük)*
 - [ ] MOST ⚠️
 - [ ] CCP — CAN Calibration Protocol ✅ *(XCP'nin selefi)*
 - [ ] SAE J1708 / J1587 ✅ *(E2)*
 - [ ] NMEA 2000 ✅ *(E3; J1939 üstü)*
-- [ ] SOME/IP-TP ✅ *(segmentasyon; mevcut `someip.rs` komşusu)*
+- [x] SOME/IP-TP ✅ *(mevcut `someip.rs` TP bayrağını hiç okumuyordu — her segment "message" olarak düşüyordu)*
 - [ ] AUTOSAR SecOC ⚠️
 - [ ] AUTOSAR PDU ⚠️
-- [ ] gPTP — IEEE 802.1AS ✅ *(PTP profili; TSN saat senkronu)*
-- [ ] AVDECC — IEEE 1722.1 ✅
+- [x] gPTP — IEEE 802.1AS ✅ *(**yeni satır değil:** ayrı tel formatı değil, 1588 profili. Wireshark da protokol sütununu `PTPv2` bırakıp yalnız profili işaretliyor. `ptp.rs` `majorSdoId` nibble'ını okuyacak şekilde genişletildi — sadece Ethernet üstünde, çünkü 802.1AS'in UDP taşıması yok)*
+- [ ] AVDECC — IEEE 1722.1 ⚠️ *(alt tipleri `avtp.rs`'de zaten adlandırılmış; yeni satır değil, derinleştirme işi)*
 - [ ] DoCAN ⚠️
 
 ### 5.3 · Faz 3 — Telekom & mobil çekirdek (25)
@@ -440,14 +440,14 @@ Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
 - [ ] NRPPa ✅
 - [ ] XwAP ⚠️
 - [ ] W1AP ⚠️
-- [ ] BSSGP ✅
-- [ ] GPRS-NS ✅
+- [x] BSSGP ✅ *(NS içinden; bağımsız giriş noktası yok)*
+- [x] GPRS-NS ✅ *(UDP 2157; `packet-nsip.c`)*
 - [ ] GPRS-LLC ✅
 - [ ] SNDCP ✅
 - [ ] INAP ✅ *(TCAP üstü; mevcut `tcap.rs` operasyon tablosu genişler)*
 - [ ] CAMEL ✅ *(TCAP üstü)*
 - [ ] MTP2 ⚠️
-- [ ] MTP3 ✅
+- [x] MTP3 ✅ *(DLT 141; M2PA/M2UA MTP3'ten söz ediyordu ama okumuyordu)*
 - [ ] SGsAP ✅
 - [ ] Sv arayüzü ⚠️
 - [ ] GTPv1-U ✅ *(mevcut `gtp.rs`'ten ayrı kullanıcı düzlemi)*
@@ -849,7 +849,7 @@ Anlamsız eşiği tutup her fazda "ihlal" raporlamaktansa kaldırmak doğru olan
 | 11 | Legacy & küçük servisler | 25 | 🟨 **8/25** *(PBB zaten kapsanıyordu)* |
 | | **Toplam** | **250** | **🟨 40/250** |
 
-**Hedef:** 342 → 592 protokol · **Şu an: 378**
+**Hedef:** 342 → 592 protokol · **Şu an: 390**
 
 ### Tamamlanan batch'ler
 
@@ -876,6 +876,17 @@ Anlamsız eşiği tutup her fazda "ihlal" raporlamaktansa kaldırmak doğru olan
 | 19 | LoRaWAN; **Modbus ASCII ertelendi** | Wireshark `packet-lorawan.c` | +8 |
 | 20 | Aeron *(yapısal guard DTLS'i kapmıştı — düzeltildi)* | Wireshark `packet-aeron.c` | +8 |
 | 21 | CMP *(E1+E8 üstünde)*; **H.324/SRP adı karışıklığı yakalandı** | Wireshark `packet-cmp.c` tabloları, RFC 4210 | +10 |
+| 33 | GPRS-NS + BSSGP. BSSGP yalnız NS veri PDU'su içinden ulaşılıyor — CN/IP+LonTalk ile aynı desen, bağımsız giriş noktası yok. BSSGP TLV uzunluğu **uzantı bitli**: üst bit set ise 1 bayt, değilse 2 — tek bayt varsaymak bir sonraki elemanın kimliğini veri sanıp yürüyüşü kaydırıyor | Wireshark `packet-nsip.c` UNITDATA yerleşimi + `packet-bssgp.c` PDU/cause tabloları | +16 |
+| 32 | MTP3 (DLT 141). Yönlendirme etiketi tek bir **little-endian** kelime: 14-bit DPC + 14-bit OPC + 4-bit SLS, hiçbiri bayta hizalı değil. Ters okumak da, nokta kodlarını 16-bit sanmak da **inandırıcı** nokta kodları üretiyor — nokta kodları düzenleyici tarafından atandığı için yanlış olan soruşturmayı başka bir operatöre gönderiyor | Wireshark `packet-mtp3.c` maskeleri + `tvb_get_letohl` | +9 |
+| 31 | SOME/IP-TP. **Mevcut kodda boşluk:** `someip.rs` mesaj tipini düz eşleştirdiği için TP bayraklı her segment "message" oluyordu — segmentasyon tamamen görünmezdi. Ofset **16-baytlık birim** sayıyor; bayt sanmak her segmenti gerçek konumunun 1/16'sına koyup sessizce yanlış birleştiriyor | Wireshark `packet-someip.c` `tp_offset <<= 4`, maske sabitleri | +7 |
+| 30 | R-GOOSE / R-SV. İki kritik alan: **simülasyon biti** (röle test modu ile uyuşmazsa gerçek açtırma yok sayılıyor ya da sahte olan uygulanıyor, ikisi de loglanmıyor) ve **kimlik doğrulama** (key id 0 + IV yok = yönlendirilebilir, taklit edilebilir bir kesici açtırma). IV değişken uzunlukta ve yük ondan sonra başlıyor — atlamak simülasyon bitini IV'nin baytlarından okutuyor | Wireshark `packet-goose.c` `dissect_rgoose` ofsetleri | +8 |
+| 29 | openSAFETY — *black channel*: altındaki taşımaya hiç güvenmiyor, tüm güvenlik garantisi çerçevenin içinde. 10-bit adresin üst 2 biti mesaj kimliği baytının içinde yaşıyor — baytı bütün okumak 255 üstü her düğümü "bilinmeyen mesaj" yapıyor, adresi 8 bite kırpmak dört düğümü tek düğüm gösteriyor | Wireshark `packet-opensafety.h` mesaj/servis tabloları + `OSS_FRAME_ADDR` makrosu | +10 |
+| 28 | CN/IP (ANSI/CEA-852) + LonTalk (CEA-709.1). LonTalk yalnız tünel içinden ulaşılıyor, o yüzden **bağımsız giriş noktası yok** — `every_dissector_module_is_reachable` bunu yakaladı, çağrılmayan `dissect_lontalk` kaldırıldı. Uzantı uzunluğu 4-baytlık birim sayıyor; bayt sanmak iç çerçeveyi kaydırıyor | Wireshark `packet-cnip.c` ofsetleri + `packet-lon.c` tabloları | +17 |
+| 27 | Foundation Fieldbus HSE. Protokol kimliği (üst 6 bit) ile mesaj tipi (alt 2 bit) aynı baytta — baytı bütün okumak bütün response ve error'ları kaybediyor. Aynı servis numarası confirmed/unconfirmed tablolarında farklı anlam taşıyor (2 = `read` / `event notification`) | Wireshark `packet-ff.h` maskeleri ve servis tabloları | +10 |
+| 26 | FlexRay (DLT 210). **Aktif-düşük tuzağı:** `NFI` *set* normal çerçeve, *clear* null çerçeve — sezgisel okuma bütün teşhisi tersine çeviriyor. 11-bit slot kimliği bayraklarla aynı baytı paylaşıyor | Wireshark `packet-flexray.h` maskeleri + `if (nfi)` dalı, libpcap `dlt.h` | +11 |
+| 25 | gPTP/802.1AS — **protokol sayısı artmadı, bilerek.** Profil, tel formatı değil; `ptp.rs` genişletildi (profil + domain), UDP yolunda profil iddia edilmiyor | Wireshark `packet-ptp.c` `ptpv2_majorsdoid_vals`, `is_802_1as` koşulu | +8 |
+| 24 | DLR — Device Level Ring. **Test kendi iddiamı çürüttü:** beacon aralığının ters okunuşunu "makul görünür, gözden kaçar" diye yazmıştım; gerçek değer 400 µs → 2.415.984.640 (≈40 dk), yani apaçık saçma. İddia doğruya çekildi | Wireshark `packet-enip.c` + `packet-enip.h` ofsetleri | +9 |
+| 23 | ERPS/R-APS. **Mevcut kodda hata bulundu:** `cfm.rs` opcode tablosu CCM dışında baştan sona yanlıştı — standart her çiftte yanıtı isteğin *altına* numaralıyor (LBR 0x02 / LBM 0x03, LMR 0x2A / LMM 0x2B), tablo ise adları tartışılma sırasına göre ardışık numaralamış. Sonuç: halka koruma anahtarlaması "kayıp ölçümü" olarak okunuyordu | Wireshark `packet-cfm.c` `#define` blokları, ITU-T G.8032 | +11 |
 | 22 | **E9: `pkix.rs`** ortak `PKIStatusInfo` (CMP + TSP); RFC 3161 TSP. **Guard kırma ölü kod buldu:** status 0 kolları metni sabit yazdığı için sonuç sözcüğü eşlemesi hiç çalışmıyordu — testi geçiren yol, iddia ettiği yol değildi | Wireshark `packet-pkixtsp.c` `PKIFailureInfo_bits[]`, RFC 3161 | +11 |
 
 > Her batch'te guard'lar bozularak doğrulandı ve editörle geri alındı:

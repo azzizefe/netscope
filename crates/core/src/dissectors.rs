@@ -32,6 +32,7 @@ pub mod bluetooth;
 pub mod bmp;
 pub mod bolt;
 pub mod bssap;
+pub mod bssgp;
 pub mod can;
 pub mod capwap;
 pub mod cassandra;
@@ -44,6 +45,7 @@ pub mod clamav;
 pub mod cldap;
 pub mod clickhouse;
 pub mod cmp;
+pub mod cnip;
 pub mod coap;
 pub mod coap_tcp;
 pub mod collectd;
@@ -59,6 +61,7 @@ pub mod dht;
 pub mod diameter;
 pub mod dicom;
 pub mod dlms;
+pub mod dlr;
 pub mod dlsw;
 pub mod dmx;
 pub mod dnp3;
@@ -78,6 +81,7 @@ pub mod edonkey;
 pub mod eigrp;
 pub mod elasticsearch;
 pub mod enip;
+pub mod erps;
 pub mod erspan;
 pub mod esmc;
 pub mod ethercat;
@@ -86,10 +90,12 @@ pub mod ethernet;
 pub mod f1ap;
 pub mod fcip;
 pub mod fcoe;
+pub mod ff_hse;
 pub mod finger;
 pub mod fins;
 pub mod firebird;
 pub mod fix;
+pub mod flexray;
 pub mod fluentd;
 pub mod fox;
 pub mod ftp;
@@ -163,6 +169,7 @@ pub mod linktypes;
 pub mod lisp;
 pub mod lldp;
 pub mod lmtp;
+pub mod lontalk;
 pub mod lorawan;
 pub mod lpd;
 pub mod lustre;
@@ -201,6 +208,7 @@ pub mod mrp_registration;
 pub mod msdp;
 pub mod msrp;
 pub mod mssqlbrowser;
+pub mod mtp3;
 pub mod mumble;
 pub mod mysql;
 pub mod mysqlx;
@@ -222,6 +230,7 @@ pub mod nmea;
 pub mod nntp;
 pub mod nrpe;
 pub mod nsh;
+pub mod nsip;
 pub mod nsq;
 pub mod ntlm;
 pub mod ntp;
@@ -231,6 +240,7 @@ pub mod ocsp;
 pub mod olsr;
 pub mod opcua;
 pub mod openflow;
+pub mod opensafety;
 pub mod openvpn;
 pub mod openwire;
 pub mod osc;
@@ -273,6 +283,7 @@ pub mod relp;
 pub mod rethinkdb;
 pub mod rexec;
 pub mod rfb;
+pub mod rgoose;
 pub mod riak;
 pub mod rip;
 pub mod ripng;
@@ -324,6 +335,7 @@ pub mod soap;
 pub mod socks;
 pub mod someip;
 pub mod someip_sd;
+pub mod someip_tp;
 pub mod source_query;
 pub mod spamd;
 pub mod spice;
@@ -487,7 +499,9 @@ const DLT_BT_HCI_H4_WITH_PHDR: i32 = 201; // …with a direction pseudo-header
 const DLT_USB_LINUX: i32 = 189; // usbmon, 48-byte header
 const DLT_USB_LINUX_MMAPPED: i32 = 220; // usbmon, 64-byte header
 const DLT_CAN_SOCKETCAN: i32 = 227; // SocketCAN (can0/vcan0)
+const DLT_MTP3: i32 = 141; // SS7 MTP3, with no MTP2 or pseudo-header
 const DLT_LIN: i32 = 212; // LIN bus, with a capture pseudo-header
+const DLT_FLEXRAY: i32 = 210; // FlexRay, with a two-byte measurement header
 const DLT_USBPCAP: i32 = 249; // Windows USBPcap
 const DLT_IEEE802_15_4: i32 = 195; // IEEE 802.15.4 Wireless PAN (Zigbee)
                                    // Captures that carry IP with no Ethernet header. Treating these as Ethernet
@@ -540,7 +554,9 @@ fn dissect_linktype_inner(data: &[u8], linktype: i32) -> DissectedResult {
         DLT_USB_LINUX | DLT_USB_LINUX_MMAPPED => usb::dissect_usb_linux(data),
         DLT_USBPCAP => usb::dissect_usbpcap(data),
         DLT_CAN_SOCKETCAN => can::dissect_can(data),
+        DLT_MTP3 => mtp3::dissect_mtp3(data),
         DLT_LIN => lin::dissect_lin(data),
+        DLT_FLEXRAY => flexray::dissect_flexray(data),
         DLT_IEEE802_15_4 => zigbee::dissect_ieee802154(data),
         DLT_NULL => linktypes::dissect_loopback(data),
         DLT_LOOP => linktypes::dissect_loop(data),
@@ -632,6 +648,7 @@ const ETHERTYPE_PBB: u16 = 0x88E7; // 802.1ah provider backbone bridging
 const ETHERTYPE_NSH: u16 = 0x894F; // Service function chaining (RFC 8300)
 const ETHERTYPE_BATMAN: u16 = 0x4305; // B.A.T.M.A.N. advanced mesh
 const ETHERTYPE_TRILL: u16 = 0x22F3; // Routed Ethernet (RFC 6325)
+const ETHERTYPE_DLR: u16 = 0x80E1; // EtherNet/IP Device Level Ring (ODVA)
 const ETHERTYPE_CFM: u16 = 0x8902; // Connectivity Fault Management (802.1ag)
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
@@ -699,6 +716,10 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_NSH => nsh::dissect_nsh(payload),
         ETHERTYPE_BATMAN => batman::dissect_batman(payload),
         ETHERTYPE_TRILL => trill::dissect_trill(payload),
+        // Ring protection shares the CFM frame format but is a protocol of
+        // its own, so the opcode decides which one this is.
+        ETHERTYPE_DLR => dlr::dissect_dlr(payload),
+        ETHERTYPE_CFM if payload.get(1) == Some(&cfm::OPCODE_RAPS) => erps::dissect_erps(payload),
         ETHERTYPE_CFM => cfm::dissect_cfm(payload),
         ETHERTYPE_AOE => aoe::dissect_aoe(payload),
         ETHERTYPE_ROCE => roce::dissect_roce(payload),
@@ -1789,6 +1810,21 @@ mod tests {
         buf
     }
 
+    /// Ring protection shares CFM's EtherType and frame format, so only the
+    /// opcode separates them. Getting this wrong reports a ring switching its
+    /// protection link as an ordinary maintenance message.
+    #[test]
+    fn ring_protection_and_cfm_are_told_apart_by_opcode() {
+        // Maintenance level 7, version 1, then the opcode.
+        let raps = build_eth_frame(
+            0x8902,
+            &[0xE1, 0x28, 0x00, 0x20, 0xB0, 0x80, 0, 0, 0, 0, 0, 0],
+        );
+        let ccm = build_eth_frame(0x8902, &[0xE1, 0x01, 0x00, 0x04]);
+        assert_eq!(dissect(&raps).protocol, Protocol::Erps);
+        assert_eq!(dissect(&ccm).protocol, Protocol::Cfm);
+    }
+
     #[test]
     fn end_to_end_lldp_via_dissect() {
         // Chassis ID + Port ID + TTL + System Name TLVs behind EtherType 0x88CC.
@@ -2874,6 +2910,12 @@ mod robustness {
             include_str!("dissectors/iec101.rs"),
             // A LIN diagnostic frame carries the same transport CAN does.
             include_str!("dissectors/lin.rs"),
+            // LonTalk is only ever reached inside a CN/IP tunnel.
+            include_str!("dissectors/cnip.rs"),
+            // A segmented SOME/IP message is handed on by the plain one.
+            include_str!("dissectors/someip.rs"),
+            // BSSGP is always carried inside an NS data PDU.
+            include_str!("dissectors/nsip.rs"),
         ];
 
         let mut unreachable = Vec::new();
