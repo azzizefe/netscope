@@ -26,6 +26,12 @@ pub fn dissect_someip(
             return super::someip_sd::dissect_someip_sd(
                 src_ip, dst_ip, src_port, dst_port, payload,
             );
+        } else if payload[14] & super::someip_tp::TP_FLAG != 0 {
+            // A segmented message has its own header after this one, and its
+            // own failure mode: nothing retransmits a lost segment.
+            return super::someip_tp::dissect_someip_tp(
+                src_ip, dst_ip, src_port, dst_port, payload,
+            );
         } else {
             let kind = match payload[14] {
                 0x00 => "Request",

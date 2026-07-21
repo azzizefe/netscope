@@ -786,6 +786,114 @@ protocols! {
         aliases:   ["cmp", "pkixcmp"],
         blurb:     "Automated certificate enrolment and renewal — and the reason a device failed to get an identity.",
     }
+    Nsip {
+        doc:       "GPRS Network Service over IP (UDP 2157, 19999 by convention).",
+        display:   "NS",
+        color:     0x7FA0C4,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["nsip"],
+        blurb:     "The link many cells share — and the heartbeat that takes all of them down at once.",
+    }
+    Bssgp {
+        doc:       "BSS GPRS Protocol, carried inside an NS data PDU.",
+        display:   "BSSGP",
+        color:     0x6F90B4,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["bssgp"],
+        blurb:     "Where a cell tells the core how much it can take — and what it threw away.",
+    }
+    Mtp3 {
+        doc:       "SS7 Message Transfer Part level 3 (DLT 141), the routing layer under SCCP and ISUP.",
+        display:   "MTP3",
+        color:     0xC8A05A,
+        transport: Other,
+        rank:      3,
+        aliases:   ["mtp3"],
+        blurb:     "Which signalling point a message is for — and which destination stopped being reachable.",
+    }
+    SomeIpTp {
+        doc:       "SOME/IP-TP segmentation (a segmented SOME/IP message, message type bit 0x20).",
+        display:   "SOME/IP-TP",
+        color:     0x9AA8D8,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["someiptp"],
+        blurb:     "Large messages cut into segments with nothing to retransmit a lost one.",
+    }
+    Rgoose {
+        doc:       "Routable GOOSE and Sampled Values, IEC 61850-90-5 (UDP 102, session header).",
+        display:   "R-GOOSE",
+        color:     0xE08A5A,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rgoose", "rsv"],
+        blurb:     "A breaker trip made routable — and whether anyone authenticated it.",
+    }
+    Opensafety {
+        doc:       "openSAFETY functional safety frames (UDP 9877, or 8755 over SERCOS III).",
+        display:   "openSAFETY",
+        color:     0xD4736A,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["opensafety"],
+        blurb:     "Safety data that trusts no network underneath it — and the fault that stops a machine.",
+    }
+    Cnip {
+        doc:       "CN/IP tunnel for LonWorks control networks, ANSI/CEA-852 (UDP 1628 normal, 1629 urgent).",
+        display:   "CN/IP",
+        color:     0xA0C48F,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["cnip"],
+        blurb:     "Building control segments joined over IP — and the routers that keep re-registering.",
+    }
+    Lontalk {
+        doc:       "LonTalk building control, ANSI/CEA-709.1 (inside a CN/IP tunnel).",
+        display:   "LonTalk",
+        color:     0x8FC4A0,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["lontalk", "lonworks"],
+        blurb:     "The language a thermostat speaks to an air handler — and whether anyone confirmed it arrived.",
+    }
+    FfHse {
+        doc:       "Foundation Fieldbus High Speed Ethernet (TCP/UDP 1089-1091, 3622).",
+        display:   "FF HSE",
+        color:     0x8FB0D0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ffhse", "fieldbus"],
+        blurb:     "A process plant's instruments over Ethernet — and the refused write the operator's screen will not show.",
+    }
+    Flexray {
+        doc:       "FlexRay automotive bus (DLT 210), the time-triggered network under brake- and steer-by-wire.",
+        display:   "FlexRay",
+        color:     0xD08A6A,
+        transport: Other,
+        rank:      3,
+        aliases:   ["flexray"],
+        blurb:     "A bus where every ECU has a scheduled slot — and a null frame means one stopped producing.",
+    }
+    Dlr {
+        doc:       "Device Level Ring, ODVA ring protection for EtherNet/IP (EtherType 0x80E1).",
+        display:   "DLR",
+        color:     0x6FA890,
+        transport: Other,
+        rank:      3,
+        aliases:   ["dlr"],
+        blurb:     "A machine's network wired as a loop — and the beacon that says whether the loop is still closed.",
+    }
+    Erps {
+        doc:       "Ethernet ring protection, ITU-T G.8032 R-APS (EtherType 0x8902, opcode 0x28).",
+        display:   "R-APS",
+        color:     0x7FB8A4,
+        transport: Other,
+        rank:      3,
+        aliases:   ["erps", "raps", "g8032"],
+        blurb:     "A ring that blocks one link on purpose — and the message that says whether it still is.",
+    }
     Tsp {
         doc:       "RFC 3161 timestamping (an HTTP body, application/timestamp-query or -reply).",
         display:   "TSP",

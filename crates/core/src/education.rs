@@ -778,6 +778,174 @@ inside is unwrapped, so the tunnel is treated as context here and the frame \
 within it is reported as the answer.",
             look_for: "What is inside the tunnel — broadcast and spanning-tree traffic crossing between sites is the thing to catch.",
         },
+        Protocol::Nsip => Lesson {
+            title: "NS — the heartbeat that takes many cells with it",
+            summary: "GPRS Network Service, and why a few missing acks is a large event.",
+            body: "GPRS Network Service multiplexes many cells onto a handful of virtual connections between the base station subsystem and the SGSN, and keeps track of which of those connections are alive.
+
+`NS-ALIVE` and its acknowledgement run continuously on each one. When the acknowledgements stop, the connection is declared dead — and every cell multiplexed onto it goes down with it. That is why a handful of missing acknowledgements is a far larger event than it looks: subscribers across several cells lose packet service simultaneously, while the base station's own logs record only that a link went down.
+
+`NS-BLOCK` is the orderly version of the same outcome — a connection taken out of service deliberately. Telling the two apart is the difference between scheduled maintenance and an outage.
+
+`NS-UNITDATA` is the envelope for real traffic. It names the cell in its own header and hands the rest to BSSGP, so a tool that stops at this layer reports \"data\" for exactly the messages worth reading.",
+            look_for: "Alive messages without acks — and which cells share that connection.",
+        },
+        Protocol::Bssgp => Lesson {
+            title: "BSSGP — where a cell says it cannot cope",
+            summary: "Flow control between a cell and the core, and the data it discarded.",
+            body: "Between a GSM/GPRS base station subsystem and the SGSN sits BSS GPRS Protocol. It carries user data, but the reason to read it is everything else: this is where a cell and the core negotiate how much traffic the radio side can actually take.
+
+The radio side has far less capacity than the wire side, and that capacity moves with the number of subscribers in the cell and the quality of their signal. So the BSS continuously tells the SGSN what it can accept — per cell, and per subscriber. When a flow-control message goes unacknowledged the core keeps sending at the old rate, and the overflow shows up as `LLC-DISCARDED`: user data the network accepted and then threw away. No layer above reports a loss. The subscriber sees a download that stalls.
+
+The `STATUS` causes are unusually specific about whose fault something is, and they lead to different teams. `Processor overload` and `SGSN congestion` are the core running out of capacity. `Cell traffic congestion` is the radio side. `Equipment failure` is hardware. `BVCI unknown` and `BVCI blocked` are configuration — one side is addressing a cell the other does not have, or has deliberately taken out of service.
+
+`BVC-RESET` deserves attention because it is not routine: it rebuilds the context for a cell and drops the state for every subscriber on it. A cell that keeps resetting is one whose subscribers keep re-attaching, which they experience as data service that comes and goes for no reason they can see.
+
+Reading the elements needs care: the length is one byte when its top bit is set and two bytes when it is not. Assume one byte always and the walk reads the next element's identifier as data, misreading everything after it.",
+            look_for: "LLC-DISCARDED, and a status cause that says whether the radio or the core ran out.",
+        },
+        Protocol::Mtp3 => Lesson {
+            title: "MTP3 — where a lost destination is explained",
+            summary: "The SS7 routing layer, and the message that says a point went away.",
+            body: "Underneath SCCP, ISUP and everything else in SS7 sits Message Transfer Part level 3: the layer that decides which signalling point a message is for. Modern networks carry it over IP rather than TDM links, but the routing label inside is unchanged.
+
+Service indicator 0 is signalling network management — the network talking about itself — and it is the reason to read this layer at all. A **transfer prohibited** message says a signalling point is no longer reachable through this route. Everything behind it stops working, and every layer above sees only silence: ISUP waits for an answer that will not come, SCCP retries, an application eventually reports a generic network error. The explanation exists here and nowhere else in the capture. The matching *transfer allowed* is how you tell an outage that recovered from one that is still going.
+
+The service indicator also names the user part — SCCP, ISUP, TUP, BICC — which is what separates call setup from database queries riding the same links. A tool that labels all of it \"MTP3\" throws that distinction away.
+
+The routing label rewards care. It is a single 32-bit **little-endian** word holding a 14-bit destination point code, a 14-bit origin point code and a 4-bit link selector, none of them aligned to a byte. Read it big-endian, or read the point codes as 16-bit values, and you still get point codes — plausible ones. On a network where point codes are assigned by a regulator and identify specific operators, a wrong one sends the investigation to a different company.",
+            look_for: "A transfer-prohibited message, and whether a transfer-allowed ever followed it.",
+        },
+        Protocol::SomeIpTp => Lesson {
+            title: "SOME/IP-TP — segments with nothing to catch them",
+            summary: "How a large vehicle message is split, and what happens when one piece is lost.",
+            body: "Plain SOME/IP carries a message that fits in one datagram. A camera's object list, a radar's track list, a diagnostic blob being pulled off an ECU — those do not fit. SOME/IP-TP cuts them into segments and stamps each one with an offset.
+
+What makes it worth separating from ordinary SOME/IP is what it deliberately lacks. There is no retransmission, no acknowledgement, no negative acknowledgement. Over UDP, one dropped datagram silently discards the entire message it belonged to — a whole perception frame, an entire diagnostic response — and the receiver's only evidence is a reassembly that never completes. Nothing on the wire reports an error, and nothing asks for the missing piece.
+
+So the offsets are the diagnosis. A gap between them is the segment that was lost, and therefore the message that will never be delivered. This is usually the only place that loss is visible at all.
+
+The more-segments flag is clear exactly once per message, on the last segment. A stream that never shows it clear is a message truncated in flight, with a receiver still waiting for the rest.
+
+One detail catches implementations out and is worth stating plainly: the offset field is 28 bits, with the low four bits of that word used for flags, so the byte offset is the field **times sixteen**. Read as a plain byte count, every segment lands at a sixteenth of its real position. The segments overlap, reassembly produces a message of roughly the right length made of the wrong bytes, and — because there is no checksum over the reassembled whole — nothing anywhere reports a problem.",
+            look_for: "A gap in the offsets, or a message whose last segment never arrives.",
+        },
+        Protocol::Rgoose => Lesson {
+            title: "R-GOOSE — a breaker trip you can route",
+            summary: "IEC 61850-90-5, and the two header fields that decide whether that is safe.",
+            body: "A GOOSE message is a protection relay telling a circuit breaker to open. It has four milliseconds to arrive, which is why ordinary GOOSE rides straight on Ethernet with no IP layer in the way. IEC 61850-90-5 wraps it in a session header so the same message can be **routed** — between substations, over a wide-area link, into a control centre.
+
+Routing a trip command is as consequential as it sounds, and most of that session header exists to make it survivable. Two fields decide whether it is.
+
+The first is the **simulation flag**. Every APDU says whether it is test traffic or real. A relay honours simulated messages only when it has itself been put into test mode, so the two must agree — and when they disagree the failure is silent in the worst possible direction. A relay left in test mode after commissioning will ignore a genuine trip. A relay taken out of test mode too early will act on an engineer's simulation. Neither writes anything in a log that says which happened.
+
+The second is **authentication**. The header carries a key identifier and an initialisation vector, because a routable trip message that nobody authenticated can be forged by anyone who can reach the network. A key identifier of zero with no vector is exactly that: unauthenticated, routable, and able to open a breaker. On a flat network this was merely bad; on a routed one it is reachable from much further away.
+
+The SPDU number is a plain sequence, and gaps in it are trip messages that did not arrive on a path whose entire budget is four milliseconds.
+
+One implementation detail matters: the initialisation vector is variable-length, and the payload begins after it. Ignore that and the simulation flag gets read out of the vector's own bytes, which makes the test-versus-real distinction meaningless while still producing a plausible answer.",
+            look_for: "A session with no key and no vector — and any disagreement between the simulation flag and what the relays expect.",
+        },
+        Protocol::Opensafety => Lesson {
+            title: "openSAFETY — the frame that trusts nothing beneath it",
+            summary: "Functional safety over any fieldbus, and the fault that stops the machine.",
+            body: "A light curtain in front of a press. An emergency stop. A two-hand control that will not let a press cycle unless both hands are on the buttons. These have to work when the network does not — and the usual answer, \"use a reliable network\", is not one you can certify.
+
+openSAFETY takes the opposite approach, called the **black channel**. The transport underneath is assumed to be completely untrustworthy: it may lose frames, duplicate them, reorder them, corrupt them or deliver them late. Every safety guarantee is carried inside the openSAFETY frame itself, so the same frames ride unchanged over POWERLINK, PROFINET, EtherNet/IP or Modbus. None of those are trusted to do anything but move bytes.
+
+That is why a **consecutive time** count sits in every frame. A receiver that sees the same count twice knows the data is not fresh, whatever the network below claims — which is how a replayed or stalled frame is caught rather than acted on.
+
+The message worth catching is **SN_FAIL**: a safety node reporting a fault. Whatever it guards is about to be, or already is, in its safe state, so this is the message that precedes a machine stopping. It names an error group and a code, which is the difference between \"a node faulted\" and knowing which node and why — a device fault and a vendor-specific code send you to entirely different places.
+
+The state handshake matters too. A node walks through pre-operational and operational before it is permitted to guard anything. A node cycling through that sequence never becomes operational, and the machine simply refuses to start with nothing obviously broken.
+
+One detail catches implementations out: the source address is ten bits, and its top two bits live inside the message identifier byte. Read that byte whole and every node above address 255 becomes an unknown message; mask the address to eight bits and four different nodes look like one.",
+            look_for: "SN_FAIL — and the error group, which says whether to look at the device or the vendor.",
+        },
+        Protocol::Cnip => Lesson {
+            title: "CN/IP — the building control channel that keeps re-forming",
+            summary: "LonWorks segments tunnelled over IP, and the registration storm.",
+            body: "A large building's heating, lighting and door control often still run on LonWorks — a network older than the IP infrastructure that now surrounds it. CN/IP is how those segments are joined across a campus: each router registers with a configuration server, joins a channel, and tunnels its native LonTalk frames to the others.
+
+Once a channel is established, essentially everything should be a data packet. The configuration messages — device registration, channel membership, send list — belong to a channel that is still forming. Seeing them over and over means routers keep dropping out and re-registering, and while that happens, control messages between segments are quietly being lost.
+
+The building does not break in any obvious way. A zone's setpoint occasionally fails to take. A light in one wing sometimes does not respond to its switch. From inside the control software this is invisible, because the software knows only what it sent — which is why the packets are often the only place the answer exists.
+
+Two details in the header are worth reading. CN/IP can **authenticate** its packets, so a channel configured for authentication carrying unauthenticated ones is a misconfigured router — and every device behind it will take commands from anyone on the network. And the **urgent channel** is a port, not a flag: 1629 is the priority path, 1628 the ordinary one. A time-critical device configured onto the wrong one has latency that nothing in the application can explain.
+
+The session identifier separates a router that is retransmitting from one that restarted — a restart resets the session, a retransmission does not.",
+            look_for: "Registration and membership traffic long after the channel should have settled.",
+        },
+        Protocol::Lontalk => Lesson {
+            title: "LonTalk — how hard the network was asked to try",
+            summary: "Building control messages, and whether anyone confirmed delivery.",
+            body: "A thermostat telling an air handler it wants more heat; a switch telling a ballast to dim; a card reader telling a door to unlock. LonTalk is what those devices say to each other, and it has been running commercial buildings since before they had IP.
+
+What makes it worth reading is that every message chooses its own delivery guarantee. **Acknowledged** means the sender waits for confirmation and retries without it. **Unacknowledged, repeated** means the message is simply sent several times and hoped for — nothing confirms any copy arrived. And a **reminder** is the transport layer asking for messages it never received.
+
+A network showing many reminders and repeats is one losing control messages. The failure is intermittent by nature: a setpoint that occasionally does not take, a light that sometimes ignores its switch. Nobody files a ticket for a building that works most of the time, and the control software cannot see it, because it only knows what it transmitted.
+
+LonTalk can also **authenticate** a message, with a challenge and a reply, and one bit in the transport byte says whether it did. On a segment where door controllers share a wire with lighting, an unauthenticated command to a lock is a command anyone with access to that wire can forge — and no part of the building's own software will ever mention it.
+
+The same class number means different things depending on the PDU format: class 0 is `acknowledged` in a transport PDU, `request` in a session PDU, and `challenge` in an authentication PDU.",
+            look_for: "Reminders and repeats — and any command to security hardware that was not authenticated.",
+        },
+        Protocol::FfHse => Lesson {
+            title: "Foundation Fieldbus HSE — the write that was refused",
+            summary: "Process instruments over Ethernet, and the error nobody sees.",
+            body: "A refinery runs on instruments that never stop talking: a flow transmitter publishing a reading several times a second, a valve positioner taking a setpoint, a controller closing the loop between them. Foundation Fieldbus is the language they speak, and HSE is how the field segments reach the control room over Ethernet.
+
+The message type is where the diagnosis lives. Every HSE message is a request, a response, or an **error** — and an error in response to a `write` is a setpoint the plant believes it applied. The operator's screen keeps showing the new value, because the screen shows what was *requested*, not what the device accepted. The valve is somewhere else entirely.
+
+The services divide into three worlds and confusing them wastes hours. **FMS** carries process data — `read`, `write`, and `information report`, which is a device publishing on its own schedule rather than answering anyone. Reports that stop are a device gone quiet without ever disconnecting, so every session still looks healthy. **SM** is system management, where repeated `device annunciation` from one address means a device that keeps restarting. **FDA** is the session underneath both.
+
+One byte carries the protocol identifier in its top six bits and the message type in its low two. Read it whole and every response and every error becomes an unrecognised protocol — which discards precisely the messages worth looking at.
+
+The same service number also means different things depending on whether the message expects an answer: service 2 is `read` when confirmed and `event notification` when not.",
+            look_for: "An error response to a write — the setpoint the screen says was applied.",
+        },
+        Protocol::Flexray => Lesson {
+            title: "FlexRay — the null frame nobody notices",
+            summary: "A time-triggered bus, and the failure that changes nothing about the timing.",
+            body: "CAN decides who transmits by arguing about it: the lowest identifier wins, whenever it wants to talk. That is fine for a window motor and unacceptable for a brake. FlexRay decides in advance instead — the cycle is cut into slots, each slot belongs to one ECU, and that ECU transmits in its slot or not at all. Latency stops being a statistic and becomes a number you can prove before the car is built.
+
+The schedule is also what hides the failure. An ECU that stops producing data does not go quiet: it transmits a **null frame** in its own slot, with the right identifier at exactly the right microsecond, carrying nothing. Bus load is unchanged. Every timing measurement still passes. No error counter moves. Somewhere upstream a control loop is now running on values that stopped updating, and the only thing on the wire that says so is one bit.
+
+That bit is **active low**, which is the trap. `NFI` set means a *normal* frame; `NFI` clear means the frame is null. Read it the intuitive way and every diagnosis inverts — a perfectly healthy bus reads as every ECU having stopped, and the single ECU that really did stop reads as fine.
+
+Two other bits decide whether the cluster starts at all. Only a few nodes are configured as sync nodes, and only those may set the startup indicator. A cluster that will not come up is usually a question about those bits: too few nodes sending them, or a node claiming a role it was never configured for.
+
+The capture format also carries the controller's own error flags. A coding error or a TSS violation is the physical layer failing — termination, wiring, a dying transceiver — and worth separating before anyone spends a day reading application data that was never valid.",
+            look_for: "A null frame: the slot arrives on time, with the right ID, carrying nothing.",
+        },
+        Protocol::Dlr => Lesson {
+            title: "DLR — the machine's network wired as a loop",
+            summary: "ODVA ring protection, and the beacon that says whether the loop is closed.",
+            body: "A machine's network cannot pause. A drive mid-motion, a press mid-stroke, a robot mid-path — none of them can wait the seconds spanning tree takes to reconverge. So EtherNet/IP rings are wired as loops and protected by DLR: one node, the ring supervisor, blocks a port to stop the loop flooding, and releases it within milliseconds when a link breaks.
+
+The supervisor beacons continuously, often every few hundred microseconds. Health is inferred from those beacons arriving, not announced — which is why a capture is often the only place the ring's real state is visible.
+
+The state worth catching is `RING_FAULT_STATE`. A ring in fault is still passing every packet, because that is exactly what the redundancy was for. Production continues, no alarm fires, and the ring is now a line — the next cable pull, the next crushed connector, takes a section of the machine off the network entirely. The window between the first fault and the second is often weeks, and nothing but the beacon reports it.
+
+The beacon also carries the supervisor's address and precedence, which catches a common commissioning mistake: two nodes configured as supervisor on one ring. That does not show up as an error anywhere — it shows up as beacons arriving from two different addresses.
+
+Sign_On and Announce belong to a ring that is forming. On a ring that should have settled hours ago, seeing them repeatedly means it keeps re-forming — a marginal cable or a device rebooting in a loop — and that is invisible from the application until the day it stops working outright.",
+            look_for: "A beacon in RING_FAULT_STATE — the machine runs fine and has no redundancy left.",
+        },
+        Protocol::Erps => Lesson {
+            title: "ERPS — the ring that blocks a link on purpose",
+            summary: "G.8032 ring protection, and the state that means it has none left.",
+            body: "A ring of switches is a loop, and an Ethernet loop floods itself to death within seconds. Spanning tree solves that by blocking links, but it reconverges in seconds — too slow for a factory floor or a substation, where a few hundred milliseconds of blackout is an outage.
+
+G.8032 takes the same idea and makes it fast. One link, the ring protection link, is blocked deliberately, so the ring runs as a line. When a link breaks, a node floods a Signal Fail message, the block is released, and traffic goes the other way around the ring — in tens of milliseconds, because the decision is pre-arranged rather than recomputed.
+
+The state worth watching is not the failure. It is the recovery that never completed. A ring sitting in `No Request` **without** the RPL Blocked bit set is running with no spare path: every host is reachable, no alarm fires, throughput is normal, and the next single link failure takes the ring down completely. The same is true of a `Forced Switch` an engineer left in place after maintenance — the ring looks healthy and has already spent its protection.
+
+Because R-APS carries the sending switch's MAC address, a ring that keeps flapping can be traced to the node that keeps reporting, rather than to \"somewhere in the ring\".
+
+R-APS rides inside the CFM frame format at EtherType 0x8902, as opcode 0x28.",
+            look_for: "A No Request with RPL Blocked clear — the ring works and has no protection left.",
+        },
         Protocol::Tsp => Lesson {
             title: "RFC 3161 — the timestamp that outlives the certificate",
             summary: "A trusted third party attesting when something existed.",
