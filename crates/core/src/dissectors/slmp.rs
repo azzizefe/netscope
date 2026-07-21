@@ -67,7 +67,7 @@ pub fn dissect_slmp(
     }
 }
 
-fn parse(payload: &[u8]) -> Option<String> {
+pub(crate) fn parse(payload: &[u8]) -> Option<String> {
     let subheader = u16::from_be_bytes([*payload.first()?, *payload.get(1)?]);
     // The 4E frame inserts a two-byte serial and a two-byte reserved field
     // before the network fields, shifting everything that follows.
