@@ -505,6 +505,16 @@ protocols! {
         aliases:   ["opcua"],
         blurb:     "An Industry 4.0 data-exchange message (OPC UA) — factory equipment talking to IT systems.",
     }
+    OpcUaPubSub {
+        doc:       "OPC UA PubSub — UADP NetworkMessage over UDP 4840 (IEC 62541-14).",
+        display:   "OPC UA PubSub",
+        color:     0x26A69A,
+        transport: Udp,
+        rank:      3,
+        // Display name has a space; provide typed aliases.
+        aliases:   ["uadp", "opcuapubsub"],
+        blurb:     "An OPC UA publish/subscribe datagram (UADP) — publisher ID and group ID show which data stream this belongs to.",
+    }
     Rtp {
         doc:       "Real-time Transport Protocol media stream (RFC 3550) — dynamic UDP ports.",
         display:   "RTP",
@@ -1254,6 +1264,24 @@ protocols! {
         aliases:   ["j1939"],
         blurb:     "A truck or bus ECU message (SAE J1939) — the identifier names both the message and the box that sent it.",
     }
+    DeviceNet {
+        doc:       "DeviceNet — ODVA CIP over 11-bit CAN (CIP Vol 3, Ed 1.14).",
+        display:   "DeviceNet",
+        color:     0xD4643A,
+        transport: Other,
+        rank:      3,
+        aliases:   ["devicenet"],
+        blurb:     "An industrial controller message (DeviceNet) — the CAN identifier names both the message group and the node address.",
+    }
+    J1708 {
+        doc:       "SAE J1708 / J1587 — the serial data bus under heavy trucks (RS-485, 9600 baud).",
+        display:   "J1708",
+        color:     0xA07840,
+        transport: Other,
+        rank:      3,
+        aliases:   ["j1708", "j1587"],
+        blurb:     "A truck ECU frame (SAE J1708) — the MID names the subsystem that sent it; without it, the capture is undifferentiated hex.",
+    }
     Obd2 {
         doc:       "OBD-II over CAN — diagnostic requests and replies on the identifiers the standard reserves.",
         display:   "OBD-II",
@@ -1280,6 +1308,15 @@ protocols! {
         rank:      3,
         aliases:   [],
         blurb:     "An SMB file-sharing transaction over TCP 445.",
+    }
+    SmbDirect {
+        doc:       "SMB Direct — SMB3 over RDMA transport (MS-SMBD), carried on RDMA SEND.",
+        display:   "SMB Direct",
+        color:     0x5C7E8E,
+        transport: Other,
+        rank:      3,
+        aliases:   ["smb_direct", "smbd"],
+        blurb:     "SMB3 file sharing over RDMA — bypasses TCP/IP to transfer data directly into memory.",
     }
     Tds {
         doc:       "TDS traffic.",

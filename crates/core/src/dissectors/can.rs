@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! CAN bus dissector — SocketCAN captures (`LINKTYPE_CAN_SOCKETCAN`, DLT 227).
 //!
@@ -111,6 +111,13 @@ pub fn dissect_can(data: &[u8]) -> DissectedResult {
         }
         if !extended && super::obd2::owns_id(id) {
             return super::obd2::result(id, payload);
+        }
+        // DeviceNet uses standard (11-bit) identifiers. The identifier range is
+        // the guard — four message groups with distinct ID bands (§2 of the
+        // DeviceNet spec). This check comes after OBD-II because OBD-II's
+        // identifiers (0x7E0-0x7EF, 0x7DF) overlap with DeviceNet group 4.
+        if !extended && super::devicenet::looks_like_devicenet(id) {
+            return super::devicenet::result(id, payload);
         }
         // Diagnostics ride ISO-TP, which is what carries a UDS message too long
         // for one frame. It is claimed on the *identifier* first: ISO-TP has no

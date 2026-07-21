@@ -5,7 +5,7 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 
 use super::{
-    aeron, bindings, dht, dns, dtls, lorawan, mdns, memberlist, mpegts, openvpn, osc, qpack,
+    aeron, bindings, dht, dns, dtls, j1708, lorawan, mdns, memberlist, mpegts, openvpn, osc, qpack,
     rgoose, roughtime, rtp, rtps, source_query, srt_transport, turn, utp, vxlan, wol, zrtp,
     DissectedResult,
 };
@@ -157,6 +157,11 @@ pub fn dissect_udp(
     }
     if source_query::looks_like_source(udp_payload) {
         return source_query::dissect_source_query(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+    // J1708 has no magic and a weak two's-complement checksum. To avoid claiming
+    // random short UDP payloads, it is tried last after all other candidates.
+    if j1708::looks_like_j1708(udp_payload) {
+        return j1708::dissect_j1708(udp_payload);
     }
     // ZRTP negotiates SRTP keys inside the media stream; its magic cookie sits
     // where RTP would put a timestamp.

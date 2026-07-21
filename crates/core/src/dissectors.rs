@@ -54,6 +54,22 @@ pub mod dccp;
 pub mod dcerpc;
 pub mod decnet;
 pub mod der;
+#[cfg(feature = "ot")]
+pub mod devicenet;
+#[cfg(not(feature = "ot"))]
+pub mod devicenet {
+    pub(crate) fn looks_like_devicenet(_id: u32) -> bool { false }
+    pub(crate) fn result(_id: u32, _payload: &[u8]) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::DeviceNet,
+            summary: String::new(),
+        }
+    }
+}
 pub mod dhcp;
 pub mod dhcpfo;
 pub mod dhcpv6;
@@ -150,6 +166,7 @@ pub mod isis;
 pub mod isns;
 pub mod isotp;
 pub mod isup;
+pub mod j1708;
 pub mod j1939;
 pub mod jaeger;
 pub mod kafka;
@@ -163,7 +180,21 @@ pub mod lacp;
 pub mod lcsap;
 pub mod ldap;
 pub mod ldp;
+#[cfg(feature = "ot")]
 pub mod lin;
+#[cfg(not(feature = "ot"))]
+pub mod lin {
+    pub fn dissect_lin(_payload: &[u8]) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::Lin,
+            summary: String::new(),
+        }
+    }
+}
 pub mod link_oam;
 pub mod linktypes;
 pub mod lisp;
@@ -197,7 +228,29 @@ pub mod mka;
 pub mod mle;
 pub mod mms;
 pub mod modbus;
+#[cfg(feature = "ot")]
 pub mod modbus_rtu;
+#[cfg(not(feature = "ot"))]
+pub mod modbus_rtu {
+    use std::net::IpAddr;
+    pub(crate) fn looks_like_modbus_rtu(_payload: &[u8]) -> bool { false }
+    pub(crate) fn dissect_modbus_rtu(
+        _src_ip: Option<IpAddr>,
+        _dst_ip: Option<IpAddr>,
+        _src_port: u16,
+        _dst_port: u16,
+        _payload: &[u8],
+    ) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::ModbusRtu,
+            summary: String::new(),
+        }
+    }
+}
 pub mod mongodb;
 pub mod mpegts;
 pub mod mpls;
@@ -222,7 +275,28 @@ pub mod nebula;
 pub mod netflow;
 pub mod nflog;
 pub mod nfs;
+#[cfg(feature = "telecom")]
 pub mod ngap;
+#[cfg(not(feature = "telecom"))]
+pub mod ngap {
+    use std::net::IpAddr;
+    pub fn dissect_ngap(
+        _src_ip: Option<IpAddr>,
+        _dst_ip: Option<IpAddr>,
+        _src_port: u16,
+        _dst_port: u16,
+        _payload: &[u8],
+    ) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::Ngap,
+            summary: String::new(),
+        }
+    }
+}
 pub mod ngap_common;
 pub mod nhrp;
 pub mod ninep;
@@ -326,6 +400,29 @@ pub mod slmp;
 pub mod slp;
 pub mod small_services;
 pub mod smb;
+#[cfg(feature = "enterprise")]
+pub mod smb_direct;
+#[cfg(not(feature = "enterprise"))]
+pub mod smb_direct {
+    use std::net::IpAddr;
+    pub(crate) fn looks_like_smb_direct(_payload: &[u8]) -> bool { false }
+    pub fn dissect_smb_direct(
+        _src_ip: Option<IpAddr>,
+        _dst_ip: Option<IpAddr>,
+        _src_port: u16,
+        _dst_port: u16,
+        _payload: &[u8],
+    ) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::SmbDirect,
+            summary: String::new(),
+        }
+    }
+}
 pub mod smp;
 pub mod smpp;
 pub mod smtp;
@@ -368,6 +465,28 @@ pub mod trill;
 pub mod tsp;
 pub mod turn;
 pub mod twamp;
+#[cfg(feature = "ot")]
+pub mod uadp;
+#[cfg(not(feature = "ot"))]
+pub mod uadp {
+    use std::net::IpAddr;
+    pub fn dissect_uadp(
+        _src_ip: Option<IpAddr>,
+        _dst_ip: Option<IpAddr>,
+        _src_port: u16,
+        _dst_port: u16,
+        _payload: &[u8],
+    ) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::OpcUaPubSub,
+            summary: String::new(),
+        }
+    }
+}
 pub mod udld;
 pub mod udp;
 pub mod uds;
