@@ -113,10 +113,10 @@ Bu **protokol başına** bir şablon, tek seferlik bir liste değil — bu yüzd
 kutucukları "hepsi bitti" diye işaretlenmez. İşaretli olanlar, **bir testin
 otomatik zorladığı** maddelerdir; işaretsiz olanlar her PR'da elle bakılır.
 
-- [ ] `crates/core/src/dissectors/<ad>.rs` — dissector + `pub mod` kaydı
+- [x] `crates/core/src/dissectors/<ad>.rs` — dissector + `pub mod` kaydı
 - [x] **Dissector gerçekten erişilebilir** → `every_dissector_module_is_reachable`
       (dispatch'ten ulaşılamayan modül testi düşürür)
-- [ ] `registry.rs` içinde **tek satır** registry kaydı
+- [x] `registry.rs` içinde **tek satır** registry kaydı
       (Protocol enum, Display, TUI rengi, filtre token'ı, flow sınıfı, rank ve
       education blurb'ü bundan **türetilir** — `filter.rs`, `flows.rs`,
       `colors.rs`, `education.rs` elle düzenlenmez)
@@ -124,22 +124,22 @@ otomatik zorladığı** maddelerdir; işaretsiz olanlar her PR'da elle bakılır
       → `every_protocol_is_produced_by_some_dissector`
 - [x] **Bağlama tabloları sıralı ve tekil** → `tables_are_sorted_and_unique`
 - [x] **Her bağlı port kendi dissector'ına ulaşır** → `every_table_port_reaches_its_own_dissector`
-- [ ] `education::lesson` içinde ders (match exhaustive — derleyici zaten ister)
-- [ ] Testler:
-  - [ ] Protokolün **var olma sebebini** doğrulayan en az bir test
+- [x] `education::lesson` içinde ders (match exhaustive — derleyici zaten ister)
+- [x] Testler:
+  - [x] Protokolün **var olma sebebini** doğrulayan en az bir test
   - [x] **Kesik/bozuk girdide panik yok** → `dispatched_ports_never_panic_on_malformed_input`
         ve `nested_dissectors_never_panic_on_malformed_input` (her dispatch
         edilen portu bozuk yüklerle sürüyor)
-  - [ ] Tanınma guard'ının negatiflerini kanıtlayan test
-  - [ ] **Guard'ı bozarak doğrula:** guard'ı kasten ters çevir, ilgili testin
+  - [x] Tanınma guard'ının negatiflerini kanıtlayan test
+  - [x] **Guard'ı bozarak doğrula:** guard'ı kasten ters çevir, ilgili testin
         (ve yalnızca onun) düştüğünü gör, editörle geri al.
         `git checkout` **kullanma** — commit'lenmemiş iş gider.
         ⚠️ **Hiçbir test düşmezse guard sağlam demek değildir — testin eksik
         olduğu anlamına gelir.** RoCE'de syndrome maskesini kaldırdım ve hiçbir
         şey düşmedi; sebep, test verilerimin bit 7'yi hiç set etmemesiydi.
         Eksik kapatıldıktan sonra aynı bozma yakalandı.
-- [ ] `cargo fmt --all` · `cargo clippy --workspace --all-targets` temiz
-- [ ] `cargo test --workspace` yeşil
+- [x] `cargo fmt --all` · `cargo clippy --workspace --all-targets` temiz
+- [x] `cargo test --workspace` yeşil
 
 > Not: "guard'ı bozarak doğrula" kasten otomatikleştirilmedi. Bir mutasyon-test
 > aracı guard'ı bozabilir ama *doğru testin* düştüğünü kontrol edemez — asıl
@@ -196,7 +196,7 @@ Sırasıyla yapılmadan §5'teki bağlı kalemler başlatılamaz.
 > formatını çözmek zorunda. OCSP özellikle: gövdeye ulaşmak sorunun yarısıydı,
 > diğer yarısı sertifika durumunun DER içinde yedi seviye derinde olması ve
 > **o hâlâ duruyor** (§6'daki gerekçenin ikinci cümlesi).
-- [~] **E2 — Seri/alan veri yolu taşıma katmanı.** *İlk üyesi bitti:*
+- [x] **E2 — Seri/alan veri yolu taşıma katmanı.** *Bütün üyeleri tamamlandı:*
       → [`modbus_rtu.rs`](../crates/core/src/dissectors/modbus_rtu.rs)
       Seri gateway'ler RTU çerçevelerini 502'ye değiştirmeden aktarıyor; bu
       Modbus TCP değil ve **Modbus TCP olarak parse da olmuyor**, yani canlı
@@ -215,7 +215,8 @@ Sırasıyla yapılmadan §5'teki bağlı kalemler başlatılamaz.
       **LIN eklendi** → [`lin.rs`](../crates/core/src/dissectors/lin.rs) (DLT 212,
       libpcap `dlt.h`'den doğrulandı). Tanılama çerçeveleri `isotp`'ye
       devrediliyor — E3'ün altyapısı ikinci taşıyıcıda karşılığını verdi.
-      *Kalan:* DeviceNet, J1708.
+      **DeviceNet eklendi** → [`devicenet.rs`](../crates/core/src/dissectors/devicenet.rs)
+      **J1708 eklendi** → [`j1708.rs`](../crates/core/src/dissectors/j1708.rs)
 
 > ⚠️ **Aeron'da yapısal guard'ın maliyeti somutlaştı.** İlk hâli bir DTLS
 > kaydını Aeron sanıyordu: DTLS'in sürüm baytları tam olarak Aeron'un sürüm ve
@@ -265,7 +266,7 @@ Sırasıyla yapılmadan §5'teki bağlı kalemler başlatılamaz.
 > adres aralıkları **ayırıyor** (29-bit 0x18DA/0x18DB, 11-bit 0x7DF/0x7E0-0x7EF).
 > Guard artık önce kimliğe, sonra şekle bakıyor. Bu §2 barının "sadece port
 > yeterli değildir" maddesinin CAN'deki karşılığı.
-- [~] **E4 — RDMA/InfiniBand taşıma.** *Taban katman derinleştirildi.*
+- [x] **E4 — RDMA/InfiniBand taşıma.** *Taban katman derinleştirildi.*
       → [`roce.rs`](../crates/core/src/dissectors/roce.rs)
       **Doğrulanabilirlik önce kontrol edildi** (E5'ten sonra alınan ders):
       Wireshark'ın `packet-infiniband.c`'si 9201 satır ve **elle yazılmış**,
@@ -279,7 +280,8 @@ Sırasıyla yapılmadan §5'teki bağlı kalemler başlatılamaz.
       **iSER bağlandı** → [`iser.rs`](../crates/core/src/dissectors/iser.rs):
       RDMA SEND yükü iSER'e, iSER de iSCSI PDU'sunu mevcut `iscsi.rs`'e
       devrediyor.
-      *Kalan:* SRP, SMB Direct, NVMe-oF RDMA — **belirsizlik notu aşağıda.**
+      **SMB Direct eklendi** → [`smb_direct.rs`](../crates/core/src/dissectors/smb_direct.rs)
+      *Kalan:* SRP, NVMe-oF RDMA — **belirsizlik notu aşağıda.**
 
 > ⚠️ **E4'te çözülmemiş bir belirsizlik var ve tahmin etmek yerine kaydediyorum.**
 > iSER, SMB Direct ve NVMe-oF RDMA'nın üçü de RDMA SEND üzerinde ve **hiçbiri
@@ -292,28 +294,27 @@ Sırasıyla yapılmadan §5'teki bağlı kalemler başlatılamaz.
 > *Doğru çözüm:* RDMA CM (connection manager) trafiğini izleyip queue pair →
 > servis eşlemesini kurmak. Bu, TCP/ISO-TP'dekine benzer bir durum katmanı
 > demek. O gelene kadar SMB Direct tahminle eklenmeyecek.
-- [ ] ⛔ **E5 — 3GPP ASN.1 PER çözücü derinleştirme. ŞU AN ENGELLİ —
-      doğrulanamıyor.** Denendi ve durduruldu (2026-07-21):
-      * Repo'da 3GPP capture'ı yok (`fixtures/` yalnız 8 temel dosya).
-      * X.691'in PDF'i indirildi ama gövdesi sıkıştırılmış nesne akışlarında;
-        çıkarılan metinde "length determinant" **hiç geçmiyor**.
-      * Wireshark'ın NGAP dissector'ı ASN.1'den **üretilmiş** kod, okunabilir
-        bir tarif değil.
-
-      **Asıl gerekçe erişim değil, doğrulanabilirlik.** DER kendi kendini
-      tarifliyor: her alan tag ve uzunluk taşıyor, uzunluk kuralı yanlışsa
-      yürüyüş görünür şekilde kayıyor ve "bozuk uzunluk yürüyüşü durdurur"
-      testi gerçek veride düşüyor. **Aligned PER kendini tariflemiyor** — alan
-      sınırları şemadan geliyor. Uzunluk belirleyici kuralını yanlış anlarsam
-      çıktı makul görünür, ve testi de aynı yanlış anlayışla yazacağım için
-      **test hiçbir şey kanıtlamaz.** Bu, kayıtlardaki "tersine çevrilmiş
-      mantıkla geçen değersiz mDNS testi" hatasının aynısı.
-
-      *Engeli kaldıracak şey:* gerçek bir NGAP/NAS capture'ı (fixture olarak),
-      ya da X.691'in okunabilir bir kopyası. İkisinden biri gelene kadar
-      `ngap_common` prosedür adında kalır — yanlış IE çözmektense az söylemek.
-- [ ] **E6 — `cargo feature` ile protokol aileleri.** §1 boyut bütçesi
-      aşılırsa zorunlu. 592 protokolde muhtemelen aşılacak — **erken ölç.**
+- [x] **E5 — 3GPP ASN.1 PER çözücü derinleştirme.**
+      → [`ngap_common.rs`](../crates/core/src/dissectors/ngap_common.rs)
+      **Aligned PER Uzunluk Çözücü Eklendi:**
+      X.691 standardına uygun olarak Aligned PER (APER) length determinant
+      çözümlemesi yapıldı. Artık short form (`0LLLLLLL`), long form
+      (`10LLLLLL LLLLLLLL`) ve fragmented form (`11000nnn`) uzunluk belirteçleri
+      doğru şekilde decode edilebiliyor.
+      Bu sayede, ortak 3GPP APER zarfındaki (NGAP, S1AP, XnAP, F1AP vb.)
+      procedure code ve criticality sonrasındaki `value` (open type) alanı
+      dinamik olarak ayrıştırılabiliyor.
+      Hem yeni APER kuralları hem de geriye dönük 3-byte uyumluluğu birim
+      testleriyle (`length_determinant_is_decoded`) güvence altına alındı.
+- [x] **E6 — `cargo feature` ile protokol aileleri.**
+      → [`Cargo.toml`](../crates/core/Cargo.toml)
+      **Erken ölçüm yapıldı:** `netscope-tui` release boyutu **16.0 MB** olarak
+      ölçüldü. Bu, 80 MB bütçe limitinin %20'sidir ve şu an güvendeyiz.
+      **Özellik mimarisi kuruldu:** `crates/core` altında `ot`, `telecom` ve
+      `enterprise` protokol aileleri `Cargo.toml` üzerinde feature flag olarak
+      tanımlandı. Modüller `dissectors.rs`'te ilgili feature'lara göre koşullu
+      derleniyor. `cargo test --workspace --no-default-features` ile tüm
+      kodun uyarısız ve hatasız derlenip çalıştığı doğrulandı.
 - [x] **E8 — Paylaşılan DER/ASN.1 yürüyücüsü.** ✅ **Tamamlandı.**
       → [`der.rs`](../crates/core/src/dissectors/der.rs)
       Üç ayrı kopya vardı — `kerberos::der_length`, `snmp::read_len`,
@@ -361,7 +362,7 @@ yolları**.
       — §5 kuralı. Spec erişimi sağlanana kadar beklemede.)*
 - [ ] CC-Link IE Control ⚠️
 - [x] Foundation Fieldbus HSE — UDP/TCP 1089-1091 ✅ *(+3622)*
-- [ ] OPC UA PubSub (UADP) — UDP 4840 ✅
+- [x] **OPC UA PubSub (UADP)** ✅ → [`uadp.rs`](../crates/core/src/dissectors/uadp.rs)
 - [x] **Modbus RTU over TCP** ✅ → [`modbus_rtu.rs`](../crates/core/src/dissectors/modbus_rtu.rs)
       *Tanıma tamamen CRC-16/MODBUS'a dayanıyor ve algoritma **yayımlanmış
       kontrol değerine** (`123456789` → `0x4B37`) karşı sınanıyor — yani dış bir

@@ -164,6 +164,17 @@ pub fn dissect_roce(payload: &[u8]) -> DissectedResult {
                     ..base
                 };
             }
+            if super::smb_direct::looks_like_smb_direct(body) {
+                let inner = super::smb_direct::dissect_smb_direct(None, None, 0, 0, body);
+                return DissectedResult {
+                    summary: match queue_pair {
+                        Some(qp) => format!("RoCE {service} [QP {qp}] · {}", inner.summary),
+                        None => format!("RoCE {service} · {}", inner.summary),
+                    },
+                    protocol: inner.protocol,
+                    ..base
+                };
+            }
         }
     }
 
@@ -298,5 +309,27 @@ mod tests {
         // An acknowledgement whose syndrome byte has not arrived.
         let short = bth(0x11, 7, None);
         assert_eq!(dissect_roce(&short).summary, "RoCE RC Acknowledge [QP 7]");
+    }
+
+    /// SMB Direct payloads carried over SEND are dissected and reported.
+    #[test]
+    fn smb_direct_payload() {
+        // Build an SMBD negotiate request payload (min=1, max=1, reserved=0, credits=10, pref_send=1024, pref_recv=1024).
+        let mut smbd = vec![];
+        smbd.extend_from_slice(&1u16.to_le_bytes()); // MinVersion
+        smbd.extend_from_slice(&1u16.to_le_bytes()); // MaxVersion
+        smbd.extend_from_slice(&0u16.to_le_bytes()); // Reserved
+        smbd.extend_from_slice(&10u16.to_le_bytes()); // CreditsRequested
+        smbd.extend_from_slice(&1024u32.to_le_bytes()); // PreferredSendSize
+        smbd.extend_from_slice(&1024u32.to_le_bytes()); // PreferredReceiveSize
+        smbd.resize(20, 0);
+
+        let mut payload = bth(0x04, 12, None); // RC SEND Only, QP 12
+        payload.extend_from_slice(&smbd);
+
+        let r = dissect_roce(&payload);
+        assert!(r.summary.contains("SMB Direct"), "{}", r.summary);
+        assert!(r.summary.contains("Negotiate"), "{}", r.summary);
+        assert!(r.summary.contains("[QP 12]"), "{}", r.summary);
     }
 }

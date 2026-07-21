@@ -45,7 +45,8 @@ use super::{
     rsh, rsync, rtmp, rtpmidi, rtsp, rua, rwho, rx, s1ap, sabp, sane, sap_announce, sbcap, sflow,
     sip, skinny, slmp, slp, small_services, smb, smpp, smtp, snmp, socks, spamd, srtp_ge, ssdp,
     ssh, statsd, stomp, stun, sua, svn, syslog, tacacs, tds, telnet, teredo, tftp, tls, tns, twamp,
-    vxlangpe, wccp, whois, wireguard, wsd, xcp, xdmcp, xmpp, xnap, zabbix, zerotier, zookeeper,
+    uadp, vxlangpe, wccp, whois, wireguard, wsd, xcp, xdmcp, xmpp, xnap, zabbix, zerotier,
+    zookeeper,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -360,6 +361,9 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (4569, iax2::dissect_iax2),
     (4739, netflow::dissect_netflow),
     (4790, vxlangpe::dissect_vxlangpe),
+    // OPC UA PubSub (UADP) shares UDP 4840 with OPC UA TCP on the same port,
+    // but the UDP variant is the publish/subscribe model (IEC 62541-14).
+    (4840, uadp::dissect_uadp),
     (5004, rtpmidi::dissect_rtpmidi),
     (5005, rtpmidi::dissect_rtpmidi),
     (5007, slmp::dissect_slmp),

@@ -372,6 +372,27 @@ secure channel, then service messages. It's the bridge between the plant floor \
 and the cloud in most new IIoT deployments.",
             look_for: "\"OPC UA Hello\" / \"OPC UA Acknowledge\" to start, \"OPC UA OpenSecureChannel\", then \"OPC UA Message\" service calls.",
         },
+        Protocol::OpcUaPubSub => Lesson {
+            title: "OPC UA PubSub — the fire-and-forget industrial data stream",
+            summary: "OPC UA's publish/subscribe mode: publishers broadcast data, subscribers listen.",
+            body: "OPC UA's client/server model is the handshake — one device asks, another \
+answers. PubSub is the broadcast: a publisher sends a UDP datagram (a UADP \
+NetworkMessage) to a multicast group or unicast address, and any subscriber \
+that cares picks it up. There is no connection, no acknowledgement, and no \
+retransmit — a missed datagram is simply gone.\n\n\
+The publisher identifies itself with a PublisherId, and groups its output into \
+WriterGroups, each carrying DataSetMessages for a particular set of variables. \
+Those two IDs — publisher and group — are the address of the data stream: \
+if a subscriber stops receiving, the first question is whether the publisher \
+is still sending and whether the group IDs match what the subscriber expects.\n\n\
+Discovery Request and Discovery Response frames are the control plane: a \
+subscriber sends a Discovery Request to find out what publishers are present \
+and what groups they offer. Seeing those frames tells you the subscription \
+configuration is still being negotiated.",
+            look_for: "\"OPC UA PubSub DataSet — publisher N group M\" repeating at a fixed rate \
+— that is the live process data. A gap in the sequence means a dropped datagram. \
+\"Discovery Request\" means a subscriber is still looking for its publisher.",
+        },
         Protocol::Rtp => Lesson {
             title: "RTP — the voice and video itself",
             summary: "The actual audio/video stream of a call, once SIP has set it up.",
@@ -1096,6 +1117,21 @@ neither carries a protocol identifier. Which service a queue pair was connected 
 for is agreed by the connection manager and never repeated, so a capture that \
 misses the connection setup cannot be certain which is which.",
             look_for: "\"rejected by the target\", and the advertised regions — a command advertising neither cannot move data whatever it asks for.",
+        },
+        Protocol::SmbDirect => Lesson {
+            title: "SMB Direct — zero-copy file sharing over RDMA",
+            summary: "SMB3 running directly over RDMA (RoCE or InfiniBand) without the TCP/IP overhead.",
+            body: "SMB Direct (SMBD) replaces TCP/IP with RDMA transport to allow extremely \
+high-speed, low-latency access to shared folders. Instead of segmenting files into TCP \
+packets and copying them through the kernel, SMB Direct uses RDMA SEND to carry commands \
+and flow-control credits, and directs the network adapter to write/read file blocks \
+directly to and from the remote machine's RAM.\n\n\
+This means that in a packet capture, the file transfer commands appear as SMB Direct messages \
+carrying SMB2 payloads (such as NEGOTIATE or CREATE), but the actual block data is moved by \
+subsequent RDMA READ/WRITE operations and does not appear inside the SMB Direct frames themselves.\n\n\
+The SMBD header manages flow control via CreditsRequested and CreditsGranted. If those credits \
+drop to zero, the connection stalls even if the underlying RDMA fabric is perfectly healthy.",
+            look_for: "\"SMB Direct Negotiate\" or \"SMB Direct Data · SMB2 CREATE\" containing the file request, and \"SMB Direct Keep-Alive\" maintaining connection credits.",
         },
         Protocol::ModbusRtu => Lesson {
             title: "Modbus RTU over TCP — the traffic that does not parse",
@@ -3132,6 +3168,27 @@ light itself, carrying the code for every fault currently active.\n\n\
 Not every 29-bit frame is J1939, so netscope only claims one whose parameter \
 group the standard actually defines; anything else stays a plain CAN frame.",
             look_for: "\"J1939 engine speed (from engine)\"; and \"J1939 DM1 — fault lamp lit, SPN 100 FMI 1\" when something is wrong.",
+        },
+        Protocol::DeviceNet => Lesson {
+            title: "DeviceNet — industrial automation over CAN",
+            summary: "Decodes 11-bit CAN identifiers into DeviceNet message groups and MAC IDs.",
+            body: "DeviceNet runs the Common Industrial Protocol (CIP) on top of standard \
+11-bit CAN. Every frame is classified into one of four message groups depending on \
+its identifier range, and contains the sender's MAC ID (node address). This lets \
+netscope tell you what type of message is being sent (e.g. Master's I/O Poll Command \
+or Slave's Explicit Response) and which node it belongs to, separating control traffic \
+from configuration changes.",
+            look_for: "\"DeviceNet Explicit Request node 5\" or \"DeviceNet I/O Poll Response from node 7\" with its raw hex data.",
+        },
+        Protocol::J1708 => Lesson {
+            title: "J1708 — the legacy truck serial bus",
+            summary: "Heavy vehicle diagnostics over RS-485 serial, identified by checksum.",
+            body: "Before CAN and J1939, heavy vehicles used J1708 — a 9600 baud serial bus \
+built on RS-485. Gateways bridge this serial traffic onto IP networks. J1708 frames \
+use a two's-complement checksum where the sum of all bytes in the frame is zero. The \
+first byte is the Message ID (MID) which identifies the subsystem (e.g. Engine, Brakes, \
+or Transmission) that spoke.",
+            look_for: "\"J1708 Engine (MID 0x80) PID 0x5C\" or \"J1708 Transmission (MID 0x88) PID 0x61\".",
         },
         Protocol::Obd2 => Lesson {
             title: "OBD-II — what the garage's scan tool asks your car",

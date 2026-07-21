@@ -47,15 +47,41 @@ impl MessageKind {
 }
 
 /// The decoded common header.
-pub(crate) struct ApPdu {
+pub(crate) struct ApPdu<'a> {
     pub kind: MessageKind,
     pub procedure_code: u8,
     pub criticality: &'static str,
+    #[allow(dead_code)]
+    pub value: &'a [u8],
 }
 
-/// Parse the two-byte common header. Returns `None` when the payload is too
+/// Decode Aligned PER length determinant (ITU-T X.691 §11.9).
+///
+/// Returns `Some((length, bytes_consumed))` on success.
+pub(crate) fn decode_length(data: &[u8]) -> Option<(usize, usize)> {
+    let first = *data.first()?;
+    if first & 0x80 == 0 {
+        // Short form: 0LLLLLLL (1 byte)
+        Some((first as usize, 1))
+    } else if first & 0xC0 == 0x80 {
+        // Long form: 10LLLLLL LLLLLLLL (2 bytes)
+        let second = *data.get(1)?;
+        let len = (((first & 0x3F) as usize) << 8) | (second as usize);
+        Some((len, 2))
+    } else {
+        // Fragmented form: 11000nnn (nnn blocks of 16K octets)
+        let n = (first & 0x07) as usize;
+        if (1..=4).contains(&n) {
+            Some((n * 16384, 1))
+        } else {
+            None
+        }
+    }
+}
+
+/// Parse the common header. Returns `None` when the payload is too
 /// short or the choice index names an alternative that does not exist.
-pub(crate) fn parse(payload: &[u8]) -> Option<ApPdu> {
+pub(crate) fn parse(payload: &[u8]) -> Option<ApPdu<'_>> {
     let first = *payload.first()?;
     let procedure_code = *payload.get(1)?;
     // The choice index occupies the top 2 bits of the first byte.
@@ -73,10 +99,28 @@ pub(crate) fn parse(payload: &[u8]) -> Option<ApPdu> {
         Some(2) => "notify",
         _ => "unknown",
     };
+
+    // Aligned PER: the open type 'value' follows criticality (byte 2) and padding,
+    // starting at byte 3. It begins with an APER length determinant.
+    let value = if let Some(sub) = payload.get(3..) {
+        if let Some((len, header)) = decode_length(sub) {
+            let start = 3 + header;
+            payload.get(start..start + len)?
+        } else {
+            if !sub.is_empty() {
+                return None;
+            }
+            &[][..]
+        }
+    } else {
+        &[][..]
+    };
+
     Some(ApPdu {
         kind,
         procedure_code,
         criticality,
+        value,
     })
 }
 
@@ -183,5 +227,24 @@ mod tests {
         assert_eq!(parse(&[0x00, 0x0F, 0x00]).unwrap().criticality, "reject");
         assert_eq!(parse(&[0x00, 0x0F, 0x40]).unwrap().criticality, "ignore");
         assert_eq!(parse(&[0x00, 0x0F, 0x80]).unwrap().criticality, "notify");
+    }
+
+    #[test]
+    fn length_determinant_is_decoded() {
+        // Short form: 5 bytes
+        let mut p1 = vec![0x00, 0x0F, 0x00];
+        p1.extend_from_slice(&[5]); // Short form length = 5
+        p1.extend_from_slice(&[0x11, 0x22, 0x33, 0x44, 0x55]);
+        let res1 = parse(&p1).unwrap();
+        assert_eq!(res1.value, &[0x11, 0x22, 0x33, 0x44, 0x55]);
+
+        // Long form: 258 bytes
+        let mut p2 = vec![0x00, 0x0F, 0x00];
+        let val: u16 = 0x8000 | 258;
+        p2.extend_from_slice(&val.to_be_bytes()); // Long form length = 258
+        let body = vec![0xAA; 258];
+        p2.extend_from_slice(&body);
+        let res2 = parse(&p2).unwrap();
+        assert_eq!(res2.value, &body[..]);
     }
 }

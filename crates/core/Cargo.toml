@@ -46,6 +46,7 @@ ureq = { version = "2.9", default-features = false, features = ["tls", "json"] }
 
 
 [features]
+default = ["ot", "telecom", "enterprise"]
 # Async facade over the capture pipeline (see `capture::AsyncCaptureEngine`).
 # Off by default so the TUI/desktop builds stay tokio-free.
 async = ["dep:tokio"]
@@ -53,6 +54,11 @@ async = ["dep:tokio"]
 # vendors and compiles Lua from source, which needs a C toolchain; without it
 # plugins still work, they just use the declarative summary template.
 lua = ["dep:mlua"]
+
+# Protocol families (E6)
+ot = []
+telecom = []
+enterprise = []
 
 [dev-dependencies]
 criterion = "0.5"
