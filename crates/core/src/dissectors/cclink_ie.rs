@@ -71,7 +71,7 @@ pub fn dissect_cclink_ie(payload: &[u8]) -> DissectedResult {
     };
 
     let pdu = pdu_name(pdu_type);
-    let summary = format!("CC-Link IE {} — {} bytes", pdu, payload.len());
+    let summary = format!("CC-Link IE {} — {}", pdu, super::bytes(payload.len() as u64));
 
     DissectedResult {
         summary,

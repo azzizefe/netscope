@@ -1172,6 +1172,18 @@ rare enough to be real evidence, and it is stronger than any guess based on \
 field shapes could be.",
             look_for: "Modbus RTU appearing on 502 at all: it means a gateway is bridging a serial bus, and anything reading it as Modbus TCP is seeing nothing.",
         },
+        Protocol::ModbusAscii => Lesson {
+            title: "Modbus ASCII — the human-readable industrial serial frame",
+            summary: "ASCII-encoded serial Modbus frames forwarded onto TCP.",
+            body: "Modbus ASCII is the character-oriented serial variant of Modbus. \
+Instead of transmitting raw binary bytes, each byte is split into two ASCII hex characters. \
+Frames start with a colon (':') and end with a carriage return and line feed (CRLF).\n\n\
+Just like Modbus RTU, serial-to-ethernet converters often forward these frames unchanged \
+over TCP networks. Because it uses ASCII characters rather than binary representation, it \
+cannot be parsed as Modbus TCP. It uses a Longitudinal Redundancy Check (LRC) checksum \
+at the end of each frame, which allows self-validation and robust identification.",
+            look_for: "Packets starting with a colon (':') and ending with CRLF ('\\r\\n') on port 502, containing hexadecimal characters.",
+        },
         Protocol::IsoTp => Lesson {
             title: "ISO-TP — why the diagnostic session stalled",
             summary: "Carrying messages longer than a CAN frame's eight bytes.",
@@ -1960,6 +1972,16 @@ running — a controller reading sensors and driving actuators, often every few 
 milliseconds. It rides directly on Ethernet (no IP) for speed. DCP messages \
 discover and name devices; RT frames carry the cyclic process data.",
             look_for: "\"PROFINET RT Class 1 (cyclic data)\" or \"PROFINET DCP Identify\".",
+        },
+        Protocol::Profisafe => Lesson {
+            title: "PROFIsafe — fail-safe communication over PROFINET",
+            summary: "Safety profile (IEC 61784-3-3) for fail-safe PROFINET IO networks.",
+            body: "PROFIsafe is a safety protocol designed for functional safety up to SIL3/PLe. \
+It runs as a safety profile on top of standard PROFINET IO (or PROFIBUS) using the 'Black Channel' \
+principle, meaning the underlying network hardware does not need safety certification.\n\n\
+A PROFIsafe PDU (Safety Protocol Data Unit) consists of application safety data, a status/control byte, \
+and a 3-byte or 4-byte CRC. In a cyclic capture, it is carried inside the PROFINET RT payload.",
+            look_for: "PROFINET IO Real-Time cyclic frames carrying safety-instrumented device values.",
         },
         Protocol::Wol => Lesson {
             title: "Wake-on-LAN — powering a machine on remotely",
@@ -3536,6 +3558,16 @@ and pool balancing so either server can take over alone.",
             summary: "The actual command sent to a factory controller.",
             body: "EtherNet/IP is only the wrapper. The message inside is CIP, and that is where the meaning lives: reading a tag holding a temperature, writing one that opens a valve, or telling the controller to stop. Every CIP request names both a service (what to do) and an object class (which part of the device), so a single line tells you a Logix controller was asked to halt rather than merely that some EtherNet/IP traffic went past. Like other factory protocols it carries no authentication.",
             look_for: "\"CIP Read Tag — Symbol\" for ordinary polling; \"CIP Write Tag\" when a value is changed; \"CIP Stop — Logix Controller\" for a command that halts the machine.",
+        },
+        Protocol::CipSafety => Lesson {
+            title: "CIP Safety — fail-safe industrial control",
+            summary: "Safety-extended CIP messages for fail-safe industrial communication.",
+            body: "CIP Safety extends the Common Industrial Protocol (CIP) to provide fail-safe \
+communication up to SIL3/PLe. It operates directly over standard networks like EtherNet/IP \
+without relying on the underlying medium for safety integrity (the 'Black Channel' principle). \
+It can be identified by the use of safety-critical classes (like Safety Supervisor 0x39 or \
+Safety Validator 0x3A) and the presence of safety validations, timestamps, and redundant CRCs.",
+            look_for: "CIP Safety messages targeting safety validator (0x3A) or safety supervisor (0x39) objects, carrying safety-critical commands.",
         },
         Protocol::Dlms => Lesson {
             title: "DLMS/COSEM — reading the meter on your wall",

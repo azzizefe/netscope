@@ -76,6 +76,11 @@ fn class_name(class: u16) -> Option<&'static str> {
         0x29 => "Control Supervisor",
         0x2A => "AC/DC Drive",
         0x37 => "File",
+        0x39 => "Safety Supervisor",
+        0x3A => "Safety Validator",
+        0x3B => "Safety Discrete Input Point",
+        0x3D => "Safety Discrete Input Group",
+        0x3F => "Safety Discrete Output Point",
         0x47 => "Device Level Ring",
         0x48 => "QoS",
         0x64 => "Symbol",
@@ -166,11 +171,19 @@ pub(crate) fn describe(payload: &[u8]) -> Option<(Protocol, String)> {
         }
     }
 
-    let summary = match path_class(path).and_then(class_name) {
+    let class_id = path_class(path);
+    let is_safety = class_id.is_some_and(|c| matches!(c, 0x39 | 0x3A | 0x3B | 0x3D | 0x3F));
+    let protocol = if is_safety {
+        Protocol::CipSafety
+    } else {
+        Protocol::Cip
+    };
+
+    let summary = match class_id.and_then(class_name) {
         Some(class) => format!("CIP {name} — {class}"),
         None => format!("CIP {name}"),
     };
-    Some((Protocol::Cip, summary))
+    Some((protocol, summary))
 }
 
 // This module has no `dissect_*` entry point of its own.
@@ -212,6 +225,14 @@ mod tests {
             describe(&p).as_ref().map(|(_, s)| s.as_str()),
             Some("CIP Read Tag — Template")
         );
+    }
+
+    #[test]
+    fn safety_validator_is_named_cipsafety() {
+        let p = request(0x0E, 0x3A);
+        let r = describe(&p).unwrap();
+        assert_eq!(r.0, Protocol::CipSafety);
+        assert_eq!(r.1, "CIP Get Attribute Single — Safety Validator");
     }
 
     /// The services that change what a controller is doing.

@@ -361,9 +361,11 @@ yolları**.
       *NTT'nin açık kaynak Spicy/Zeek parser'ı referans alınarak doğrulandı.
       SLMP/MELSEC 3E/4E çerçeve yapısını UDP 61450 üzerinde taşır; ortak SLMP
       ayrıştırıcı motoru (`slmp.rs`) kullanılarak entegre edildi.*
-- [ ] CC-Link IE Control ⚠️ *(**engellendi:** Tescilli donanım ve ASIC katmanı
-      gerektiriyor, standart IP ağlarında doğrudan koşmuyor. Açık bir referans
-      şema bulunamadı — §5 kuralı uyarınca beklemede.)*
+- [x] **CC-Link IE Control — EtherType 0x890F** ✅ → [`cclink_ie.rs`](../crates/core/src/dissectors/cclink_ie.rs)
+      *NTT'nin açık kaynak Spicy/Zeek parser'ındaki `NO_IP` L2 tanımları
+      referans alınarak entegre edildi. EtherType 0x890F üzerindeki direkt L2
+      çerçevelerinin PDU tipleri (TokenM, CyclicData, Transient, vb.)
+      ayrıştırılarak anlamlı bir özet sunulmaktadır.*
 - [x] Foundation Fieldbus HSE — UDP/TCP 1089-1091 ✅ *(+3622)*
 - [x] **OPC UA PubSub (UADP)** ✅ → [`uadp.rs`](../crates/core/src/dissectors/uadp.rs)
 - [x] **Modbus RTU over TCP** ✅ → [`modbus_rtu.rs`](../crates/core/src/dissectors/modbus_rtu.rs)

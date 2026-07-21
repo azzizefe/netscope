@@ -268,6 +268,29 @@ pub mod mle;
 pub mod mms;
 pub mod modbus;
 #[cfg(feature = "ot")]
+pub mod modbus_ascii;
+#[cfg(not(feature = "ot"))]
+pub mod modbus_ascii {
+    use std::net::IpAddr;
+    pub(crate) fn looks_like_modbus_ascii(_payload: &[u8]) -> bool { false }
+    pub fn dissect_modbus_ascii(
+        _src_ip: Option<IpAddr>,
+        _dst_ip: Option<IpAddr>,
+        _src_port: u16,
+        _dst_port: u16,
+        _payload: &[u8],
+    ) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::ModbusAscii,
+            summary: String::new(),
+        }
+    }
+}
+#[cfg(feature = "ot")]
 pub mod modbus_rtu;
 #[cfg(not(feature = "ot"))]
 pub mod modbus_rtu {
@@ -381,6 +404,21 @@ pub mod ppp;
 pub mod pppoe;
 pub mod pptp;
 pub mod profinet;
+#[cfg(feature = "ot")]
+pub mod profisafe;
+#[cfg(not(feature = "ot"))]
+pub mod profisafe {
+    pub fn dissect_profisafe(_payload: &[u8]) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::Profisafe,
+            summary: String::new(),
+        }
+    }
+}
 pub mod prp;
 pub mod ptp;
 pub mod pulsar;
@@ -423,6 +461,28 @@ pub mod rwho;
 pub mod rx;
 pub mod s1ap;
 pub mod s7comm;
+#[cfg(feature = "ot")]
+pub mod s7comm_plus;
+#[cfg(not(feature = "ot"))]
+pub mod s7comm_plus {
+    use std::net::IpAddr;
+    pub fn dissect_s7comm_plus(
+        _src_ip: Option<IpAddr>,
+        _dst_ip: Option<IpAddr>,
+        _src_port: u16,
+        _dst_port: u16,
+        _payload: &[u8],
+    ) -> super::DissectedResult {
+        super::DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: crate::models::Protocol::S7commPlus,
+            summary: String::new(),
+        }
+    }
+}
 pub mod sabp;
 pub mod sane;
 pub mod sap_announce;
