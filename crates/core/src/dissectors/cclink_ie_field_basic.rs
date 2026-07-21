@@ -2,8 +2,8 @@
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
 
 /// Dissect a CC-Link IE Field Network Basic message on UDP port 61450.
 ///

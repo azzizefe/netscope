@@ -80,7 +80,9 @@ pub mod der;
 pub mod devicenet;
 #[cfg(not(feature = "ot"))]
 pub mod devicenet {
-    pub(crate) fn looks_like_devicenet(_id: u32) -> bool { false }
+    pub(crate) fn looks_like_devicenet(_id: u32) -> bool {
+        false
+    }
     pub(crate) fn result(_id: u32, _payload: &[u8]) -> super::DissectedResult {
         super::DissectedResult {
             src_addr: None,
@@ -255,7 +257,9 @@ pub mod modbus_rtu;
 #[cfg(not(feature = "ot"))]
 pub mod modbus_rtu {
     use std::net::IpAddr;
-    pub(crate) fn looks_like_modbus_rtu(_payload: &[u8]) -> bool { false }
+    pub(crate) fn looks_like_modbus_rtu(_payload: &[u8]) -> bool {
+        false
+    }
     pub(crate) fn dissect_modbus_rtu(
         _src_ip: Option<IpAddr>,
         _dst_ip: Option<IpAddr>,
@@ -427,7 +431,9 @@ pub mod smb_direct;
 #[cfg(not(feature = "enterprise"))]
 pub mod smb_direct {
     use std::net::IpAddr;
-    pub(crate) fn looks_like_smb_direct(_payload: &[u8]) -> bool { false }
+    pub(crate) fn looks_like_smb_direct(_payload: &[u8]) -> bool {
+        false
+    }
     pub fn dissect_smb_direct(
         _src_ip: Option<IpAddr>,
         _dst_ip: Option<IpAddr>,
