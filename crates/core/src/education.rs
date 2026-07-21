@@ -607,6 +607,648 @@ and Option 2 (ANSI), and the frame does not say which the network runs. \
 netscope names the Option 1 meanings and always shows the raw code too.",
             look_for: "\"ESMC heartbeat — primary reference clock (QL 2)\" when healthy; \"local equipment clock (will drift)\" or \"do not use\" when the sync chain has broken.",
         },
+        Protocol::Memberlist => Lesson {
+            title: "memberlist — how a cluster decides a node is dead",
+            summary: "Gossip that names both the evicted node and the node that evicted it.",
+            body: "Serf, Consul and Nomad all sit on the same membership library. Nodes \
+ping each other over UDP; a node that does not answer is pinged again indirectly, \
+through a third node, in case the direct path is the broken thing. If that also \
+fails, the node is gossiped as suspect, and shortly after as dead.\n\n\
+What makes this worth reading is that the accusations are signed. A suspect or \
+dead message names the node being removed and the node making the claim, so a \
+capture answers the question a cluster's logs cannot: is one flapping member \
+being reported by everybody, or is a single peer with a broken path evicting \
+every node it cannot reach? Those two have identical symptoms and opposite fixes.\n\n\
+It also separates a clean shutdown from an eviction. A node leaving on purpose \
+gossips its own death, so the accused and the accuser are the same name.",
+            look_for: "\"web-1 declared web-3 dead\" — and whether the accuser is always the same node, which points at the accuser rather than the accused.",
+        },
+        Protocol::ConsulRpc => Lesson {
+            title: "Consul RPC — watching a cluster lose its leader",
+            summary: "One port carrying agent RPC, Raft, gossip and gRPC, told apart by a single byte.",
+            body: "Consul servers multiplex several protocols onto one port and put a type \
+byte in front of each connection. The interesting value is Raft, because Raft is \
+where a cluster's health is decided.\n\n\
+A healthy cluster carries AppendEntries: the leader replicating log entries, and \
+using that same call as its heartbeat. RequestVote means a follower stopped \
+hearing the heartbeat and started an election. Occasional elections are normal \
+after a restart; a capture full of them is a cluster that cannot hold a leader, \
+which users experience as writes failing intermittently while every individual \
+server looks fine. InstallSnapshot means a follower fell so far behind that \
+replaying the log was given up on in favour of shipping the whole state.\n\n\
+The type bytes are 0-9, a range RFC 7983 leaves unassigned as TLS content types \
+precisely so ports can be multiplexed this way — which is why native TLS on the \
+same port cannot be mistaken for them.",
+            look_for: "\"RequestVote — an election is under way\" repeating, which means the cluster is churning leaders rather than serving.",
+        },
+        Protocol::Drbd => Lesson {
+            title: "DRBD — a disk mirrored to another machine",
+            summary: "Replicated block storage, and the peer-side failures that stall writes locally.",
+            body: "DRBD mirrors a block device over the network: writes to the primary are \
+sent to the peer, and depending on the configured protocol the write is not \
+acknowledged locally until the peer has it. That coupling is why a remote problem \
+shows up as a local one — a filesystem that stalls, or a failover that comes up \
+holding stale data, with nothing local looking broken.\n\n\
+The negative acknowledgements are what explain it. NegAck, NegDReply and \
+NegRSDReply are all the peer reporting that its own disk could not serve the \
+request. Seeing them means the mirror is the failing side. A run of OutOfSync or \
+RSDataRequest is something else entirely — a resynchronisation working through \
+the blocks that diverged, which is the expected aftermath of a node rejoining \
+rather than a fault.\n\n\
+Each resource is configured on its own port, climbing from around 7788, so DRBD \
+is recognised by the magic at the head of every packet instead.",
+            look_for: "\"NegDReply — the peer's disk is unusable\", which puts the fault on the far node rather than the one that appears stuck.",
+        },
+        Protocol::Chargen
+        | Protocol::Qotd
+        | Protocol::Echo
+        | Protocol::Discard
+        | Protocol::Daytime
+        | Protocol::Time
+        | Protocol::Tcpmux => Lesson {
+            title: "The small services — 1983 debugging aids, now DDoS weapons",
+            summary: "Echo, Discard, Daytime, QOTD, Chargen, Time and TCPMUX.",
+            body: "These were specified in the early 1980s as debugging aids, when \
+every host on the network was known and trusted. Each RFC is about two pages. \
+Every one of them is still compiled into equipment shipping today, and on a \
+great many devices they are still switched on.\n\n\
+The UDP variants are reflectors. A single spoofed datagram to Chargen returns \
+up to 512 bytes to whoever the source address claimed to be — and RFC 864 \
+states plainly that the request's contents are ignored, so one byte is enough \
+to trigger it. QOTD behaves much the same. The attacker sends small packets \
+from a forged address, the victim receives the flood, and the reflecting host \
+has no idea it is taking part.\n\n\
+That makes seeing these at all the finding. Nothing legitimate has used them in \
+thirty years. A host answering on UDP 19 from the public internet is a \
+reflector waiting to be recruited — usually a printer, a switch management \
+port, or an embedded stack that shipped with the defaults left on.\n\n\
+Time is the odd one out, and worth a second look for a different reason: it \
+counts seconds from 1900 in 32 bits, so it overflows in 2036.",
+            look_for: "Any of them answering on UDP at all — and especially a Chargen reply of a few hundred bytes, which is the reflected volume.",
+        },
+        Protocol::Artnet | Protocol::Sacn => Lesson {
+            title: "Art-Net and sACN — two consoles fighting over one universe",
+            summary: "Stage lighting control carried over Ethernet.",
+            body: "Theatrical lighting runs on DMX512: 512 channels of one byte each, \
+grouped into a universe. Art-Net and sACN carry universes over IP so a console \
+can drive a rig without a cable per dimmer. Art-Net is the older informal one; \
+sACN (ANSI E1.31) is the standardised answer, and both are everywhere.\n\n\
+Two fields matter. Every packet for a universe carries an incrementing \
+sequence number, so a gap means frames were dropped — which the audience sees \
+as the rig stuttering, and which no console will report because from its side \
+everything was sent.\n\n\
+The second is priority, and it is the classic failure. sACN lets several \
+sources send the same universe at different priorities and the receiver obeys \
+the highest. Two consoles at the *same* priority is the one that wastes an \
+afternoon: the fixtures flicker between two states at packet rate while each \
+console displays a perfectly correct output. Nothing but the wire shows that \
+there are two senders at all — which is why the source name is worth reading.",
+            look_for: "The same universe from two sources at equal priority, or a sequence number that skips.",
+        },
+        Protocol::Osc => Lesson {
+            title: "OSC — control traffic on a port nobody registered",
+            summary: "Open Sound Control: addresses like file paths, in plain text.",
+            body: "OSC replaced MIDI for anything needing more than seven bits of \
+resolution or a name longer than a number. A message is an address pattern that \
+looks like a filesystem path — /mixer/1/fader — a type-tag string saying what \
+the arguments are, then the arguments.\n\n\
+It has no port of its own. Every application picks one, and that is exactly why \
+it is worth recognising structurally: on a show network the traffic is plainly \
+there, but a capture filtered by port finds nothing at all. netscope identifies \
+it by shape instead — an address starting with a slash, everything padded to a \
+multiple of four bytes.\n\n\
+Bundles are the other half. A bundle groups several messages with a time tag \
+saying when they should take effect, which is how a lighting cue and an audio \
+change stay together. A bundle whose time tag has already passed is applied \
+immediately, and the cue lands out of step with everything it was meant to \
+match.",
+            look_for: "The address pattern — it names the device and the parameter in plain text, with no lookup needed.",
+        },
+        Protocol::RtpMidi => Lesson {
+            title: "RTP-MIDI — refused, or simply never answered",
+            summary: "MIDI over a network, plus the session that has to open first.",
+            body: "RTP-MIDI carries MIDI over IP instead of a five-pin cable, which is \
+how a keyboard reaches a computer in another room and how Apple's Network MIDI \
+works. There are two conversations on adjacent ports: a control port running \
+the session protocol, and a data port carrying the MIDI once that succeeds.\n\n\
+Reading the control port is the point. A session that never establishes looks, \
+at the instrument, exactly like a cable that is not plugged in — no error, no \
+sound, nothing on screen. But an invitation that is *rejected* is a completely \
+different fault from one that goes unanswered: the far end is present and \
+refusing, usually because it is already bound to another host or the name does \
+not match what was configured.\n\n\
+The clock exchange is worth watching too. RTP-MIDI corrects for network delay \
+by measuring it in rounds; rounds that keep repeating mean the estimate never \
+settles, and notes will arrive audibly late.",
+            look_for: "\"invitation rejected\" rather than no reply at all — the far end is there and saying no.",
+        },
+        Protocol::Igrp => Lesson {
+            title: "IGRP — a router older than its own replacement",
+            summary: "Cisco's pre-EIGRP interior routing protocol.",
+            body: "IGRP was Cisco's answer to RIP's fifteen-hop ceiling: a \
+distance-vector protocol whose metric was built from bandwidth and delay rather \
+than a hop count. EIGRP replaced it, and Cisco removed IGRP from IOS long \
+ago.\n\n\
+That is precisely why finding it matters. IGRP on a capture taken today is not \
+a routing design decision — it is a device old enough to predate its vendor's \
+own replacement for it, still participating in routing. And it carries no \
+authentication of any kind, so anything able to put a packet on the segment can \
+advertise a route and have it believed.\n\n\
+The three counts in the header — interior, system and exterior — are the useful \
+read. Exterior routes are how a default route arrives, so a neighbour that \
+suddenly advertises them when it never did before has either gained a new \
+upstream or is being spoofed.",
+            look_for: "Any IGRP at all, and especially exterior routes from a neighbour that did not advertise them before.",
+        },
+        Protocol::Etherip => Lesson {
+            title: "EtherIP — the far site's broadcasts arriving here",
+            summary: "A complete Ethernet segment tunnelled inside IP.",
+            body: "EtherIP does one thing: it puts an entire Ethernet frame, headers \
+and all, inside an IP packet. Two sites then share one broadcast domain as \
+though they were patched into the same switch. OpenBSD bridging and a number of \
+layer-2 VPNs use it.\n\n\
+The header is two bytes — a version nibble and twelve reserved bits — which is \
+about as thin as encapsulation gets. What that thinness hides is the point: \
+everything inside is a full Ethernet frame, so the tunnel carries the remote \
+site's broadcasts, its spanning tree and its ARP. A broadcast storm at one end \
+crosses to the other, and a loop can form between two sites that have no \
+physical link at all.\n\n\
+At the tunnel endpoint a capture shows only \"IP protocol 97\" unless the frame \
+inside is unwrapped, so the tunnel is treated as context here and the frame \
+within it is reported as the answer.",
+            look_for: "What is inside the tunnel — broadcast and spanning-tree traffic crossing between sites is the thing to catch.",
+        },
+        Protocol::Tsp => Lesson {
+            title: "RFC 3161 — the timestamp that outlives the certificate",
+            summary: "A trusted third party attesting when something existed.",
+            body: "A signature proves who signed. It does not prove *when*, and that gap matters because certificates expire. Once the signing certificate is past its date, a verifier cannot tell a signature made while the certificate was valid from one forged afterwards, so it rejects both.
+
+A timestamp authority closes the gap. It signs the hash together with the current time, and its attestation is what lets a verifier say the signature was made while the certificate was still good. This is why signed software keeps verifying years after release, and why archives, invoices and legal documents are timestamped rather than merely signed.
+
+The failure is unusually quiet. Timestamping happens during a build or an archival job, against an external service nobody monitors, and a build that could not reach its authority still produces a signature that verifies perfectly *today*. It stops verifying on the day the signing certificate expires — often years later, long after the build logs are gone.
+
+When the authority does answer with a refusal, the reason narrows the fix sharply. `timeNotAvailable` means the authority has lost its trusted time source and is refusing rather than signing a time it cannot stand behind — the correct behaviour, and an outage on their side. `unacceptedPolicy` means the client asked for a policy this authority does not offer, which is a configuration mismatch rather than an outage. `badAlg` is usually a client still requesting a hash algorithm that has since been withdrawn.
+
+Timestamping travels inside HTTP with its own content types, `application/timestamp-query` and `application/timestamp-reply`, so nothing sees it without looking past the headers.",
+            look_for: "A refusal — and especially \"timeNotAvailable\", which means the authority is refusing rather than signing a time it cannot vouch for.",
+        },
+        Protocol::Cmp => Lesson {
+            title: "CMP — why the device could not get a certificate",
+            summary: "Automated certificate enrolment, renewal and revocation.",
+            body: "Certificate Management Protocol is what runs underneath automated \
+PKI: an industrial controller, a phone or a car enrolling with a CA and then \
+renewing before its certificate expires, without anyone typing anything.\n\n\
+An enrolment failure is worth catching because of *when* it happens. A device \
+with no valid certificate has no identity, so nothing will talk to it — and \
+renewal happens weeks or months after installation, on a schedule nobody is \
+watching. The failure that matters is not the one during deployment but the one \
+at three in the morning on a device that has been fine for a year.\n\n\
+CMP says exactly which thing went wrong, and the answers need entirely \
+different fixes: `badTime` is the device's clock drifting out of tolerance, \
+`signerNotTrusted` is the CA not accepting the key that signed the request, \
+`badPOP` is a failed proof of possession, `systemUnavail` is the CA simply not \
+taking requests. A device's own log will usually record none of that — just \
+\"enrolment failed\".\n\n\
+Several reasons can be set at once, because they arrive as a bit string rather \
+than a single code, so reporting only the first would lose the rest.",
+            look_for: "An error body's reason bits — especially \"bad time\", which is a clock problem masquerading as a PKI one.",
+        },
+        Protocol::Aeron => Lesson {
+            title: "Aeron — the NAKs arrive before the latency does",
+            summary: "Low-latency messaging that recovers loss itself.",
+            body: "Aeron moves messages between processes faster than TCP can, which \
+is why trading systems and market-data feeds are built on it. It does over UDP \
+roughly what TCP does over IP, but the loss recovery is explicit: a receiver \
+notices a gap and asks for the missing range by name.\n\n\
+That makes the control frames the interesting ones. A data frame tells you only \
+that traffic is flowing.\n\n\
+**NAK** is a receiver saying it missed a range. The occasional one is ordinary \
+on a busy network. A stream of them is a publisher outrunning the path, and it \
+is the earliest signal available — it appears before the latency does.\n\n\
+**Status messages** advertise how much receive window is left. A window \
+shrinking towards zero is a consumer that cannot keep up, and when it reaches \
+zero the publisher stalls. In the application that stall looks like a latency \
+spike with no cause, which is exactly the kind of thing a capture ought to \
+explain.\n\n\
+A publication is identified by session, stream and term together. Two of the \
+three matching is a different stream, so all three have to be read before \
+concluding two frames belong to the same flow.",
+            look_for: "NAKs increasing, or a status window shrinking towards zero — both precede the stall rather than follow it.",
+        },
+        Protocol::Lorawan => Lesson {
+            title: "LoRaWAN — the counter a network silently ignores",
+            summary: "Battery sensors on a kilometres-wide radio link.",
+            body: "LoRaWAN carries a few bytes at a time from devices that must run \
+for years on one battery: water meters, soil probes, parking sensors, cattle \
+trackers. The radio reaches a long way and the devices sleep almost all the \
+time, and both of those shape what goes wrong.\n\n\
+**The frame counter is the failure worth knowing.** Every frame carries one, \
+and it exists to stop replay — a receiver ignores anything not ahead of what it \
+has already seen. So a device that resets, or gets a battery change on cheap \
+hardware, restarts its counter at zero and the network then silently discards \
+everything it sends. The device is transmitting perfectly and simply is not \
+being listened to. Nothing at the device end shows this at all.\n\n\
+**A device stuck on Join Request** is the other one. Joining is a two-step \
+exchange, and a capture full of Join Requests with no Accepts is a device whose \
+keys the network does not recognise, or whose requests reach a gateway that \
+cannot reach the network server. It will retry until the battery is gone.\n\n\
+**ADRACKReq** is the device asking whether anyone is still there — it has \
+already raised its transmit power as far as it can and heard nothing back.\n\n\
+The payload is encrypted end to end, so what the sensor actually reported is \
+not readable. The header is the whole of what a capture can say, which is why \
+these three fields carry so much of the diagnosis.",
+            look_for: "A counter that restarted at zero, or Join Requests with no matching Accept.",
+        },
+        Protocol::Lin => Lesson {
+            title: "LIN — where \"nobody answered\" is the whole diagnosis",
+            summary: "The cheap single-wire bus under CAN.",
+            body: "CAN costs real money per node, so carmakers put everything that \
+needs only a few bytes a second on LIN instead: window motors, seat adjusters, \
+mirrors, rain sensors, interior lighting. One master polls a handful of slaves \
+over a single wire, and every frame is the master asking one specific slave to \
+speak.\n\n\
+That structure is why the error flags matter more than the data. **No slave \
+response** means the master asked and nothing answered — on a bus this simple, \
+the device is dead, unplugged or unpowered. **Checksum error** means something \
+did answer but the frame arrived corrupt, which points at wiring rather than at \
+the device. **Parity error** means the identifier itself was damaged, so even \
+the question did not get there intact.\n\n\
+Those three point at three different repairs, and a mechanic replacing the \
+wrong part is the ordinary cost of a tool that only says \"LIN error\".\n\n\
+Two subtleties decide whether a frame reads correctly. The length, message type \
+and checksum type share a single byte, so reading it whole makes every length \
+wrong by a factor of sixteen. And the identifier is six bits — the top two are \
+its parity, not part of the number.\n\n\
+Identifiers 0x3C and 0x3D are reserved for diagnostics and carry the same \
+transport CAN uses, so a diagnostic session on LIN reads exactly like one on \
+CAN.",
+            look_for: "\"no slave response\" against a particular identifier — that identifier names the device that stopped answering.",
+        },
+        Protocol::Iec101 => Lesson {
+            title: "IEC 60870-5-101 — the serial link that reached IP anyway",
+            summary: "The same telecontrol messages as -104, over FT1.2 framing.",
+            body: "A great many substations are still reached by leased line, radio \
+or dial-up, and they speak -101 rather than -104. Gateways then forward that \
+serial traffic onto IP unchanged — exactly as Modbus gateways forward RTU — so \
+it turns up on captures that ought to contain nothing but Ethernet.\n\n\
+The message inside is the same ASDU -104 carries, so a refused breaker command \
+reads the same way here. What differs is the frame around it, and the link \
+layer says two things -104 has no equivalent for.\n\n\
+**NACK — link busy** is the outstation refusing a message outright, at the link \
+layer, before any ASDU is involved. A control centre watching a command time \
+out cannot tell that from a lost frame unless the link layer is read.\n\n\
+**DFC — data flow control** is the outstation saying its buffers are full. On a \
+slow serial link this is how an overloaded RTU announces itself, and it is why \
+polling appears to stall while the line itself is perfectly healthy.\n\n\
+One detail decides whether the control byte reads correctly: the same function \
+code means different things in each direction. Code 1 is \"reset user process\" \
+from the controlling station and \"NACK\" from the outstation.",
+            look_for: "\"NACK — link busy\" or the DFC flag, either of which explains a stalled poll that looks like a dead link.",
+        },
+        Protocol::Iser => Lesson {
+            title: "iSER — the commands are here, the data never is",
+            summary: "iSCSI with the block transfers moved onto RDMA.",
+            body: "Ordinary iSCSI copies every block through the kernel twice. iSER \
+keeps iSCSI's commands and responses but moves the data onto RDMA: the \
+initiator advertises a region of its memory and the target reads from or writes \
+to it directly. All-flash arrays and NVMe gateways use it because the copying is \
+what costs, not the protocol.\n\n\
+That split is what makes a capture confusing the first time. Commands appear as \
+iSER messages wrapping an ordinary iSCSI PDU, but the blocks those commands move \
+never appear at all — they travel as RDMA READ and WRITE operations against the \
+advertised region, which is a different opcode on a different packet, and often \
+offloaded so far into the adapter that a host capture never sees them. **A \
+capture showing commands and no data is not a broken transfer. That is how iSER \
+is supposed to look.**\n\n\
+The header says which memory regions the target has been granted, which is how \
+a command becomes a transfer, and the reject flag is the target refusing \
+outright — before iSCSI's own status codes get a chance to say anything.\n\n\
+One caveat worth knowing: iSER and SMB Direct both ride on RDMA SEND and \
+neither carries a protocol identifier. Which service a queue pair was connected \
+for is agreed by the connection manager and never repeated, so a capture that \
+misses the connection setup cannot be certain which is which.",
+            look_for: "\"rejected by the target\", and the advertised regions — a command advertising neither cannot move data whatever it asks for.",
+        },
+        Protocol::ModbusRtu => Lesson {
+            title: "Modbus RTU over TCP — the traffic that does not parse",
+            summary: "Serial framing forwarded onto port 502 unchanged.",
+            body: "Modbus TCP wraps every request in an MBAP header: a transaction \
+id, a protocol id of zero, and a length. Modbus RTU is the older serial framing \
+and has none of that — a unit address, the PDU, and a CRC.\n\n\
+A great many gateways bridge a serial bus onto TCP by doing nothing at all. \
+They listen on port 502 and forward RTU frames unchanged. That is not Modbus \
+TCP and it does not parse as Modbus TCP: the first two bytes are an address and \
+a function code where a transaction id is expected, so read as MBAP the frame \
+is garbage. The result is that live control traffic renders as malformed \
+packets or as nothing, on a network where knowing what is being written to a \
+PLC is the entire reason for capturing.\n\n\
+RTU has no header to identify it by — no protocol id, no length, no magic — so \
+the CRC is the identification. A sixteen-bit checksum agreeing by chance is \
+rare enough to be real evidence, and it is stronger than any guess based on \
+field shapes could be.",
+            look_for: "Modbus RTU appearing on 502 at all: it means a gateway is bridging a serial bus, and anything reading it as Modbus TCP is seeing nothing.",
+        },
+        Protocol::IsoTp => Lesson {
+            title: "ISO-TP — why the diagnostic session stalled",
+            summary: "Carrying messages longer than a CAN frame's eight bytes.",
+            body: "A CAN frame holds eight bytes and vehicle diagnostics routinely \
+need more, so ISO-TP splits a message up: a First Frame announcing the total \
+length, then Consecutive Frames carrying the rest, with the receiver sending a \
+Flow Control frame in between to say whether it can keep up. Anything that fits \
+in one frame is a Single Frame and skips all of it.\n\n\
+UDS — the protocol every garage diagnostic tool speaks — rides on top of this. \
+Without reading the ISO-TP layer, a diagnostic session on a raw CAN capture is \
+just a wall of eight-byte hex lines.\n\n\
+Flow Control is the frame worth looking for, because two of its three statuses \
+explain a session that hangs. **Wait** is the ECU asking the tester to hold: a \
+few are ordinary, a stream of them is an ECU too busy to be diagnosed, and the \
+tool eventually gives up with a misleading \"no response\". **Overflow** means \
+the ECU cannot buffer the message at all — the transfer is already dead, and \
+the tool usually reports it as a generic communication error rather than as the \
+ECU refusing on capacity grounds.\n\n\
+One deliberate limit: only a Single Frame is handed to UDS. A First Frame is \
+the *opening* of a message, and reading its bytes as a complete request would \
+report a service code with a truncated body — confidently, and wrongly.",
+            look_for: "\"flow control — overflow\" or a run of \"wait\" ahead of a diagnostic tool timing out.",
+        },
+        Protocol::Ocsp => Lesson {
+            title: "OCSP — the two statuses that mean opposite things",
+            summary: "Asking a CA whether a certificate has been revoked.",
+            body: "When a client is handed a certificate it can ask the issuing CA \
+whether that certificate is still valid. The answer decides whether a TLS \
+connection may proceed — so an OCSP exchange that goes wrong takes working \
+connections down with it, and it does so from a completely different host than \
+the one the user was trying to reach. That is what makes it hard to find in a \
+capture.\n\n\
+The thing to get right is that an OCSP response carries **two** statuses.\n\n\
+The outer one is transport-level: did the responder manage to answer at all — \
+successful, tryLater, unauthorized. The inner one, buried inside the signed \
+response about seven levels down in DER, is the actual verdict on the \
+certificate: good, revoked, or unknown.\n\n\
+Reading only the outer status is worse than reading nothing, because a revoked \
+certificate arrives inside a response whose transport status is *successful*. \
+\"OCSP successful\" next to a browser refusing to load a page is exactly the \
+confusion worth removing. When the verdict cannot be reached, netscope says so \
+rather than reporting the transport status alone — \"successful\" on its own \
+would be read as \"the certificate is fine\".",
+            look_for: "\"certificate REVOKED\" — and note that its transport status is \"successful\", which is why the outer one cannot be trusted alone.",
+        },
+        Protocol::Soap => Lesson {
+            title: "SOAP — what that POST actually did",
+            summary: "Device management hiding inside an HTTP body.",
+            body: "A great deal of device management is SOAP over HTTP, and none of \
+it shows in the request line. Every call is `POST /onvif/device_service` or \
+`POST /` with a 200 back. What the call *did* is an element name inside the \
+body, so a capture of a camera being reconfigured and one of a camera being \
+polled for the time look identical until the envelope is opened.\n\n\
+Two families dominate and the namespace tells them apart. **ONVIF** is IP \
+cameras: SetSystemDateAndTime, CreateUsers and SetNetworkInterfaces are the \
+calls that change a camera out from under whoever is recording from it. \
+**TR-069** is how an ISP manages the router in a subscriber's house: Inform is \
+the router checking in, while SetParameterValues and Download are the ACS \
+changing configuration or pushing firmware. A Download nobody scheduled is \
+worth knowing about.\n\n\
+One detail decides whether the reading is right: the operation is the first \
+element *inside* the Body element. Taking the first element in the document \
+gives `Envelope` every time, and taking the first namespace-prefixed element \
+usually gives whatever the SOAP header carries — a security token.",
+            look_for: "The operation name: a Set… or Download that nobody scheduled, or a Fault carrying its own reason.",
+        },
+        Protocol::Bier => Lesson {
+            title: "BIER — multicast that keeps no state anywhere",
+            summary: "The delivery list travels inside the packet.",
+            body: "Traditional multicast asks every router along the path to remember \
+a tree per group, and that state is what breaks: it must be built before \
+traffic flows, torn down afterwards, and when it goes stale nothing forwards. \
+BIER removes it completely. The ingress router writes a bit string into the \
+packet — one bit per egress router that should receive a copy — and each hop \
+replicates towards whichever bits are still set. Nothing in the middle holds \
+anything at all.\n\n\
+So the bit string is the diagnosis, and it reads directly: the number of bits \
+set is the number of destinations this particular copy is still headed for. A \
+packet with fewer bits set than it had at the ingress has already been \
+replicated and split, which is correct and expected. One whose bit string is \
+empty should not be on the wire — there is nobody left to deliver it to. One \
+that never loses bits along a path is being carried further than it needs to \
+be.\n\n\
+BIER has no EtherType. It rides beneath an MPLS label stack and is told apart \
+from an ordinary labelled IP packet by a single nibble: 5, where 4 and 6 would \
+mean IPv4 and IPv6. Read as IP by mistake, the bit string would be decoded as \
+an IP header.",
+            look_for: "An empty bit string, or one that never thins out along a path — the first should not exist, the second is wasted replication.",
+        },
+        Protocol::Srv6 => Lesson {
+            title: "SRv6 — where the packet is actually headed",
+            summary: "The itinerary is in the packet, not in the routers.",
+            body: "Ordinary routing asks every hop to work out independently where a \
+packet should go next. Segment routing puts that decision into the packet: the \
+ingress node writes a list of segments — waypoints — into a Segment Routing \
+Header, and each listed node forwards to the next. Nothing in between has to \
+hold per-flow state, which is the entire point of the design.\n\n\
+There is one detail that makes captures confusing until you know it. The \
+segment list is stored backwards: Segment List[0] is the *final* waypoint, and \
+Segments Left counts down as the packet is steered. So the waypoint being aimed \
+at right now is the one at index Segments Left, not the one at the front.\n\n\
+That counter is the useful reading. It says how far along its engineered path a \
+packet has got. Seeing the same packet at two points with the same count means \
+it went somewhere the policy did not intend. A count that never decreases means \
+a segment is not being consumed — traffic looping through a waypoint instead of \
+past it. Neither is visible from the addresses, because the outer destination is \
+only ever the next waypoint rather than the real destination.",
+            look_for: "The segment counter not decreasing between two capture points — a waypoint that is not consuming its segment.",
+        },
+        Protocol::Isns => Lesson {
+            title: "iSNS — where storage goes when it disappears",
+            summary: "The directory an iSCSI initiator uses to find its targets.",
+            body: "An iSCSI initiator does not usually have its targets typed in by \
+hand. It registers with an iSNS server, asks which targets it is permitted to \
+see, and subscribes to notifications so it hears when one appears or goes away. \
+Fibre Channel over IP uses the same directory.\n\n\
+That makes iSNS the place where \"the storage disappeared\" is actually \
+explained. When a LUN vanishes from a host, the cause is usually not the target \
+at all — it is a query that came back empty, a registration that was allowed to \
+expire, or an authorisation the server refused. At the initiator those produce \
+one identical symptom: the volume is simply gone.\n\n\
+Every response carries a status code and every response's function ID is the \
+request's with the top bit set, so both the direction and the outcome are \
+readable from a single packet without following the conversation.",
+            look_for: "\"failed — source unauthorised\" or \"no such entry\" on a query, which puts the fault in the directory rather than the array.",
+        },
+        Protocol::Hip => Lesson {
+            title: "HIP — when a connection never opens and nothing says why",
+            summary: "A cryptographic identity for a host, separate from its address.",
+            body: "An IP address does two jobs: it says who a host is and where it is. \
+That double duty is why moving a laptop between networks breaks its \
+connections. HIP splits them — a host gets a permanent cryptographic Host \
+Identity, and its address becomes just a current location that can change \
+underneath an established connection.\n\n\
+Connections open with a four-packet base exchange: I1, R1, I2, R2. R1 hands the \
+initiator a puzzle it must solve before the responder commits any state, which \
+is what makes HIP resistant to connection floods — the expensive work happens \
+on the side trying to connect.\n\n\
+NOTIFY is the packet worth finding. When the base exchange fails it fails \
+silently as far as the application is concerned: the connection just never \
+establishes, with no error to report. NOTIFY is where the responder says which \
+step rejected it — authentication failed, no acceptable Diffie-Hellman \
+proposal, an HMAC that did not verify, or simply blocked by policy. Those have \
+completely different fixes and are indistinguishable from anywhere else.",
+            look_for: "\"HIP NOTIFY — ...\" carrying the reason, on a connection that appears to hang rather than fail.",
+        },
+        Protocol::Dvmrp => Lesson {
+            title: "DVMRP — who decided nobody was watching",
+            summary: "Flood the multicast everywhere, then wait to be told to stop.",
+            body: "DVMRP was the first multicast routing protocol and its design is \
+exactly that blunt: send the stream down every path, and let routers that have \
+no interested receivers send a Prune back towards the source. When a listener \
+appears again, a Graft restarts it. That is why DVMRP does not scale — and it \
+is still what carries a great deal of campus and broadcast-plant multicast.\n\n\
+Prune is the message worth finding. A multicast stream that stopped arriving \
+has usually been pruned, and the prune identifies the router that concluded it \
+had no listeners left. That separates \"the source stopped sending\" from \"a \
+router upstream decided nobody was watching\" — two causes that look identical \
+from the receiver's end.\n\n\
+It rides inside IGMP rather than on a protocol number of its own, so a \
+multicast *routing* message arrives looking like ordinary group membership \
+until the type byte is read. The two versions also number their messages \
+differently: code 2 is a Report in version 3 and a Request in version 1.",
+            look_for: "\"Prune — a router downstream has no listeners left\" on the path towards a stream that stopped.",
+        },
+        Protocol::PnPtcp => Lesson {
+            title: "PROFINET PTCP — the clock under the isochronous cycle",
+            summary: "Sub-microsecond time sync, without which IRT stops working.",
+            body: "PROFINET's fastest mode, IRT, does not transmit when a device is \
+ready — it transmits on a schedule every device on the segment shares. That \
+only works if they agree what time it is to within a fraction of a microsecond, \
+and PTCP is how they agree.\n\n\
+A sync master sends Announce frames carrying the time. Devices measure cable \
+delay to their neighbours with Delay frames so they can correct for \
+propagation, and FollowUp frames carry the precise send timestamp that could \
+not be written into the Announce before it was already on the wire.\n\n\
+The reason to watch it is that losing synchronisation does not present as a \
+clock problem. It presents as IO data landing in the wrong cycle — intermittent \
+process faults on devices that are each individually healthy — and eventually \
+as a device dropping out of the IRT schedule altogether. The sync master's \
+Announce frames stopping, or measured delays jumping, is the only place the \
+actual cause is visible.\n\n\
+One note on reading captures: FrameIDs 0xFF00-0xFF43 are all PTCP. netscope \
+used to label that range \"RT Class 3 (isochronous)\", which was wrong — RT \
+Class 3 uses the low FrameIDs, and this range is the clock underneath it.",
+            look_for: "Announce frames from the sync master stopping, or Delay measurements that jump between frames.",
+        },
+        Protocol::Ripng => Lesson {
+            title: "RIPng — reading a route being withdrawn",
+            summary: "RIP for IPv6: a hop count, and sixteen means gone.",
+            body: "RIPng keeps RIP's shape — periodic full-table announcements and a \
+maximum diameter of fifteen hops — but shares almost none of RIPv2's wire \
+format. There is no address family field and no per-route authentication; each \
+route is a flat twenty-byte entry: an IPv6 prefix, its length, and a metric.\n\n\
+The metric is the whole message. Sixteen means infinity — the sender is saying \
+the destination is not reachable through it. That is how RIP withdraws a route, \
+and it is what explains traffic that stopped without anything else changing. A \
+burst of sixteens is a network reconverging; a steady state full of them is one \
+that has partitioned and settled that way.\n\n\
+The count-to-infinity problem that hop limit exists to bound is visible here \
+too: a prefix whose metric rises by one in each successive announcement is a \
+routing loop being slowly discovered, and it will keep climbing until it hits \
+sixteen and the route finally disappears.",
+            look_for: "\"metric 16\" — a withdrawal, and the reason a prefix stopped being reachable.",
+        },
+        Protocol::Mip6 => Lesson {
+            title: "Mobile IPv6 — why the handset kept its address but lost its traffic",
+            summary: "A node keeping one address as it moves between networks.",
+            body: "A mobile node has one permanent home address regardless of which \
+network it is attached to. When it moves it tells its home agent \"I am now \
+reachable at this care-of address\", and the home agent tunnels its traffic \
+there. Proxy Mobile IPv6 does the same thing on the node's behalf — that is how \
+a mobile operator hands a subscriber between gateways without the handset \
+taking part.\n\n\
+The Binding Acknowledgement is where this becomes readable. One status byte \
+says whether the registration was accepted and, if not, exactly why: \
+administratively prohibited, not the home agent for this node, duplicate \
+address detection failed, sequence number out of window. Those have entirely \
+different causes and produce identical symptoms — a device that has a network \
+connection and no working traffic, because packets are still being tunnelled to \
+where it used to be.\n\n\
+The split is easy to read: below 128 is an acceptance, 128 and above a refusal. \
+A Binding Update with a lifetime of zero is not a registration at all — it is \
+the node deregistering, which looks almost identical on the wire.",
+            look_for: "\"refused: ...\" on a Binding Acknowledgement — the home agent's own reason, in one byte.",
+        },
+        Protocol::Amt => Lesson {
+            title: "AMT — multicast smuggled through networks that block it",
+            summary: "Multicast tunnelled inside ordinary unicast UDP.",
+            body: "Most of the internet does not forward multicast. AMT gets it \
+across anyway: a gateway near the receiver finds a relay near the source and \
+tunnels the multicast inside plain unicast UDP. IPTV, market data feeds and \
+multicast-based streaming all reach networks this way whose providers never \
+enabled multicast routing.\n\n\
+The setup is a fixed sequence, and where it stops is the diagnosis. A gateway \
+sends Relay Discovery and expects an Advertisement. It then sends a Request and \
+expects a Membership Query carrying a nonce. Only then can a Membership Update \
+join a group and Multicast Data start flowing.\n\n\
+That makes two very different failures easy to separate. Discovery with no \
+Advertisement is a relay that is unreachable, or anycast-routed somewhere that \
+no longer answers. Requests answered by Queries but no Multicast Data means the \
+join succeeded and the source is simply not sending. Without seeing the tunnel \
+itself those two are indistinguishable — both look like \"the stream does not \
+work\".",
+            look_for: "Where the sequence stops: Discovery with no Advertisement, or a completed join with no Multicast Data.",
+        },
+        Protocol::Prp => Lesson {
+            title: "PRP — redundancy you cannot tell is gone",
+            summary: "Every frame sent over two separate networks at once.",
+            body: "HSR and PRP solve one problem from opposite ends. HSR sends a \
+frame both ways round a single ring. PRP duplicates it onto two completely \
+separate networks — LAN A and LAN B — and appends a six-byte trailer so the \
+receiver can throw away whichever copy arrives second.\n\n\
+That is also why PRP failures are invisible. Losing an entire LAN costs \
+nothing: every frame still arrives over the other one, the application never \
+notices, and the plant keeps running on redundancy that no longer exists. \
+Nobody finds out until the second network fails too, and then everything stops \
+at once.\n\n\
+The trailer is the only place this shows. It names which LAN each copy \
+crossed, so a capture carrying only LAN A is a network that is already down to \
+one path. Supervision frames are the other half: nodes announce themselves \
+periodically, so a node that stops appearing on one LAN has lost that path.",
+            look_for: "\"PRP LAN A\" with no matching LAN B traffic — redundancy that is already gone while everything still works.",
+        },
+        Protocol::PnDcp => Lesson {
+            title: "PROFINET DCP — the rename that stops a line",
+            summary: "How a PROFINET device gets its name, and how it loses it.",
+            body: "PROFINET does not address devices by IP but by name of station. \
+An engineer assigns those names when commissioning a line, and the controller \
+looks each one up to find the device it should be exchanging IO with. DCP does \
+both jobs: Identify discovers devices, Set assigns names and addresses.\n\n\
+The problem is that Set is unauthenticated and takes effect immediately. One \
+Set can rename a device or change its IP, and the controller's very next \
+cyclic exchange fails — the station it was configured for no longer answers to \
+that name. The device is powered, the cable is fine, the switch reports no \
+errors, and nothing in the IO traffic explains any of it. The Set that caused \
+it appears exactly once, and the capture is usually the only record.\n\n\
+Identify with the all-selector is the other thing to watch: it makes every \
+device on the segment answer with its own name. That is how a line gets \
+inventoried, and equally how it gets mapped by someone who should not be \
+there.",
+            look_for: "\"PROFINET DCP Set — name of station := ...\", especially one nobody scheduled.",
+        },
+        Protocol::Ecpri => Lesson {
+            title: "eCPRI — when the radio says the data came too late",
+            summary: "Fronthaul between a radio unit and its baseband.",
+            body: "A modern base station is split: the radio unit sits at the top of \
+the mast, the baseband unit at the bottom or in a datacentre. eCPRI is the link \
+between them and it carries the sampled radio waveform itself.\n\n\
+That makes it the most timing-sensitive traffic on any network carrying it. The \
+radio must transmit on an exact symbol boundary, so IQ data arriving late is \
+not delayed — it is useless, and gets dropped. Users see degraded coverage or \
+dropped calls while every switch along the path reports healthy links and zero \
+discards, because from the network's point of view nothing went wrong.\n\n\
+The Event Indication message is where the radio finally says so. Its fault \
+codes separate the possibilities precisely: data that arrived too early, too \
+late, or that overran or starved the playout buffer. Those distinguish a \
+fronthaul timing problem from a radio hardware fault, and nothing else in the \
+capture does.",
+            look_for: "\"userplane data received too late\" — a timing fault the switches on the path will all report as healthy.",
+        },
         Protocol::Mrp => Lesson {
             title: "MRP — the ring that keeps a factory running",
             summary: "Industrial redundancy: one cut cable must not stop the line.",

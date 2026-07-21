@@ -14,6 +14,13 @@ pub fn dissect_igmp(
     dst_ip: Option<IpAddr>,
     payload: &[u8],
 ) -> DissectedResult {
+    // DVMRP borrows an IGMP type rather than a protocol number of its own, so
+    // a multicast *routing* message arrives looking like group membership
+    // until this byte is read.
+    if payload.first() == Some(&super::dvmrp::IGMP_TYPE_DVMRP) {
+        return super::dvmrp::dissect_dvmrp(src_ip, dst_ip, payload);
+    }
+
     let summary = match payload.first() {
         Some(&t) => {
             let name = match t {

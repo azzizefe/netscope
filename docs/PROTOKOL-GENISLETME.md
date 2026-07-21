@@ -1,0 +1,917 @@
+# netscope — 250 Protokollük Genişletme Planı
+
+> **Senior-level protocol expansion blueprint.**
+> Hedef: **342 → 592 protokol**.
+> Bu belge bir istek listesi değil; her satırı bir kabul kriterine, bir tanınma
+> yöntemine ve bir reddetme gerekçesine bağlı bir çalışma planıdır.
+
+**Durum:** 378 protokol · 1774 core + 36 TUI + 2 desktop test · `cargo test --workspace` yeşil
+**Son güncelleme:** 2026-07-21 · **Tamamlanan: 37/250 + E1, E3, E7, E8 (E2/E4 başladı, E5 engelli)** *(+4 zaten kapsanıyordu, 3 iptal, 1 hata düzeltmesi)*
+
+---
+
+## 📐 İçindekiler
+
+1. [Ürün kısıtları ve mimari sonuçları](#1-ürün-kısıtları-ve-mimari-sonuçları)
+2. [Kalite barı ve reddetme politikası](#2-kalite-barı-ve-reddetme-politikası)
+3. [Protokol başına tanım-tamam (DoD)](#3-protokol-başına-tanım-tamam-dod)
+4. [Ön koşul iş kalemleri (enabler'lar)](#4-ön-koşul-iş-kalemleri-enablerlar)
+5. [Fazlar ve protokol listesi (250)](#5-fazlar-ve-protokol-listesi-250)
+6. [Reddedilenler kaydı](#6-reddedilenler-kaydı)
+7. [Riskler ve ölçüm](#7-riskler-ve-ölçüm)
+8. [İlerleme özeti](#8-i̇lerleme-özeti)
+
+---
+
+## 1. Ürün kısıtları ve mimari sonuçları
+
+netscope; VPS'siz, veritabanısız, kullanıcının kendi makinesinde çalışan, açık
+kaynak bir masaüstü aracıdır. Bu bir dağıtım tercihi değil, **çözümleyici
+tasarımını doğrudan bağlayan bir kısıttır**:
+
+Bu kısıtlar artık iddia değil, **test tarafından zorlanan kurallar** —
+`dissectors::robustness` içinde. Bir kısıtın kutucuğu, ancak onu ihlal eden bir
+değişikliği düşüren bir test varsa işaretlidir.
+
+- [x] **Runtime'da ağ sorgusu yok.** OUI tablosu, servis adları, tehdit
+      imzaları — hepsi derleme zamanında gömülü. (Bir paket çözümleyici,
+      incelediği ağa paket göndermemelidir; adli kopyalarda bu bir doğruluk
+      meselesidir.)
+      → `no_dissector_reaches_out_to_the_network`: dissector kaynaklarında
+      soket/HTTP **çağrısı** arıyor. Düz kelime değil çağrı sözdizimi arıyor,
+      çünkü `UdpSocket` kelimesi dissector'ın anlattığı protokolde geçebilir.
+- [x] **Deterministik çözümleme.** Aynı capture iki kez açıldığında aynı çıktı.
+      → `a_capture_read_twice_gives_the_same_answers`.
+      **Bu testi yazarken bir şey netleşti:** çözümleme *durumsuz değildir ve
+      olmamalıdır* — TCP bir akış, yeniden birleştirici kasten segmentler arası
+      durum taşıyor. Naif yazılan test tam bu yüzden düşüyor. Gerçek özellik
+      **durumun sıfırlanabilir olması**; test onu doğruluyor ve ayrıca
+      sıfırlamanın gerçekten bir şey yaptığını iddia ediyor (aksi halde
+      boş yere geçerdi).
+- [x] **Telemetri yok — ama "hiçbir şey çıkmaz" değil.**
+      → `the_only_thing_that_can_send_is_the_export_the_user_configured`.
+      **İlk yazdığım ifade fazla mutlaktı ve test onu yakaladı:** çekirdekte
+      `ureq` var. İncelendi — `siem.rs`, kullanıcının kendi Elasticsearch/Splunk
+      adresine olay gönderiyor ve **URL verilmezse hiçbir şey göndermiyor.**
+      Bu telemetri değil; kullanıcının açtığı ve hedefini kendi verdiği bir
+      özellik. Doğru sınır şu ve test bunu tutuyor: satıcı telemetri SDK'sı
+      ağaçta **hiç** olamaz (kullanıcı-yönlendirmeli bir kullanımı yok), HTTP
+      istemcisi olabilir ama **yalnız o tek açık dışa aktarma yolunda** kalır,
+      çözümlemeden asla erişilebilir olmaz.
+- [x] **İndirme boyutu bütçesi.** Ölçüldü: **15.3 MB** (release `netscope-tui`),
+      80 MB eşiğinin %19'u. Aşılırsa protokol aileleri `cargo feature` arkasına
+      alınır (**E6**); niş olanlar `crate::plugins`'e taşınır.
+- [x] **Derleme süresi bütçesi.** Ölçüldü: **199 sn** temiz release build
+      (`netscope-core`), 5 dk eşiğinin %66'sı. **Dört metrik içinde sınırına en
+      yakın olan bu** — §7'ye bakın.
+
+> ⚠️ **Bu bölüm bir onay listesi değil, bir kabul kapısıdır.** Yukarıdakilerden
+> birini ihlal eden bir PR, protokol ne kadar değerli olursa olsun reddedilir.
+> Kutucuklar "düşündük" demek değil; her birinin arkasında ihlali düşüren bir
+> test ya da ölçülmüş bir sayı var.
+
+---
+
+## 2. Kalite barı ve reddetme politikası
+
+Mevcut 342 protokolün tamamı şu barı geçti; yeni 250'si de geçmek zorunda:
+
+1. **Kamuya açık bir spesifikasyon** (RFC, IEC/IEEE/ITU standardı, ya da
+   okunabilir bir referans implementasyon).
+2. **Telde tanınabilirlik** — atanmış EtherType, port + içerik guard'ı, ya da
+   gerçek bir magic. "Sadece port" yeterli değildir.
+3. **Eyleme dönüşen bir özet** — okuyanın bir karar alabileceği bir cümle.
+   "Protokol X mesajı" özeti bu barı geçmez.
+
+**Reddetmek de iştir.** Bir protokol yalnızca "port + biraz framing"
+derinliğine ulaşabiliyorsa, eklenmez ve gerekçesi §6'ya yazılır. Kotayı
+doldurmak için bar düşürülmez — bu listedeki 250 sayısı bir hedef, bir söz
+değildir.
+
+**Şifreli protokoller (🔒):** Yükü TLS/DTLS içinde taşıyan protokoller ancak
+anahtar sağlanabildiğinde (mevcut TLS keylog desteği) veya dış zarf tek başına
+eyleme dönüşen bilgi taşıdığında (ör. ALPN, SNI, sertifika zinciri) kabul
+edilir. Aksi halde §6'ya gider — OCSP ve NTS-KE bu yüzden reddedildi.
+
+### Güven etiketleri
+
+| Etiket | Anlamı | Beklenen dönüşüm |
+|:--|:--|:--|
+| ✅ | Spec ve tanınma yöntemi doğrulandı; barı geçeceği net | ~%95 eklenir |
+| ⚠️ | Gerçek protokol, ama spec erişimi veya derinlik riskli | ~%50 eklenir |
+| 🔒 | Şifreli/tescilli; yalnız zarf okunabilir | ~%20 eklenir |
+
+> ⚠️ **Bu liste bilerek fazladan sağlanmıştır.** ⚠️ ve 🔒 kalemlerinin bir
+> kısmı incelemede §6'ya düşecektir; yerine §5.12'deki yedek havuzdan seçim
+> yapılır. **Hiçbir kalem, kotayı tutturmak için barı esneterek eklenmez.**
+
+---
+
+## 3. Protokol başına tanım-tamam (DoD)
+
+Bu **protokol başına** bir şablon, tek seferlik bir liste değil — bu yüzden
+kutucukları "hepsi bitti" diye işaretlenmez. İşaretli olanlar, **bir testin
+otomatik zorladığı** maddelerdir; işaretsiz olanlar her PR'da elle bakılır.
+
+- [ ] `crates/core/src/dissectors/<ad>.rs` — dissector + `pub mod` kaydı
+- [x] **Dissector gerçekten erişilebilir** → `every_dissector_module_is_reachable`
+      (dispatch'ten ulaşılamayan modül testi düşürür)
+- [ ] `registry.rs` içinde **tek satır** registry kaydı
+      (Protocol enum, Display, TUI rengi, filtre token'ı, flow sınıfı, rank ve
+      education blurb'ü bundan **türetilir** — `filter.rs`, `flows.rs`,
+      `colors.rs`, `education.rs` elle düzenlenmez)
+- [x] **Her registry protokolünü bir dissector gerçekten üretir**
+      → `every_protocol_is_produced_by_some_dissector`
+- [x] **Bağlama tabloları sıralı ve tekil** → `tables_are_sorted_and_unique`
+- [x] **Her bağlı port kendi dissector'ına ulaşır** → `every_table_port_reaches_its_own_dissector`
+- [ ] `education::lesson` içinde ders (match exhaustive — derleyici zaten ister)
+- [ ] Testler:
+  - [ ] Protokolün **var olma sebebini** doğrulayan en az bir test
+  - [x] **Kesik/bozuk girdide panik yok** → `dispatched_ports_never_panic_on_malformed_input`
+        ve `nested_dissectors_never_panic_on_malformed_input` (her dispatch
+        edilen portu bozuk yüklerle sürüyor)
+  - [ ] Tanınma guard'ının negatiflerini kanıtlayan test
+  - [ ] **Guard'ı bozarak doğrula:** guard'ı kasten ters çevir, ilgili testin
+        (ve yalnızca onun) düştüğünü gör, editörle geri al.
+        `git checkout` **kullanma** — commit'lenmemiş iş gider.
+        ⚠️ **Hiçbir test düşmezse guard sağlam demek değildir — testin eksik
+        olduğu anlamına gelir.** RoCE'de syndrome maskesini kaldırdım ve hiçbir
+        şey düşmedi; sebep, test verilerimin bit 7'yi hiç set etmemesiydi.
+        Eksik kapatıldıktan sonra aynı bozma yakalandı.
+- [ ] `cargo fmt --all` · `cargo clippy --workspace --all-targets` temiz
+- [ ] `cargo test --workspace` yeşil
+
+> Not: "guard'ı bozarak doğrula" kasten otomatikleştirilmedi. Bir mutasyon-test
+> aracı guard'ı bozabilir ama *doğru testin* düştüğünü kontrol edemez — asıl
+> soru odur, ve yanıtı yazan kişinin bilmesi gerekir.
+
+### Mevcut testlerin zorladığı, kolayca kaçırılan iki kural
+
+- **Bayt sayısı `super::bytes(n)` ile biçimlendirilir**, `format!("{} bytes")`
+  ile değil — aksi halde "1 bytes" yazar. `no_dissector_formats_a_bare_byte_count`
+  bunu zorluyor.
+- **Dissector fonksiyonları makroyla üretilmez.**
+  `every_protocol_is_produced_by_some_dissector` kaynak metninde `Protocol::X`
+  arıyor; makro o adı gizlerse protokol "hiçbir dissector üretmiyor" sayılır.
+  Bir dissector başka bir dissector'a devrediyorsa (PROFINET → DCP gibi),
+  `robustness` testindeki `dispatch` listesine ebeveynin `include_str!`'ı
+  eklenir.
+- **Dissector ağa dokunamaz.** `no_dissector_reaches_out_to_the_network` soket
+  ve HTTP çağrılarını yakalıyor; gerekli her veri derleme zamanında gömülür.
+- **HTTP istemcisi `siem.rs` dışına çıkamaz.**
+  `the_only_thing_that_can_send_is_the_export_the_user_configured` bunu tutuyor.
+
+### İki kural (mevcut koddan çıkarıldı, tartışmaya kapalı)
+
+1. **Standart dışı kod, numarasını korur.** En yakın tablo girdisine
+   eşlenmez — her birinin testi vardır.
+2. **Alan, yapıyı yürüyerek bulunur; asla byte taranarak değil.** Kerberos,
+   LDAP, DNS ve memberlist'te komşu alanlar aynı şekilde kodlanır; tarama
+   yanlış alanı döndürür. Her birinin, yürüyüş taramayla değiştirilirse düşen
+   bir testi vardır.
+
+---
+
+## 4. Ön koşul iş kalemleri (enabler'lar)
+
+Bunlar protokol değil; **her biri bir protokol katmanının kilidini açar.**
+Sırasıyla yapılmadan §5'teki bağlı kalemler başlatılamaz.
+
+- [x] **E1 — HTTP gövde inceleme.** ✅ **Altyapı tamam, ilk tüketici bağlandı.**
+      → [`http_body.rs`](../crates/core/src/dissectors/http_body.rs)
+      Gövdeyi bulup `Content-Type`'ı normalize ediyor, `http.rs` de tanınan bir
+      tip varsa iç protokolü raporluyor (MPLS/EtherIP'teki sarmalayıcı deseni).
+      **Mevcut performans kısıtı korundu:** boş satır **bayt** aramasıyla
+      bulunuyor (`memchr`), yalnız başlık bloğu metne çevriliyor — gövde ham
+      bayt olarak devrediliyor. `http.rs`'in "tüm yükü UTF-8 taramayla oku"
+      yasağı (ROADMAP §4.1) bozulmadı.
+      *İlk tüketici:* **SOAP** → ONVIF + TR-069.
+      *Kalan tüketiciler* ayrı kalemler olarak duruyor: OCSP, MTConnect, WebDAV,
+      OTLP/HTTP, Prometheus remote-write, CouchDB, ArangoDB, Zipkin, Loki, AS2,
+      Trino, Druid. Her biri artık **bir `Content-Type` kolu + bir dissector**,
+      mimari iş değil.
+
+> ⚠️ **E1'in "açtığı ~14 protokol" ifadesini düzeltiyorum.** Altyapı hepsinin
+> önünü açtı ama hiçbirini tek başına *tamamlamadı* — her biri hâlâ kendi gövde
+> formatını çözmek zorunda. OCSP özellikle: gövdeye ulaşmak sorunun yarısıydı,
+> diğer yarısı sertifika durumunun DER içinde yedi seviye derinde olması ve
+> **o hâlâ duruyor** (§6'daki gerekçenin ikinci cümlesi).
+- [~] **E2 — Seri/alan veri yolu taşıma katmanı.** *İlk üyesi bitti:*
+      → [`modbus_rtu.rs`](../crates/core/src/dissectors/modbus_rtu.rs)
+      Seri gateway'ler RTU çerçevelerini 502'ye değiştirmeden aktarıyor; bu
+      Modbus TCP değil ve **Modbus TCP olarak parse da olmuyor**, yani canlı
+      kontrol trafiği görünmez kalıyor. RTU'nun başlığı yok — tanıma tamamen
+      CRC-16/MODBUS'a dayanıyor.
+      **Paylaşılan ASDU çözücüsü eklendi** →
+      [`iec_asdu.rs`](../crates/core/src/dissectors/iec_asdu.rs): IEC 60870-5'in
+      -104 (TCP) ve -101 (seri) varyantları **aynı ASDU'yu** taşıyor, yalnız
+      çerçeveleme farklı — E8'in DER'de yaptığı gibi tek yerde. Bunu eklerken
+      mevcut `iec104.rs` derinleştirildi: yalnız çerçeve formatını (I/S/U)
+      adlandırıyordu, artık telekontrol içeriğini okuyor.
+      **IEC 60870-5-101 eklendi** →
+      [`iec101.rs`](../crates/core/src/dissectors/iec101.rs): ASDU çözücüsü
+      hazır olduğu için yalnız FT1.2 çerçevelemesi yazıldı — paylaşılan
+      altyapının karşılığını verdiği yer.
+      **LIN eklendi** → [`lin.rs`](../crates/core/src/dissectors/lin.rs) (DLT 212,
+      libpcap `dlt.h`'den doğrulandı). Tanılama çerçeveleri `isotp`'ye
+      devrediliyor — E3'ün altyapısı ikinci taşıyıcıda karşılığını verdi.
+      *Kalan:* DeviceNet, J1708.
+
+> ⚠️ **Aeron'da yapısal guard'ın maliyeti somutlaştı.** İlk hâli bir DTLS
+> kaydını Aeron sanıyordu: DTLS'in sürüm baytları tam olarak Aeron'un sürüm ve
+> tip alanlarının olduğu yere düşüyor. İki düzeltme gerekti — (a) padding
+> çerçevelerine tanıdığım uzunluk muafiyeti kaldırıldı (deliği açan oydu; buna
+> karşılık gerçek padding çerçeveleri artık talep edilmiyor, ki zaten bilgi
+> taşımıyorlar), (b) Aeron, **magic'i olan her protokolden sonraya** alındı.
+> Mevcut `end_to_end_dtls_via_dissect` testi yakaladı — ben aramadım.
+>
+> Genel kural olarak §5'e: *magic'i olmayan yapısal tanıma, magic'i olan her
+> şeyden sonra sıralanır.*
+
+> ⛔ **Modbus ASCII ertelendi (2026-07-21) — doğrulanamıyor.** Wireshark'ın
+> Modbus dissector'ında ASCII *çerçevelemesi* yok (çıkan sonuçlar bir diagnostic
+> alt-fonksiyonu). Modbus.org'un seri hat spec'i **403** veriyor. LRC ve
+> çerçeveleme ezberden yazılabilirdi ama CRC deneyi (bkz. `modbus_rtu.rs`) tam
+> olarak bunun neden işe yaramadığını gösterdi: testi de aynı ezberle yazacağım
+> için hiçbir şey kanıtlamaz. Spec erişimi sağlanırsa açılır.
+
+> 💡 **IEC 104'te bulunan şey:** cause-of-transmission baytında bir **negatif
+> bayrağı** var. `ActCon` "aktivasyon onaylandı" demek; aynı `ActCon` bu bayrak
+> set iken trafo merkezinin komutu **reddettiği** anlamına geliyor. İkisi bir
+> bit farkla ayrılıyor ve yalnız cause'u raporlayan bir araçta birebir aynı
+> görünüyorlar. Bir elektrik şebekesi capture'ında bu, "kesici açıldı" ile
+> "kesiciye açılması söylendi ve açılmadı" arasındaki fark.
+- [x] **E3 — CAN ailesi genişletmesi.** ✅ **ISO-TP tamamlandı (yeniden
+      birleştirme dahil), CAN FD bayrakları çözüldü.**
+      → [`isotp.rs`](../crates/core/src/dissectors/isotp.rs)
+      Çok-çerçeveli mesajlar **CAN kimliğine göre** birleştiriliyor — bir tester
+      ile ECU aynı anda birden çok transfer yürütebiliyor ve çerçeveleri bus'ta
+      iç içe geçiyor, tek ortak tampon alakasız mesajları birbirine ekler.
+      Sırasız gelen çerçeve bir kaybı gösterir ve transfer **delikli
+      birleştirilmek yerine terk edilir**. Durum sıfırlanabilir
+      (`clear_isotp_reassembler`) ve §1'in determinizm testine bağlandı.
+      `can.rs`'te FD bayrakları: **ESI** gönderenin error-passive'e geçtiğini
+      söylüyor — hâlâ bus'ta ama bozulmakta, fault sürerse bus-off olacak.
+      *Kalan (ayrı kalem):* CAN XL.
+
+> ⚠️ **E3'te bir kusuru mevcut testler yakaladı ve tasarımı değiştirdi.**
+> İlk yazdığım guard yalnız ISO-TP çerçeve tipine bakıyordu. Ama tip dört bitlik
+> bir alan, yani **rastgele bir CAN yükünün dörtte biri geçerli bir tipe
+> benziyor** — proprietary bir endüstriyel bus'ın çeyreği hayalî tanılama
+> oturumuna dönüşüyordu. `an_unknown_extended_frame_stays_a_can_frame` tam
+> bunun için varmış ve düştü.
+>
+> Doğru dayanak kimlik: ISO-TP'nin magic'i yok, ama ISO 15765-4 tanılama için
+> adres aralıkları **ayırıyor** (29-bit 0x18DA/0x18DB, 11-bit 0x7DF/0x7E0-0x7EF).
+> Guard artık önce kimliğe, sonra şekle bakıyor. Bu §2 barının "sadece port
+> yeterli değildir" maddesinin CAN'deki karşılığı.
+- [~] **E4 — RDMA/InfiniBand taşıma.** *Taban katman derinleştirildi.*
+      → [`roce.rs`](../crates/core/src/dissectors/roce.rs)
+      **Doğrulanabilirlik önce kontrol edildi** (E5'ten sonra alınan ders):
+      Wireshark'ın `packet-infiniband.c`'si 9201 satır ve **elle yazılmış**,
+      üretilmiş değil — yani okunabilir bir referans. E5'ten farkı bu.
+      `roce.rs` 50 satırdı ve yalnız opcode'un alt 5 bitini okuyordu. Artık
+      transport service (üst 3 bit), queue pair ve **AETH syndrome** okunuyor.
+      Syndrome asıl değer: RDMA başarısızlığının raporlanacağı bir socket yok,
+      NAK kodu tek hesap. "PSN sequence error" (kayıp paket → PFC yapılandırması)
+      ile "remote access error" (yazılım hatası) tamamen farklı düzeltmeler ve
+      capture'da başka hiçbir şey ayırmıyor.
+      **iSER bağlandı** → [`iser.rs`](../crates/core/src/dissectors/iser.rs):
+      RDMA SEND yükü iSER'e, iSER de iSCSI PDU'sunu mevcut `iscsi.rs`'e
+      devrediyor.
+      *Kalan:* SRP, SMB Direct, NVMe-oF RDMA — **belirsizlik notu aşağıda.**
+
+> ⚠️ **E4'te çözülmemiş bir belirsizlik var ve tahmin etmek yerine kaydediyorum.**
+> iSER, SMB Direct ve NVMe-oF RDMA'nın üçü de RDMA SEND üzerinde ve **hiçbiri
+> protokol tanımlayıcısı taşımıyor** — bir queue pair'in hangi servis için
+> bağlandığı connection manager'da anlaşılıyor ve her pakette tekrar
+> edilmiyor. iSER'i yine de aldım çünkü başlığında sıfır olması gereken üç
+> rezerve bayt var, yani zayıf da olsa bir kanıt sunuyor. SMB Direct'in veri
+> mesajlarında o kadarı bile yok.
+>
+> *Doğru çözüm:* RDMA CM (connection manager) trafiğini izleyip queue pair →
+> servis eşlemesini kurmak. Bu, TCP/ISO-TP'dekine benzer bir durum katmanı
+> demek. O gelene kadar SMB Direct tahminle eklenmeyecek.
+- [ ] ⛔ **E5 — 3GPP ASN.1 PER çözücü derinleştirme. ŞU AN ENGELLİ —
+      doğrulanamıyor.** Denendi ve durduruldu (2026-07-21):
+      * Repo'da 3GPP capture'ı yok (`fixtures/` yalnız 8 temel dosya).
+      * X.691'in PDF'i indirildi ama gövdesi sıkıştırılmış nesne akışlarında;
+        çıkarılan metinde "length determinant" **hiç geçmiyor**.
+      * Wireshark'ın NGAP dissector'ı ASN.1'den **üretilmiş** kod, okunabilir
+        bir tarif değil.
+
+      **Asıl gerekçe erişim değil, doğrulanabilirlik.** DER kendi kendini
+      tarifliyor: her alan tag ve uzunluk taşıyor, uzunluk kuralı yanlışsa
+      yürüyüş görünür şekilde kayıyor ve "bozuk uzunluk yürüyüşü durdurur"
+      testi gerçek veride düşüyor. **Aligned PER kendini tariflemiyor** — alan
+      sınırları şemadan geliyor. Uzunluk belirleyici kuralını yanlış anlarsam
+      çıktı makul görünür, ve testi de aynı yanlış anlayışla yazacağım için
+      **test hiçbir şey kanıtlamaz.** Bu, kayıtlardaki "tersine çevrilmiş
+      mantıkla geçen değersiz mDNS testi" hatasının aynısı.
+
+      *Engeli kaldıracak şey:* gerçek bir NGAP/NAS capture'ı (fixture olarak),
+      ya da X.691'in okunabilir bir kopyası. İkisinden biri gelene kadar
+      `ngap_common` prosedür adında kalır — yanlış IE çözmektense az söylemek.
+- [ ] **E6 — `cargo feature` ile protokol aileleri.** §1 boyut bütçesi
+      aşılırsa zorunlu. 592 protokolde muhtemelen aşılacak — **erken ölç.**
+- [x] **E8 — Paylaşılan DER/ASN.1 yürüyücüsü.** ✅ **Tamamlandı.**
+      → [`der.rs`](../crates/core/src/dissectors/der.rs)
+      Üç ayrı kopya vardı — `kerberos::der_length`, `snmp::read_len`,
+      `ldap::ber_len`/`skip_tlv` — ve OCSP dördüncüsünü isteyecekti.
+      **Dördüncüyü eklemek yerine üçü de tek kurala bağlandı;** her biri artık
+      tek satırlık bir devretme. Kuralın keskin kenarı da orada belgelendi:
+      uzun form alt yedi bitte *uzunluk baytlarının sayısını* tutuyor ve orada
+      sıfır belirsiz uzunluk demek (BER'de var, DER'de yok).
+      **Açtığı kalemler:** OCSP *(bitti)*, CMP, RFC 3161 TSP, SCEP, EST.
+- [x] **E7 — Sarmalayıcı katmanların içine bakma.** ✅ **Tamamlandı.**
+      *IPv6 yarısı:* uzantı başlığı uzunluk kuralı `ip::ext_header_len` olarak
+      paylaştırıldı (auth header 4-oktet biriminde ve iki birim eksik sayıyor —
+      bu kuralın iki kopyası kaçınılmaz olarak kayardı), `srv6.rs` aynı kuralla
+      zinciri yürüyor.
+      *MPLS yarısı:* `dissect_mpls` label yığınının altındaki nibble'ı zaten
+      okuyordu (4=IPv4, 6=IPv6); 5=BIER kolu eklendi ve **IP kontrolünden önce**
+      sıralandı — BIER bir IP paketi değil, IP diye okunursa bit string bir IP
+      başlığı olarak çözülür.
+      *Tasarım kararı:* sarmalayıcılar `mpls.rs` desenini izler — iç
+      adres/portlar korunur, not öne eklenir, protokol sarmalayıcıya ayarlanır.
+      **Açtığı protokoller:** SRv6, BIER.
+
+---
+
+## 5. Fazlar ve protokol listesi (250)
+
+> **Her kaleme başlamadan önce `registry.rs`'e karşı doğrula.** Bu listedeki
+> adlar planlama sırasında derlendi; kod değişmeye devam ediyor. Roadmap'in
+> protokol listesi bir kez bu yüzden 267 protokol kaydı; aynı hatayı tekrar
+> etmemenin yolu, listeye değil registry'ye güvenmektir.
+
+### 5.1 · Faz 1 — Endüstriyel & OT (25)
+
+Mevcut OT kapsamı güçlü (Modbus, DNP3, S7comm, EtherCAT, PROFINET, CIP,
+IEC 61850, BACnet). Buradaki boşluk **yedeklilik halkaları ve saha veri
+yolları**.
+
+- [x] **PRP — IEC 62439-3** ✅ → [`prp.rs`](../crates/core/src/dissectors/prp.rs)
+      *Hem supervision frame'i (EtherType 0x88FB) hem de RCT trailer'ı. Trailer
+      EtherType ile dispatch edilemez (frame'in EtherType'ı iç protokolündür),
+      bu yüzden frame sonundan suffix ile bulunuyor. PRP-0 **bilerek
+      alınmadı** — suffix'i yok, yanlış olduğunda hayatta kalacak kanıt yok.*
+- [ ] CC-Link IE Field Basic — UDP 61450 ⚠️ *(**engellendi:** açık referans
+      implementasyon yok, CLPA spec'i kayıt gerektiriyor. Ezberden yazılmayacak
+      — §5 kuralı. Spec erişimi sağlanana kadar beklemede.)*
+- [ ] CC-Link IE Control ⚠️
+- [ ] Foundation Fieldbus HSE — UDP/TCP 1089-1091 ✅
+- [ ] OPC UA PubSub (UADP) — UDP 4840 ✅
+- [x] **Modbus RTU over TCP** ✅ → [`modbus_rtu.rs`](../crates/core/src/dissectors/modbus_rtu.rs)
+      *Tanıma tamamen CRC-16/MODBUS'a dayanıyor ve algoritma **yayımlanmış
+      kontrol değerine** (`123456789` → `0x4B37`) karşı sınanıyor — yani dış bir
+      sabite, kendi okumama değil.*
+- [ ] Modbus ASCII ⚠️ *(E2)*
+- [ ] S7comm-plus ⚠️
+- [ ] LonTalk / EIA-852 (LonWorks over IP) ✅
+- [ ] wM-Bus (wireless M-Bus, EN 13757-4) ✅
+- [ ] DLR — Device Level Ring (ODVA) ✅
+- [ ] ERPS — ITU-T G.8032 halka koruma ✅
+- [x] **PROFINET DCP** ✅ → [`pn_dcp.rs`](../crates/core/src/dissectors/pn_dcp.rs)
+      *`profinet.rs` yalnızca FrameID'yi adlandırıyordu; DCP bloğu okunmuyordu.
+      Artık ayrı protokol: blok listesi yürünüyor (istasyon adı serbest metin,
+      taramada bir sonraki bloğun başlığına benziyor) ve Set/response'un
+      BlockQualifier/BlockInfo öneki hesaba katılıyor.*
+- [x] **PROFINET PTCP** ✅ → [`pn_ptcp.rs`](../crates/core/src/dissectors/pn_ptcp.rs)
+      *0xFF00–0xFF43. **Mevcut kodda bir hata düzeltti:** `profinet.rs` bu
+      aralığın tamamını "RT Class 3 (isochronous)" diye etiketliyordu; Wireshark
+      `packet-pn-rt.c`'ye göre aralığın tamamı PN-PTCP, RT Class 3 ise düşük
+      FrameID'lerde. Yanlış etiket kaldırıldı.*
+- [ ] openSAFETY ✅
+- [ ] CIP Safety ⚠️
+- [ ] PROFIsafe ⚠️
+- [ ] R-GOOSE / R-SV (IEC 61850-90-5, routable) ✅
+- [x] **IEC 60870-5-101 over TCP** ✅ → [`iec101.rs`](../crates/core/src/dissectors/iec101.rs)
+      *FT1.2 uzunluğunu iki kez ve başlangıç baytını tekrar gönderiyor — tanıma
+      o fazlalığa dayanıyor, böylece 2404'te -104 gölgelenmiyor. Link katmanı
+      NACK ve DFC'yi söylüyor: -104'te karşılığı olmayan iki bilgi.*
+- [ ] Codesys V3 ⚠️
+- [ ] Emerson ROC Plus ⚠️
+- [ ] Bristol BSAP ⚠️
+- [ ] Fanuc FOCAS ⚠️
+- [ ] Toyopuc ⚠️
+- [ ] Yokogawa Vnet/IP ⚠️
+
+### 5.2 · Faz 2 — Otomotiv & taşıt ağları (15)
+
+- [x] **CAN FD** ✅ *(bayraklar çözüldü: BRS ve **ESI** — ESI gönderenin
+      error-passive olduğunu, yani bus-off'a bir adım kaldığını söylüyor)*
+- [ ] CAN XL ⚠️ *(E3)*
+- [x] **ISO-TP — ISO 15765-2** ✅ → [`isotp.rs`](../crates/core/src/dissectors/isotp.rs)
+      *Flow control'ün "wait"/"overflow" durumları takılan tanılama oturumunun
+      sebebi. Çok-çerçeveli mesajlar kimliğe göre birleştiriliyor; sırasız
+      çerçeve transferi terk ettiriyor — delikli bir mesajı UDS'e gerçekmiş
+      gibi vermek en kötü sonuç olurdu.*
+- [x] **LIN** ✅ → [`lin.rs`](../crates/core/src/dissectors/lin.rs)
+      *Hata bayrakları asıl içerik: "no slave response" cihazın ölü olduğunu,
+      "checksum error" kablolamayı, "parity error" sorunun kendisinin bozuk
+      geldiğini gösteriyor — üç farklı tamir.*
+- [ ] FlexRay ✅
+- [ ] MOST ⚠️
+- [ ] CCP — CAN Calibration Protocol ✅ *(XCP'nin selefi)*
+- [ ] SAE J1708 / J1587 ✅ *(E2)*
+- [ ] NMEA 2000 ✅ *(E3; J1939 üstü)*
+- [ ] SOME/IP-TP ✅ *(segmentasyon; mevcut `someip.rs` komşusu)*
+- [ ] AUTOSAR SecOC ⚠️
+- [ ] AUTOSAR PDU ⚠️
+- [ ] gPTP — IEEE 802.1AS ✅ *(PTP profili; TSN saat senkronu)*
+- [ ] AVDECC — IEEE 1722.1 ✅
+- [ ] DoCAN ⚠️
+
+### 5.3 · Faz 3 — Telekom & mobil çekirdek (25)
+
+Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
+
+- [ ] X2AP ✅ *(LTE'nin XnAP karşılığı; `ngap_common` ailesine oturur)*
+- [ ] E2AP — O-RAN RIC ✅
+- [ ] O-RAN E1/M-Plane ⚠️
+- [x] **eCPRI** ✅ → [`ecpri.rs`](../crates/core/src/dissectors/ecpri.rs)
+      *EtherType 0xAEFE. Event Indication'ın fault kodları asıl değer: "geç
+      geldi / erken geldi / buffer taştı-boşaldı" — fronthaul zamanlama
+      sorununu radyo donanım arızasından ayıran tek şey.*
+- [ ] CPRI ⚠️
+- [ ] NAS-EPS ✅ *(E5)*
+- [ ] NAS-5GS ✅ *(E5)*
+- [ ] NRPPa ✅
+- [ ] XwAP ⚠️
+- [ ] W1AP ⚠️
+- [ ] BSSGP ✅
+- [ ] GPRS-NS ✅
+- [ ] GPRS-LLC ✅
+- [ ] SNDCP ✅
+- [ ] INAP ✅ *(TCAP üstü; mevcut `tcap.rs` operasyon tablosu genişler)*
+- [ ] CAMEL ✅ *(TCAP üstü)*
+- [ ] MTP2 ⚠️
+- [ ] MTP3 ✅
+- [ ] SGsAP ✅
+- [ ] Sv arayüzü ⚠️
+- [ ] GTPv1-U ✅ *(mevcut `gtp.rs`'ten ayrı kullanıcı düzlemi)*
+- [ ] RRC — LTE ⚠️ *(E5)*
+- [ ] RRC — NR ⚠️ *(E5)*
+- [ ] PDCP ⚠️
+- [ ] RLC ⚠️
+
+### 5.4 · Faz 4 — Yönlendirme & IP altyapı (25)
+
+- [x] **RIPng** ✅ → [`ripng.rs`](../crates/core/src/dissectors/ripng.rs)
+      *UDP 521. RIPv2 ile şekli aynı, wire format'ı değil — bu yüzden `rip.rs`
+      içinde version dalı değil, ayrı dissector. Metric 16 = withdrawal;
+      next-hop entry'leri (metric 0xFF) route sayılmıyor.*
+- [x] **IGRP** ✅ → [`igrp.rs`](../crates/core/src/dissectors/igrp.rs)
+      *IP protokol 9. Sürüm ve opcode tek baytı paylaşıyor. Hiçbir kimlik
+      doğrulaması yok — segmente paket koyabilen her şey rota enjekte edebilir.*
+- [x] ~~OSPFv3~~ — **zaten kapsanıyor**: `ospf.rs` version byte'ını okuyup
+      "OSPFv3" raporluyor. *(v3'ün header'ı farklı — auth alanı yok, Instance
+      ID var — yani ileride bir derinleştirme adayı, yeni protokol değil.)*
+- [x] ~~MLDv2~~ — **zaten kapsanıyor**: `icmp.rs` tip 130/131/132/143'ü
+      adlandırıyor.
+- [x] **SRv6 / Segment Routing Header** ✅ → [`srv6.rs`](../crates/core/src/dissectors/srv6.rs)
+      *Tasarım kararı `mpls.rs` örneğine göre verildi: iç adres/portlar korunuyor,
+      yol notu öne ekleniyor, protokol sarmalayıcıya ayarlanıyor. Segment listesi
+      **ters sıralı** — aktif waypoint `Segments Left` indeksinde, listenin
+      başında değil.*
+- [ ] SR-MPLS ✅
+- [x] **BIER** ✅ → [`bier.rs`](../crates/core/src/dissectors/bier.rs)
+      *MPLS nibble 5. Bit string'deki set bit sayısı = bu kopyanın hâlâ kaç
+      alıcıya gittiği. Uzunluk alanı **üs**, sayı değil: 1=64 bit, 7=4096 bit —
+      sayı sanılırsa 512 baytlık dizi 7 bayt okunur.*
+- [x] **Mobile IPv6** ✅ → [`mip6.rs`](../crates/core/src/dissectors/mip6.rs)
+      *IP protokol 135. Binding Acknowledgement'ın status byte'ı asıl değer:
+      <128 kabul, ≥128 ret, ve ret sebebi tek baytta. Lifetime 0 olan bir
+      Binding Update kayıt değil, kayıt silme.*
+- [ ] PMIPv6 ✅ *(Mobile IPv6'nın mesaj tiplerini paylaşıyor; `mip6.rs`
+      üstünde bir genişletme olacak, ayrı dissector değil)*
+- [ ] ~~GDOI — RFC 6407~~ ⚠️ *(**iptal:** ISAKMP'nin bir varyantı, ayrı wire
+      format değil — mevcut `isakmp.rs` üstünde port 848 relabel'ı olurdu.
+      Wireshark da ayrı dissector tutmuyor. Bar'ı geçmiyor.)*
+- [x] **HIP — RFC 7401** ✅ → [`hip.rs`](../crates/core/src/dissectors/hip.rs)
+      *IP protokol 139. NOTIFY'ın reason kodu asıl değer: base exchange
+      başarısız olduğunda uygulama tarafında sessiz — bağlantı sadece hiç
+      kurulmuyor. Parametreler yürünüyor, taranmıyor (HIT ve imzalar opak).*
+- [x] **AMT — RFC 7450** ✅ → [`amt.rs`](../crates/core/src/dissectors/amt.rs)
+      *UDP 2268 (IANA atamalı → guard değil düz binding). Tip düşük nibble'da,
+      yüksek nibble version. Multicast Data içindeki paketi açıp raporluyor.*
+- [x] **DVMRP** ✅ → [`dvmrp.rs`](../crates/core/src/dissectors/dvmrp.rs)
+      *Kendi protokol numarası yok — IGMP tip 0x13 olarak geliyor, bu yüzden
+      `igmp.rs`'ten devrediliyor. v1 ve v3 kodları farklı numaralandırıyor
+      (kod 2 = v3'te Report, v1'de Request), sürüm 0xFF03 işaretiyle tespit
+      ediliyor.*
+- [x] ~~VRRPv3~~ — **zaten kapsanıyor**: `vrrp.rs` version nibble'ını okuyup
+      "VRRPv3" raporluyor.
+- [ ] SHIM6 ⚠️
+- [ ] BGP-LS ✅ *(mevcut `bgp.rs` üstünde yeni NLRI ailesi)*
+- [ ] BGP FlowSpec ✅
+- [ ] RSVP-TE ✅
+- [ ] OpenR ⚠️
+- [ ] IPv6 ND / RA — SLAAC ✅ *(`icmp.rs` içinde derinleştirme)*
+- [ ] DHCPv6-PD ✅
+- [ ] 6to4 ✅
+- [ ] ISATAP ⚠️
+- [ ] GUE — Generic UDP Encapsulation ✅
+- [ ] FOU — Foo over UDP ✅
+
+### 5.5 · Faz 5 — Tünelleme, VPN & güvenlik (20)
+
+- [ ] IKEv2 ✅ *(mevcut `isakmp.rs` IKEv1'i kapsıyor; v2 ayrı exchange)*
+- [ ] SSTP ⚠️
+- [ ] SoftEther ⚠️
+- [ ] STT — Stateless Transport Tunneling ✅
+- [ ] NVGRE ✅
+- [ ] MPLS-in-UDP ✅
+- [x] **EtherIP — RFC 3378** ✅ → [`etherip.rs`](../crates/core/src/dissectors/etherip.rs)
+      *IP protokol 97. İçindeki tam Ethernet çerçevesi açılıyor — uzak sahanın
+      broadcast'i ve spanning tree'si buraya geçiyor.*
+- [ ] OpenConnect / AnyConnect 🔒
+- [ ] SCEP ⚠️ *(E1)*
+- [ ] EST — RFC 7030 ⚠️ *(E1)*
+- [x] **CMP — RFC 4210** ✅ → [`cmp.rs`](../crates/core/src/dissectors/cmp.rs)
+      *E8 (DER) + E1 (HTTP gövde) ikisinin birden karşılığı: hem TCP 829'da hem
+      `application/pkixcmp` gövdesinde okunuyor. Hata gövdesindeki reason
+      bitleri asıl değer — "badTime" bir saat sorununun PKI sorunu gibi
+      görünmesi.*
+- [ ] TSP — RFC 3161 zaman damgası ✅
+- [ ] SASL ✅ *(gömülü; birçok protokolde kimlik doğrulama başarısızlığını açıklar)*
+- [ ] GSSAPI ✅
+- [ ] SRP — Secure Remote Password ⚠️
+- [ ] DTLS-SRTP ✅
+- [ ] TACACS (v1, XTACACS) ⚠️
+- [ ] Shadowsocks 🔒
+- [ ] VMess / VLESS 🔒
+- [ ] obfs4 🔒
+
+### 5.6 · Faz 6 — Depolama & dosya sistemleri (20)
+
+- [x] **iSNS — RFC 4171** ✅ → [`isns.rs`](../crates/core/src/dissectors/isns.rs)
+      *TCP/UDP 3205. Response function ID = request | 0x8000, ve her yanıt
+      4 baytlık status ile başlıyor — yön ve sonuç tek paketten okunuyor.*
+- [x] **iSER** ✅ → [`iser.rs`](../crates/core/src/dissectors/iser.rs)
+      *Komutlar görünür, bloklar hiç görünmez — bu bir arıza değil, iSER'in
+      tasarımı. Reject bayrağı hedefin iSCSI status'ü konuşmadan önceki reddi.*
+- [ ] SRP — SCSI RDMA Protocol ⚠️ *(E4)*
+- [ ] SMB Direct ⚠️ *(E4)*
+- [ ] NVMe-oF RDMA ⚠️ *(E4)*
+- [ ] Fibre Channel (native FC-2) ✅
+- [ ] FCP ✅
+- [ ] pNFS ✅
+- [ ] NFSv4 callback ✅
+- [ ] HDFS Data Transfer Protocol ✅
+- [ ] MooseFS ⚠️
+- [ ] BeeGFS ⚠️
+- [ ] OrangeFS ⚠️
+- [ ] Sheepdog ⚠️
+- [ ] Coda ⚠️
+- [ ] Syncthing BEP ✅
+- [ ] Perforce (P4) ⚠️
+- [ ] ~~CVS pserver~~ ⚠️ *(**iptal:** Wireshark'ın kendi dissector'ı bile
+      sadece satır sayıyor, protokolü çözmüyor — "port + biraz framing"
+      derinliğinin tanımı. Verb'leri ezberden yazmak §5 kuralına aykırı.)*
+- [ ] Mercurial wire protocol ✅
+- [ ] OFTP — Odette FTP ✅
+
+### 5.7 · Faz 7 — Veritabanları (25)
+
+- [ ] Tarantool iproto ✅
+- [ ] HBase ⚠️
+- [ ] Hive Thrift ⚠️ *(mevcut `thrift.rs` üstünde)*
+- [ ] Impala ⚠️
+- [ ] Vertica ⚠️
+- [ ] Teradata ⚠️
+- [ ] SAP HANA SQLDBC ⚠️
+- [ ] Informix ⚠️
+- [ ] Netezza ⚠️
+- [ ] Ingres ⚠️
+- [ ] MaxDB ⚠️
+- [ ] Voldemort ⚠️
+- [ ] OpenTSDB ✅
+- [ ] TDengine ⚠️
+- [ ] QuestDB ✅ *(InfluxDB line protocol varyantı)*
+- [ ] OrientDB binary ⚠️
+- [ ] etcd v3 (gRPC) ✅ *(mevcut `grpc` üstünde)*
+- [ ] TiKV ⚠️
+- [ ] Couchbase memcached uzantıları ✅
+- [ ] CouchDB 🔒 *(E1)*
+- [ ] ArangoDB 🔒 *(E1)*
+- [ ] Trino / Presto 🔒 *(E1)*
+- [ ] Druid 🔒 *(E1)*
+- [ ] Prometheus remote-write 🔒 *(E1)*
+- [ ] VictoriaMetrics 🔒 *(E1)*
+
+### 5.8 · Faz 8 — Mesajlaşma, telemetri & gözlemlenebilirlik (25)
+
+- [ ] RabbitMQ Stream Protocol ✅
+- [ ] ActiveMQ Artemis Core ✅
+- [ ] Solace SMF ⚠️
+- [ ] TIBCO Rendezvous ⚠️
+- [ ] TIBCO EMS ⚠️
+- [x] **Aeron** ✅ → [`aeron.rs`](../crates/core/src/dissectors/aeron.rs)
+      *Kontrol çerçeveleri asıl içerik: NAK'lar ve küçülen pencere, gecikme
+      artışından **önce** geliyor. Magic'i yok — guard'ın ilk hâli bir DTLS
+      kaydını kapmıştı, aşağıya bakın.*
+- [ ] NNG / nanomsg SP ✅
+- [ ] OTLP over gRPC ✅
+- [ ] OTLP over HTTP 🔒 *(E1)*
+- [ ] Zipkin 🔒 *(E1)*
+- [ ] Riemann ✅
+- [ ] Munin ✅
+- [ ] Sensu ⚠️
+- [ ] Netdata streaming ⚠️
+- [ ] Splunk S2S ⚠️
+- [ ] Loki push 🔒 *(E1)*
+- [ ] Vector native ⚠️
+- [ ] Graphite pickle protocol ✅ *(mevcut `graphite.rs` düz metin; pickle ayrı)*
+- [ ] Icinga2 cluster ⚠️
+- [ ] Nagios NSCA ✅
+- [ ] Nagios NDO ⚠️
+- [ ] collectd binary v5 uzantıları ✅
+- [ ] Ganglia gmetad interaktif ✅
+- [ ] Zabbix aktif-ajan protokolü ✅
+- [ ] Telegraf/InfluxDB v2 write ⚠️
+
+### 5.9 · Faz 9 — IoT, bina & düşük güç (25)
+
+- [ ] LwM2M ✅ *(CoAP üstü — roadmap'te bir kez hayalî olarak listelenmişti; **bu sefer gerçekten eklenecek**)*
+- [x] **LoRaWAN** ✅ → [`lorawan.rs`](../crates/core/src/dissectors/lorawan.rs)
+      *Yük uçtan uca şifreli, o yüzden başlık capture'ın söyleyebileceği her şey
+      — ve frame counter orada: sıfırlanan bir cihazın frame'lerini ağ sessizce
+      atıyor, cihaz tarafında hiçbir belirti yok.*
+- [ ] Semtech UDP packet forwarder ✅
+- [ ] Z-Wave ✅
+- [ ] EnOcean ✅
+- [ ] Wi-SUN ⚠️
+- [ ] Zigbee Green Power ✅
+- [ ] Thread (MLE üstü genişletme) ✅
+- [ ] HomeKit HAP ⚠️
+- [ ] ESPHome native API ✅
+- [ ] Insteon ⚠️
+- [ ] X10 ⚠️
+- [ ] DALI over IP ⚠️
+- [x] **Art-Net** ✅ → [`dmx.rs`](../crates/core/src/dissectors/dmx.rs)
+      *UDP 6454. Opcode **little-endian** — big-endian okunursa DMX (0x5000)
+      0x0050 olur ve hiçbir opcode'a denk gelmez.*
+- [x] **sACN — E1.31** ✅ → [`dmx.rs`](../crates/core/src/dissectors/dmx.rs)
+      *UDP 5568. Aynı modülde çünkü teşhis aynı, ama formatlar ayrı ayrı
+      çözülüyor. Priority + kaynak adı: aynı öncelikte iki konsol klasik arıza
+      ve her iki konsol da kendi çıktısını doğru gösteriyor.*
+- [x] **OSC — Open Sound Control** ✅ → [`osc.rs`](../crates/core/src/dissectors/osc.rs)
+      ***Kendi portu yok*** — bu yüzden yapısal tanıma katmanına eklendi. Porta
+      göre filtrelenen bir yakalama bu trafiği hiç bulamıyor.
+- [x] **RTP-MIDI — RFC 6295** ✅ → [`rtpmidi.rs`](../crates/core/src/dissectors/rtpmidi.rs)
+      *UDP 5004/5005. Clock paketinin düzeni davetlerden farklı: protokol
+      sürümü ve token taşımıyor, sayaç offset 8'de (12'de değil).*
+- [ ] CobraNet ⚠️
+- [ ] AES67 ✅ *(RTP profili)*
+- [ ] SMPTE ST 2110 ✅ *(RTP profili)*
+- [ ] RIST ✅
+- [ ] ONVIF 🔒 *(E1)*
+- [ ] MTConnect 🔒 *(E1)*
+- [ ] TR-069 / CWMP 🔒 *(E1)*
+- [ ] TR-369 / USP ⚠️
+
+### 5.10 · Faz 10 — Uzak erişim, keşif & web (20)
+
+- [ ] NETCONF ✅
+- [ ] RESTCONF 🔒 *(E1)*
+- [ ] gNMI ✅ *(gRPC üstü)*
+- [ ] NIS / YP ✅ *(ONC RPC üstü; mevcut `rpc.rs`)*
+- [ ] UPnP SOAP ⚠️ *(E1; SSDP mevcut, kontrol düzlemi değil)*
+- [ ] WPAD ✅
+- [ ] Guacamole protokolü ✅
+- [ ] NX / NoMachine ⚠️
+- [ ] Mosh 🔒
+- [ ] SPDY ⚠️
+- [ ] WAP WSP / WTP ✅
+- [ ] WBXML ✅
+- [ ] WebDAV 🔒 *(E1)*
+- [ ] CalDAV / CardDAV 🔒 *(E1)*
+- [ ] DNSCrypt ✅ *(kendi çerçevelemesi var; DoT/DoH aksine zarf okunabilir)*
+- [ ] DNS over QUIC ⚠️
+- [ ] Matrix federasyon 🔒 *(E1)*
+- [ ] ActivityPub 🔒 *(E1)*
+- [ ] AS2 🔒 *(E1)*
+- [ ] Gemini 🔒
+
+### 5.11 · Faz 11 — Legacy & küçük servisler (25)
+
+Küçük RFC servisleri değersiz görünür; **amplifikasyon saldırılarında hâlâ
+aktif olarak kullanıldıkları için** değerlidirler. Chargen ve QOTD, DDoS
+yansıtma vektörü olarak bugün de görülür.
+
+Yedisi tek modülde: [`small_services.rs`](../crates/core/src/dissectors/small_services.rs).
+Portlar IANA CSV'sinden, davranışlar RFC metinlerinden doğrulandı.
+
+- [x] **Echo — RFC 862** ✅ *(1:1 yansıtıcı)*
+- [x] **Discard — RFC 863** ✅ *(cevap vermemeli — cevap gelirse bulgu odur)*
+- [x] **Chargen — RFC 864** ✅ *(RFC "isteğin içeriği tamamen yok sayılır"
+      diyor — tek sahte bayt 512 bayt döndürmeye yetiyor)*
+- [x] **QOTD — RFC 865** ✅ *(<512 karakter)*
+- [x] **Daytime — RFC 867** ✅
+- [x] **Time — RFC 868** ✅ *(1900 epoch'u; RFC'nin kendi verdiği
+      2 208 988 800 = 1 Oca 1970 değeriyle test edildi. 2036'da taşıyor.)*
+- [x] **TCPMUX — RFC 1078** ✅ *(sadece TCP — UDP tablosuna konmadı)*
+- [ ] Netstat servisi ⚠️
+- [ ] systat ⚠️
+- [ ] SNA / APPN ⚠️
+- [ ] NetBEUI ⚠️
+- [ ] Novell NCP ✅
+- [ ] IPX SPX ✅
+- [ ] DEC LAT ✅
+- [ ] DEC MOP ✅
+- [ ] Chaosnet ⚠️
+- [ ] XNS ⚠️
+- [ ] UUCP ✅
+- [ ] Kermit ⚠️ *(E2)*
+- [ ] ZMODEM ⚠️ *(E2)*
+- [ ] EDP — Extreme Discovery ✅
+- [ ] FDP — Foundry Discovery ✅
+- [ ] SONMP / NDP — Nortel ✅
+- [ ] SPB — IEEE 802.1aq ⚠️
+- [x] ~~PBB — 802.1ah~~ — **zaten kapsanıyor**: `dissectors.rs` içindeki
+      `dissect_pbb`, müşteri frame'ini açıp içindekini raporluyor. Registry
+      protokolü değil çünkü bir sarmalayıcı, bir protokol değil. *(Listeye
+      yazılırken kaçmıştı — §5'teki "başlamadan önce registry'ye karşı
+      doğrula" kuralının neden orada olduğunun örneği.)*
+
+### 5.12 · Yedek havuz (kota dışı)
+
+⚠️/🔒 kalemleri §6'ya düştükçe buradan ikame edilir. Bu havuz kasten
+adlandırılmamış bırakılmıştır — **doğrulanmamış protokol adlarını önceden
+listeye yazmak, roadmap'in zaten bir kez yaptığı hatadır.** İkame gerektiğinde
+aday, §2 barına karşı o an değerlendirilir.
+
+Aday alanlar: OPC UA güvenlik profilleri · ek ODVA/CIP nesneleri · bölgesel
+SCADA protokolleri (KNX varyantları, Chinese GB/T) · ek 3GPP arayüzleri
+(N2/N4 varyantları) · niş bilimsel enstrüman protokolleri (EPICS CA/PVA,
+TANGO) · HPC (MPI wire, Slurm RPC, PMIx).
+
+> 💡 **EPICS Channel Access ve MPI, ilk incelemede güçlü adaylar** — kamuya
+> açık spec, net magic, ve laboratuvar/HPC ağlarında gerçek teşhis değeri.
+> §5.12'de bırakılmalarının sebebi değersizlik değil, doğrulanmamış olmaları.
+
+---
+
+## 6. Reddedilenler kaydı
+
+**Bu kayıt bağlayıcıdır.** Buradaki bir protokol, gerekçesini ortadan kaldıran
+bir değişiklik olmadan yeniden önerilmez.
+
+> ✅ **OCSP kayıttan çıktı (2026-07-21).** Gerekçesi iki cümleydi ve ikisi de
+> ortadan kalktı: HTTP gövdesine erişim **E1** ile, DER'de yedi seviye derindeki
+> sertifika verdict'ine ulaşmak **E8** ile. Bu, kaydın nasıl çalışması
+> gerektiğinin örneği — reddetme kalıcı bir yargı değil, *bir koşula bağlı*
+> bir karar, ve koşul karşılandığında geri alınır. → [`ocsp.rs`](../crates/core/src/dissectors/ocsp.rs)
+
+| Protokol | Gerekçe | Yeniden değerlendirme koşulu |
+|:--|:--|:--|
+| CARP | VRRP ile telde birebir aynı | — (kalıcı) |
+| CANopen | 11-bit ID'ler tescilli bir veri yolundan ayırt edilemez | — (kalıcı) |
+| RakNet | Tescilli ve şifreli | — (kalıcı) |
+| TeamSpeak 3 | Tescilli ve şifreli | — (kalıcı) |
+| NTS-KE | Kayıtlar TLS içinde; yalnız `ntske/1` ALPN okunur | TLS keylog akışı genelleşirse |
+| Corosync | v3 varsayılan olarak knet + crypto; Totem tipleri telde yok | Şifresiz dağıtım yaygınlaşırsa |
+| Quake | Sürüm kararsız; "port + biraz framing" derinliği | — |
+| Tinc | Şifreli yük | — |
+| TeamViewer / AnyDesk | Tescilli ve şifreli | — (kalıcı) |
+
+---
+
+## 7. Riskler ve ölçüm
+
+### Taban çizgisi — 366 protokolde ölçüldü (2026-07-21)
+
+| Metrik | Ölçülen | Eşik | Kullanım | Durum |
+|:--|--:|--:|--:|:--|
+| Binary boyutu (release `netscope-tui`) | **15.3 MB** | 80 MB | %19 | ✅ rahat |
+| Temiz release build (`netscope-core`) | **199 sn** | 5 dk | %66 | ⚠️ **en dar pay** |
+| Test süresi (`--workspace`, derlenmiş) | **26.6 sn** | 60 sn | %44 | ✅ |
+| `protocols!` blok boyutu | **3306 satır** | ~~700~~ | — | ❌ eşik anlamsızdı |
+
+**Ölçüm iş kalemleri:**
+
+- [x] Mevcut binary boyutu ve temiz derleme süresi ölç (**taban çizgisi**) —
+      yukarıdaki tablo. Ayrı bir `CARGO_TARGET_DIR`'de ölçüldü, böylece çalışan
+      target dizini bozulmadı.
+- [ ] Her fazdan sonra tekrar ölç, bu tabloya işle
+- [ ] Eşik aşılırsa **E6**'yı sıraya al — *henüz aşılmadı, sıraya alınmadı*
+
+#### Kendi eşiğimden birini geri çekiyorum
+
+`protocols!` için koyduğum **700 satır eşiği ölçmeden konmuştu ve hiçbir şey
+ölçmüyor.** Her protokol tam 9 satır, yani blok boyutu = 9 × protokol sayısı;
+366'da 3306 satır, 592'de ~5300 olacak. Bu bir uyarı sinyali değil, sabit bir
+çarpım — "aşıldı" demek "protokol eklendi" demekten başka bir bilgi taşımıyor.
+Blok düz ve tekdüze bir tablo olduğu için okunabilirlik de bozulmuyor.
+
+Asıl endişe zaten **derleme süresiydi** ve o ayrı bir satır olarak ölçülüyor.
+Anlamsız eşiği tutup her fazda "ihlal" raporlamaktansa kaldırmak doğru olan.
+
+### Kalan riskler
+
+| Risk | Etki | Önlem | Eşik |
+|:--|:--|:--|:--|
+| Binary boyutu | İndirme boyutu — §1 kısıtı | `cargo feature` ile aile ayrımı (**E6**) | > 80 MB |
+| Derleme süresi | Katkıcı deneyimi | `protocols!` makrosunu bölme, E6 | > 5 dk |
+| Test süresi | CI geri bildirimi | Paralelleştirme | `--workspace` > 60 sn |
+| Yüzeysel dissector birikimi | **Ürün değeri** | §2 barı + §6 kaydı | — |
+| Throughput regresyonu | Performans | `bench_pipeline_throughput` | ⚠️ Tek başına düşen bench genellikle makine yükü, regresyon değil |
+
+> **Derleme süresi neden izlenmeli:** 199 sn, 366 protokolde eşiğin üçte
+> ikisi. 592'ye giderken doğrusal büyürse ~320 sn'ye çıkar ve eşiği aşar. Bu,
+> **E6'yı tetikleyecek ilk metrik** olma ihtimali en yüksek olan.
+
+> ⚠️ **En büyük risk teknik değil.** 250 protokolü mevcut barda bitirmek çok
+> uzun bir iştir; kotanın kendisi barı esnetmeye baskı yapar. Bu belgede
+> reddetme kaydının (§6) ve güven etiketlerinin (§2) bu kadar yer kaplaması
+> bunun içindir. **Barın altında 250 protokol, barın üstünde 150 protokolden
+> daha az değerlidir.**
+
+---
+
+## 8. İlerleme özeti
+
+| Faz | Alan | Adet | Durum |
+|:--|:--|--:|:--|
+| — | Enabler'lar (E1-E8) | 8 | 🟨 **5/8** *(E1, E3, E7, E8 tamam; E2/E4 başladı, **E5 engelli**)* |
+| 1 | Endüstriyel & OT | 25 | 🟨 **5/25** |
+| 2 | Otomotiv | 15 | 🟨 **3/15** |
+| 3 | Telekom & mobil | 25 | 🟨 **1/25** |
+| 4 | Yönlendirme & IP | 25 | 🟨 **10/25** *(3'ü zaten kapsanıyordu)* |
+| 5 | Tünel, VPN & güvenlik | 20 | 🟨 **2/20** |
+| 6 | Depolama & dosya | 20 | 🟨 **2/20** |
+| 7 | Veritabanları | 25 | ⬜ 0/25 |
+| 8 | Mesajlaşma & telemetri | 25 | 🟨 **1/25** |
+| 9 | IoT & bina | 25 | 🟨 **6/25** *(ONVIF+TR-069 → SOAP)* |
+| 10 | Uzak erişim & keşif | 20 | ⬜ 0/20 |
+| 11 | Legacy & küçük servisler | 25 | 🟨 **8/25** *(PBB zaten kapsanıyordu)* |
+| | **Toplam** | **250** | **🟨 40/250** |
+
+**Hedef:** 342 → 592 protokol · **Şu an: 378**
+
+### Tamamlanan batch'ler
+
+| # | Protokoller | Doğrulama kaynağı | Test |
+|:--|:--|:--|--:|
+| 1 | PRP · PROFINET DCP · eCPRI | Wireshark `packet-prp.c`, `packet-hsr-prp-supervision.c`, `packet-pn-dcp.c`, `packet-ecpri.c`, `etypes.h` | +27 |
+| 2 | RIPng · Mobile IPv6 · AMT | Wireshark `packet-ripng.c`, `packet-mip6.c`, `packet-amt.c` | +18 |
+| 3 | Echo · Discard · Daytime · QOTD · Chargen · Time · TCPMUX | IANA port CSV + RFC 862/863/864/865/867/868 metinleri | +11 |
+| 4 | DVMRP · PROFINET PTCP | Wireshark `packet-dvmrp.c`, `packet-pn-ptcp.c`, `packet-pn-rt.c` | +11 |
+| 5 | iSNS · HIP | Wireshark `packet-isns.c`, `packet-hip.c` | +14 |
+| 6 | SRv6 (+ E7'nin IPv6 yarısı) | Wireshark `packet-ipv6.c`, RFC 8754 | +6 |
+| 7 | Art-Net · sACN · OSC · RTP-MIDI · IGRP · EtherIP | Wireshark `packet-artnet.c`, `packet-acn.c`, `packet-osc.c`, `packet-applemidi.c`, `packet-igrp.c`, `packet-etherip.c` | +27 |
+| 8 | *(protokol yok)* §1 kısıtları teste bağlandı, §7 taban çizgisi ölçüldü | — | +3 |
+| 9 | **E7 tamamlandı** + BIER | Wireshark `packet-bier.c`, RFC 8296 | +7 |
+| 10 | **E1 tamamlandı** + SOAP (ONVIF/TR-069) | RFC 7230 §3, ONVIF/DSL Forum namespace'leri | +17 |
+| 11 | **E8 tamamlandı** + OCSP *(reddedilenlerden çıktı)* | RFC 6960 §4.2, X.690 | +18 |
+| 12 | **E3 tamamlandı** + ISO-TP (yeniden birleştirme dahil), CAN FD bayrakları | Wireshark `packet-iso15765.c`, ISO 15765-2/-4 | +15 |
+| 13 | **E2 başladı** + Modbus RTU; **E5 engelli olarak kaydedildi** | CRC-16/MODBUS yayımlanmış kontrol değeri | +8 |
+| 14 | **E4 başladı** — RoCE derinleştirildi (syndrome/QP/transport service) | Wireshark `packet-infiniband.c` (elle yazılmış) | +8 |
+| 15 | iSER (RoCE SEND → iSER → iSCSI) | Wireshark `packet-iser.c`, RFC 7145 | +6 |
+| 16 | Paylaşılan IEC 60870-5 ASDU çözücüsü; IEC 104 derinleştirildi | Wireshark `packet-iec104.c` | +9 |
+| 17 | IEC 60870-5-101 (FT1.2) | Wireshark `packet-iec104.c` içindeki 101 bölümü | +7 |
+| 18 | LIN (DLT 212) | Wireshark `packet-lin.c`/`.h`, libpcap `dlt.h` | +8 |
+| 19 | LoRaWAN; **Modbus ASCII ertelendi** | Wireshark `packet-lorawan.c` | +8 |
+| 20 | Aeron *(yapısal guard DTLS'i kapmıştı — düzeltildi)* | Wireshark `packet-aeron.c` | +8 |
+| 21 | CMP *(E1+E8 üstünde)*; **H.324/SRP adı karışıklığı yakalandı** | Wireshark `packet-cmp.c` tabloları, RFC 4210 | +10 |
+| 22 | **E9: `pkix.rs`** ortak `PKIStatusInfo` (CMP + TSP); RFC 3161 TSP. **Guard kırma ölü kod buldu:** status 0 kolları metni sabit yazdığı için sonuç sözcüğü eşlemesi hiç çalışmıyordu — testi geçiren yol, iddia ettiği yol değildi | Wireshark `packet-pkixtsp.c` `PKIFailureInfo_bits[]`, RFC 3161 | +11 |
+
+> Her batch'te guard'lar bozularak doğrulandı ve editörle geri alındı:
+> DCP blok öneki (4 test düştü) · PRP suffix (tam olarak
+> `the_trailer_is_only_claimed_on_its_suffix`) · MIP6 kabul/ret eşiği (tam
+> olarak `an_acceptance_is_not_reported_as_a_refusal`) · RIPng next-hop filtresi
+> (tam olarak `a_next_hop_entry_is_not_reported_as_a_route`) · Time 1900 epoch
+> kayması (2 test, ikisi de RFC 868'in kendi verdiği değerlerle).
+
+#### Batch 3'te öğrenilen iki repo kuralı
+
+Mevcut testler iki konvansiyonu yakaladı — ikisi de belgeye §3'e eklendi:
+
+1. **`super::bytes()` kullanılacak, `{} bytes` yazılmayacak.**
+   `no_dissector_formats_a_bare_byte_count` bunu zorluyor; aksi halde "1 bytes"
+   render ediliyor.
+2. **Dissector'ları makroyla üretme.** `every_protocol_is_produced_by_some_dissector`
+   kaynakta `Protocol::X` metnini arıyor; makro o adları gizlediği için yedi
+   protokolün hiçbiri görünmedi. Açık fonksiyonlara çevrildi — test tam olarak
+   bu tür kaymayı yakalamak için var.
+
+### Gözlem: listenin ~%15'i zaten kapsanıyor
+
+İki batch'te 250 kalemden **4'ü zaten mevcut** çıktı (OSPFv3, MLDv2, VRRPv3,
+PBB) ve **2'si iptal** oldu (CC-Link IE Basic — açık spec yok; GDOI — ISAKMP
+varyantı, bar'ı geçmiyor). Bu, §2'deki "liste bilerek fazladan sağlanmıştır"
+notunun beklediği davranış, ama oran tahmin edilenden yüksek: **gerçek net
+kazanç kalem başına ~0.6.** 250 kutucuk muhtemelen ~150-170 yeni protokole
+karşılık gelecek. Yedek havuzun (§5.12) var olma sebebi tam olarak bu.
+
+### Önerilen başlangıç sırası
+
+1. **E1 (HTTP gövde inceleme)** — tek başına ~14 protokolün kilidini açar,
+   en yüksek kaldıraç.
+2. **Faz 1 (Endüstriyel)** — PRP, CC-Link IE, FF-HSE, OPC UA PubSub zaten
+   önceki batch'te planlanmıştı; ✅ oranı en yüksek faz.
+3. **E6 ölçümü** — Faz 1 biter bitmez boyut/süre tabanını al; erken ölçüm,
+   geç refactor'dan ucuzdur.
+4. **Faz 4 (Yönlendirme)** — ✅ yoğunluğu yüksek, mevcut kodla en az sürtünme.

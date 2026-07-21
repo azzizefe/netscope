@@ -139,30 +139,37 @@ const MAX_EXTENSION_HEADERS: usize = 8;
 ///
 /// The fragment header is deliberately left in place: reassembly needs it, and
 /// the caller handles it.
+/// How long one extension header is, or `None` if `next_header` is not one.
+///
+/// Shared with [`crate::dissectors::srv6`], which walks the same chain looking
+/// for the segment routing header. Keeping the length rule in one place is the
+/// point: the authentication header measures itself differently from every
+/// other extension header, and two copies of that rule would drift.
+pub(crate) fn ext_header_len(next_header: u8, payload: &[u8]) -> Option<usize> {
+    match next_header {
+        EXT_HOP_BY_HOP | EXT_ROUTING | EXT_DEST_OPTIONS | EXT_MOBILITY | EXT_HIP | EXT_SHIM6 => {
+            // Length is in 8-octet units, not counting the first 8 bytes.
+            payload.get(1).map(|&len| (len as usize + 1) * 8)
+        }
+        EXT_AUTH => {
+            // The authentication header counts 4-octet units and excludes two
+            // of them, which is a different rule from every other extension
+            // header.
+            payload.get(1).map(|&len| (len as usize + 2) * 4)
+        }
+        _ => None,
+    }
+}
+
 fn skip_extension_headers(mut next_header: u8, mut payload: &[u8]) -> (u8, &[u8]) {
     for _ in 0..MAX_EXTENSION_HEADERS {
-        let length = match next_header {
-            EXT_HOP_BY_HOP | EXT_ROUTING | EXT_DEST_OPTIONS | EXT_MOBILITY | EXT_HIP
-            | EXT_SHIM6 => {
-                // Length is in 8-octet units, not counting the first 8 bytes.
-                match payload.get(1) {
-                    Some(&len) => (len as usize + 1) * 8,
-                    None => return (next_header, payload),
-                }
-            }
-            EXT_AUTH => {
-                // The authentication header counts 4-octet units and excludes
-                // two of them, which is a different rule from every other
-                // extension header.
-                match payload.get(1) {
-                    Some(&len) => (len as usize + 2) * 4,
-                    None => return (next_header, payload),
-                }
-            }
-            NO_NEXT_HEADER => return (next_header, &[]),
-            // Anything else is the transport protocol, or a fragment header the
-            // caller deals with.
-            _ => return (next_header, payload),
+        if next_header == NO_NEXT_HEADER {
+            return (next_header, &[]);
+        }
+        // Anything that is not an extension header is the transport protocol,
+        // or a fragment header the caller deals with.
+        let Some(length) = ext_header_len(next_header, payload) else {
+            return (next_header, payload);
         };
         let Some(&following) = payload.first() else {
             return (next_header, payload);

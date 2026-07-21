@@ -67,7 +67,7 @@ pub fn looks_like_modbus(payload: &[u8]) -> bool {
     }
 }
 
-fn function_name(func: u8) -> &'static str {
+pub(crate) fn function_name(func: u8) -> &'static str {
     match func {
         1 => "Read Coils",
         2 => "Read Discrete Inputs",
@@ -88,7 +88,7 @@ fn function_name(func: u8) -> &'static str {
     }
 }
 
-fn exception_name(exc: u8) -> &'static str {
+pub(crate) fn exception_name(exc: u8) -> &'static str {
     match exc {
         1 => "Illegal Function",
         2 => "Illegal Data Address",

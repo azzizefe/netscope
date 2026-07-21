@@ -1,10 +1,10 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 
 use crate::models::Protocol;
 
-use super::{http2, websocket, DissectedResult};
+use super::{cmp, http2, ocsp, soap, tsp, websocket, DissectedResult};
 
 #[derive(Debug)]
 pub struct HttpRequest {
@@ -52,6 +52,60 @@ pub fn dissect_http(
     };
 
     let body = body.trim_start_matches('\0');
+
+    // A great deal rides inside HTTP bodies rather than on a port of its own.
+    // `http_body` finds the body without decoding it; if something here
+    // understands what the Content-Type names, that inner protocol is the
+    // answer and HTTP is the envelope — the same treatment MPLS and EtherIP
+    // get. Only content types that are actually claimed take this path, so an
+    // ordinary page or API call still reads as HTTP.
+    if let Some(message) = super::http_body::split(payload) {
+        if let Some(content_type) = message.content_type.as_deref() {
+            let inner = if message.body.is_empty() {
+                None
+            } else if soap::is_soap_type(content_type) {
+                Some(soap::dissect_soap(
+                    src_ip,
+                    dst_ip,
+                    src_port,
+                    dst_port,
+                    message.body,
+                ))
+            } else if cmp::is_cmp_type(content_type) {
+                Some(cmp::dissect_cmp(
+                    src_ip,
+                    dst_ip,
+                    src_port,
+                    dst_port,
+                    message.body,
+                ))
+            } else if tsp::is_query_type(content_type) || tsp::is_reply_type(content_type) {
+                Some(tsp::dissect_tsp(
+                    src_ip,
+                    dst_ip,
+                    src_port,
+                    dst_port,
+                    message.body,
+                    tsp::is_reply_type(content_type),
+                ))
+            } else if ocsp::is_request_type(content_type) || ocsp::is_response_type(content_type) {
+                Some(ocsp::dissect_ocsp(
+                    src_ip,
+                    dst_ip,
+                    src_port,
+                    dst_port,
+                    message.body,
+                    ocsp::is_response_type(content_type),
+                ))
+            } else {
+                None
+            };
+            if let Some(mut inner) = inner {
+                inner.summary = format!("HTTP · {}", inner.summary);
+                return inner;
+            }
+        }
+    }
 
     // A WebSocket or h2c upgrade is still HTTP on the wire — flag it in the
     // summary so the handshake is recognisable next to the frames that follow.

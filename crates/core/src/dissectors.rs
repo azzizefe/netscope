@@ -3,10 +3,12 @@
 pub mod aarp;
 pub mod ads;
 pub mod adsb;
+pub mod aeron;
 pub mod aerospike;
 pub mod afp;
 pub mod amqp;
 pub mod amqp1;
+pub mod amt;
 pub mod aodv;
 pub mod aoe;
 pub mod aprs;
@@ -22,6 +24,7 @@ pub mod beats;
 pub mod bfcp;
 pub mod bfd;
 pub mod bgp;
+pub mod bier;
 pub mod bindings;
 pub mod bitcoin;
 pub mod bittorrent;
@@ -40,12 +43,15 @@ pub mod cip;
 pub mod clamav;
 pub mod cldap;
 pub mod clickhouse;
+pub mod cmp;
 pub mod coap;
 pub mod coap_tcp;
 pub mod collectd;
+pub mod consul_rpc;
 pub mod dccp;
 pub mod dcerpc;
 pub mod decnet;
+pub mod der;
 pub mod dhcp;
 pub mod dhcpfo;
 pub mod dhcpv6;
@@ -54,16 +60,20 @@ pub mod diameter;
 pub mod dicom;
 pub mod dlms;
 pub mod dlsw;
+pub mod dmx;
 pub mod dnp3;
 pub mod dns;
 pub mod dns_tcp;
 pub mod doip;
+pub mod drbd;
 pub mod drda;
 pub mod dtls;
 pub mod dtp;
+pub mod dvmrp;
 pub mod e1ap;
 pub mod eap;
 pub mod eapol;
+pub mod ecpri;
 pub mod edonkey;
 pub mod eigrp;
 pub mod elasticsearch;
@@ -71,6 +81,7 @@ pub mod enip;
 pub mod erspan;
 pub mod esmc;
 pub mod ethercat;
+pub mod etherip;
 pub mod ethernet;
 pub mod f1ap;
 pub mod fcip;
@@ -100,6 +111,7 @@ pub mod gvcp;
 pub mod h225ras;
 pub mod hadooprpc;
 pub mod hartip;
+pub mod hip;
 pub mod hl7;
 pub mod hnbap;
 pub mod hsms;
@@ -107,13 +119,17 @@ pub mod hsr;
 pub mod hsrp;
 pub mod http;
 pub mod http2;
+pub mod http_body;
 pub mod iax2;
 pub mod ibmmq;
 pub mod ica;
 pub mod icmp;
 pub mod ident;
+pub mod iec101;
 pub mod iec104;
+pub mod iec_asdu;
 pub mod igmp;
+pub mod igrp;
 pub mod imap;
 pub mod influxdb;
 pub mod ip;
@@ -123,7 +139,10 @@ pub mod ipx;
 pub mod irc;
 pub mod isakmp;
 pub mod iscsi;
+pub mod iser;
 pub mod isis;
+pub mod isns;
+pub mod isotp;
 pub mod isup;
 pub mod j1939;
 pub mod jaeger;
@@ -138,11 +157,13 @@ pub mod lacp;
 pub mod lcsap;
 pub mod ldap;
 pub mod ldp;
+pub mod lin;
 pub mod link_oam;
 pub mod linktypes;
 pub mod lisp;
 pub mod lldp;
 pub mod lmtp;
+pub mod lorawan;
 pub mod lpd;
 pub mod lustre;
 pub mod lwapp;
@@ -158,15 +179,18 @@ pub mod matter;
 pub mod mbus;
 pub mod mdns;
 pub mod megaco;
+pub mod memberlist;
 pub mod memcached;
 pub mod memcached_bin;
 pub mod mgcp;
 pub mod milter;
 pub mod minecraft;
+pub mod mip6;
 pub mod mka;
 pub mod mle;
 pub mod mms;
 pub mod modbus;
+pub mod modbus_rtu;
 pub mod mongodb;
 pub mod mpegts;
 pub mod mpls;
@@ -203,11 +227,13 @@ pub mod ntlm;
 pub mod ntp;
 pub mod nvmeof;
 pub mod obd2;
+pub mod ocsp;
 pub mod olsr;
 pub mod opcua;
 pub mod openflow;
 pub mod openvpn;
 pub mod openwire;
+pub mod osc;
 pub mod ospf;
 pub mod ovsdb;
 pub mod pagp;
@@ -219,7 +245,10 @@ pub mod pcp;
 pub mod pfcp;
 pub mod pgm;
 pub mod pim;
+pub mod pkix;
 pub mod pktap;
+pub mod pn_dcp;
+pub mod pn_ptcp;
 pub mod pop3;
 pub mod postgres;
 pub mod powerlink;
@@ -227,6 +256,7 @@ pub mod ppp;
 pub mod pppoe;
 pub mod pptp;
 pub mod profinet;
+pub mod prp;
 pub mod ptp;
 pub mod pulsar;
 pub mod q931;
@@ -245,6 +275,7 @@ pub mod rexec;
 pub mod rfb;
 pub mod riak;
 pub mod rip;
+pub mod ripng;
 pub mod rlogin;
 pub mod rmcp;
 pub mod rnsap;
@@ -258,6 +289,7 @@ pub mod rsvp;
 pub mod rsync;
 pub mod rtmp;
 pub mod rtp;
+pub mod rtpmidi;
 pub mod rtps;
 pub mod rtsp;
 pub mod rua;
@@ -281,12 +313,14 @@ pub mod skinny;
 pub mod sll;
 pub mod slmp;
 pub mod slp;
+pub mod small_services;
 pub mod smb;
 pub mod smp;
 pub mod smpp;
 pub mod smtp;
 pub mod snap;
 pub mod snmp;
+pub mod soap;
 pub mod socks;
 pub mod someip;
 pub mod someip_sd;
@@ -296,6 +330,7 @@ pub mod spice;
 pub mod srt;
 pub mod srt_transport;
 pub mod srtp_ge;
+pub mod srv6;
 pub mod ssdp;
 pub mod ssh;
 pub mod statsd;
@@ -318,6 +353,7 @@ pub mod thrift;
 pub mod tls;
 pub mod tns;
 pub mod trill;
+pub mod tsp;
 pub mod turn;
 pub mod twamp;
 pub mod udld;
@@ -451,6 +487,7 @@ const DLT_BT_HCI_H4_WITH_PHDR: i32 = 201; // …with a direction pseudo-header
 const DLT_USB_LINUX: i32 = 189; // usbmon, 48-byte header
 const DLT_USB_LINUX_MMAPPED: i32 = 220; // usbmon, 64-byte header
 const DLT_CAN_SOCKETCAN: i32 = 227; // SocketCAN (can0/vcan0)
+const DLT_LIN: i32 = 212; // LIN bus, with a capture pseudo-header
 const DLT_USBPCAP: i32 = 249; // Windows USBPcap
 const DLT_IEEE802_15_4: i32 = 195; // IEEE 802.15.4 Wireless PAN (Zigbee)
                                    // Captures that carry IP with no Ethernet header. Treating these as Ethernet
@@ -503,6 +540,7 @@ fn dissect_linktype_inner(data: &[u8], linktype: i32) -> DissectedResult {
         DLT_USB_LINUX | DLT_USB_LINUX_MMAPPED => usb::dissect_usb_linux(data),
         DLT_USBPCAP => usb::dissect_usbpcap(data),
         DLT_CAN_SOCKETCAN => can::dissect_can(data),
+        DLT_LIN => lin::dissect_lin(data),
         DLT_IEEE802_15_4 => zigbee::dissect_ieee802154(data),
         DLT_NULL => linktypes::dissect_loopback(data),
         DLT_LOOP => linktypes::dissect_loop(data),
@@ -536,7 +574,19 @@ pub fn dissect(data: &[u8]) -> DissectedResult {
         }
     };
 
-    dispatch_l3(eth.ethertype.0, &eth.payload, 0)
+    let mut result = dispatch_l3(eth.ethertype.0, &eth.payload, 0);
+    // PRP appends its redundancy control trailer to an otherwise ordinary
+    // frame, leaving the EtherType as the inner protocol's — so it cannot be
+    // dispatched on and is looked for from the end instead. Like HSR's tag,
+    // it is context rather than the answer, so the inner protocol is kept and
+    // the trailer prefixed.
+    if let Some(rct) = prp::redundancy_trailer(&eth.payload) {
+        result.summary = format!(
+            "PRP LAN {}, seq {} · {}",
+            rct.lan, rct.sequence, result.summary
+        );
+    }
+    result
 }
 
 // EtherType values handled below the Ethernet header. Named here so the VLAN
@@ -569,6 +619,8 @@ const ETHERTYPE_POWERLINK: u16 = 0x88AB; // Ethernet POWERLINK real-time
 const ETHERTYPE_SERCOS: u16 = 0x88CD; // SERCOS III motion control
 const ETHERTYPE_MRP: u16 = 0x88E3; // IEC 62439-2 media redundancy ring
 const ETHERTYPE_HSR: u16 = 0x892F; // IEC 62439-3 seamless redundancy tag
+const ETHERTYPE_PRP: u16 = 0x88FB; // IEC 62439-3 parallel redundancy supervision
+const ETHERTYPE_ECPRI: u16 = 0xAEFE; // eCPRI radio fronthaul
 const ETHERTYPE_MVRP: u16 = 0x88F5; // 802.1ak VLAN registration
 const ETHERTYPE_MMRP: u16 = 0x88F6; // 802.1ak multicast registration
 const ETHERTYPE_RARP: u16 = 0x8035; // Reverse ARP
@@ -599,12 +651,27 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         }
         ETHERTYPE_IPV6 => {
             let (src_ip, dst_ip, proto, inner) = ip::dissect_ipv6(payload);
-            dispatch_transport((src_ip, dst_ip, proto), inner, payload.len())
+            let mut r = dispatch_transport((src_ip, dst_ip, proto), inner, payload.len());
+            // Segment routing is an itinerary the packet carries, so it is
+            // presented the way MPLS's label stack is: the inner addresses and
+            // ports are kept and the path note is prefixed. The outer
+            // destination is only the next waypoint, so without this the
+            // capture never shows where the packet is actually headed.
+            if let Some(srh) = srv6::find(payload) {
+                r.protocol = Protocol::Srv6;
+                r.summary = format!("{} · {}", srh.note(), r.summary);
+            }
+            r
         }
         ETHERTYPE_LLDP => lldp::dissect_lldp(payload),
         ETHERTYPE_SLOW => lacp::dissect_slow(payload),
         ETHERTYPE_MRP => mrp::dissect_mrp(payload),
         ETHERTYPE_HSR => hsr::dissect_hsr(payload),
+        // 0x88FB carries HSR/PRP supervision frames. PRP's redundancy trailer
+        // rides on ordinary frames instead and is picked up after dispatch,
+        // since those keep the inner protocol's EtherType.
+        ETHERTYPE_PRP => prp::dissect_supervision(payload),
+        ETHERTYPE_ECPRI => ecpri::dissect_ecpri(payload),
         ETHERTYPE_MVRP => mrp_registration::dissect(payload, Protocol::Mvrp),
         ETHERTYPE_MMRP => mrp_registration::dissect(payload, Protocol::Mmrp),
         ETHERTYPE_PPPOE_DISC => pppoe::dissect_pppoe(payload, false),
@@ -725,6 +792,16 @@ fn dissect_mpls(payload: &[u8], vlan_depth: u8) -> DissectedResult {
     } else {
         format!("MPLS label {} (TTL {})", stack.top_label, stack.top_ttl)
     };
+    // BIER has no EtherType and rides here, under the label stack, identified
+    // by the same nibble that would otherwise say IPv4 or IPv6. It is checked
+    // first because a BIER packet is not an IP packet at all — reading it as
+    // one would report the bit string as an IP header.
+    if bier::looks_like_bier(inner) {
+        let mut r = bier::dissect_bier(inner);
+        r.summary = format!("{label_note} · {}", r.summary);
+        return r;
+    }
+
     // Peek the inner IP version and recurse; keep the inner addresses/ports but
     // present it under the MPLS protocol with the label prefixed.
     let inner_ethertype = match inner.first().map(|b| b >> 4) {
@@ -866,6 +943,15 @@ fn dispatch_transport(
         Some(113) => pgm::dissect_pgm(src_ip, dst_ip, &payload),
         // DMVPN's next-hop resolution rides directly on IP.
         Some(54) => nhrp::dissect_nhrp(src_ip, dst_ip, &payload),
+        // Mobile IPv6's mobility header is an IPv6 extension header carried as
+        // its own protocol number.
+        Some(135) => mip6::dissect_mip6(src_ip, dst_ip, &payload),
+        // HIP is shaped like an extension header but is the interesting layer
+        // itself, so it is dissected rather than stepped over.
+        Some(139) => hip::dissect_hip(src_ip, dst_ip, &payload),
+        // IGRP and EtherIP both ride directly on IP.
+        Some(9) => igrp::dissect_igrp(src_ip, dst_ip, &payload),
+        Some(97) => etherip::dissect_etherip(src_ip, dst_ip, &payload),
         // Plain IP-in-IP tunnels. 6in4 (41) is how a great deal of IPv6
         // connectivity is delivered, and IPIP (4) is what many VPNs and Linux
         // tunnels use. Without unwrapping them the outer packet is all that is
@@ -1947,10 +2033,52 @@ mod tests {
 
     #[test]
     fn end_to_end_profinet_via_dissect() {
-        // EtherType 0x8892, FrameID 0xFEFC (DCP Identify).
-        let r = dissect(&build_eth_frame(0x8892, &[0xFE, 0xFC, 0x05, 0x00]));
+        // EtherType 0x8892, FrameID 0x8000 — RT Class 1 cyclic data.
+        let r = dissect(&build_eth_frame(0x8892, &[0x80, 0x00, 0x00, 0x00]));
         assert_eq!(r.protocol, Protocol::Profinet);
+        assert!(r.summary.contains("RT Class 1"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_profinet_dcp_via_dissect() {
+        // EtherType 0x8892, FrameID 0xFEFC — DCP, which relabels itself.
+        let mut frame = vec![0xFE, 0xFC, 0x05, 0x00];
+        frame.extend_from_slice(&[0u8; 8]);
+        let r = dissect(&build_eth_frame(0x8892, &frame));
+        assert_eq!(r.protocol, Protocol::PnDcp);
         assert!(r.summary.contains("DCP Identify"), "{}", r.summary);
+    }
+
+    #[test]
+    fn end_to_end_prp_trailer_via_dissect() {
+        // An ARP frame with a PRP redundancy control trailer appended. The
+        // inner protocol is kept; the trailer says which LAN it crossed.
+        let mut arp = vec![
+            0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 10,
+            0, 0, 1, 0, 0, 0, 0, 0, 0, 10, 0, 0, 2,
+        ];
+        arp.extend_from_slice(&[0x00, 0x2A]); // sequence number
+        arp.extend_from_slice(&[0xA0, 0x40]); // LAN A, LSDU size
+        arp.extend_from_slice(&[0x88, 0xFB]); // PRP suffix
+        let r = dissect(&build_eth_frame(0x0806, &arp));
+        assert_eq!(r.protocol, Protocol::Arp);
+        assert!(
+            r.summary.starts_with("PRP LAN A, seq 42 ·"),
+            "{}",
+            r.summary
+        );
+    }
+
+    #[test]
+    fn end_to_end_ecpri_via_dissect() {
+        // EtherType 0xAEFE, Event Indication reporting late fronthaul data.
+        let frame = [
+            0x10, 0x07, 0x00, 0x0C, 0x01, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0x04, 0x04, 0x00, 0x00,
+            0x00, 0x00,
+        ];
+        let r = dissect(&build_eth_frame(0xAEFE, &frame));
+        assert_eq!(r.protocol, Protocol::Ecpri);
+        assert!(r.summary.contains("received too late"), "{}", r.summary);
     }
 
     #[test]
@@ -2666,6 +2794,8 @@ mod robustness {
         "ngap_common",
         "nfs",
         "pccc",
+        // The PKIX status structure two protocols answer with.
+        "pkix",
         "sdp",
         "sigtran",
         "srt",
@@ -2730,6 +2860,20 @@ mod robustness {
             // discovery messages, and the UDS command inside a DoIP envelope.
             include_str!("dissectors/someip.rs"),
             include_str!("dissectors/doip.rs"),
+            // A PROFINET FrameID in the DCP range selects discovery and
+            // configuration, which is a different protocol from cyclic IO.
+            include_str!("dissectors/profinet.rs"),
+            // DVMRP borrows an IGMP type rather than a protocol number.
+            include_str!("dissectors/igmp.rs"),
+            // An HTTP body can carry a protocol of its own (E1).
+            include_str!("dissectors/http.rs"),
+            // An RDMA SEND can carry an upper-layer storage protocol.
+            include_str!("dissectors/roce.rs"),
+            // Both IEC 60870-5 carriers hand their ASDU to the shared decoder.
+            include_str!("dissectors/iec104.rs"),
+            include_str!("dissectors/iec101.rs"),
+            // A LIN diagnostic frame carries the same transport CAN does.
+            include_str!("dissectors/lin.rs"),
         ];
 
         let mut unreachable = Vec::new();
@@ -2909,5 +3053,240 @@ mod robustness {
                 let _ = dissect_tcp(ip(), ip(), &tcp_pkt(40000, port, body));
             }
         }
+    }
+
+    /// Every `.rs` file under `dissectors/`, with its `#[cfg(test)]` block
+    /// removed. Tests may legitimately do things production code must not.
+    fn dissector_sources() -> Vec<(String, String)> {
+        use std::fs;
+        use std::path::Path;
+
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/dissectors");
+        let mut sources = Vec::new();
+        for entry in fs::read_dir(&dir).expect("dissectors directory").flatten() {
+            let path = entry.path();
+            if path.extension().is_none_or(|e| e != "rs") {
+                continue;
+            }
+            let Ok(text) = fs::read_to_string(&path) else {
+                continue;
+            };
+            let body = text.split("#[cfg(test)]").next().unwrap_or_default();
+            sources.push((
+                path.file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
+                body.to_string(),
+            ));
+        }
+        assert!(sources.len() > 300, "dissector sweep found almost nothing");
+        sources
+    }
+
+    /// netscope runs on the user's own machine with no server behind it, and a
+    /// packet analyser must not transmit onto the network it is inspecting —
+    /// on a forensic copy that is a correctness property, not a preference.
+    ///
+    /// So no dissector may open a socket or make an HTTP request. Anything a
+    /// dissector needs to know (OUI tables, service names) is compiled in.
+    #[test]
+    fn no_dissector_reaches_out_to_the_network() {
+        // Constructors and client types, not bare words: `UdpSocket` appears in
+        // prose about the protocol being dissected, `UdpSocket::bind` does not.
+        const NETWORK_CALLS: &[&str] = &[
+            "TcpStream::connect",
+            "UdpSocket::bind",
+            "TcpListener::bind",
+            "reqwest::",
+            "ureq::",
+            "hyper::Client",
+            "std::net::ToSocketAddrs",
+            "lookup_host",
+        ];
+        let mut offenders = Vec::new();
+        for (name, body) in dissector_sources() {
+            for call in NETWORK_CALLS {
+                if body.contains(call) {
+                    offenders.push(format!("{name}: {call}"));
+                }
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "dissectors must not touch the network — netscope analyses a capture, \
+             it does not talk to the network it is inspecting: {offenders:?}"
+        );
+    }
+
+    /// The same constraint from the other side, enforced where it is actually
+    /// decidable: the dependency list.
+    ///
+    /// Scanning the sources for words like "telemetry" was tried first and is
+    /// the wrong instrument — APRS genuinely carries telemetry beacons, and
+    /// LDAP's `searchResEntry` contains the letters of "sentry". Those are the
+    /// protocols' own vocabulary, not calls.
+    ///
+    /// What can be decided is where the ability to send lives.
+    ///
+    /// No vendor telemetry SDK may be in the tree at all. An HTTP client may —
+    /// `siem.rs` uses one to forward events to an Elasticsearch or Splunk
+    /// endpoint — but that is a different thing from phoning home: the user
+    /// supplies the URL, and with no URL configured nothing is sent anywhere.
+    /// This test holds that line: the client stays confined to that one
+    /// explicit, user-directed export path and never becomes reachable from
+    /// dissection.
+    #[test]
+    fn the_only_thing_that_can_send_is_the_export_the_user_configured() {
+        // A vendor telemetry SDK has no user-directed use, so its presence is
+        // the violation — there is no correct place for it.
+        const NEVER: &[&str] = &[
+            "sentry",
+            "opentelemetry",
+            "tracing-opentelemetry",
+            "posthog",
+            "segment",
+            "amplitude",
+        ];
+        // An HTTP client is legitimate, but only in the module that exports on
+        // the user's instruction.
+        const CLIENTS: &[&str] = &["reqwest", "ureq", "hyper", "isahc", "curl", "surf"];
+        const EXPORT_MODULE: &str = "siem.rs";
+
+        let manifest = include_str!("../Cargo.toml");
+        let mut declared_clients = Vec::new();
+        for line in manifest.lines() {
+            let line = line.trim();
+            if line.starts_with('#') {
+                continue;
+            }
+            let Some((name, _)) = line.split_once('=') else {
+                continue;
+            };
+            let name = name
+                .trim()
+                .trim_matches('"')
+                .split('.')
+                .next()
+                .unwrap_or("");
+            assert!(
+                !NEVER.contains(&name),
+                "`{name}` is a telemetry SDK and has no user-directed use — \
+                 netscope reports nothing about its users anywhere"
+            );
+            if CLIENTS.contains(&name) {
+                declared_clients.push(name.to_string());
+            }
+        }
+
+        // Every use of a declared client must be in the export module.
+        use std::fs;
+        use std::path::Path;
+        let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut stray = Vec::new();
+        for entry in fs::read_dir(&src).expect("src directory").flatten() {
+            let path = entry.path();
+            if path.extension().is_none_or(|e| e != "rs") {
+                continue;
+            }
+            let file = path.file_name().unwrap_or_default().to_string_lossy();
+            if file == EXPORT_MODULE || file == "dissectors.rs" {
+                // This test names the crates in order to ban them, so the file
+                // it lives in is necessarily a match.
+                continue;
+            }
+            let Ok(text) = fs::read_to_string(&path) else {
+                continue;
+            };
+            let body = text.split("#[cfg(test)]").next().unwrap_or_default();
+            for client in &declared_clients {
+                if body.contains(&format!("{client}::")) {
+                    stray.push(format!("{file}: {client}"));
+                }
+            }
+        }
+        assert!(
+            stray.is_empty(),
+            "an HTTP client escaped `{EXPORT_MODULE}` — sending is only ever \
+             allowed on an endpoint the user configured: {stray:?}"
+        );
+    }
+
+    /// Opening the same capture twice must give the same answers, or none of
+    /// the tests above predict anything about the next run.
+    ///
+    /// Note what this does *not* claim. Dissection is not stateless and must
+    /// not be: TCP is a stream, so the reassembler deliberately carries state
+    /// between segments, and re-feeding one segment mid-stream legitimately
+    /// reads differently from seeing it fresh. Written the naive way this test
+    /// fails for exactly that reason — the second pass sees every segment as
+    /// already consumed and reports bare ACKs.
+    ///
+    /// The property that actually matters is therefore that the state is
+    /// *resettable*: clear it, and the same bytes produce the same output
+    /// again. That is what opening a second capture does, and a piece of state
+    /// with no way to clear it is the bug this catches.
+    #[test]
+    fn a_capture_read_twice_gives_the_same_answers() {
+        // Driven through the transport entry points rather than `dissect`,
+        // because that is where the thread-local state lives: the TCP
+        // reassembler and the analysis cache both persist between packets.
+        let udp: Vec<Vec<u8>> = vec![
+            udp_pkt(40000, 53, &[0u8; 12]),
+            udp_pkt(40000, 19, b"chargen"),
+            udp_pkt(
+                40000,
+                6454,
+                b"Art-Net\0\x00\x50\x00\x0e\x07\x00\x01\x00\x02\x00",
+            ),
+            udp_pkt(40000, 5568, &[0u8; 130]),
+        ];
+        let tcp: Vec<Vec<u8>> = vec![
+            tcp_pkt(40000, 443, &[0x16, 0x03, 0x01, 0x00, 0x05]),
+            tcp_pkt(40000, 8300, &[1, 1]),
+            tcp_pkt(40000, 3205, &[0u8; 16]),
+        ];
+
+        let run = || -> Vec<(String, String)> {
+            // What opening a fresh capture does. Every reassembler has to be
+            // listed here — one that is not resettable is the bug this test
+            // exists to catch.
+            super::tcp::clear_tcp_reassembler();
+            super::isotp::clear_isotp_reassembler();
+            let mut out = Vec::new();
+            for p in &udp {
+                let r = dissect_udp(ip(), ip(), p);
+                out.push((format!("{:?}", r.protocol), r.summary));
+            }
+            for p in &tcp {
+                let r = dissect_tcp(ip(), ip(), p);
+                out.push((format!("{:?}", r.protocol), r.summary));
+            }
+            out
+        };
+
+        let first = run();
+        let second = run();
+        assert_eq!(
+            first, second,
+            "reading the same capture twice gave different answers — some state \
+             survives the reset"
+        );
+        // And the reset has to be doing something: without it the second pass
+        // differs, which is what makes the assertion above meaningful rather
+        // than vacuously true.
+        let third: Vec<(String, String)> = tcp
+            .iter()
+            .map(|p| {
+                let r = dissect_tcp(ip(), ip(), p);
+                (format!("{:?}", r.protocol), r.summary)
+            })
+            .collect();
+        assert_ne!(
+            third,
+            first[udp.len()..].to_vec(),
+            "re-feeding segments without clearing the reassembler produced the \
+             same answers, so this test is no longer proving the reset works"
+        );
     }
 }

@@ -23,6 +23,10 @@ const CAN_ERR_FLAG: u32 = 0x2000_0000; // error message frame
 const CAN_EFF_MASK: u32 = 0x1FFF_FFFF;
 const CAN_SFF_MASK: u32 = 0x0000_07FF;
 
+/// Flag bits in the CAN FD flags byte (SocketCAN's `canfd_frame.flags`).
+const CAN_FD_BRS: u8 = 0x01; // data phase sent at the higher bit rate
+const CAN_FD_ESI: u8 = 0x02; // the transmitting node is error-passive
+
 pub fn dissect_can(data: &[u8]) -> DissectedResult {
     let base = DissectedResult {
         src_addr: None,
@@ -63,7 +67,18 @@ pub fn dissect_can(data: &[u8]) -> DissectedResult {
         parts.push("ext".into());
     }
     if fd {
-        parts.push("FD".into());
+        // The FD flags are not decoration. ESI means the transmitting node has
+        // entered its error-passive state — it is still on the bus but already
+        // degrading, and it will go bus-off if the fault continues. That is a
+        // failing controller announcing itself one step before it disappears.
+        let mut fd_notes = vec!["FD"];
+        if fd_flags & CAN_FD_BRS != 0 {
+            fd_notes.push("bit-rate switched");
+        }
+        if fd_flags & CAN_FD_ESI != 0 {
+            fd_notes.push("SENDER ERROR-PASSIVE");
+        }
+        parts.push(fd_notes.join(", "));
     }
     let notes = if parts.is_empty() {
         String::new()
@@ -96,6 +111,18 @@ pub fn dissect_can(data: &[u8]) -> DissectedResult {
         }
         if !extended && super::obd2::owns_id(id) {
             return super::obd2::result(id, payload);
+        }
+        // Diagnostics ride ISO-TP, which is what carries a UDS message too long
+        // for one frame. It is claimed on the *identifier* first: ISO-TP has no
+        // magic and its frame type is four bits, so one payload in four looks
+        // like a valid type and shape alone would turn a quarter of a
+        // proprietary bus into imaginary diagnostic sessions. Only the
+        // identifiers ISO 15765-4 reserves are considered.
+        if super::isotp::is_diagnostic_id(id, extended) && super::isotp::looks_like_isotp(payload) {
+            let mut r = super::isotp::dissect_isotp(id, payload);
+            let width = if extended { 8 } else { 3 };
+            r.summary = format!("CAN 0x{id:0width$X} · {}", r.summary);
+            return r;
         }
     }
 
