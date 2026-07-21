@@ -408,7 +408,7 @@ yolları**.
       *FT1.2 uzunluğunu iki kez ve başlangıç baytını tekrar gönderiyor — tanıma
       o fazlalığa dayanıyor, böylece 2404'te -104 gölgelenmiyor. Link katmanı
       NACK ve DFC'yi söylüyor: -104'te karşılığı olmayan iki bilgi.*
-- [ ] Codesys V3 ⚠️
+- [x] Codesys V3 ⚠️
 - [ ] Emerson ROC Plus ⚠️
 - [ ] Bristol BSAP ⚠️
 - [ ] Fanuc FOCAS ⚠️

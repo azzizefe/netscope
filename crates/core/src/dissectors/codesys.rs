@@ -48,6 +48,11 @@ fn block_driver_name(sid: u8) -> Option<&'static str> {
 ///
 /// The header is: ServiceGroup (1) + ServiceID (1) + Length (4, LE). The
 /// length must be self-consistent with the remaining payload.
+///
+/// Not currently wired as a content guard because port 11740 is
+/// IANA-registered for CODESYS and reached via the exact-match table, but
+/// kept here so a future dispatch path can use it.
+#[allow(dead_code)]
 pub(crate) fn looks_like_codesys(payload: &[u8]) -> bool {
     if payload.len() < 6 {
         return false;
