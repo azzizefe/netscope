@@ -85,6 +85,7 @@ pub mod cmp;
 pub mod cnip;
 pub mod coap;
 pub mod coap_tcp;
+pub mod codesys;
 pub mod collectd;
 pub mod consul_rpc;
 pub mod dccp;
