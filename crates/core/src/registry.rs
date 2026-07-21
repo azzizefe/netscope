@@ -533,6 +533,15 @@ protocols! {
         aliases:   ["cclink_ie_control", "cc-link-control"],
         blurb:     "A high-speed industrial control-layer frame over EtherType 0x890F (direct Ethernet).",
     }
+    Codesys {
+        doc:       "CODESYS V3 runtime and programming protocol for IEC 61131-3 PLCs (TCP/UDP 11740).",
+        display:   "CODESYS",
+        color:     0xFF6A00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["codesys"],
+        blurb:     "A CODESYS V3 PLC communication — programming, monitoring or data exchange with a controller on TCP 11740.",
+    }
     Rtp {
         doc:       "Real-time Transport Protocol media stream (RFC 3550) — dynamic UDP ports.",
         display:   "RTP",

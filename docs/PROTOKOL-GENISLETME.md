@@ -381,7 +381,7 @@ yolları**.
       üzerinden 0x72 protokol ID'si taşıyan mesajlarının sürüm, işlem kodu (opcode)
       ve işlev kodları (CreateObject, SetVariable, vb.) ayrıştırılarak raporlanır.*
 - [x] LonTalk / EIA-852 (LonWorks over IP) ✅ *(iki protokol: CN/IP tüneli + içindeki LonTalk)*
-- [ ] wM-Bus (wireless M-Bus, EN 13757-4) ✅
+- [x] wM-Bus (wireless M-Bus, EN 13757-4) ✅
 - [x] DLR — Device Level Ring (ODVA) ✅
 - [x] ERPS — ITU-T G.8032 halka koruma ✅ *(R-APS; CFM opcode tablosu hatası burada yakalandı)*
 - [x] **PROFINET DCP** ✅ → [`pn_dcp.rs`](../crates/core/src/dissectors/pn_dcp.rs)

@@ -427,6 +427,19 @@ of control data, alongside transient messaging. It utilizes a token-passing mech
 highly reliable data transfer without collision.",
             look_for: "Frames on EtherType 0x890F carrying CC-Link IE message structures (such as TokenM, CyclicData, or Transient).",
         },
+        Protocol::Codesys => Lesson {
+            title: "CODESYS V3 — programming and monitoring PLCs",
+            summary: "The runtime protocol behind IEC 61131-3 controllers on TCP 11740.",
+            body: "CODESYS is the most widely used IEC 61131-3 development environment. \
+A controller running the CODESYS runtime listens on TCP 11740 for engineering-tool \
+connections — downloading programs, reading variables, forcing outputs. The Block \
+Driver is the most common service group, providing channel-based Read, Write, and \
+Notify operations.\n\n\
+Seeing CODESYS traffic means someone is talking to a PLC. The operation names tell \
+you whether they are reading (monitoring) or writing (changing the program or data), \
+which is the difference between watching a machine and altering its behaviour.",
+            look_for: "\"CODESYS Block Driver — Read\" (monitoring), \"CODESYS Block Driver — Write\" (a change); UDP discovery broadcasts with device info.",
+        },
         Protocol::Rtp => Lesson {
             title: "RTP — the voice and video itself",
             summary: "The actual audio/video stream of a call, once SIP has set it up.",
