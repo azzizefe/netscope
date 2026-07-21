@@ -22,6 +22,12 @@ pub fn dissect_profinet(payload: &[u8]) -> DissectedResult {
         return super::pn_ptcp::dissect_pn_ptcp(id, &payload[2..]);
     }
 
+    if let Some(id) = frame_id {
+        if (0x8000..=0xBBFF).contains(&id) && super::profisafe::looks_like_profisafe(&payload[2..]) {
+            return super::profisafe::dissect_profisafe(&payload[2..]);
+        }
+    }
+
     let summary = if payload.len() >= 2 {
         let frame_id = u16::from_be_bytes([payload[0], payload[1]]);
         let name = match frame_id {
@@ -88,5 +94,13 @@ mod tests {
     fn cyclic_rt() {
         let r = dissect_profinet(&[0x80, 0x00, 0x00, 0x00]);
         assert!(r.summary.contains("RT Class 1"), "{}", r.summary);
+    }
+
+    #[test]
+    fn profisafe_dispatch() {
+        let p = vec![0x80, 0x00, 0x01, 0x02, 0x20, 0xAA, 0xBB, 0xCC];
+        let r = dissect_profinet(&p);
+        assert_eq!(r.protocol, Protocol::Profisafe);
+        assert!(r.summary.contains("PROFIsafe"), "{}", r.summary);
     }
 }

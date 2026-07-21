@@ -605,6 +605,7 @@ pub mod websocket;
 pub mod whois;
 pub mod wireguard;
 pub mod wlan;
+pub mod wmbus;
 pub mod wol;
 pub mod wsd;
 pub mod x11;
