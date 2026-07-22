@@ -760,7 +760,30 @@ Portlar IANA CSV'sinden, davranışlar RFC metinlerinden doğrulandı.
 - [x] **OF-CONFIG** ✅ → [`of_config.rs`](../crates/core/src/dissectors/of_config.rs)
 - [x] **EtherCAT Mailbox** ✅ → [`ethercat_mailbox.rs`](../crates/core/src/dissectors/ethercat_mailbox.rs)
 
-### 5.13 · Yedek havuz (kota dışı)
+### 5.13 · Faz 13 — Otomasyon, 5G & Endüstriyel IIoT Genişletme (20)
+
+- [x] **KNX RF** ✅ → [`knx_rf.rs`](../crates/core/src/dissectors/knx_rf.rs)
+- [x] **KNX TP** ✅ → [`knx_tp.rs`](../crates/core/src/dissectors/knx_tp.rs)
+- [x] **OPC UA PubSub** ✅ → [`opc_ua_pubsub.rs`](../crates/core/src/dissectors/opc_ua_pubsub.rs)
+- [x] **CIP Motion** ✅ → [`cip_motion.rs`](../crates/core/src/dissectors/cip_motion.rs)
+- [x] **CIP Safety** ✅ → [`cip_safety.rs`](../crates/core/src/dissectors/cip_safety.rs)
+- [x] **GB/T 20414** ✅ → [`gbt_20414.rs`](../crates/core/src/dissectors/gbt_20414.rs)
+- [x] **GB/T 19582** ✅ → [`gbt_19582.rs`](../crates/core/src/dissectors/gbt_19582.rs)
+- [x] **5G N2 NGAP** ✅ → [`fiveg_n2.rs`](../crates/core/src/dissectors/fiveg_n2.rs)
+- [x] **5G N4 PFCP** ✅ → [`fiveg_n4.rs`](../crates/core/src/dissectors/fiveg_n4.rs)
+- [x] **5G N11 SBI** ✅ → [`fiveg_n11.rs`](../crates/core/src/dissectors/fiveg_n11.rs)
+- [x] **MPI Wire** ✅ → [`mpi_wire.rs`](../crates/core/src/dissectors/mpi_wire.rs)
+- [x] **UCX HPC** ✅ → [`ucx_hpc.rs`](../crates/core/src/dissectors/ucx_hpc.rs)
+- [x] **SERCOS III** ✅ → [`sercos_iii.rs`](../crates/core/src/dissectors/sercos_iii.rs)
+- [x] **VARAN** ✅ → [`varan.rs`](../crates/core/src/dissectors/varan.rs)
+- [x] **SafetyNET p** ✅ → [`safetynet_p.rs`](../crates/core/src/dissectors/safetynet_p.rs)
+- [x] **POWERLINK v2** ✅ → [`ethernet_powerlink_v2.rs`](../crates/core/src/dissectors/ethernet_powerlink_v2.rs)
+- [x] **MECHATROLINK-III** ✅ → [`mechatrolink_iii.rs`](../crates/core/src/dissectors/mechatrolink_iii.rs)
+- [x] **WirelessHART** ✅ → [`hart_wireless.rs`](../crates/core/src/dissectors/hart_wireless.rs)
+- [x] **ISA100.11a** ✅ → [`isa100_11a.rs`](../crates/core/src/dissectors/isa100_11a.rs)
+- [x] **Wibree / BLE** ✅ → [`wibree.rs`](../crates/core/src/dissectors/wibree.rs)
+
+### 5.14 · Yedek havuz (kota dışı)
 
 ⚠️/🔒 kalemleri §6'ya düştükçe buradan ikame edilir. Bu havuz kasten
 adlandırılmamış bırakılmıştır — **doğrulanmamış protokol adlarını önceden
