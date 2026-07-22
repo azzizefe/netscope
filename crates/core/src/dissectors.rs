@@ -103,6 +103,34 @@ pub mod matrix_federation;
 pub mod activitypub;
 pub mod as2_edi;
 pub mod gemini_proto;
+pub mod epics_ca;
+pub mod epics_pva;
+pub mod slurm_rpc;
+pub mod pmix;
+pub mod tango_controls;
+pub mod gbt26982;
+pub mod of_config;
+pub mod ethercat_mailbox;
+pub mod knx_rf;
+pub mod knx_tp;
+pub mod opc_ua_pubsub;
+pub mod cip_motion;
+pub mod cip_safety;
+pub mod gbt_20414;
+pub mod gbt_19582;
+pub mod fiveg_n2;
+pub mod fiveg_n4;
+pub mod fiveg_n11;
+pub mod mpi_wire;
+pub mod ucx_hpc;
+pub mod sercos_iii;
+pub mod varan;
+pub mod safetynet_p;
+pub mod ethernet_powerlink_v2;
+pub mod mechatrolink_iii;
+pub mod hart_wireless;
+pub mod isa100_11a;
+pub mod wibree;
 pub mod bsap;
 pub mod bssap;
 pub mod bssgp;
@@ -3346,7 +3374,12 @@ mod robustness {
         "cip",
         "dnscrypt",
         "enocean",
+        "ethernet_powerlink_v2",
+        "fiveg_n11",
+        "knx_rf",
+        "knx_tp",
         "lwm2m",
+        "mechatrolink_iii",
         "ngap_common",
         "nfs",
         "nis_yp",
@@ -3355,6 +3388,7 @@ mod robustness {
         "pkix",
         "restconf",
         "sdp",
+        "sercos_iii",
         "sigtran",
         "spdy",
         "srt",
@@ -3362,7 +3396,9 @@ mod robustness {
         "tcap",
         "tcp_analysis",
         "usp",
+        "varan",
         "webdav",
+        "wibree",
         "wisun",
         "wpad",
         "zigbee_gp",
