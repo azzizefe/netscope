@@ -1055,6 +1055,12 @@ const ETHERTYPE_BATMAN: u16 = 0x4305; // B.A.T.M.A.N. advanced mesh
 const ETHERTYPE_TRILL: u16 = 0x22F3; // Routed Ethernet (RFC 6325)
 const ETHERTYPE_DLR: u16 = 0x80E1; // EtherNet/IP Device Level Ring (ODVA)
 const ETHERTYPE_CFM: u16 = 0x8902; // Connectivity Fault Management (802.1ag)
+const ETHERTYPE_SNA: u16 = 0x80D5; // IBM SNA / APPN
+const ETHERTYPE_DEC_LAT: u16 = 0x6004; // DEC Local Area Transport
+const ETHERTYPE_DEC_MOP: u16 = 0x6002; // DEC Maintenance Operation Protocol
+const ETHERTYPE_CHAOSNET: u16 = 0x0804; // Chaosnet
+const ETHERTYPE_XNS: u16 = 0x0600; // Xerox Network Systems IDP
+const ETHERTYPE_SPB: u16 = 0x88E5; // IEEE 802.1aq Shortest Path Bridging
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
