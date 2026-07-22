@@ -15,7 +15,7 @@ pub fn dissect_lwm2m(
     payload: &[u8],
 ) -> DissectedResult {
     let summary = if payload.len() >= 2 {
-        let content_type = payload.get(0).copied().unwrap_or(0);
+        let content_type = u16::from_be_bytes([payload[0], payload[1]]);
         let ct_name = match content_type {
             11542 => "LwM2M TLV",
             11543 => "LwM2M JSON",

@@ -47,7 +47,7 @@ use super::{
     socks, spamd, srtp_ge, ssdp, ssh, statsd, stomp, stt, stun, sua, svn, syslog, tacacs, tds, telnet,
     teredo, tftp, tls, tns, toyopuc, tsp_timestamp, twamp, uadp, vnet_ip, vxlangpe, w1ap, wccp, whois, wireguard, wsd, x2ap, xcp, xdmcp, xmpp,
     xnap, xwap, zabbix, zerotier, zookeeper, beegfs, coda, edp, hdfs_data, moosefs, ncp, oftp, orangefs, perforce, sheepdog, syncthing, uucp,
-    cwmp, dali, enocean, esphome, homekit, insteon, lwm2m, mtconnect, onvif, rist, semtech_lora, st2110, usp, wisun, x10, zigbee_gp, zwave, aes67, cobranet,
+    cwmp, dali, esphome, homekit, insteon, mtconnect, onvif, rist, semtech_lora, st2110, x10, zwave,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -401,6 +401,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (4569, iax2::dissect_iax2),
     (4739, netflow::dissect_netflow),
     (4790, vxlangpe::dissect_vxlangpe),
+    (4803, dali::dissect_dali),
     // OPC UA PubSub (UADP) shares UDP 4840 with OPC UA TCP on the same port,
     // but the UDP variant is the publish/subscribe model (IEC 62541-14).
     (4840, uadp::dissect_uadp),
