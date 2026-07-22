@@ -12,7 +12,7 @@ pub fn dissect_caldav_carddav(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary = if payload.starts_with(b"REPORT /") || payload.contains(&b"calendar-query") || payload.contains(&b"addressbook-query") {
+    let summary = if payload.starts_with(b"REPORT /") || memchr::memmem::find(payload, b"calendar-query").is_some() || memchr::memmem::find(payload, b"addressbook-query").is_some() {
         "CalDAV/CardDAV sync request".to_string()
     } else {
         format!("CalDAV/CardDAV ({})", super::bytes(payload.len() as u64))

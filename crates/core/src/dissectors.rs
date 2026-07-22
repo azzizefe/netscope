@@ -3338,24 +3338,33 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "activitypub",
         "aes67",
+        "as2_edi",
         "bindings",
+        "caldav_carddav",
         "cip",
+        "dnscrypt",
         "enocean",
         "lwm2m",
         "ngap_common",
         "nfs",
+        "nis_yp",
         "pccc",
         // The PKIX status structure two protocols answer with.
         "pkix",
+        "restconf",
         "sdp",
         "sigtran",
+        "spdy",
         "srt",
         "st2110",
         "tcap",
         "tcp_analysis",
         "usp",
+        "webdav",
         "wisun",
+        "wpad",
         "zigbee_gp",
     ];
 

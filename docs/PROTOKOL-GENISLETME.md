@@ -687,26 +687,26 @@ Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
 
 ### 5.10 · Faz 10 — Uzak erişim, keşif & web (20)
 
-- [ ] NETCONF ✅
-- [ ] RESTCONF 🔒 *(E1)*
-- [ ] gNMI ✅ *(gRPC üstü)*
-- [ ] NIS / YP ✅ *(ONC RPC üstü; mevcut `rpc.rs`)*
-- [ ] UPnP SOAP ⚠️ *(E1; SSDP mevcut, kontrol düzlemi değil)*
-- [ ] WPAD ✅
-- [ ] Guacamole protokolü ✅
-- [ ] NX / NoMachine ⚠️
-- [ ] Mosh 🔒
-- [ ] SPDY ⚠️
-- [ ] WAP WSP / WTP ✅
-- [ ] WBXML ✅
-- [ ] WebDAV 🔒 *(E1)*
-- [ ] CalDAV / CardDAV 🔒 *(E1)*
-- [ ] DNSCrypt ✅ *(kendi çerçevelemesi var; DoT/DoH aksine zarf okunabilir)*
-- [ ] DNS over QUIC ⚠️
-- [ ] Matrix federasyon 🔒 *(E1)*
-- [ ] ActivityPub 🔒 *(E1)*
-- [ ] AS2 🔒 *(E1)*
-- [ ] Gemini 🔒
+- [x] **NETCONF** ✅ → [`netconf.rs`](../crates/core/src/dissectors/netconf.rs)
+- [x] **RESTCONF** 🔒 ✅ → [`restconf.rs`](../crates/core/src/dissectors/restconf.rs)
+- [x] **gNMI** ✅ → [`gnmi.rs`](../crates/core/src/dissectors/gnmi.rs)
+- [x] **NIS / YP** ✅ → [`nis_yp.rs`](../crates/core/src/dissectors/nis_yp.rs)
+- [x] **UPnP SOAP** ⚠️ ✅ → [`upnp_soap.rs`](../crates/core/src/dissectors/upnp_soap.rs)
+- [x] **WPAD** ✅ → [`wpad.rs`](../crates/core/src/dissectors/wpad.rs)
+- [x] **Guacamole protokolü** ✅ → [`guacamole.rs`](../crates/core/src/dissectors/guacamole.rs)
+- [x] **NX / NoMachine** ⚠️ ✅ → [`nomachine_nx.rs`](../crates/core/src/dissectors/nomachine_nx.rs)
+- [x] **Mosh** 🔒 ✅ → [`mosh.rs`](../crates/core/src/dissectors/mosh.rs)
+- [x] **SPDY** ⚠️ ✅ → [`spdy.rs`](../crates/core/src/dissectors/spdy.rs)
+- [x] **WAP WSP / WTP** ✅ → [`wap_wsp_wtp.rs`](../crates/core/src/dissectors/wap_wsp_wtp.rs)
+- [x] **WBXML** ✅ → [`wbxml.rs`](../crates/core/src/dissectors/wbxml.rs)
+- [x] **WebDAV** 🔒 ✅ → [`webdav.rs`](../crates/core/src/dissectors/webdav.rs)
+- [x] **CalDAV / CardDAV** 🔒 ✅ → [`caldav_carddav.rs`](../crates/core/src/dissectors/caldav_carddav.rs)
+- [x] **DNSCrypt** ✅ → [`dnscrypt.rs`](../crates/core/src/dissectors/dnscrypt.rs)
+- [x] **DNS over QUIC** ⚠️ ✅ → [`dns_over_quic.rs`](../crates/core/src/dissectors/dns_over_quic.rs)
+- [x] **Matrix federasyon** 🔒 ✅ → [`matrix_federation.rs`](../crates/core/src/dissectors/matrix_federation.rs)
+- [x] **ActivityPub** 🔒 ✅ → [`activitypub.rs`](../crates/core/src/dissectors/activitypub.rs)
+- [x] **AS2** 🔒 ✅ → [`as2_edi.rs`](../crates/core/src/dissectors/as2_edi.rs)
+- [x] **Gemini** 🔒 ✅ → [`gemini_proto.rs`](../crates/core/src/dissectors/gemini_proto.rs)
 
 ### 5.11 · Faz 11 — Legacy & küçük servisler (25)
 
