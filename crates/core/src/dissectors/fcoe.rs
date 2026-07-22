@@ -8,6 +8,17 @@ use super::DissectedResult;
 /// carried over Ethernet in converged data-centre networks. The encapsulated
 /// FC frame's R_CTL byte (after the 14-byte FCoE header) names the frame class.
 pub fn dissect_fcoe(payload: &[u8]) -> DissectedResult {
+    if payload.len() >= 14 {
+        let inner = super::fc2::dissect_fc2(&payload[14..]);
+        return DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Fcoe,
+            summary: format!("FCoE · {}", inner.summary),
+        };
+    }
     let summary = match payload.get(14) {
         Some(&r_ctl) => {
             let class = match r_ctl >> 4 {
