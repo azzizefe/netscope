@@ -43,3 +43,6 @@ mod tests {
         assert_eq!(res.protocol, Protocol::ModbusAscii);
     }
 }
+
+
+pub fn looks_like_modbus_ascii(_payload: &[u8]) -> bool { false }

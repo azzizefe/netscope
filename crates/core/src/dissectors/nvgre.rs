@@ -6,13 +6,7 @@ use crate::models::Protocol;
 use super::DissectedResult;
 
 /// Dissect NVGRE
-pub fn dissect_nvgre(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    _payload: &[u8],
-) -> DissectedResult {
+pub fn dissect_nvgre(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, _payload: &[u8]) -> DissectedResult {
     DissectedResult {
         src_addr: src_ip,
         dst_addr: dst_ip,
