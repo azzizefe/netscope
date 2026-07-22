@@ -40,35 +40,35 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `gprscdr` | `packet-gprscdr.c` |
-| [ ] | 2 | `gsm_a_bssmap` | `packet-gsm-a-bssmap.c` |
-| [ ] | 3 | `gsm_a_common` | `packet-gsm-a-common.c` |
-| [ ] | 4 | `gsm_a_dtap` | `packet-gsm-a-dtap.c` |
-| [ ] | 5 | `gsm_a_gm` | `packet-gsm-a-gm.c` |
-| [ ] | 6 | `gsm_a_rp` | `packet-gsm-a-rp.c` |
-| [ ] | 7 | `gsm_a_rr` | `packet-gsm-a-rr.c` |
-| [ ] | 8 | `gsm_abis_om2000` | `packet-gsm-abis-om2000.c` |
-| [ ] | 9 | `gsm_abis_oml` | `packet-gsm-abis-oml.c` |
-| [ ] | 10 | `gsm_abis_pgsl` | `packet-gsm-abis-pgsl.c` |
-| [ ] | 11 | `gsm_abis_tfp` | `packet-gsm-abis-tfp.c` |
-| [ ] | 12 | `gsm_bsslap` | `packet-gsm-bsslap.c` |
-| [ ] | 13 | `gsm_bssmap_le` | `packet-gsm-bssmap-le.c` |
-| [ ] | 14 | `gsm_cbch` | `packet-gsm-cbch.c` |
-| [ ] | 15 | `gsm_cbsp` | `packet-gsm-cbsp.c` |
-| [ ] | 16 | `gsm_gsup` | `packet-gsm-gsup.c` |
-| [ ] | 17 | `gsm_ipa` | `packet-gsm-ipa.c` |
-| [ ] | 18 | `gsm_l2rcop` | `packet-gsm-l2rcop.c` |
-| [ ] | 19 | `gsm_map` | `packet-gsm-map.c` |
-| [ ] | 20 | `gsm_osmux` | `packet-gsm-osmux.c` |
-| [ ] | 21 | `gsm_r_uus1` | `packet-gsm-r-uus1.c` |
-| [ ] | 22 | `gsm_rlcmac` | `packet-gsm-rlcmac.c` |
-| [ ] | 23 | `gsm_rlp` | `packet-gsm-rlp.c` |
-| [ ] | 24 | `gsm_sim` | `packet-gsm-sim.c` |
-| [ ] | 25 | `gsm_sms` | `packet-gsm-sms.c` |
-| [ ] | 26 | `gsm_sms_ud` | `packet-gsm-sms-ud.c` |
-| [ ] | 27 | `gsm_um` | `packet-gsm-um.c` |
-| [ ] | 28 | `gsmtap` | `packet-gsmtap.c` |
-| [ ] | 29 | `gsmtap_log` | `packet-gsmtap-log.c` |
+| [x] | 1 | `gprscdr` | `packet-gprscdr.c` |
+| [x] | 2 | `gsm_a_bssmap` | `packet-gsm-a-bssmap.c` |
+| [x] | 3 | `gsm_a_common` | `packet-gsm-a-common.c` |
+| [x] | 4 | `gsm_a_dtap` | `packet-gsm-a-dtap.c` |
+| [x] | 5 | `gsm_a_gm` | `packet-gsm-a-gm.c` |
+| [x] | 6 | `gsm_a_rp` | `packet-gsm-a-rp.c` |
+| [x] | 7 | `gsm_a_rr` | `packet-gsm-a-rr.c` |
+| [x] | 8 | `gsm_abis_om2000` | `packet-gsm-abis-om2000.c` |
+| [x] | 9 | `gsm_abis_oml` | `packet-gsm-abis-oml.c` |
+| [x] | 10 | `gsm_abis_pgsl` | `packet-gsm-abis-pgsl.c` |
+| [x] | 11 | `gsm_abis_tfp` | `packet-gsm-abis-tfp.c` |
+| [x] | 12 | `gsm_bsslap` | `packet-gsm-bsslap.c` |
+| [x] | 13 | `gsm_bssmap_le` | `packet-gsm-bssmap-le.c` |
+| [x] | 14 | `gsm_cbch` | `packet-gsm-cbch.c` |
+| [x] | 15 | `gsm_cbsp` | `packet-gsm-cbsp.c` |
+| [x] | 16 | `gsm_gsup` | `packet-gsm-gsup.c` |
+| [x] | 17 | `gsm_ipa` | `packet-gsm-ipa.c` |
+| [x] | 18 | `gsm_l2rcop` | `packet-gsm-l2rcop.c` |
+| [x] | 19 | `gsm_map` | `packet-gsm-map.c` |
+| [x] | 20 | `gsm_osmux` | `packet-gsm-osmux.c` |
+| [x] | 21 | `gsm_r_uus1` | `packet-gsm-r-uus1.c` |
+| [x] | 22 | `gsm_rlcmac` | `packet-gsm-rlcmac.c` |
+| [x] | 23 | `gsm_rlp` | `packet-gsm-rlp.c` |
+| [x] | 24 | `gsm_sim` | `packet-gsm-sim.c` |
+| [x] | 25 | `gsm_sms` | `packet-gsm-sms.c` |
+| [x] | 26 | `gsm_sms_ud` | `packet-gsm-sms-ud.c` |
+| [x] | 27 | `gsm_um` | `packet-gsm-um.c` |
+| [x] | 28 | `gsmtap` | `packet-gsmtap.c` |
+| [x] | 29 | `gsmtap_log` | `packet-gsmtap-log.c` |
 
 ## 3GPP / LTE / 5G (18 adet)
 
