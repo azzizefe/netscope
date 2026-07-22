@@ -9,8 +9,8 @@ use crate::models::Protocol;
 
 use super::{
     adsb, amqp1, bindings, bitcoin, bittorrent, ceph, consul_rpc, drbd, drda, fix, hl7, http,
-    http2, ibmmq, iec101, lmtp, lustre, mbus, memcached_bin, mercurial, milter, mms, modbus_ascii, modbus_rtu, mysqlx, nmea,
-    ntlm, openvpn, redis_cluster, s7comm, s7comm_plus, someip, spice, syslog, thrift, websocket, wmbus, x11, zmtp,
+    http2, ibmmq, iec101, kermit, lmtp, lustre, mbus, memcached_bin, mercurial, milter, mms, modbus_ascii, modbus_rtu, mysqlx, nmea,
+    ntlm, openvpn, redis_cluster, s7comm, s7comm_plus, someip, spice, syslog, thrift, websocket, wmbus, x11, zmodem, zmtp,
     DissectedResult,
 };
 
@@ -345,6 +345,12 @@ fn dissect_tcp_inner(
         }
         if on(502) && modbus_ascii::looks_like_modbus_ascii(tcp_payload) {
             return modbus_ascii::dissect_modbus_ascii(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if kermit::looks_like_kermit(tcp_payload) {
+            return kermit::dissect_kermit(tcp_payload);
+        }
+        if zmodem::looks_like_zmodem(tcp_payload) {
+            return zmodem::dissect_zmodem(tcp_payload);
         }
         // 8300 is Consul's convention rather than an assignment, and the type
         // byte only leads the first segment of a connection — so a mid-stream
