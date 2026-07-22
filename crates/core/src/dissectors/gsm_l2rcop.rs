@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
 use std::net::IpAddr;
@@ -18,7 +18,7 @@ pub fn dissect_gsm_l2rcop(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::GsmL2Rcop,
+        protocol: Protocol::GsmL2rcop,
         summary: format!("GSM_L2RCOP message"),
     }
 }
@@ -40,6 +40,6 @@ mod tests {
     #[test]
     fn handle_empty_payload() {
         let res = dissect_gsm_l2rcop(None, None, 0, 0, &[]);
-        assert_eq!(res.protocol, Protocol::GsmL2Rcop);
+        assert_eq!(res.protocol, Protocol::GsmL2rcop);
     }
 }
