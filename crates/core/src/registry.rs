@@ -605,6 +605,222 @@ protocols! {
         aliases:   ["most", "most_bus"],
         blurb:     "A MOST automotive infotainment control packet — directing audio, navigation or display function blocks.",
     }
+    Tarantool {
+        doc:       "Tarantool iproto binary protocol (TCP 3301).",
+        display:   "Tarantool",
+        color:     0xE11D48,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tarantool"],
+        blurb:     "A Tarantool iproto binary protocol message — query, mutation or greeting frame.",
+    }
+    Hbase {
+        doc:       "Apache HBase RPC protocol (TCP 16000/16020).",
+        display:   "HBase",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hbase"],
+        blurb:     "An Apache HBase RPC protocol packet — table scan, get, put or region server message.",
+    }
+    Impala {
+        doc:       "Apache Impala query service / Beeswax protocol (TCP 21000/21050).",
+        display:   "Impala",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["impala"],
+        blurb:     "An Apache Impala SQL query or result fetch packet via Beeswax/HS2 Thrift.",
+    }
+    Vertica {
+        doc:       "HP Vertica wire protocol (TCP 5433).",
+        display:   "Vertica",
+        color:     0x0D9488,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["vertica"],
+        blurb:     "An HP Vertica analytical database query or result stream packet.",
+    }
+    Teradata {
+        doc:       "Teradata DBC protocol (TCP 1025).",
+        display:   "Teradata",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["teradata"],
+        blurb:     "A Teradata DBC database communication packet.",
+    }
+    SapHana {
+        doc:       "SAP HANA SQLDBC binary protocol (TCP 30015/39015).",
+        display:   "SAP HANA",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["saphana", "sap_hana", "sqldbc"],
+        blurb:     "An SAP HANA SQLDBC binary protocol packet.",
+    }
+    Informix {
+        doc:       "IBM Informix SQLI protocol (TCP 9088/1526).",
+        display:   "Informix",
+        color:     0x4F46E5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["informix", "sqli"],
+        blurb:     "An IBM Informix SQLI database client message.",
+    }
+    Netezza {
+        doc:       "IBM Netezza wire protocol (TCP 5480).",
+        display:   "Netezza",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netezza"],
+        blurb:     "An IBM Netezza data warehouse query or system message.",
+    }
+    Ingres {
+        doc:       "Actian Ingres GCA protocol (TCP 21071/1783/17830).",
+        display:   "Ingres",
+        color:     0x9333EA,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ingres", "gca"],
+        blurb:     "An Actian Ingres Generic Communication Architecture (GCA) packet.",
+    }
+    MaxDb {
+        doc:       "SAP MaxDB SQL protocol (TCP 7210/7269).",
+        display:   "MaxDB",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["maxdb"],
+        blurb:     "An SAP MaxDB database query or session management packet.",
+    }
+    Voldemort {
+        doc:       "Project Voldemort custom binary protocol (TCP 6666).",
+        display:   "Voldemort",
+        color:     0xDC2626,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["voldemort"],
+        blurb:     "A Project Voldemort distributed key-value store protocol message.",
+    }
+    OpenTsdb {
+        doc:       "OpenTSDB Telnet / HTTP metric protocol (TCP 4242).",
+        display:   "OpenTSDB",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["opentsdb"],
+        blurb:     "An OpenTSDB time-series metric push packet.",
+    }
+    Tdengine {
+        doc:       "TDengine binary RPC protocol (TCP 6030).",
+        display:   "TDengine",
+        color:     0x0891B2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tdengine"],
+        blurb:     "A TDengine time-series database RPC message.",
+    }
+    QuestDb {
+        doc:       "QuestDB InfluxDB Line Protocol (ILP) (TCP/UDP 9009).",
+        display:   "QuestDB",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["questdb"],
+        blurb:     "A QuestDB InfluxDB Line Protocol (ILP) data ingestion message.",
+    }
+    OrientDb {
+        doc:       "OrientDB binary protocol (TCP 2424).",
+        display:   "OrientDB",
+        color:     0xD97706,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["orientdb"],
+        blurb:     "An OrientDB multi-model graph database binary protocol message.",
+    }
+    Etcd {
+        doc:       "etcd v3 gRPC protocol (TCP 2379).",
+        display:   "etcd",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["etcd"],
+        blurb:     "An etcd key-value store gRPC request or watch notification.",
+    }
+    Tikv {
+        doc:       "TiKV key-value protocol (TCP 20160).",
+        display:   "TiKV",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tikv"],
+        blurb:     "A TiKV distributed transactional key-value store packet.",
+    }
+    Couchbase {
+        doc:       "Couchbase memcached binary extensions (TCP 11210).",
+        display:   "Couchbase",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["couchbase"],
+        blurb:     "A Couchbase binary protocol or DCP stream packet.",
+    }
+    CouchDb {
+        doc:       "CouchDB HTTP REST API (TCP 5984).",
+        display:   "CouchDB",
+        color:     0xDC2626,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["couchdb"],
+        blurb:     "A CouchDB NoSQL document database REST API request or response.",
+    }
+    ArangoDb {
+        doc:       "ArangoDB VelocyStream / HTTP REST API (TCP 8529).",
+        display:   "ArangoDB",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["arangodb"],
+        blurb:     "An ArangoDB multi-model database REST or VelocyStream packet.",
+    }
+    Trino {
+        doc:       "Trino / Presto HTTP query REST API (TCP 8080/8443).",
+        display:   "Trino",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["trino", "presto"],
+        blurb:     "A Trino / Presto distributed SQL query engine REST request.",
+    }
+    Druid {
+        doc:       "Apache Druid HTTP ingest & query API (TCP 8888/8082).",
+        display:   "Druid",
+        color:     0x0891B2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["druid"],
+        blurb:     "An Apache Druid analytical query or ingestion request.",
+    }
+    PrometheusRw {
+        doc:       "Prometheus remote-write Snappy-compressed protobuf payload (TCP 9090).",
+        display:   "Prometheus RW",
+        color:     0xE11D48,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["prometheus_rw", "prometheus_remote_write"],
+        blurb:     "A Prometheus remote-write metric push payload.",
+    }
+    VictoriaMetrics {
+        doc:       "VictoriaMetrics ingestion protocol (TCP 8428).",
+        display:   "VictoriaMetrics",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["victoriametrics"],
+        blurb:     "A VictoriaMetrics time-series ingestion or query API message.",
+    }
     Ccp {
         doc:       "CAN Calibration Protocol (ASAM CCP v2.1) for ECU measurement and calibration over CAN/UDP.",
         display:   "CCP",
@@ -1549,7 +1765,7 @@ protocols! {
         color:     0xB58F6E,
         transport: Tcp,
         rank:      3,
-        aliases:   ["soap", "onvif", "cwmp", "tr069"],
+        aliases:   ["soap"],
         blurb:     "The operation hiding inside POST / — which camera setting or router config was actually changed.",
     }
     Bier {

@@ -35,6 +35,30 @@ pub mod bittorrent;
 pub mod bluetooth;
 pub mod bmp;
 pub mod bolt;
+pub mod tarantool;
+pub mod hbase;
+pub mod impala;
+pub mod vertica;
+pub mod teradata;
+pub mod saphana;
+pub mod informix;
+pub mod netezza;
+pub mod ingres;
+pub mod maxdb;
+pub mod voldemort;
+pub mod opentsdb;
+pub mod tdengine;
+pub mod questdb;
+pub mod orientdb;
+pub mod etcd;
+pub mod tikv;
+pub mod couchbase;
+pub mod couchdb;
+pub mod arangodb;
+pub mod trino;
+pub mod druid;
+pub mod prometheus_rw;
+pub mod victoriametrics;
 pub mod bsap;
 pub mod bssap;
 pub mod bssgp;
@@ -1079,6 +1103,7 @@ const ETHERTYPE_DEC_LAT: u16 = 0x6004; // DEC Local Area Transport
 const ETHERTYPE_DEC_MOP: u16 = 0x6002; // DEC Maintenance Operation Protocol
 const ETHERTYPE_CHAOSNET: u16 = 0x0804; // Chaosnet
 const ETHERTYPE_XNS: u16 = 0x0600; // Xerox Network Systems IDP
+const ETHERTYPE_COBRANET: u16 = 0x8819; // CobraNet audio-over-Ethernet
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
@@ -1169,6 +1194,7 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_DEC_MOP => dec_mop::dissect_dec_mop(payload),
         ETHERTYPE_CHAOSNET => chaosnet::dissect_chaosnet(payload),
         ETHERTYPE_XNS => xns::dissect_xns(payload),
+        ETHERTYPE_COBRANET => cobranet::dissect_cobranet(payload),
         et if et <= ETHERTYPE_MAX_LENGTH && payload.first() == Some(&0xF0) => netbeui::dissect_netbeui(payload),
         et if et <= ETHERTYPE_MAX_LENGTH && matches!(payload.first(), Some(0x04 | 0x08 | 0x0C)) => sna::dissect_sna(payload),
         et if et <= ETHERTYPE_MAX_LENGTH && stp::is_stp(payload) => stp::dissect_stp(payload),
