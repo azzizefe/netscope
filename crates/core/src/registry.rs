@@ -4615,6 +4615,186 @@ protocols! {
         aliases:   ["wmbus", "w-mbus"],
         blurb:     "A wireless meter reading (wM-Bus) — water, gas, heat or electricity data collected over the air and forwarded by a gateway.",
     }
+    Lwm2m {
+        doc:       "OMA Lightweight M2M over CoAP.",
+        display:   "LwM2M",
+        color:     0x3B82F6,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["lwm2m", "oma-lwm2m"],
+        blurb:     "An OMA LwM2M IoT device management message (CoAP payload).",
+    }
+    SemtechLora {
+        doc:       "Semtech LoRaWAN Packet Forwarder protocol.",
+        display:   "Semtech LoRa",
+        color:     0x10B981,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["semtech", "semtech-lora"],
+        blurb:     "A LoRaWAN gateway packet forwarder message.",
+    }
+    Zwave {
+        doc:       "Z-Wave / Z-IP Gateway network protocol.",
+        display:   "Z-Wave",
+        color:     0x8B5CF6,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["zwave", "z-wave", "zipgateway"],
+        blurb:     "A Z-Wave smart home command (Z-IP Gateway).",
+    }
+    Enocean {
+        doc:       "EnOcean Serial Protocol 3 (ESP3).",
+        display:   "EnOcean",
+        color:     0xEC4899,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["enocean", "esp3"],
+        blurb:     "An EnOcean energy-harvesting wireless sensor frame.",
+    }
+    Wisun {
+        doc:       "Wi-SUN FAN (Field Area Network / IEEE 802.15.4g).",
+        display:   "Wi-SUN",
+        color:     0x06B6D4,
+        transport: Other,
+        rank:      3,
+        aliases:   ["wisun", "wi-sun"],
+        blurb:     "A Wi-SUN sub-GHz wireless mesh frame for smart utility networks.",
+    }
+    ZigbeeGreenPower {
+        doc:       "Zigbee Green Power (ZGP / GPDF).",
+        display:   "Zigbee GP",
+        color:     0xF59E0B,
+        transport: Other,
+        rank:      3,
+        aliases:   ["zigbeegp", "zgp", "zigbee-green-power"],
+        blurb:     "A Zigbee Green Power ultra-low power energy-harvesting frame.",
+    }
+    Mle {
+        doc:       "Mesh Link Establishment (Thread MLE protocol).",
+        display:   "MLE",
+        color:     0x6366F1,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["mle", "thread-mle"],
+        blurb:     "A Thread MLE message — devices establishing and maintaining mesh links.",
+    }
+    HomekitHap {
+        doc:       "Apple HomeKit Accessory Protocol (HAP over IP).",
+        display:   "HomeKit HAP",
+        color:     0xF43F5E,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["homekit", "hap", "homekit-hap"],
+        blurb:     "An Apple HomeKit accessory control or pairing request.",
+    }
+    Esphome {
+        doc:       "ESPHome Native API protocol.",
+        display:   "ESPHome",
+        color:     0x14B8A6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["esphome", "esphome-api"],
+        blurb:     "An ESPHome smart device native API message.",
+    }
+    Insteon {
+        doc:       "Insteon powerline/RF smart home gateway messages.",
+        display:   "Insteon",
+        color:     0xA855F7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["insteon"],
+        blurb:     "An Insteon smart home PLM or Hub gateway command.",
+    }
+    X10 {
+        doc:       "X10 home automation over IP bridge.",
+        display:   "X10",
+        color:     0x64748B,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["x10"],
+        blurb:     "An X10 powerline / RF smart home IP gateway command.",
+    }
+    Dali {
+        doc:       "DALI over IP (Digital Addressable Lighting Interface).",
+        display:   "DALI over IP",
+        color:     0xEAB308,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["dali", "dali-ip"],
+        blurb:     "A DALI digital lighting control frame over IP.",
+    }
+    Cobranet {
+        doc:       "CobraNet digital audio over Ethernet (EtherType 0x8887).",
+        display:   "CobraNet",
+        color:     0x0284C7,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cobranet"],
+        blurb:     "A CobraNet uncompressed digital audio Ethernet frame.",
+    }
+    Aes67 {
+        doc:       "AES67 High-performance audio over IP RTP profile.",
+        display:   "AES67",
+        color:     0x2563EB,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["aes67"],
+        blurb:     "An AES67 high-performance audio over IP stream.",
+    }
+    St2110 {
+        doc:       "SMPTE ST 2110 broadcast media over IP.",
+        display:   "SMPTE ST 2110",
+        color:     0x7E22CE,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["st2110", "smpte2110", "smpte-st-2110"],
+        blurb:     "A SMPTE ST 2110 broadcast video/audio/ancillary stream over IP.",
+    }
+    Rist {
+        doc:       "Reliable Internet Stream Transport (RIST).",
+        display:   "RIST",
+        color:     0x059669,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rist"],
+        blurb:     "A RIST reliable media transport stream or ARQ feedback message.",
+    }
+    Onvif {
+        doc:       "ONVIF IP camera SOAP management.",
+        display:   "ONVIF",
+        color:     0xD97706,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["onvif"],
+        blurb:     "An ONVIF IP camera or security device SOAP control message.",
+    }
+    Mtconnect {
+        doc:       "MTConnect industrial machine tool telemetry.",
+        display:   "MTConnect",
+        color:     0x475569,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["mtconnect"],
+        blurb:     "An MTConnect industrial CNC machine tool telemetry response.",
+    }
+    Cwmp {
+        doc:       "CPE WAN Management Protocol (TR-069 / CWMP).",
+        display:   "TR-069 CWMP",
+        color:     0xDC2626,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["cwmp", "tr069", "tr-069"],
+        blurb:     "A TR-069 CWMP broadband CPE remote management SOAP message.",
+    }
+    Usp {
+        doc:       "User Services Platform (TR-369 / USP).",
+        display:   "TR-369 USP",
+        color:     0x9333EA,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["usp", "tr369", "tr-369"],
+        blurb:     "A TR-369 USP smart gateway management message.",
+    }
 }
 
 impl std::fmt::Display for Protocol {
