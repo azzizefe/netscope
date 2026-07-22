@@ -4444,12 +4444,6 @@ reason as a numeric code.",
             body: "Zigbee Green Power (ZGP) uses compact Green Power Data Frames (GPDF) to allow light switches and sensors to operate purely from harvested kinetic energy.",
             look_for: "Zigbee Green Power GPDF Button Press or Toggle commands.",
         },
-        Protocol::Mle => Lesson {
-            title: "Thread MLE — Mesh Link Establishment",
-            summary: "Establishes and maintains Thread low-power IPv6 mesh networks.",
-            body: "Thread devices use MLE over UDP 19788 to discover parent routers, exchange link metrics, and manage secure mesh network topology.",
-            look_for: "MLE Parent Request, Child ID Request, or Link Advertisement messages.",
-        },
         Protocol::HomekitHap => Lesson {
             title: "Apple HomeKit Accessory Protocol (HAP)",
             summary: "Apple smart home control and pairing protocol over IP.",
