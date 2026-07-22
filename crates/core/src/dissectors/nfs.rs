@@ -111,6 +111,10 @@ fn nlm_procedure(proc_num: u32) -> Option<&'static str> {
 pub(crate) fn describe(program: u32, version: u32, proc_num: u32) -> Option<(Protocol, String)> {
     let (protocol, family, name) = match program {
         PROG_NFS => {
+            if version >= 4 && (45..=51).contains(&proc_num) {
+                let res = super::pnfs::dissect_pnfs(None, None, 0, 0, proc_num, &[]);
+                return Some((res.protocol, res.summary));
+            }
             let name = if version >= 4 {
                 nfs4_procedure(proc_num)
             } else {
