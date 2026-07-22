@@ -3294,8 +3294,11 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "aes67",
         "bindings",
         "cip",
+        "enocean",
+        "lwm2m",
         "ngap_common",
         "nfs",
         "pccc",
@@ -3304,8 +3307,12 @@ mod robustness {
         "sdp",
         "sigtran",
         "srt",
+        "st2110",
         "tcap",
         "tcp_analysis",
+        "usp",
+        "wisun",
+        "zigbee_gp",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
