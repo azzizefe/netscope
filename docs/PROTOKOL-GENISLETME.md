@@ -565,26 +565,26 @@ Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
 - [x] **iSER** ✅ → [`iser.rs`](../crates/core/src/dissectors/iser.rs)
       *Komutlar görünür, bloklar hiç görünmez — bu bir arıza değil, iSER'in
       tasarımı. Reject bayrağı hedefin iSCSI status'ü konuşmadan önceki reddi.*
-- [ ] SRP — SCSI RDMA Protocol ⚠️ *(E4)*
-- [ ] SMB Direct ⚠️ *(E4)*
-- [ ] NVMe-oF RDMA ⚠️ *(E4)*
-- [ ] Fibre Channel (native FC-2) ✅
-- [ ] FCP ✅
-- [ ] pNFS ✅
-- [ ] NFSv4 callback ✅
-- [ ] HDFS Data Transfer Protocol ✅
-- [ ] MooseFS ⚠️
-- [ ] BeeGFS ⚠️
-- [ ] OrangeFS ⚠️
-- [ ] Sheepdog ⚠️
-- [ ] Coda ⚠️
-- [ ] Syncthing BEP ✅
-- [ ] Perforce (P4) ⚠️
-- [ ] ~~CVS pserver~~ ⚠️ *(**iptal:** Wireshark'ın kendi dissector'ı bile
+- [x] **SRP — SCSI RDMA Protocol** ⚠️ *(E4)* ✅ → [`srp_rdma.rs`](../crates/core/src/dissectors/srp_rdma.rs)
+- [x] **SMB Direct** ⚠️ *(E4)* ✅ → [`smb_direct.rs`](../crates/core/src/dissectors/smb_direct.rs)
+- [x] **NVMe-oF RDMA** ⚠️ *(E4)* ✅ → [`nvmeof.rs`](../crates/core/src/dissectors/nvmeof.rs)
+- [x] **Fibre Channel (native FC-2)** ✅ → [`fc2.rs`](../crates/core/src/dissectors/fc2.rs)
+- [x] **FCP** ✅ → [`fcp.rs`](../crates/core/src/dissectors/fcp.rs)
+- [x] **pNFS** ✅ → [`pnfs.rs`](../crates/core/src/dissectors/pnfs.rs)
+- [x] **NFSv4 callback** ✅ → [`nfs_callback.rs`](../crates/core/src/dissectors/nfs_callback.rs)
+- [x] **HDFS Data Transfer Protocol** ✅ → [`hdfs_data.rs`](../crates/core/src/dissectors/hdfs_data.rs)
+- [x] **MooseFS** ⚠️ ✅ → [`moosefs.rs`](../crates/core/src/dissectors/moosefs.rs)
+- [x] **BeeGFS** ⚠️ ✅ → [`beegfs.rs`](../crates/core/src/dissectors/beegfs.rs)
+- [x] **OrangeFS** ⚠️ ✅ → [`orangefs.rs`](../crates/core/src/dissectors/orangefs.rs)
+- [x] **Sheepdog** ⚠️ ✅ → [`sheepdog.rs`](../crates/core/src/dissectors/sheepdog.rs)
+- [x] **Coda** ⚠️ ✅ → [`coda.rs`](../crates/core/src/dissectors/coda.rs)
+- [x] **Syncthing BEP** ✅ → [`syncthing.rs`](../crates/core/src/dissectors/syncthing.rs)
+- [x] **Perforce (P4)** ⚠️ ✅ → [`perforce.rs`](../crates/core/src/dissectors/perforce.rs)
+- [x] ~~CVS pserver~~ ⚠️ *(**iptal:** Wireshark'ın kendi dissector'ı bile
       sadece satır sayıyor, protokolü çözmüyor — "port + biraz framing"
       derinliğinin tanımı. Verb'leri ezberden yazmak §5 kuralına aykırı.)*
-- [ ] Mercurial wire protocol ✅
-- [ ] OFTP — Odette FTP ✅
+- [x] **Mercurial wire protocol** ✅ → [`mercurial.rs`](../crates/core/src/dissectors/mercurial.rs)
+- [x] **OFTP — Odette FTP** ✅ → [`oftp.rs`](../crates/core/src/dissectors/oftp.rs)
 
 ### 5.7 · Faz 7 — Veritabanları (25)
 

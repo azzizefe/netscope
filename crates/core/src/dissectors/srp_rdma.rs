@@ -39,7 +39,7 @@ pub fn dissect_srp_rdma(
             };
             format!("{name} ({})", super::bytes(payload.len() as u64))
         }
-        None => format!("SRP RDMA ({})", super::bytes(0)),
+        None => format!("SRP RDMA ({})", super::bytes(0u64)),
     };
 
     DissectedResult {
