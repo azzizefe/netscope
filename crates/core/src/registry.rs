@@ -1876,6 +1876,141 @@ protocols! {
         aliases:   ["smb_direct", "smbd"],
         blurb:     "SMB3 file sharing over RDMA — bypasses TCP/IP to transfer data directly into memory.",
     }
+    SrpRdma {
+        doc:       "SCSI RDMA Protocol (SRP) carried over RDMA.",
+        display:   "SRP RDMA",
+        color:     0x5C7E8E,
+        transport: Other,
+        rank:      3,
+        aliases:   ["srp_rdma", "srp-rdma"],
+        blurb:     "SCSI RDMA Protocol message over RDMA transport.",
+    }
+    Fc2 {
+        doc:       "Native Fibre Channel (FC-2) frame.",
+        display:   "FC-2",
+        color:     0x2563EB,
+        transport: Other,
+        rank:      3,
+        aliases:   ["fc2", "fc-2"],
+        blurb:     "Native Fibre Channel FC-2 frame.",
+    }
+    Fcp {
+        doc:       "Fibre Channel Protocol (FCP) for SCSI.",
+        display:   "FCP",
+        color:     0x2563EB,
+        transport: Other,
+        rank:      3,
+        aliases:   ["fcp"],
+        blurb:     "Fibre Channel Protocol SCSI command/response.",
+    }
+    PNfs {
+        doc:       "Parallel NFS (pNFS, RFC 5661 layout operations).",
+        display:   "pNFS",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pnfs"],
+        blurb:     "Parallel NFS layout transaction over TCP 2049.",
+    }
+    NfsCb {
+        doc:       "NFSv4 Callback backchannel protocol.",
+        display:   "NFSv4 Callback",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nfs_cb", "nfs-cb"],
+        blurb:     "NFSv4 Callback backchannel RPC operation.",
+    }
+    HdfsData {
+        doc:       "HDFS Data Transfer Protocol (DataNode TCP 50010).",
+        display:   "HDFS Data",
+        color:     0xE11D48,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hdfs_data", "hdfs-data"],
+        blurb:     "HDFS DataNode block read/write operation.",
+    }
+    MooseFs {
+        doc:       "MooseFS distributed file system (TCP 9419-9421).",
+        display:   "MooseFS",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["moosefs", "mfs"],
+        blurb:     "MooseFS master/chunkserver command.",
+    }
+    BeeFs {
+        doc:       "BeeGFS cluster file system (TCP/UDP 8003).",
+        display:   "BeeGFS",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["beegfs", "fhgfs"],
+        blurb:     "BeeGFS storage or metadata operation.",
+    }
+    OrangeFs {
+        doc:       "OrangeFS / PVFS2 parallel file system (TCP 3334).",
+        display:   "OrangeFS",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["orangefs", "pvfs2"],
+        blurb:     "OrangeFS parallel storage request.",
+    }
+    Sheepdog {
+        doc:       "Sheepdog distributed block storage (TCP 7000).",
+        display:   "Sheepdog",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sheepdog"],
+        blurb:     "Sheepdog VDI read/write block storage command.",
+    }
+    Coda {
+        doc:       "Coda distributed file system RPC2 protocol (UDP 2430-2433).",
+        display:   "Coda",
+        color:     0x0284C7,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["coda", "rpc2"],
+        blurb:     "Coda distributed filesystem RPC2 packet.",
+    }
+    Syncthing {
+        doc:       "Syncthing Block Exchange Protocol (BEP v1, TCP 22000).",
+        display:   "Syncthing BEP",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["syncthing", "bep"],
+        blurb:     "Syncthing BEP file index/block exchange.",
+    }
+    Perforce {
+        doc:       "Perforce (P4) version control server protocol (TCP 1666).",
+        display:   "Perforce (P4)",
+        color:     0x6366F1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["perforce", "p4"],
+        blurb:     "Perforce version control sync/command request.",
+    }
+    Mercurial {
+        doc:       "Mercurial wire protocol (TCP 2000 hg serve).",
+        display:   "Mercurial",
+        color:     0x6366F1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mercurial", "hg"],
+        blurb:     "Mercurial repository wire command.",
+    }
+    Oftp {
+        doc:       "Odette FTP (OFTP / OFTP2, RFC 2204 / RFC 5024, TCP 3305 / 6619).",
+        display:   "OFTP",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["oftp", "oftp2"],
+        blurb:     "Odette FTP file transfer session message.",
+    }
     Tds {
         doc:       "TDS traffic.",
         display:   "TDS",
