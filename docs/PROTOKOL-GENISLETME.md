@@ -616,34 +616,34 @@ Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
 
 ### 5.8 · Faz 8 — Mesajlaşma, telemetri & gözlemlenebilirlik (25)
 
-- [ ] RabbitMQ Stream Protocol ✅
-- [ ] ActiveMQ Artemis Core ✅
-- [ ] Solace SMF ⚠️
-- [ ] TIBCO Rendezvous ⚠️
-- [ ] TIBCO EMS ⚠️
+- [x] **RabbitMQ Stream Protocol** ✅ → [`rabbitmq_stream.rs`](../crates/core/src/dissectors/rabbitmq_stream.rs)
+- [x] **ActiveMQ Artemis Core** ✅ → [`artemis_core.rs`](../crates/core/src/dissectors/artemis_core.rs)
+- [x] **Solace SMF** ⚠️ ✅ → [`solace_smf.rs`](../crates/core/src/dissectors/solace_smf.rs)
+- [x] **TIBCO Rendezvous** ⚠️ ✅ → [`tibco_rv.rs`](../crates/core/src/dissectors/tibco_rv.rs)
+- [x] **TIBCO EMS** ⚠️ ✅ → [`tibco_ems.rs`](../crates/core/src/dissectors/tibco_ems.rs)
 - [x] **Aeron** ✅ → [`aeron.rs`](../crates/core/src/dissectors/aeron.rs)
       *Kontrol çerçeveleri asıl içerik: NAK'lar ve küçülen pencere, gecikme
       artışından **önce** geliyor. Magic'i yok — guard'ın ilk hâli bir DTLS
       kaydını kapmıştı, aşağıya bakın.*
-- [ ] NNG / nanomsg SP ✅
-- [ ] OTLP over gRPC ✅
-- [ ] OTLP over HTTP 🔒 *(E1)*
-- [ ] Zipkin 🔒 *(E1)*
-- [ ] Riemann ✅
-- [ ] Munin ✅
-- [ ] Sensu ⚠️
-- [ ] Netdata streaming ⚠️
-- [ ] Splunk S2S ⚠️
-- [ ] Loki push 🔒 *(E1)*
-- [ ] Vector native ⚠️
-- [ ] Graphite pickle protocol ✅ *(mevcut `graphite.rs` düz metin; pickle ayrı)*
-- [ ] Icinga2 cluster ⚠️
-- [ ] Nagios NSCA ✅
-- [ ] Nagios NDO ⚠️
-- [ ] collectd binary v5 uzantıları ✅
-- [ ] Ganglia gmetad interaktif ✅
-- [ ] Zabbix aktif-ajan protokolü ✅
-- [ ] Telegraf/InfluxDB v2 write ⚠️
+- [x] **NNG / nanomsg SP** ✅ → [`nanomsg_sp.rs`](../crates/core/src/dissectors/nanomsg_sp.rs)
+- [x] **OTLP over gRPC** ✅ → [`otlp_grpc.rs`](../crates/core/src/dissectors/otlp_grpc.rs)
+- [x] **OTLP over HTTP** ✅ → [`otlp_http.rs`](../crates/core/src/dissectors/otlp_http.rs)
+- [x] **Zipkin** ✅ → [`zipkin.rs`](../crates/core/src/dissectors/zipkin.rs)
+- [x] **Riemann** ✅ → [`riemann.rs`](../crates/core/src/dissectors/riemann.rs)
+- [x] **Munin** ✅ → [`munin.rs`](../crates/core/src/dissectors/munin.rs)
+- [x] **Sensu** ⚠️ ✅ → [`sensu.rs`](../crates/core/src/dissectors/sensu.rs)
+- [x] **Netdata streaming** ⚠️ ✅ → [`netdata.rs`](../crates/core/src/dissectors/netdata.rs)
+- [x] **Splunk S2S** ⚠️ ✅ → [`splunk_s2s.rs`](../crates/core/src/dissectors/splunk_s2s.rs)
+- [x] **Loki push** ✅ → [`loki_push.rs`](../crates/core/src/dissectors/loki_push.rs)
+- [x] **Vector native** ⚠️ ✅ → [`vector_native.rs`](../crates/core/src/dissectors/vector_native.rs)
+- [x] **Graphite pickle protocol** ✅ → [`graphite_pickle.rs`](../crates/core/src/dissectors/graphite_pickle.rs)
+- [x] **Icinga2 cluster** ⚠️ ✅ → [`icinga2.rs`](../crates/core/src/dissectors/icinga2.rs)
+- [x] **Nagios NSCA** ✅ → [`nagios_nsca.rs`](../crates/core/src/dissectors/nagios_nsca.rs)
+- [x] **Nagios NDO** ⚠️ ✅ → [`nagios_ndo.rs`](../crates/core/src/dissectors/nagios_ndo.rs)
+- [x] **collectd binary v5 uzantıları** ✅ → [`collectd_v5.rs`](../crates/core/src/dissectors/collectd_v5.rs)
+- [x] **Ganglia gmetad interaktif** ✅ → [`ganglia_gmetad.rs`](../crates/core/src/dissectors/ganglia_gmetad.rs)
+- [x] **Zabbix aktif-ajan protokolü** ✅ → [`zabbix_active.rs`](../crates/core/src/dissectors/zabbix_active.rs)
+- [x] **Telegraf/InfluxDB v2 write** ⚠️ ✅ → [`telegraf_influxv2.rs`](../crates/core/src/dissectors/telegraf_influxv2.rs)
 
 ### 5.9 · Faz 9 — IoT, bina & düşük güç (25)
 
