@@ -588,31 +588,31 @@ Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
 
 ### 5.7 · Faz 7 — Veritabanları (25)
 
-- [ ] Tarantool iproto ✅
-- [ ] HBase ⚠️
-- [ ] Hive Thrift ⚠️ *(mevcut `thrift.rs` üstünde)*
-- [ ] Impala ⚠️
-- [ ] Vertica ⚠️
-- [ ] Teradata ⚠️
-- [ ] SAP HANA SQLDBC ⚠️
-- [ ] Informix ⚠️
-- [ ] Netezza ⚠️
-- [ ] Ingres ⚠️
-- [ ] MaxDB ⚠️
-- [ ] Voldemort ⚠️
-- [ ] OpenTSDB ✅
-- [ ] TDengine ⚠️
-- [ ] QuestDB ✅ *(InfluxDB line protocol varyantı)*
-- [ ] OrientDB binary ⚠️
-- [ ] etcd v3 (gRPC) ✅ *(mevcut `grpc` üstünde)*
-- [ ] TiKV ⚠️
-- [ ] Couchbase memcached uzantıları ✅
-- [ ] CouchDB 🔒 *(E1)*
-- [ ] ArangoDB 🔒 *(E1)*
-- [ ] Trino / Presto 🔒 *(E1)*
-- [ ] Druid 🔒 *(E1)*
-- [ ] Prometheus remote-write 🔒 *(E1)*
-- [ ] VictoriaMetrics 🔒 *(E1)*
+- [x] **Tarantool iproto** ✅ → [`tarantool.rs`](../crates/core/src/dissectors/tarantool.rs)
+- [x] **HBase** ⚠️ ✅ → [`hbase.rs`](../crates/core/src/dissectors/hbase.rs)
+- [x] **Hive Thrift** ⚠️ ✅ → [`thrift.rs`](../crates/core/src/dissectors/thrift.rs)
+- [x] **Impala** ⚠️ ✅ → [`impala.rs`](../crates/core/src/dissectors/impala.rs)
+- [x] **Vertica** ⚠️ ✅ → [`vertica.rs`](../crates/core/src/dissectors/vertica.rs)
+- [x] **Teradata** ⚠️ ✅ → [`teradata.rs`](../crates/core/src/dissectors/teradata.rs)
+- [x] **SAP HANA SQLDBC** ⚠️ ✅ → [`saphana.rs`](../crates/core/src/dissectors/saphana.rs)
+- [x] **Informix** ⚠️ ✅ → [`informix.rs`](../crates/core/src/dissectors/informix.rs)
+- [x] **Netezza** ⚠️ ✅ → [`netezza.rs`](../crates/core/src/dissectors/netezza.rs)
+- [x] **Ingres** ⚠️ ✅ → [`ingres.rs`](../crates/core/src/dissectors/ingres.rs)
+- [x] **MaxDB** ⚠️ ✅ → [`maxdb.rs`](../crates/core/src/dissectors/maxdb.rs)
+- [x] **Voldemort** ⚠️ ✅ → [`voldemort.rs`](../crates/core/src/dissectors/voldemort.rs)
+- [x] **OpenTSDB** ✅ → [`opentsdb.rs`](../crates/core/src/dissectors/opentsdb.rs)
+- [x] **TDengine** ⚠️ ✅ → [`tdengine.rs`](../crates/core/src/dissectors/tdengine.rs)
+- [x] **QuestDB** ✅ → [`questdb.rs`](../crates/core/src/dissectors/questdb.rs)
+- [x] **OrientDB binary** ⚠️ ✅ → [`orientdb.rs`](../crates/core/src/dissectors/orientdb.rs)
+- [x] **etcd v3 (gRPC)** ✅ → [`etcd.rs`](../crates/core/src/dissectors/etcd.rs)
+- [x] **TiKV** ⚠️ ✅ → [`tikv.rs`](../crates/core/src/dissectors/tikv.rs)
+- [x] **Couchbase memcached uzantıları** ✅ → [`couchbase.rs`](../crates/core/src/dissectors/couchbase.rs)
+- [x] **CouchDB** ✅ → [`couchdb.rs`](../crates/core/src/dissectors/couchdb.rs)
+- [x] **ArangoDB** ✅ → [`arangodb.rs`](../crates/core/src/dissectors/arangodb.rs)
+- [x] **Trino / Presto** ✅ → [`trino.rs`](../crates/core/src/dissectors/trino.rs)
+- [x] **Druid** ✅ → [`druid.rs`](../crates/core/src/dissectors/druid.rs)
+- [x] **Prometheus remote-write** ✅ → [`prometheus_rw.rs`](../crates/core/src/dissectors/prometheus_rw.rs)
+- [x] **VictoriaMetrics** ✅ → [`victoriametrics.rs`](../crates/core/src/dissectors/victoriametrics.rs)
 
 ### 5.8 · Faz 8 — Mesajlaşma, telemetri & gözlemlenebilirlik (25)
 
