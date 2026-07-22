@@ -4,7 +4,7 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-/// Dissect CobraNet digital audio over Ethernet frame (EtherType `0x8887`).
+/// Dissect CobraNet digital audio over Ethernet frame (EtherType `0x8819`).
 pub fn dissect_cobranet(payload: &[u8]) -> DissectedResult {
     let summary = if payload.len() >= 4 {
         let pkt_type = u16::from_be_bytes([payload[0], payload[1]]);
