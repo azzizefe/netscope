@@ -3803,6 +3803,35 @@ mod robustness {
         for line in dissectors.lines() {
             let Some(module) = line
                 .strip_prefix("pub mod ")
+pub mod gprscdr;
+pub mod gsm_a_bssmap;
+pub mod gsm_a_common;
+pub mod gsm_a_dtap;
+pub mod gsm_a_gm;
+pub mod gsm_a_rp;
+pub mod gsm_a_rr;
+pub mod gsm_abis_om2000;
+pub mod gsm_abis_oml;
+pub mod gsm_abis_pgsl;
+pub mod gsm_abis_tfp;
+pub mod gsm_bsslap;
+pub mod gsm_bssmap_le;
+pub mod gsm_cbch;
+pub mod gsm_cbsp;
+pub mod gsm_gsup;
+pub mod gsm_ipa;
+pub mod gsm_l2rcop;
+pub mod gsm_map;
+pub mod gsm_osmux;
+pub mod gsm_r_uus1;
+pub mod gsm_rlcmac;
+pub mod gsm_rlp;
+pub mod gsm_sim;
+pub mod gsm_sms;
+pub mod gsm_sms_ud;
+pub mod gsm_um;
+pub mod gsmtap;
+pub mod gsmtap_log;
                 .and_then(|m| m.strip_suffix(';'))
             else {
                 continue;
