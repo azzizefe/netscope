@@ -647,22 +647,22 @@ Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
 
 ### 5.9 · Faz 9 — IoT, bina & düşük güç (25)
 
-- [ ] LwM2M ✅ *(CoAP üstü — roadmap'te bir kez hayalî olarak listelenmişti; **bu sefer gerçekten eklenecek**)*
+- [x] **LwM2M** ✅ → [`lwm2m.rs`](../crates/core/src/dissectors/lwm2m.rs)
 - [x] **LoRaWAN** ✅ → [`lorawan.rs`](../crates/core/src/dissectors/lorawan.rs)
       *Yük uçtan uca şifreli, o yüzden başlık capture'ın söyleyebileceği her şey
       — ve frame counter orada: sıfırlanan bir cihazın frame'lerini ağ sessizce
       atıyor, cihaz tarafında hiçbir belirti yok.*
-- [ ] Semtech UDP packet forwarder ✅
-- [ ] Z-Wave ✅
-- [ ] EnOcean ✅
-- [ ] Wi-SUN ⚠️
-- [ ] Zigbee Green Power ✅
-- [ ] Thread (MLE üstü genişletme) ✅
-- [ ] HomeKit HAP ⚠️
-- [ ] ESPHome native API ✅
-- [ ] Insteon ⚠️
-- [ ] X10 ⚠️
-- [ ] DALI over IP ⚠️
+- [x] **Semtech UDP packet forwarder** ✅ → [`semtech_lora.rs`](../crates/core/src/dissectors/semtech_lora.rs)
+- [x] **Z-Wave** ✅ → [`zwave.rs`](../crates/core/src/dissectors/zwave.rs)
+- [x] **EnOcean** ✅ → [`enocean.rs`](../crates/core/src/dissectors/enocean.rs)
+- [x] **Wi-SUN** ✅ → [`wisun.rs`](../crates/core/src/dissectors/wisun.rs)
+- [x] **Zigbee Green Power** ✅ → [`zigbee_gp.rs`](../crates/core/src/dissectors/zigbee_gp.rs)
+- [x] **Thread (MLE üstü genişletme)** ✅ → [`mle.rs`](../crates/core/src/dissectors/mle.rs)
+- [x] **HomeKit HAP** ✅ → [`homekit.rs`](../crates/core/src/dissectors/homekit.rs)
+- [x] **ESPHome native API** ✅ → [`esphome.rs`](../crates/core/src/dissectors/esphome.rs)
+- [x] **Insteon** ✅ → [`insteon.rs`](../crates/core/src/dissectors/insteon.rs)
+- [x] **X10** ✅ → [`x10.rs`](../crates/core/src/dissectors/x10.rs)
+- [x] **DALI over IP** ✅ → [`dali.rs`](../crates/core/src/dissectors/dali.rs)
 - [x] **Art-Net** ✅ → [`dmx.rs`](../crates/core/src/dissectors/dmx.rs)
       *UDP 6454. Opcode **little-endian** — big-endian okunursa DMX (0x5000)
       0x0050 olur ve hiçbir opcode'a denk gelmez.*
@@ -676,14 +676,14 @@ Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
 - [x] **RTP-MIDI — RFC 6295** ✅ → [`rtpmidi.rs`](../crates/core/src/dissectors/rtpmidi.rs)
       *UDP 5004/5005. Clock paketinin düzeni davetlerden farklı: protokol
       sürümü ve token taşımıyor, sayaç offset 8'de (12'de değil).*
-- [ ] CobraNet ⚠️
-- [ ] AES67 ✅ *(RTP profili)*
-- [ ] SMPTE ST 2110 ✅ *(RTP profili)*
-- [ ] RIST ✅
-- [ ] ONVIF 🔒 *(E1)*
-- [ ] MTConnect 🔒 *(E1)*
-- [ ] TR-069 / CWMP 🔒 *(E1)*
-- [ ] TR-369 / USP ⚠️
+- [x] **CobraNet** ✅ → [`cobranet.rs`](../crates/core/src/dissectors/cobranet.rs)
+- [x] **AES67** ✅ → [`aes67.rs`](../crates/core/src/dissectors/aes67.rs)
+- [x] **SMPTE ST 2110** ✅ → [`st2110.rs`](../crates/core/src/dissectors/st2110.rs)
+- [x] **RIST** ✅ → [`rist.rs`](../crates/core/src/dissectors/rist.rs)
+- [x] **ONVIF** ✅ → [`onvif.rs`](../crates/core/src/dissectors/onvif.rs)
+- [x] **MTConnect** ✅ → [`mtconnect.rs`](../crates/core/src/dissectors/mtconnect.rs)
+- [x] **TR-069 / CWMP** ✅ → [`cwmp.rs`](../crates/core/src/dissectors/cwmp.rs)
+- [x] **TR-369 / USP** ✅ → [`usp.rs`](../crates/core/src/dissectors/usp.rs)
 
 ### 5.10 · Faz 10 — Uzak erişim, keşif & web (20)
 
