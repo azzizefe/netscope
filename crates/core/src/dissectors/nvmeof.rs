@@ -6,9 +6,17 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-/// Dissect an NVMe/TCP PDU (TCP 4420) — NVMe over Fabrics, which puts modern
-/// flash storage on the network with far less overhead than iSCSI. Byte 0 is
-/// the PDU type.
+/// Check if payload looks like an NVMe over Fabrics capsule/PDU.
+pub(crate) fn looks_like_nvmeof(payload: &[u8]) -> bool {
+    if payload.len() < 4 {
+        return false;
+    }
+    matches!(payload[0], 0x00..=0x07 | 0x09)
+}
+
+/// Dissect an NVMe/TCP PDU (TCP 4420) or NVMe-oF RDMA capsule — NVMe over Fabrics,
+/// which puts modern flash storage on the network with far less overhead than iSCSI. Byte 0 is
+/// the PDU/Capsule type.
 pub fn dissect_nvmeof(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,

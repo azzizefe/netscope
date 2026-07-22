@@ -23,6 +23,7 @@ pub mod bacnet;
 pub mod batman;
 pub mod beanstalk;
 pub mod beats;
+pub mod beegfs;
 pub mod bfcp;
 pub mod bfd;
 pub mod bgp;
