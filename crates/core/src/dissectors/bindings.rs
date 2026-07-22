@@ -46,7 +46,7 @@ use super::{
     sap_announce, sbcap, sflow, sip, skinny, slmp, slp, small_services, smb, smpp, smtp, snmp,
     socks, spamd, srtp_ge, ssdp, ssh, statsd, stomp, stt, stun, sua, svn, syslog, tacacs, tds, telnet,
     teredo, tftp, tls, tns, toyopuc, tsp_timestamp, twamp, uadp, vnet_ip, vxlangpe, w1ap, wccp, whois, wireguard, wsd, x2ap, xcp, xdmcp, xmpp,
-    xnap, xwap, zabbix, zerotier, zookeeper,
+    xnap, xwap, zabbix, zerotier, zookeeper, beegfs, coda, fc2, fcp, hdfs_data, mercurial, moosefs, nfs_callback, oftp, orangefs, perforce, pnfs, sheepdog, srp_rdma, syncthing,
 };
 
 /// The signature every port-dispatched dissector shares.
