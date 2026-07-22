@@ -1037,6 +1037,186 @@ protocols! {
         aliases:   ["telegraf_influxv2", "influxv2"],
         blurb:     "A Telegraf / InfluxDB v2 metrics write API payload.",
     }
+    Netconf {
+        doc:       "NETCONF Network Configuration Protocol (TCP 830).",
+        display:   "NETCONF",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netconf"],
+        blurb:     "A NETCONF network device configuration RPC XML message.",
+    }
+    Restconf {
+        doc:       "RESTCONF Protocol (TCP 8080/443).",
+        display:   "RESTCONF",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["restconf"],
+        blurb:     "A RESTCONF HTTP REST request for YANG network data models.",
+    }
+    Gnmi {
+        doc:       "gNMI gRPC Network Management Interface (TCP 9339/57400).",
+        display:   "gNMI",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gnmi"],
+        blurb:     "A gNMI network management telemetry get, set or subscribe gRPC stream.",
+    }
+    NisYp {
+        doc:       "NIS / Yellow Pages ONC RPC protocol.",
+        display:   "NIS / YP",
+        color:     0x4F46E5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nis", "yp", "nis_yp"],
+        blurb:     "A Network Information Service (NIS/YP) ONC RPC directory request.",
+    }
+    UpnpSoap {
+        doc:       "UPnP SOAP Device Control Protocol (TCP 49152).",
+        display:   "UPnP SOAP",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["upnp_soap", "upnp_control"],
+        blurb:     "A UPnP SOAP action message for router or device control.",
+    }
+    Wpad {
+        doc:       "Web Proxy Auto-Discovery Protocol (WPAD) (TCP 80/3128).",
+        display:   "WPAD",
+        color:     0x9333EA,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["wpad"],
+        blurb:     "A Web Proxy Auto-Discovery (WPAD) proxy.pac request.",
+    }
+    Guacamole {
+        doc:       "Apache Guacamole Remote Desktop Protocol (TCP 4822).",
+        display:   "Guacamole",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["guacamole", "guac"],
+        blurb:     "An Apache Guacamole client-to-guacd remote desktop instruction stream.",
+    }
+    NomachineNx {
+        doc:       "NoMachine NX Remote Desktop Protocol (TCP 4000).",
+        display:   "NoMachine NX",
+        color:     0xD97706,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nomachine_nx", "nomachine", "nx"],
+        blurb:     "A NoMachine NX remote desktop session handshake or data frame.",
+    }
+    Mosh {
+        doc:       "Mosh Mobile Shell Protocol (UDP 60001).",
+        display:   "Mosh",
+        color:     0xDC2626,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["mosh", "mobile_shell"],
+        blurb:     "A Mosh roaming encrypted terminal datagram.",
+    }
+    Spdy {
+        doc:       "SPDY Web Framing Protocol (TCP 443).",
+        display:   "SPDY",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["spdy"],
+        blurb:     "A SPDY multiplexed web control or data frame.",
+    }
+    WapWspWtp {
+        doc:       "WAP WSP / WTP Protocol (UDP 9201).",
+        display:   "WAP WSP/WTP",
+        color:     0x0891B2,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["wap_wsp_wtp", "wsp", "wtp"],
+        blurb:     "A Wireless Application Protocol (WAP) WSP/WTP session datagram.",
+    }
+    Wbxml {
+        doc:       "WAP Binary XML Content Format (TCP/UDP 9200).",
+        display:   "WBXML",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["wbxml"],
+        blurb:     "A WAP Binary XML compact document frame.",
+    }
+    Webdav {
+        doc:       "WebDAV HTTP Extensions (TCP 80/443).",
+        display:   "WebDAV",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["webdav"],
+        blurb:     "A WebDAV HTTP file management request (PROPFIND, MKCOL, LOCK).",
+    }
+    CaldavCarddav {
+        doc:       "CalDAV & CardDAV Calendar and Contact Sync (TCP 80/443).",
+        display:   "CalDAV/CardDAV",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["caldav", "carddav", "caldav_carddav"],
+        blurb:     "A CalDAV/CardDAV calendar or address book sync query.",
+    }
+    Dnscrypt {
+        doc:       "DNSCrypt Encrypted DNS Protocol (UDP 443/5353).",
+        display:   "DNSCrypt",
+        color:     0x4F46E5,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["dnscrypt"],
+        blurb:     "A DNSCrypt encrypted DNS request or response envelope.",
+    }
+    DnsOverQuic {
+        doc:       "DNS over QUIC (DoQ) Protocol (UDP 853).",
+        display:   "DoQ",
+        color:     0x7C3AED,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["dns_over_quic", "doq"],
+        blurb:     "A DNS over QUIC (DoQ) encrypted DNS query stream.",
+    }
+    MatrixFederation {
+        doc:       "Matrix Federation API Protocol (TCP 8448).",
+        display:   "Matrix Federation",
+        color:     0xE11D48,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["matrix_federation", "matrix"],
+        blurb:     "A Matrix server-to-server federation sync or transaction API call.",
+    }
+    Activitypub {
+        doc:       "ActivityPub Decentralized Social Networking Protocol (TCP 443).",
+        display:   "ActivityPub",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["activitypub", "mastodon"],
+        blurb:     "An ActivityPub decentralized social networking inbox/outbox event.",
+    }
+    As2Edi {
+        doc:       "AS2 Applicability Statement 2 B2B EDI Protocol (TCP 8080/8443).",
+        display:   "AS2 EDI",
+        color:     0xD97706,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["as2_edi", "as2"],
+        blurb:     "An AS2 B2B Electronic Data Interchange (EDI) message.",
+    }
+    GeminiProto {
+        doc:       "Gemini Hypertext Protocol (TCP 1965).",
+        display:   "Gemini Protocol",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gemini_proto", "gemini"],
+        blurb:     "A Gemini lightweight hypertext request or response stream.",
+    }
     Ccp {
         doc:       "CAN Calibration Protocol (ASAM CCP v2.1) for ECU measurement and calibration over CAN/UDP.",
         display:   "CCP",
