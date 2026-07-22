@@ -9,7 +9,7 @@ use crate::models::Protocol;
 
 use super::{
     adsb, amqp1, bindings, bitcoin, bittorrent, ceph, consul_rpc, drbd, drda, fix, hl7, http,
-    http2, ibmmq, iec101, lmtp, lustre, mbus, memcached_bin, milter, mms, modbus_ascii, modbus_rtu, mysqlx, nmea,
+    http2, ibmmq, iec101, lmtp, lustre, mbus, memcached_bin, mercurial, milter, mms, modbus_ascii, modbus_rtu, mysqlx, nmea,
     ntlm, openvpn, redis_cluster, s7comm, s7comm_plus, someip, spice, syslog, thrift, websocket, wmbus, x11, zmtp,
     DissectedResult,
 };
@@ -267,6 +267,13 @@ fn dissect_tcp_inner(
                 return s7comm_plus::dissect_s7comm_plus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
             }
             return s7comm::dissect_s7comm(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(2000) {
+            if let Ok(s) = std::str::from_utf8(tcp_payload) {
+                if s.starts_with("capabilities") || s.starts_with("heads") || s.starts_with("changegroup") || s.starts_with("batch") || s.starts_with("branches") {
+                    return mercurial::dissect_mercurial(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+                }
+            }
         }
         if on(1194) {
             // OpenVPN shares a port number across TCP and UDP; the flag says which.
