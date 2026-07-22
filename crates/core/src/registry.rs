@@ -1217,6 +1217,78 @@ protocols! {
         aliases:   ["gemini_proto", "gemini"],
         blurb:     "A Gemini lightweight hypertext request or response stream.",
     }
+    EpicsCa {
+        doc:       "EPICS Channel Access Protocol (TCP/UDP 5064/5065).",
+        display:   "EPICS CA",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["epics_ca", "epics"],
+        blurb:     "An EPICS Channel Access particle accelerator or lab control command.",
+    }
+    EpicsPva {
+        doc:       "EPICS pvAccess Protocol (TCP/UDP 5075).",
+        display:   "EPICS PVA",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["epics_pva", "pva"],
+        blurb:     "An EPICS pvAccess high-speed structured control data frame.",
+    }
+    SlurmRpc {
+        doc:       "Slurm Workload Manager RPC Protocol (TCP 6817/6818).",
+        display:   "Slurm RPC",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["slurm_rpc", "slurm"],
+        blurb:     "A Slurm HPC supercomputer workload manager job or node control RPC.",
+    }
+    Pmix {
+        doc:       "PMIx Process Management Interface Exascale (TCP/UDS 6120).",
+        display:   "PMIx",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pmix"],
+        blurb:     "A PMIx parallel process management orchestration message.",
+    }
+    TangoControls {
+        doc:       "TANGO Controls System CORBA IIOP Protocol (TCP 10000).",
+        display:   "TANGO Controls",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tango_controls", "tango"],
+        blurb:     "A TANGO Controls GIOP/IIOP device server transaction message.",
+    }
+    Gbt26982 {
+        doc:       "GB/T 26982 Industrial Automation Control (TCP/UDP 20000).",
+        display:   "GB/T 26982",
+        color:     0xD97706,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gbt26982", "gbt_26982"],
+        blurb:     "A GB/T 26982 regional industrial automation telemetry or command frame.",
+    }
+    OfConfig {
+        doc:       "OpenFlow Management & Configuration OF-CONFIG Protocol (TCP 6654).",
+        display:   "OF-CONFIG",
+        color:     0x4F46E5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["of_config", "ofconfig"],
+        blurb:     "An OF-CONFIG SDN switch datapath configuration XML payload.",
+    }
+    EthercatMailbox {
+        doc:       "EtherCAT CoE/FoE/SoE Mailbox Protocol (UDP 34980).",
+        display:   "EtherCAT Mailbox",
+        color:     0xDC2626,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ethercat_mailbox", "coe", "foe"],
+        blurb:     "An EtherCAT CANopen over EtherCAT (CoE) or File over EtherCAT (FoE) mailbox frame.",
+    }
     Ccp {
         doc:       "CAN Calibration Protocol (ASAM CCP v2.1) for ECU measurement and calibration over CAN/UDP.",
         display:   "CCP",

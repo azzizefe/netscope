@@ -749,7 +749,18 @@ Portlar IANA CSV'sinden, davranışlar RFC metinlerinden doğrulandı.
       yazılırken kaçmıştı — §5'teki "başlamadan önce registry'ye karşı
       doğrula" kuralının neden orada olduğunun örneği.)*
 
-### 5.12 · Yedek havuz (kota dışı)
+### 5.12 · Faz 12 — Laboratuvar, HPC & Endüstriyel Genişletme (8)
+
+- [x] **EPICS Channel Access** ✅ → [`epics_ca.rs`](../crates/core/src/dissectors/epics_ca.rs)
+- [x] **EPICS pvAccess** ✅ → [`epics_pva.rs`](../crates/core/src/dissectors/epics_pva.rs)
+- [x] **Slurm Workload Manager RPC** ✅ → [`slurm_rpc.rs`](../crates/core/src/dissectors/slurm_rpc.rs)
+- [x] **PMIx Process Management** ✅ → [`pmix.rs`](../crates/core/src/dissectors/pmix.rs)
+- [x] **TANGO Controls** ✅ → [`tango_controls.rs`](../crates/core/src/dissectors/tango_controls.rs)
+- [x] **GB/T 26982** ✅ → [`gbt26982.rs`](../crates/core/src/dissectors/gbt26982.rs)
+- [x] **OF-CONFIG** ✅ → [`of_config.rs`](../crates/core/src/dissectors/of_config.rs)
+- [x] **EtherCAT Mailbox** ✅ → [`ethercat_mailbox.rs`](../crates/core/src/dissectors/ethercat_mailbox.rs)
+
+### 5.13 · Yedek havuz (kota dışı)
 
 ⚠️/🔒 kalemleri §6'ya düştükçe buradan ikame edilir. Bu havuz kasten
 adlandırılmamış bırakılmıştır — **doğrulanmamış protokol adlarını önceden
