@@ -6,6 +6,15 @@ use super::DissectedResult;
 
 /// Dissect a native Fibre Channel FC-2 frame (24-byte header: R_CTL, D_ID, S_ID, TYPE, F_CTL, SEQ_ID, OX_ID/RX_ID).
 pub fn dissect_fc2(payload: &[u8]) -> DissectedResult {
+    let class_str = match payload.first().map(|b| b >> 4) {
+        Some(0x0) => "device data",
+        Some(0x2) => "extended link services",
+        Some(0x3) => "FC-4 link data",
+        Some(0x8) => "basic link services",
+        Some(0xC) => "link control",
+        _ => "frame",
+    };
+
     if payload.len() < 24 {
         return DissectedResult {
             src_addr: None,
@@ -13,7 +22,7 @@ pub fn dissect_fc2(payload: &[u8]) -> DissectedResult {
             src_port: None,
             dst_port: None,
             protocol: Protocol::Fc2,
-            summary: format!("Fibre Channel (FC-2) ({})", super::bytes(payload.len() as u64)),
+            summary: format!("Fibre Channel (FC-2) {class_str} ({})", super::bytes(payload.len() as u64)),
         };
     }
 

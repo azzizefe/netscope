@@ -58,6 +58,6 @@ mod tests {
     fn test_hdfs_short() {
         let r = dissect_hdfs_data(None, None, 40000, 50010, &[0x00]);
         assert_eq!(r.protocol, Protocol::HdfsData);
-        assert!(r.summary.contains("1 B"));
+        assert!(r.summary.contains("1 byte"));
     }
 }

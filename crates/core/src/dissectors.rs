@@ -3307,6 +3307,8 @@ mod robustness {
             include_str!("dissectors/someip.rs"),
             // BSSGP is always carried inside an NS data PDU.
             include_str!("dissectors/nsip.rs"),
+            include_str!("dissectors/fcoe.rs"),
+            include_str!("dissectors/nfs.rs"),
         ];
 
         let mut unreachable = Vec::new();
