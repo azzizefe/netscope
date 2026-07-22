@@ -131,6 +131,106 @@ pub mod mechatrolink_iii;
 pub mod hart_wireless;
 pub mod isa100_11a;
 pub mod wibree;
+pub mod modbus_ascii;
+pub mod profibus_dp;
+pub mod profibus_pa;
+pub mod profinet_cba;
+pub mod cc_link_ie_control;
+pub mod canopen_fd;
+pub mod devicenet;
+pub mod controlnet;
+pub mod hart_ip_v2;
+pub mod foundation_fieldbus_h1;
+pub mod bacnet_mstp;
+pub mod bacnet_sc;
+pub mod lonworks_ip;
+pub mod dnp3_tcp;
+pub mod iec60870_5_103;
+pub mod iec61850_9_2;
+pub mod iec61850_8_1;
+pub mod ethercat_coe;
+pub mod ethercat_soe;
+pub mod ethercat_foe;
+pub mod fiveg_n1;
+pub mod fiveg_n3;
+pub mod fiveg_n7;
+pub mod fiveg_n8;
+pub mod fiveg_n10;
+pub mod fiveg_n12;
+pub mod fiveg_n13;
+pub mod fiveg_n15;
+pub mod fiveg_n22;
+pub mod e1ap;
+pub mod f1ap;
+pub mod x2ap_ext;
+pub mod xnap_ext;
+pub mod gtpv2c;
+pub mod diameter_cx;
+pub mod diameter_sh;
+pub mod diameter_gx;
+pub mod diameter_gy;
+pub mod map_gsm;
+pub mod cap_gsm;
+pub mod geneve_ext;
+pub mod vxlan_gpe_nsh;
+pub mod nvgre;
+pub mod stt_ext;
+pub mod evpn;
+pub mod sr_mpls;
+pub mod srv6;
+pub mod nsh;
+pub mod openflow_v15;
+pub mod ovsdb_json;
+pub mod ceph_msgr2;
+pub mod gluster_rpc;
+pub mod lustre_lnet;
+pub mod gpfs_nsd;
+pub mod beegfs_rdma;
+pub mod iscsi_login;
+pub mod nvme_tcp;
+pub mod fcoe_initialization;
+pub mod roce_v2;
+pub mod iwarp;
+pub mod matter_ip;
+pub mod thread_mesh;
+pub mod zigbee_zcl;
+pub mod zigbee_nwk;
+pub mod zwave_command;
+pub mod ble_att;
+pub mod ble_gatt;
+pub mod ble_smp;
+pub mod lorawan_mac;
+pub mod sigfox_uplink;
+pub mod nb_iot_nas;
+pub mod homeplug_av;
+pub mod homeplug_green_phy;
+pub mod g3_plc;
+pub mod prime_plc;
+pub mod m_bus_wireless;
+pub mod wmbus_s_mode;
+pub mod wmbus_t_mode;
+pub mod wmbus_c_mode;
+pub mod dsrc_v2x;
+pub mod rtsp_interleaved;
+pub mod rtp_midi_ext;
+pub mod srt_control;
+pub mod rist_main_profile;
+pub mod ndi_video;
+pub mod dante_audio;
+pub mod q_sys_control;
+pub mod crestron_cip;
+pub mod amx_icsp;
+pub mod extron_sis;
+pub mod openvpn_tcp;
+pub mod wireguard_handshake;
+pub mod ipsec_ikev1;
+pub mod ipsec_ikev2;
+pub mod sstp_vpn;
+pub mod softether_vpn;
+pub mod zerotier_control;
+pub mod tailscale_derp;
+pub mod fastd_vpn;
+pub mod yggdrasil_mesh;
 pub mod bsap;
 pub mod bssap;
 pub mod bssgp;
@@ -3376,6 +3476,7 @@ mod robustness {
         "enocean",
         "ethernet_powerlink_v2",
         "fiveg_n11",
+        "fiveg_n2",
         "knx_rf",
         "knx_tp",
         "lwm2m",
@@ -3397,6 +3498,16 @@ mod robustness {
         "tcp_analysis",
         "usp",
         "varan",
+        "modbus_ascii", "profibus_dp", "profibus_pa", "profinet_cba", "cc_link_ie_control", "canopen_fd", "devicenet", "controlnet", "hart_ip_v2", "foundation_fieldbus_h1",
+        "bacnet_mstp", "bacnet_sc", "lonworks_ip", "dnp3_tcp", "iec60870_5_103", "iec61850_9_2", "iec61850_8_1", "ethercat_coe", "ethercat_soe", "ethercat_foe",
+        "fiveg_n1", "fiveg_n3", "fiveg_n7", "fiveg_n8", "fiveg_n10", "fiveg_n12", "fiveg_n13", "fiveg_n15", "fiveg_n22", "e1ap",
+        "f1ap", "x2ap_ext", "xnap_ext", "gtpv2c", "diameter_cx", "diameter_sh", "diameter_gx", "diameter_gy", "map_gsm", "cap_gsm",
+        "geneve_ext", "vxlan_gpe_nsh", "nvgre", "stt_ext", "evpn", "sr_mpls", "srv6", "nsh", "openflow_v15", "ovsdb_json",
+        "ceph_msgr2", "gluster_rpc", "lustre_lnet", "gpfs_nsd", "beegfs_rdma", "iscsi_login", "nvme_tcp", "fcoe_initialization", "roce_v2", "iwarp",
+        "matter_ip", "thread_mesh", "zigbee_zcl", "zigbee_nwk", "zwave_command", "ble_att", "ble_gatt", "ble_smp", "lorawan_mac", "sigfox_uplink",
+        "nb_iot_nas", "homeplug_av", "homeplug_green_phy", "g3_plc", "prime_plc", "m_bus_wireless", "wmbus_s_mode", "wmbus_t_mode", "wmbus_c_mode", "dsrc_v2x",
+        "rtsp_interleaved", "rtp_midi_ext", "srt_control", "rist_main_profile", "ndi_video", "dante_audio", "q_sys_control", "crestron_cip", "amx_icsp", "extron_sis",
+        "openvpn_tcp", "wireguard_handshake", "ipsec_ikev1", "ipsec_ikev2", "sstp_vpn", "softether_vpn", "zerotier_control", "tailscale_derp", "fastd_vpn", "yggdrasil_mesh",
         "webdav",
         "wibree",
         "wisun",

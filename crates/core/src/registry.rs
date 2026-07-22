@@ -1289,6 +1289,186 @@ protocols! {
         aliases:   ["ethercat_mailbox", "coe", "foe"],
         blurb:     "An EtherCAT CANopen over EtherCAT (CoE) or File over EtherCAT (FoE) mailbox frame.",
     }
+    KnxRf {
+        doc:       "KNX RF Wireless Building Automation Protocol (868 MHz).",
+        display:   "KNX RF",
+        color:     0x2563EB,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["knx_rf"],
+        blurb:     "A KNX RF wireless building automation frame.",
+    }
+    KnxTp {
+        doc:       "KNX TP Twisted Pair Building Control Protocol.",
+        display:   "KNX TP",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["knx_tp"],
+        blurb:     "A KNX TP twisted pair building automation telegram.",
+    }
+    OpcUaPubsub {
+        doc:       "OPC UA PubSub Protocol (UDP 4841 / MQTT).",
+        display:   "OPC UA PubSub",
+        color:     0x059669,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["opc_ua_pubsub"],
+        blurb:     "An OPC UA PubSub dataset message.",
+    }
+    CipMotion {
+        doc:       "ODVA CIP Motion Protocol (UDP 2223).",
+        display:   "CIP Motion",
+        color:     0x7C3AED,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["cip_motion"],
+        blurb:     "An ODVA CIP Motion real-time drive command or status frame.",
+    }
+    CipSafetyExt {
+        doc:       "ODVA CIP Safety Functional Safety Transport (UDP 2224).",
+        display:   "CIP Safety Ext",
+        color:     0xDC2626,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["cip_safety_ext"],
+        blurb:     "An ODVA CIP Safety functional safety PDU.",
+    }
+    Gbt20414 {
+        doc:       "GB/T 20414 Substation Automation Protocol (TCP 20002).",
+        display:   "GB/T 20414",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gbt_20414", "gbt20414"],
+        blurb:     "A GB/T 20414 substation automation control frame.",
+    }
+    Gbt19582 {
+        doc:       "GB/T 19582 Modbus China National Standard (TCP 503).",
+        display:   "GB/T 19582",
+        color:     0xD97706,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gbt_19582", "gbt19582"],
+        blurb:     "A GB/T 19582 industrial Modbus standard PDU.",
+    }
+    FivegN2 {
+        doc:       "5G N2 NGAP Interface Protocol (SCTP 38412).",
+        display:   "5G N2 NGAP",
+        color:     0x4F46E5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fiveg_n2", "n2_ngap"],
+        blurb:     "A 5G N2 NGAP control plane message between gNB and AMF.",
+    }
+    FivegN4 {
+        doc:       "5G N4 PFCP Interface Protocol (UDP 8806).",
+        display:   "5G N4 PFCP",
+        color:     0x0284C7,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["fiveg_n4", "n4_pfcp"],
+        blurb:     "A 5G N4 PFCP session control message between SMF and UPF.",
+    }
+    FivegN11 {
+        doc:       "5G N11 Interface HTTP/2 SBI Protocol (TCP 80/443).",
+        display:   "5G N11 SBI",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fiveg_n11", "n11_sbi"],
+        blurb:     "A 5G N11 Service Based Interface HTTP/2 API request.",
+    }
+    MpiWire {
+        doc:       "Message Passing Interface (MPI) HPC Wire Protocol (TCP 6500).",
+        display:   "MPI Wire",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpi_wire", "mpi"],
+        blurb:     "An MPI high-performance computing wire message.",
+    }
+    UcxHpc {
+        doc:       "Unified Communication X (UCX) HPC Transport (TCP 13337).",
+        display:   "UCX HPC",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ucx_hpc", "ucx"],
+        blurb:     "A UCX high-speed interconnect protocol message.",
+    }
+    SercosIii {
+        doc:       "SERCOS III Industrial Ethernet Protocol (EtherType 0x88CD).",
+        display:   "SERCOS III",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sercos_iii", "sercos"],
+        blurb:     "A SERCOS III real-time industrial Ethernet frame.",
+    }
+    Varan {
+        doc:       "VARAN Real-Time Industrial Ethernet Protocol (EtherType 0x88B7).",
+        display:   "VARAN",
+        color:     0xD97706,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["varan"],
+        blurb:     "A VARAN real-time industrial Ethernet bus telegram.",
+    }
+    SafetynetP {
+        doc:       "SafetyNET p Industrial Safety Network (UDP 34981).",
+        display:   "SafetyNET p",
+        color:     0xDC2626,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["safetynet_p", "safetynet"],
+        blurb:     "A SafetyNET p industrial safety telegram.",
+    }
+    EthernetPowerlinkV2 {
+        doc:       "Ethernet POWERLINK v2 Protocol (EtherType 0x88AB).",
+        display:   "POWERLINK v2",
+        color:     0x4F46E5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ethernet_powerlink_v2", "powerlink"],
+        blurb:     "A POWERLINK v2 real-time Ethernet frame.",
+    }
+    MechatrolinkIii {
+        doc:       "MECHATROLINK-III Motion Control (EtherType 0x88E3).",
+        display:   "MECHATROLINK-III",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mechatrolink_iii", "mechatrolink"],
+        blurb:     "A MECHATROLINK-III motion control command frame.",
+    }
+    HartWireless {
+        doc:       "WirelessHART Industrial Mesh Protocol (UDP 5095).",
+        display:   "WirelessHART",
+        color:     0x059669,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["hart_wireless", "wirelesshart"],
+        blurb:     "A WirelessHART industrial sensor mesh packet.",
+    }
+    Isa10011a {
+        doc:       "ISA100.11a Industrial Wireless Automation (UDP 24130).",
+        display:   "ISA100.11a",
+        color:     0x2563EB,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["isa100_11a", "isa100"],
+        blurb:     "An ISA100.11a industrial wireless automation PDU.",
+    }
+    Wibree {
+        doc:       "Wibree / Bluetooth Low Energy PHY Protocol.",
+        display:   "Wibree / BLE",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["wibree", "ble_phy"],
+        blurb:     "A Wibree / BLE low-energy physical layer frame.",
+    }
     Ccp {
         doc:       "CAN Calibration Protocol (ASAM CCP v2.1) for ECU measurement and calibration over CAN/UDP.",
         display:   "CCP",
