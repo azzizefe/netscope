@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 use crate::models::Protocol;
@@ -10,8 +10,8 @@ pub fn dissect_iec61850_9_2(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, src_
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::İec6185092,
-        summary: format!("İec6185092 ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::Iec6185092,
+        summary: format!("Iec6185092 ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -21,6 +21,6 @@ mod tests {
     #[test]
     fn test_iec61850_9_2() {
         let r = dissect_iec61850_9_2(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::İec6185092);
+        assert_eq!(r.protocol, Protocol::Iec6185092);
     }
 }

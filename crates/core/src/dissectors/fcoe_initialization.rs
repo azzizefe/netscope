@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 use crate::models::Protocol;
@@ -10,8 +10,8 @@ pub fn dissect_fcoe_initialization(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Fcoeİnitialization,
-        summary: format!("Fcoeİnitialization ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::FcoeInitialization,
+        summary: format!("FcoeInitialization ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -21,6 +21,6 @@ mod tests {
     #[test]
     fn test_fcoe_initialization() {
         let r = dissect_fcoe_initialization(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::Fcoeİnitialization);
+        assert_eq!(r.protocol, Protocol::FcoeInitialization);
     }
 }
