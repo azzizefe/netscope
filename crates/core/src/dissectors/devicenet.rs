@@ -24,3 +24,6 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Devicenet);
     }
 }
+
+pub fn looks_like_devicenet(_id: u32) -> bool { false }
+pub fn result(_id: u32, _payload: &[u8]) -> DissectedResult { DissectedResult { src_addr: None, dst_addr: None, src_port: None, dst_port: None, protocol: crate::models::Protocol::Unknown("devicenet".into()), summary: "".into() } }

@@ -43,3 +43,6 @@ mod tests {
         assert_eq!(res.protocol, Protocol::Srv6);
     }
 }
+
+
+pub fn find(_payload: &[u8]) -> Option<DissectedResult> { None }

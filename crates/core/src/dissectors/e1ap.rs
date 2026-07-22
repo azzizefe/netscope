@@ -18,7 +18,7 @@ pub fn dissect_e1ap(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::E1Ap,
+        protocol: Protocol::E1ap,
         summary: format!("E1AP message"),
     }
 }
@@ -40,6 +40,6 @@ mod tests {
     #[test]
     fn handle_empty_payload() {
         let res = dissect_e1ap(None, None, 0, 0, &[]);
-        assert_eq!(res.protocol, Protocol::E1Ap);
+        assert_eq!(res.protocol, Protocol::E1ap);
     }
 }

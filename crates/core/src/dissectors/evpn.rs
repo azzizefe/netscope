@@ -18,7 +18,7 @@ pub fn dissect_evpn(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Evpn,
+        protocol: Protocol::EvpnExt,
         summary: format!("EVPN message"),
     }
 }
@@ -40,6 +40,6 @@ mod tests {
     #[test]
     fn handle_empty_payload() {
         let res = dissect_evpn(None, None, 0, 0, &[]);
-        assert_eq!(res.protocol, Protocol::Evpn);
+        assert_eq!(res.protocol, Protocol::EvpnExt);
     }
 }
