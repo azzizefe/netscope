@@ -4669,15 +4669,6 @@ protocols! {
         aliases:   ["zigbeegp", "zgp", "zigbee-green-power"],
         blurb:     "A Zigbee Green Power ultra-low power energy-harvesting frame.",
     }
-    Mle {
-        doc:       "Mesh Link Establishment (Thread MLE protocol).",
-        display:   "MLE",
-        color:     0x6366F1,
-        transport: Udp,
-        rank:      3,
-        aliases:   ["mle", "thread-mle"],
-        blurb:     "A Thread MLE message — devices establishing and maintaining mesh links.",
-    }
     HomekitHap {
         doc:       "Apple HomeKit Accessory Protocol (HAP over IP).",
         display:   "HomeKit HAP",
