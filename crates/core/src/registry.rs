@@ -2011,6 +2011,159 @@ protocols! {
         aliases:   ["oftp", "oftp2"],
         blurb:     "Odette FTP file transfer session message.",
     }
+    Systat {
+        doc:       "Systat service (RFC 866, TCP 11).",
+        display:   "Systat",
+        color:     0x6B7280,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["systat"],
+        blurb:     "Systat system status response.",
+    }
+    Netstat {
+        doc:       "Netstat service (RFC 866, TCP 15).",
+        display:   "Netstat",
+        color:     0x6B7280,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netstat"],
+        blurb:     "Netstat network status response.",
+    }
+    Sna {
+        doc:       "IBM Systems Network Architecture (SNA / APPN).",
+        display:   "IBM SNA",
+        color:     0x2563EB,
+        transport: Other,
+        rank:      3,
+        aliases:   ["sna", "appn"],
+        blurb:     "IBM SNA / APPN path control frame.",
+    }
+    NetBeui {
+        doc:       "NetBIOS Frame Protocol (NetBEUI / NBF).",
+        display:   "NetBEUI",
+        color:     0x2563EB,
+        transport: Other,
+        rank:      3,
+        aliases:   ["netbeui", "nbf"],
+        blurb:     "NetBEUI frame session or name request.",
+    }
+    Ncp {
+        doc:       "Novell NetWare Core Protocol (NCP, TCP/UDP 524).",
+        display:   "Novell NCP",
+        color:     0xDC2626,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ncp"],
+        blurb:     "Novell NetWare file/session request.",
+    }
+    Spx {
+        doc:       "Sequenced Packet Exchange (SPX, IPX packet type 5).",
+        display:   "IPX SPX",
+        color:     0xDC2626,
+        transport: Other,
+        rank:      3,
+        aliases:   ["spx"],
+        blurb:     "IPX SPX connection packet.",
+    }
+    DecLat {
+        doc:       "DEC Local Area Transport (LAT, EtherType 0x6004).",
+        display:   "DEC LAT",
+        color:     0x7C3AED,
+        transport: Other,
+        rank:      3,
+        aliases:   ["dec_lat", "lat"],
+        blurb:     "DEC Local Area Transport terminal session frame.",
+    }
+    DecMop {
+        doc:       "DEC Maintenance Operation Protocol (MOP, EtherType 0x6002).",
+        display:   "DEC MOP",
+        color:     0x7C3AED,
+        transport: Other,
+        rank:      3,
+        aliases:   ["dec_mop", "mop"],
+        blurb:     "DEC MOP system dump or load frame.",
+    }
+    Chaosnet {
+        doc:       "Chaosnet protocol (EtherType 0x0804).",
+        display:   "Chaosnet",
+        color:     0x7C3AED,
+        transport: Other,
+        rank:      3,
+        aliases:   ["chaosnet"],
+        blurb:     "Chaosnet LISP machine network packet.",
+    }
+    Xns {
+        doc:       "Xerox Network Systems IDP (XNS, EtherType 0x0600).",
+        display:   "XNS IDP",
+        color:     0x7C3AED,
+        transport: Other,
+        rank:      3,
+        aliases:   ["xns"],
+        blurb:     "Xerox Network Systems internet datagram.",
+    }
+    Uucp {
+        doc:       "Unix-to-Unix Copy Protocol (UUCP, TCP 540).",
+        display:   "UUCP",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["uucp"],
+        blurb:     "UUCP file transfer or command execution session.",
+    }
+    Kermit {
+        doc:       "Kermit File Transfer Protocol.",
+        display:   "Kermit",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["kermit"],
+        blurb:     "Kermit file transfer frame.",
+    }
+    Zmodem {
+        doc:       "ZMODEM File Transfer Protocol.",
+        display:   "ZMODEM",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zmodem"],
+        blurb:     "ZMODEM file transfer frame.",
+    }
+    Edp {
+        doc:       "Extreme Networks Discovery Protocol (EDP, UDP 6112).",
+        display:   "Extreme EDP",
+        color:     0x0284C7,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["edp"],
+        blurb:     "Extreme Networks device discovery announcement.",
+    }
+    Fdp {
+        doc:       "Foundry Discovery Protocol (FDP, UDP 6112).",
+        display:   "Foundry FDP",
+        color:     0x0284C7,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["fdp"],
+        blurb:     "Foundry/Brocade device discovery frame.",
+    }
+    Sonmp {
+        doc:       "SynOptics / Nortel Discovery Protocol (SONMP / NDP).",
+        display:   "Nortel SONMP",
+        color:     0x0284C7,
+        transport: Other,
+        rank:      3,
+        aliases:   ["sonmp", "ndp_nortel"],
+        blurb:     "Nortel SONMP device discovery frame.",
+    }
+    Spb {
+        doc:       "Shortest Path Bridging (IEEE 802.1aq, EtherType 0x88E5).",
+        display:   "IEEE 802.1aq SPB",
+        color:     0x2563EB,
+        transport: Other,
+        rank:      3,
+        aliases:   ["spb", "8021aq"],
+        blurb:     "IEEE 802.1aq Shortest Path Bridging frame.",
+    }
     Tds {
         doc:       "TDS traffic.",
         display:   "TDS",
