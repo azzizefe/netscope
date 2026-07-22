@@ -72,6 +72,10 @@ pub fn dissect_rpc(
         // The program alone says little: whether a call is a LOOKUP or a WRITE
         // is the question worth answering, so hand the numbers on.
         Some((0, Some(call))) => {
+            if call.program == 0x4000_0000 {
+                let proc_num = call.detail.map(|(_, p)| p).unwrap_or(0);
+                return super::nfs_callback::dissect_nfs_callback(src_ip, dst_ip, src_port, dst_port, proc_num, payload);
+            }
             if let Some((protocol, summary)) = call.detail.and_then(|(version, procedure)| {
                 super::nfs::describe(call.program, version, procedure)
             }) {
