@@ -10,8 +10,8 @@ pub fn dissect_nvgre(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, _payload: &
     DissectedResult {
         src_addr: src_ip,
         dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
+        src_port: None,
+        dst_port: None,
         protocol: Protocol::Nvgre,
         summary: format!("NVGRE message"),
     }

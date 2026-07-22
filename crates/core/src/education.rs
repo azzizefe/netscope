@@ -5867,17 +5867,11 @@ reason as a numeric code.",
             look_for: "EvpnExt frame.",
         },
 
-        Protocol::Gsmİpa => Lesson {
-            title: "GSM_İPA",
-            summary: "GSM / Telecommunication protocol.",
-            body: "GSM_İPA is used in mobile telecommunications.",
-            look_for: ""GSM_İPA message"",
-        },
         Protocol::GsmL2rcop => Lesson {
             title: "GSM_L2RCOP",
             summary: "GSM / Telecommunication protocol.",
             body: "GSM_L2RCOP is used in mobile telecommunications.",
-            look_for: ""GSM_L2RCOP message"",
+            look_for: "GSM_L2RCOP message",
         },
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",

@@ -8,10 +8,10 @@ use super::DissectedResult;
 /// Dissect NSH
 pub fn dissect_nsh(_payload: &[u8]) -> DissectedResult {
     DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
+        src_addr: None,
+        dst_addr: None,
+        src_port: None,
+        dst_port: None,
         protocol: Protocol::Nsh,
         summary: format!("NSH message"),
     }
