@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 use crate::models::Protocol;
@@ -10,8 +10,8 @@ pub fn dissect_rtsp_interleaved(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, 
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Rtspİnterleaved,
-        summary: format!("Rtspİnterleaved ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::RtspInterleaved,
+        summary: format!("RtspInterleaved ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -21,6 +21,6 @@ mod tests {
     #[test]
     fn test_rtsp_interleaved() {
         let r = dissect_rtsp_interleaved(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::Rtspİnterleaved);
+        assert_eq!(r.protocol, Protocol::RtspInterleaved);
     }
 }

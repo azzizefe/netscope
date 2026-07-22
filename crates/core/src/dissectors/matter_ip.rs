@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 use crate::models::Protocol;
@@ -10,8 +10,8 @@ pub fn dissect_matter_ip(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, src_por
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Matterİp,
-        summary: format!("Matterİp ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::MatterIp,
+        summary: format!("MatterIp ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -21,6 +21,6 @@ mod tests {
     #[test]
     fn test_matter_ip() {
         let r = dissect_matter_ip(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::Matterİp);
+        assert_eq!(r.protocol, Protocol::MatterIp);
     }
 }

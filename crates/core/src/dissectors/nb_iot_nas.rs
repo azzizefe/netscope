@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 use crate::models::Protocol;
@@ -10,8 +10,8 @@ pub fn dissect_nb_iot_nas(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, src_po
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::NbİotNas,
-        summary: format!("NbİotNas ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::NbIotNas,
+        summary: format!("NbIotNas ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -21,6 +21,6 @@ mod tests {
     #[test]
     fn test_nb_iot_nas() {
         let r = dissect_nb_iot_nas(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::NbİotNas);
+        assert_eq!(r.protocol, Protocol::NbIotNas);
     }
 }

@@ -1,13 +1,4 @@
-﻿    ModbusAscii {
-        doc:       "ModbusAscii protocol extension.",
-        display:   "ModbusAscii",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["modbus_ascii"],
-        blurb:     "A ModbusAscii protocol frame.",
-    }
-    ProfibusDp {
+﻿    ProfibusDp {
         doc:       "ProfibusDp protocol extension.",
         display:   "ProfibusDp",
         color:     0x2563EB,
@@ -259,24 +250,6 @@
         aliases:   ["fiveg_n22"],
         blurb:     "A FivegN22 protocol frame.",
     }
-    E1ap {
-        doc:       "E1ap protocol extension.",
-        display:   "E1ap",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["e1ap"],
-        blurb:     "A E1ap protocol frame.",
-    }
-    F1ap {
-        doc:       "F1ap protocol extension.",
-        display:   "F1ap",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["f1ap"],
-        blurb:     "A F1ap protocol frame.",
-    }
     X2apExt {
         doc:       "X2apExt protocol extension.",
         display:   "X2apExt",
@@ -376,15 +349,6 @@
         aliases:   ["vxlan_gpe_nsh"],
         blurb:     "A VxlanGpeNsh protocol frame.",
     }
-    Nvgre {
-        doc:       "Nvgre protocol extension.",
-        display:   "Nvgre",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["nvgre"],
-        blurb:     "A Nvgre protocol frame.",
-    }
     SttExt {
         doc:       "SttExt protocol extension.",
         display:   "SttExt",
@@ -394,15 +358,6 @@
         aliases:   ["stt_ext"],
         blurb:     "A SttExt protocol frame.",
     }
-    Evpn {
-        doc:       "Evpn protocol extension.",
-        display:   "Evpn",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["evpn"],
-        blurb:     "A Evpn protocol frame.",
-    }
     SrMpls {
         doc:       "SrMpls protocol extension.",
         display:   "SrMpls",
@@ -411,24 +366,6 @@
         rank:      3,
         aliases:   ["sr_mpls"],
         blurb:     "A SrMpls protocol frame.",
-    }
-    Srv6 {
-        doc:       "Srv6 protocol extension.",
-        display:   "Srv6",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["srv6"],
-        blurb:     "A Srv6 protocol frame.",
-    }
-    Nsh {
-        doc:       "Nsh protocol extension.",
-        display:   "Nsh",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["nsh"],
-        blurb:     "A Nsh protocol frame.",
     }
     OpenflowV15 {
         doc:       "OpenflowV15 protocol extension.",
@@ -897,4 +834,67 @@
         rank:      3,
         aliases:   ["yggdrasil_mesh"],
         blurb:     "A YggdrasilMesh protocol frame.",
+    }
+    ModbusAsciiExt {
+        doc:       "ModbusAsciiExt protocol extension.",
+        display:   "ModbusAsciiExt",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["modbus_ascii_ext"],
+        blurb:     "A ModbusAsciiExt protocol frame.",
+    }
+    NvgreExt {
+        doc:       "NvgreExt protocol extension.",
+        display:   "NvgreExt",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nvgre_ext"],
+        blurb:     "A NvgreExt protocol frame.",
+    }
+    Srv6Ext {
+        doc:       "Srv6Ext protocol extension.",
+        display:   "Srv6Ext",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["srv6_ext"],
+        blurb:     "A Srv6Ext protocol frame.",
+    }
+    F1apExt {
+        doc:       "F1apExt protocol extension.",
+        display:   "F1apExt",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["f1ap_ext"],
+        blurb:     "A F1apExt protocol frame.",
+    }
+    E1apExt {
+        doc:       "E1apExt protocol extension.",
+        display:   "E1apExt",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["e1ap_ext"],
+        blurb:     "A E1apExt protocol frame.",
+    }
+    NshExt {
+        doc:       "NshExt protocol extension.",
+        display:   "NshExt",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nsh_ext"],
+        blurb:     "A NshExt protocol frame.",
+    }
+    EvpnExt {
+        doc:       "EvpnExt protocol extension.",
+        display:   "EvpnExt",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["evpn_ext"],
+        blurb:     "A EvpnExt protocol frame.",
     }
