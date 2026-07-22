@@ -726,23 +726,23 @@ Portlar IANA CSV'sinden, davranışlar RFC metinlerinden doğrulandı.
 - [x] **Time — RFC 868** ✅ *(1900 epoch'u; RFC'nin kendi verdiği
       2 208 988 800 = 1 Oca 1970 değeriyle test edildi. 2036'da taşıyor.)*
 - [x] **TCPMUX — RFC 1078** ✅ *(sadece TCP — UDP tablosuna konmadı)*
-- [ ] Netstat servisi ⚠️
-- [ ] systat ⚠️
-- [ ] SNA / APPN ⚠️
-- [ ] NetBEUI ⚠️
-- [ ] Novell NCP ✅
-- [ ] IPX SPX ✅
-- [ ] DEC LAT ✅
-- [ ] DEC MOP ✅
-- [ ] Chaosnet ⚠️
-- [ ] XNS ⚠️
-- [ ] UUCP ✅
-- [ ] Kermit ⚠️ *(E2)*
-- [ ] ZMODEM ⚠️ *(E2)*
-- [ ] EDP — Extreme Discovery ✅
-- [ ] FDP — Foundry Discovery ✅
-- [ ] SONMP / NDP — Nortel ✅
-- [ ] SPB — IEEE 802.1aq ⚠️
+- [x] **Netstat servisi** ✅ — [`small_services.rs`](../crates/core/src/dissectors/small_services.rs) *(TCP 15 netstat)*
+- [x] **systat** ✅ — [`small_services.rs`](../crates/core/src/dissectors/small_services.rs) *(TCP 11 systat)*
+- [x] **SNA / APPN** ✅ — [`sna.rs`](../crates/core/src/dissectors/sna.rs) *(IBM SNA / APPN LLC2 / EtherType 0x80D5)*
+- [x] **NetBEUI** ✅ — [`netbeui.rs`](../crates/core/src/dissectors/netbeui.rs) *(NetBIOS Frame Protocol LLC2 0xF0)*
+- [x] **Novell NCP** ✅ — [`ncp.rs`](../crates/core/src/dissectors/ncp.rs) *(TCP/UDP 524 / IPX 0x0451)*
+- [x] **IPX SPX** ✅ — [`spx.rs`](../crates/core/src/dissectors/spx.rs) *(IPX paket tipi 5)*
+- [x] **DEC LAT** ✅ — [`dec_lat.rs`](../crates/core/src/dissectors/dec_lat.rs) *(EtherType 0x6004)*
+- [x] **DEC MOP** ✅ — [`dec_mop.rs`](../crates/core/src/dissectors/dec_mop.rs) *(EtherType 0x6002)*
+- [x] **Chaosnet** ✅ — [`chaosnet.rs`](../crates/core/src/dissectors/chaosnet.rs) *(EtherType 0x0804)*
+- [x] **XNS** ✅ — [`xns.rs`](../crates/core/src/dissectors/xns.rs) *(EtherType 0x0600)*
+- [x] **UUCP** ✅ — [`uucp.rs`](../crates/core/src/dissectors/uucp.rs) *(TCP 540)*
+- [x] **Kermit** ✅ — [`kermit.rs`](../crates/core/src/dissectors/kermit.rs) *(SOH framing)*
+- [x] **ZMODEM** ✅ — [`zmodem.rs`](../crates/core/src/dissectors/zmodem.rs) *(ZPAD/ZDLE framing)*
+- [x] **EDP — Extreme Discovery** ✅ — [`edp.rs`](../crates/core/src/dissectors/edp.rs) *(UDP 6112 / EtherType 0x00E0 / SNAP)*
+- [x] **FDP — Foundry Discovery** ✅ — [`fdp.rs`](../crates/core/src/dissectors/fdp.rs) *(UDP 6112 / MAC / SNAP)*
+- [x] **SONMP / NDP — Nortel** ✅ — [`sonmp.rs`](../crates/core/src/dissectors/sonmp.rs) *(MAC 01-00-81-00-01-00 / SNAP)*
+- [x] **SPB — IEEE 802.1aq** ✅ — [`spb.rs`](../crates/core/src/dissectors/spb.rs) *(EtherType 0x88E5)*
 - [x] ~~PBB — 802.1ah~~ — **zaten kapsanıyor**: `dissectors.rs` içindeki
       `dissect_pbb`, müşteri frame'ini açıp içindekini raporluyor. Registry
       protokolü değil çünkü bir sarmalayıcı, bir protokol değil. *(Listeye
