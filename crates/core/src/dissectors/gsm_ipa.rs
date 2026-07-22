@@ -5,7 +5,7 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
-/// Dissect GSM_İPA
+/// Dissect GSM_IPA
 pub fn dissect_gsm_ipa(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
@@ -18,8 +18,8 @@ pub fn dissect_gsm_ipa(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Gsmİpa,
-        summary: format!("GSM_İPA message"),
+        protocol: Protocol::GsmIpa,
+        summary: format!("GSM_IPA message"),
     }
 }
 
@@ -40,6 +40,6 @@ mod tests {
     #[test]
     fn handle_empty_payload() {
         let res = dissect_gsm_ipa(None, None, 0, 0, &[]);
-        assert_eq!(res.protocol, Protocol::Gsmİpa);
+        assert_eq!(res.protocol, Protocol::GsmIpa);
     }
 }

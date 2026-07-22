@@ -5,7 +5,7 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
-/// Dissect GSM_SİM
+/// Dissect GSM_SIM
 pub fn dissect_gsm_sim(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
@@ -19,7 +19,7 @@ pub fn dissect_gsm_sim(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmSim,
-        summary: format!("GSM_SİM message"),
+        summary: format!("GSM_SIM message"),
     }
 }
 

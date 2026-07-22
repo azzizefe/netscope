@@ -6605,40 +6605,40 @@ protocols! {
         blurb:     "GSM_A_RR telecommunications protocol.",
     }
     GsmAbisOm2000 {
-        doc:       "GSM_ABİS_OM2000 traffic.",
-        display:   "GSM_ABİS_OM2000",
+        doc:       "GSM_ABIS_OM2000 traffic.",
+        display:   "GSM_ABIS_OM2000",
         color:     0x808080,
         transport: Other,
         rank:      100,
         aliases:   ["gsm-abis-om2000"],
-        blurb:     "GSM_ABİS_OM2000 telecommunications protocol.",
+        blurb:     "GSM_ABIS_OM2000 telecommunications protocol.",
     }
     GsmAbisOml {
-        doc:       "GSM_ABİS_OML traffic.",
-        display:   "GSM_ABİS_OML",
+        doc:       "GSM_ABIS_OML traffic.",
+        display:   "GSM_ABIS_OML",
         color:     0x808080,
         transport: Other,
         rank:      100,
         aliases:   ["gsm-abis-oml"],
-        blurb:     "GSM_ABİS_OML telecommunications protocol.",
+        blurb:     "GSM_ABIS_OML telecommunications protocol.",
     }
     GsmAbisPgsl {
-        doc:       "GSM_ABİS_PGSL traffic.",
-        display:   "GSM_ABİS_PGSL",
+        doc:       "GSM_ABIS_PGSL traffic.",
+        display:   "GSM_ABIS_PGSL",
         color:     0x808080,
         transport: Other,
         rank:      100,
         aliases:   ["gsm-abis-pgsl"],
-        blurb:     "GSM_ABİS_PGSL telecommunications protocol.",
+        blurb:     "GSM_ABIS_PGSL telecommunications protocol.",
     }
     GsmAbisTfp {
-        doc:       "GSM_ABİS_TFP traffic.",
-        display:   "GSM_ABİS_TFP",
+        doc:       "GSM_ABIS_TFP traffic.",
+        display:   "GSM_ABIS_TFP",
         color:     0x808080,
         transport: Other,
         rank:      100,
         aliases:   ["gsm-abis-tfp"],
-        blurb:     "GSM_ABİS_TFP telecommunications protocol.",
+        blurb:     "GSM_ABIS_TFP telecommunications protocol.",
     }
     GsmBsslap {
         doc:       "GSM_BSSLAP traffic.",
@@ -6685,14 +6685,14 @@ protocols! {
         aliases:   ["gsm-gsup"],
         blurb:     "GSM_GSUP telecommunications protocol.",
     }
-    Gsmİpa {
-        doc:       "GSM_İPA traffic.",
-        display:   "GSM_İPA",
+    GsmIpa {
+        doc:       "GSM_IPA traffic.",
+        display:   "GSM_IPA",
         color:     0x808080,
         transport: Other,
         rank:      100,
         aliases:   ["gsm-ipa"],
-        blurb:     "GSM_İPA telecommunications protocol.",
+        blurb:     "GSM_IPA telecommunications protocol.",
     }
     GsmL2rcop {
         doc:       "GSM_L2RCOP traffic.",
@@ -6749,13 +6749,13 @@ protocols! {
         blurb:     "GSM_RLP telecommunications protocol.",
     }
     GsmSim {
-        doc:       "GSM_SİM traffic.",
-        display:   "GSM_SİM",
+        doc:       "GSM_SIM traffic.",
+        display:   "GSM_SIM",
         color:     0x808080,
         transport: Other,
         rank:      100,
         aliases:   ["gsm-sim"],
-        blurb:     "GSM_SİM telecommunications protocol.",
+        blurb:     "GSM_SIM telecommunications protocol.",
     }
     GsmSms {
         doc:       "GSM_SMS traffic.",
@@ -6803,15 +6803,6 @@ protocols! {
         blurb:     "GSMTAP_LOG telecommunications protocol.",
     }
 
-    GsmIpa {
-        doc:       "GSM_IPA traffic.",
-        display:   "GSM_IPA",
-        color:     0x808080,
-        transport: Other,
-        rank:      100,
-        aliases:   ["gsm-ipa"],
-        blurb:     "GSM_IPA telecommunications protocol.",
-    }
     GsmL2Rcop {
         doc:       "GSM_L2RCOP traffic.",
         display:   "GSM_L2RCOP",
