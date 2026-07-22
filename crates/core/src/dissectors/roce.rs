@@ -175,6 +175,28 @@ pub fn dissect_roce(payload: &[u8]) -> DissectedResult {
                     ..base
                 };
             }
+            if super::srp_rdma::looks_like_srp_rdma(body) {
+                let inner = super::srp_rdma::dissect_srp_rdma(None, None, 0, 0, body);
+                return DissectedResult {
+                    summary: match queue_pair {
+                        Some(qp) => format!("RoCE {service} [QP {qp}] · {}", inner.summary),
+                        None => format!("RoCE {service} · {}", inner.summary),
+                    },
+                    protocol: inner.protocol,
+                    ..base
+                };
+            }
+            if super::nvmeof::looks_like_nvmeof(body) {
+                let inner = super::nvmeof::dissect_nvmeof(None, None, 0, 0, body);
+                return DissectedResult {
+                    summary: match queue_pair {
+                        Some(qp) => format!("RoCE {service} [QP {qp}] · {}", inner.summary),
+                        None => format!("RoCE {service} · {}", inner.summary),
+                    },
+                    protocol: inner.protocol,
+                    ..base
+                };
+            }
         }
     }
 

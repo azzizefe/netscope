@@ -19,6 +19,7 @@ pub(crate) const PROG_MOUNT: u32 = 100_005;
 pub(crate) const PROG_NLM: u32 = 100_021;
 pub(crate) const PROG_STATUS: u32 = 100_024;
 pub(crate) const PROG_NFS_ACL: u32 = 100_227;
+pub(crate) const PROG_NFS4_CALLBACK: u32 = 0x4000_0000;
 /// GlusterFS reuses the ONC RPC framing with its own program numbers.
 pub(crate) const PROG_GLUSTERFS: u32 = 1_298_437;
 pub(crate) const PROG_GLUSTER_HANDSHAKE: u32 = 14_398_633;
@@ -120,6 +121,7 @@ pub(crate) fn describe(program: u32, version: u32, proc_num: u32) -> Option<(Pro
         PROG_MOUNT => (Protocol::Nfs, "Mount", mount_procedure(proc_num)),
         PROG_NLM => (Protocol::Nfs, "NLM", nlm_procedure(proc_num)),
         PROG_NFS_ACL => (Protocol::Nfs, "NFS ACL", None),
+        PROG_NFS4_CALLBACK => (Protocol::NfsCb, "NFSv4 Callback", None),
         PROG_STATUS => (Protocol::Nfs, "NSM (status monitor)", None),
         PROG_PORTMAP => (Protocol::Rpc, "Portmap", portmap_procedure(proc_num)),
         PROG_GLUSTERFS => (Protocol::GlusterFs, "GlusterFS", None),
