@@ -8,6 +8,21 @@ use super::DissectedResult;
 /// once ubiquitous on office LANs. Byte 5 is the packet type (RIP, SAP, SPX,
 /// NCP…); the checksum field is conventionally 0xFFFF.
 pub fn dissect_ipx(payload: &[u8]) -> DissectedResult {
+    if payload.len() >= 30 {
+        let pkt_type = payload[5];
+        let dst_sock = u16::from_be_bytes([payload[16], payload[17]]);
+        let src_sock = u16::from_be_bytes([payload[28], payload[29]]);
+        if pkt_type == 5 {
+            let mut res = super::spx::dissect_spx(&payload[30..]);
+            res.summary = format!("IPX · {}", res.summary);
+            return res;
+        }
+        if pkt_type == 17 || dst_sock == 0x0451 || src_sock == 0x0451 {
+            let mut res = super::ncp::dissect_ncp(None, None, src_sock, dst_sock, &payload[30..]);
+            res.summary = format!("IPX · {}", res.summary);
+            return res;
+        }
+    }
     let summary = if payload.len() >= 6 {
         let name = match payload[5] {
             1 => "RIP (routing)",

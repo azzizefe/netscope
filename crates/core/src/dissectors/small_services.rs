@@ -165,6 +165,36 @@ pub fn dissect_tcpmux(
     )
 }
 
+pub fn dissect_systat(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    payload: &[u8],
+) -> DissectedResult {
+    let summary = if src_port == 11 {
+        format!("Systat reply ({})", super::bytes(payload.len() as u64))
+    } else {
+        "Systat request".to_string()
+    };
+    result(src_ip, dst_ip, src_port, dst_port, Protocol::Systat, summary)
+}
+
+pub fn dissect_netstat(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    payload: &[u8],
+) -> DissectedResult {
+    let summary = if src_port == 15 {
+        format!("Netstat reply ({})", super::bytes(payload.len() as u64))
+    } else {
+        "Netstat request".to_string()
+    };
+    result(src_ip, dst_ip, src_port, dst_port, Protocol::Netstat, summary)
+}
+
 /// Read a payload as text, for the services whose whole content is a string.
 fn text(payload: &[u8]) -> Option<String> {
     let trimmed = payload
