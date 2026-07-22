@@ -46,7 +46,7 @@ use super::{
     sap_announce, sbcap, sflow, sip, skinny, slmp, slp, small_services, smb, smpp, smtp, snmp,
     socks, spamd, srtp_ge, ssdp, ssh, statsd, stomp, stt, stun, sua, svn, syslog, tacacs, tds, telnet,
     teredo, tftp, tls, tns, toyopuc, tsp_timestamp, twamp, uadp, vnet_ip, vxlangpe, w1ap, wccp, whois, wireguard, wsd, x2ap, xcp, xdmcp, xmpp,
-    xnap, xwap, zabbix, zerotier, zookeeper, beegfs, coda, hdfs_data, moosefs, oftp, orangefs, perforce, sheepdog, syncthing,
+    xnap, xwap, zabbix, zerotier, zookeeper, beegfs, coda, edp, hdfs_data, moosefs, ncp, oftp, orangefs, perforce, sheepdog, syncthing, uucp,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -124,7 +124,9 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (1, small_services::dissect_tcpmux),
     (7, small_services::dissect_echo),
     (9, small_services::dissect_discard),
+    (11, small_services::dissect_systat),
     (13, small_services::dissect_daytime),
+    (15, small_services::dissect_netstat),
     (17, small_services::dissect_qotd),
     (19, small_services::dissect_chargen),
     (21, ftp::dissect_ftp),
@@ -157,6 +159,8 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (513, rlogin::dissect_rlogin),
     (514, rsh::dissect_rsh),
     (515, lpd::dissect_lpd),
+    (524, ncp::dissect_ncp),
+    (540, uucp::dissect_uucp),
     (548, afp::dissect_afp),
     (554, rtsp::dissect_rtsp),
     (564, ninep::dissect_9p),
@@ -330,6 +334,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     // RIPng shares almost nothing with RIPv2 but its shape, so it gets its own
     // dissector rather than a version branch inside RIP's.
     (521, ripng::dissect_ripng),
+    (524, ncp::dissect_ncp),
     (546, dhcpv6::dissect_dhcpv6),
     (547, dhcpv6::dissect_dhcpv6),
     (623, rmcp::dissect_rmcp),
@@ -407,6 +412,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (5683, coap::dissect_coap),
     (6080, gue::dissect_gue),
     (6081, geneve::dissect_geneve),
+    (6112, edp::dissect_edp),
     (6343, sflow::dissect_sflow),
     (6454, dmx::dissect_artnet),
     (6635, mpls_in_udp::dissect_mpls_in_udp),

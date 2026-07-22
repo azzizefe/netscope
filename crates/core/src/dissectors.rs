@@ -1140,6 +1140,14 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_IPX => ipx::dissect_ipx(payload),
         ETHERTYPE_ATALK => atalk::dissect_atalk(payload),
         ETHERTYPE_AARP => aarp::dissect_aarp(payload),
+        ETHERTYPE_SNA => sna::dissect_sna(payload),
+        ETHERTYPE_DEC_LAT => dec_lat::dissect_dec_lat(payload),
+        ETHERTYPE_DEC_MOP => dec_mop::dissect_dec_mop(payload),
+        ETHERTYPE_CHAOSNET => chaosnet::dissect_chaosnet(payload),
+        ETHERTYPE_XNS => xns::dissect_xns(payload),
+        ETHERTYPE_SPB => spb::dissect_spb(payload),
+        et if et <= ETHERTYPE_MAX_LENGTH && payload.first() == Some(&0xF0) => netbeui::dissect_netbeui(payload),
+        et if et <= ETHERTYPE_MAX_LENGTH && matches!(payload.first(), Some(0x04 | 0x08 | 0x0C)) => sna::dissect_sna(payload),
         et if et <= ETHERTYPE_MAX_LENGTH && stp::is_stp(payload) => stp::dissect_stp(payload),
         // IS-IS also arrives as an LLC frame, on its own service access
         // point, and is confirmed by its protocol discriminator.
