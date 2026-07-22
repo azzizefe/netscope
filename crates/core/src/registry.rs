@@ -6550,6 +6550,267 @@ protocols! {
         aliases:   ["evpn_ext"],
         blurb:     "A EvpnExt protocol frame.",
     }
+    Gprscdr {
+        doc:       "GPRSCDR traffic.",
+        display:   "GPRSCDR",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gprscdr"],
+        blurb:     "GPRSCDR telecommunications protocol.",
+    }
+    GsmABssmap {
+        doc:       "GSM_A_BSSMAP traffic.",
+        display:   "GSM_A_BSSMAP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-a-bssmap"],
+        blurb:     "GSM_A_BSSMAP telecommunications protocol.",
+    }
+    GsmACommon {
+        doc:       "GSM_A_COMMON traffic.",
+        display:   "GSM_A_COMMON",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-a-common"],
+        blurb:     "GSM_A_COMMON telecommunications protocol.",
+    }
+    GsmADtap {
+        doc:       "GSM_A_DTAP traffic.",
+        display:   "GSM_A_DTAP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-a-dtap"],
+        blurb:     "GSM_A_DTAP telecommunications protocol.",
+    }
+    GsmAGm {
+        doc:       "GSM_A_GM traffic.",
+        display:   "GSM_A_GM",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-a-gm"],
+        blurb:     "GSM_A_GM telecommunications protocol.",
+    }
+    GsmARp {
+        doc:       "GSM_A_RP traffic.",
+        display:   "GSM_A_RP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-a-rp"],
+        blurb:     "GSM_A_RP telecommunications protocol.",
+    }
+    GsmARr {
+        doc:       "GSM_A_RR traffic.",
+        display:   "GSM_A_RR",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-a-rr"],
+        blurb:     "GSM_A_RR telecommunications protocol.",
+    }
+    GsmAbisOm2000 {
+        doc:       "GSM_ABİS_OM2000 traffic.",
+        display:   "GSM_ABİS_OM2000",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-abis-om2000"],
+        blurb:     "GSM_ABİS_OM2000 telecommunications protocol.",
+    }
+    GsmAbisOml {
+        doc:       "GSM_ABİS_OML traffic.",
+        display:   "GSM_ABİS_OML",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-abis-oml"],
+        blurb:     "GSM_ABİS_OML telecommunications protocol.",
+    }
+    GsmAbisPgsl {
+        doc:       "GSM_ABİS_PGSL traffic.",
+        display:   "GSM_ABİS_PGSL",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-abis-pgsl"],
+        blurb:     "GSM_ABİS_PGSL telecommunications protocol.",
+    }
+    GsmAbisTfp {
+        doc:       "GSM_ABİS_TFP traffic.",
+        display:   "GSM_ABİS_TFP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-abis-tfp"],
+        blurb:     "GSM_ABİS_TFP telecommunications protocol.",
+    }
+    GsmBsslap {
+        doc:       "GSM_BSSLAP traffic.",
+        display:   "GSM_BSSLAP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-bsslap"],
+        blurb:     "GSM_BSSLAP telecommunications protocol.",
+    }
+    GsmBssmapLe {
+        doc:       "GSM_BSSMAP_LE traffic.",
+        display:   "GSM_BSSMAP_LE",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-bssmap-le"],
+        blurb:     "GSM_BSSMAP_LE telecommunications protocol.",
+    }
+    GsmCbch {
+        doc:       "GSM_CBCH traffic.",
+        display:   "GSM_CBCH",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-cbch"],
+        blurb:     "GSM_CBCH telecommunications protocol.",
+    }
+    GsmCbsp {
+        doc:       "GSM_CBSP traffic.",
+        display:   "GSM_CBSP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-cbsp"],
+        blurb:     "GSM_CBSP telecommunications protocol.",
+    }
+    GsmGsup {
+        doc:       "GSM_GSUP traffic.",
+        display:   "GSM_GSUP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-gsup"],
+        blurb:     "GSM_GSUP telecommunications protocol.",
+    }
+    Gsmİpa {
+        doc:       "GSM_İPA traffic.",
+        display:   "GSM_İPA",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-ipa"],
+        blurb:     "GSM_İPA telecommunications protocol.",
+    }
+    GsmL2rcop {
+        doc:       "GSM_L2RCOP traffic.",
+        display:   "GSM_L2RCOP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-l2rcop"],
+        blurb:     "GSM_L2RCOP telecommunications protocol.",
+    }
+    GsmMap {
+        doc:       "GSM_MAP traffic.",
+        display:   "GSM_MAP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-map"],
+        blurb:     "GSM_MAP telecommunications protocol.",
+    }
+    GsmOsmux {
+        doc:       "GSM_OSMUX traffic.",
+        display:   "GSM_OSMUX",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-osmux"],
+        blurb:     "GSM_OSMUX telecommunications protocol.",
+    }
+    GsmRUus1 {
+        doc:       "GSM_R_UUS1 traffic.",
+        display:   "GSM_R_UUS1",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-r-uus1"],
+        blurb:     "GSM_R_UUS1 telecommunications protocol.",
+    }
+    GsmRlcmac {
+        doc:       "GSM_RLCMAC traffic.",
+        display:   "GSM_RLCMAC",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-rlcmac"],
+        blurb:     "GSM_RLCMAC telecommunications protocol.",
+    }
+    GsmRlp {
+        doc:       "GSM_RLP traffic.",
+        display:   "GSM_RLP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-rlp"],
+        blurb:     "GSM_RLP telecommunications protocol.",
+    }
+    GsmSim {
+        doc:       "GSM_SİM traffic.",
+        display:   "GSM_SİM",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-sim"],
+        blurb:     "GSM_SİM telecommunications protocol.",
+    }
+    GsmSms {
+        doc:       "GSM_SMS traffic.",
+        display:   "GSM_SMS",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-sms"],
+        blurb:     "GSM_SMS telecommunications protocol.",
+    }
+    GsmSmsUd {
+        doc:       "GSM_SMS_UD traffic.",
+        display:   "GSM_SMS_UD",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-sms-ud"],
+        blurb:     "GSM_SMS_UD telecommunications protocol.",
+    }
+    GsmUm {
+        doc:       "GSM_UM traffic.",
+        display:   "GSM_UM",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsm-um"],
+        blurb:     "GSM_UM telecommunications protocol.",
+    }
+    Gsmtap {
+        doc:       "GSMTAP traffic.",
+        display:   "GSMTAP",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsmtap"],
+        blurb:     "GSMTAP telecommunications protocol.",
+    }
+    GsmtapLog {
+        doc:       "GSMTAP_LOG traffic.",
+        display:   "GSMTAP_LOG",
+        color:     0x808080,
+        transport: Other,
+        rank:      100,
+        aliases:   ["gsmtap-log"],
+        blurb:     "GSMTAP_LOG telecommunications protocol.",
+    }
 
     Gprscdr {
         doc:       "GPRSCDR traffic.",

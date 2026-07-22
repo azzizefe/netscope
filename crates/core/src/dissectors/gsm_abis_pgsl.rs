@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
 use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
-/// Dissect GSM_ABIS_PGSL
+/// Dissect GSM_ABİS_PGSL
 pub fn dissect_gsm_abis_pgsl(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
@@ -19,7 +19,7 @@ pub fn dissect_gsm_abis_pgsl(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmAbisPgsl,
-        summary: format!("GSM_ABIS_PGSL message"),
+        summary: format!("GSM_ABİS_PGSL message"),
     }
 }
 
