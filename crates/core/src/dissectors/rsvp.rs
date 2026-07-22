@@ -26,7 +26,9 @@ pub fn dissect_rsvp(
                 7 => "ResvConf",
                 _ => "message",
             };
-            format!("RSVP {name}")
+            let is_te = payload.windows(2).any(|w| w[1] == 20 || w[1] == 21 || w[1] == 207);
+            let te_prefix = if is_te { "RSVP-TE" } else { "RSVP" };
+            format!("{te_prefix} {name}")
         }
         None => "RSVP (truncated)".to_string(),
     };

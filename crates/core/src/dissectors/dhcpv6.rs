@@ -33,7 +33,9 @@ pub fn dissect_dhcpv6(
                 13 => "Relay-Reply",
                 _ => "message",
             };
-            format!("DHCPv6 {name}")
+            let is_pd = payload.get(4..).map_or(false, |opts| opts.windows(2).any(|w| w[0] == 0 && (w[1] == 25 || w[1] == 26)));
+            let pd_suffix = if is_pd { " (Prefix Delegation PD)" } else { "" };
+            format!("DHCPv6 {name}{pd_suffix}")
         }
         None => "DHCPv6 (empty)".to_string(),
     };

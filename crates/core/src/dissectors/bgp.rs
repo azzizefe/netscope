@@ -41,7 +41,15 @@ pub fn dissect_bgp(
             let my_as = u16::from_be_bytes([payload[20], payload[21]]);
             format!("BGP OPEN — AS {my_as}")
         }
-        2 => "BGP UPDATE".to_string(),
+        2 => {
+            if payload.windows(4).any(|w| w == [0x40, 0x04, 0x00, 0x47] || w == [0x40, 0x04, 0x00, 0x85]) {
+                "BGP UPDATE — BGP-LS (Link-State)".to_string()
+            } else if payload.windows(3).any(|w| w == [0x00, 0x01, 0x85] || w == [0x00, 0x02, 0x85]) {
+                "BGP UPDATE — FlowSpec".to_string()
+            } else {
+                "BGP UPDATE".to_string()
+            }
+        }
         3 => {
             // A notification is a session being torn down, and the code says
             // by whom and why. "error 6/2" is an operator shutting the peer

@@ -15,6 +15,8 @@ pub mod aprs;
 pub mod arp;
 pub mod atalk;
 pub mod att;
+pub mod autosar_pdu;
+pub mod avdecc;
 pub mod avtp;
 pub mod babel;
 pub mod bacnet;
@@ -31,10 +33,13 @@ pub mod bittorrent;
 pub mod bluetooth;
 pub mod bmp;
 pub mod bolt;
+pub mod bsap;
 pub mod bssap;
 pub mod bssgp;
 pub mod can;
+pub mod can_xl;
 pub mod capwap;
+pub mod camel;
 #[cfg(feature = "ot")]
 pub mod cclink_ie_field_basic;
 #[cfg(not(feature = "ot"))]
@@ -73,7 +78,9 @@ pub mod cclink_ie {
     }
 }
 pub mod cassandra;
+pub mod ccp;
 pub mod cdp;
+pub mod cpri;
 pub mod ceph;
 pub mod cfm;
 pub mod chap;
@@ -124,12 +131,15 @@ pub mod dnp3;
 pub mod dns;
 pub mod dns_tcp;
 pub mod doip;
+pub mod docan;
 pub mod drbd;
 pub mod drda;
 pub mod dtls;
+pub mod dtls_srtp;
 pub mod dtp;
 pub mod dvmrp;
 pub mod e1ap;
+pub mod e2ap;
 pub mod eap;
 pub mod eapol;
 pub mod ecpri;
@@ -140,6 +150,7 @@ pub mod enip;
 pub mod erps;
 pub mod erspan;
 pub mod esmc;
+pub mod est;
 pub mod ethercat;
 pub mod etherip;
 pub mod ethernet;
@@ -152,7 +163,9 @@ pub mod fins;
 pub mod firebird;
 pub mod fix;
 pub mod flexray;
+pub mod fou;
 pub mod fluentd;
+pub mod focas;
 pub mod fox;
 pub mod ftp;
 pub mod ganglia;
@@ -165,10 +178,15 @@ pub mod gnutella;
 pub mod goose;
 pub mod gopher;
 pub mod graphite;
+pub mod gprs_llc;
 pub mod gre;
 pub mod gtp;
+pub mod gtp_sv;
+pub mod gtpv1u;
 pub mod gtpprime;
 pub mod gtpv2;
+pub mod gue;
+pub mod gssapi;
 pub mod gvcp;
 pub mod h225ras;
 pub mod hadooprpc;
@@ -183,6 +201,7 @@ pub mod http;
 pub mod http2;
 pub mod http_body;
 pub mod iax2;
+pub mod ikev2;
 pub mod ibmmq;
 pub mod ica;
 pub mod icmp;
@@ -191,6 +210,7 @@ pub mod iec101;
 pub mod iec104;
 pub mod iec_asdu;
 pub mod igmp;
+pub mod inap;
 pub mod igrp;
 pub mod imap;
 pub mod influxdb;
@@ -200,6 +220,7 @@ pub mod ipsec;
 pub mod ipx;
 pub mod irc;
 pub mod isakmp;
+pub mod isatap;
 pub mod iscsi;
 pub mod iser;
 pub mod isis;
@@ -317,8 +338,10 @@ pub mod modbus_rtu {
     }
 }
 pub mod mongodb;
+pub mod most;
 pub mod mpegts;
 pub mod mpls;
+pub mod mpls_in_udp;
 pub mod mqtt;
 pub mod mqttsn;
 pub mod mrp;
@@ -326,11 +349,14 @@ pub mod mrp_registration;
 pub mod msdp;
 pub mod msrp;
 pub mod mssqlbrowser;
+pub mod mtp2;
 pub mod mtp3;
 pub mod mumble;
 pub mod mysql;
 pub mod mysqlx;
 pub mod nats;
+pub mod nas_5gs;
+pub mod nas_eps;
 pub mod nbap;
 pub mod nbd;
 pub mod nbds;
@@ -366,13 +392,16 @@ pub mod ngap_common;
 pub mod nhrp;
 pub mod ninep;
 pub mod nmea;
+pub mod nmea2000;
 pub mod nntp;
 pub mod nrpe;
+pub mod nrppa;
 pub mod nsh;
 pub mod nsip;
 pub mod nsq;
 pub mod ntlm;
 pub mod ntp;
+pub mod nvgre;
 pub mod nvmeof;
 pub mod obd2;
 pub mod ocsp;
@@ -380,8 +409,11 @@ pub mod olsr;
 pub mod opcua;
 pub mod openflow;
 pub mod opensafety;
+pub mod openr;
+pub mod openconnect;
 pub mod openvpn;
 pub mod openwire;
+pub mod oran_e1;
 pub mod osc;
 pub mod ospf;
 pub mod ovsdb;
@@ -390,6 +422,7 @@ pub mod pap;
 pub mod pccc;
 pub mod pcep;
 pub mod pcoip;
+pub mod pdcp;
 pub mod pcp;
 pub mod pfcp;
 pub mod pgm;
@@ -441,10 +474,14 @@ pub mod rgoose;
 pub mod riak;
 pub mod rip;
 pub mod ripng;
+pub mod rlc;
 pub mod rlogin;
 pub mod rmcp;
 pub mod rnsap;
 pub mod roce;
+pub mod roc_plus;
+pub mod rrc_lte;
+pub mod rrc_nr;
 pub mod roughtime;
 pub mod rpc;
 pub mod rpkirtr;
@@ -487,21 +524,28 @@ pub mod s7comm_plus {
 pub mod sabp;
 pub mod sane;
 pub mod sap_announce;
+pub mod sasl;
 pub mod sbcap;
 pub mod sccp;
+pub mod scep;
+pub mod secoc;
 pub mod sctp;
 pub mod sdp;
 pub mod sercos;
 pub mod sflow;
+pub mod sgsap;
+pub mod shim6;
 pub mod sigtran;
 pub mod sip;
 pub mod sixlowpan;
+pub mod six_to_four;
 pub mod skinny;
 pub mod sll;
 pub mod slmp;
 pub mod slp;
 pub mod small_services;
 pub mod smb;
+pub mod shadowsocks;
 #[cfg(feature = "enterprise")]
 pub mod smb_direct;
 #[cfg(not(feature = "enterprise"))]
@@ -531,6 +575,8 @@ pub mod smp;
 pub mod smpp;
 pub mod smtp;
 pub mod snap;
+pub mod sndcp;
+pub mod softether;
 pub mod snmp;
 pub mod soap;
 pub mod socks;
@@ -544,17 +590,21 @@ pub mod srt;
 pub mod srt_transport;
 pub mod srtp_ge;
 pub mod srv6;
+pub mod srp;
 pub mod ssdp;
 pub mod ssh;
 pub mod statsd;
 pub mod stomp;
 pub mod stp;
+pub mod sstp;
+pub mod stt;
 pub mod stun;
 pub mod sua;
 pub mod sv;
 pub mod svn;
 pub mod syslog;
 pub mod tacacs;
+pub mod tacacs_legacy;
 pub mod tcap;
 pub mod tcp;
 pub mod tcp_analysis;
@@ -565,8 +615,10 @@ pub mod tftp;
 pub mod thrift;
 pub mod tls;
 pub mod tns;
+pub mod toyopuc;
 pub mod trill;
 pub mod tsp;
+pub mod tsp_timestamp;
 pub mod turn;
 pub mod twamp;
 #[cfg(feature = "ot")]
@@ -597,14 +649,20 @@ pub mod uds;
 pub mod usb;
 pub mod utp;
 pub mod vines;
+pub mod vmess;
+pub mod obfs4;
 pub mod vrrp;
 pub mod vtp;
+pub mod vnet_ip;
 pub mod vxlan;
 pub mod vxlangpe;
 pub mod wccp;
+pub mod w1ap;
 pub mod websocket;
 pub mod whois;
 pub mod wireguard;
+pub mod x2ap;
+pub mod xwap;
 pub mod wlan;
 pub mod wmbus;
 pub mod wol;
@@ -726,6 +784,52 @@ const DLT_CAN_SOCKETCAN: i32 = 227; // SocketCAN (can0/vcan0)
 const DLT_MTP3: i32 = 141; // SS7 MTP3, with no MTP2 or pseudo-header
 const DLT_LIN: i32 = 212; // LIN bus, with a capture pseudo-header
 const DLT_FLEXRAY: i32 = 210; // FlexRay, with a two-byte measurement header
+const DLT_MOST: i32 = 217; // MOST automotive network
+const DLT_NMEA2000: i32 = 247; // NMEA 2000 marine CAN network
+const DLT_CAN_XL: i32 = 257; // CAN XL eXtra Long CAN frame
+const DLT_DOCAN: i32 = 259; // DoCAN (ISO 15765-2 / UDS over CAN)
+const DLT_AUTOSAR_PDU: i32 = 260; // AUTOSAR Container I-PDU
+const DLT_SECOC: i32 = 261; // AUTOSAR SecOC
+const DLT_AVDECC: i32 = 262; // IEEE 1722.1 AVDECC
+const DLT_CPRI: i32 = 263;
+const DLT_NAS_EPS: i32 = 264;
+const DLT_NAS_5GS: i32 = 265;
+const DLT_GPRS_LLC: i32 = 266;
+const DLT_SNDCP: i32 = 267;
+const DLT_INAP: i32 = 268;
+const DLT_CAMEL: i32 = 269;
+const DLT_MTP2: i32 = 270;
+const DLT_SGSAP: i32 = 271;
+const DLT_GTP_SV: i32 = 272;
+const DLT_RRC_LTE: i32 = 273;
+const DLT_RRC_NR: i32 = 274;
+const DLT_PDCP: i32 = 275;
+const DLT_RLC: i32 = 277;
+const DLT_GTPV1U: i32 = 278;
+const DLT_SHIM6: i32 = 279;
+const DLT_OPENR: i32 = 280;
+const DLT_GUE: i32 = 281;
+const DLT_FOU: i32 = 282;
+const DLT_6TO4: i32 = 283;
+const DLT_ISATAP: i32 = 284;
+const DLT_IKEV2: i32 = 285;
+const DLT_SSTP: i32 = 286;
+const DLT_SOFTETHER: i32 = 287;
+const DLT_STT: i32 = 288;
+const DLT_NVGRE: i32 = 289;
+const DLT_MPLS_IN_UDP: i32 = 290;
+const DLT_OPENCONNECT: i32 = 291;
+const DLT_SCEP: i32 = 292;
+const DLT_EST: i32 = 293;
+const DLT_TSP_TIMESTAMP: i32 = 294;
+const DLT_SASL: i32 = 295;
+const DLT_GSSAPI: i32 = 296;
+const DLT_SRP: i32 = 297;
+const DLT_DTLS_SRTP: i32 = 298;
+const DLT_TACACS_LEGACY: i32 = 299;
+const DLT_SHADOWSOCKS: i32 = 300;
+const DLT_VMESS: i32 = 301;
+const DLT_OBFS4: i32 = 302;
 const DLT_USBPCAP: i32 = 249; // Windows USBPcap
 const DLT_IEEE802_15_4: i32 = 195; // IEEE 802.15.4 Wireless PAN (Zigbee)
                                    // Captures that carry IP with no Ethernet header. Treating these as Ethernet
@@ -781,6 +885,52 @@ fn dissect_linktype_inner(data: &[u8], linktype: i32) -> DissectedResult {
         DLT_MTP3 => mtp3::dissect_mtp3(data),
         DLT_LIN => lin::dissect_lin(data),
         DLT_FLEXRAY => flexray::dissect_flexray(data),
+        DLT_MOST => most::dissect_most(None, None, 0, 0, data),
+        DLT_NMEA2000 => nmea2000::dissect_nmea2000(None, None, 0, 0, data),
+        DLT_CAN_XL => can_xl::dissect_can_xl(None, None, 0, 0, data),
+        DLT_DOCAN => docan::dissect_docan(None, None, 0, 0, data),
+        DLT_AUTOSAR_PDU => autosar_pdu::dissect_autosar_pdu(None, None, 0, 0, data),
+        DLT_SECOC => secoc::dissect_secoc(None, None, 0, 0, data),
+        DLT_AVDECC => avdecc::dissect_avdecc(data),
+        DLT_CPRI => cpri::dissect_cpri(None, None, 0, 0, data),
+        DLT_NAS_EPS => nas_eps::dissect_nas_eps(None, None, 0, 0, data),
+        DLT_NAS_5GS => nas_5gs::dissect_nas_5gs(None, None, 0, 0, data),
+        DLT_GPRS_LLC => gprs_llc::dissect_gprs_llc(None, None, 0, 0, data),
+        DLT_SNDCP => sndcp::dissect_sndcp(None, None, 0, 0, data),
+        DLT_INAP => inap::dissect_inap(None, None, 0, 0, data),
+        DLT_CAMEL => camel::dissect_camel(None, None, 0, 0, data),
+        DLT_MTP2 => mtp2::dissect_mtp2(None, None, 0, 0, data),
+        DLT_SGSAP => sgsap::dissect_sgsap(None, None, 0, 0, data),
+        DLT_GTP_SV => gtp_sv::dissect_gtp_sv(None, None, 0, 0, data),
+        DLT_RRC_LTE => rrc_lte::dissect_rrc_lte(None, None, 0, 0, data),
+        DLT_RRC_NR => rrc_nr::dissect_rrc_nr(None, None, 0, 0, data),
+        DLT_PDCP => pdcp::dissect_pdcp(None, None, 0, 0, data),
+        DLT_RLC => rlc::dissect_rlc(None, None, 0, 0, data),
+        DLT_GTPV1U => gtpv1u::dissect_gtpv1u(None, None, 0, 0, data),
+        DLT_SHIM6 => shim6::dissect_shim6(None, None, data),
+        DLT_OPENR => openr::dissect_openr(None, None, 0, 0, data),
+        DLT_GUE => gue::dissect_gue(None, None, 0, 0, data),
+        DLT_FOU => fou::dissect_fou(None, None, 0, 0, data),
+        DLT_6TO4 => six_to_four::dissect_six_to_four(None, None, data),
+        DLT_ISATAP => isatap::dissect_isatap(None, None, data),
+        DLT_IKEV2 => ikev2::dissect_ikev2(None, None, 0, 0, data),
+        DLT_SSTP => sstp::dissect_sstp(None, None, 0, 0, data),
+        DLT_SOFTETHER => softether::dissect_softether(None, None, 0, 0, data),
+        DLT_STT => stt::dissect_stt(None, None, 0, 0, data),
+        DLT_NVGRE => nvgre::dissect_nvgre(None, None, data),
+        DLT_MPLS_IN_UDP => mpls_in_udp::dissect_mpls_in_udp(None, None, 0, 0, data),
+        DLT_OPENCONNECT => openconnect::dissect_openconnect(None, None, 0, 0, data),
+        DLT_SCEP => scep::dissect_scep(None, None, 0, 0, data),
+        DLT_EST => est::dissect_est(None, None, 0, 0, data),
+        DLT_TSP_TIMESTAMP => tsp_timestamp::dissect_tsp_timestamp(None, None, 0, 0, data),
+        DLT_SASL => sasl::dissect_sasl(None, None, 0, 0, data),
+        DLT_GSSAPI => gssapi::dissect_gssapi(None, None, 0, 0, data),
+        DLT_SRP => srp::dissect_srp(None, None, 0, 0, data),
+        DLT_DTLS_SRTP => dtls_srtp::dissect_dtls_srtp(None, None, 0, 0, data),
+        DLT_TACACS_LEGACY => tacacs_legacy::dissect_tacacs_legacy(None, None, 0, 0, data),
+        DLT_SHADOWSOCKS => shadowsocks::dissect_shadowsocks(None, None, 0, 0, data),
+        DLT_VMESS => vmess::dissect_vmess(None, None, 0, 0, data),
+        DLT_OBFS4 => obfs4::dissect_obfs4(None, None, 0, 0, data),
         DLT_IEEE802_15_4 => zigbee::dissect_ieee802154(data),
         DLT_NULL => linktypes::dissect_loopback(data),
         DLT_LOOP => linktypes::dissect_loop(data),

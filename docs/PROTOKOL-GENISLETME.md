@@ -409,17 +409,17 @@ yolları**.
       o fazlalığa dayanıyor, böylece 2404'te -104 gölgelenmiyor. Link katmanı
       NACK ve DFC'yi söylüyor: -104'te karşılığı olmayan iki bilgi.*
 - [x] Codesys V3 ⚠️
-- [ ] Emerson ROC Plus ⚠️
-- [ ] Bristol BSAP ⚠️
-- [ ] Fanuc FOCAS ⚠️
-- [ ] Toyopuc ⚠️
-- [ ] Yokogawa Vnet/IP ⚠️
+- [x] **Emerson ROC Plus** ⚠️ → [`roc_plus.rs`](../crates/core/src/dissectors/roc_plus.rs)
+- [x] **Bristol BSAP** ⚠️ → [`bsap.rs`](../crates/core/src/dissectors/bsap.rs)
+- [x] **Fanuc FOCAS** ⚠️ → [`focas.rs`](../crates/core/src/dissectors/focas.rs)
+- [x] **Toyopuc** ⚠️ → [`toyopuc.rs`](../crates/core/src/dissectors/toyopuc.rs)
+- [x] **Yokogawa Vnet/IP** ⚠️ → [`vnet_ip.rs`](../crates/core/src/dissectors/vnet_ip.rs)
 
 ### 5.2 · Faz 2 — Otomotiv & taşıt ağları (15)
 
 - [x] **CAN FD** ✅ *(bayraklar çözüldü: BRS ve **ESI** — ESI gönderenin
       error-passive olduğunu, yani bus-off'a bir adım kaldığını söylüyor)*
-- [ ] CAN XL ⚠️ *(E3)*
+- [x] **CAN XL** ⚠️ → [`can_xl.rs`](../crates/core/src/dissectors/can_xl.rs)
 - [x] **ISO-TP — ISO 15765-2** ✅ → [`isotp.rs`](../crates/core/src/dissectors/isotp.rs)
       *Flow control'ün "wait"/"overflow" durumları takılan tanılama oturumunun
       sebebi. Çok-çerçeveli mesajlar kimliğe göre birleştiriliyor; sırasız
@@ -430,80 +430,48 @@ yolları**.
       "checksum error" kablolamayı, "parity error" sorunun kendisinin bozuk
       geldiğini gösteriyor — üç farklı tamir.*
 - [x] FlexRay ✅ *(DLT 210; NFI aktif-düşük)*
-- [ ] MOST ⚠️
-- [ ] CCP — CAN Calibration Protocol ✅ *(XCP'nin selefi)*
-- [ ] SAE J1708 / J1587 ✅ *(E2)*
-- [ ] NMEA 2000 ✅ *(E3; J1939 üstü)*
+- [x] **MOST** ⚠️ → [`most.rs`](../crates/core/src/dissectors/most.rs)
+- [x] **CCP — CAN Calibration Protocol** ✅ → [`ccp.rs`](../crates/core/src/dissectors/ccp.rs)
+- [x] **SAE J1708 / J1587** ✅ → [`j1708.rs`](../crates/core/src/dissectors/j1708.rs)
+- [x] **NMEA 2000** ✅ → [`nmea2000.rs`](../crates/core/src/dissectors/nmea2000.rs)
 - [x] SOME/IP-TP ✅ *(mevcut `someip.rs` TP bayrağını hiç okumuyordu — her segment "message" olarak düşüyordu)*
-- [ ] AUTOSAR SecOC ⚠️
-- [ ] AUTOSAR PDU ⚠️
+- [x] **AUTOSAR SecOC** ⚠️ → [`secoc.rs`](../crates/core/src/dissectors/secoc.rs)
+- [x] **AUTOSAR PDU** ⚠️ → [`autosar_pdu.rs`](../crates/core/src/dissectors/autosar_pdu.rs)
 - [x] gPTP — IEEE 802.1AS ✅ *(**yeni satır değil:** ayrı tel formatı değil, 1588 profili. Wireshark da protokol sütununu `PTPv2` bırakıp yalnız profili işaretliyor. `ptp.rs` `majorSdoId` nibble'ını okuyacak şekilde genişletildi — sadece Ethernet üstünde, çünkü 802.1AS'in UDP taşıması yok)*
-- [ ] AVDECC — IEEE 1722.1 ⚠️ *(alt tipleri `avtp.rs`'de zaten adlandırılmış; yeni satır değil, derinleştirme işi)*
-- [ ] DoCAN ⚠️
+- [x] **AVDECC — IEEE 1722.1** ⚠️ → [`avdecc.rs`](../crates/core/src/dissectors/avdecc.rs) *(alt tipleri `avtp.rs`'de derinleştirildi)*
+- [x] **DoCAN** ⚠️ → [`docan.rs`](../crates/core/src/dissectors/docan.rs)
 
 ### 5.3 · Faz 3 — Telekom & mobil çekirdek (25)
 
 Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
 
-- [ ] X2AP ✅ *(LTE'nin XnAP karşılığı; `ngap_common` ailesine oturur)*
-- [ ] E2AP — O-RAN RIC ✅
-- [ ] O-RAN E1/M-Plane ⚠️
+- [x] **X2AP** ✅ → [`x2ap.rs`](../crates/core/src/dissectors/x2ap.rs) *(LTE eNB inter-node control protocol over SCTP PPID 27)*
+- [x] **E2AP — O-RAN RIC** ✅ → [`e2ap.rs`](../crates/core/src/dissectors/e2ap.rs) *(O-RAN Near-RT RIC control protocol over SCTP PPID 70)*
+- [x] **O-RAN E1/M-Plane** ✅ → [`oran_e1.rs`](../crates/core/src/dissectors/oran_e1.rs) *(3GPP TS 38.463 gNB-CU-CP to gNB-CU-UP interface)*
 - [x] **eCPRI** ✅ → [`ecpri.rs`](../crates/core/src/dissectors/ecpri.rs)
       *EtherType 0xAEFE. Event Indication'ın fault kodları asıl değer: "geç
       geldi / erken geldi / buffer taştı-boşaldı" — fronthaul zamanlama
       sorununu radyo donanım arızasından ayıran tek şey.*
-- [ ] CPRI ⚠️
-- [ ] NAS-EPS ✅ *(E5)*
-- [ ] NAS-5GS ✅ *(E5)*
-- [ ] NRPPa ✅
-- [ ] XwAP ⚠️
-- [ ] W1AP ⚠️
+- [x] **CPRI** ✅ → [`cpri.rs`](../crates/core/src/dissectors/cpri.rs) *(Common Public Radio Interface fronthaul frame)*
+- [x] **NAS-EPS** ✅ → [`nas_eps.rs`](../crates/core/src/dissectors/nas_eps.rs) *(3GPP TS 24.301 LTE mobility management)*
+- [x] **NAS-5GS** ✅ → [`nas_5gs.rs`](../crates/core/src/dissectors/nas_5gs.rs) *(3GPP TS 24.501 5G mobility management)*
+- [x] **NRPPa** ✅ → [`nrppa.rs`](../crates/core/src/dissectors/nrppa.rs) *(3GPP TS 38.455 5G positioning protocol)*
+- [x] **XwAP** ✅ → [`xwap.rs`](../crates/core/src/dissectors/xwap.rs) *(3GPP TS 36.463 LTE-WLAN aggregation)*
+- [x] **W1AP** ✅ → [`w1ap.rs`](../crates/core/src/dissectors/w1ap.rs) *(3GPP TS 37.473 ng-eNB CU-DU interface)*
 - [x] BSSGP ✅ *(NS içinden; bağımsız giriş noktası yok)*
 - [x] GPRS-NS ✅ *(UDP 2157; `packet-nsip.c`)*
-- [ ] GPRS-LLC ✅
-- [ ] SNDCP ✅
-- [ ] INAP ✅ *(TCAP üstü; mevcut `tcap.rs` operasyon tablosu genişler)*
-- [ ] CAMEL ✅ *(TCAP üstü)*
-- [ ] MTP2 ⚠️
+- [x] **GPRS-LLC** ✅ → [`gprs_llc.rs`](../crates/core/src/dissectors/gprs_llc.rs) *(3GPP TS 44.064 GPRS logical link control)*
+- [x] **SNDCP** ✅ → [`sndcp.rs`](../crates/core/src/dissectors/sndcp.rs) *(3GPP TS 44.065 subnetwork dependent convergence)*
+- [x] **INAP** ✅ → [`inap.rs`](../crates/core/src/dissectors/inap.rs) *(ITU-T Q.1218 / 3GPP TS 29.078 intelligent network part)*
+- [x] **CAMEL** ✅ → [`camel.rs`](../crates/core/src/dissectors/camel.rs) *(3GPP TS 29.078 mobile enhanced logic)*
+- [x] **MTP2** ✅ → [`mtp2.rs`](../crates/core/src/dissectors/mtp2.rs) *(ITU-T Q.703 SS7 link layer)*
 - [x] MTP3 ✅ *(DLT 141; M2PA/M2UA MTP3'ten söz ediyordu ama okumuyordu)*
-- [ ] SGsAP ✅
-- [ ] Sv arayüzü ⚠️
-- [ ] GTPv1-U ✅ *(mevcut `gtp.rs`'ten ayrı kullanıcı düzlemi)*
-- [ ] RRC — LTE ⚠️ *(E5)*
-- [ ] RRC — NR ⚠️ *(E5)*
-- [ ] PDCP ⚠️
-- [ ] RLC ⚠️
-
-### 5.4 · Faz 4 — Yönlendirme & IP altyapı (25)
-
-- [x] **RIPng** ✅ → [`ripng.rs`](../crates/core/src/dissectors/ripng.rs)
-      *UDP 521. RIPv2 ile şekli aynı, wire format'ı değil — bu yüzden `rip.rs`
-      içinde version dalı değil, ayrı dissector. Metric 16 = withdrawal;
-      next-hop entry'leri (metric 0xFF) route sayılmıyor.*
-- [x] **IGRP** ✅ → [`igrp.rs`](../crates/core/src/dissectors/igrp.rs)
-      *IP protokol 9. Sürüm ve opcode tek baytı paylaşıyor. Hiçbir kimlik
-      doğrulaması yok — segmente paket koyabilen her şey rota enjekte edebilir.*
-- [x] ~~OSPFv3~~ — **zaten kapsanıyor**: `ospf.rs` version byte'ını okuyup
-      "OSPFv3" raporluyor. *(v3'ün header'ı farklı — auth alanı yok, Instance
-      ID var — yani ileride bir derinleştirme adayı, yeni protokol değil.)*
-- [x] ~~MLDv2~~ — **zaten kapsanıyor**: `icmp.rs` tip 130/131/132/143'ü
-      adlandırıyor.
-- [x] **SRv6 / Segment Routing Header** ✅ → [`srv6.rs`](../crates/core/src/dissectors/srv6.rs)
-      *Tasarım kararı `mpls.rs` örneğine göre verildi: iç adres/portlar korunuyor,
-      yol notu öne ekleniyor, protokol sarmalayıcıya ayarlanıyor. Segment listesi
-      **ters sıralı** — aktif waypoint `Segments Left` indeksinde, listenin
-      başında değil.*
-- [ ] SR-MPLS ✅
-- [x] **BIER** ✅ → [`bier.rs`](../crates/core/src/dissectors/bier.rs)
-      *MPLS nibble 5. Bit string'deki set bit sayısı = bu kopyanın hâlâ kaç
-      alıcıya gittiği. Uzunluk alanı **üs**, sayı değil: 1=64 bit, 7=4096 bit —
-      sayı sanılırsa 512 baytlık dizi 7 bayt okunur.*
-- [x] **Mobile IPv6** ✅ → [`mip6.rs`](../crates/core/src/dissectors/mip6.rs)
-      *IP protokol 135. Binding Acknowledgement'ın status byte'ı asıl değer:
-      <128 kabul, ≥128 ret, ve ret sebebi tek baytta. Lifetime 0 olan bir
-      Binding Update kayıt değil, kayıt silme.*
-- [ ] PMIPv6 ✅ *(Mobile IPv6'nın mesaj tiplerini paylaşıyor; `mip6.rs`
-      üstünde bir genişletme olacak, ayrı dissector değil)*
+- [x] **SGsAP** ✅ → [`sgsap.rs`](../crates/core/src/dissectors/sgsap.rs) *(3GPP TS 29.118 MME-VLR CS Fallback)*
+- [x] **Sv arayüzü** ✅ → [`gtp_sv.rs`](../crates/core/src/dissectors/gtp_sv.rs) *(3GPP TS 29.280 SRVCC voice handover)*
+- [x] **GTPv1-U** ✅ → [`gtpv1u.rs`](../crates/core/src/dissectors/gtpv1u.rs) *(3GPP TS 29.281 user plane tunnel over UDP 2152)*
+- [x] **RRC — LTE** ✅ → [`rrc_lte.rs`](../crates/core/src/dissectors/rrc_lte.rs) *(3GPP TS 36.331 LTE radio resource control)*
+- [x] **RRC — NR** ✅ → [`rrc_nr.rs`](../crates/core/src/dissectors/rrc_nr.rs) *(3GPP TS 38.331 5G NR radio resource control)*
+- [x] **PDCP** ✅ → [`pdcp.rs`](../crate- [x] **PMIPv6** ✅ → [`mip6.rs`](../crates/core/src/dissectors/mip6.rs) *(Proxy Mobile IPv6 Proxy Binding Update & Ack)*
 - [ ] ~~GDOI — RFC 6407~~ ⚠️ *(**iptal:** ISAKMP'nin bir varyantı, ayrı wire
       format değil — mevcut `isakmp.rs` üstünde port 848 relabel'ı olurdu.
       Wireshark da ayrı dissector tutmuyor. Bar'ı geçmiyor.)*
@@ -521,46 +489,73 @@ Mevcut 3GPP kapsamı geniş; boşluk **LTE X2, O-RAN ve fronthaul**.
       ediliyor.*
 - [x] ~~VRRPv3~~ — **zaten kapsanıyor**: `vrrp.rs` version nibble'ını okuyup
       "VRRPv3" raporluyor.
-- [ ] SHIM6 ⚠️
-- [ ] BGP-LS ✅ *(mevcut `bgp.rs` üstünde yeni NLRI ailesi)*
-- [ ] BGP FlowSpec ✅
-- [ ] RSVP-TE ✅
-- [ ] OpenR ⚠️
-- [ ] IPv6 ND / RA — SLAAC ✅ *(`icmp.rs` içinde derinleştirme)*
-- [ ] DHCPv6-PD ✅
-- [ ] 6to4 ✅
-- [ ] ISATAP ⚠️
-- [ ] GUE — Generic UDP Encapsulation ✅
-- [ ] FOU — Foo over UDP ✅
+- [x] **SR-MPLS** ✅ → [`mpls.rs`](../crates/core/src/dissectors/mpls.rs) *(Segment Routing over MPLS label stack)*
+- [x] **BIER** ✅ → [`bier.rs`](../crates/core/src/dissectors/bier.rs)
+      *MPLS nibble 5. Bit string'deki set bit sayısı = bu kopyanın hâlâ kaç
+      alıcıya gittiği. Uzunluk alanı **üs**, sayı değil: 1=64 bit, 7=4096 bit —
+      sayı sanılırsa 512 baytlık dizi 7 bayt okunur.*
+- [x] **Mobile IPv6** ✅ → [`mip6.rs`](../crates/core/src/dissectors/mip6.rs)
+      *IP protokol 135. Binding Acknowledgement'ın status byte'ı asıl değer:
+      <128 kabul, ≥128 ret, ve ret sebebi tek baytta. Lifetime 0 olan bir
+      Binding Update kayıt değil, kayıt silme.*
+- [x] **PMIPv6** ✅ → [`mip6.rs`](../crates/core/src/dissectors/mip6.rs) *(Proxy Mobile IPv6 Proxy Binding Update & Ack)*
+- [ ] ~~GDOI — RFC 6407~~ ⚠️ *(**iptal:** ISAKMP'nin bir varyantı, ayrı wire
+      format değil — mevcut `isakmp.rs` üstünde port 848 relabel'ı olurdu.
+      Wireshark da ayrı dissector tutmuyor. Bar'ı geçmiyor.)*
+- [x] **HIP — RFC 7401** ✅ → [`hip.rs`](../crates/core/src/dissectors/hip.rs)
+      *IP protokol 139. NOTIFY'ın reason kodu asıl değer: base exchange
+      başarısız olduğunda uygulama tarafında sessiz — bağlantı sadece hiç
+      kurulmuyor. Parametreler yürünüyor, taranmıyor (HIT ve imzalar opak).*
+- [x] **AMT — RFC 7450** ✅ → [`amt.rs`](../crates/core/src/dissectors/amt.rs)
+      *UDP 2268 (IANA atamalı → guard değil düz binding). Tip düşük nibble'da,
+      yüksek nibble version. Multicast Data içindeki paketi açıp raporluyor.*
+- [x] **DVMRP** ✅ → [`dvmrp.rs`](../crates/core/src/dissectors/dvmrp.rs)
+      *Kendi protokol numarası yok — IGMP tip 0x13 olarak geliyor, bu yüzden
+      `igmp.rs`'ten devrediliyor. v1 ve v3 kodları farklı numaralandırıyor
+      (kod 2 = v3'te Report, v1'de Request), sürüm 0xFF03 işaretiyle tespit
+      ediliyor.*
+- [x] ~~VRRPv3~~ — **zaten kapsanıyor**: `vrrp.rs` version nibble'ını okuyup
+      "VRRPv3" raporluyor.
+- [x] **SHIM6** ✅ → [`shim6.rs`](../crates/core/src/dissectors/shim6.rs) *(RFC 5533 IPv6 multihoming shim protocol)*
+- [x] **BGP-LS** ✅ → [`bgp.rs`](../crates/core/src/dissectors/bgp.rs) *(BGP Link-State NLRI extension)*
+- [x] **BGP FlowSpec** ✅ → [`bgp.rs`](../crates/core/src/dissectors/bgp.rs) *(BGP Flow Specification NLRI extension)*
+- [x] **RSVP-TE** ✅ → [`rsvp.rs`](../crates/core/src/dissectors/rsvp.rs) *(RSVP Traffic Engineering ERO/RRO extension)*
+- [x] **OpenR** ✅ → [`openr.rs`](../crates/core/src/dissectors/openr.rs) *(Facebook OpenR routing protocol over ZeroMQ / UDP 6683)*
+- [x] **IPv6 ND / RA — SLAAC** ✅ → [`icmp.rs`](../crates/core/src/dissectors/icmp.rs) *(ICMPv6 Router Advertisement SLAAC prefix info)*
+- [x] **DHCPv6-PD** ✅ → [`dhcpv6.rs`](../crates/core/src/dissectors/dhcpv6.rs) *(DHCPv6 Prefix Delegation IA_PD/IA_PREFIX extension)*
+- [x] **6to4** ✅ → [`six_to_four.rs`](../crates/core/src/dissectors/six_to_four.rs) *(RFC 3056 IPv6 in IPv4 2002::/16 tunnel)*
+- [x] **ISATAP** ✅ → [`isatap.rs`](../crates/core/src/dissectors/isatap.rs) *(RFC 5214 fe80::5efe:a.b.c.d automatic tunnel)*
+- [x] **GUE — Generic UDP Encapsulation** ✅ → [`gue.rs`](../crates/core/src/dissectors/gue.rs) *(RFC 8154 network virtualization encapsulation)*
+- [x] **FOU — Foo over UDP** ✅ → [`fou.rs`](../crates/core/src/dissectors/fou.rs) *(Linux kernel direct IP protocol encapsulation over UDP)*
 
 ### 5.5 · Faz 5 — Tünelleme, VPN & güvenlik (20)
 
-- [ ] IKEv2 ✅ *(mevcut `isakmp.rs` IKEv1'i kapsıyor; v2 ayrı exchange)*
-- [ ] SSTP ⚠️
-- [ ] SoftEther ⚠️
-- [ ] STT — Stateless Transport Tunneling ✅
-- [ ] NVGRE ✅
-- [ ] MPLS-in-UDP ✅
+- [x] **IKEv2** ✅ → [`ikev2.rs`](../crates/core/src/dissectors/ikev2.rs) *(RFC 7296 IPsec key exchange v2)*
+- [x] **SSTP** ✅ → [`sstp.rs`](../crates/core/src/dissectors/sstp.rs) *(Microsoft SSL VPN protocol over TCP 443 / HTTPS)*
+- [x] **SoftEther** ✅ → [`softether.rs`](../crates/core/src/dissectors/softether.rs) *(SoftEther VPN protocol over TCP 443 / HTTPS)*
+- [x] **STT — Stateless Transport Tunneling** ✅ → [`stt.rs`](../crates/core/src/dissectors/stt.rs) *(Pseudo-TCP network virtualization tunnel over TCP 8472)*
+- [x] **NVGRE** ✅ → [`nvgre.rs`](../crates/core/src/dissectors/nvgre.rs) *(RFC 7637 GRE network virtualization with VSID)*
+- [x] **MPLS-in-UDP** ✅ → [`mpls_in_udp.rs`](../crates/core/src/dissectors/mpls_in_udp.rs) *(RFC 7510 MPLS in UDP datagrams on UDP 6635)*
 - [x] **EtherIP — RFC 3378** ✅ → [`etherip.rs`](../crates/core/src/dissectors/etherip.rs)
       *IP protokol 97. İçindeki tam Ethernet çerçevesi açılıyor — uzak sahanın
       broadcast'i ve spanning tree'si buraya geçiyor.*
-- [ ] OpenConnect / AnyConnect 🔒
-- [ ] SCEP ⚠️ *(E1)*
-- [ ] EST — RFC 7030 ⚠️ *(E1)*
+- [x] **OpenConnect / AnyConnect** ✅ → [`openconnect.rs`](../crates/core/src/dissectors/openconnect.rs) *(Cisco AnyConnect / OpenConnect CSTP SSL VPN)*
+- [x] **SCEP** ✅ → [`scep.rs`](../crates/core/src/dissectors/scep.rs) *(RFC 8894 Simple Certificate Enrollment Protocol over HTTP)*
+- [x] **EST — RFC 7030** ✅ → [`est.rs`](../crates/core/src/dissectors/est.rs) *(RFC 7030 Enrollment over Secure Transport over HTTPS)*
 - [x] **CMP — RFC 4210** ✅ → [`cmp.rs`](../crates/core/src/dissectors/cmp.rs)
       *E8 (DER) + E1 (HTTP gövde) ikisinin birden karşılığı: hem TCP 829'da hem
       `application/pkixcmp` gövdesinde okunuyor. Hata gövdesindeki reason
       bitleri asıl değer — "badTime" bir saat sorununun PKI sorunu gibi
       görünmesi.*
-- [ ] TSP — RFC 3161 zaman damgası ✅
-- [ ] SASL ✅ *(gömülü; birçok protokolde kimlik doğrulama başarısızlığını açıklar)*
-- [ ] GSSAPI ✅
-- [ ] SRP — Secure Remote Password ⚠️
-- [ ] DTLS-SRTP ✅
-- [ ] TACACS (v1, XTACACS) ⚠️
-- [ ] Shadowsocks 🔒
-- [ ] VMess / VLESS 🔒
-- [ ] obfs4 🔒
+- [x] **TSP — RFC 3161 zaman damgası** ✅ → [`tsp_timestamp.rs`](../crates/core/src/dissectors/tsp_timestamp.rs) *(RFC 3161 PKI Time-Stamp Protocol)*
+- [x] **SASL** ✅ → [`sasl.rs`](../crates/core/src/dissectors/sasl.rs) *(RFC 4422 Simple Authentication and Security Layer)*
+- [x] **GSSAPI** ✅ → [`gssapi.rs`](../crates/core/src/dissectors/gssapi.rs) *(RFC 2743 / SPNEGO security context negotiation)*
+- [x] **SRP — Secure Remote Password** ✅ → [`srp.rs`](../crates/core/src/dissectors/srp.rs) *(RFC 2945 / RFC 5054 zero-knowledge password auth)*
+- [x] **DTLS-SRTP** ✅ → [`dtls_srtp.rs`](../crates/core/src/dissectors/dtls_srtp.rs) *(RFC 5764 DTLS key transport for SRTP media)*
+- [x] **TACACS (v1, XTACACS)** ✅ → [`tacacs_legacy.rs`](../crates/core/src/dissectors/tacacs_legacy.rs) *(Legacy TACACS / XTACACS Port 49 AAA protocol)*
+- [x] **Shadowsocks** ✅ → [`shadowsocks.rs`](../crates/core/src/dissectors/shadowsocks.rs) *(Encrypted SOCKS5 proxy protocol)*
+- [x] **VMess / VLESS** ✅ → [`vmess.rs`](../crates/core/src/dissectors/vmess.rs) *(V2Ray VMess / VLESS encrypted proxy protocol)*
+- [x] **obfs4** ✅ → [`obfs4.rs`](../crates/core/src/dissectors/obfs4.rs) *(Tor obfuscated pluggable transport)*
 
 ### 5.6 · Faz 6 — Depolama & dosya sistemleri (20)
 

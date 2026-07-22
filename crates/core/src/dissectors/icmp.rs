@@ -21,7 +21,7 @@ pub fn dissect_icmp(
     let summary = match payload.first() {
         Some(&icmp_type) => {
             if is_v6 {
-                describe_icmpv6(icmp_type)
+                describe_icmpv6(icmp_type, payload)
             } else {
                 describe_icmpv4(icmp_type)
             }
@@ -50,14 +50,20 @@ fn describe_icmpv4(icmp_type: u8) -> String {
     }
 }
 
-fn describe_icmpv6(icmp_type: u8) -> String {
+fn describe_icmpv6(icmp_type: u8, payload: &[u8]) -> String {
     match icmp_type {
         1 => "Destination unreachable".into(),
         3 => "Hop limit exceeded".into(),
         128 => "Ping request (echo request)".into(),
         129 => "Ping reply (echo reply)".into(),
         133 => "Router solicitation".into(),
-        134 => "Router advertisement".into(),
+        134 => {
+            if payload.windows(2).any(|w| w[0] == 3 && w[1] == 4) {
+                "Router Advertisement (SLAAC prefix info)".into()
+            } else {
+                "Router Advertisement".into()
+            }
+        }
         135 => "Neighbor solicitation (who has this IPv6?)".into(),
         136 => "Neighbor advertisement".into(),
         137 => "Redirect".into(),

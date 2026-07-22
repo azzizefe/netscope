@@ -121,11 +121,16 @@ fn describe(payload: &[u8]) -> String {
     };
     let body = &payload[HEADER_LEN..];
 
+    let is_proxy = payload.get(HEADER_LEN..).map_or(false, |b| {
+        b.windows(2).any(|w| w[0] == 8 || w[0] == 11 || w[0] == 14) || b.get(2).map_or(false, |&f| f & 0x20 != 0)
+    });
+    let proto_prefix = if is_proxy { "PMIPv6 Proxy" } else { "Mobile IPv6" };
+
     match kind {
         // The status byte leads the acknowledgement, and is the whole answer.
         TYPE_BINDING_ACK | TYPE_BINDING_ERROR => {
             let Some(&status) = body.first() else {
-                return format!("Mobile IPv6 {name}");
+                return format!("{proto_prefix} {name}");
             };
             // A status the standard has not assigned keeps its number rather
             // than being mapped to whichever entry happened to be nearest.
@@ -134,25 +139,25 @@ fn describe(payload: &[u8]) -> String {
                 None => format!("status {status}"),
             };
             if status >= STATUS_REFUSED {
-                format!("Mobile IPv6 {name} — refused: {reason}")
+                format!("{proto_prefix} {name} — refused: {reason}")
             } else {
-                format!("Mobile IPv6 {name} — {reason}")
+                format!("{proto_prefix} {name} — {reason}")
             }
         }
         // The lifetime is what a mobile node is asking for; zero is how it
         // deregisters, which is a different event entirely.
         TYPE_BINDING_UPDATE => {
             let Some(lifetime) = body.get(4..6).map(|b| u16::from_be_bytes([b[0], b[1]])) else {
-                return format!("Mobile IPv6 {name}");
+                return format!("{proto_prefix} {name}");
             };
             if lifetime == 0 {
-                format!("Mobile IPv6 {name} — deregistering")
+                format!("{proto_prefix} {name} — deregistering")
             } else {
                 // The unit is four seconds, not one.
-                format!("Mobile IPv6 {name} — lifetime {}s", lifetime as u32 * 4)
+                format!("{proto_prefix} {name} — lifetime {}s", lifetime as u32 * 4)
             }
         }
-        _ => format!("Mobile IPv6 {name}"),
+        _ => format!("{proto_prefix} {name}"),
     }
 }
 

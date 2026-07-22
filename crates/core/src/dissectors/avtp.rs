@@ -8,6 +8,12 @@ use super::DissectedResult;
 /// used in automotive Ethernet and pro AV to stream time-synced media. Byte 0
 /// is the subtype.
 pub fn dissect_avtp(payload: &[u8]) -> DissectedResult {
+    if let Some(&s) = payload.first() {
+        if matches!(s, 0x6E | 0x6F | 0x70 | 0xFA | 0xFB | 0xFC) {
+            return super::avdecc::dissect_avdecc(payload);
+        }
+    }
+
     let summary = match payload.first() {
         Some(&s) => {
             let name = match s {
@@ -16,9 +22,6 @@ pub fn dissect_avtp(payload: &[u8]) -> DissectedResult {
                 0x03 => "Compressed Video (CVF)",
                 0x22 => "AVTP Audio (AAF)",
                 0x23 => "Clock Reference (CRF)",
-                0xFA => "AVDECC Discovery (ADP)",
-                0xFB => "AVDECC Command (AECP)",
-                0xFC => "AVDECC Connection (ACMP)",
                 0xFE => "MAAP",
                 _ => "stream",
             };

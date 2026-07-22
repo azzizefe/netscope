@@ -542,6 +542,528 @@ protocols! {
         aliases:   ["codesys"],
         blurb:     "A CODESYS V3 PLC communication — programming, monitoring or data exchange with a controller on TCP 11740.",
     }
+    RocPlus {
+        doc:       "Emerson ROC Plus SCADA protocol over TCP/UDP 4000.",
+        display:   "ROC Plus",
+        color:     0xD97706,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["roc_plus", "rocplus", "roc"],
+        blurb:     "An Emerson ROC Plus SCADA telemetry or control communication frame.",
+    }
+    Bsap {
+        doc:       "Bristol Standard Asynchronous Protocol (BSAP) over TCP/UDP 1234/4268.",
+        display:   "BSAP",
+        color:     0xB45309,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["bsap", "bristol_bsap"],
+        blurb:     "A Bristol BSAP datagram — SCADA RTU polling, data transfer or control command.",
+    }
+    Focas {
+        doc:       "Fanuc Open CNC API Specifications (FOCAS) protocol on TCP 8193.",
+        display:   "FOCAS",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["focas", "fanuc_focas"],
+        blurb:     "A Fanuc FOCAS CNC communication message — reading status, G-code, axis parameters or PMC data.",
+    }
+    Toyopuc {
+        doc:       "JTEKT Toyopuc Computer Link PLC protocol on TCP/UDP 4096.",
+        display:   "Toyopuc",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["toyopuc", "jtekt_toyopuc"],
+        blurb:     "A Toyopuc PLC Computer Link packet — reading or writing CPU memory registers.",
+    }
+    VnetIp {
+        doc:       "Yokogawa Vnet/IP DCS real-time control protocol over UDP 13000-13002.",
+        display:   "Vnet/IP",
+        color:     0x7C3AED,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["vnet_ip", "vnetip", "vnet"],
+        blurb:     "A Yokogawa Vnet/IP DCS control message — cyclic process data, transient command or time sync.",
+    }
+    CanXl {
+        doc:       "CAN XL (CiA 610-1) eXtra Long CAN frame protocol supporting payloads up to 2048 bytes.",
+        display:   "CAN XL",
+        color:     0x059669,
+        transport: Other,
+        rank:      3,
+        aliases:   ["can_xl", "canxl"],
+        blurb:     "A CAN XL eXtra Long frame — carrying Ethernet, IP or UDS payload up to 2048 bytes over CAN.",
+    }
+    Most {
+        doc:       "Media Oriented Systems Transport (MOST) automotive infotainment control and data network.",
+        display:   "MOST",
+        color:     0xD97706,
+        transport: Other,
+        rank:      3,
+        aliases:   ["most", "most_bus"],
+        blurb:     "A MOST automotive infotainment control packet — directing audio, navigation or display function blocks.",
+    }
+    Ccp {
+        doc:       "CAN Calibration Protocol (ASAM CCP v2.1) for ECU measurement and calibration over CAN/UDP.",
+        display:   "CCP",
+        color:     0x2563EB,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ccp", "can_calibration"],
+        blurb:     "A CCP automotive ECU calibration message — memory transfer, DAQ setup or flash programming.",
+    }
+    Nmea2000 {
+        doc:       "NMEA 2000 (N2K) marine and vehicle CAN network protocol based on SAE J1939.",
+        display:   "NMEA 2000",
+        color:     0x0891B2,
+        transport: Other,
+        rank:      3,
+        aliases:   ["nmea2000", "n2k", "nmea_2000"],
+        blurb:     "An NMEA 2000 vessel telemetry message — position, depth, wind or engine parameters.",
+    }
+    AutosarSecOc {
+        doc:       "AUTOSAR SecOC (Secure On-Board Communication / ISO 23132) I-PDU security payload with Freshness Counter and MAC.",
+        display:   "AUTOSAR SecOC",
+        color:     0xDC2626,
+        transport: Other,
+        rank:      3,
+        aliases:   ["secoc", "autosar_secoc", "sec_oc"],
+        blurb:     "An AUTOSAR SecOC secured I-PDU packet carrying payload, Freshness Counter and Message Authentication Code (MAC).",
+    }
+    AutosarPdu {
+        doc:       "AUTOSAR Container I-PDU and PDU Router multiplexing protocol for vehicle networks.",
+        display:   "AUTOSAR PDU",
+        color:     0xEA580C,
+        transport: Other,
+        rank:      3,
+        aliases:   ["autosar_pdu", "ipdu", "pdu_router"],
+        blurb:     "An AUTOSAR Container I-PDU multiplexed frame carrying structured signals over automotive buses.",
+    }
+    Avdecc {
+        doc:       "IEEE 1722.1 AVDECC Audio Video Discovery, Enumeration, Connection Management, and Control Protocol.",
+        display:   "AVDECC",
+        color:     0x9333EA,
+        transport: Other,
+        rank:      3,
+        aliases:   ["avdecc", "ieee1722_1", "adp", "aecp"],
+        blurb:     "An IEEE 1722.1 AVDECC control packet — ADP entity discovery, AECP control command, or ACMP connection management.",
+    }
+    DoCan {
+        doc:       "DoCAN (ISO 15765-2 / ISO 14229-2 UDS over CAN) diagnostic communication protocol.",
+        display:   "DoCAN",
+        color:     0x0284C7,
+        transport: Other,
+        rank:      3,
+        aliases:   ["docan", "uds_can", "can_docan"],
+        blurb:     "A DoCAN diagnostic message — Single Frame, First Frame, Consecutive Frame or Flow Control carrying UDS commands.",
+    }
+    X2ap {
+        doc:       "LTE X2 Application Protocol (3GPP TS 36.423) eNB-to-eNB interface over SCTP PPID 27.",
+        display:   "X2AP",
+        color:     0x0284C7,
+        transport: Other,
+        rank:      3,
+        aliases:   ["x2ap", "x2_ap"],
+        blurb:     "An LTE X2AP inter-eNB message — handover request, load information or SN status transfer.",
+    }
+    E2ap {
+        doc:       "O-RAN Near-RT RIC E2 Application Protocol (O-RAN WG3.E2GAP) over SCTP PPID 70.",
+        display:   "E2AP",
+        color:     0x059669,
+        transport: Other,
+        rank:      3,
+        aliases:   ["e2ap", "oran_e2ap", "ric_e2ap"],
+        blurb:     "An O-RAN E2AP RIC control message — E2 setup, RIC subscription or RIC indication.",
+    }
+    OranE1 {
+        doc:       "O-RAN E1/M-Plane interface protocol (3GPP TS 38.463) gNB-CU-CP to gNB-CU-UP.",
+        display:   "O-RAN E1",
+        color:     0x10B981,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["oran_e1", "oran_mplane"],
+        blurb:     "An O-RAN E1 bearer context message — setting up CP/UP user plane bearer contexts.",
+    }
+    Cpri {
+        doc:       "Common Public Radio Interface (CPRI) fronthaul frame for radio units.",
+        display:   "CPRI",
+        color:     0x6366F1,
+        transport: Other,
+        rank:      3,
+        aliases:   ["cpri", "cpri_fronthaul"],
+        blurb:     "A CPRI radio fronthaul frame — C&M HDLC, L1 inband signaling or IQ data stream.",
+    }
+    NasEps {
+        doc:       "3GPP TS 24.301 LTE EPS Non-Access Stratum (NAS-EPS) signaling protocol.",
+        display:   "NAS-EPS",
+        color:     0x2563EB,
+        transport: Other,
+        rank:      3,
+        aliases:   ["nas_eps", "eps_nas", "lte_nas"],
+        blurb:     "An LTE EPS NAS mobility or session management message — Attach, TAU, or Security Mode Command.",
+    }
+    Nas5gs {
+        doc:       "3GPP TS 24.501 5GS Non-Access Stratum (NAS-5GS) signaling protocol.",
+        display:   "NAS-5GS",
+        color:     0x7C3AED,
+        transport: Other,
+        rank:      3,
+        aliases:   ["nas_5gs", "5gs_nas", "5g_nas"],
+        blurb:     "A 5G NAS mobility or session management message — Registration Request, PDU Session Establishment.",
+    }
+    Nrppa {
+        doc:       "NR Positioning Protocol A (3GPP TS 38.455) for gNB positioning over SCTP PPID 66.",
+        display:   "NRPPa",
+        color:     0x8B5CF6,
+        transport: Other,
+        rank:      3,
+        aliases:   ["nrppa", "nr_positioning"],
+        blurb:     "An NRPPa positioning message — OTDOA information exchange or E-CID measurement report.",
+    }
+    Xwap {
+        doc:       "LTE-WLAN Aggregation Application Protocol (3GPP TS 36.463) over SCTP PPID 59.",
+        display:   "XwAP",
+        color:     0x0891B2,
+        transport: Other,
+        rank:      3,
+        aliases:   ["xwap", "xw_ap"],
+        blurb:     "An XwAP LTE-WLAN aggregation message — Xw setup, WT association or WLAN status reporting.",
+    }
+    W1ap {
+        doc:       "3GPP TS 37.473 W1 Application Protocol ng-eNB-CU to ng-eNB-DU over SCTP PPID 63.",
+        display:   "W1AP",
+        color:     0x0D9488,
+        transport: Other,
+        rank:      3,
+        aliases:   ["w1ap", "w1_ap"],
+        blurb:     "A W1AP CU-DU control message — W1 setup, gNB-DU configuration update, or UE context setup.",
+    }
+    GprsLlc {
+        doc:       "GPRS Logical Link Control (3GPP TS 44.064) over Gb interface.",
+        display:   "GPRS-LLC",
+        color:     0xD97706,
+        transport: Other,
+        rank:      3,
+        aliases:   ["gprs_llc", "llc_gprs"],
+        blurb:     "A GPRS LLC frame — GMM mobility management, TOM tunneling, or SNDCP user data.",
+    }
+    Sndcp {
+        doc:       "Subnetwork Dependent Convergence Protocol (3GPP TS 44.065) over GPRS LLC.",
+        display:   "SNDCP",
+        color:     0xB45309,
+        transport: Other,
+        rank:      3,
+        aliases:   ["sndcp", "gprs_sndcp"],
+        blurb:     "An SNDCP packet — multiplexing packet data network IP traffic over GPRS LLC SAPIs.",
+    }
+    Inap {
+        doc:       "Intelligent Network Application Part (ITU-T Q.1218 / 3GPP TS 29.078) over SS7/TCAP.",
+        display:   "INAP",
+        color:     0xC026D3,
+        transport: Other,
+        rank:      3,
+        aliases:   ["inap", "inap_ss7"],
+        blurb:     "An SS7 INAP message — InitialDP, Connect, ReleaseCall, or ApplyCharging.",
+    }
+    Camel {
+        doc:       "Customised Applications for Mobile network Enhanced Logic (3GPP TS 29.078 CAP) over TCAP.",
+        display:   "CAMEL",
+        color:     0xDB2777,
+        transport: Other,
+        rank:      3,
+        aliases:   ["camel", "cap_ss7"],
+        blurb:     "A CAMEL/CAP SS7 message — InitialDPSMS, ApplyChargingReport, or FurnishChargingInformation.",
+    }
+    Mtp2 {
+        doc:       "SS7 Message Transfer Part Level 2 (ITU-T Q.703) signaling link layer.",
+        display:   "MTP2",
+        color:     0xE11D48,
+        transport: Other,
+        rank:      3,
+        aliases:   ["mtp2", "ss7_mtp2"],
+        blurb:     "An SS7 MTP2 link signal unit — FISU fill-in, LSSU link status, or MSU message unit.",
+    }
+    Sgsap {
+        doc:       "3GPP TS 29.118 SGs Application Protocol for MME to VLR CS Fallback.",
+        display:   "SGsAP",
+        color:     0x4F46E5,
+        transport: Other,
+        rank:      3,
+        aliases:   ["sgsap", "sgs_ap"],
+        blurb:     "An SGsAP CS fallback message — Location Update Request, Paging Request, or Alert Request.",
+    }
+    GtpSv {
+        doc:       "3GPP TS 29.280 Sv Interface for SRVCC voice handover between MME and MSC.",
+        display:   "GTP Sv",
+        color:     0x6D28D9,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["gtp_sv", "gtp_sv_interface"],
+        blurb:     "A GTP Sv interface message — PS to CS Handover Request, Response, or Cancel.",
+    }
+    Gtpv1U {
+        doc:       "GPRS Tunnelling Protocol User Plane (3GPP TS 29.281 GTPv1-U) over UDP port 2152.",
+        display:   "GTPv1-U",
+        color:     0x0369A1,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["gtpv1u", "gtp_u", "gtpv1_u"],
+        blurb:     "A GTPv1-U user plane tunnel packet — carrying mobile subscriber IP payload inside TEIDs.",
+    }
+    RrcLte {
+        doc:       "3GPP TS 36.331 LTE Radio Resource Control (RRC) protocol.",
+        display:   "RRC LTE",
+        color:     0x15803D,
+        transport: Other,
+        rank:      3,
+        aliases:   ["rrc_lte", "lte_rrc"],
+        blurb:     "An LTE RRC radio message — RRCConnectionRequest, Setup, or SecurityModeCommand.",
+    }
+    RrcNr {
+        doc:       "3GPP TS 38.331 5G NR Radio Resource Control (RRC) protocol.",
+        display:   "RRC NR",
+        color:     0x047857,
+        transport: Other,
+        rank:      3,
+        aliases:   ["rrc_nr", "nr_rrc", "5g_rrc"],
+        blurb:     "A 5G NR RRC radio message — RRCSetupRequest, RRCReconfiguration, or RRCResumeRequest.",
+    }
+    Pdcp {
+        doc:       "3GPP TS 36.323 / TS 38.323 Packet Data Convergence Protocol (PDCP).",
+        display:   "PDCP",
+        color:     0x0F766E,
+        transport: Other,
+        rank:      3,
+        aliases:   ["pdcp", "3gpp_pdcp"],
+        blurb:     "A PDCP radio layer PDU — Data PDU sequence number or Control Status Report.",
+    }
+    Rlc {
+        doc:       "3GPP TS 36.322 / TS 38.322 Radio Link Control (RLC) protocol.",
+        display:   "RLC",
+        color:     0x374151,
+        transport: Other,
+        rank:      3,
+        aliases:   ["rlc", "3gpp_rlc"],
+        blurb:     "An RLC radio layer PDU — Acknowledged Mode (AM) Data PDU or Status Control PDU.",
+    }
+    Shim6 {
+        doc:       "RFC 5533 Level 3 Multihoming Shim Protocol for IPv6 (SHIM6).",
+        display:   "SHIM6",
+        color:     0x2563EB,
+        transport: Other,
+        rank:      3,
+        aliases:   ["shim6", "ipv6_shim6"],
+        blurb:     "A SHIM6 IPv6 multihoming control message — I1, R1, I2, R2 or keepalive.",
+    }
+    Openr {
+        doc:       "Facebook OpenR Routing Protocol over ZeroMQ / UDP 6683.",
+        display:   "OpenR",
+        color:     0x059669,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["openr", "fb_openr"],
+        blurb:     "An OpenR routing message — Spark hello, KvStore synchronization or LinkMonitor update.",
+    }
+    Gue {
+        doc:       "Generic UDP Encapsulation (RFC 8154) over UDP port 6080.",
+        display:   "GUE",
+        color:     0x7C3AED,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["gue", "generic_udp_encap"],
+        blurb:     "A Generic UDP Encapsulation packet — carrying IPv4, IPv6 or GRE payloads inside UDP.",
+    }
+    Fou {
+        doc:       "Foo over UDP (Linux kernel FOU direct IP encapsulation) over UDP 5556.",
+        display:   "FOU",
+        color:     0x0891B2,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["fou", "foo_over_udp"],
+        blurb:     "A Foo over UDP (FOU) packet — carrying direct IP protocols (IPv4/IPv6/ESP) inside UDP.",
+    }
+    SixToFour {
+        doc:       "6to4 IPv6 in IPv4 encapsulation (RFC 3056 / IP Proto 41).",
+        display:   "6to4",
+        color:     0xD97706,
+        transport: Other,
+        rank:      3,
+        aliases:   ["6to4", "six_to_four"],
+        blurb:     "A 6to4 IPv6 in IPv4 tunnel packet — carrying 2002::/16 addresses across IPv4 backbones.",
+    }
+    Isatap {
+        doc:       "Intra-Site Automatic Tunnel Addressing Protocol (RFC 5214 ISATAP).",
+        display:   "ISATAP",
+        color:     0x0D9488,
+        transport: Other,
+        rank:      3,
+        aliases:   ["isatap", "isatap_tunnel"],
+        blurb:     "An ISATAP IPv6 tunnel packet — carrying fe80::5efe:a.b.c.d intra-site tunnel traffic.",
+    }
+    Ikev2 {
+        doc:       "Internet Key Exchange version 2 (RFC 7296 IKEv2) over UDP 500 / 4500.",
+        display:   "IKEv2",
+        color:     0x6366F1,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ikev2", "ike_v2"],
+        blurb:     "An IKEv2 VPN key exchange message — IKE_SA_INIT, IKE_AUTH or CREATE_CHILD_SA.",
+    }
+    Sstp {
+        doc:       "Secure Socket Tunneling Protocol (Microsoft SSTP) over TCP 443 / HTTPS.",
+        display:   "SSTP",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sstp", "ms_sstp"],
+        blurb:     "An SSTP VPN control or data packet — CALL_CONNECT_REQUEST, ACK or ECHO.",
+    }
+    SoftEther {
+        doc:       "SoftEther VPN Protocol over TCP 443 / UDP 1194 / 5555.",
+        display:   "SoftEther",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["softether", "softether_vpn"],
+        blurb:     "A SoftEther VPN session or HTTPS tunnel packet.",
+    }
+    Stt {
+        doc:       "Stateless Transport Tunneling (STT) network virtualization over TCP 8472.",
+        display:   "STT",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["stt", "stt_tunnel"],
+        blurb:     "An STT stateless transport tunnel frame — carrying virtual network traffic with Context IDs.",
+    }
+    Nvgre {
+        doc:       "Network Virtualization using Generic Routing Encapsulation (RFC 7637 NVGRE).",
+        display:   "NVGRE",
+        color:     0x0891B2,
+        transport: Other,
+        rank:      3,
+        aliases:   ["nvgre", "nvgre_tunnel"],
+        blurb:     "An NVGRE network virtualization frame — carrying 24-bit Virtual Subnet IDs (VSID).",
+    }
+    MplsInUdp {
+        doc:       "RFC 7510 Encapsulating MPLS in UDP over UDP port 6635.",
+        display:   "MPLS-in-UDP",
+        color:     0xD97706,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["mpls_in_udp", "mpls_udp"],
+        blurb:     "An MPLS-in-UDP tunnel packet — carrying MPLS label stacks over UDP transport.",
+    }
+    Openconnect {
+        doc:       "OpenConnect / Cisco AnyConnect SSL VPN CSTP protocol.",
+        display:   "OpenConnect",
+        color:     0x0D9488,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openconnect", "anyconnect"],
+        blurb:     "An OpenConnect / AnyConnect SSL VPN CSTP handshake or data frame.",
+    }
+    Scep {
+        doc:       "Simple Certificate Enrollment Protocol (RFC 8894 SCEP) over HTTP.",
+        display:   "SCEP",
+        color:     0xD946EF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["scep", "pki_scep"],
+        blurb:     "A SCEP PKI certificate enrollment message — PKIOperation, GetCACert or GetCACaps.",
+    }
+    Est {
+        doc:       "Enrollment over Secure Transport (RFC 7030 EST) over HTTPS.",
+        display:   "EST",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["est", "pki_est"],
+        blurb:     "An EST certificate enrollment message — simpleenroll, simplereenroll or cacerts.",
+    }
+    TspTimestamp {
+        doc:       "RFC 3161 Time-Stamp Protocol (TSP) over HTTP / TCP 318.",
+        display:   "TSP Timestamp",
+        color:     0xF43F5E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tsp_timestamp", "rfc3161_tsp"],
+        blurb:     "A TSP PKI time-stamp message — TimeStampReq or TimeStampResp.",
+    }
+    Sasl {
+        doc:       "Simple Authentication and Security Layer (RFC 4422 SASL).",
+        display:   "SASL",
+        color:     0x4F46E5,
+        transport: Other,
+        rank:      3,
+        aliases:   ["sasl", "sasl_auth"],
+        blurb:     "A SASL authentication exchange — PLAIN, GSSAPI, DIGEST-MD5 or EXTERNAL.",
+    }
+    Gssapi {
+        doc:       "Generic Security Services Application Program Interface (RFC 2743 GSSAPI / SPNEGO).",
+        display:   "GSSAPI",
+        color:     0x6D28D9,
+        transport: Other,
+        rank:      3,
+        aliases:   ["gssapi", "spnego"],
+        blurb:     "A GSSAPI / SPNEGO negotiation token for Kerberos and NTLM security contexts.",
+    }
+    Srp {
+        doc:       "Secure Remote Password Protocol (RFC 2945 / RFC 5054 SRP).",
+        display:   "SRP",
+        color:     0x0369A1,
+        transport: Other,
+        rank:      3,
+        aliases:   ["srp", "srp_auth"],
+        blurb:     "An SRP zero-knowledge password authentication handshake.",
+    }
+    DtlsSrtp {
+        doc:       "RFC 5764 DTLS Extension for SRTP Keying (DTLS-SRTP).",
+        display:   "DTLS-SRTP",
+        color:     0x15803D,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["dtls_srtp", "srtp_dtls"],
+        blurb:     "A DTLS-SRTP key exchange packet — establishing SRTP media encryption keys.",
+    }
+    TacacsLegacy {
+        doc:       "Legacy TACACS / XTACACS authentication protocol on Port 49.",
+        display:   "Legacy TACACS",
+        color:     0x047857,
+        transport: Other,
+        rank:      3,
+        aliases:   ["tacacs_legacy", "xtacacs"],
+        blurb:     "A legacy TACACS / XTACACS authentication packet — LOGIN, RESPONSE or CHANGE_PASSWORD.",
+    }
+    Shadowsocks {
+        doc:       "Shadowsocks encrypted socks5 proxy protocol.",
+        display:   "Shadowsocks",
+        color:     0x0F766E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["shadowsocks", "ss_proxy"],
+        blurb:     "A Shadowsocks encrypted proxy packet carrying AEAD chunks.",
+    }
+    Vmess {
+        doc:       "V2Ray VMess / VLESS encrypted proxy protocol.",
+        display:   "VMess/VLESS",
+        color:     0x374151,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["vmess", "vless", "v2ray"],
+        blurb:     "A VMess / VLESS encrypted proxy protocol frame.",
+    }
+    Obfs4 {
+        doc:       "Tor obfs4 obfuscated pluggable transport.",
+        display:   "obfs4",
+        color:     0x1F2937,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["obfs4", "tor_obfs4"],
+        blurb:     "An obfs4 obfuscated proxy stream.",
+    }
     Rtp {
         doc:       "Real-time Transport Protocol media stream (RFC 3550) — dynamic UDP ports.",
         display:   "RTP",
