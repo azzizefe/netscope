@@ -821,6 +821,222 @@ protocols! {
         aliases:   ["victoriametrics"],
         blurb:     "A VictoriaMetrics time-series ingestion or query API message.",
     }
+    RabbitmqStream {
+        doc:       "RabbitMQ Stream Protocol (TCP 5552).",
+        display:   "RabbitMQ Stream",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["rabbitmq_stream", "rabbitmqstream"],
+        blurb:     "A RabbitMQ Stream Protocol binary frame.",
+    }
+    ArtemisCore {
+        doc:       "ActiveMQ Artemis Core Protocol (TCP 61616).",
+        display:   "Artemis Core",
+        color:     0xD97706,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["artemis_core", "artemis"],
+        blurb:     "An ActiveMQ Artemis Core messaging packet.",
+    }
+    SolaceSmf {
+        doc:       "Solace SMF Wire Protocol (TCP 55555).",
+        display:   "Solace SMF",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["solace_smf", "solace", "smf"],
+        blurb:     "A Solace SolCache SMF binary protocol message.",
+    }
+    TibcoRv {
+        doc:       "TIBCO Rendezvous (UDP 7500).",
+        display:   "TIBCO RV",
+        color:     0x2563EB,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["tibco_rv", "tibrv", "rendezvous"],
+        blurb:     "A TIBCO Rendezvous reliable multicast messaging packet.",
+    }
+    TibcoEms {
+        doc:       "TIBCO EMS Protocol (TCP 7222).",
+        display:   "TIBCO EMS",
+        color:     0x4F46E5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tibco_ems", "tibems"],
+        blurb:     "A TIBCO Enterprise Message Service (EMS) packet.",
+    }
+    NanomsgSp {
+        doc:       "NNG / nanomsg Scalability Protocols (TCP 5554).",
+        display:   "nanomsg SP",
+        color:     0x0D9488,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nanomsg_sp", "nanomsg", "nng"],
+        blurb:     "A nanomsg / NNG Scalability Protocol frame.",
+    }
+    OtlpGrpc {
+        doc:       "OpenTelemetry OTLP over gRPC (TCP 4317).",
+        display:   "OTLP gRPC",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["otlp_grpc", "otlp"],
+        blurb:     "An OpenTelemetry OTLP gRPC telemetry export message.",
+    }
+    OtlpHttp {
+        doc:       "OpenTelemetry OTLP over HTTP (TCP 4318).",
+        display:   "OTLP HTTP",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["otlp_http"],
+        blurb:     "An OpenTelemetry OTLP HTTP REST export request.",
+    }
+    Zipkin {
+        doc:       "Zipkin Span Reporting HTTP API (TCP 9411).",
+        display:   "Zipkin",
+        color:     0x0891B2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zipkin"],
+        blurb:     "A Zipkin distributed tracing span report.",
+    }
+    Riemann {
+        doc:       "Riemann Event Stream Protocol (TCP/UDP 5555).",
+        display:   "Riemann",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["riemann"],
+        blurb:     "A Riemann event stream monitoring packet.",
+    }
+    Munin {
+        doc:       "Munin Node Protocol (TCP 4949).",
+        display:   "Munin",
+        color:     0x9333EA,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["munin"],
+        blurb:     "A Munin system monitoring node command or response.",
+    }
+    Sensu {
+        doc:       "Sensu Go Agent Transport (TCP 3031).",
+        display:   "Sensu",
+        color:     0xE11D48,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sensu"],
+        blurb:     "A Sensu Go monitoring agent payload.",
+    }
+    Netdata {
+        doc:       "Netdata Streaming Protocol (TCP 19999).",
+        display:   "Netdata",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netdata"],
+        blurb:     "A Netdata real-time metrics streaming frame.",
+    }
+    SplunkS2s {
+        doc:       "Splunk Server-to-Server (S2S) Protocol (TCP 9997).",
+        display:   "Splunk S2S",
+        color:     0xDC2626,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["splunk_s2s", "splunk"],
+        blurb:     "A Splunk forwarder Server-to-Server log stream packet.",
+    }
+    LokiPush {
+        doc:       "Grafana Loki Log Push API (TCP 3100).",
+        display:   "Loki Push",
+        color:     0xEA580C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["loki_push", "loki"],
+        blurb:     "A Grafana Loki log entry push request.",
+    }
+    VectorNative {
+        doc:       "Vector Native Protobuf Stream Protocol (TCP 6000).",
+        display:   "Vector Native",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["vector_native", "vector"],
+        blurb:     "A Vector observability data pipeline native stream packet.",
+    }
+    GraphitePickle {
+        doc:       "Graphite Pickle Protocol (TCP 2004).",
+        display:   "Graphite Pickle",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["graphite_pickle"],
+        blurb:     "A Graphite metrics pickle batch stream frame.",
+    }
+    Icinga2 {
+        doc:       "Icinga2 Cluster Communication (TCP 5665).",
+        display:   "Icinga2",
+        color:     0x4F46E5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["icinga2"],
+        blurb:     "An Icinga2 monitoring cluster node sync packet.",
+    }
+    NagiosNsca {
+        doc:       "Nagios NSCA Passive Check Protocol (TCP 5667).",
+        display:   "Nagios NSCA",
+        color:     0x059669,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nagios_nsca", "nsca"],
+        blurb:     "A Nagios NSCA passive service check result packet.",
+    }
+    NagiosNdo {
+        doc:       "Nagios NDO Protocol (TCP 5668).",
+        display:   "Nagios NDO",
+        color:     0x0891B2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nagios_ndo", "ndo"],
+        blurb:     "A Nagios NDO event sink data stream packet.",
+    }
+    CollectdV5 {
+        doc:       "collectd binary v5 extensions (UDP 25826).",
+        display:   "collectd v5",
+        color:     0x7C3AED,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["collectd_v5"],
+        blurb:     "A collectd binary v5 telemetry metric packet.",
+    }
+    GangliaGmetad {
+        doc:       "Ganglia gmetad XML protocol (TCP 8651).",
+        display:   "Ganglia gmetad",
+        color:     0x9333EA,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ganglia_gmetad", "gmetad"],
+        blurb:     "A Ganglia gmetad XML cluster metrics stream.",
+    }
+    ZabbixActive {
+        doc:       "Zabbix Active Agent Protocol (TCP 10051).",
+        display:   "Zabbix Active",
+        color:     0xE11D48,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zabbix_active"],
+        blurb:     "A Zabbix active agent metric check request or reply.",
+    }
+    TelegrafInfluxV2 {
+        doc:       "Telegraf / InfluxDB v2 Write API (TCP 8086).",
+        display:   "InfluxDB v2 Write",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["telegraf_influxv2", "influxv2"],
+        blurb:     "A Telegraf / InfluxDB v2 metrics write API payload.",
+    }
     Ccp {
         doc:       "CAN Calibration Protocol (ASAM CCP v2.1) for ECU measurement and calibration over CAN/UDP.",
         display:   "CCP",
