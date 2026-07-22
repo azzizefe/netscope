@@ -6,10 +6,13 @@ use super::DissectedResult;
 
 /// Check if payload looks like a Kermit packet (SOH 0x01 + ASCII length + ASCII seq + packet type).
 pub(crate) fn looks_like_kermit(payload: &[u8]) -> bool {
-    if payload.len() < 4 {
+    if payload.len() < 4 || payload[0] != 0x01 {
         return false;
     }
-    payload[0] == 0x01 && payload[1].is_ascii() && payload[2].is_ascii()
+    if !(32..=126).contains(&payload[1]) || !(32..=126).contains(&payload[2]) {
+        return false;
+    }
+    matches!(payload[3], b'S' | b'Y' | b'N' | b'F' | b'D' | b'Z' | b'B' | b'E' | b'G' | b'C' | b'A' | b'Q')
 }
 
 /// Dissect a Kermit File Transfer Protocol frame.

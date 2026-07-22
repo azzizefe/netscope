@@ -1060,7 +1060,6 @@ const ETHERTYPE_DEC_LAT: u16 = 0x6004; // DEC Local Area Transport
 const ETHERTYPE_DEC_MOP: u16 = 0x6002; // DEC Maintenance Operation Protocol
 const ETHERTYPE_CHAOSNET: u16 = 0x0804; // Chaosnet
 const ETHERTYPE_XNS: u16 = 0x0600; // Xerox Network Systems IDP
-const ETHERTYPE_SPB: u16 = 0x88E5; // IEEE 802.1aq Shortest Path Bridging
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
@@ -1115,7 +1114,13 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_SERCOS => sercos::dissect_sercos(payload),
         ETHERTYPE_RARP => rarp::dissect_rarp(payload),
         ETHERTYPE_ETHERCAT => ethercat::dissect_ethercat(payload),
-        ETHERTYPE_MACSEC => macsec::dissect_macsec(payload),
+        ETHERTYPE_MACSEC => {
+            if payload.len() >= 4 && (payload[0] & 0x0F) == 0 && payload[1] <= 0x0F {
+                spb::dissect_spb(payload)
+            } else {
+                macsec::dissect_macsec(payload)
+            }
+        },
         ETHERTYPE_FCOE => fcoe::dissect_fcoe(payload),
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
