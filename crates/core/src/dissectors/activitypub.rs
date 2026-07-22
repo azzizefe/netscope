@@ -12,7 +12,7 @@ pub fn dissect_activitypub(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary = if payload.contains(&b"application/activity+json") || payload.contains(&b"application/ld+json") {
+    let summary = if memchr::memmem::find(payload, b"application/activity+json").is_some() || memchr::memmem::find(payload, b"application/ld+json").is_some() {
         "ActivityPub payload".to_string()
     } else {
         format!("ActivityPub ({})", super::bytes(payload.len() as u64))

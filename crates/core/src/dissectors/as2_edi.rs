@@ -12,7 +12,7 @@ pub fn dissect_as2_edi(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary = if payload.contains(&b"AS2-To:") || payload.contains(&b"AS2-From:") || payload.contains(&b"as2-version:") {
+    let summary = if memchr::memmem::find(payload, b"AS2-To:").is_some() || memchr::memmem::find(payload, b"AS2-From:").is_some() || memchr::memmem::find(payload, b"as2-version:").is_some() {
         "AS2 EDI message".to_string()
     } else {
         format!("AS2 EDI ({})", super::bytes(payload.len() as u64))
