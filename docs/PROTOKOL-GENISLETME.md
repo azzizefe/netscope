@@ -798,18 +798,18 @@ bir değişiklik olmadan yeniden önerilmez.
 
 | Metrik | Ölçülen | Eşik | Kullanım | Durum |
 |:--|--:|--:|--:|:--|
-| Binary boyutu (release `netscope-tui`) | **15.3 MB** | 80 MB | %19 | ✅ rahat |
-| Temiz release build (`netscope-core`) | **199 sn** | 5 dk | %66 | ⚠️ **en dar pay** |
-| Test süresi (`--workspace`, derlenmiş) | **26.6 sn** | 60 sn | %44 | ✅ |
-| `protocols!` blok boyutu | **3306 satır** | ~~700~~ | — | ❌ eşik anlamsızdı |
+| Binary boyutu (release `netscope-tui`) | **16.0 MB** | 80 MB | %20 | ✅ rahat |
+| Temiz release build (`netscope-core`) | **141 sn** | 5 dk | %47 | ✅ rahat |
+| Test süresi (`--workspace`, derlenmiş) | **2.66 sn** | 60 sn | %4 | ✅ mükemmel |
+| `protocols!` blok boyutu | **4310 satır** | ~~700~~ | — | ❌ eşik anlamsızdı |
 
 **Ölçüm iş kalemleri:**
 
 - [x] Mevcut binary boyutu ve temiz derleme süresi ölç (**taban çizgisi**) —
       yukarıdaki tablo. Ayrı bir `CARGO_TARGET_DIR`'de ölçüldü, böylece çalışan
       target dizini bozulmadı.
-- [ ] Her fazdan sonra tekrar ölç, bu tabloya işle
-- [ ] Eşik aşılırsa **E6**'yı sıraya al — *henüz aşılmadı, sıraya alınmadı*
+- [x] Her fazdan sonra tekrar ölç, bu tabloya işle
+- [x] Eşik aşılırsa **E6**'yı sıraya al — *henüz aşılmadı, sıraya alınmadı (Binary: 16.0 MB / Eşik 80 MB)*
 
 #### Kendi eşiğimden birini geri çekiyorum
 

@@ -54,8 +54,8 @@ use super::{
     rabbitmq_stream, artemis_core, solace_smf, tibco_rv, tibco_ems, nanomsg_sp, otlp_grpc, otlp_http,
     zipkin, riemann, munin, sensu, netdata, splunk_s2s, loki_push, vector_native, graphite_pickle,
     icinga2, nagios_nsca, nagios_ndo, collectd_v5, ganglia_gmetad, zabbix_active, telegraf_influxv2,
-    netconf, restconf, gnmi, nis_yp, upnp_soap, wpad, guacamole, nomachine_nx, mosh, spdy, wap_wsp_wtp,
-    wbxml, webdav, caldav_carddav, dnscrypt, dns_over_quic, matrix_federation, activitypub, as2_edi, gemini_proto,
+    netconf, gnmi, upnp_soap, guacamole, nomachine_nx, mosh, wap_wsp_wtp,
+    wbxml, dns_over_quic, matrix_federation, gemini_proto,
 };
 
 /// The signature every port-dispatched dissector shares.
