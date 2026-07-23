@@ -7214,6 +7214,880 @@ protocols! {
         aliases:   ["h501"],
         blurb:     "An H.501 mobility management message.",
     }
+    DcerpcAtsvc {
+        doc:       "DCERPC-ATSVC protocol extension.",
+        display:   "DCERPC-ATSVC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_atsvc"],
+        blurb:     "A DCERPC-ATSVC protocol PDU.",
+    }
+    DcerpcBossvr {
+        doc:       "DCERPC-BOSSVR protocol extension.",
+        display:   "DCERPC-BOSSVR",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_bossvr"],
+        blurb:     "A DCERPC-BOSSVR protocol PDU.",
+    }
+    DcerpcBrowser {
+        doc:       "DCERPC-BROWSER protocol extension.",
+        display:   "DCERPC-BROWSER",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_browser"],
+        blurb:     "A DCERPC-BROWSER protocol PDU.",
+    }
+    DcerpcBudb {
+        doc:       "DCERPC-BUDB protocol extension.",
+        display:   "DCERPC-BUDB",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_budb"],
+        blurb:     "A DCERPC-BUDB protocol PDU.",
+    }
+    DcerpcButc {
+        doc:       "DCERPC-BUTC protocol extension.",
+        display:   "DCERPC-BUTC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_butc"],
+        blurb:     "A DCERPC-BUTC protocol PDU.",
+    }
+    DcerpcCdsClerkserver {
+        doc:       "DCERPC-CDS-CLERKSERVER protocol extension.",
+        display:   "DCERPC-CDS-CLERKSERVER",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_cds_clerkserver"],
+        blurb:     "A DCERPC-CDS-CLERKSERVER protocol PDU.",
+    }
+    DcerpcCdsSolicit {
+        doc:       "DCERPC-CDS-SOLICIT protocol extension.",
+        display:   "DCERPC-CDS-SOLICIT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_cds_solicit"],
+        blurb:     "A DCERPC-CDS-SOLICIT protocol PDU.",
+    }
+    DcerpcClusapi {
+        doc:       "DCERPC-CLUSAPI protocol extension.",
+        display:   "DCERPC-CLUSAPI",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_clusapi"],
+        blurb:     "A DCERPC-CLUSAPI protocol PDU.",
+    }
+    DcerpcConv {
+        doc:       "DCERPC-CONV protocol extension.",
+        display:   "DCERPC-CONV",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_conv"],
+        blurb:     "A DCERPC-CONV protocol PDU.",
+    }
+    DcerpcCprpcServer {
+        doc:       "DCERPC-CPRPC-SERVER protocol extension.",
+        display:   "DCERPC-CPRPC-SERVER",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_cprpc_server"],
+        blurb:     "A DCERPC-CPRPC-SERVER protocol PDU.",
+    }
+    DcerpcDce122 {
+        doc:       "DCERPC-DCE122 protocol extension.",
+        display:   "DCERPC-DCE122",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_dce122"],
+        blurb:     "A DCERPC-DCE122 protocol PDU.",
+    }
+    DcerpcDfs {
+        doc:       "DCERPC-DFS protocol extension.",
+        display:   "DCERPC-DFS",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_dfs"],
+        blurb:     "A DCERPC-DFS protocol PDU.",
+    }
+    DcerpcDnsserver {
+        doc:       "DCERPC-DNSSERVER protocol extension.",
+        display:   "DCERPC-DNSSERVER",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_dnsserver"],
+        blurb:     "A DCERPC-DNSSERVER protocol PDU.",
+    }
+    DcerpcDrsuapi {
+        doc:       "DCERPC-DRSUAPI protocol extension.",
+        display:   "DCERPC-DRSUAPI",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_drsuapi"],
+        blurb:     "A DCERPC-DRSUAPI protocol PDU.",
+    }
+    DcerpcDssetup {
+        doc:       "DCERPC-DSSETUP protocol extension.",
+        display:   "DCERPC-DSSETUP",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_dssetup"],
+        blurb:     "A DCERPC-DSSETUP protocol PDU.",
+    }
+    DcerpcDtsprovider {
+        doc:       "DCERPC-DTSPROVIDER protocol extension.",
+        display:   "DCERPC-DTSPROVIDER",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_dtsprovider"],
+        blurb:     "A DCERPC-DTSPROVIDER protocol PDU.",
+    }
+    DcerpcDtsstimeReq {
+        doc:       "DCERPC-DTSSTIME-REQ protocol extension.",
+        display:   "DCERPC-DTSSTIME-REQ",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_dtsstime_req"],
+        blurb:     "A DCERPC-DTSSTIME-REQ protocol PDU.",
+    }
+    DcerpcEfs {
+        doc:       "DCERPC-EFS protocol extension.",
+        display:   "DCERPC-EFS",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_efs"],
+        blurb:     "A DCERPC-EFS protocol PDU.",
+    }
+    DcerpcEpm {
+        doc:       "DCERPC-EPM protocol extension.",
+        display:   "DCERPC-EPM",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_epm"],
+        blurb:     "A DCERPC-EPM protocol PDU.",
+    }
+    DcerpcEventlog {
+        doc:       "DCERPC-EVENTLOG protocol extension.",
+        display:   "DCERPC-EVENTLOG",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_eventlog"],
+        blurb:     "A DCERPC-EVENTLOG protocol PDU.",
+    }
+    DcerpcFileexp {
+        doc:       "DCERPC-FILEEXP protocol extension.",
+        display:   "DCERPC-FILEEXP",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_fileexp"],
+        blurb:     "A DCERPC-FILEEXP protocol PDU.",
+    }
+    DcerpcFldb {
+        doc:       "DCERPC-FLDB protocol extension.",
+        display:   "DCERPC-FLDB",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_fldb"],
+        blurb:     "A DCERPC-FLDB protocol PDU.",
+    }
+    DcerpcFrsapi {
+        doc:       "DCERPC-FRSAPI protocol extension.",
+        display:   "DCERPC-FRSAPI",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_frsapi"],
+        blurb:     "A DCERPC-FRSAPI protocol PDU.",
+    }
+    DcerpcFrsrpc {
+        doc:       "DCERPC-FRSRPC protocol extension.",
+        display:   "DCERPC-FRSRPC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_frsrpc"],
+        blurb:     "A DCERPC-FRSRPC protocol PDU.",
+    }
+    DcerpcFrstrans {
+        doc:       "DCERPC-FRSTRANS protocol extension.",
+        display:   "DCERPC-FRSTRANS",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_frstrans"],
+        blurb:     "A DCERPC-FRSTRANS protocol PDU.",
+    }
+    DcerpcFsrvp {
+        doc:       "DCERPC-FSRVP protocol extension.",
+        display:   "DCERPC-FSRVP",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_fsrvp"],
+        blurb:     "A DCERPC-FSRVP protocol PDU.",
+    }
+    DcerpcFtserver {
+        doc:       "DCERPC-FTSERVER protocol extension.",
+        display:   "DCERPC-FTSERVER",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_ftserver"],
+        blurb:     "A DCERPC-FTSERVER protocol PDU.",
+    }
+    DcerpcIclRpc {
+        doc:       "DCERPC-ICL-RPC protocol extension.",
+        display:   "DCERPC-ICL-RPC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_icl_rpc"],
+        blurb:     "A DCERPC-ICL-RPC protocol PDU.",
+    }
+    DcerpcInitshutdown {
+        doc:       "DCERPC-INITSHUTDOWN protocol extension.",
+        display:   "DCERPC-INITSHUTDOWN",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_initshutdown"],
+        blurb:     "A DCERPC-INITSHUTDOWN protocol PDU.",
+    }
+    DcerpcIwbemlevel1login {
+        doc:       "DCERPC-IWBEMLEVEL1LOGIN protocol extension.",
+        display:   "DCERPC-IWBEMLEVEL1LOGIN",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_iwbemlevel1login"],
+        blurb:     "A DCERPC-IWBEMLEVEL1LOGIN protocol PDU.",
+    }
+    DcerpcIwbemloginclientid {
+        doc:       "DCERPC-IWBEMLOGINCLIENTID protocol extension.",
+        display:   "DCERPC-IWBEMLOGINCLIENTID",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_iwbemloginclientid"],
+        blurb:     "A DCERPC-IWBEMLOGINCLIENTID protocol PDU.",
+    }
+    DcerpcIwbemloginclientidex {
+        doc:       "DCERPC-IWBEMLOGINCLIENTIDEX protocol extension.",
+        display:   "DCERPC-IWBEMLOGINCLIENTIDEX",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_iwbemloginclientidex"],
+        blurb:     "A DCERPC-IWBEMLOGINCLIENTIDEX protocol PDU.",
+    }
+    DcerpcIwbemservices {
+        doc:       "DCERPC-IWBEMSERVICES protocol extension.",
+        display:   "DCERPC-IWBEMSERVICES",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_iwbemservices"],
+        blurb:     "A DCERPC-IWBEMSERVICES protocol PDU.",
+    }
+    DcerpcKrb5rpc {
+        doc:       "DCERPC-KRB5RPC protocol extension.",
+        display:   "DCERPC-KRB5RPC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_krb5rpc"],
+        blurb:     "A DCERPC-KRB5RPC protocol PDU.",
+    }
+    DcerpcLlb {
+        doc:       "DCERPC-LLB protocol extension.",
+        display:   "DCERPC-LLB",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_llb"],
+        blurb:     "A DCERPC-LLB protocol PDU.",
+    }
+    DcerpcLsa {
+        doc:       "DCERPC-LSA protocol extension.",
+        display:   "DCERPC-LSA",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_lsa"],
+        blurb:     "A DCERPC-LSA protocol PDU.",
+    }
+    DcerpcMapi {
+        doc:       "DCERPC-MAPI protocol extension.",
+        display:   "DCERPC-MAPI",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_mapi"],
+        blurb:     "A DCERPC-MAPI protocol PDU.",
+    }
+    DcerpcMdssvc {
+        doc:       "DCERPC-MDSSVC protocol extension.",
+        display:   "DCERPC-MDSSVC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_mdssvc"],
+        blurb:     "A DCERPC-MDSSVC protocol PDU.",
+    }
+    DcerpcMessenger {
+        doc:       "DCERPC-MESSENGER protocol extension.",
+        display:   "DCERPC-MESSENGER",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_messenger"],
+        blurb:     "A DCERPC-MESSENGER protocol PDU.",
+    }
+    DcerpcMgmt {
+        doc:       "DCERPC-MGMT protocol extension.",
+        display:   "DCERPC-MGMT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_mgmt"],
+        blurb:     "A DCERPC-MGMT protocol PDU.",
+    }
+    DcerpcMisc {
+        doc:       "DCERPC-MISC protocol extension.",
+        display:   "DCERPC-MISC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_misc"],
+        blurb:     "A DCERPC-MISC protocol PDU.",
+    }
+    DcerpcNdr {
+        doc:       "DCERPC-NDR protocol extension.",
+        display:   "DCERPC-NDR",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_ndr"],
+        blurb:     "A DCERPC-NDR protocol PDU.",
+    }
+    DcerpcNetlogon {
+        doc:       "DCERPC-NETLOGON protocol extension.",
+        display:   "DCERPC-NETLOGON",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_netlogon"],
+        blurb:     "A DCERPC-NETLOGON protocol PDU.",
+    }
+    DcerpcNspi {
+        doc:       "DCERPC-NSPI protocol extension.",
+        display:   "DCERPC-NSPI",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_nspi"],
+        blurb:     "A DCERPC-NSPI protocol PDU.",
+    }
+    DcerpcNt {
+        doc:       "DCERPC-NT protocol extension.",
+        display:   "DCERPC-NT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_nt"],
+        blurb:     "A DCERPC-NT protocol PDU.",
+    }
+    DcerpcPnp {
+        doc:       "DCERPC-PNP protocol extension.",
+        display:   "DCERPC-PNP",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_pnp"],
+        blurb:     "A DCERPC-PNP protocol PDU.",
+    }
+    DcerpcRcg {
+        doc:       "DCERPC-RCG protocol extension.",
+        display:   "DCERPC-RCG",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rcg"],
+        blurb:     "A DCERPC-RCG protocol PDU.",
+    }
+    DcerpcRdaclif {
+        doc:       "DCERPC-RDACLIF protocol extension.",
+        display:   "DCERPC-RDACLIF",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rdaclif"],
+        blurb:     "A DCERPC-RDACLIF protocol PDU.",
+    }
+    DcerpcRdpdrSmartcard {
+        doc:       "DCERPC-RDPDR-SMARTCARD protocol extension.",
+        display:   "DCERPC-RDPDR-SMARTCARD",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rdpdr_smartcard"],
+        blurb:     "A DCERPC-RDPDR-SMARTCARD protocol PDU.",
+    }
+    DcerpcRepProc {
+        doc:       "DCERPC-REP-PROC protocol extension.",
+        display:   "DCERPC-REP-PROC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rep_proc"],
+        blurb:     "A DCERPC-REP-PROC protocol PDU.",
+    }
+    DcerpcRfr {
+        doc:       "DCERPC-RFR protocol extension.",
+        display:   "DCERPC-RFR",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rfr"],
+        blurb:     "A DCERPC-RFR protocol PDU.",
+    }
+    DcerpcRoverride {
+        doc:       "DCERPC-ROVERRIDE protocol extension.",
+        display:   "DCERPC-ROVERRIDE",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_roverride"],
+        blurb:     "A DCERPC-ROVERRIDE protocol PDU.",
+    }
+    DcerpcRpriv {
+        doc:       "DCERPC-RPRIV protocol extension.",
+        display:   "DCERPC-RPRIV",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rpriv"],
+        blurb:     "A DCERPC-RPRIV protocol PDU.",
+    }
+    DcerpcRras {
+        doc:       "DCERPC-RRAS protocol extension.",
+        display:   "DCERPC-RRAS",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rras"],
+        blurb:     "A DCERPC-RRAS protocol PDU.",
+    }
+    DcerpcRsAcct {
+        doc:       "DCERPC-RS-ACCT protocol extension.",
+        display:   "DCERPC-RS-ACCT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_acct"],
+        blurb:     "A DCERPC-RS-ACCT protocol PDU.",
+    }
+    DcerpcRsAttr {
+        doc:       "DCERPC-RS-ATTR protocol extension.",
+        display:   "DCERPC-RS-ATTR",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_attr"],
+        blurb:     "A DCERPC-RS-ATTR protocol PDU.",
+    }
+    DcerpcRsAttrSchema {
+        doc:       "DCERPC-RS-ATTR-SCHEMA protocol extension.",
+        display:   "DCERPC-RS-ATTR-SCHEMA",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_attr_schema"],
+        blurb:     "A DCERPC-RS-ATTR-SCHEMA protocol PDU.",
+    }
+    DcerpcRsBind {
+        doc:       "DCERPC-RS-BIND protocol extension.",
+        display:   "DCERPC-RS-BIND",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_bind"],
+        blurb:     "A DCERPC-RS-BIND protocol PDU.",
+    }
+    DcerpcRsMisc {
+        doc:       "DCERPC-RS-MISC protocol extension.",
+        display:   "DCERPC-RS-MISC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_misc"],
+        blurb:     "A DCERPC-RS-MISC protocol PDU.",
+    }
+    DcerpcRsPgo {
+        doc:       "DCERPC-RS-PGO protocol extension.",
+        display:   "DCERPC-RS-PGO",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_pgo"],
+        blurb:     "A DCERPC-RS-PGO protocol PDU.",
+    }
+    DcerpcRsPlcy {
+        doc:       "DCERPC-RS-PLCY protocol extension.",
+        display:   "DCERPC-RS-PLCY",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_plcy"],
+        blurb:     "A DCERPC-RS-PLCY protocol PDU.",
+    }
+    DcerpcRsPropAcct {
+        doc:       "DCERPC-RS-PROP-ACCT protocol extension.",
+        display:   "DCERPC-RS-PROP-ACCT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_prop_acct"],
+        blurb:     "A DCERPC-RS-PROP-ACCT protocol PDU.",
+    }
+    DcerpcRsPropAcl {
+        doc:       "DCERPC-RS-PROP-ACL protocol extension.",
+        display:   "DCERPC-RS-PROP-ACL",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_prop_acl"],
+        blurb:     "A DCERPC-RS-PROP-ACL protocol PDU.",
+    }
+    DcerpcRsPropAttr {
+        doc:       "DCERPC-RS-PROP-ATTR protocol extension.",
+        display:   "DCERPC-RS-PROP-ATTR",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_prop_attr"],
+        blurb:     "A DCERPC-RS-PROP-ATTR protocol PDU.",
+    }
+    DcerpcRsPropPgo {
+        doc:       "DCERPC-RS-PROP-PGO protocol extension.",
+        display:   "DCERPC-RS-PROP-PGO",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_prop_pgo"],
+        blurb:     "A DCERPC-RS-PROP-PGO protocol PDU.",
+    }
+    DcerpcRsPropPlcy {
+        doc:       "DCERPC-RS-PROP-PLCY protocol extension.",
+        display:   "DCERPC-RS-PROP-PLCY",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_prop_plcy"],
+        blurb:     "A DCERPC-RS-PROP-PLCY protocol PDU.",
+    }
+    DcerpcRsPwdMgmt {
+        doc:       "DCERPC-RS-PWD-MGMT protocol extension.",
+        display:   "DCERPC-RS-PWD-MGMT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_pwd_mgmt"],
+        blurb:     "A DCERPC-RS-PWD-MGMT protocol PDU.",
+    }
+    DcerpcRsRepadm {
+        doc:       "DCERPC-RS-REPADM protocol extension.",
+        display:   "DCERPC-RS-REPADM",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_repadm"],
+        blurb:     "A DCERPC-RS-REPADM protocol PDU.",
+    }
+    DcerpcRsReplist {
+        doc:       "DCERPC-RS-REPLIST protocol extension.",
+        display:   "DCERPC-RS-REPLIST",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_replist"],
+        blurb:     "A DCERPC-RS-REPLIST protocol PDU.",
+    }
+    DcerpcRsRepmgr {
+        doc:       "DCERPC-RS-REPMGR protocol extension.",
+        display:   "DCERPC-RS-REPMGR",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_repmgr"],
+        blurb:     "A DCERPC-RS-REPMGR protocol PDU.",
+    }
+    DcerpcRsUnix {
+        doc:       "DCERPC-RS-UNIX protocol extension.",
+        display:   "DCERPC-RS-UNIX",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rs_unix"],
+        blurb:     "A DCERPC-RS-UNIX protocol PDU.",
+    }
+    DcerpcRsecLogin {
+        doc:       "DCERPC-RSEC-LOGIN protocol extension.",
+        display:   "DCERPC-RSEC-LOGIN",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_rsec_login"],
+        blurb:     "A DCERPC-RSEC-LOGIN protocol PDU.",
+    }
+    DcerpcSamr {
+        doc:       "DCERPC-SAMR protocol extension.",
+        display:   "DCERPC-SAMR",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_samr"],
+        blurb:     "A DCERPC-SAMR protocol PDU.",
+    }
+    DcerpcSecidmap {
+        doc:       "DCERPC-SECIDMAP protocol extension.",
+        display:   "DCERPC-SECIDMAP",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_secidmap"],
+        blurb:     "A DCERPC-SECIDMAP protocol PDU.",
+    }
+    DcerpcSpoolss {
+        doc:       "DCERPC-SPOOLSS protocol extension.",
+        display:   "DCERPC-SPOOLSS",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_spoolss"],
+        blurb:     "A DCERPC-SPOOLSS protocol PDU.",
+    }
+    DcerpcSrvsvc {
+        doc:       "DCERPC-SRVSVC protocol extension.",
+        display:   "DCERPC-SRVSVC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_srvsvc"],
+        blurb:     "A DCERPC-SRVSVC protocol PDU.",
+    }
+    DcerpcSvcctl {
+        doc:       "DCERPC-SVCCTL protocol extension.",
+        display:   "DCERPC-SVCCTL",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_svcctl"],
+        blurb:     "A DCERPC-SVCCTL protocol PDU.",
+    }
+    DcerpcTapi {
+        doc:       "DCERPC-TAPI protocol extension.",
+        display:   "DCERPC-TAPI",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_tapi"],
+        blurb:     "A DCERPC-TAPI protocol PDU.",
+    }
+    DcerpcTaskschedulerservice {
+        doc:       "DCERPC-TASKSCHEDULERSERVICE protocol extension.",
+        display:   "DCERPC-TASKSCHEDULERSERVICE",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_taskschedulerservice"],
+        blurb:     "A DCERPC-TASKSCHEDULERSERVICE protocol PDU.",
+    }
+    DcerpcTkn4int {
+        doc:       "DCERPC-TKN4INT protocol extension.",
+        display:   "DCERPC-TKN4INT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_tkn4int"],
+        blurb:     "A DCERPC-TKN4INT protocol PDU.",
+    }
+    DcerpcTrksvr {
+        doc:       "DCERPC-TRKSVR protocol extension.",
+        display:   "DCERPC-TRKSVR",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_trksvr"],
+        blurb:     "A DCERPC-TRKSVR protocol PDU.",
+    }
+    DcerpcUbikdisk {
+        doc:       "DCERPC-UBIKDISK protocol extension.",
+        display:   "DCERPC-UBIKDISK",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_ubikdisk"],
+        blurb:     "A DCERPC-UBIKDISK protocol PDU.",
+    }
+    DcerpcUbikvote {
+        doc:       "DCERPC-UBIKVOTE protocol extension.",
+        display:   "DCERPC-UBIKVOTE",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_ubikvote"],
+        blurb:     "A DCERPC-UBIKVOTE protocol PDU.",
+    }
+    DcerpcUpdate {
+        doc:       "DCERPC-UPDATE protocol extension.",
+        display:   "DCERPC-UPDATE",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_update"],
+        blurb:     "A DCERPC-UPDATE protocol PDU.",
+    }
+    DcerpcWinreg {
+        doc:       "DCERPC-WINREG protocol extension.",
+        display:   "DCERPC-WINREG",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_winreg"],
+        blurb:     "A DCERPC-WINREG protocol PDU.",
+    }
+    DcerpcWinspool {
+        doc:       "DCERPC-WINSPOOL protocol extension.",
+        display:   "DCERPC-WINSPOOL",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_winspool"],
+        blurb:     "A DCERPC-WINSPOOL protocol PDU.",
+    }
+    DcerpcWitness {
+        doc:       "DCERPC-WITNESS protocol extension.",
+        display:   "DCERPC-WITNESS",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_witness"],
+        blurb:     "A DCERPC-WITNESS protocol PDU.",
+    }
+    DcerpcWkssvc {
+        doc:       "DCERPC-WKSSVC protocol extension.",
+        display:   "DCERPC-WKSSVC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_wkssvc"],
+        blurb:     "A DCERPC-WKSSVC protocol PDU.",
+    }
+    DcerpcWzcsvc {
+        doc:       "DCERPC-WZCSVC protocol extension.",
+        display:   "DCERPC-WZCSVC",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcerpc_wzcsvc"],
+        blurb:     "A DCERPC-WZCSVC protocol PDU.",
+    }
+    Dcom {
+        doc:       "DCOM protocol extension.",
+        display:   "DCOM",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcom"],
+        blurb:     "A DCOM protocol PDU.",
+    }
+    DcomDispatch {
+        doc:       "DCOM-DISPATCH protocol extension.",
+        display:   "DCOM-DISPATCH",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcom_dispatch"],
+        blurb:     "A DCOM-DISPATCH protocol PDU.",
+    }
+    DcomOxid {
+        doc:       "DCOM-OXID protocol extension.",
+        display:   "DCOM-OXID",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcom_oxid"],
+        blurb:     "A DCOM-OXID protocol PDU.",
+    }
+    DcomProvideclassinfo {
+        doc:       "DCOM-PROVIDECLASSINFO protocol extension.",
+        display:   "DCOM-PROVIDECLASSINFO",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcom_provideclassinfo"],
+        blurb:     "A DCOM-PROVIDECLASSINFO protocol PDU.",
+    }
+    DcomRemact {
+        doc:       "DCOM-REMACT protocol extension.",
+        display:   "DCOM-REMACT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcom_remact"],
+        blurb:     "A DCOM-REMACT protocol PDU.",
+    }
+    DcomRemunkn {
+        doc:       "DCOM-REMUNKN protocol extension.",
+        display:   "DCOM-REMUNKN",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcom_remunkn"],
+        blurb:     "A DCOM-REMUNKN protocol PDU.",
+    }
+    DcomSysact {
+        doc:       "DCOM-SYSACT protocol extension.",
+        display:   "DCOM-SYSACT",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcom_sysact"],
+        blurb:     "A DCOM-SYSACT protocol PDU.",
+    }
+    DcomTypeinfo {
+        doc:       "DCOM-TYPEINFO protocol extension.",
+        display:   "DCOM-TYPEINFO",
+        color:     0xFBBF24,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dcom_typeinfo"],
+        blurb:     "A DCOM-TYPEINFO protocol PDU.",
+    }
+
 
 
 }
