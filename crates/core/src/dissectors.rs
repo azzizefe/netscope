@@ -1287,6 +1287,29 @@ pub mod ipmi_trace;
 pub mod ipmi_transport;
 pub mod ipmi_update;
 pub mod ipmi_vita;
+pub mod bootparams;
+pub mod hclnfsd;
+pub mod klm;
+pub mod mount;
+pub mod nfsacl;
+pub mod nfsauth;
+pub mod nisplus;
+pub mod nlm;
+pub mod pcnfsd;
+pub mod portmap;
+pub mod rpcap;
+pub mod rpcrdma;
+pub mod rquota;
+pub mod rstat;
+pub mod rwall;
+pub mod sadmind;
+pub mod spray;
+pub mod stat;
+pub mod stat_notify;
+pub mod ypbind;
+pub mod yppasswd;
+pub mod ypserv;
+pub mod ypxfr;
 
 use std::net::IpAddr;
 
@@ -4360,6 +4383,29 @@ mod robustness {
         "ipmi_transport",
         "ipmi_update",
         "ipmi_vita",
+        "bootparams",
+        "hclnfsd",
+        "klm",
+        "mount",
+        "nfsacl",
+        "nfsauth",
+        "nisplus",
+        "nlm",
+        "pcnfsd",
+        "portmap",
+        "rpcap",
+        "rpcrdma",
+        "rquota",
+        "rstat",
+        "rwall",
+        "sadmind",
+        "spray",
+        "stat",
+        "stat_notify",
+        "ypbind",
+        "yppasswd",
+        "ypserv",
+        "ypxfr",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
