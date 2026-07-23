@@ -7994,6 +7994,62 @@ reason as a numeric code.",
             look_for: "YPXFR header or payload.",
         },
 
+        
+        Protocol::Mcpe => Lesson {
+            title: "Mcpe",
+            summary: "MCPE Protocol.",
+            body: "A MCPE game protocol frame.",
+            look_for: "MCPE header or payload.",
+        },
+        Protocol::Quake => Lesson {
+            title: "Quake",
+            summary: "QUAKE Protocol.",
+            body: "A QUAKE game protocol frame.",
+            look_for: "QUAKE header or payload.",
+        },
+        Protocol::Quake2 => Lesson {
+            title: "Quake2",
+            summary: "QUAKE2 Protocol.",
+            body: "A QUAKE2 game protocol frame.",
+            look_for: "QUAKE2 header or payload.",
+        },
+        Protocol::Quake3 => Lesson {
+            title: "Quake3",
+            summary: "QUAKE3 Protocol.",
+            body: "A QUAKE3 game protocol frame.",
+            look_for: "QUAKE3 header or payload.",
+        },
+        Protocol::Quakeworld => Lesson {
+            title: "Quakeworld",
+            summary: "QUAKEWORLD Protocol.",
+            body: "A QUAKEWORLD game protocol frame.",
+            look_for: "QUAKEWORLD header or payload.",
+        },
+        Protocol::SteamIhsDiscovery => Lesson {
+            title: "SteamIhsDiscovery",
+            summary: "STEAM-IHS-DISCOVERY Protocol.",
+            body: "A STEAM-IHS-DISCOVERY game protocol frame.",
+            look_for: "STEAM-IHS-DISCOVERY header or payload.",
+        },
+        Protocol::Tibia => Lesson {
+            title: "Tibia",
+            summary: "TIBIA Protocol.",
+            body: "A TIBIA game protocol frame.",
+            look_for: "TIBIA header or payload.",
+        },
+        Protocol::Wow => Lesson {
+            title: "Wow",
+            summary: "WOW Protocol.",
+            body: "A WOW game protocol frame.",
+            look_for: "WOW header or payload.",
+        },
+        Protocol::Woww => Lesson {
+            title: "Woww",
+            summary: "WOWW Protocol.",
+            body: "A WOWW game protocol frame.",
+            look_for: "WOWW header or payload.",
+        },
+
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",
