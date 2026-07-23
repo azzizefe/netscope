@@ -6754,6 +6754,241 @@ protocols! {
         blurb:     "GSMTAP_LOG telecommunications protocol.",
     }
 
+    DvbAit {
+        doc:       "DVB Application Information Table.",
+        display:   "DVB-AIT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_ait"],
+        blurb:     "A DVB Application Information Table (AIT) section.",
+    }
+    DvbBat {
+        doc:       "DVB Bouquet Association Table.",
+        display:   "DVB-BAT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_bat"],
+        blurb:     "A DVB Bouquet Association Table (BAT) section.",
+    }
+    DvbDataMpe {
+        doc:       "DVB Multi-Protocol Encapsulation.",
+        display:   "DVB-MPE",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_data_mpe", "dvb_mpe"],
+        blurb:     "A DVB Multi-Protocol Encapsulation (MPE) frame.",
+    }
+    DvbEit {
+        doc:       "DVB Event Information Table.",
+        display:   "DVB-EIT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_eit"],
+        blurb:     "A DVB Event Information Table (EIT) section.",
+    }
+    DvbIpdc {
+        doc:       "DVB IP Datacast Protocol.",
+        display:   "DVB-IPDC",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_ipdc"],
+        blurb:     "A DVB IP Datacast (IPDC) packet.",
+    }
+    DvbNit {
+        doc:       "DVB Network Information Table.",
+        display:   "DVB-NIT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_nit"],
+        blurb:     "A DVB Network Information Table (NIT) section.",
+    }
+    DvbS2Bb {
+        doc:       "DVB-S2 Baseband Header.",
+        display:   "DVB-S2-BB",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_s2_bb"],
+        blurb:     "A DVB-S2 Baseband Header (BBHEADER) frame.",
+    }
+    DvbS2Table {
+        doc:       "DVB-S2 Table Section.",
+        display:   "DVB-S2-TABLE",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_s2_table"],
+        blurb:     "A DVB-S2 Table Section frame.",
+    }
+    DvbSdt {
+        doc:       "DVB Service Description Table.",
+        display:   "DVB-SDT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_sdt"],
+        blurb:     "A DVB Service Description Table (SDT) section.",
+    }
+    DvbSit {
+        doc:       "DVB Selection Information Table.",
+        display:   "DVB-SIT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_sit"],
+        blurb:     "A DVB Selection Information Table (SIT) section.",
+    }
+    DvbTdt {
+        doc:       "DVB Time and Date Table.",
+        display:   "DVB-TDT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_tdt"],
+        blurb:     "A DVB Time and Date Table (TDT) section.",
+    }
+    DvbTot {
+        doc:       "DVB Time Offset Table.",
+        display:   "DVB-TOT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvb_tot"],
+        blurb:     "A DVB Time Offset Table (TOT) section.",
+    }
+    Dvbci {
+        doc:       "DVB Common Interface Protocol.",
+        display:   "DVBCI",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dvbci"],
+        blurb:     "A DVB Common Interface (DVB-CI) transport packet.",
+    }
+    EtsiCardAppToolkit {
+        doc:       "ETSI Card Application Toolkit.",
+        display:   "ETSI-CAT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["etsi_card_app_toolkit", "etsi_cat"],
+        blurb:     "An ETSI Card Application Toolkit (CAT) frame.",
+    }
+    Mp2t {
+        doc:       "MPEG-2 Transport Stream Protocol.",
+        display:   "MPEG2-TS",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mp2t"],
+        blurb:     "An MPEG-2 Transport Stream (MP2T) 188-byte packet.",
+    }
+    Mp4ves {
+        doc:       "MPEG-4 Visual Elementary Stream.",
+        display:   "MP4VES",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mp4ves"],
+        blurb:     "An MPEG-4 Visual Elementary Stream (MP4VES) packet.",
+    }
+    MpegAudio {
+        doc:       "MPEG Audio Stream.",
+        display:   "MPEG-Audio",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg_audio"],
+        blurb:     "An MPEG Audio stream frame.",
+    }
+    MpegCa {
+        doc:       "MPEG Conditional Access Table.",
+        display:   "MPEG-CA",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg_ca"],
+        blurb:     "An MPEG Conditional Access Table (CAT) section.",
+    }
+    MpegDescriptor {
+        doc:       "MPEG PSI Descriptor.",
+        display:   "MPEG-Descriptor",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg_descriptor"],
+        blurb:     "An MPEG PSI descriptor field.",
+    }
+    MpegDsmcc {
+        doc:       "MPEG DSM-CC Command and Control.",
+        display:   "MPEG-DSMCC",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg_dsmcc"],
+        blurb:     "An MPEG DSM-CC message.",
+    }
+    MpegPat {
+        doc:       "MPEG Program Association Table.",
+        display:   "MPEG-PAT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg_pat"],
+        blurb:     "An MPEG Program Association Table (PAT) section.",
+    }
+    MpegPes {
+        doc:       "MPEG Packetized Elementary Stream.",
+        display:   "MPEG-PES",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg_pes"],
+        blurb:     "An MPEG Packetized Elementary Stream (PES) packet.",
+    }
+    MpegPmt {
+        doc:       "MPEG Program Map Table.",
+        display:   "MPEG-PMT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg_pmt"],
+        blurb:     "An MPEG Program Map Table (PMT) section.",
+    }
+    MpegSect {
+        doc:       "MPEG Section Syntax.",
+        display:   "MPEG-SECT",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg_sect"],
+        blurb:     "An MPEG PSI Section Syntax header.",
+    }
+    Mpeg1 {
+        doc:       "MPEG-1 Video Stream.",
+        display:   "MPEG1",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpeg1"],
+        blurb:     "An MPEG-1 System / Video stream packet.",
+    }
+    Scte35 {
+        doc:       "SCTE-35 Digital Program Insertion Cueing Message.",
+        display:   "SCTE-35",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["scte35", "scte_35"],
+        blurb:     "An SCTE-35 Digital Program Insertion (DPI) Splice Information section.",
+    }
+
 
 }
 

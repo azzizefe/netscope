@@ -58,6 +58,7 @@ use super::{
     wbxml, dns_over_quic, matrix_federation, gemini_proto,
     epics_ca, epics_pva, slurm_rpc, pmix, tango_controls, gbt26982, of_config, ethercat_mailbox,
     opc_ua_pubsub, cip_motion, cip_safety, gbt_20414, gbt_19582, fiveg_n4, mpi_wire, ucx_hpc, safetynet_p, hart_wireless, isa100_11a,
+    dvb_ait, dvb_bat, dvb_data_mpe, dvb_eit, dvb_ipdc, dvb_nit, dvb_s2_bb, dvb_s2_table, dvb_sdt, dvb_sit, dvb_tdt, dvb_tot, dvbci, etsi_card_app_toolkit, mp2t, mp4ves, mpeg_audio, mpeg_ca, mpeg_descriptor, mpeg_dsmcc, mpeg_pat, mpeg_pes, mpeg_pmt, mpeg_sect, mpeg1, scte35,
 };
 
 /// The signature every port-dispatched dissector shares.
