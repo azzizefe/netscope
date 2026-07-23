@@ -1103,6 +1103,44 @@ pub mod dcom_remact;
 pub mod dcom_remunkn;
 pub mod dcom_sysact;
 pub mod dcom_typeinfo;
+pub mod btamp;
+pub mod btatt;
+pub mod btavctp;
+pub mod btavdtp;
+pub mod btavrcp;
+pub mod btbnep;
+pub mod btbredr_rf;
+pub mod bthci_acl;
+pub mod bthci_cmd;
+pub mod bthci_evt;
+pub mod bthci_iso;
+pub mod bthci_sco;
+pub mod bthci_vendor_android;
+pub mod bthci_vendor_broadcom;
+pub mod bthci_vendor_intel;
+pub mod bthcrp;
+pub mod bthfp;
+pub mod bthid;
+pub mod bthsp;
+pub mod btl2cap;
+pub mod btle;
+pub mod btle_rf;
+pub mod btlmp;
+pub mod btmcap;
+pub mod btmesh;
+pub mod btmesh_beacon;
+pub mod btmesh_pbadv;
+pub mod btmesh_provisioning;
+pub mod btmesh_proxy;
+pub mod btp_matter;
+pub mod btrfcomm;
+pub mod btsap;
+pub mod btsdp;
+pub mod btsmp;
+pub mod hci_h1;
+pub mod hci_h4;
+pub mod hci_mon;
+pub mod hci_usb;
 
 use std::net::IpAddr;
 
@@ -3992,6 +4030,44 @@ mod robustness {
         "dcom_remunkn",
         "dcom_sysact",
         "dcom_typeinfo",
+        "btamp",
+        "btatt",
+        "btavctp",
+        "btavdtp",
+        "btavrcp",
+        "btbnep",
+        "btbredr_rf",
+        "bthci_acl",
+        "bthci_cmd",
+        "bthci_evt",
+        "bthci_iso",
+        "bthci_sco",
+        "bthci_vendor_android",
+        "bthci_vendor_broadcom",
+        "bthci_vendor_intel",
+        "bthcrp",
+        "bthfp",
+        "bthid",
+        "bthsp",
+        "btl2cap",
+        "btle",
+        "btle_rf",
+        "btlmp",
+        "btmcap",
+        "btmesh",
+        "btmesh_beacon",
+        "btmesh_pbadv",
+        "btmesh_provisioning",
+        "btmesh_proxy",
+        "btp_matter",
+        "btrfcomm",
+        "btsap",
+        "btsdp",
+        "btsmp",
+        "hci_h1",
+        "hci_h4",
+        "hci_mon",
+        "hci_usb",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
