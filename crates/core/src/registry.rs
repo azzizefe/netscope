@@ -8429,6 +8429,151 @@ protocols! {
         aliases:   ["hci_usb"],
         blurb:     "A HCI-USB protocol PDU.",
     }
+    Ieee1609dot2 {
+        doc:       "IEEE1609DOT2 protocol extension.",
+        display:   "IEEE1609DOT2",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee1609dot2"],
+        blurb:     "An IEEE1609DOT2 protocol frame.",
+    }
+    Ieee1722 {
+        doc:       "IEEE1722 protocol extension.",
+        display:   "IEEE1722",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee1722"],
+        blurb:     "An IEEE1722 protocol frame.",
+    }
+    Ieee17221 {
+        doc:       "IEEE17221 protocol extension.",
+        display:   "IEEE17221",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee17221"],
+        blurb:     "An IEEE17221 protocol frame.",
+    }
+    Ieee1905 {
+        doc:       "IEEE1905 protocol extension.",
+        display:   "IEEE1905",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee1905"],
+        blurb:     "An IEEE1905 protocol frame.",
+    }
+    Ieee80211 {
+        doc:       "IEEE80211 protocol extension.",
+        display:   "IEEE80211",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee80211"],
+        blurb:     "An IEEE80211 protocol frame.",
+    }
+    Ieee80211Netmon {
+        doc:       "IEEE80211-NETMON protocol extension.",
+        display:   "IEEE80211-NETMON",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee80211_netmon"],
+        blurb:     "An IEEE80211-NETMON protocol frame.",
+    }
+    Ieee80211Prism {
+        doc:       "IEEE80211-PRISM protocol extension.",
+        display:   "IEEE80211-PRISM",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee80211_prism"],
+        blurb:     "An IEEE80211-PRISM protocol frame.",
+    }
+    Ieee80211Radio {
+        doc:       "IEEE80211-RADIO protocol extension.",
+        display:   "IEEE80211-RADIO",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee80211_radio"],
+        blurb:     "An IEEE80211-RADIO protocol frame.",
+    }
+    Ieee80211Radiotap {
+        doc:       "IEEE80211-RADIOTAP protocol extension.",
+        display:   "IEEE80211-RADIOTAP",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee80211_radiotap"],
+        blurb:     "An IEEE80211-RADIOTAP protocol frame.",
+    }
+    Ieee80211RadiotapIter {
+        doc:       "IEEE80211-RADIOTAP-ITER protocol extension.",
+        display:   "IEEE80211-RADIOTAP-ITER",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee80211_radiotap_iter"],
+        blurb:     "An IEEE80211-RADIOTAP-ITER protocol frame.",
+    }
+    Ieee80211Wlancap {
+        doc:       "IEEE80211-WLANCAP protocol extension.",
+        display:   "IEEE80211-WLANCAP",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee80211_wlancap"],
+        blurb:     "An IEEE80211-WLANCAP protocol frame.",
+    }
+    Ieee802154 {
+        doc:       "IEEE802154 protocol extension.",
+        display:   "IEEE802154",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee802154"],
+        blurb:     "An IEEE802154 protocol frame.",
+    }
+    Ieee8021ah {
+        doc:       "IEEE8021AH protocol extension.",
+        display:   "IEEE8021AH",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee8021ah"],
+        blurb:     "An IEEE8021AH protocol frame.",
+    }
+    Ieee8021cb {
+        doc:       "IEEE8021CB protocol extension.",
+        display:   "IEEE8021CB",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee8021cb"],
+        blurb:     "An IEEE8021CB protocol frame.",
+    }
+    Ieee8023 {
+        doc:       "IEEE8023 protocol extension.",
+        display:   "IEEE8023",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee8023"],
+        blurb:     "An IEEE8023 protocol frame.",
+    }
+    Ieee802a {
+        doc:       "IEEE802A protocol extension.",
+        display:   "IEEE802A",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee802a"],
+        blurb:     "An IEEE802A protocol frame.",
+    }
+
 
 
 

@@ -1141,6 +1141,22 @@ pub mod hci_h1;
 pub mod hci_h4;
 pub mod hci_mon;
 pub mod hci_usb;
+pub mod ieee1609dot2;
+pub mod ieee1722;
+pub mod ieee17221;
+pub mod ieee1905;
+pub mod ieee80211;
+pub mod ieee80211_netmon;
+pub mod ieee80211_prism;
+pub mod ieee80211_radio;
+pub mod ieee80211_radiotap;
+pub mod ieee80211_radiotap_iter;
+pub mod ieee80211_wlancap;
+pub mod ieee802154;
+pub mod ieee8021ah;
+pub mod ieee8021cb;
+pub mod ieee8023;
+pub mod ieee802a;
 
 use std::net::IpAddr;
 
@@ -4068,6 +4084,22 @@ mod robustness {
         "hci_h4",
         "hci_mon",
         "hci_usb",
+        "ieee1609dot2",
+        "ieee1722",
+        "ieee17221",
+        "ieee1905",
+        "ieee80211",
+        "ieee80211_netmon",
+        "ieee80211_prism",
+        "ieee80211_radio",
+        "ieee80211_radiotap",
+        "ieee80211_radiotap_iter",
+        "ieee80211_wlancap",
+        "ieee802154",
+        "ieee8021ah",
+        "ieee8021cb",
+        "ieee8023",
+        "ieee802a",
     ];
 
     /// Every dissector module must be reachable from the dispatch.

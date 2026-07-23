@@ -274,22 +274,22 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `ieee1609dot2` | `packet-ieee1609dot2.c` |
-| [ ] | 2 | `ieee1722` | `packet-ieee1722.c` |
-| [ ] | 3 | `ieee17221` | `packet-ieee17221.c` |
-| [ ] | 4 | `ieee1905` | `packet-ieee1905.c` |
-| [ ] | 5 | `ieee80211` | `packet-ieee80211.c` |
-| [ ] | 6 | `ieee80211_netmon` | `packet-ieee80211-netmon.c` |
-| [ ] | 7 | `ieee80211_prism` | `packet-ieee80211-prism.c` |
-| [ ] | 8 | `ieee80211_radio` | `packet-ieee80211-radio.c` |
-| [ ] | 9 | `ieee80211_radiotap` | `packet-ieee80211-radiotap.c` |
-| [ ] | 10 | `ieee80211_radiotap_iter` | `packet-ieee80211-radiotap-iter.c` |
-| [ ] | 11 | `ieee80211_wlancap` | `packet-ieee80211-wlancap.c` |
-| [ ] | 12 | `ieee802154` | `packet-ieee802154.c` |
-| [ ] | 13 | `ieee8021ah` | `packet-ieee8021ah.c` |
-| [ ] | 14 | `ieee8021cb` | `packet-ieee8021cb.c` |
-| [ ] | 15 | `ieee8023` | `packet-ieee8023.c` |
-| [ ] | 16 | `ieee802a` | `packet-ieee802a.c` |
+| [x] | 1 | `ieee1609dot2` | `packet-ieee1609dot2.c` |
+| [x] | 2 | `ieee1722` | `packet-ieee1722.c` |
+| [x] | 3 | `ieee17221` | `packet-ieee17221.c` |
+| [x] | 4 | `ieee1905` | `packet-ieee1905.c` |
+| [x] | 5 | `ieee80211` | `packet-ieee80211.c` |
+| [x] | 6 | `ieee80211_netmon` | `packet-ieee80211-netmon.c` |
+| [x] | 7 | `ieee80211_prism` | `packet-ieee80211-prism.c` |
+| [x] | 8 | `ieee80211_radio` | `packet-ieee80211-radio.c` |
+| [x] | 9 | `ieee80211_radiotap` | `packet-ieee80211-radiotap.c` |
+| [x] | 10 | `ieee80211_radiotap_iter` | `packet-ieee80211-radiotap-iter.c` |
+| [x] | 11 | `ieee80211_wlancap` | `packet-ieee80211-wlancap.c` |
+| [x] | 12 | `ieee802154` | `packet-ieee802154.c` |
+| [x] | 13 | `ieee8021ah` | `packet-ieee8021ah.c` |
+| [x] | 14 | `ieee8021cb` | `packet-ieee8021cb.c` |
+| [x] | 15 | `ieee8023` | `packet-ieee8023.c` |
+| [x] | 16 | `ieee802a` | `packet-ieee802a.c` |
 
 ## ASN.1 / X.509 / PKI (28 adet)
 
