@@ -19,7 +19,7 @@ pub fn dissect_gsm_cbch(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmCbch,
-        summary: format!("GSM_CBCH message"),
+        summary: "GSM_CBCH message".to_string(),
     }
 }
 

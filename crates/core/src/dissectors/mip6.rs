@@ -121,8 +121,8 @@ fn describe(payload: &[u8]) -> String {
     };
     let body = &payload[HEADER_LEN..];
 
-    let is_proxy = payload.get(HEADER_LEN..).map_or(false, |b| {
-        b.windows(2).any(|w| w[0] == 8 || w[0] == 11 || w[0] == 14) || b.get(2).map_or(false, |&f| f & 0x20 != 0)
+    let is_proxy = payload.get(HEADER_LEN..).is_some_and(|b| {
+        b.windows(2).any(|w| w[0] == 8 || w[0] == 11 || w[0] == 14) || b.get(2).is_some_and(|&f| f & 0x20 != 0)
     });
     let proto_prefix = if is_proxy { "PMIPv6 Proxy" } else { "Mobile IPv6" };
 

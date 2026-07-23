@@ -19,7 +19,7 @@ pub fn dissect_gsm_bsslap(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmBsslap,
-        summary: format!("GSM_BSSLAP message"),
+        summary: "GSM_BSSLAP message".to_string(),
     }
 }
 

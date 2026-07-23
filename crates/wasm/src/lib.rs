@@ -133,10 +133,11 @@ fn parse_protocol(s: &str) -> Protocol {
         "TDS" => Protocol::Tds,
         "AMQP" => Protocol::Amqp,
         "KAFKA" => Protocol::Kafka,
-        other => Protocol::Plugin(netscope_core::models::PluginProto {
-            name: other.to_string(),
-            transport: netscope_core::models::PluginTransport::Tcp,
-        }),
+        other => netscope_core::registry::Protocol::from_filter_token(&other.to_lowercase())
+            .unwrap_or_else(|| Protocol::Plugin(netscope_core::models::PluginProto {
+                name: other.to_string(),
+                transport: netscope_core::models::PluginTransport::Tcp,
+            })),
     }
 }
 
@@ -157,5 +158,18 @@ impl JsPacket {
             summary: self.summary,
             data: Bytes::from(self.raw),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_protocol_registry_fallback() {
+        assert_eq!(parse_protocol("S7COMM"), Protocol::S7comm);
+        assert_eq!(parse_protocol("bencode"), Protocol::Bencode);
+        assert_eq!(parse_protocol("zbee_aps"), Protocol::ZbeeAps);
+        assert_eq!(parse_protocol("TCP"), Protocol::Tcp);
     }
 }

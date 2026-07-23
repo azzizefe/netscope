@@ -19,7 +19,7 @@ pub fn dissect_gsm_abis_pgsl(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmAbisPgsl,
-        summary: format!("GSM_ABIS_PGSL message"),
+        summary: "GSM_ABIS_PGSL message".to_string(),
     }
 }
 

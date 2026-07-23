@@ -19,7 +19,7 @@ pub fn dissect_gsmtap(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::Gsmtap,
-        summary: format!("GSMTAP message"),
+        summary: "GSMTAP message".to_string(),
     }
 }
 

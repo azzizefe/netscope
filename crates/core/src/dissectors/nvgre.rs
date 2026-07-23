@@ -13,7 +13,7 @@ pub fn dissect_nvgre(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, _payload: &
         src_port: None,
         dst_port: None,
         protocol: Protocol::Nvgre,
-        summary: format!("NVGRE message"),
+        summary: "NVGRE message".to_string(),
     }
 }
 

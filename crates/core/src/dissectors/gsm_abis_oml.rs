@@ -19,7 +19,7 @@ pub fn dissect_gsm_abis_oml(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmAbisOml,
-        summary: format!("GSM_ABIS_OML message"),
+        summary: "GSM_ABIS_OML message".to_string(),
     }
 }
 

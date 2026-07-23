@@ -19,7 +19,7 @@ pub fn dissect_gsm_osmux(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmOsmux,
-        summary: format!("GSM_OSMUX message"),
+        summary: "GSM_OSMUX message".to_string(),
     }
 }
 

@@ -14,7 +14,7 @@ pub fn dissect_syncthing(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary = if payload.len() >= 4 && &payload[0..4] == &[0x2E, 0xA7, 0xD9, 0x0B] {
+    let summary = if payload.len() >= 4 && payload[0..4] == [0x2E, 0xA7, 0xD9, 0x0B] {
         if payload.len() >= 8 {
             let msg_type = payload[5];
             let name = match msg_type {

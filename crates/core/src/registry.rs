@@ -697,7 +697,7 @@ protocols! {
     Bacapp { doc: "BACAPP protocol.", display: "BACAPP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["bacapp"], blurb: "BACnet Application Layer Protocol.", }
     Banana { doc: "BANANA protocol.", display: "BANANA", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["banana"], blurb: "Twisted Banana serialization protocol.", }
     Bat { doc: "BAT protocol.", display: "BAT", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bat_proto"], blurb: "B.A.T.M.A.N. mesh protocol header.", }
-    Batadv { doc: "BATADV protocol.", display: "BATADV", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["batadv_link"], blurb: "B.A.T.M.A.N. Advanced link layer protocol.", }
+    Batadv { doc: "BATADV protocol.", display: "BATADV-Link", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["batadv_link"], blurb: "B.A.T.M.A.N. Advanced link layer protocol.", }
     Bblog { doc: "BBLOG protocol.", display: "BBLOG", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bblog"], blurb: "BlackBerry Log framing.", }
     Bctp { doc: "BCTP protocol.", display: "BCTP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bctp"], blurb: "BCTP Telecommunications Protocol.", }
     Beep { doc: "BEEP protocol.", display: "BEEP", color: 0x9CA3AF, transport: Tcp, rank: 3, aliases: ["beep"], blurb: "Blocks Extensible Exchange Protocol (RFC 3080).", }

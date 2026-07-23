@@ -19,7 +19,7 @@ pub fn dissect_evpn(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::EvpnExt,
-        summary: format!("EVPN message"),
+        summary: "EVPN message".to_string(),
     }
 }
 
