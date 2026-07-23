@@ -72,6 +72,7 @@ use super::{
     netlink, netlink_generic, netlink_mac80211_hwsim, netlink_net_dm, netlink_netfilter, netlink_nl80211, netlink_ovs_ct_limit, netlink_ovs_datapath, netlink_ovs_flow, netlink_ovs_meter, netlink_ovs_packet, netlink_ovs_vport, netlink_psample, netlink_route, netlink_sock_diag,
     sapdiag, sapenqueue, saphdb, sapigs, sapms, sapni, saprfc, saprouter, sapsnc,
     ipmi, ipmi_app, ipmi_bridge, ipmi_chassis, ipmi_picmg, ipmi_pps, ipmi_se, ipmi_session, ipmi_storage, ipmi_trace, ipmi_transport, ipmi_update, ipmi_vita,
+    bootparams, hclnfsd, klm, mount, nfsacl, nfsauth, nisplus, nlm, pcnfsd, portmap, rpcap, rpcrdma, rquota, rstat, rwall, sadmind, spray, stat, stat_notify, ypbind, yppasswd, ypserv, ypxfr,
 };
 
 /// The signature every port-dispatched dissector shares.

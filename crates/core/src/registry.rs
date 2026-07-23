@@ -3674,7 +3674,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
-        aliases:   ["portmap"],
+        aliases:   ["oncrpc", "sunrpc"],
         blurb:     "An ONC RPC message (TCP/UDP 111/2049) â€” the plumbing behind NFS file sharing.",
     }
     Graphite {
@@ -5333,7 +5333,7 @@ protocols! {
         color:     0x0369A3,
         transport: Tcp,
         rank:      3,
-        aliases:   ["nfs", "mount", "nlm"],
+        aliases:   ["nfs"],
         blurb:     "A network filesystem operation (NFS) â€” a machine reading, writing or listing files that live on another machine.",
     }
     NineP {
@@ -9743,6 +9743,214 @@ protocols! {
         aliases:   ["ipmi_vita"],
         blurb:     "An IPMI-VITA protocol message.",
     }
+    Bootparams {
+        doc:       "BOOTPARAMS protocol extension.",
+        display:   "BOOTPARAMS",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["bootparams"],
+        blurb:     "An BOOTPARAMS protocol message.",
+    }
+    Hclnfsd {
+        doc:       "HCLNFSD protocol extension.",
+        display:   "HCLNFSD",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["hclnfsd"],
+        blurb:     "An HCLNFSD protocol message.",
+    }
+    Klm {
+        doc:       "KLM protocol extension.",
+        display:   "KLM",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["klm"],
+        blurb:     "An KLM protocol message.",
+    }
+    Mount {
+        doc:       "MOUNT protocol extension.",
+        display:   "MOUNT",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["mount"],
+        blurb:     "An MOUNT protocol message.",
+    }
+    Nfsacl {
+        doc:       "NFSACL protocol extension.",
+        display:   "NFSACL",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["nfsacl"],
+        blurb:     "An NFSACL protocol message.",
+    }
+    Nfsauth {
+        doc:       "NFSAUTH protocol extension.",
+        display:   "NFSAUTH",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["nfsauth"],
+        blurb:     "An NFSAUTH protocol message.",
+    }
+    Nisplus {
+        doc:       "NISPLUS protocol extension.",
+        display:   "NISPLUS",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["nisplus"],
+        blurb:     "An NISPLUS protocol message.",
+    }
+    Nlm {
+        doc:       "NLM protocol extension.",
+        display:   "NLM",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["nlm"],
+        blurb:     "An NLM protocol message.",
+    }
+    Pcnfsd {
+        doc:       "PCNFSD protocol extension.",
+        display:   "PCNFSD",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["pcnfsd"],
+        blurb:     "An PCNFSD protocol message.",
+    }
+    Portmap {
+        doc:       "PORTMAP protocol extension.",
+        display:   "PORTMAP",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["portmap"],
+        blurb:     "An PORTMAP protocol message.",
+    }
+    Rpcap {
+        doc:       "RPCAP protocol extension.",
+        display:   "RPCAP",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rpcap"],
+        blurb:     "An RPCAP protocol message.",
+    }
+    Rpcrdma {
+        doc:       "RPCRDMA protocol extension.",
+        display:   "RPCRDMA",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rpcrdma"],
+        blurb:     "An RPCRDMA protocol message.",
+    }
+    Rquota {
+        doc:       "RQUOTA protocol extension.",
+        display:   "RQUOTA",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rquota"],
+        blurb:     "An RQUOTA protocol message.",
+    }
+    Rstat {
+        doc:       "RSTAT protocol extension.",
+        display:   "RSTAT",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rstat"],
+        blurb:     "An RSTAT protocol message.",
+    }
+    Rwall {
+        doc:       "RWALL protocol extension.",
+        display:   "RWALL",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rwall"],
+        blurb:     "An RWALL protocol message.",
+    }
+    Sadmind {
+        doc:       "SADMIND protocol extension.",
+        display:   "SADMIND",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["sadmind"],
+        blurb:     "An SADMIND protocol message.",
+    }
+    Spray {
+        doc:       "SPRAY protocol extension.",
+        display:   "SPRAY",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["spray"],
+        blurb:     "An SPRAY protocol message.",
+    }
+    Stat {
+        doc:       "STAT protocol extension.",
+        display:   "STAT",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["stat"],
+        blurb:     "An STAT protocol message.",
+    }
+    StatNotify {
+        doc:       "STAT-NOTIFY protocol extension.",
+        display:   "STAT-NOTIFY",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["stat_notify"],
+        blurb:     "An STAT-NOTIFY protocol message.",
+    }
+    Ypbind {
+        doc:       "YPBIND protocol extension.",
+        display:   "YPBIND",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ypbind"],
+        blurb:     "An YPBIND protocol message.",
+    }
+    Yppasswd {
+        doc:       "YPPASSWD protocol extension.",
+        display:   "YPPASSWD",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["yppasswd"],
+        blurb:     "An YPPASSWD protocol message.",
+    }
+    Ypserv {
+        doc:       "YPSERV protocol extension.",
+        display:   "YPSERV",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ypserv"],
+        blurb:     "An YPSERV protocol message.",
+    }
+    Ypxfr {
+        doc:       "YPXFR protocol extension.",
+        display:   "YPXFR",
+        color:     0xE11D48,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ypxfr"],
+        blurb:     "An YPXFR protocol message.",
+    }
+
 
 
 

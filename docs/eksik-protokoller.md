@@ -501,29 +501,29 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `bootparams` | `packet-bootparams.c` |
-| [ ] | 2 | `hclnfsd` | `packet-hclnfsd.c` |
-| [ ] | 3 | `klm` | `packet-klm.c` |
-| [ ] | 4 | `mount` | `packet-mount.c` |
-| [ ] | 5 | `nfsacl` | `packet-nfsacl.c` |
-| [ ] | 6 | `nfsauth` | `packet-nfsauth.c` |
-| [ ] | 7 | `nisplus` | `packet-nisplus.c` |
-| [ ] | 8 | `nlm` | `packet-nlm.c` |
-| [ ] | 9 | `pcnfsd` | `packet-pcnfsd.c` |
-| [ ] | 10 | `portmap` | `packet-portmap.c` |
-| [ ] | 11 | `rpcap` | `packet-rpcap.c` |
-| [ ] | 12 | `rpcrdma` | `packet-rpcrdma.c` |
-| [ ] | 13 | `rquota` | `packet-rquota.c` |
-| [ ] | 14 | `rstat` | `packet-rstat.c` |
-| [ ] | 15 | `rwall` | `packet-rwall.c` |
-| [ ] | 16 | `sadmind` | `packet-sadmind.c` |
-| [ ] | 17 | `spray` | `packet-spray.c` |
-| [ ] | 18 | `stat` | `packet-stat.c` |
-| [ ] | 19 | `stat_notify` | `packet-stat-notify.c` |
-| [ ] | 20 | `ypbind` | `packet-ypbind.c` |
-| [ ] | 21 | `yppasswd` | `packet-yppasswd.c` |
-| [ ] | 22 | `ypserv` | `packet-ypserv.c` |
-| [ ] | 23 | `ypxfr` | `packet-ypxfr.c` |
+| [x] | 1 | `bootparams` | `packet-bootparams.c` |
+| [x] | 2 | `hclnfsd` | `packet-hclnfsd.c` |
+| [x] | 3 | `klm` | `packet-klm.c` |
+| [x] | 4 | `mount` | `packet-mount.c` |
+| [x] | 5 | `nfsacl` | `packet-nfsacl.c` |
+| [x] | 6 | `nfsauth` | `packet-nfsauth.c` |
+| [x] | 7 | `nisplus` | `packet-nisplus.c` |
+| [x] | 8 | `nlm` | `packet-nlm.c` |
+| [x] | 9 | `pcnfsd` | `packet-pcnfsd.c` |
+| [x] | 10 | `portmap` | `packet-portmap.c` |
+| [x] | 11 | `rpcap` | `packet-rpcap.c` |
+| [x] | 12 | `rpcrdma` | `packet-rpcrdma.c` |
+| [x] | 13 | `rquota` | `packet-rquota.c` |
+| [x] | 14 | `rstat` | `packet-rstat.c` |
+| [x] | 15 | `rwall` | `packet-rwall.c` |
+| [x] | 16 | `sadmind` | `packet-sadmind.c` |
+| [x] | 17 | `spray` | `packet-spray.c` |
+| [x] | 18 | `stat` | `packet-stat.c` |
+| [x] | 19 | `stat_notify` | `packet-stat-notify.c` |
+| [x] | 20 | `ypbind` | `packet-ypbind.c` |
+| [x] | 21 | `yppasswd` | `packet-yppasswd.c` |
+| [x] | 22 | `ypserv` | `packet-ypserv.c` |
+| [x] | 23 | `ypxfr` | `packet-ypxfr.c` |
 
 ## Oyun Protokolleri (9 adet)
 
