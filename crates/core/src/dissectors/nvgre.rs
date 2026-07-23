@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn handle_empty_payload() {
-        let res = dissect_nvgre(None, None, 0, 0, &[]);
+        let res = dissect_nvgre(None, None, &[]);
         assert_eq!(res.protocol, Protocol::Nvgre);
     }
 }

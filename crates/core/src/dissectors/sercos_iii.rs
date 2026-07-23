@@ -5,11 +5,11 @@ use crate::models::Protocol;
 use super::DissectedResult;
 
 pub fn dissect_sercos_iii(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, src_port: u16, dst_port: u16, payload: &[u8]) -> DissectedResult {
-    DissectedResult { src_addr: src_ip, dst_addr: dst_ip, src_port: Some(src_port), dst_port: Some(dst_port), protocol: Protocol::SercosIii, summary: format!("SERCOS III Industrial ({})", super::bytes(payload.len() as u64)) }
+    DissectedResult { src_addr: src_ip, dst_addr: dst_ip, src_port: Some(src_port), dst_port: Some(dst_port), protocol: Protocol::Sercos, summary: format!("SERCOS III Industrial ({})", super::bytes(payload.len() as u64)) }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test] fn sercos_iii_test() { assert_eq!(dissect_sercos_iii(None, None, 0, 0, b"\x88\xCD\x01\x00").protocol, Protocol::SercosIii); }
+    #[test] fn sercos_iii_test() { assert_eq!(dissect_sercos_iii(None, None, 0, 0, b"\x88\xCD\x01\x00").protocol, Protocol::Sercos); }
 }

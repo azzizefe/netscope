@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::net::IpAddr;
 use crate::models::Protocol;
@@ -10,8 +10,8 @@ pub fn dissect_nvme_tcp(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, src_port
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::NvmeTcp,
-        summary: format!("NvmeTcp ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::NvmeOf,
+        summary: format!("NvmeOf ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -21,6 +21,6 @@ mod tests {
     #[test]
     fn test_nvme_tcp() {
         let r = dissect_nvme_tcp(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::NvmeTcp);
+        assert_eq!(r.protocol, Protocol::NvmeOf);
     }
 }
