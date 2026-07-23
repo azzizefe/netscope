@@ -8087,6 +8087,349 @@ protocols! {
         aliases:   ["dcom_typeinfo"],
         blurb:     "A DCOM-TYPEINFO protocol PDU.",
     }
+    Btamp {
+        doc:       "BTAMP protocol extension.",
+        display:   "BTAMP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btamp"],
+        blurb:     "A BTAMP protocol PDU.",
+    }
+    Btatt {
+        doc:       "BTATT protocol extension.",
+        display:   "BTATT",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btatt"],
+        blurb:     "A BTATT protocol PDU.",
+    }
+    Btavctp {
+        doc:       "BTAVCTP protocol extension.",
+        display:   "BTAVCTP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btavctp"],
+        blurb:     "A BTAVCTP protocol PDU.",
+    }
+    Btavdtp {
+        doc:       "BTAVDTP protocol extension.",
+        display:   "BTAVDTP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btavdtp"],
+        blurb:     "A BTAVDTP protocol PDU.",
+    }
+    Btavrcp {
+        doc:       "BTAVRCP protocol extension.",
+        display:   "BTAVRCP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btavrcp"],
+        blurb:     "A BTAVRCP protocol PDU.",
+    }
+    Btbnep {
+        doc:       "BTBNEP protocol extension.",
+        display:   "BTBNEP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btbnep"],
+        blurb:     "A BTBNEP protocol PDU.",
+    }
+    BtbredrRf {
+        doc:       "BTBREDR-RF protocol extension.",
+        display:   "BTBREDR-RF",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btbredr_rf"],
+        blurb:     "A BTBREDR-RF protocol PDU.",
+    }
+    BthciAcl {
+        doc:       "BTHCI-ACL protocol extension.",
+        display:   "BTHCI-ACL",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthci_acl"],
+        blurb:     "A BTHCI-ACL protocol PDU.",
+    }
+    BthciCmd {
+        doc:       "BTHCI-CMD protocol extension.",
+        display:   "BTHCI-CMD",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthci_cmd"],
+        blurb:     "A BTHCI-CMD protocol PDU.",
+    }
+    BthciEvt {
+        doc:       "BTHCI-EVT protocol extension.",
+        display:   "BTHCI-EVT",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthci_evt"],
+        blurb:     "A BTHCI-EVT protocol PDU.",
+    }
+    BthciIso {
+        doc:       "BTHCI-ISO protocol extension.",
+        display:   "BTHCI-ISO",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthci_iso"],
+        blurb:     "A BTHCI-ISO protocol PDU.",
+    }
+    BthciSco {
+        doc:       "BTHCI-SCO protocol extension.",
+        display:   "BTHCI-SCO",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthci_sco"],
+        blurb:     "A BTHCI-SCO protocol PDU.",
+    }
+    BthciVendorAndroid {
+        doc:       "BTHCI-VENDOR-ANDROID protocol extension.",
+        display:   "BTHCI-VENDOR-ANDROID",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthci_vendor_android"],
+        blurb:     "A BTHCI-VENDOR-ANDROID protocol PDU.",
+    }
+    BthciVendorBroadcom {
+        doc:       "BTHCI-VENDOR-BROADCOM protocol extension.",
+        display:   "BTHCI-VENDOR-BROADCOM",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthci_vendor_broadcom"],
+        blurb:     "A BTHCI-VENDOR-BROADCOM protocol PDU.",
+    }
+    BthciVendorIntel {
+        doc:       "BTHCI-VENDOR-INTEL protocol extension.",
+        display:   "BTHCI-VENDOR-INTEL",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthci_vendor_intel"],
+        blurb:     "A BTHCI-VENDOR-INTEL protocol PDU.",
+    }
+    Bthcrp {
+        doc:       "BTHCRP protocol extension.",
+        display:   "BTHCRP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthcrp"],
+        blurb:     "A BTHCRP protocol PDU.",
+    }
+    Bthfp {
+        doc:       "BTHFP protocol extension.",
+        display:   "BTHFP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthfp"],
+        blurb:     "A BTHFP protocol PDU.",
+    }
+    Bthid {
+        doc:       "BTHID protocol extension.",
+        display:   "BTHID",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthid"],
+        blurb:     "A BTHID protocol PDU.",
+    }
+    Bthsp {
+        doc:       "BTHSP protocol extension.",
+        display:   "BTHSP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bthsp"],
+        blurb:     "A BTHSP protocol PDU.",
+    }
+    Btl2cap {
+        doc:       "BTL2CAP protocol extension.",
+        display:   "BTL2CAP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btl2cap"],
+        blurb:     "A BTL2CAP protocol PDU.",
+    }
+    Btle {
+        doc:       "BTLE protocol extension.",
+        display:   "BTLE",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btle"],
+        blurb:     "A BTLE protocol PDU.",
+    }
+    BtleRf {
+        doc:       "BTLE-RF protocol extension.",
+        display:   "BTLE-RF",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btle_rf"],
+        blurb:     "A BTLE-RF protocol PDU.",
+    }
+    Btlmp {
+        doc:       "BTLMP protocol extension.",
+        display:   "BTLMP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btlmp"],
+        blurb:     "A BTLMP protocol PDU.",
+    }
+    Btmcap {
+        doc:       "BTMCAP protocol extension.",
+        display:   "BTMCAP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btmcap"],
+        blurb:     "A BTMCAP protocol PDU.",
+    }
+    Btmesh {
+        doc:       "BTMESH protocol extension.",
+        display:   "BTMESH",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btmesh"],
+        blurb:     "A BTMESH protocol PDU.",
+    }
+    BtmeshBeacon {
+        doc:       "BTMESH-BEACON protocol extension.",
+        display:   "BTMESH-BEACON",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btmesh_beacon"],
+        blurb:     "A BTMESH-BEACON protocol PDU.",
+    }
+    BtmeshPbadv {
+        doc:       "BTMESH-PBADV protocol extension.",
+        display:   "BTMESH-PBADV",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btmesh_pbadv"],
+        blurb:     "A BTMESH-PBADV protocol PDU.",
+    }
+    BtmeshProvisioning {
+        doc:       "BTMESH-PROVISIONING protocol extension.",
+        display:   "BTMESH-PROVISIONING",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btmesh_provisioning"],
+        blurb:     "A BTMESH-PROVISIONING protocol PDU.",
+    }
+    BtmeshProxy {
+        doc:       "BTMESH-PROXY protocol extension.",
+        display:   "BTMESH-PROXY",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btmesh_proxy"],
+        blurb:     "A BTMESH-PROXY protocol PDU.",
+    }
+    BtpMatter {
+        doc:       "BTP-MATTER protocol extension.",
+        display:   "BTP-MATTER",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btp_matter"],
+        blurb:     "A BTP-MATTER protocol PDU.",
+    }
+    Btrfcomm {
+        doc:       "BTRFCOMM protocol extension.",
+        display:   "BTRFCOMM",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btrfcomm"],
+        blurb:     "A BTRFCOMM protocol PDU.",
+    }
+    Btsap {
+        doc:       "BTSAP protocol extension.",
+        display:   "BTSAP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btsap"],
+        blurb:     "A BTSAP protocol PDU.",
+    }
+    Btsdp {
+        doc:       "BTSDP protocol extension.",
+        display:   "BTSDP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btsdp"],
+        blurb:     "A BTSDP protocol PDU.",
+    }
+    Btsmp {
+        doc:       "BTSMP protocol extension.",
+        display:   "BTSMP",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["btsmp"],
+        blurb:     "A BTSMP protocol PDU.",
+    }
+    HciH1 {
+        doc:       "HCI-H1 protocol extension.",
+        display:   "HCI-H1",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hci_h1"],
+        blurb:     "A HCI-H1 protocol PDU.",
+    }
+    HciH4 {
+        doc:       "HCI-H4 protocol extension.",
+        display:   "HCI-H4",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hci_h4"],
+        blurb:     "A HCI-H4 protocol PDU.",
+    }
+    HciMon {
+        doc:       "HCI-MON protocol extension.",
+        display:   "HCI-MON",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hci_mon"],
+        blurb:     "A HCI-MON protocol PDU.",
+    }
+    HciUsb {
+        doc:       "HCI-USB protocol extension.",
+        display:   "HCI-USB",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hci_usb"],
+        blurb:     "A HCI-USB protocol PDU.",
+    }
+
 
 
 
