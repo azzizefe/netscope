@@ -9185,6 +9185,232 @@ protocols! {
         aliases:   ["mplstp_oam"],
         blurb:     "An MPLSTP-OAM protocol frame.",
     }
+    Rf4ceNwk {
+        doc:       "RF4CE-NWK protocol extension.",
+        display:   "RF4CE-NWK",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["rf4ce_nwk"],
+        blurb:     "A RF4CE-NWK protocol frame.",
+    }
+    Rf4ceProfile {
+        doc:       "RF4CE-PROFILE protocol extension.",
+        display:   "RF4CE-PROFILE",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["rf4ce_profile"],
+        blurb:     "A RF4CE-PROFILE protocol frame.",
+    }
+    Rf4ceSecur {
+        doc:       "RF4CE-SECUR protocol extension.",
+        display:   "RF4CE-SECUR",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["rf4ce_secur"],
+        blurb:     "A RF4CE-SECUR protocol frame.",
+    }
+    ZbeeAps {
+        doc:       "ZBEE-APS protocol extension.",
+        display:   "ZBEE-APS",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_aps"],
+        blurb:     "A ZBEE-APS protocol frame.",
+    }
+    ZbeeDirect {
+        doc:       "ZBEE-DIRECT protocol extension.",
+        display:   "ZBEE-DIRECT",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_direct"],
+        blurb:     "A ZBEE-DIRECT protocol frame.",
+    }
+    ZbeeNwk {
+        doc:       "ZBEE-NWK protocol extension.",
+        display:   "ZBEE-NWK",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_nwk"],
+        blurb:     "A ZBEE-NWK protocol frame.",
+    }
+    ZbeeNwkGp {
+        doc:       "ZBEE-NWK-GP protocol extension.",
+        display:   "ZBEE-NWK-GP",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_nwk_gp"],
+        blurb:     "A ZBEE-NWK-GP protocol frame.",
+    }
+    ZbeeSecurity {
+        doc:       "ZBEE-SECURITY protocol extension.",
+        display:   "ZBEE-SECURITY",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_security"],
+        blurb:     "A ZBEE-SECURITY protocol frame.",
+    }
+    ZbeeTlv {
+        doc:       "ZBEE-TLV protocol extension.",
+        display:   "ZBEE-TLV",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_tlv"],
+        blurb:     "A ZBEE-TLV protocol frame.",
+    }
+    ZbeeZcl {
+        doc:       "ZBEE-ZCL protocol extension.",
+        display:   "ZBEE-ZCL",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl"],
+        blurb:     "A ZBEE-ZCL protocol frame.",
+    }
+    ZbeeZclClosures {
+        doc:       "ZBEE-ZCL-CLOSURES protocol extension.",
+        display:   "ZBEE-ZCL-CLOSURES",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_closures"],
+        blurb:     "A ZBEE-ZCL-CLOSURES protocol frame.",
+    }
+    ZbeeZclGeneral {
+        doc:       "ZBEE-ZCL-GENERAL protocol extension.",
+        display:   "ZBEE-ZCL-GENERAL",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_general"],
+        blurb:     "A ZBEE-ZCL-GENERAL protocol frame.",
+    }
+    ZbeeZclHa {
+        doc:       "ZBEE-ZCL-HA protocol extension.",
+        display:   "ZBEE-ZCL-HA",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_ha"],
+        blurb:     "A ZBEE-ZCL-HA protocol frame.",
+    }
+    ZbeeZclHvac {
+        doc:       "ZBEE-ZCL-HVAC protocol extension.",
+        display:   "ZBEE-ZCL-HVAC",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_hvac"],
+        blurb:     "A ZBEE-ZCL-HVAC protocol frame.",
+    }
+    ZbeeZclLighting {
+        doc:       "ZBEE-ZCL-LIGHTING protocol extension.",
+        display:   "ZBEE-ZCL-LIGHTING",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_lighting"],
+        blurb:     "A ZBEE-ZCL-LIGHTING protocol frame.",
+    }
+    ZbeeZclMeasSensing {
+        doc:       "ZBEE-ZCL-MEAS-SENSING protocol extension.",
+        display:   "ZBEE-ZCL-MEAS-SENSING",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_meas_sensing"],
+        blurb:     "A ZBEE-ZCL-MEAS-SENSING protocol frame.",
+    }
+    ZbeeZclMisc {
+        doc:       "ZBEE-ZCL-MISC protocol extension.",
+        display:   "ZBEE-ZCL-MISC",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_misc"],
+        blurb:     "A ZBEE-ZCL-MISC protocol frame.",
+    }
+    ZbeeZclProtoIface {
+        doc:       "ZBEE-ZCL-PROTO-IFACE protocol extension.",
+        display:   "ZBEE-ZCL-PROTO-IFACE",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_proto_iface"],
+        blurb:     "A ZBEE-ZCL-PROTO-IFACE protocol frame.",
+    }
+    ZbeeZclSas {
+        doc:       "ZBEE-ZCL-SAS protocol extension.",
+        display:   "ZBEE-ZCL-SAS",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_sas"],
+        blurb:     "A ZBEE-ZCL-SAS protocol frame.",
+    }
+    ZbeeZclSe {
+        doc:       "ZBEE-ZCL-SE protocol extension.",
+        display:   "ZBEE-ZCL-SE",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zcl_se"],
+        blurb:     "A ZBEE-ZCL-SE protocol frame.",
+    }
+    ZbeeZdp {
+        doc:       "ZBEE-ZDP protocol extension.",
+        display:   "ZBEE-ZDP",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zdp"],
+        blurb:     "A ZBEE-ZDP protocol frame.",
+    }
+    ZbeeZdpBinding {
+        doc:       "ZBEE-ZDP-BINDING protocol extension.",
+        display:   "ZBEE-ZDP-BINDING",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zdp_binding"],
+        blurb:     "A ZBEE-ZDP-BINDING protocol frame.",
+    }
+    ZbeeZdpDiscovery {
+        doc:       "ZBEE-ZDP-DISCOVERY protocol extension.",
+        display:   "ZBEE-ZDP-DISCOVERY",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zdp_discovery"],
+        blurb:     "A ZBEE-ZDP-DISCOVERY protocol frame.",
+    }
+    ZbeeZdpManagement {
+        doc:       "ZBEE-ZDP-MANAGEMENT protocol extension.",
+        display:   "ZBEE-ZDP-MANAGEMENT",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbee_zdp_management"],
+        blurb:     "A ZBEE-ZDP-MANAGEMENT protocol frame.",
+    }
+    Zbncp {
+        doc:       "ZBNCP protocol extension.",
+        display:   "ZBNCP",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zbncp"],
+        blurb:     "A ZBNCP protocol frame.",
+    }
+
 
 
 

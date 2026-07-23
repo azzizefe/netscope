@@ -1225,6 +1225,31 @@ pub mod mpls_pm;
 pub mod mpls_psc;
 pub mod mpls_y1711;
 pub mod mplstp_oam;
+pub mod rf4ce_nwk;
+pub mod rf4ce_profile;
+pub mod rf4ce_secur;
+pub mod zbee_aps;
+pub mod zbee_direct;
+pub mod zbee_nwk;
+pub mod zbee_nwk_gp;
+pub mod zbee_security;
+pub mod zbee_tlv;
+pub mod zbee_zcl;
+pub mod zbee_zcl_closures;
+pub mod zbee_zcl_general;
+pub mod zbee_zcl_ha;
+pub mod zbee_zcl_hvac;
+pub mod zbee_zcl_lighting;
+pub mod zbee_zcl_meas_sensing;
+pub mod zbee_zcl_misc;
+pub mod zbee_zcl_proto_iface;
+pub mod zbee_zcl_sas;
+pub mod zbee_zcl_se;
+pub mod zbee_zdp;
+pub mod zbee_zdp_binding;
+pub mod zbee_zdp_discovery;
+pub mod zbee_zdp_management;
+pub mod zbncp;
 
 use std::net::IpAddr;
 
@@ -4236,6 +4261,31 @@ mod robustness {
         "mpls_psc",
         "mpls_y1711",
         "mplstp_oam",
+        "rf4ce_nwk",
+        "rf4ce_profile",
+        "rf4ce_secur",
+        "zbee_aps",
+        "zbee_direct",
+        "zbee_nwk",
+        "zbee_nwk_gp",
+        "zbee_security",
+        "zbee_tlv",
+        "zbee_zcl",
+        "zbee_zcl_closures",
+        "zbee_zcl_general",
+        "zbee_zcl_ha",
+        "zbee_zcl_hvac",
+        "zbee_zcl_lighting",
+        "zbee_zcl_meas_sensing",
+        "zbee_zcl_misc",
+        "zbee_zcl_proto_iface",
+        "zbee_zcl_sas",
+        "zbee_zcl_se",
+        "zbee_zdp",
+        "zbee_zdp_binding",
+        "zbee_zdp_discovery",
+        "zbee_zdp_management",
+        "zbncp",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
