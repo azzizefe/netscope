@@ -8996,6 +8996,197 @@ protocols! {
         aliases:   ["ifcp"],
         blurb:     "A IFCP protocol frame.",
     }
+    UsbAudio {
+        doc:       "USB-AUDIO protocol extension.",
+        display:   "USB-AUDIO",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_audio"],
+        blurb:     "An USB-AUDIO protocol frame.",
+    }
+    UsbCcid {
+        doc:       "USB-CCID protocol extension.",
+        display:   "USB-CCID",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_ccid"],
+        blurb:     "An USB-CCID protocol frame.",
+    }
+    UsbCom {
+        doc:       "USB-COM protocol extension.",
+        display:   "USB-COM",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_com"],
+        blurb:     "An USB-COM protocol frame.",
+    }
+    UsbDfu {
+        doc:       "USB-DFU protocol extension.",
+        display:   "USB-DFU",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_dfu"],
+        blurb:     "An USB-DFU protocol frame.",
+    }
+    UsbHid {
+        doc:       "USB-HID protocol extension.",
+        display:   "USB-HID",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_hid"],
+        blurb:     "An USB-HID protocol frame.",
+    }
+    UsbHub {
+        doc:       "USB-HUB protocol extension.",
+        display:   "USB-HUB",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_hub"],
+        blurb:     "An USB-HUB protocol frame.",
+    }
+    UsbI1d3 {
+        doc:       "USB-I1D3 protocol extension.",
+        display:   "USB-I1D3",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_i1d3"],
+        blurb:     "An USB-I1D3 protocol frame.",
+    }
+    UsbMasstorage {
+        doc:       "USB-MASSTORAGE protocol extension.",
+        display:   "USB-MASSTORAGE",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_masstorage"],
+        blurb:     "An USB-MASSTORAGE protocol frame.",
+    }
+    UsbPrinter {
+        doc:       "USB-PRINTER protocol extension.",
+        display:   "USB-PRINTER",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_printer"],
+        blurb:     "An USB-PRINTER protocol frame.",
+    }
+    UsbPtp {
+        doc:       "USB-PTP protocol extension.",
+        display:   "USB-PTP",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_ptp"],
+        blurb:     "An USB-PTP protocol frame.",
+    }
+    UsbVideo {
+        doc:       "USB-VIDEO protocol extension.",
+        display:   "USB-VIDEO",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usb_video"],
+        blurb:     "An USB-VIDEO protocol frame.",
+    }
+    Usbip {
+        doc:       "USBIP protocol extension.",
+        display:   "USBIP",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usbip"],
+        blurb:     "An USBIP protocol frame.",
+    }
+    Usbll {
+        doc:       "USBLL protocol extension.",
+        display:   "USBLL",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usbll"],
+        blurb:     "An USBLL protocol frame.",
+    }
+    UsbmsBot {
+        doc:       "USBMS-BOT protocol extension.",
+        display:   "USBMS-BOT",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usbms_bot"],
+        blurb:     "An USBMS-BOT protocol frame.",
+    }
+    UsbmsUasp {
+        doc:       "USBMS-UASP protocol extension.",
+        display:   "USBMS-UASP",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["usbms_uasp"],
+        blurb:     "An USBMS-UASP protocol frame.",
+    }
+    MplsEcho {
+        doc:       "MPLS-ECHO protocol extension.",
+        display:   "MPLS-ECHO",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpls_echo"],
+        blurb:     "An MPLS-ECHO protocol frame.",
+    }
+    MplsMac {
+        doc:       "MPLS-MAC protocol extension.",
+        display:   "MPLS-MAC",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpls_mac"],
+        blurb:     "An MPLS-MAC protocol frame.",
+    }
+    MplsPm {
+        doc:       "MPLS-PM protocol extension.",
+        display:   "MPLS-PM",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpls_pm"],
+        blurb:     "An MPLS-PM protocol frame.",
+    }
+    MplsPsc {
+        doc:       "MPLS-PSC protocol extension.",
+        display:   "MPLS-PSC",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpls_psc"],
+        blurb:     "An MPLS-PSC protocol frame.",
+    }
+    MplsY1711 {
+        doc:       "MPLS-Y1711 protocol extension.",
+        display:   "MPLS-Y1711",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mpls_y1711"],
+        blurb:     "An MPLS-Y1711 protocol frame.",
+    }
+    MplstpOam {
+        doc:       "MPLSTP-OAM protocol extension.",
+        display:   "MPLSTP-OAM",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mplstp_oam"],
+        blurb:     "An MPLSTP-OAM protocol frame.",
+    }
+
+
 
 
 

@@ -66,6 +66,8 @@ use super::{
     acse, cbrs_oids, cdt, cms, credssp, crmf, ess, logotypecertextn, nist_csor, novell_pkis, ns_cert_exts, pkcs10, pkcs12, pkinit, pkix1explicit, pkix1implicit, pkixac, pkixalgs, pkixproxy, pkixqualified, pkixtsp, pres, tcg_cp_oids, wlancertextn, x509af, x509ce, x509if, x509sat,
     scsi, scsi_mmc, scsi_osd, scsi_sbc, scsi_smc, scsi_ssc,
     fc, fcct, fcdns, fcels, fcfcs, fcfzs, fcgi, fclctl, fcoib, fcsb3, fcsp, fcswils, ifcp,
+    usb_audio, usb_ccid, usb_com, usb_dfu, usb_hid, usb_hub, usb_i1d3, usb_masstorage, usb_printer, usb_ptp, usb_video, usbip, usbll, usbms_bot, usbms_uasp,
+    mpls_echo, mpls_mac, mpls_pm, mpls_psc, mpls_y1711, mplstp_oam,
 };
 
 /// The signature every port-dispatched dissector shares.
