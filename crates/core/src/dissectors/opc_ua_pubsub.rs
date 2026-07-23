@@ -5,11 +5,11 @@ use crate::models::Protocol;
 use super::DissectedResult;
 
 pub fn dissect_opc_ua_pubsub(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, src_port: u16, dst_port: u16, payload: &[u8]) -> DissectedResult {
-    DissectedResult { src_addr: src_ip, dst_addr: dst_ip, src_port: Some(src_port), dst_port: Some(dst_port), protocol: Protocol::OpcUaPubsub, summary: format!("OPC UA PubSub ({})", super::bytes(payload.len() as u64)) }
+    DissectedResult { src_addr: src_ip, dst_addr: dst_ip, src_port: Some(src_port), dst_port: Some(dst_port), protocol: Protocol::OpcUaPubSub, summary: format!("OPC UA PubSub ({})", super::bytes(payload.len() as u64)) }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test] fn opc_ua_pubsub_test() { assert_eq!(dissect_opc_ua_pubsub(None, None, 40000, 4840, b"\x71\x00").protocol, Protocol::OpcUaPubsub); }
+    #[test] fn opc_ua_pubsub_test() { assert_eq!(dissect_opc_ua_pubsub(None, None, 40000, 4840, b"\x71\x00").protocol, Protocol::OpcUaPubSub); }
 }

@@ -57,7 +57,7 @@ use super::{
     netconf, gnmi, upnp_soap, guacamole, nomachine_nx, mosh, wap_wsp_wtp,
     wbxml, dns_over_quic, matrix_federation, gemini_proto,
     epics_ca, epics_pva, slurm_rpc, pmix, tango_controls, gbt26982, of_config, ethercat_mailbox,
-    opc_ua_pubsub, cip_motion, cip_safety, gbt_20414, gbt_19582, fiveg_n2, fiveg_n4, mpi_wire, ucx_hpc, safetynet_p, hart_wireless, isa100_11a,
+    opc_ua_pubsub, cip_motion, cip_safety, gbt_20414, gbt_19582, fiveg_n4, mpi_wire, ucx_hpc, safetynet_p, hart_wireless, isa100_11a,
 };
 
 /// The signature every port-dispatched dissector shares.

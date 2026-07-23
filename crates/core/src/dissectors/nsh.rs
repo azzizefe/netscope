@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
-use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
@@ -33,7 +32,7 @@ mod tests {
 
     #[test]
     fn handle_empty_payload() {
-        let res = dissect_nsh(None, None, 0, 0, &[]);
+        let res = dissect_nsh(&[]);
         assert_eq!(res.protocol, Protocol::Nsh);
     }
 }

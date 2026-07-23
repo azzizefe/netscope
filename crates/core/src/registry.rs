@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! The protocol registry â€” the single source of truth for every protocol
 //! netscope knows about.
@@ -1307,15 +1307,7 @@ protocols! {
         aliases:   ["knx_tp"],
         blurb:     "A KNX TP twisted pair building automation telegram.",
     }
-    OpcUaPubsub {
-        doc:       "OPC UA PubSub Protocol (UDP 4841 / MQTT).",
-        display:   "OPC UA PubSub",
-        color:     0x059669,
-        transport: Udp,
-        rank:      3,
-        aliases:   ["opc_ua_pubsub"],
-        blurb:     "An OPC UA PubSub dataset message.",
-    }
+
     CipMotion {
         doc:       "ODVA CIP Motion Protocol (UDP 2223).",
         display:   "CIP Motion",
@@ -1397,15 +1389,6 @@ protocols! {
         aliases:   ["ucx_hpc", "ucx"],
         blurb:     "A UCX high-speed interconnect protocol message.",
     }
-    SercosIii {
-        doc:       "SERCOS III Industrial Ethernet Protocol (EtherType 0x88CD).",
-        display:   "SERCOS III",
-        color:     0xEA580C,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["sercos_iii", "sercos"],
-        blurb:     "A SERCOS III real-time industrial Ethernet frame.",
-    }
     Varan {
         doc:       "VARAN Real-Time Industrial Ethernet Protocol (EtherType 0x88B7).",
         display:   "VARAN",
@@ -1430,7 +1413,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
-        aliases:   ["ethernet_powerlink_v2", "powerlink"],
+        aliases:   ["ethernet_powerlink_v2"],
         blurb:     "A POWERLINK v2 real-time Ethernet frame.",
     }
     MechatrolinkIii {
@@ -5686,15 +5669,7 @@ protocols! {
         aliases:   ["canopen_fd"],
         blurb:     "A CanopenFd protocol frame.",
     }
-    Devicenet {
-        doc:       "Devicenet protocol extension.",
-        display:   "Devicenet",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["devicenet"],
-        blurb:     "A Devicenet protocol frame.",
-    }
+
     Controlnet {
         doc:       "Controlnet protocol extension.",
         display:   "Controlnet",
@@ -5911,15 +5886,7 @@ protocols! {
         aliases:   ["xnap_ext"],
         blurb:     "A XnapExt protocol frame.",
     }
-    Gtpv2c {
-        doc:       "Gtpv2c protocol extension.",
-        display:   "Gtpv2c",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["gtpv2c"],
-        blurb:     "A Gtpv2c protocol frame.",
-    }
+
     DiameterCx {
         doc:       "DiameterCx protocol extension.",
         display:   "DiameterCx",
@@ -6082,15 +6049,7 @@ protocols! {
         aliases:   ["iscsi_login"],
         blurb:     "A IscsiLogin protocol frame.",
     }
-    NvmeTcp {
-        doc:       "NvmeTcp protocol extension.",
-        display:   "NvmeTcp",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["nvme_tcp"],
-        blurb:     "A NvmeTcp protocol frame.",
-    }
+
     FcoeInitialization {
         doc:       "FcoeInitialization protocol extension.",
         display:   "FcoeInitialization",
@@ -6433,15 +6392,7 @@ protocols! {
         aliases:   ["sstp_vpn"],
         blurb:     "A SstpVpn protocol frame.",
     }
-    SoftetherVpn {
-        doc:       "SoftetherVpn protocol extension.",
-        display:   "SoftetherVpn",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["softether_vpn"],
-        blurb:     "A SoftetherVpn protocol frame.",
-    }
+
     ZerotierControl {
         doc:       "ZerotierControl protocol extension.",
         display:   "ZerotierControl",
@@ -6803,15 +6754,7 @@ protocols! {
         blurb:     "GSMTAP_LOG telecommunications protocol.",
     }
 
-    GsmL2Rcop {
-        doc:       "GSM_L2RCOP traffic.",
-        display:   "GSM_L2RCOP",
-        color:     0x808080,
-        transport: Other,
-        rank:      100,
-        aliases:   ["gsm-l2rcop"],
-        blurb:     "GSM_L2RCOP telecommunications protocol.",
-    }
+
 }
 
 impl std::fmt::Display for Protocol {
@@ -6867,7 +6810,7 @@ mod tests {
 
     /// Every protocol must be reachable by *some* typeable filter word. This is
     /// the check that was missing before the registry: 27 protocols (redis,
-    /// kafka, bgp, smb, modbusâ€¦) had working match logic but were absent from
+    /// kafka, bgp, smb, modbus…) had working match logic but were absent from
     /// the hand-maintained keyword list, so `redis` failed to parse and
     /// silently degraded to a substring search.
     #[test]

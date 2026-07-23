@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Plain-language explanations of what netscope shows.
 //!
@@ -32,7 +32,7 @@ your browser can reach google.com it asks a DNS server \"what's the number \
 for this name?\". The answer comes back as an IP address, and the real \
 connection starts. DNS is unencrypted, so anyone on the path can see which \
 sites you look up.",
-            look_for: "\"DNS Query â€” google.com\" (asking) then \"DNS Response â€” google.com â†’ 142.250.74.46\" (the answer).",
+            look_for: "\"DNS Query â€” google.com\" (asking) then \"DNS Response â€” google.com → 142.250.74.46\" (the answer).",
         },
         Protocol::Tls => Lesson {
             title: "TLS / HTTPS â€” the encrypted web",
@@ -98,7 +98,7 @@ address. DHCP is the automatic negotiation that gives it one: the device shouts 
 'Discover', a server 'Offers' an address, the device 'Requests' it, and the \
 server confirms with an 'ACK'. That's why you almost never have to type in \
 network settings by hand.",
-            look_for: "\"DHCP Discover\" â†’ \"DHCP Offer â€” 192.168.1.50\" â†’ \"DHCP Request\" â†’ \"DHCP ACK\".",
+            look_for: "\"DHCP Discover\" → \"DHCP Offer â€” 192.168.1.50\" → \"DHCP Request\" → \"DHCP ACK\".",
         },
         Protocol::Ntp => Lesson {
             title: "NTP â€” keeping the clock correct",
@@ -161,7 +161,7 @@ netscope can tell an SSH session is happening but not what's inside it.",
 plain-text commands like USER and PASS, so anyone capturing can read the login. \
 That's why it's largely replaced by SFTP/FTPS today â€” but you'll still meet it on \
 legacy gear, and it's a classic thing to spot in a capture.",
-            look_for: "\"FTP USER alice\", \"FTP PASS â€¦\", and numbered replies like \"FTP 230 login OK\".",
+            look_for: "\"FTP USER alice\", \"FTP PASS …\", and numbered replies like \"FTP 230 login OK\".",
         },
         Protocol::Smtp => Lesson {
             title: "SMTP â€” sending email between servers",
@@ -177,7 +177,7 @@ envelope of a message go by.",
             summary: "How a mail app browses a mailbox that stays on the server.",
             body: "IMAP lets your mail client read and organise messages that live on \
 the mail server, so the same mailbox looks the same on your phone and laptop. \
-Commands are tagged (a1, a2â€¦) so replies can be matched to requests. Plain IMAP \
+Commands are tagged (a1, a2…) so replies can be matched to requests. Plain IMAP \
 is unencrypted; most clients use it over TLS.",
             look_for: "\"IMAP LOGIN\", \"IMAP SELECT INBOX\", and \"* OK\" server replies.",
         },
@@ -188,7 +188,7 @@ is unencrypted; most clients use it over TLS.",
 messages, and (classically) delete them from the server. It's mostly given way to \
 IMAP, which keeps mail on the server. Like the others, plain POP3 is unencrypted \
 and usually run over TLS today.",
-            look_for: "\"POP3 USER alice\", \"POP3 PASS â€¦\", and \"+OK\" / \"-ERR\" replies.",
+            look_for: "\"POP3 USER alice\", \"POP3 PASS …\", and \"+OK\" / \"-ERR\" replies.",
         },
         Protocol::Telnet => Lesson {
             title: "Telnet â€” the unencrypted remote terminal",
@@ -217,7 +217,7 @@ and dev-server hot-reload all use it to push updates instantly. It starts as \
 an ordinary HTTP request with an 'Upgrade: websocket' header; after the \
 server's '101 Switching Protocols' answer, the same connection carries \
 WebSocket frames instead of HTTP.",
-            look_for: "An \"HTTP GET â€¦ â€” WebSocket handshake\" pair, then \"WebSocket Text\" / \"WebSocket Binary\" frames flowing both ways.",
+            look_for: "An \"HTTP GET … â€” WebSocket handshake\" pair, then \"WebSocket Text\" / \"WebSocket Binary\" frames flowing both ways.",
         },
         Protocol::Http2 => Lesson {
             title: "HTTP/2 â€” the multiplexed web",
@@ -249,7 +249,7 @@ networks on the same physical one. VXLAN wraps a complete Ethernet frame \
 inside a UDP packet and labels it with a VNI (network number), so traffic for \
 virtual network 5000 stays separate from 5001 even on shared cables. netscope \
 unwraps the tunnel and shows you what's really travelling inside.",
-            look_for: "\"VXLAN VNI 5000 â†’ DNS Query â€” â€¦\" â€” the part after the arrow is the inner, real conversation.",
+            look_for: "\"VXLAN VNI 5000 → DNS Query â€” …\" â€” the part after the arrow is the inner, real conversation.",
         },
         Protocol::Postgres => Lesson {
             title: "PostgreSQL â€” talking to the database",
@@ -259,7 +259,7 @@ connection (port 5432) and speaks Postgres' own message protocol: a startup \
 handshake, then messages like 'Query' carrying SQL text and 'DataRow' carrying \
 results. Plain connections send the SQL â€” and sometimes the password â€” in clear \
 text, which is why production databases are usually behind TLS.",
-            look_for: "\"PostgreSQL Query â€” SELECT â€¦\" (a query going out) and \"PostgreSQL DataRow\" / \"PostgreSQL ReadyForQuery\" (results coming back).",
+            look_for: "\"PostgreSQL Query â€” SELECT …\" (a query going out) and \"PostgreSQL DataRow\" / \"PostgreSQL ReadyForQuery\" (results coming back).",
         },
         Protocol::Mysql => Lesson {
             title: "MySQL â€” the other popular database",
@@ -269,7 +269,7 @@ with a handshake that reveals its version, the client logs in, then sends \
 commands â€” most commonly COM_QUERY carrying the SQL text. As with any \
 unencrypted database link, the queries and login are visible on the wire unless \
 the connection is wrapped in TLS.",
-            look_for: "\"MySQL Server handshake â€” 8.0.32\" at the start, then \"MySQL Query â€” SELECT â€¦\".",
+            look_for: "\"MySQL Server handshake â€” 8.0.32\" at the start, then \"MySQL Query â€” SELECT …\".",
         },
         Protocol::Mongodb => Lesson {
             title: "MongoDB â€” the document database",
@@ -308,7 +308,7 @@ Those are the cause of the errors clients see, not a symptom of them.",
 Clients speak the CQL native protocol on TCP 9042: a STARTUP handshake, then \
 QUERY frames carrying CQL (a SQL-like language) and RESULT frames coming back. \
 Each frame is tagged with a stream id so many requests can share the connection.",
-            look_for: "\"CQL STARTUP\" opening a session, then \"CQL QUERY â€” SELECT â€¦\" and \"CQL RESULT\".",
+            look_for: "\"CQL STARTUP\" opening a session, then \"CQL QUERY â€” SELECT …\" and \"CQL RESULT\".",
         },
         Protocol::Modbus => Lesson {
             title: "Modbus â€” talking to industrial machines",
@@ -344,7 +344,7 @@ The frame shares its application layer with wired M-Bus, so a variable-data repl
 names the CI-field and the meter's serial number. Watching this is how you notice \
 a meter that has gone quiet â€” the concentrator still forwards everyone else, and \
 the gap is invisible until the estimate arrives.",
-            look_for: "\"wM-Bus (S) reply â€” variable data reply, serial â€¦\"; mode labels and CI-field names; a missing meter in a run of regular readings.",
+            look_for: "\"wM-Bus (S) reply â€” variable data reply, serial …\"; mode labels and CI-field names; a missing meter in a run of regular readings.",
         },
         Protocol::Dnp3 => Lesson {
             title: "DNP3 â€” the grid's control protocol",
@@ -354,7 +354,7 @@ power and water infrastructure. Frames start with a fixed 0x0564 sync and addres
 a specific station. Like Modbus it grew up without security; a modern secure \
 variant exists, but plenty of legacy DNP3 still runs in the clear â€” worth flagging \
 in any utility capture.",
-            look_for: "\"DNP3 UNCONFIRMED_USER_DATA â€” 1 â†’ 1024\" (master to outstation) and \"DNP3 LINK_STATUS\" replies; the numbers are station addresses.",
+            look_for: "\"DNP3 UNCONFIRMED_USER_DATA â€” 1 → 1024\" (master to outstation) and \"DNP3 LINK_STATUS\" replies; the numbers are station addresses.",
         },
         Protocol::Bacnet => Lesson {
             title: "BACnet â€” the building's nervous system",
@@ -479,7 +479,7 @@ Attackers watch these too â€” which is why the exchange is worth recognisin
 'bind'. A plain (unencrypted) simple bind sends the username and password in clear \
 text, so seeing one on the wire is a real credential-exposure finding; production \
 directories use LDAPS (LDAP over TLS) instead.",
-            look_for: "\"LDAP bindRequest â€” cn=admin,â€¦\" (a login) and \"LDAP searchRequest\" (a lookup).",
+            look_for: "\"LDAP bindRequest â€” cn=admin,…\" (a login) and \"LDAP searchRequest\" (a lookup).",
         },
         Protocol::Radius => Lesson {
             title: "RADIUS â€” who gets onto the network",
@@ -529,7 +529,7 @@ a packet â€” proving it came from the right peer and wasn't altered â€�
 encrypting the contents. It's used less than ESP today, since it breaks with NAT, \
 but you'll still meet it. Like ESP it carries an SPI and sequence number, and it \
 names the protocol it's protecting.",
-            look_for: "\"AH (IPsec) â€” SPI 0xâ€¦, seq 7, protects TCP\".",
+            look_for: "\"AH (IPsec) â€” SPI 0x…, seq 7, protects TCP\".",
         },
         Protocol::Mqtt => Lesson {
             title: "MQTT â€” the language of IoT",
@@ -1178,7 +1178,7 @@ carrying SMB2 payloads (such as NEGOTIATE or CREATE), but the actual block data 
 subsequent RDMA READ/WRITE operations and does not appear inside the SMB Direct frames themselves.\n\n\
 The SMBD header manages flow control via CreditsRequested and CreditsGranted. If those credits \
 drop to zero, the connection stalls even if the underlying RDMA fabric is perfectly healthy.",
-            look_for: "\"SMB Direct Negotiate\" or \"SMB Direct Data Â· SMB2 CREATE\" containing the file request, and \"SMB Direct Keep-Alive\" maintaining connection credits.",
+            look_for: "\"SMB Direct Negotiate\" or \"SMB Direct Data · SMB2 CREATE\" containing the file request, and \"SMB Direct Keep-Alive\" maintaining connection credits.",
         },
         Protocol::SrpRdma => Lesson {
             title: "SCSI RDMA Protocol (SRP)",
@@ -1365,7 +1365,7 @@ One detail decides whether the reading is right: the operation is the first \
 element *inside* the Body element. Taking the first element in the document \
 gives `Envelope` every time, and taking the first namespace-prefixed element \
 usually gives whatever the SOAP header carries â€” a security token.",
-            look_for: "The operation name: a Setâ€¦ or Download that nobody scheduled, or a Fault carrying its own reason.",
+            look_for: "The operation name: a Set… or Download that nobody scheduled, or a Fault carrying its own reason.",
         },
         Protocol::Bier => Lesson {
             title: "BIER â€” multicast that keeps no state anywhere",
@@ -1628,7 +1628,7 @@ Both copies carry the same sequence number in their tag â€” that is how the
 receiver spots the duplicate. It is also how you spot a ring that has already \
 lost one path: you stop seeing pairs. HSR is designed to hide that from the \
 application, so nothing else will tell you until the second path fails too.",
-            look_for: "\"HSR path 0, seq 1234 Â· â€¦\" and \"HSR path 1, seq 1234 Â· â€¦\" as a pair; a capture with only one path is a ring already running on one leg.",
+            look_for: "\"HSR path 0, seq 1234 · …\" and \"HSR path 1, seq 1234 · …\" as a pair; a capture with only one path is a ring already running on one leg.",
         },
         Protocol::Mvrp => Lesson {
             title: "MVRP â€” switches agreeing which VLANs to carry",
@@ -1650,7 +1650,7 @@ which wastes capacity on every link that did not want it. MMRP lets ports say \
 which groups and MAC addresses they actually need, so the switch can forward \
 rather than flood. It shares MVRP's attribute encoding â€” the difference is what \
 is being registered.",
-            look_for: "\"MMRP JoinIn â€” MAC address â€¦\" as a receiver subscribes to a group.",
+            look_for: "\"MMRP JoinIn â€” MAC address …\" as a receiver subscribes to a group.",
         },
         Protocol::Stp => Lesson {
             title: "STP â€” stopping network loops",
@@ -1670,7 +1670,7 @@ packet with a short 'label' at the edge of the network; core routers then forwar
 purely on that label â€” faster, and flexible enough to build VPNs and engineer \
 traffic paths. Labels can stack (an outer one for the tunnel, an inner one for the \
 service). netscope unwraps the labels and shows the real packet inside.",
-            look_for: "\"MPLS label 16 (TTL 64) Â· IPv4 â€¦\" â€” the part after the dot is the actual packet being carried.",
+            look_for: "\"MPLS label 16 (TTL 64) · IPv4 …\" â€” the part after the dot is the actual packet being carried.",
         },
         Protocol::Syslog => Lesson {
             title: "Syslog â€” the system's diary",
@@ -1679,7 +1679,7 @@ service). netscope unwraps the labels and shows the real packet inside.",
 network to one place. Each message carries a priority that encodes a facility \
 (which subsystem) and a severity (how bad), from Emergency down to Debug. It's \
 usually plaintext over UDP 514 â€” handy for ops, but readable by anyone capturing.",
-            look_for: "\"Syslog Error (facility 4) â€” â€¦\" on UDP 514.",
+            look_for: "\"Syslog Error (facility 4) â€” …\" on UDP 514.",
         },
         Protocol::Tftp => Lesson {
             title: "TFTP â€” tiny file transfer",
@@ -1734,7 +1734,7 @@ security cameras.",
 it. Simple and human-readable on TCP 6667 (or TLS on 6697). Because it's easy to \
 script, it's also historically been used to control botnets â€” so unexpected IRC \
 from a server is worth a second look.",
-            look_for: "\"IRC PRIVMSG â€” :nick â€¦ #channel\" on TCP 6667.",
+            look_for: "\"IRC PRIVMSG â€” :nick … #channel\" on TCP 6667.",
         },
         Protocol::Rfb => Lesson {
             title: "RFB / VNC â€” sharing a screen",
@@ -1769,7 +1769,7 @@ and large binary downloads.",
 multiple independent streams in one connection (so one lost message doesn't \
 stall the rest) and multi-homing for failover. You'll mostly see it carrying \
 mobile-core signalling like Diameter and S1AP.",
-            look_for: "\"SCTP INIT â€” 1234 â†’ 38412\" â€” the chunk type names the action.",
+            look_for: "\"SCTP INIT â€” 1234 → 38412\" â€” the chunk type names the action.",
         },
         Protocol::Gre => Lesson {
             title: "GRE â€” a plain tunnel",
@@ -1851,7 +1851,7 @@ use many ports.",
         },
         Protocol::Git => Lesson {
             title: "Git â€” the native git:// transport",
-            summary: "The unencrypted protocol behind `git clone git://â€¦`.",
+            summary: "The unencrypted protocol behind `git clone git://…`.",
             body: "Git can move repositories over its own lightweight protocol on TCP \
 9418. It names a service â€” upload-pack for clone/fetch, receive-pack for push. \
 It has no encryption or authentication, so it's read-only and mostly superseded \
@@ -1984,7 +1984,7 @@ name. SSH replaced it decades ago, so seeing rlogin today is a red flag.",
 but not its insistence on redelivering old data â€” by the time it arrives, it's \
 too late to be useful. DCCP gives congestion control without reliability, aimed \
 at streaming and gaming.",
-            look_for: "\"DCCP Request â€” 5001 â†’ 5002\" (IP protocol 33).",
+            look_for: "\"DCCP Request â€” 5001 → 5002\" (IP protocol 33).",
         },
         Protocol::Dtls => Lesson {
             title: "DTLS â€” TLS for UDP",
@@ -2160,7 +2160,7 @@ wrapped in MLLP framing over TCP. Like DICOM, it carries protected health data."
             title: "FIX â€” the language of trading",
             summary: "How trading systems and exchanges send orders and market data.",
             body: "FIX is the lingua franca of electronic finance: tag=value pairs \
-(8=FIX.4.2â€¦35=Dâ€¦) carry orders (NewOrderSingle), fills (ExecutionReport) and \
+(8=FIX.4.2…35=D…) carry orders (NewOrderSingle), fills (ExecutionReport) and \
 market data between brokers, funds and exchanges. Latency-sensitive and \
 high-value, so it's tightly monitored.",
             look_for: "\"FIX FIX.4.2 â€” NewOrderSingle\" â€” tag 35 is the message type.",
@@ -2675,7 +2675,7 @@ actual data.",
 audio passes through media gateways. Megaco (also standardised as H.248) is the \
 command channel between them: add this endpoint, connect these two, drop the \
 call. The successor to MGCP.",
-            look_for: "\"Megaco/H.248 â€” MEGACO/1 â€¦\" on UDP/TCP 2944.",
+            look_for: "\"Megaco/H.248 â€” MEGACO/1 …\" on UDP/TCP 2944.",
         },
         Protocol::Msrp => Lesson {
             title: "MSRP â€” chat inside a call",
@@ -2698,7 +2698,7 @@ netscope identifies it by its port rather than decoding the pixels.",
             summary: "The remote-display protocol for virtual machines (oVirt/QEMU).",
             body: "SPICE gives you a virtual machine's screen, keyboard, mouse, sound and \
 USB redirection over the network â€” the console you open from a virtualisation \
-manager. It splits work across separate channels (display, inputs, cursorâ€¦), each \
+manager. It splits work across separate channels (display, inputs, cursor…), each \
 opening with a \"REDQ\" link message.",
             look_for: "\"SPICE link â€” display channel\".",
         },
@@ -3054,7 +3054,7 @@ what your laptop uses when a printer just appears and works.",
 password before running the command â€” but sends that password unencrypted, so anyone \
 capturing the traffic gets working credentials. If you see rexec, treat the password \
 as compromised.",
-            look_for: "\"rexec â€” alice runs â€¦ (cleartext password)\" on TCP 512.",
+            look_for: "\"rexec â€” alice runs … (cleartext password)\" on TCP 512.",
         },
         Protocol::Sane => Lesson {
             title: "SANE â€” sharing a scanner",
@@ -3179,7 +3179,7 @@ number.",
 captures the exchange has them. It survives because it's simple and some ISPs still \
 accept it, but CHAP or EAP should be used instead â€” and a PAP login in a capture \
 should be treated as a leaked password.",
-            look_for: "\"PAP Authenticate-Request â€” user â€¦ (cleartext password)\".",
+            look_for: "\"PAP Authenticate-Request â€” user … (cleartext password)\".",
         },
         Protocol::Chap => Lesson {
             title: "CHAP â€” proving a secret without sending it",
@@ -3373,7 +3373,7 @@ legacy Unix networks.",
             body: "GSM_IPA is used in mobile telecommunications.",
             look_for: "\"GSM_IPA message\".",
         },
-        Protocol::GsmL2Rcop => Lesson {
+        Protocol::GsmL2rcop => Lesson {
             title: "GSM_L2RCOP",
             summary: "GSM / Telecommunication protocol.",
             body: "GSM_L2RCOP is used in mobile telecommunications.",
@@ -3492,11 +3492,11 @@ without pairing to anything.",
             summary: "Tiny broadcast frames from a car or industrial controller bus.",
             body: "CAN (Controller Area Network) is what a car's parts use to talk: \
 every frame is broadcast to the whole bus with an ID that says what it is \
-(engine RPM, wheel speedâ€¦) and up to 8 data bytes (64 for CAN FD). There are \
+(engine RPM, wheel speed…) and up to 8 data bytes (64 for CAN FD). There are \
 no addresses and no connections â€” receivers just pick the IDs they care \
 about. On Linux, SocketCAN exposes canN/vcanN interfaces netscope can \
 capture like any NIC.",
-            look_for: "\"CAN 0x244 [8]  12 0A 00 F3 â€¦\" â€” the ID, the byte count, and the raw data bytes.",
+            look_for: "\"CAN 0x244 [8]  12 0A 00 F3 …\" â€” the ID, the byte count, and the raw data bytes.",
         },
         Protocol::J1939 => Lesson {
             title: "J1939 â€” the language trucks speak over CAN",
@@ -3719,7 +3719,7 @@ and pool balancing so either server can take over alone.",
             title: "M3UA â€” SS7 telephony moved onto IP",
             summary: "How phone networks still route calls and texts, now over IP.",
             body: "Before mobile networks ran on IP, operators used SS7 â€” a separate signalling network for setting up calls, delivering SMS and answering roaming queries. Those SS7 links are mostly gone, but the protocol on top of them was kept, wrapped in M3UA and carried over IP. It is why a text message still reaches you abroad. SS7 was designed for a world of a few trusted operators, so it carries very little authentication, which is why access to it is tightly controlled.",
-            look_for: "\"M3UA DATA â€” SCCP 1001 â†’ 2002\" (a message travelling between two switches), \"M3UA ASPUP\" when a link comes up.",
+            look_for: "\"M3UA DATA â€” SCCP 1001 → 2002\" (a message travelling between two switches), \"M3UA ASPUP\" when a link comes up.",
         },
         Protocol::M2ua => Lesson {
             title: "M2UA â€” a remote SS7 link, made local",
@@ -3797,13 +3797,13 @@ and pool balancing so either server can take over alone.",
             title: "SCCP â€” addressing inside the phone network",
             summary: "Works out which network element a query should reach.",
             body: "SS7 point codes identify a switch, but not what you want to talk to inside it. SCCP adds a subsystem number that names the actual element â€” the subscriber database (HLR), the visitor register (VLR), the switch itself (MSC). That is the useful part of an SCCP header: it tells you a query is heading for a subscriber database rather than just to some node.",
-            look_for: "\"SCCP UDT â€” MSC â†’ HLR\", meaning a switch is querying the subscriber database. When the contents are recognised, netscope shows the TCAP operation instead.",
+            look_for: "\"SCCP UDT â€” MSC → HLR\", meaning a switch is querying the subscriber database. When the contents are recognised, netscope shows the TCAP operation instead.",
         },
         Protocol::Tcap => Lesson {
             title: "TCAP â€” what the phone network is actually asking",
             summary: "Pairs a question with its answer, and names the question.",
             body: "TCAP matches a request to its response across the network. On its own that says little, but the operation code it carries names the real work: registering a phone in a new area, fetching authentication keys, or finding out where to deliver a text message. Two of those operations are worth recognising on sight. sendRoutingInfoForSM asks where a subscriber is so a message can be delivered, and anyTimeInterrogation asks where a subscriber physically is. Both are legitimate operations that are also the basis of well-known SS7 tracking and interception abuse, which is why netscope names them rather than leaving them as numbers.",
-            look_for: "\"TCAP Begin Invoke â€” sendRoutingInfoForSM â€” MSC â†’ HLR\" for SMS routing; \"anyTimeInterrogation\" for a location query; \"updateLocation\" when a phone registers somewhere new.",
+            look_for: "\"TCAP Begin Invoke â€” sendRoutingInfoForSM â€” MSC → HLR\" for SMS routing; \"anyTimeInterrogation\" for a location query; \"updateLocation\" when a phone registers somewhere new.",
         },
         Protocol::Isup => Lesson {
             title: "ISUP â€” setting up a phone call",
@@ -3873,13 +3873,13 @@ Safety Validator 0x3A) and the presence of safety validations, timestamps, and r
             title: "DLMS/COSEM â€” reading the meter on your wall",
             summary: "How electricity, gas and water meters report and are configured.",
             body: "Smart meters send their readings and accept configuration over DLMS/COSEM. The part worth watching is whether the message is encrypted: the standard defines the same operations twice, once in the clear and once ciphered. A GET-Request in the clear means readings are visible to anyone on the path, and a SET-Request in the clear means the meter can be reconfigured without the traffic being protected. netscope marks which form is in use.",
-            look_for: "\"DLMS GET-Request â€” client 1 â†’ server 17\" reading a meter; \"DLMS SET-Request (encrypted)\" reconfiguring one with the body protected.",
+            look_for: "\"DLMS GET-Request â€” client 1 → server 17\" reading a meter; \"DLMS SET-Request (encrypted)\" reconfiguring one with the body protected.",
         },
         Protocol::Fox => Lesson {
             title: "Niagara Fox â€” the building's control system",
             summary: "Runs heating, lighting, lifts and door access in large buildings.",
             body: "Tridium Niagara is one of the most widely deployed building-management platforms, and Fox is how its controllers talk. Its opening greeting is unusually revealing: before any login it announces the station name, the product version and the host operating system. That makes it easy to inventory a building's control system from a single packet, which is exactly why it is worth surfacing what the greeting gives away.",
-            look_for: "\"Fox hello â€” BMS-TOWER-3 Â· Tridium Â· QNX (x86)\", naming the station, the product and the operating system it runs on.",
+            look_for: "\"Fox hello â€” BMS-TOWER-3 · Tridium · QNX (x86)\", naming the station, the product and the operating system it runs on.",
         },
         Protocol::SrtpGe => Lesson {
             title: "GE-SRTP â€” GE Fanuc factory controllers",
@@ -3951,7 +3951,7 @@ Safety Validator 0x3A) and the presence of safety validations, timestamps, and r
             title: "TRILL â€” Ethernet that actually routes",
             summary: "Uses every link in a data centre instead of switching some off.",
             body: "Spanning tree keeps a switched network from looping by disabling links until only one path remains, which means expensive links sit idle. TRILL replaces that: each switch gets a nickname, and frames are routed between nicknames using IS-IS, so every link carries traffic and the shortest path is really used. Because it is genuine routing, frames carry a hop count â€” without one a loop would be fatal rather than merely wasteful.",
-            look_for: "\"TRILL 100 â†’ 200, 30 hops left\" for a routed frame; \"TRILL multi-destination\" for one being flooded to a distribution tree.",
+            look_for: "\"TRILL 100 → 200, 30 hops left\" for a routed frame; \"TRILL multi-destination\" for one being flooded to a distribution tree.",
         },
         Protocol::Cfm => Lesson {
             title: "CFM â€” proving a carrier circuit is healthy",
@@ -4106,13 +4106,13 @@ reason as a numeric code.",
             title: "NFLOG â€” what the firewall decided, and why",
             summary: "A Linux firewall's own log of the packets it acted on.",
             body: "A firewall rule on Linux can hand a packet to a log group as well as dropping it, and a capture can read that group directly. What makes this more useful than watching the traffic itself is the prefix: whoever wrote the rule can attach a name to it, and that name travels with every packet the rule matches. So the capture does not only show that something was blocked â€” it names the rule that blocked it, which is the question anyone debugging a firewall actually has.",
-            look_for: "\"NFLOG [DROP-INBOUND] Â· TCP Connection opened\" â€” the text in brackets is the rule's own label, followed by the packet it matched.",
+            look_for: "\"NFLOG [DROP-INBOUND] · TCP Connection opened\" â€” the text in brackets is the rule's own label, followed by the packet it matched.",
         },
         Protocol::ZeroTier => Lesson {
             title: "ZeroTier â€” one network across many places",
             summary: "Makes machines in different buildings behave as if they share a switch.",
             body: "ZeroTier builds a virtual Ethernet network over the internet, so a laptop at home and a server in a data centre can behave as though they are plugged into the same switch. The contents are encrypted, but the header is not, and it carries the two ZeroTier node addresses â€” identifiers of their own, unrelated to any IP address â€” plus a hop count. That hop count is the useful part when a link feels slow: zero means the two nodes reached each other directly, and anything higher means traffic is being relayed through ZeroTier's infrastructure instead.",
-            look_for: "\"ZeroTier deadbeef01 â†’ cafebabe02 â€” direct\" for a peer-to-peer path; \"2 hops\" means it is being relayed.",
+            look_for: "\"ZeroTier deadbeef01 → cafebabe02 â€” direct\" for a peer-to-peer path; \"2 hops\" means it is being relayed.",
         },
         Protocol::Nebula => Lesson {
             title: "Nebula â€” a mesh that introduces itself",
@@ -4142,7 +4142,7 @@ reason as a numeric code.",
             title: "Bristol BSAP â€” SCADA RTU network protocol",
             summary: "Used by Bristol Babcock and Emerson ControlWave RTUs over port 1234/4268.",
             body: "BSAP (Bristol Standard Asynchronous Protocol) is a master/slave SCADA protocol designed for RTUs in water, wastewater, and energy networks. It handles polling, register data transfers, time synchronization, and control commands.",
-            look_for: "\"BSAP Read Data / Poll â€” node 10 â†’ 1\" or \"BSAP Control Command\".",
+            look_for: "\"BSAP Read Data / Poll â€” node 10 → 1\" or \"BSAP Control Command\".",
         },
         Protocol::Focas => Lesson {
             title: "Fanuc FOCAS â€” CNC machine tool communication",
@@ -4172,7 +4172,7 @@ reason as a numeric code.",
             title: "MOST â€” Media Oriented Systems Transport",
             summary: "High-speed automotive infotainment network for audio, video, and control.",
             body: "MOST (Media Oriented Systems Transport) connects automotive multimedia devices such as head units, amplifiers, radio tuners, and displays in ring topologies. Control messages target specific Function Blocks (FBlocks) like CD players or navigation units to perform actions or report status.",
-            look_for: "\"MOST 0x0110 â†’ 0x0100 | FBlock 0x22 (Radio Tuner) â€” Get\".",
+            look_for: "\"MOST 0x0110 → 0x0100 | FBlock 0x22 (Radio Tuner) â€” Get\".",
         },
         Protocol::Ccp => Lesson {
             title: "CCP â€” CAN Calibration Protocol",
@@ -5164,12 +5164,7 @@ reason as a numeric code.",
             body: "KNX TP carries building management telegrams over dedicated twisted-pair bus cables.",
             look_for: "KNX TP bus telegram.",
         },
-        Protocol::OpcUaPubsub => Lesson {
-            title: "OPC UA PubSub",
-            summary: "Publish/Subscribe extension for OPC UA.",
-            body: "OPC UA PubSub streams dataset messages over UDP or MQTT for decoupled industrial IoT.",
-            look_for: "OPC UA PubSub message.",
-        },
+
         Protocol::CipMotion => Lesson {
             title: "CIP Motion",
             summary: "ODVA CIP real-time drive and motion control.",
@@ -5224,12 +5219,7 @@ reason as a numeric code.",
             body: "UCX provides low-latency high-bandwidth communication for InfiniBand, RoCE and Shared Memory.",
             look_for: "UCX transport packet.",
         },
-        Protocol::SercosIii => Lesson {
-            title: "SERCOS III",
-            summary: "Real-time industrial Ethernet motion bus.",
-            body: "SERCOS III provides deterministic Ethernet communication for CNC machinery and robotics.",
-            look_for: "SERCOS III Ethernet frame.",
-        },
+
         Protocol::Varan => Lesson {
             title: "VARAN",
             summary: "Hard real-time industrial Ethernet protocol.",
@@ -5296,12 +5286,7 @@ reason as a numeric code.",
             body: "CanopenFd protocol communication.",
             look_for: "CanopenFd frame.",
         },
-        Protocol::Devicenet => Lesson {
-            title: "Devicenet",
-            summary: "Devicenet protocol.",
-            body: "Devicenet protocol communication.",
-            look_for: "Devicenet frame.",
-        },
+
         Protocol::Controlnet => Lesson {
             title: "Controlnet",
             summary: "Controlnet protocol.",
@@ -5446,12 +5431,7 @@ reason as a numeric code.",
             body: "XnapExt protocol communication.",
             look_for: "XnapExt frame.",
         },
-        Protocol::Gtpv2c => Lesson {
-            title: "Gtpv2c",
-            summary: "Gtpv2c protocol.",
-            body: "Gtpv2c protocol communication.",
-            look_for: "Gtpv2c frame.",
-        },
+
         Protocol::DiameterCx => Lesson {
             title: "DiameterCx",
             summary: "DiameterCx protocol.",
@@ -5560,12 +5540,7 @@ reason as a numeric code.",
             body: "IscsiLogin protocol communication.",
             look_for: "IscsiLogin frame.",
         },
-        Protocol::NvmeTcp => Lesson {
-            title: "NvmeTcp",
-            summary: "NvmeTcp protocol.",
-            body: "NvmeTcp protocol communication.",
-            look_for: "NvmeTcp frame.",
-        },
+
         Protocol::FcoeInitialization => Lesson {
             title: "FcoeInitialization",
             summary: "FcoeInitialization protocol.",
@@ -5794,12 +5769,7 @@ reason as a numeric code.",
             body: "SstpVpn protocol communication.",
             look_for: "SstpVpn frame.",
         },
-        Protocol::SoftetherVpn => Lesson {
-            title: "SoftetherVpn",
-            summary: "SoftetherVpn protocol.",
-            body: "SoftetherVpn protocol communication.",
-            look_for: "SoftetherVpn frame.",
-        },
+
         Protocol::ZerotierControl => Lesson {
             title: "ZerotierControl",
             summary: "ZerotierControl protocol.",
@@ -5867,12 +5837,7 @@ reason as a numeric code.",
             look_for: "EvpnExt frame.",
         },
 
-        Protocol::GsmL2rcop => Lesson {
-            title: "GSM_L2RCOP",
-            summary: "GSM / Telecommunication protocol.",
-            body: "GSM_L2RCOP is used in mobile telecommunications.",
-            look_for: "GSM_L2RCOP message",
-        },
+
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",
@@ -5910,7 +5875,7 @@ pub fn glossary() -> &'static [Term] {
         Term { term: "IP address", meaning: "A device's number on the network, like 142.250.74.46 (IPv4) or 2606:4700::1 (IPv6)." },
         Term { term: "Port", meaning: "A numbered 'door' on a device for a specific service. 443 = HTTPS, 80 = HTTP, 53 = DNS." },
         Term { term: "MAC address", meaning: "A device's permanent hardware ID, used only on the local network (e.g. aa:bb:cc:dd:ee:ff)." },
-        Term { term: "Handshake", meaning: "The SYN â†’ SYN-ACK â†’ ACK exchange two computers use to agree to start a TCP conversation." },
+        Term { term: "Handshake", meaning: "The SYN → SYN-ACK → ACK exchange two computers use to agree to start a TCP conversation." },
         Term { term: "SYN / ACK / FIN / RST", meaning: "TCP flags: SYN starts, ACK acknowledges, FIN closes politely, RST aborts." },
         Term { term: "TTL", meaning: "'Time to live' â€” a countdown that stops a lost packet from circling the internet forever." },
         Term { term: "SNI", meaning: "The site name a browser reveals when starting HTTPS, before encryption kicks in." },
@@ -6043,7 +6008,7 @@ mod tests {
     #[test]
     fn explain_dns_query_vs_response() {
         let q = pkt(Protocol::Dns, "DNS Query â€” google.com");
-        let r = pkt(Protocol::Dns, "DNS Response â€” google.com â†’ 1.2.3.4");
+        let r = pkt(Protocol::Dns, "DNS Response â€” google.com → 1.2.3.4");
         assert!(explain_packet(&q).contains("asking"));
         assert!(explain_packet(&r).contains("answered"));
     }
