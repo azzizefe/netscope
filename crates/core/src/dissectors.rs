@@ -1250,6 +1250,21 @@ pub mod zbee_zdp_binding;
 pub mod zbee_zdp_discovery;
 pub mod zbee_zdp_management;
 pub mod zbncp;
+pub mod netlink;
+pub mod netlink_generic;
+pub mod netlink_mac80211_hwsim;
+pub mod netlink_net_dm;
+pub mod netlink_netfilter;
+pub mod netlink_nl80211;
+pub mod netlink_ovs_ct_limit;
+pub mod netlink_ovs_datapath;
+pub mod netlink_ovs_flow;
+pub mod netlink_ovs_meter;
+pub mod netlink_ovs_packet;
+pub mod netlink_ovs_vport;
+pub mod netlink_psample;
+pub mod netlink_route;
+pub mod netlink_sock_diag;
 
 use std::net::IpAddr;
 
@@ -4286,6 +4301,21 @@ mod robustness {
         "zbee_zdp_discovery",
         "zbee_zdp_management",
         "zbncp",
+        "netlink",
+        "netlink_generic",
+        "netlink_mac80211_hwsim",
+        "netlink_net_dm",
+        "netlink_netfilter",
+        "netlink_nl80211",
+        "netlink_ovs_ct_limit",
+        "netlink_ovs_datapath",
+        "netlink_ovs_flow",
+        "netlink_ovs_meter",
+        "netlink_ovs_packet",
+        "netlink_ovs_vport",
+        "netlink_psample",
+        "netlink_route",
+        "netlink_sock_diag",
     ];
 
     /// Every dissector module must be reachable from the dispatch.

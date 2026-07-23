@@ -7626,6 +7626,98 @@ reason as a numeric code.",
             look_for: "ZBNCP header or payload.",
         },
 
+        
+        Protocol::Netlink => Lesson {
+            title: "Netlink",
+            summary: "NETLINK Protocol.",
+            body: "A NETLINK protocol communication frame.",
+            look_for: "NETLINK header or payload.",
+        },
+        Protocol::NetlinkGeneric => Lesson {
+            title: "NetlinkGeneric",
+            summary: "NETLINK-GENERIC Protocol.",
+            body: "A NETLINK-GENERIC protocol communication frame.",
+            look_for: "NETLINK-GENERIC header or payload.",
+        },
+        Protocol::NetlinkMac80211Hwsim => Lesson {
+            title: "NetlinkMac80211Hwsim",
+            summary: "NETLINK-MAC80211-HWSIM Protocol.",
+            body: "A NETLINK-MAC80211-HWSIM protocol communication frame.",
+            look_for: "NETLINK-MAC80211-HWSIM header or payload.",
+        },
+        Protocol::NetlinkNetDm => Lesson {
+            title: "NetlinkNetDm",
+            summary: "NETLINK-NET-DM Protocol.",
+            body: "A NETLINK-NET-DM protocol communication frame.",
+            look_for: "NETLINK-NET-DM header or payload.",
+        },
+        Protocol::NetlinkNetfilter => Lesson {
+            title: "NetlinkNetfilter",
+            summary: "NETLINK-NETFILTER Protocol.",
+            body: "A NETLINK-NETFILTER protocol communication frame.",
+            look_for: "NETLINK-NETFILTER header or payload.",
+        },
+        Protocol::NetlinkNl80211 => Lesson {
+            title: "NetlinkNl80211",
+            summary: "NETLINK-NL80211 Protocol.",
+            body: "A NETLINK-NL80211 protocol communication frame.",
+            look_for: "NETLINK-NL80211 header or payload.",
+        },
+        Protocol::NetlinkOvsCtLimit => Lesson {
+            title: "NetlinkOvsCtLimit",
+            summary: "NETLINK-OVS-CT-LIMIT Protocol.",
+            body: "A NETLINK-OVS-CT-LIMIT protocol communication frame.",
+            look_for: "NETLINK-OVS-CT-LIMIT header or payload.",
+        },
+        Protocol::NetlinkOvsDatapath => Lesson {
+            title: "NetlinkOvsDatapath",
+            summary: "NETLINK-OVS-DATAPATH Protocol.",
+            body: "A NETLINK-OVS-DATAPATH protocol communication frame.",
+            look_for: "NETLINK-OVS-DATAPATH header or payload.",
+        },
+        Protocol::NetlinkOvsFlow => Lesson {
+            title: "NetlinkOvsFlow",
+            summary: "NETLINK-OVS-FLOW Protocol.",
+            body: "A NETLINK-OVS-FLOW protocol communication frame.",
+            look_for: "NETLINK-OVS-FLOW header or payload.",
+        },
+        Protocol::NetlinkOvsMeter => Lesson {
+            title: "NetlinkOvsMeter",
+            summary: "NETLINK-OVS-METER Protocol.",
+            body: "A NETLINK-OVS-METER protocol communication frame.",
+            look_for: "NETLINK-OVS-METER header or payload.",
+        },
+        Protocol::NetlinkOvsPacket => Lesson {
+            title: "NetlinkOvsPacket",
+            summary: "NETLINK-OVS-PACKET Protocol.",
+            body: "A NETLINK-OVS-PACKET protocol communication frame.",
+            look_for: "NETLINK-OVS-PACKET header or payload.",
+        },
+        Protocol::NetlinkOvsVport => Lesson {
+            title: "NetlinkOvsVport",
+            summary: "NETLINK-OVS-VPORT Protocol.",
+            body: "A NETLINK-OVS-VPORT protocol communication frame.",
+            look_for: "NETLINK-OVS-VPORT header or payload.",
+        },
+        Protocol::NetlinkPsample => Lesson {
+            title: "NetlinkPsample",
+            summary: "NETLINK-PSAMPLE Protocol.",
+            body: "A NETLINK-PSAMPLE protocol communication frame.",
+            look_for: "NETLINK-PSAMPLE header or payload.",
+        },
+        Protocol::NetlinkRoute => Lesson {
+            title: "NetlinkRoute",
+            summary: "NETLINK-ROUTE Protocol.",
+            body: "A NETLINK-ROUTE protocol communication frame.",
+            look_for: "NETLINK-ROUTE header or payload.",
+        },
+        Protocol::NetlinkSockDiag => Lesson {
+            title: "NetlinkSockDiag",
+            summary: "NETLINK-SOCK-DIAG Protocol.",
+            body: "A NETLINK-SOCK-DIAG protocol communication frame.",
+            look_for: "NETLINK-SOCK-DIAG header or payload.",
+        },
+
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",
