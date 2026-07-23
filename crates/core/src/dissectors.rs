@@ -1,6 +1,104 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 pub mod aarp;
+pub mod p2dparityfec;
+pub mod p3com_njack;
+pub mod p3com_xns;
+pub mod p3g_a11;
+pub mod p5co_legacy;
+pub mod p5co_rap;
+pub mod a21;
+pub mod aastra_aasp;
+pub mod acap;
+pub mod acdr;
+pub mod acn;
+pub mod acp133;
+pub mod acr122;
+pub mod actrace;
+pub mod adb;
+pub mod adb_cs;
+pub mod adb_service;
+pub mod adwin;
+pub mod adwin_config;
+pub mod afs;
+pub mod agentx;
+pub mod aim;
+pub mod ain;
+pub mod ajp13;
+pub mod akp;
+pub mod alcap;
+pub mod alljoyn;
+pub mod alp;
+pub mod amp;
+pub mod amr;
+pub mod ancp;
+pub mod ans;
+pub mod ansi_637;
+pub mod ansi_683;
+pub mod ansi_801;
+pub mod ansi_a;
+pub mod ansi_map;
+pub mod ansi_tcap;
+pub mod aol;
+pub mod ap1394;
+pub mod app_pkix_cert;
+pub mod applemidi;
+pub mod ar_drone;
+pub mod arcnet;
+pub mod arinc615a;
+pub mod armagetronad;
+pub mod artemis;
+pub mod artnet;
+pub mod aruba_adp;
+pub mod aruba_erm;
+pub mod aruba_iap;
+pub mod aruba_papi;
+pub mod aruba_ubt;
+pub mod asam_cmp;
+pub mod asap;
+pub mod ascend;
+pub mod asf;
+pub mod asphodel;
+pub mod assa_r3;
+pub mod asterix;
+pub mod at;
+pub mod at_ldf;
+pub mod at_rl;
+pub mod ath;
+pub mod atm;
+pub mod atmtcp;
+pub mod atn_cm;
+pub mod atn_cpdlc;
+pub mod atn_sl;
+pub mod atn_ulcs;
+pub mod auto_rp;
+pub mod autosar_ipdu_multiplexer;
+pub mod autosar_nm;
+pub mod avsp;
+pub mod awdl;
+pub mod ax25;
+pub mod ax25_kiss;
+pub mod ax25_nol3;
+pub mod ax4000;
+pub mod ayiya;
+pub mod bacapp;
+pub mod banana;
+pub mod bat;
+pub mod batadv;
+pub mod bblog;
+pub mod bctp;
+pub mod beep;
+pub mod bencode;
+pub mod ber;
+pub mod bhttp;
+pub mod bicc_mst;
+pub mod bist_itch;
+pub mod bist_ouch;
+pub mod bjnp;
+pub mod blip;
+pub mod bluecom;
+pub mod bmc;
+pub mod bofl;
 pub mod ads;
 pub mod adsb;
 pub mod aeron;
@@ -4424,6 +4522,104 @@ mod robustness {
         "tibia",
         "wow",
         "woww",
+        "p2dparityfec",
+        "p3com_njack",
+        "p3com_xns",
+        "p3g_a11",
+        "p5co_legacy",
+        "p5co_rap",
+        "a21",
+        "aastra_aasp",
+        "acap",
+        "acdr",
+        "acn",
+        "acp133",
+        "acr122",
+        "actrace",
+        "adb",
+        "adb_cs",
+        "adb_service",
+        "adwin",
+        "adwin_config",
+        "afs",
+        "agentx",
+        "aim",
+        "ain",
+        "ajp13",
+        "akp",
+        "alcap",
+        "alljoyn",
+        "alp",
+        "amp",
+        "amr",
+        "ancp",
+        "ans",
+        "ansi_637",
+        "ansi_683",
+        "ansi_801",
+        "ansi_a",
+        "ansi_map",
+        "ansi_tcap",
+        "aol",
+        "ap1394",
+        "app_pkix_cert",
+        "applemidi",
+        "ar_drone",
+        "arcnet",
+        "arinc615a",
+        "armagetronad",
+        "artemis",
+        "artnet",
+        "aruba_adp",
+        "aruba_erm",
+        "aruba_iap",
+        "aruba_papi",
+        "aruba_ubt",
+        "asam_cmp",
+        "asap",
+        "ascend",
+        "asf",
+        "asphodel",
+        "assa_r3",
+        "asterix",
+        "at",
+        "at_ldf",
+        "at_rl",
+        "ath",
+        "atm",
+        "atmtcp",
+        "atn_cm",
+        "atn_cpdlc",
+        "atn_sl",
+        "atn_ulcs",
+        "auto_rp",
+        "autosar_ipdu_multiplexer",
+        "autosar_nm",
+        "avsp",
+        "awdl",
+        "ax25",
+        "ax25_kiss",
+        "ax25_nol3",
+        "ax4000",
+        "ayiya",
+        "bacapp",
+        "banana",
+        "bat",
+        "batadv",
+        "bblog",
+        "bctp",
+        "beep",
+        "bencode",
+        "ber",
+        "bhttp",
+        "bicc_mst",
+        "bist_itch",
+        "bist_ouch",
+        "bjnp",
+        "blip",
+        "bluecom",
+        "bmc",
+        "bofl",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
