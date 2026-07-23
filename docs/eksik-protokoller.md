@@ -295,34 +295,34 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `acse` | `packet-acse.c` |
-| [ ] | 2 | `cbrs_oids` | `packet-cbrs-oids.c` |
-| [ ] | 3 | `cdt` | `packet-cdt.c` |
-| [ ] | 4 | `cms` | `packet-cms.c` |
-| [ ] | 5 | `credssp` | `packet-credssp.c` |
-| [ ] | 6 | `crmf` | `packet-crmf.c` |
-| [ ] | 7 | `ess` | `packet-ess.c` |
-| [ ] | 8 | `logotypecertextn` | `packet-logotypecertextn.c` |
-| [ ] | 9 | `nist_csor` | `packet-nist-csor.c` |
-| [ ] | 10 | `novell_pkis` | `packet-novell-pkis.c` |
-| [ ] | 11 | `ns_cert_exts` | `packet-ns-cert-exts.c` |
-| [ ] | 12 | `pkcs10` | `packet-pkcs10.c` |
-| [ ] | 13 | `pkcs12` | `packet-pkcs12.c` |
-| [ ] | 14 | `pkinit` | `packet-pkinit.c` |
-| [ ] | 15 | `pkix1explicit` | `packet-pkix1explicit.c` |
-| [ ] | 16 | `pkix1implicit` | `packet-pkix1implicit.c` |
-| [ ] | 17 | `pkixac` | `packet-pkixac.c` |
-| [ ] | 18 | `pkixalgs` | `packet-pkixalgs.c` |
-| [ ] | 19 | `pkixproxy` | `packet-pkixproxy.c` |
-| [ ] | 20 | `pkixqualified` | `packet-pkixqualified.c` |
-| [ ] | 21 | `pkixtsp` | `packet-pkixtsp.c` |
-| [ ] | 22 | `pres` | `packet-pres.c` |
-| [ ] | 23 | `tcg_cp_oids` | `packet-tcg-cp-oids.c` |
-| [ ] | 24 | `wlancertextn` | `packet-wlancertextn.c` |
-| [ ] | 25 | `x509af` | `packet-x509af.c` |
-| [ ] | 26 | `x509ce` | `packet-x509ce.c` |
-| [ ] | 27 | `x509if` | `packet-x509if.c` |
-| [ ] | 28 | `x509sat` | `packet-x509sat.c` |
+| [x] | 1 | `acse` | `packet-acse.c` |
+| [x] | 2 | `cbrs_oids` | `packet-cbrs-oids.c` |
+| [x] | 3 | `cdt` | `packet-cdt.c` |
+| [x] | 4 | `cms` | `packet-cms.c` |
+| [x] | 5 | `credssp` | `packet-credssp.c` |
+| [x] | 6 | `crmf` | `packet-crmf.c` |
+| [x] | 7 | `ess` | `packet-ess.c` |
+| [x] | 8 | `logotypecertextn` | `packet-logotypecertextn.c` |
+| [x] | 9 | `nist_csor` | `packet-nist-csor.c` |
+| [x] | 10 | `novell_pkis` | `packet-novell-pkis.c` |
+| [x] | 11 | `ns_cert_exts` | `packet-ns-cert-exts.c` |
+| [x] | 12 | `pkcs10` | `packet-pkcs10.c` |
+| [x] | 13 | `pkcs12` | `packet-pkcs12.c` |
+| [x] | 14 | `pkinit` | `packet-pkinit.c` |
+| [x] | 15 | `pkix1explicit` | `packet-pkix1explicit.c` |
+| [x] | 16 | `pkix1implicit` | `packet-pkix1implicit.c` |
+| [x] | 17 | `pkixac` | `packet-pkixac.c` |
+| [x] | 18 | `pkixalgs` | `packet-pkixalgs.c` |
+| [x] | 19 | `pkixproxy` | `packet-pkixproxy.c` |
+| [x] | 20 | `pkixqualified` | `packet-pkixqualified.c` |
+| [x] | 21 | `pkixtsp` | `packet-pkixtsp.c` |
+| [x] | 22 | `pres` | `packet-pres.c` |
+| [x] | 23 | `tcg_cp_oids` | `packet-tcg-cp-oids.c` |
+| [x] | 24 | `wlancertextn` | `packet-wlancertextn.c` |
+| [x] | 25 | `x509af` | `packet-x509af.c` |
+| [x] | 26 | `x509ce` | `packet-x509ce.c` |
+| [x] | 27 | `x509if` | `packet-x509if.c` |
+| [x] | 28 | `x509sat` | `packet-x509sat.c` |
 
 ## DVB / MPEG / Broadcast (26 adet)
 
