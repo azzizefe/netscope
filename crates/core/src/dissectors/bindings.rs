@@ -71,6 +71,7 @@ use super::{
     rf4ce_nwk, rf4ce_profile, rf4ce_secur, zbee_aps, zbee_direct, zbee_nwk, zbee_nwk_gp, zbee_security, zbee_tlv, zbee_zcl, zbee_zcl_closures, zbee_zcl_general, zbee_zcl_ha, zbee_zcl_hvac, zbee_zcl_lighting, zbee_zcl_meas_sensing, zbee_zcl_misc, zbee_zcl_proto_iface, zbee_zcl_sas, zbee_zcl_se, zbee_zdp, zbee_zdp_binding, zbee_zdp_discovery, zbee_zdp_management, zbncp,
     netlink, netlink_generic, netlink_mac80211_hwsim, netlink_net_dm, netlink_netfilter, netlink_nl80211, netlink_ovs_ct_limit, netlink_ovs_datapath, netlink_ovs_flow, netlink_ovs_meter, netlink_ovs_packet, netlink_ovs_vport, netlink_psample, netlink_route, netlink_sock_diag,
     sapdiag, sapenqueue, saphdb, sapigs, sapms, sapni, saprfc, saprouter, sapsnc,
+    ipmi, ipmi_app, ipmi_bridge, ipmi_chassis, ipmi_picmg, ipmi_pps, ipmi_se, ipmi_session, ipmi_storage, ipmi_trace, ipmi_transport, ipmi_update, ipmi_vita,
 };
 
 /// The signature every port-dispatched dissector shares.

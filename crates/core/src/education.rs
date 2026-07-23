@@ -7774,6 +7774,86 @@ reason as a numeric code.",
             look_for: "SAPSNC header or payload.",
         },
 
+        
+        Protocol::Ipmi => Lesson {
+            title: "Ipmi",
+            summary: "IPMI Protocol.",
+            body: "An IPMI protocol communication frame.",
+            look_for: "IPMI header or payload.",
+        },
+        Protocol::IpmiApp => Lesson {
+            title: "IpmiApp",
+            summary: "IPMI-APP Protocol.",
+            body: "An IPMI-APP protocol communication frame.",
+            look_for: "IPMI-APP header or payload.",
+        },
+        Protocol::IpmiBridge => Lesson {
+            title: "IpmiBridge",
+            summary: "IPMI-BRIDGE Protocol.",
+            body: "An IPMI-BRIDGE protocol communication frame.",
+            look_for: "IPMI-BRIDGE header or payload.",
+        },
+        Protocol::IpmiChassis => Lesson {
+            title: "IpmiChassis",
+            summary: "IPMI-CHASSIS Protocol.",
+            body: "An IPMI-CHASSIS protocol communication frame.",
+            look_for: "IPMI-CHASSIS header or payload.",
+        },
+        Protocol::IpmiPicmg => Lesson {
+            title: "IpmiPicmg",
+            summary: "IPMI-PICMG Protocol.",
+            body: "An IPMI-PICMG protocol communication frame.",
+            look_for: "IPMI-PICMG header or payload.",
+        },
+        Protocol::IpmiPps => Lesson {
+            title: "IpmiPps",
+            summary: "IPMI-PPS Protocol.",
+            body: "An IPMI-PPS protocol communication frame.",
+            look_for: "IPMI-PPS header or payload.",
+        },
+        Protocol::IpmiSe => Lesson {
+            title: "IpmiSe",
+            summary: "IPMI-SE Protocol.",
+            body: "An IPMI-SE protocol communication frame.",
+            look_for: "IPMI-SE header or payload.",
+        },
+        Protocol::IpmiSession => Lesson {
+            title: "IpmiSession",
+            summary: "IPMI-SESSION Protocol.",
+            body: "An IPMI-SESSION protocol communication frame.",
+            look_for: "IPMI-SESSION header or payload.",
+        },
+        Protocol::IpmiStorage => Lesson {
+            title: "IpmiStorage",
+            summary: "IPMI-STORAGE Protocol.",
+            body: "An IPMI-STORAGE protocol communication frame.",
+            look_for: "IPMI-STORAGE header or payload.",
+        },
+        Protocol::IpmiTrace => Lesson {
+            title: "IpmiTrace",
+            summary: "IPMI-TRACE Protocol.",
+            body: "An IPMI-TRACE protocol communication frame.",
+            look_for: "IPMI-TRACE header or payload.",
+        },
+        Protocol::IpmiTransport => Lesson {
+            title: "IpmiTransport",
+            summary: "IPMI-TRANSPORT Protocol.",
+            body: "An IPMI-TRANSPORT protocol communication frame.",
+            look_for: "IPMI-TRANSPORT header or payload.",
+        },
+        Protocol::IpmiUpdate => Lesson {
+            title: "IpmiUpdate",
+            summary: "IPMI-UPDATE Protocol.",
+            body: "An IPMI-UPDATE protocol communication frame.",
+            look_for: "IPMI-UPDATE header or payload.",
+        },
+        Protocol::IpmiVita => Lesson {
+            title: "IpmiVita",
+            summary: "IPMI-VITA Protocol.",
+            body: "An IPMI-VITA protocol communication frame.",
+            look_for: "IPMI-VITA header or payload.",
+        },
+
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",

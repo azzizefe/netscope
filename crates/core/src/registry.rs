@@ -9545,6 +9545,15 @@ protocols! {
         aliases:   ["netlink_sock_diag"],
         blurb:     "A NETLINK-SOCK-DIAG protocol frame.",
     }
+    Rmcp {
+        doc:       "RMCP / IPMI out-of-band server management (UDP 623).",
+        display:   "RMCP",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rmcp"],
+        blurb:     "An RMCP/IPMI message (UDP 623) — out-of-band management of a server's BMC.",
+    }
     Sapdiag {
         doc:       "SAPDIAG protocol extension.",
         display:   "SAPDIAG",
@@ -9626,6 +9635,124 @@ protocols! {
         aliases:   ["sapsnc"],
         blurb:     "A SAPSNC protocol frame.",
     }
+    Ipmi {
+        doc:       "IPMI protocol extension.",
+        display:   "IPMI",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi"],
+        blurb:     "An IPMI protocol message.",
+    }
+    IpmiApp {
+        doc:       "IPMI-APP protocol extension.",
+        display:   "IPMI-APP",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_app"],
+        blurb:     "An IPMI-APP protocol message.",
+    }
+    IpmiBridge {
+        doc:       "IPMI-BRIDGE protocol extension.",
+        display:   "IPMI-BRIDGE",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_bridge"],
+        blurb:     "An IPMI-BRIDGE protocol message.",
+    }
+    IpmiChassis {
+        doc:       "IPMI-CHASSIS protocol extension.",
+        display:   "IPMI-CHASSIS",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_chassis"],
+        blurb:     "An IPMI-CHASSIS protocol message.",
+    }
+    IpmiPicmg {
+        doc:       "IPMI-PICMG protocol extension.",
+        display:   "IPMI-PICMG",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_picmg"],
+        blurb:     "An IPMI-PICMG protocol message.",
+    }
+    IpmiPps {
+        doc:       "IPMI-PPS protocol extension.",
+        display:   "IPMI-PPS",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_pps"],
+        blurb:     "An IPMI-PPS protocol message.",
+    }
+    IpmiSe {
+        doc:       "IPMI-SE protocol extension.",
+        display:   "IPMI-SE",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_se"],
+        blurb:     "An IPMI-SE protocol message.",
+    }
+    IpmiSession {
+        doc:       "IPMI-SESSION protocol extension.",
+        display:   "IPMI-SESSION",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_session"],
+        blurb:     "An IPMI-SESSION protocol message.",
+    }
+    IpmiStorage {
+        doc:       "IPMI-STORAGE protocol extension.",
+        display:   "IPMI-STORAGE",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_storage"],
+        blurb:     "An IPMI-STORAGE protocol message.",
+    }
+    IpmiTrace {
+        doc:       "IPMI-TRACE protocol extension.",
+        display:   "IPMI-TRACE",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_trace"],
+        blurb:     "An IPMI-TRACE protocol message.",
+    }
+    IpmiTransport {
+        doc:       "IPMI-TRANSPORT protocol extension.",
+        display:   "IPMI-TRANSPORT",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_transport"],
+        blurb:     "An IPMI-TRANSPORT protocol message.",
+    }
+    IpmiUpdate {
+        doc:       "IPMI-UPDATE protocol extension.",
+        display:   "IPMI-UPDATE",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_update"],
+        blurb:     "An IPMI-UPDATE protocol message.",
+    }
+    IpmiVita {
+        doc:       "IPMI-VITA protocol extension.",
+        display:   "IPMI-VITA",
+        color:     0xF59E0B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ipmi_vita"],
+        blurb:     "An IPMI-VITA protocol message.",
+    }
+
 
 
 

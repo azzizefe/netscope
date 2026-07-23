@@ -483,19 +483,19 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `ipmi` | `packet-ipmi.c` |
-| [ ] | 2 | `ipmi_app` | `packet-ipmi-app.c` |
-| [ ] | 3 | `ipmi_bridge` | `packet-ipmi-bridge.c` |
-| [ ] | 4 | `ipmi_chassis` | `packet-ipmi-chassis.c` |
-| [ ] | 5 | `ipmi_picmg` | `packet-ipmi-picmg.c` |
-| [ ] | 6 | `ipmi_pps` | `packet-ipmi-pps.c` |
-| [ ] | 7 | `ipmi_se` | `packet-ipmi-se.c` |
-| [ ] | 8 | `ipmi_session` | `packet-ipmi-session.c` |
-| [ ] | 9 | `ipmi_storage` | `packet-ipmi-storage.c` |
-| [ ] | 10 | `ipmi_trace` | `packet-ipmi-trace.c` |
-| [ ] | 11 | `ipmi_transport` | `packet-ipmi-transport.c` |
-| [ ] | 12 | `ipmi_update` | `packet-ipmi-update.c` |
-| [ ] | 13 | `ipmi_vita` | `packet-ipmi-vita.c` |
+| [x] | 1 | `ipmi` | `packet-ipmi.c` |
+| [x] | 2 | `ipmi_app` | `packet-ipmi-app.c` |
+| [x] | 3 | `ipmi_bridge` | `packet-ipmi-bridge.c` |
+| [x] | 4 | `ipmi_chassis` | `packet-ipmi-chassis.c` |
+| [x] | 5 | `ipmi_picmg` | `packet-ipmi-picmg.c` |
+| [x] | 6 | `ipmi_pps` | `packet-ipmi-pps.c` |
+| [x] | 7 | `ipmi_se` | `packet-ipmi-se.c` |
+| [x] | 8 | `ipmi_session` | `packet-ipmi-session.c` |
+| [x] | 9 | `ipmi_storage` | `packet-ipmi-storage.c` |
+| [x] | 10 | `ipmi_trace` | `packet-ipmi-trace.c` |
+| [x] | 11 | `ipmi_transport` | `packet-ipmi-transport.c` |
+| [x] | 12 | `ipmi_update` | `packet-ipmi-update.c` |
+| [x] | 13 | `ipmi_vita` | `packet-ipmi-vita.c` |
 
 ## NFS / RPC / Dosya Sistemi (23 adet)
 
