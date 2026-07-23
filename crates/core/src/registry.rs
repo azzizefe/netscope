@@ -8825,6 +8825,61 @@ protocols! {
         aliases:   ["x509sat"],
         blurb:     "An X509SAT protocol structure.",
     }
+    Scsi {
+        doc:       "SCSI protocol extension.",
+        display:   "SCSI",
+        color:     0x6366F1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["scsi"],
+        blurb:     "A SCSI protocol command/data frame.",
+    }
+    ScsiMmc {
+        doc:       "SCSI-MMC protocol extension.",
+        display:   "SCSI-MMC",
+        color:     0x6366F1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["scsi_mmc"],
+        blurb:     "A SCSI-MMC protocol command/data frame.",
+    }
+    ScsiOsd {
+        doc:       "SCSI-OSD protocol extension.",
+        display:   "SCSI-OSD",
+        color:     0x6366F1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["scsi_osd"],
+        blurb:     "A SCSI-OSD protocol command/data frame.",
+    }
+    ScsiSbc {
+        doc:       "SCSI-SBC protocol extension.",
+        display:   "SCSI-SBC",
+        color:     0x6366F1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["scsi_sbc"],
+        blurb:     "A SCSI-SBC protocol command/data frame.",
+    }
+    ScsiSmc {
+        doc:       "SCSI-SMC protocol extension.",
+        display:   "SCSI-SMC",
+        color:     0x6366F1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["scsi_smc"],
+        blurb:     "A SCSI-SMC protocol command/data frame.",
+    }
+    ScsiSsc {
+        doc:       "SCSI-SSC protocol extension.",
+        display:   "SCSI-SSC",
+        color:     0x6366F1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["scsi_ssc"],
+        blurb:     "A SCSI-SSC protocol command/data frame.",
+    }
+
 
 
 

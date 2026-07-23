@@ -359,12 +359,12 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `scsi` | `packet-scsi.c` |
-| [ ] | 2 | `scsi_mmc` | `packet-scsi-mmc.c` |
-| [ ] | 3 | `scsi_osd` | `packet-scsi-osd.c` |
-| [ ] | 4 | `scsi_sbc` | `packet-scsi-sbc.c` |
-| [ ] | 5 | `scsi_smc` | `packet-scsi-smc.c` |
-| [ ] | 6 | `scsi_ssc` | `packet-scsi-ssc.c` |
+| [x] | 1 | `scsi` | `packet-scsi.c` |
+| [x] | 2 | `scsi_mmc` | `packet-scsi-mmc.c` |
+| [x] | 3 | `scsi_osd` | `packet-scsi-osd.c` |
+| [x] | 4 | `scsi_sbc` | `packet-scsi-sbc.c` |
+| [x] | 5 | `scsi_smc` | `packet-scsi-smc.c` |
+| [x] | 6 | `scsi_ssc` | `packet-scsi-ssc.c` |
 
 ## Fibre Channel (13 adet)
 

@@ -1185,6 +1185,12 @@ pub mod x509af;
 pub mod x509ce;
 pub mod x509if;
 pub mod x509sat;
+pub mod scsi;
+pub mod scsi_mmc;
+pub mod scsi_osd;
+pub mod scsi_sbc;
+pub mod scsi_smc;
+pub mod scsi_ssc;
 
 use std::net::IpAddr;
 
@@ -4156,6 +4162,12 @@ mod robustness {
         "x509ce",
         "x509if",
         "x509sat",
+        "scsi",
+        "scsi_mmc",
+        "scsi_osd",
+        "scsi_sbc",
+        "scsi_smc",
+        "scsi_ssc",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
