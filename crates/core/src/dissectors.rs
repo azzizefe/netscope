@@ -1265,6 +1265,15 @@ pub mod netlink_ovs_vport;
 pub mod netlink_psample;
 pub mod netlink_route;
 pub mod netlink_sock_diag;
+pub mod sapdiag;
+pub mod sapenqueue;
+pub mod saphdb;
+pub mod sapigs;
+pub mod sapms;
+pub mod sapni;
+pub mod saprfc;
+pub mod saprouter;
+pub mod sapsnc;
 
 use std::net::IpAddr;
 
@@ -4316,6 +4325,15 @@ mod robustness {
         "netlink_psample",
         "netlink_route",
         "netlink_sock_diag",
+        "sapdiag",
+        "sapenqueue",
+        "saphdb",
+        "sapigs",
+        "sapms",
+        "sapni",
+        "saprfc",
+        "saprouter",
+        "sapsnc",
     ];
 
     /// Every dissector module must be reachable from the dispatch.

@@ -469,15 +469,15 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `sapdiag` | `packet-sapdiag.c` |
-| [ ] | 2 | `sapenqueue` | `packet-sapenqueue.c` |
-| [ ] | 3 | `saphdb` | `packet-saphdb.c` |
-| [ ] | 4 | `sapigs` | `packet-sapigs.c` |
-| [ ] | 5 | `sapms` | `packet-sapms.c` |
-| [ ] | 6 | `sapni` | `packet-sapni.c` |
-| [ ] | 7 | `saprfc` | `packet-saprfc.c` |
-| [ ] | 8 | `saprouter` | `packet-saprouter.c` |
-| [ ] | 9 | `sapsnc` | `packet-sapsnc.c` |
+| [x] | 1 | `sapdiag` | `packet-sapdiag.c` |
+| [x] | 2 | `sapenqueue` | `packet-sapenqueue.c` |
+| [x] | 3 | `saphdb` | `packet-saphdb.c` |
+| [x] | 4 | `sapigs` | `packet-sapigs.c` |
+| [x] | 5 | `sapms` | `packet-sapms.c` |
+| [x] | 6 | `sapni` | `packet-sapni.c` |
+| [x] | 7 | `saprfc` | `packet-saprfc.c` |
+| [x] | 8 | `saprouter` | `packet-saprouter.c` |
+| [x] | 9 | `sapsnc` | `packet-sapsnc.c` |
 
 ## IPMI (13 adet)
 

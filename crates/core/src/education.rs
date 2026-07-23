@@ -7718,6 +7718,62 @@ reason as a numeric code.",
             look_for: "NETLINK-SOCK-DIAG header or payload.",
         },
 
+        
+        Protocol::Sapdiag => Lesson {
+            title: "Sapdiag",
+            summary: "SAPDIAG Protocol.",
+            body: "A SAPDIAG protocol communication frame.",
+            look_for: "SAPDIAG header or payload.",
+        },
+        Protocol::Sapenqueue => Lesson {
+            title: "Sapenqueue",
+            summary: "SAPENQUEUE Protocol.",
+            body: "A SAPENQUEUE protocol communication frame.",
+            look_for: "SAPENQUEUE header or payload.",
+        },
+        Protocol::Saphdb => Lesson {
+            title: "Saphdb",
+            summary: "SAPHDB Protocol.",
+            body: "A SAPHDB protocol communication frame.",
+            look_for: "SAPHDB header or payload.",
+        },
+        Protocol::Sapigs => Lesson {
+            title: "Sapigs",
+            summary: "SAPIGS Protocol.",
+            body: "A SAPIGS protocol communication frame.",
+            look_for: "SAPIGS header or payload.",
+        },
+        Protocol::Sapms => Lesson {
+            title: "Sapms",
+            summary: "SAPMS Protocol.",
+            body: "A SAPMS protocol communication frame.",
+            look_for: "SAPMS header or payload.",
+        },
+        Protocol::Sapni => Lesson {
+            title: "Sapni",
+            summary: "SAPNI Protocol.",
+            body: "A SAPNI protocol communication frame.",
+            look_for: "SAPNI header or payload.",
+        },
+        Protocol::Saprfc => Lesson {
+            title: "Saprfc",
+            summary: "SAPRFC Protocol.",
+            body: "A SAPRFC protocol communication frame.",
+            look_for: "SAPRFC header or payload.",
+        },
+        Protocol::Saprouter => Lesson {
+            title: "Saprouter",
+            summary: "SAPROUTER Protocol.",
+            body: "A SAPROUTER protocol communication frame.",
+            look_for: "SAPROUTER header or payload.",
+        },
+        Protocol::Sapsnc => Lesson {
+            title: "Sapsnc",
+            summary: "SAPSNC Protocol.",
+            body: "A SAPSNC protocol communication frame.",
+            look_for: "SAPSNC header or payload.",
+        },
+
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",
