@@ -8573,6 +8573,259 @@ protocols! {
         aliases:   ["ieee802a"],
         blurb:     "An IEEE802A protocol frame.",
     }
+    Acse {
+        doc:       "ACSE protocol extension.",
+        display:   "ACSE",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["acse"],
+        blurb:     "An ACSE protocol structure.",
+    }
+    CbrsOids {
+        doc:       "CBRS-OIDS protocol extension.",
+        display:   "CBRS-OIDS",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cbrs_oids"],
+        blurb:     "An CBRS-OIDS protocol structure.",
+    }
+    Cdt {
+        doc:       "CDT protocol extension.",
+        display:   "CDT",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cdt"],
+        blurb:     "An CDT protocol structure.",
+    }
+    Cms {
+        doc:       "CMS protocol extension.",
+        display:   "CMS",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cms"],
+        blurb:     "An CMS protocol structure.",
+    }
+    Credssp {
+        doc:       "CREDSSP protocol extension.",
+        display:   "CREDSSP",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["credssp"],
+        blurb:     "An CREDSSP protocol structure.",
+    }
+    Crmf {
+        doc:       "CRMF protocol extension.",
+        display:   "CRMF",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["crmf"],
+        blurb:     "An CRMF protocol structure.",
+    }
+    Ess {
+        doc:       "ESS protocol extension.",
+        display:   "ESS",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ess"],
+        blurb:     "An ESS protocol structure.",
+    }
+    Logotypecertextn {
+        doc:       "LOGOTYPECERTEXTN protocol extension.",
+        display:   "LOGOTYPECERTEXTN",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["logotypecertextn"],
+        blurb:     "An LOGOTYPECERTEXTN protocol structure.",
+    }
+    NistCsor {
+        doc:       "NIST-CSOR protocol extension.",
+        display:   "NIST-CSOR",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nist_csor"],
+        blurb:     "An NIST-CSOR protocol structure.",
+    }
+    NovellPkis {
+        doc:       "NOVELL-PKIS protocol extension.",
+        display:   "NOVELL-PKIS",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["novell_pkis"],
+        blurb:     "An NOVELL-PKIS protocol structure.",
+    }
+    NsCertExts {
+        doc:       "NS-CERT-EXTS protocol extension.",
+        display:   "NS-CERT-EXTS",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ns_cert_exts"],
+        blurb:     "An NS-CERT-EXTS protocol structure.",
+    }
+    Pkcs10 {
+        doc:       "PKCS10 protocol extension.",
+        display:   "PKCS10",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkcs10"],
+        blurb:     "An PKCS10 protocol structure.",
+    }
+    Pkcs12 {
+        doc:       "PKCS12 protocol extension.",
+        display:   "PKCS12",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkcs12"],
+        blurb:     "An PKCS12 protocol structure.",
+    }
+    Pkinit {
+        doc:       "PKINIT protocol extension.",
+        display:   "PKINIT",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkinit"],
+        blurb:     "An PKINIT protocol structure.",
+    }
+    Pkix1explicit {
+        doc:       "PKIX1EXPLICIT protocol extension.",
+        display:   "PKIX1EXPLICIT",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkix1explicit"],
+        blurb:     "An PKIX1EXPLICIT protocol structure.",
+    }
+    Pkix1implicit {
+        doc:       "PKIX1IMPLICIT protocol extension.",
+        display:   "PKIX1IMPLICIT",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkix1implicit"],
+        blurb:     "An PKIX1IMPLICIT protocol structure.",
+    }
+    Pkixac {
+        doc:       "PKIXAC protocol extension.",
+        display:   "PKIXAC",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkixac"],
+        blurb:     "An PKIXAC protocol structure.",
+    }
+    Pkixalgs {
+        doc:       "PKIXALGS protocol extension.",
+        display:   "PKIXALGS",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkixalgs"],
+        blurb:     "An PKIXALGS protocol structure.",
+    }
+    Pkixproxy {
+        doc:       "PKIXPROXY protocol extension.",
+        display:   "PKIXPROXY",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkixproxy"],
+        blurb:     "An PKIXPROXY protocol structure.",
+    }
+    Pkixqualified {
+        doc:       "PKIXQUALIFIED protocol extension.",
+        display:   "PKIXQUALIFIED",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkixqualified"],
+        blurb:     "An PKIXQUALIFIED protocol structure.",
+    }
+    Pkixtsp {
+        doc:       "PKIXTSP protocol extension.",
+        display:   "PKIXTSP",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkixtsp"],
+        blurb:     "An PKIXTSP protocol structure.",
+    }
+    Pres {
+        doc:       "PRES protocol extension.",
+        display:   "PRES",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pres"],
+        blurb:     "An PRES protocol structure.",
+    }
+    TcgCpOids {
+        doc:       "TCG-CP-OIDS protocol extension.",
+        display:   "TCG-CP-OIDS",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tcg_cp_oids"],
+        blurb:     "An TCG-CP-OIDS protocol structure.",
+    }
+    Wlancertextn {
+        doc:       "WLANCERTEXTN protocol extension.",
+        display:   "WLANCERTEXTN",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["wlancertextn"],
+        blurb:     "An WLANCERTEXTN protocol structure.",
+    }
+    X509af {
+        doc:       "X509AF protocol extension.",
+        display:   "X509AF",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["x509af"],
+        blurb:     "An X509AF protocol structure.",
+    }
+    X509ce {
+        doc:       "X509CE protocol extension.",
+        display:   "X509CE",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["x509ce"],
+        blurb:     "An X509CE protocol structure.",
+    }
+    X509if {
+        doc:       "X509IF protocol extension.",
+        display:   "X509IF",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["x509if"],
+        blurb:     "An X509IF protocol structure.",
+    }
+    X509sat {
+        doc:       "X509SAT protocol extension.",
+        display:   "X509SAT",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["x509sat"],
+        blurb:     "An X509SAT protocol structure.",
+    }
+
 
 
 

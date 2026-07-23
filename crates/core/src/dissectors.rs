@@ -1157,6 +1157,34 @@ pub mod ieee8021ah;
 pub mod ieee8021cb;
 pub mod ieee8023;
 pub mod ieee802a;
+pub mod acse;
+pub mod cbrs_oids;
+pub mod cdt;
+pub mod cms;
+pub mod credssp;
+pub mod crmf;
+pub mod ess;
+pub mod logotypecertextn;
+pub mod nist_csor;
+pub mod novell_pkis;
+pub mod ns_cert_exts;
+pub mod pkcs10;
+pub mod pkcs12;
+pub mod pkinit;
+pub mod pkix1explicit;
+pub mod pkix1implicit;
+pub mod pkixac;
+pub mod pkixalgs;
+pub mod pkixproxy;
+pub mod pkixqualified;
+pub mod pkixtsp;
+pub mod pres;
+pub mod tcg_cp_oids;
+pub mod wlancertextn;
+pub mod x509af;
+pub mod x509ce;
+pub mod x509if;
+pub mod x509sat;
 
 use std::net::IpAddr;
 
@@ -4100,6 +4128,34 @@ mod robustness {
         "ieee8021cb",
         "ieee8023",
         "ieee802a",
+        "acse",
+        "cbrs_oids",
+        "cdt",
+        "cms",
+        "credssp",
+        "crmf",
+        "ess",
+        "logotypecertextn",
+        "nist_csor",
+        "novell_pkis",
+        "ns_cert_exts",
+        "pkcs10",
+        "pkcs12",
+        "pkinit",
+        "pkix1explicit",
+        "pkix1implicit",
+        "pkixac",
+        "pkixalgs",
+        "pkixproxy",
+        "pkixqualified",
+        "pkixtsp",
+        "pres",
+        "tcg_cp_oids",
+        "wlancertextn",
+        "x509af",
+        "x509ce",
+        "x509if",
+        "x509sat",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
