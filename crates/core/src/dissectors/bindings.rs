@@ -64,6 +64,7 @@ use super::{
     btamp, btatt, btavctp, btavdtp, btavrcp, btbnep, btbredr_rf, bthci_acl, bthci_cmd, bthci_evt, bthci_iso, bthci_sco, bthci_vendor_android, bthci_vendor_broadcom, bthci_vendor_intel, bthcrp, bthfp, bthid, bthsp, btl2cap, btle, btle_rf, btlmp, btmcap, btmesh, btmesh_beacon, btmesh_pbadv, btmesh_provisioning, btmesh_proxy, btp_matter, btrfcomm, btsap, btsdp, btsmp, hci_h1, hci_h4, hci_mon, hci_usb,
     ieee1609dot2, ieee1722, ieee17221, ieee1905, ieee80211, ieee80211_netmon, ieee80211_prism, ieee80211_radio, ieee80211_radiotap, ieee80211_radiotap_iter, ieee80211_wlancap, ieee802154, ieee8021ah, ieee8021cb, ieee8023, ieee802a,
     acse, cbrs_oids, cdt, cms, credssp, crmf, ess, logotypecertextn, nist_csor, novell_pkis, ns_cert_exts, pkcs10, pkcs12, pkinit, pkix1explicit, pkix1implicit, pkixac, pkixalgs, pkixproxy, pkixqualified, pkixtsp, pres, tcg_cp_oids, wlancertextn, x509af, x509ce, x509if, x509sat,
+    scsi, scsi_mmc, scsi_osd, scsi_sbc, scsi_smc, scsi_ssc,
 };
 
 /// The signature every port-dispatched dissector shares.

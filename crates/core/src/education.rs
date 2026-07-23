@@ -7226,6 +7226,44 @@ reason as a numeric code.",
             look_for: "X509SAT header or payload.",
         },
 
+        
+        Protocol::Scsi => Lesson {
+            title: "Scsi",
+            summary: "SCSI Protocol.",
+            body: "A SCSI protocol communication frame.",
+            look_for: "SCSI header or payload.",
+        },
+        Protocol::ScsiMmc => Lesson {
+            title: "ScsiMmc",
+            summary: "SCSI-MMC Protocol.",
+            body: "A SCSI-MMC protocol communication frame.",
+            look_for: "SCSI-MMC header or payload.",
+        },
+        Protocol::ScsiOsd => Lesson {
+            title: "ScsiOsd",
+            summary: "SCSI-OSD Protocol.",
+            body: "A SCSI-OSD protocol communication frame.",
+            look_for: "SCSI-OSD header or payload.",
+        },
+        Protocol::ScsiSbc => Lesson {
+            title: "ScsiSbc",
+            summary: "SCSI-SBC Protocol.",
+            body: "A SCSI-SBC protocol communication frame.",
+            look_for: "SCSI-SBC header or payload.",
+        },
+        Protocol::ScsiSmc => Lesson {
+            title: "ScsiSmc",
+            summary: "SCSI-SMC Protocol.",
+            body: "A SCSI-SMC protocol communication frame.",
+            look_for: "SCSI-SMC header or payload.",
+        },
+        Protocol::ScsiSsc => Lesson {
+            title: "ScsiSsc",
+            summary: "SCSI-SSC Protocol.",
+            body: "A SCSI-SSC protocol communication frame.",
+            look_for: "SCSI-SSC header or payload.",
+        },
+
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",
