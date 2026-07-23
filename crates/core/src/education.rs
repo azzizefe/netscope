@@ -7264,6 +7264,86 @@ reason as a numeric code.",
             look_for: "SCSI-SSC header or payload.",
         },
 
+        
+        Protocol::Fc => Lesson {
+            title: "Fc",
+            summary: "FC Protocol.",
+            body: "An FC protocol communication frame.",
+            look_for: "FC header or payload.",
+        },
+        Protocol::Fcct => Lesson {
+            title: "Fcct",
+            summary: "FCCT Protocol.",
+            body: "An FCCT protocol communication frame.",
+            look_for: "FCCT header or payload.",
+        },
+        Protocol::Fcdns => Lesson {
+            title: "Fcdns",
+            summary: "FCDNS Protocol.",
+            body: "An FCDNS protocol communication frame.",
+            look_for: "FCDNS header or payload.",
+        },
+        Protocol::Fcels => Lesson {
+            title: "Fcels",
+            summary: "FCELS Protocol.",
+            body: "An FCELS protocol communication frame.",
+            look_for: "FCELS header or payload.",
+        },
+        Protocol::Fcfcs => Lesson {
+            title: "Fcfcs",
+            summary: "FCFCS Protocol.",
+            body: "An FCFCS protocol communication frame.",
+            look_for: "FCFCS header or payload.",
+        },
+        Protocol::Fcfzs => Lesson {
+            title: "Fcfzs",
+            summary: "FCFZS Protocol.",
+            body: "An FCFZS protocol communication frame.",
+            look_for: "FCFZS header or payload.",
+        },
+        Protocol::Fcgi => Lesson {
+            title: "Fcgi",
+            summary: "FCGI Protocol.",
+            body: "An FCGI protocol communication frame.",
+            look_for: "FCGI header or payload.",
+        },
+        Protocol::Fclctl => Lesson {
+            title: "Fclctl",
+            summary: "FCLCTL Protocol.",
+            body: "An FCLCTL protocol communication frame.",
+            look_for: "FCLCTL header or payload.",
+        },
+        Protocol::Fcoib => Lesson {
+            title: "Fcoib",
+            summary: "FCOIB Protocol.",
+            body: "An FCOIB protocol communication frame.",
+            look_for: "FCOIB header or payload.",
+        },
+        Protocol::Fcsb3 => Lesson {
+            title: "Fcsb3",
+            summary: "FCSB3 Protocol.",
+            body: "An FCSB3 protocol communication frame.",
+            look_for: "FCSB3 header or payload.",
+        },
+        Protocol::Fcsp => Lesson {
+            title: "Fcsp",
+            summary: "FCSP Protocol.",
+            body: "An FCSP protocol communication frame.",
+            look_for: "FCSP header or payload.",
+        },
+        Protocol::Fcswils => Lesson {
+            title: "Fcswils",
+            summary: "FCSWILS Protocol.",
+            body: "An FCSWILS protocol communication frame.",
+            look_for: "FCSWILS header or payload.",
+        },
+        Protocol::Ifcp => Lesson {
+            title: "Ifcp",
+            summary: "IFCP Protocol.",
+            body: "An IFCP protocol communication frame.",
+            look_for: "IFCP header or payload.",
+        },
+
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",

@@ -370,19 +370,19 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `fc` | `packet-fc.c` |
-| [ ] | 2 | `fcct` | `packet-fcct.c` |
-| [ ] | 3 | `fcdns` | `packet-fcdns.c` |
-| [ ] | 4 | `fcels` | `packet-fcels.c` |
-| [ ] | 5 | `fcfcs` | `packet-fcfcs.c` |
-| [ ] | 6 | `fcfzs` | `packet-fcfzs.c` |
-| [ ] | 7 | `fcgi` | `packet-fcgi.c` |
-| [ ] | 8 | `fclctl` | `packet-fclctl.c` |
-| [ ] | 9 | `fcoib` | `packet-fcoib.c` |
-| [ ] | 10 | `fcsb3` | `packet-fcsb3.c` |
-| [ ] | 11 | `fcsp` | `packet-fcsp.c` |
-| [ ] | 12 | `fcswils` | `packet-fcswils.c` |
-| [ ] | 13 | `ifcp` | `packet-ifcp.c` |
+| [x] | 1 | `fc` | `packet-fc.c` |
+| [x] | 2 | `fcct` | `packet-fcct.c` |
+| [x] | 3 | `fcdns` | `packet-fcdns.c` |
+| [x] | 4 | `fcels` | `packet-fcels.c` |
+| [x] | 5 | `fcfcs` | `packet-fcfcs.c` |
+| [x] | 6 | `fcfzs` | `packet-fcfzs.c` |
+| [x] | 7 | `fcgi` | `packet-fcgi.c` |
+| [x] | 8 | `fclctl` | `packet-fclctl.c` |
+| [x] | 9 | `fcoib` | `packet-fcoib.c` |
+| [x] | 10 | `fcsb3` | `packet-fcsb3.c` |
+| [x] | 11 | `fcsp` | `packet-fcsp.c` |
+| [x] | 12 | `fcswils` | `packet-fcswils.c` |
+| [x] | 13 | `ifcp` | `packet-ifcp.c` |
 
 ## USB (15 adet)
 

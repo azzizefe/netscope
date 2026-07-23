@@ -1191,6 +1191,19 @@ pub mod scsi_osd;
 pub mod scsi_sbc;
 pub mod scsi_smc;
 pub mod scsi_ssc;
+pub mod fc;
+pub mod fcct;
+pub mod fcdns;
+pub mod fcels;
+pub mod fcfcs;
+pub mod fcfzs;
+pub mod fcgi;
+pub mod fclctl;
+pub mod fcoib;
+pub mod fcsb3;
+pub mod fcsp;
+pub mod fcswils;
+pub mod ifcp;
 
 use std::net::IpAddr;
 
@@ -4168,6 +4181,19 @@ mod robustness {
         "scsi_sbc",
         "scsi_smc",
         "scsi_ssc",
+        "fc",
+        "fcct",
+        "fcdns",
+        "fcels",
+        "fcfcs",
+        "fcfzs",
+        "fcgi",
+        "fclctl",
+        "fcoib",
+        "fcsb3",
+        "fcsp",
+        "fcswils",
+        "ifcp",
     ];
 
     /// Every dissector module must be reachable from the dispatch.

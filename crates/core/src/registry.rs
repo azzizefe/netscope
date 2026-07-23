@@ -8879,6 +8879,124 @@ protocols! {
         aliases:   ["scsi_ssc"],
         blurb:     "A SCSI-SSC protocol command/data frame.",
     }
+    Fc {
+        doc:       "FC protocol extension.",
+        display:   "FC",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fc"],
+        blurb:     "A FC protocol frame.",
+    }
+    Fcct {
+        doc:       "FCCT protocol extension.",
+        display:   "FCCT",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcct"],
+        blurb:     "A FCCT protocol frame.",
+    }
+    Fcdns {
+        doc:       "FCDNS protocol extension.",
+        display:   "FCDNS",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcdns"],
+        blurb:     "A FCDNS protocol frame.",
+    }
+    Fcels {
+        doc:       "FCELS protocol extension.",
+        display:   "FCELS",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcels"],
+        blurb:     "A FCELS protocol frame.",
+    }
+    Fcfcs {
+        doc:       "FCFCS protocol extension.",
+        display:   "FCFCS",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcfcs"],
+        blurb:     "A FCFCS protocol frame.",
+    }
+    Fcfzs {
+        doc:       "FCFZS protocol extension.",
+        display:   "FCFZS",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcfzs"],
+        blurb:     "A FCFZS protocol frame.",
+    }
+    Fcgi {
+        doc:       "FCGI protocol extension.",
+        display:   "FCGI",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcgi"],
+        blurb:     "A FCGI protocol frame.",
+    }
+    Fclctl {
+        doc:       "FCLCTL protocol extension.",
+        display:   "FCLCTL",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fclctl"],
+        blurb:     "A FCLCTL protocol frame.",
+    }
+    Fcoib {
+        doc:       "FCOIB protocol extension.",
+        display:   "FCOIB",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcoib"],
+        blurb:     "A FCOIB protocol frame.",
+    }
+    Fcsb3 {
+        doc:       "FCSB3 protocol extension.",
+        display:   "FCSB3",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcsb3"],
+        blurb:     "A FCSB3 protocol frame.",
+    }
+    Fcsp {
+        doc:       "FCSP protocol extension.",
+        display:   "FCSP",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcsp"],
+        blurb:     "A FCSP protocol frame.",
+    }
+    Fcswils {
+        doc:       "FCSWILS protocol extension.",
+        display:   "FCSWILS",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fcswils"],
+        blurb:     "A FCSWILS protocol frame.",
+    }
+    Ifcp {
+        doc:       "IFCP protocol extension.",
+        display:   "IFCP",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ifcp"],
+        blurb:     "A IFCP protocol frame.",
+    }
+
 
 
 
