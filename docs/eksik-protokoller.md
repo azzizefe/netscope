@@ -529,15 +529,15 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `mcpe` | `packet-mcpe.c` |
-| [ ] | 2 | `quake` | `packet-quake.c` |
-| [ ] | 3 | `quake2` | `packet-quake2.c` |
-| [ ] | 4 | `quake3` | `packet-quake3.c` |
-| [ ] | 5 | `quakeworld` | `packet-quakeworld.c` |
-| [ ] | 6 | `steam_ihs_discovery` | `packet-steam-ihs-discovery.c` |
-| [ ] | 7 | `tibia` | `packet-tibia.c` |
-| [ ] | 8 | `wow` | `packet-wow.c` |
-| [ ] | 9 | `woww` | `packet-woww.c` |
+| [x] | 1 | `mcpe` | `packet-mcpe.c` |
+| [x] | 2 | `quake` | `packet-quake.c` |
+| [x] | 3 | `quake2` | `packet-quake2.c` |
+| [x] | 4 | `quake3` | `packet-quake3.c` |
+| [x] | 5 | `quakeworld` | `packet-quakeworld.c` |
+| [x] | 6 | `steam_ihs_discovery` | `packet-steam-ihs-discovery.c` |
+| [x] | 7 | `tibia` | `packet-tibia.c` |
+| [x] | 8 | `wow` | `packet-wow.c` |
+| [x] | 9 | `woww` | `packet-woww.c` |
 
 ## Diger (1009 adet)
 

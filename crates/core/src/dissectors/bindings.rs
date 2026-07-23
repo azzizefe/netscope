@@ -73,6 +73,7 @@ use super::{
     sapdiag, sapenqueue, saphdb, sapigs, sapms, sapni, saprfc, saprouter, sapsnc,
     ipmi, ipmi_app, ipmi_bridge, ipmi_chassis, ipmi_picmg, ipmi_pps, ipmi_se, ipmi_session, ipmi_storage, ipmi_trace, ipmi_transport, ipmi_update, ipmi_vita,
     bootparams, hclnfsd, klm, mount, nfsacl, nfsauth, nisplus, nlm, pcnfsd, portmap, rpcap, rpcrdma, rquota, rstat, rwall, sadmind, spray, stat, stat_notify, ypbind, yppasswd, ypserv, ypxfr,
+    mcpe, quake, quake2, quake3, quakeworld, steam_ihs_discovery, tibia, wow, woww,
 };
 
 /// The signature every port-dispatched dissector shares.

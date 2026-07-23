@@ -9950,6 +9950,88 @@ protocols! {
         aliases:   ["ypxfr"],
         blurb:     "An YPXFR protocol message.",
     }
+    Mcpe {
+        doc:       "MCPE protocol extension.",
+        display:   "MCPE",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["mcpe"],
+        blurb:     "A MCPE game protocol packet.",
+    }
+    Quake {
+        doc:       "QUAKE protocol extension.",
+        display:   "QUAKE",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["quake"],
+        blurb:     "A QUAKE game protocol packet.",
+    }
+    Quake2 {
+        doc:       "QUAKE2 protocol extension.",
+        display:   "QUAKE2",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["quake2"],
+        blurb:     "A QUAKE2 game protocol packet.",
+    }
+    Quake3 {
+        doc:       "QUAKE3 protocol extension.",
+        display:   "QUAKE3",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["quake3"],
+        blurb:     "A QUAKE3 game protocol packet.",
+    }
+    Quakeworld {
+        doc:       "QUAKEWORLD protocol extension.",
+        display:   "QUAKEWORLD",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["quakeworld"],
+        blurb:     "A QUAKEWORLD game protocol packet.",
+    }
+    SteamIhsDiscovery {
+        doc:       "STEAM-IHS-DISCOVERY protocol extension.",
+        display:   "STEAM-IHS-DISCOVERY",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["steam_ihs_discovery"],
+        blurb:     "A STEAM-IHS-DISCOVERY game protocol packet.",
+    }
+    Tibia {
+        doc:       "TIBIA protocol extension.",
+        display:   "TIBIA",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["tibia"],
+        blurb:     "A TIBIA game protocol packet.",
+    }
+    Wow {
+        doc:       "WOW protocol extension.",
+        display:   "WOW",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["wow"],
+        blurb:     "A WOW game protocol packet.",
+    }
+    Woww {
+        doc:       "WOWW protocol extension.",
+        display:   "WOWW",
+        color:     0x84CC16,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["woww"],
+        blurb:     "A WOWW game protocol packet.",
+    }
+
 
 
 

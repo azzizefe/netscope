@@ -1310,6 +1310,15 @@ pub mod ypbind;
 pub mod yppasswd;
 pub mod ypserv;
 pub mod ypxfr;
+pub mod mcpe;
+pub mod quake;
+pub mod quake2;
+pub mod quake3;
+pub mod quakeworld;
+pub mod steam_ihs_discovery;
+pub mod tibia;
+pub mod wow;
+pub mod woww;
 
 use std::net::IpAddr;
 
@@ -4406,6 +4415,15 @@ mod robustness {
         "yppasswd",
         "ypserv",
         "ypxfr",
+        "mcpe",
+        "quake",
+        "quake2",
+        "quake3",
+        "quakeworld",
+        "steam_ihs_discovery",
+        "tibia",
+        "wow",
+        "woww",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
