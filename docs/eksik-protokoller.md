@@ -74,24 +74,24 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `li5g` | `packet-li5g.c` |
-| [ ] | 2 | `log3gpp` | `packet-log3gpp.c` |
-| [ ] | 3 | `lte_rrc` | `packet-lte-rrc.c` |
-| [ ] | 4 | `mac_lte` | `packet-mac-lte.c` |
-| [ ] | 5 | `mac_lte_framed` | `packet-mac-lte-framed.c` |
-| [ ] | 6 | `mac_nr` | `packet-mac-nr.c` |
-| [ ] | 7 | `mac_nr_framed` | `packet-mac-nr-framed.c` |
-| [ ] | 8 | `mcdata` | `packet-mcdata.c` |
-| [ ] | 9 | `nbifom` | `packet-nbifom.c` |
-| [ ] | 10 | `nfapi` | `packet-nfapi.c` |
-| [ ] | 11 | `nr_rrc` | `packet-nr-rrc.c` |
-| [ ] | 12 | `pdcp_lte` | `packet-pdcp-lte.c` |
-| [ ] | 13 | `pdcp_nr` | `packet-pdcp-nr.c` |
-| [ ] | 14 | `rlc_lte` | `packet-rlc-lte.c` |
-| [ ] | 15 | `rlc_nr` | `packet-rlc-nr.c` |
-| [ ] | 16 | `umts_fp` | `packet-umts-fp.c` |
-| [ ] | 17 | `umts_mac` | `packet-umts-mac.c` |
-| [ ] | 18 | `umts_rlc` | `packet-umts-rlc.c` |
+| [x] | 1 | `li5g` | `packet-li5g.c` |
+| [x] | 2 | `log3gpp` | `packet-log3gpp.c` |
+| [x] | 3 | `lte_rrc` | `packet-lte-rrc.c` |
+| [x] | 4 | `mac_lte` | `packet-mac-lte.c` |
+| [x] | 5 | `mac_lte_framed` | `packet-mac-lte-framed.c` |
+| [x] | 6 | `mac_nr` | `packet-mac-nr.c` |
+| [x] | 7 | `mac_nr_framed` | `packet-mac-nr-framed.c` |
+| [x] | 8 | `mcdata` | `packet-mcdata.c` |
+| [x] | 9 | `nbifom` | `packet-nbifom.c` |
+| [x] | 10 | `nfapi` | `packet-nfapi.c` |
+| [x] | 11 | `nr_rrc` | `packet-nr-rrc.c` |
+| [x] | 12 | `pdcp_lte` | `packet-pdcp-lte.c` |
+| [x] | 13 | `pdcp_nr` | `packet-pdcp-nr.c` |
+| [x] | 14 | `rlc_lte` | `packet-rlc-lte.c` |
+| [x] | 15 | `rlc_nr` | `packet-rlc-nr.c` |
+| [x] | 16 | `umts_fp` | `packet-umts-fp.c` |
+| [x] | 17 | `umts_mac` | `packet-umts-mac.c` |
+| [x] | 18 | `umts_rlc` | `packet-umts-rlc.c` |
 
 ## H.2xx / VoIP / Multimedya (27 adet)
 
