@@ -3323,7 +3323,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
-        aliases:   ["ipmi"],
+        aliases:   ["rmcp"],
         blurb:     "An RMCP/IPMI message (UDP 623) â€” out-of-band management of a server's BMC.",
     }
     WsDiscovery {
@@ -9544,15 +9544,6 @@ protocols! {
         rank:      3,
         aliases:   ["netlink_sock_diag"],
         blurb:     "A NETLINK-SOCK-DIAG protocol frame.",
-    }
-    Rmcp {
-        doc:       "RMCP / IPMI out-of-band server management (UDP 623).",
-        display:   "RMCP",
-        color:     0xF59E0B,
-        transport: Udp,
-        rank:      3,
-        aliases:   ["rmcp"],
-        blurb:     "An RMCP/IPMI message (UDP 623) — out-of-band management of a server's BMC.",
     }
     Sapdiag {
         doc:       "SAPDIAG protocol extension.",
