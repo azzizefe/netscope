@@ -449,21 +449,21 @@
 
 | | # | Protokol Adi | Wireshark Dosya Adi |
 |---|---|-------------|---------------------|
-| [ ] | 1 | `netlink` | `packet-netlink.c` |
-| [ ] | 2 | `netlink_generic` | `packet-netlink-generic.c` |
-| [ ] | 3 | `netlink_mac80211_hwsim` | `packet-netlink-mac80211-hwsim.c` |
-| [ ] | 4 | `netlink_net_dm` | `packet-netlink-net-dm.c` |
-| [ ] | 5 | `netlink_netfilter` | `packet-netlink-netfilter.c` |
-| [ ] | 6 | `netlink_nl80211` | `packet-netlink-nl80211.c` |
-| [ ] | 7 | `netlink_ovs_ct_limit` | `packet-netlink-ovs-ct-limit.c` |
-| [ ] | 8 | `netlink_ovs_datapath` | `packet-netlink-ovs-datapath.c` |
-| [ ] | 9 | `netlink_ovs_flow` | `packet-netlink-ovs-flow.c` |
-| [ ] | 10 | `netlink_ovs_meter` | `packet-netlink-ovs-meter.c` |
-| [ ] | 11 | `netlink_ovs_packet` | `packet-netlink-ovs-packet.c` |
-| [ ] | 12 | `netlink_ovs_vport` | `packet-netlink-ovs-vport.c` |
-| [ ] | 13 | `netlink_psample` | `packet-netlink-psample.c` |
-| [ ] | 14 | `netlink_route` | `packet-netlink-route.c` |
-| [ ] | 15 | `netlink_sock_diag` | `packet-netlink-sock-diag.c` |
+| [x] | 1 | `netlink` | `packet-netlink.c` |
+| [x] | 2 | `netlink_generic` | `packet-netlink-generic.c` |
+| [x] | 3 | `netlink_mac80211_hwsim` | `packet-netlink-mac80211-hwsim.c` |
+| [x] | 4 | `netlink_net_dm` | `packet-netlink-net-dm.c` |
+| [x] | 5 | `netlink_netfilter` | `packet-netlink-netfilter.c` |
+| [x] | 6 | `netlink_nl80211` | `packet-netlink-nl80211.c` |
+| [x] | 7 | `netlink_ovs_ct_limit` | `packet-netlink-ovs-ct-limit.c` |
+| [x] | 8 | `netlink_ovs_datapath` | `packet-netlink-ovs-datapath.c` |
+| [x] | 9 | `netlink_ovs_flow` | `packet-netlink-ovs-flow.c` |
+| [x] | 10 | `netlink_ovs_meter` | `packet-netlink-ovs-meter.c` |
+| [x] | 11 | `netlink_ovs_packet` | `packet-netlink-ovs-packet.c` |
+| [x] | 12 | `netlink_ovs_vport` | `packet-netlink-ovs-vport.c` |
+| [x] | 13 | `netlink_psample` | `packet-netlink-psample.c` |
+| [x] | 14 | `netlink_route` | `packet-netlink-route.c` |
+| [x] | 15 | `netlink_sock_diag` | `packet-netlink-sock-diag.c` |
 
 ## SAP (9 adet)
 

@@ -9410,6 +9410,142 @@ protocols! {
         aliases:   ["zbncp"],
         blurb:     "A ZBNCP protocol frame.",
     }
+    Netlink {
+        doc:       "NETLINK protocol extension.",
+        display:   "NETLINK",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink"],
+        blurb:     "A NETLINK protocol frame.",
+    }
+    NetlinkGeneric {
+        doc:       "NETLINK-GENERIC protocol extension.",
+        display:   "NETLINK-GENERIC",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_generic"],
+        blurb:     "A NETLINK-GENERIC protocol frame.",
+    }
+    NetlinkMac80211Hwsim {
+        doc:       "NETLINK-MAC80211-HWSIM protocol extension.",
+        display:   "NETLINK-MAC80211-HWSIM",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_mac80211_hwsim"],
+        blurb:     "A NETLINK-MAC80211-HWSIM protocol frame.",
+    }
+    NetlinkNetDm {
+        doc:       "NETLINK-NET-DM protocol extension.",
+        display:   "NETLINK-NET-DM",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_net_dm"],
+        blurb:     "A NETLINK-NET-DM protocol frame.",
+    }
+    NetlinkNetfilter {
+        doc:       "NETLINK-NETFILTER protocol extension.",
+        display:   "NETLINK-NETFILTER",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_netfilter"],
+        blurb:     "A NETLINK-NETFILTER protocol frame.",
+    }
+    NetlinkNl80211 {
+        doc:       "NETLINK-NL80211 protocol extension.",
+        display:   "NETLINK-NL80211",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_nl80211"],
+        blurb:     "A NETLINK-NL80211 protocol frame.",
+    }
+    NetlinkOvsCtLimit {
+        doc:       "NETLINK-OVS-CT-LIMIT protocol extension.",
+        display:   "NETLINK-OVS-CT-LIMIT",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_ovs_ct_limit"],
+        blurb:     "A NETLINK-OVS-CT-LIMIT protocol frame.",
+    }
+    NetlinkOvsDatapath {
+        doc:       "NETLINK-OVS-DATAPATH protocol extension.",
+        display:   "NETLINK-OVS-DATAPATH",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_ovs_datapath"],
+        blurb:     "A NETLINK-OVS-DATAPATH protocol frame.",
+    }
+    NetlinkOvsFlow {
+        doc:       "NETLINK-OVS-FLOW protocol extension.",
+        display:   "NETLINK-OVS-FLOW",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_ovs_flow"],
+        blurb:     "A NETLINK-OVS-FLOW protocol frame.",
+    }
+    NetlinkOvsMeter {
+        doc:       "NETLINK-OVS-METER protocol extension.",
+        display:   "NETLINK-OVS-METER",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_ovs_meter"],
+        blurb:     "A NETLINK-OVS-METER protocol frame.",
+    }
+    NetlinkOvsPacket {
+        doc:       "NETLINK-OVS-PACKET protocol extension.",
+        display:   "NETLINK-OVS-PACKET",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_ovs_packet"],
+        blurb:     "A NETLINK-OVS-PACKET protocol frame.",
+    }
+    NetlinkOvsVport {
+        doc:       "NETLINK-OVS-VPORT protocol extension.",
+        display:   "NETLINK-OVS-VPORT",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_ovs_vport"],
+        blurb:     "A NETLINK-OVS-VPORT protocol frame.",
+    }
+    NetlinkPsample {
+        doc:       "NETLINK-PSAMPLE protocol extension.",
+        display:   "NETLINK-PSAMPLE",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_psample"],
+        blurb:     "A NETLINK-PSAMPLE protocol frame.",
+    }
+    NetlinkRoute {
+        doc:       "NETLINK-ROUTE protocol extension.",
+        display:   "NETLINK-ROUTE",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_route"],
+        blurb:     "A NETLINK-ROUTE protocol frame.",
+    }
+    NetlinkSockDiag {
+        doc:       "NETLINK-SOCK-DIAG protocol extension.",
+        display:   "NETLINK-SOCK-DIAG",
+        color:     0x0284C7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["netlink_sock_diag"],
+        blurb:     "A NETLINK-SOCK-DIAG protocol frame.",
+    }
+
 
 
 
