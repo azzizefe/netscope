@@ -5,8 +5,8 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
-/// Dissect an H248 (ITU-T H.248 / Megaco Gateway Control Protocol) packet.
-pub fn dissect_h248(
+/// Dissect an H263 (ITU-T H.263 Video Codec Stream) packet.
+pub fn dissect_h263(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
     src_port: u16,
@@ -18,8 +18,8 @@ pub fn dissect_h248(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Megaco,
-        summary: format!("H248 ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::H263,
+        summary: format!("H263 ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -28,8 +28,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_h248() {
-        let r = dissect_h248(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::Megaco);
+    fn test_h263() {
+        let r = dissect_h263(None, None, 0, 0, b"\x00\x01");
+        assert_eq!(r.protocol, Protocol::H263);
     }
 }

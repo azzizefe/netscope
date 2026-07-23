@@ -6989,6 +6989,232 @@ protocols! {
         blurb:     "An SCTE-35 Digital Program Insertion (DPI) Splice Information section.",
     }
 
+    H1 {
+        doc:       "H1 Telecommunication Protocol.",
+        display:   "H1",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h1"],
+        blurb:     "An H1 protocol frame.",
+    }
+    H221Nonstd {
+        doc:       "ITU-T H.221 Non-Standard Identifier.",
+        display:   "H221-Nonstd",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h221_nonstd"],
+        blurb:     "An H.221 non-standard structure.",
+    }
+    H223 {
+        doc:       "ITU-T H.223 Multiplex Protocol.",
+        display:   "H223",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h223"],
+        blurb:     "An H.223 multiplexed stream frame.",
+    }
+    H224 {
+        doc:       "ITU-T H.224 Simplex/Duplex Protocol.",
+        display:   "H224",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h224"],
+        blurb:     "An H.224 remote control frame.",
+    }
+    H225 {
+        doc:       "ITU-T H.225.0 Call Signalling Protocol.",
+        display:   "H225",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h225"],
+        blurb:     "An H.225 call signaling message.",
+    }
+    H235 {
+        doc:       "ITU-T H.235 Security and Encryption.",
+        display:   "H235",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h235"],
+        blurb:     "An H.235 security extension frame.",
+    }
+    H245 {
+        doc:       "ITU-T H.245 Control Protocol for Multimedia.",
+        display:   "H245",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h245"],
+        blurb:     "An H.245 control message.",
+    }
+    H248_10 {
+        doc:       "ITU-T H.248.10 Media Gateway Extension.",
+        display:   "H248-10",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h248_10"],
+        blurb:     "An H.248.10 media gateway package.",
+    }
+    H248_2 {
+        doc:       "ITU-T H.248.2 Media Gateway Extension.",
+        display:   "H248-2",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h248_2"],
+        blurb:     "An H.248.2 media gateway package.",
+    }
+    H2483gpp {
+        doc:       "ITU-T H.248 3GPP Circuit Switched Package.",
+        display:   "H248-3GPP",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h248_3gpp"],
+        blurb:     "An H.248 3GPP circuit-switched extension.",
+    }
+    H248_7 {
+        doc:       "ITU-T H.248.7 Media Gateway Extension.",
+        display:   "H248-7",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h248_7"],
+        blurb:     "An H.248.7 media gateway package.",
+    }
+    H248AnnexC {
+        doc:       "ITU-T H.248 Annex C Transport.",
+        display:   "H248-AnnexC",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h248_annex_c"],
+        blurb:     "An H.248 Annex C message.",
+    }
+    H248AnnexE {
+        doc:       "ITU-T H.248 Annex E SDP Extension.",
+        display:   "H248-AnnexE",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h248_annex_e"],
+        blurb:     "An H.248 Annex E message.",
+    }
+    H248Q1950 {
+        doc:       "ITU-T H.248 Q.1950 Call Bearer Control.",
+        display:   "H248-Q1950",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h248_q1950"],
+        blurb:     "An H.248 Q.1950 bearer control package.",
+    }
+    H261 {
+        doc:       "ITU-T H.261 Video Codec Stream.",
+        display:   "H261",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h261"],
+        blurb:     "An H.261 video stream payload.",
+    }
+    H263 {
+        doc:       "ITU-T H.263 Video Codec Stream.",
+        display:   "H263",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h263"],
+        blurb:     "An H.263 video stream payload.",
+    }
+    H263p {
+        doc:       "ITU-T H.263+ Video Codec Stream.",
+        display:   "H263+",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h263p", "h263_plus"],
+        blurb:     "An H.263+ video stream payload.",
+    }
+    H264 {
+        doc:       "ITU-T H.264 / AVC Video Stream.",
+        display:   "H264",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h264"],
+        blurb:     "An H.264 / AVC video stream NAL unit.",
+    }
+    H265 {
+        doc:       "ITU-T H.265 / HEVC Video Stream.",
+        display:   "H265",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h265"],
+        blurb:     "An H.265 / HEVC video stream NAL unit.",
+    }
+    H282 {
+        doc:       "ITU-T H.282 Remote Device Control.",
+        display:   "H282",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h282"],
+        blurb:     "An H.282 remote control structure.",
+    }
+    H283 {
+        doc:       "ITU-T H.283 Logical Channel Transport.",
+        display:   "H283",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h283"],
+        blurb:     "An H.283 channel transport frame.",
+    }
+    H450 {
+        doc:       "ITU-T H.450 Supplementary Services.",
+        display:   "H450",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h450"],
+        blurb:     "An H.450 supplementary service message.",
+    }
+    H450Ros {
+        doc:       "ITU-T H.450 Remote Operations Service.",
+        display:   "H450-ROS",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h450_ros"],
+        blurb:     "An H.450 ROS APDU.",
+    }
+    H460 {
+        doc:       "ITU-T H.460 Multimedia Extension.",
+        display:   "H460",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h460"],
+        blurb:     "An H.460 extension message.",
+    }
+    H501 {
+        doc:       "ITU-T H.501 Mobility Management Protocol.",
+        display:   "H501",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["h501"],
+        blurb:     "An H.501 mobility management message.",
+    }
+
 
 }
 

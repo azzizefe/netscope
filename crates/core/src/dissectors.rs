@@ -979,6 +979,33 @@ pub mod mpeg_pmt;
 pub mod mpeg_sect;
 pub mod mpeg1;
 pub mod scte35;
+pub mod h1;
+pub mod h221_nonstd;
+pub mod h223;
+pub mod h224;
+pub mod h225;
+pub mod h235;
+pub mod h245;
+pub mod h248;
+pub mod h248_10;
+pub mod h248_2;
+pub mod h248_3gpp;
+pub mod h248_7;
+pub mod h248_annex_c;
+pub mod h248_annex_e;
+pub mod h248_q1950;
+pub mod h261;
+pub mod h263;
+pub mod h263p;
+pub mod h264;
+pub mod h265;
+pub mod h282;
+pub mod h283;
+pub mod h323;
+pub mod h450;
+pub mod h450_ros;
+pub mod h460;
+pub mod h501;
 
 use std::net::IpAddr;
 
@@ -3743,6 +3770,33 @@ mod robustness {
         "mpeg_sect",
         "mpeg1",
         "scte35",
+        "h1",
+        "h221_nonstd",
+        "h223",
+        "h224",
+        "h225",
+        "h235",
+        "h245",
+        "h248",
+        "h248_10",
+        "h248_2",
+        "h248_3gpp",
+        "h248_7",
+        "h248_annex_c",
+        "h248_annex_e",
+        "h248_q1950",
+        "h261",
+        "h263",
+        "h263p",
+        "h264",
+        "h265",
+        "h282",
+        "h283",
+        "h323",
+        "h450",
+        "h450_ros",
+        "h460",
+        "h501",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
