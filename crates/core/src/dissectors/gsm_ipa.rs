@@ -19,7 +19,7 @@ pub fn dissect_gsm_ipa(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmIpa,
-        summary: format!("GSM_IPA message"),
+        summary: "GSM_IPA message".to_string(),
     }
 }
 

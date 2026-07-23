@@ -6,7 +6,7 @@ use super::DissectedResult;
 
 /// Dissect a DEC Maintenance Operation Protocol (MOP, EtherType 0x6002) frame.
 pub fn dissect_dec_mop(payload: &[u8]) -> DissectedResult {
-    let summary = if payload.len() >= 1 {
+    let summary = if !payload.is_empty() {
         let code = payload[0];
         let name = match code {
             0x02 => "Dump Request",

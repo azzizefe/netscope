@@ -19,7 +19,7 @@ pub fn dissect_gsm_a_bssmap(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmABssmap,
-        summary: format!("GSM_A_BSSMAP message"),
+        summary: "GSM_A_BSSMAP message".to_string(),
     }
 }
 

@@ -12,7 +12,7 @@ pub fn dissect_vertica(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary = if payload.len() >= 4 && &payload[..4] == b"Q\x00\x00\x00" || (payload.len() > 0 && payload[0] == b'Q') {
+    let summary = if payload.len() >= 4 && &payload[..4] == b"Q\x00\x00\x00" || (!payload.is_empty() && payload[0] == b'Q') {
         "Vertica Query".to_string()
     } else {
         format!("Vertica client protocol ({})", super::bytes(payload.len() as u64))

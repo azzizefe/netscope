@@ -19,7 +19,7 @@ pub fn dissect_gprscdr(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::Gprscdr,
-        summary: format!("GPRSCDR message"),
+        summary: "GPRSCDR message".to_string(),
     }
 }
 

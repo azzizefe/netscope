@@ -19,7 +19,7 @@ pub fn dissect_gsm_a_rr(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmARr,
-        summary: format!("GSM_A_RR message"),
+        summary: "GSM_A_RR message".to_string(),
     }
 }
 

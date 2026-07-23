@@ -19,7 +19,7 @@ pub fn dissect_gsm_bssmap_le(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmBssmapLe,
-        summary: format!("GSM_BSSMAP_LE message"),
+        summary: "GSM_BSSMAP_LE message".to_string(),
     }
 }
 

@@ -19,7 +19,7 @@ pub fn dissect_gsm_rlcmac(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmRlcmac,
-        summary: format!("GSM_RLCMAC message"),
+        summary: "GSM_RLCMAC message".to_string(),
     }
 }
 

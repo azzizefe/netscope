@@ -19,7 +19,7 @@ pub fn dissect_f1ap(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::F1ap,
-        summary: format!("F1AP message"),
+        summary: "F1AP message".to_string(),
     }
 }
 

@@ -12,7 +12,7 @@ pub fn dissect_nsh(_payload: &[u8]) -> DissectedResult {
         src_port: None,
         dst_port: None,
         protocol: Protocol::Nsh,
-        summary: format!("NSH message"),
+        summary: "NSH message".to_string(),
     }
 }
 

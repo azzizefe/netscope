@@ -19,7 +19,7 @@ pub fn dissect_gsm_cbsp(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmCbsp,
-        summary: format!("GSM_CBSP message"),
+        summary: "GSM_CBSP message".to_string(),
     }
 }
 

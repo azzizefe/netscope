@@ -19,7 +19,7 @@ pub fn dissect_gsm_l2rcop(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmL2rcop,
-        summary: format!("GSM_L2RCOP message"),
+        summary: "GSM_L2RCOP message".to_string(),
     }
 }
 

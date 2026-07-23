@@ -19,7 +19,7 @@ pub fn dissect_gsm_abis_tfp(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmAbisTfp,
-        summary: format!("GSM_ABIS_TFP message"),
+        summary: "GSM_ABIS_TFP message".to_string(),
     }
 }
 

@@ -19,7 +19,7 @@ pub fn dissect_gsm_sms(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmSms,
-        summary: format!("GSM_SMS message"),
+        summary: "GSM_SMS message".to_string(),
     }
 }
 

@@ -19,7 +19,7 @@ pub fn dissect_modbus_ascii(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::ModbusAscii,
-        summary: format!("MODBUS_ASCII message"),
+        summary: "MODBUS_ASCII message".to_string(),
     }
 }
 

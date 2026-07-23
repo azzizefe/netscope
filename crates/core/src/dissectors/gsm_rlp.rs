@@ -19,7 +19,7 @@ pub fn dissect_gsm_rlp(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::GsmRlp,
-        summary: format!("GSM_RLP message"),
+        summary: "GSM_RLP message".to_string(),
     }
 }
 

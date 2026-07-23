@@ -92,7 +92,7 @@ fn mode_name(c_field: u8, data_len: usize) -> &'static str {
 fn ci_position(mode: &str, data: &[u8]) -> Option<usize> {
     match mode {
         // C mode: C(1) + A(1) before data → CI is the first byte of data.
-        "C" => (data.len() >= 1).then_some(0),
+        "C" => (!data.is_empty()).then_some(0),
         // T mode with 2-byte A: M(1) + A(2) = 3 bytes before CI.
         "T" => {
             if data.len() >= 4 && data.get(3).is_some_and(|b| ci_name(*b).is_some()) {
