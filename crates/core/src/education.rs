@@ -7344,6 +7344,136 @@ reason as a numeric code.",
             look_for: "IFCP header or payload.",
         },
 
+        
+        Protocol::UsbAudio => Lesson {
+            title: "UsbAudio",
+            summary: "USB-AUDIO Protocol.",
+            body: "An USB-AUDIO protocol communication frame.",
+            look_for: "USB-AUDIO header or payload.",
+        },
+        Protocol::UsbCcid => Lesson {
+            title: "UsbCcid",
+            summary: "USB-CCID Protocol.",
+            body: "An USB-CCID protocol communication frame.",
+            look_for: "USB-CCID header or payload.",
+        },
+        Protocol::UsbCom => Lesson {
+            title: "UsbCom",
+            summary: "USB-COM Protocol.",
+            body: "An USB-COM protocol communication frame.",
+            look_for: "USB-COM header or payload.",
+        },
+        Protocol::UsbDfu => Lesson {
+            title: "UsbDfu",
+            summary: "USB-DFU Protocol.",
+            body: "An USB-DFU protocol communication frame.",
+            look_for: "USB-DFU header or payload.",
+        },
+        Protocol::UsbHid => Lesson {
+            title: "UsbHid",
+            summary: "USB-HID Protocol.",
+            body: "An USB-HID protocol communication frame.",
+            look_for: "USB-HID header or payload.",
+        },
+        Protocol::UsbHub => Lesson {
+            title: "UsbHub",
+            summary: "USB-HUB Protocol.",
+            body: "An USB-HUB protocol communication frame.",
+            look_for: "USB-HUB header or payload.",
+        },
+        Protocol::UsbI1d3 => Lesson {
+            title: "UsbI1d3",
+            summary: "USB-I1D3 Protocol.",
+            body: "An USB-I1D3 protocol communication frame.",
+            look_for: "USB-I1D3 header or payload.",
+        },
+        Protocol::UsbMasstorage => Lesson {
+            title: "UsbMasstorage",
+            summary: "USB-MASSTORAGE Protocol.",
+            body: "An USB-MASSTORAGE protocol communication frame.",
+            look_for: "USB-MASSTORAGE header or payload.",
+        },
+        Protocol::UsbPrinter => Lesson {
+            title: "UsbPrinter",
+            summary: "USB-PRINTER Protocol.",
+            body: "An USB-PRINTER protocol communication frame.",
+            look_for: "USB-PRINTER header or payload.",
+        },
+        Protocol::UsbPtp => Lesson {
+            title: "UsbPtp",
+            summary: "USB-PTP Protocol.",
+            body: "An USB-PTP protocol communication frame.",
+            look_for: "USB-PTP header or payload.",
+        },
+        Protocol::UsbVideo => Lesson {
+            title: "UsbVideo",
+            summary: "USB-VIDEO Protocol.",
+            body: "An USB-VIDEO protocol communication frame.",
+            look_for: "USB-VIDEO header or payload.",
+        },
+        Protocol::Usbip => Lesson {
+            title: "Usbip",
+            summary: "USBIP Protocol.",
+            body: "An USBIP protocol communication frame.",
+            look_for: "USBIP header or payload.",
+        },
+        Protocol::Usbll => Lesson {
+            title: "Usbll",
+            summary: "USBLL Protocol.",
+            body: "An USBLL protocol communication frame.",
+            look_for: "USBLL header or payload.",
+        },
+        Protocol::UsbmsBot => Lesson {
+            title: "UsbmsBot",
+            summary: "USBMS-BOT Protocol.",
+            body: "An USBMS-BOT protocol communication frame.",
+            look_for: "USBMS-BOT header or payload.",
+        },
+        Protocol::UsbmsUasp => Lesson {
+            title: "UsbmsUasp",
+            summary: "USBMS-UASP Protocol.",
+            body: "An USBMS-UASP protocol communication frame.",
+            look_for: "USBMS-UASP header or payload.",
+        },
+
+        
+        Protocol::MplsEcho => Lesson {
+            title: "MplsEcho",
+            summary: "MPLS-ECHO Protocol.",
+            body: "An MPLS-ECHO protocol communication frame.",
+            look_for: "MPLS-ECHO header or payload.",
+        },
+        Protocol::MplsMac => Lesson {
+            title: "MplsMac",
+            summary: "MPLS-MAC Protocol.",
+            body: "An MPLS-MAC protocol communication frame.",
+            look_for: "MPLS-MAC header or payload.",
+        },
+        Protocol::MplsPm => Lesson {
+            title: "MplsPm",
+            summary: "MPLS-PM Protocol.",
+            body: "An MPLS-PM protocol communication frame.",
+            look_for: "MPLS-PM header or payload.",
+        },
+        Protocol::MplsPsc => Lesson {
+            title: "MplsPsc",
+            summary: "MPLS-PSC Protocol.",
+            body: "An MPLS-PSC protocol communication frame.",
+            look_for: "MPLS-PSC header or payload.",
+        },
+        Protocol::MplsY1711 => Lesson {
+            title: "MplsY1711",
+            summary: "MPLS-Y1711 Protocol.",
+            body: "An MPLS-Y1711 protocol communication frame.",
+            look_for: "MPLS-Y1711 header or payload.",
+        },
+        Protocol::MplstpOam => Lesson {
+            title: "MplstpOam",
+            summary: "MPLSTP-OAM Protocol.",
+            body: "An MPLSTP-OAM protocol communication frame.",
+            look_for: "MPLSTP-OAM header or payload.",
+        },
+
         Protocol::Unknown(_) => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",

@@ -1204,6 +1204,27 @@ pub mod fcsb3;
 pub mod fcsp;
 pub mod fcswils;
 pub mod ifcp;
+pub mod usb_audio;
+pub mod usb_ccid;
+pub mod usb_com;
+pub mod usb_dfu;
+pub mod usb_hid;
+pub mod usb_hub;
+pub mod usb_i1d3;
+pub mod usb_masstorage;
+pub mod usb_printer;
+pub mod usb_ptp;
+pub mod usb_video;
+pub mod usbip;
+pub mod usbll;
+pub mod usbms_bot;
+pub mod usbms_uasp;
+pub mod mpls_echo;
+pub mod mpls_mac;
+pub mod mpls_pm;
+pub mod mpls_psc;
+pub mod mpls_y1711;
+pub mod mplstp_oam;
 
 use std::net::IpAddr;
 
@@ -4194,6 +4215,27 @@ mod robustness {
         "fcsp",
         "fcswils",
         "ifcp",
+        "usb_audio",
+        "usb_ccid",
+        "usb_com",
+        "usb_dfu",
+        "usb_hid",
+        "usb_hub",
+        "usb_i1d3",
+        "usb_masstorage",
+        "usb_printer",
+        "usb_ptp",
+        "usb_video",
+        "usbip",
+        "usbll",
+        "usbms_bot",
+        "usbms_uasp",
+        "mpls_echo",
+        "mpls_mac",
+        "mpls_pm",
+        "mpls_psc",
+        "mpls_y1711",
+        "mplstp_oam",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
