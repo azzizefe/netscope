@@ -68,6 +68,7 @@ use super::{
     fc, fcct, fcdns, fcels, fcfcs, fcfzs, fcgi, fclctl, fcoib, fcsb3, fcsp, fcswils, ifcp,
     usb_audio, usb_ccid, usb_com, usb_dfu, usb_hid, usb_hub, usb_i1d3, usb_masstorage, usb_printer, usb_ptp, usb_video, usbip, usbll, usbms_bot, usbms_uasp,
     mpls_echo, mpls_mac, mpls_pm, mpls_psc, mpls_y1711, mplstp_oam,
+    rf4ce_nwk, rf4ce_profile, rf4ce_secur, zbee_aps, zbee_direct, zbee_nwk, zbee_nwk_gp, zbee_security, zbee_tlv, zbee_zcl, zbee_zcl_closures, zbee_zcl_general, zbee_zcl_ha, zbee_zcl_hvac, zbee_zcl_lighting, zbee_zcl_meas_sensing, zbee_zcl_misc, zbee_zcl_proto_iface, zbee_zcl_sas, zbee_zcl_se, zbee_zdp, zbee_zdp_binding, zbee_zdp_discovery, zbee_zdp_management, zbncp,
 };
 
 /// The signature every port-dispatched dissector shares.
