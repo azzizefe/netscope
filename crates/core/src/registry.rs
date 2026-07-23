@@ -239,6 +239,479 @@ protocols! {
         aliases:   [],
         blurb:     "A local-network lookup matching an IP to a hardware address.",
     }
+    TwoDParityFec {
+        doc:       "2DParityFec protocol.",
+        display:   "2DPARITYFEC",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["2dparityfec"],
+        blurb:     "2D Parity Forward Error Correction protocol.",
+    }
+    ThreeComNjack {
+        doc:       "3Com Network Jack protocol.",
+        display:   "3COM-NJACK",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["3com_njack"],
+        blurb:     "3Com Network Jack protocol.",
+    }
+    ThreeComXns {
+        doc:       "3Com XNS protocol.",
+        display:   "3COM-XNS",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["3com_xns"],
+        blurb:     "3Com XNS protocol.",
+    }
+    ThreeGA11 {
+        doc:       "3G-A11 protocol.",
+        display:   "3G-A11",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["3g_a11"],
+        blurb:     "3GPP2 A11 interface protocol.",
+    }
+    FiveCoLegacy {
+        doc:       "5Co Legacy protocol.",
+        display:   "5CO-LEGACY",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["5co_legacy"],
+        blurb:     "5Co Legacy protocol.",
+    }
+    FiveCoRap {
+        doc:       "5Co RAP protocol.",
+        display:   "5CO-RAP",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["5co_rap"],
+        blurb:     "5Co RAP protocol.",
+    }
+    A21 {
+        doc:       "A21 protocol.",
+        display:   "A21",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["a21"],
+        blurb:     "3GPP2 A21 interface protocol.",
+    }
+    AastraAasp {
+        doc:       "Aastra AASP protocol.",
+        display:   "AASTRA-AASP",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["aastra_aasp"],
+        blurb:     "Aastra Application Service Protocol.",
+    }
+    Acap {
+        doc:       "ACAP protocol.",
+        display:   "ACAP",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["acap"],
+        blurb:     "Application Configuration Access Protocol.",
+    }
+    Acdr {
+        doc:       "ACDR protocol.",
+        display:   "ACDR",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["acdr"],
+        blurb:     "AudioCodes Call Detail Record protocol.",
+    }
+    Acn {
+        doc:       "ACN protocol.",
+        display:   "ACN",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["acn"],
+        blurb:     "Architecture for Control Networks (ANSI E1.17).",
+    }
+    Acp133 {
+        doc:       "ACP133 protocol.",
+        display:   "ACP133",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["acp133"],
+        blurb:     "ACP 133 directory service protocol.",
+    }
+    Acr122 {
+        doc:       "ACR122 protocol.",
+        display:   "ACR122",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["acr122"],
+        blurb:     "ACR122 NFC Reader protocol.",
+    }
+    Actrace {
+        doc:       "ACTRACE protocol.",
+        display:   "ACTRACE",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["actrace"],
+        blurb:     "AudioCodes Trace protocol.",
+    }
+    Adb {
+        doc:       "ADB protocol.",
+        display:   "ADB",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["adb"],
+        blurb:     "Android Debug Bridge protocol.",
+    }
+    AdbCs {
+        doc:       "ADB-CS protocol.",
+        display:   "ADB-CS",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["adb_cs"],
+        blurb:     "Android Debug Bridge Connection Service.",
+    }
+    AdbService {
+        doc:       "ADB-SERVICE protocol.",
+        display:   "ADB-SERVICE",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["adb_service"],
+        blurb:     "Android Debug Bridge Service protocol.",
+    }
+    Adwin {
+        doc:       "ADwin protocol.",
+        display:   "ADWIN",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["adwin"],
+        blurb:     "ADwin data acquisition protocol.",
+    }
+    AdwinConfig {
+        doc:       "ADwin Config protocol.",
+        display:   "ADWIN-CONFIG",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["adwin_config"],
+        blurb:     "ADwin Configuration protocol.",
+    }
+    Afs {
+        doc:       "AFS protocol.",
+        display:   "AFS-FS",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["afs_fs"],
+        blurb:     "Andrew File System protocol.",
+    }
+    Agentx {
+        doc:       "AgentX protocol.",
+        display:   "AGENTX",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["agentx"],
+        blurb:     "Agent Extensibility Protocol (RFC 2741).",
+    }
+    Aim {
+        doc:       "AIM protocol.",
+        display:   "AIM",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["aim"],
+        blurb:     "AOL Instant Messenger protocol.",
+    }
+    Ain {
+        doc:       "AIN protocol.",
+        display:   "AIN",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ain"],
+        blurb:     "Advanced Intelligent Network protocol.",
+    }
+    Ajp13 {
+        doc:       "AJP13 protocol.",
+        display:   "AJP13",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ajp13"],
+        blurb:     "Apache JServ Protocol version 1.3.",
+    }
+    Akp {
+        doc:       "AKP protocol.",
+        display:   "AKP",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["akp"],
+        blurb:     "AudioCodes AKP protocol.",
+    }
+    Alcap {
+        doc:       "ALCAP protocol.",
+        display:   "ALCAP",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["alcap"],
+        blurb:     "Access Link Control Application Part.",
+    }
+    Alljoyn {
+        doc:       "AllJoyn protocol.",
+        display:   "AllJoyn",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["alljoyn"],
+        blurb:     "AllJoyn IoT communication protocol.",
+    }
+    Alp {
+        doc:       "ALP protocol.",
+        display:   "ALP",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["alp"],
+        blurb:     "Application Layer Protocol.",
+    }
+    Amp {
+        doc:       "AMP protocol.",
+        display:   "AMP",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["amp"],
+        blurb:     "Asynchronous Message Protocol.",
+    }
+    Amr {
+        doc:       "AMR protocol.",
+        display:   "AMR",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["amr"],
+        blurb:     "Adaptive Multi-Rate audio framing.",
+    }
+    Ancp {
+        doc:       "ANCP protocol.",
+        display:   "ANCP",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ancp"],
+        blurb:     "Access Node Control Protocol (RFC 6320).",
+    }
+    Ans {
+        doc:       "ANS protocol.",
+        display:   "ANS",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ans"],
+        blurb:     "ANSI / ANS protocol.",
+    }
+    Ansi637 {
+        doc:       "ANSI-637 protocol.",
+        display:   "ANSI-637",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ansi_637"],
+        blurb:     "ANSI IS-637 Short Message Service.",
+    }
+    Ansi683 {
+        doc:       "ANSI-683 protocol.",
+        display:   "ANSI-683",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ansi_683"],
+        blurb:     "ANSI IS-683 Over-the-Air Provisioning.",
+    }
+    Ansi801 {
+        doc:       "ANSI-801 protocol.",
+        display:   "ANSI-801",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ansi_801"],
+        blurb:     "ANSI IS-801 Position Determination.",
+    }
+    AnsiA {
+        doc:       "ANSI-A protocol.",
+        display:   "ANSI-A",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ansi_a"],
+        blurb:     "ANSI A-Interface protocol.",
+    }
+    AnsiMap {
+        doc:       "ANSI-MAP protocol.",
+        display:   "ANSI-MAP",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ansi_map"],
+        blurb:     "ANSI Mobile Application Part.",
+    }
+    AnsiTcap {
+        doc:       "ANSI-TCAP protocol.",
+        display:   "ANSI-TCAP",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ansi_tcap"],
+        blurb:     "ANSI Transaction Capabilities Application Part.",
+    }
+    Aol {
+        doc:       "AOL protocol.",
+        display:   "AOL",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["aol"],
+        blurb:     "America Online proprietary protocol.",
+    }
+    Ap1394 {
+        doc:       "AP1394 protocol.",
+        display:   "AP1394",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ap1394"],
+        blurb:     "Apple IEEE 1394 FireWire protocol.",
+    }
+    AppPkixCert {
+        doc:       "APP-PKIX-CERT protocol.",
+        display:   "APP-PKIX-CERT",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["app_pkix_cert"],
+        blurb:     "Application PKIX Certificate framing.",
+    }
+    Applemidi {
+        doc:       "AppleMIDI protocol.",
+        display:   "AppleMIDI-Session",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["apple_midi"],
+        blurb:     "AppleMIDI / RTP-MIDI session protocol.",
+    }
+    ArDrone {
+        doc:       "AR-DRONE protocol.",
+        display:   "AR-DRONE",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ar_drone"],
+        blurb:     "Parrot AR.Drone control protocol.",
+    }
+    Arcnet {
+        doc:       "ARCNET protocol.",
+        display:   "ARCNET",
+        color:     0x9CA3AF,
+        transport: Other,
+        rank:      2,
+        aliases:   ["arcnet"],
+        blurb:     "Attached Resource Computer Network protocol.",
+    }
+    Arinc615a {
+        doc:       "ARINC615A protocol.",
+        display:   "ARINC615A",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["arinc615a"],
+        blurb:     "ARINC 615A software data loader protocol.",
+    }
+    Armagetronad {
+        doc:       "ARMAGETRONAD protocol.",
+        display:   "ARMAGETRONAD",
+        color:     0x9CA3AF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["armagetronad"],
+        blurb:     "Armagetron Advanced game protocol.",
+    }
+    Artemis {
+        doc:       "Artemis protocol.",
+        display:   "Artemis",
+        color:     0x9CA3AF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["artemis_amqp"],
+        blurb:     "Apache ActiveMQ Artemis protocol.",
+    }
+    ArubaAdp { doc: "Aruba ADP protocol.", display: "ARUBA-ADP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_adp"], blurb: "Aruba Aruba Discovery Protocol.", }
+    ArubaErm { doc: "Aruba ERM protocol.", display: "ARUBA-ERM", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_erm"], blurb: "Aruba Encapsulated Remote Mirroring.", }
+    ArubaIap { doc: "Aruba IAP protocol.", display: "ARUBA-IAP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_iap"], blurb: "Aruba Instant Access Point protocol.", }
+    ArubaPapi { doc: "Aruba PAPI protocol.", display: "ARUBA-PAPI", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_papi"], blurb: "Aruba Process Application Programming Interface.", }
+    ArubaUbt { doc: "Aruba UBT protocol.", display: "ARUBA-UBT", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_ubt"], blurb: "Aruba User-Based Tunneling protocol.", }
+    AsamCmp { doc: "ASAM CMP protocol.", display: "ASAM-CMP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["asam_cmp"], blurb: "ASAM Capture Module Protocol.", }
+    Asap { doc: "ASAP protocol.", display: "ASAP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["asap"], blurb: "Aggregate Server Access Protocol (RFC 5352).", }
+    Ascend { doc: "Ascend protocol.", display: "ASCEND", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ascend"], blurb: "Lucent/Ascend Router proprietary framing.", }
+    Asf { doc: "ASF protocol.", display: "ASF", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["asf"], blurb: "Alert Standard Format / RMCP encapsulation.", }
+    Asphodel { doc: "Asphodel protocol.", display: "ASPHODEL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["asphodel"], blurb: "Asphodel Protocol.", }
+    AssaR3 { doc: "ASSA R3 protocol.", display: "ASSA-R3", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["assa_r3"], blurb: "ASSA R3 protocol.", }
+    Asterix { doc: "ASTERIX protocol.", display: "ASTERIX", color: 0x9CA3AF, transport: Udp, rank: 3, aliases: ["asterix"], blurb: "EUROCONTROL All Purpose Structured EUROCONTROL Surveillance Information Exchange.", }
+    At { doc: "AT protocol.", display: "AT", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["at_command"], blurb: "Hayes AT command set framing.", }
+    AtLdf { doc: "AT-LDF protocol.", display: "AT-LDF", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["at_ldf"], blurb: "Air Traffic Local Data Format.", }
+    AtRl { doc: "AT-RL protocol.", display: "AT-RL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["at_rl"], blurb: "Air Traffic Radar Link protocol.", }
+    Ath { doc: "ATH protocol.", display: "ATH", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ath"], blurb: "Atheros proprietary wireless framing.", }
+    Atm { doc: "ATM protocol.", display: "ATM", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atm"], blurb: "Asynchronous Transfer Mode cell header.", }
+    Atmtcp { doc: "ATMTCP protocol.", display: "ATMTCP", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["atmtcp"], blurb: "ATM over TCP tunnel.", }
+    AtnCm { doc: "ATN-CM protocol.", display: "ATN-CM", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atn_cm"], blurb: "Aeronautical Telecommunication Network Context Management.", }
+    AtnCpdlc { doc: "ATN-CPDLC protocol.", display: "ATN-CPDLC", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atn_cpdlc"], blurb: "Aeronautical Telecommunication Network Controller-Pilot Data Link Communications.", }
+    AtnSl { doc: "ATN-SL protocol.", display: "ATN-SL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atn_sl"], blurb: "Aeronautical Telecommunication Network Sublayer.", }
+    AtnUlcs { doc: "ATN-ULCS protocol.", display: "ATN-ULCS", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atn_ulcs"], blurb: "Aeronautical Telecommunication Network Upper Layer Communications Services.", }
+    AutoRp { doc: "AUTO-RP protocol.", display: "AUTO-RP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["auto_rp"], blurb: "Cisco Auto-RP PIM Rendezvous Point announcement.", }
+    AutosarIpduMultiplexer { doc: "AUTOSAR-IPDU-MUX protocol.", display: "AUTOSAR-IPDU-MUX", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["autosar_ipdu_multiplexer"], blurb: "AUTOSAR I-PDU Multiplexer protocol.", }
+    AutosarNm { doc: "AUTOSAR-NM protocol.", display: "AUTOSAR-NM", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["autosar_nm"], blurb: "AUTOSAR Network Management protocol.", }
+    Avsp { doc: "AVSP protocol.", display: "AVSP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["avsp"], blurb: "Aruba Video Streaming Protocol.", }
+    Awdl { doc: "AWDL protocol.", display: "AWDL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["awdl"], blurb: "Apple Wireless Direct Link protocol.", }
+    Ax25 { doc: "AX25 protocol.", display: "AX25", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ax25"], blurb: "Amateur Radio AX.25 Link Layer protocol.", }
+    Ax25Kiss { doc: "AX25-KISS protocol.", display: "AX25-KISS", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ax25_kiss"], blurb: "KISS TNC protocol for AX.25.", }
+    Ax25Nol3 { doc: "AX25-NOL3 protocol.", display: "AX25-NOL3", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ax25_nol3"], blurb: "AX.25 frame without Layer 3.", }
+    Ax4000 { doc: "AX4000 protocol.", display: "AX4000", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ax4000"], blurb: "Spirent AX/4000 test equipment framing.", }
+    Ayiya { doc: "AYIYA protocol.", display: "AYIYA", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["ayiya"], blurb: "Anything in Anything IPv6 Tunneling Protocol.", }
+    Bacapp { doc: "BACAPP protocol.", display: "BACAPP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["bacapp"], blurb: "BACnet Application Layer Protocol.", }
+    Banana { doc: "BANANA protocol.", display: "BANANA", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["banana"], blurb: "Twisted Banana serialization protocol.", }
+    Bat { doc: "BAT protocol.", display: "BAT", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bat_proto"], blurb: "B.A.T.M.A.N. mesh protocol header.", }
+    Batadv { doc: "BATADV protocol.", display: "BATADV", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["batadv_link"], blurb: "B.A.T.M.A.N. Advanced link layer protocol.", }
+    Bblog { doc: "BBLOG protocol.", display: "BBLOG", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bblog"], blurb: "BlackBerry Log framing.", }
+    Bctp { doc: "BCTP protocol.", display: "BCTP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bctp"], blurb: "BCTP Telecommunications Protocol.", }
+    Beep { doc: "BEEP protocol.", display: "BEEP", color: 0x9CA3AF, transport: Tcp, rank: 3, aliases: ["beep"], blurb: "Blocks Extensible Exchange Protocol (RFC 3080).", }
+    Bencode { doc: "BENCODE protocol.", display: "BENCODE", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["bencode"], blurb: "BitTorrent Bencode serialization.", }
+    Ber { doc: "BER protocol.", display: "BER", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ber"], blurb: "ASN.1 Basic Encoding Rules framing.", }
+    Bhttp { doc: "BHTTP protocol.", display: "BHTTP", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["bhttp"], blurb: "Binary HTTP (RFC 9292).", }
+    BiccMst { doc: "BICC-MST protocol.", display: "BICC-MST", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bicc_mst"], blurb: "BICC Bearer Control Application Part.", }
+    BistItch { doc: "BIST-ITCH protocol.", display: "BIST-ITCH", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["bist_itch"], blurb: "Borsa Istanbul ITCH market data protocol.", }
+    BistOuch { doc: "BIST-OUCH protocol.", display: "BIST-OUCH", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["bist_ouch"], blurb: "Borsa Istanbul OUCH order entry protocol.", }
+    Bjnp { doc: "BJNP protocol.", display: "BJNP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["bjnp"], blurb: "Canon BJNP Network Printer Protocol.", }
+    Blip { doc: "BLIP protocol.", display: "BLIP", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["blip"], blurb: "Couchbase BLIP multiplexed WebSocket protocol.", }
+    Bluecom { doc: "BLUECOM protocol.", display: "BLUECOM", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bluecom"], blurb: "BlueCom industrial communication protocol.", }
+    Bmc { doc: "BMC protocol.", display: "BMC", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bmc"], blurb: "Baseboard Management Controller protocol.", }
+    Bofl { doc: "BOFL protocol.", display: "BOFL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bofl"], blurb: "Build On Fault Link protocol.", }
     Dhcp {
         doc:       "DHCP / BOOTP address assignment (UDP 67/68).",
         display:   "DHCP",
@@ -836,7 +1309,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
-        aliases:   ["artemis_core", "artemis"],
+        aliases:   ["artemis_core"],
         blurb:     "An ActiveMQ Artemis Core messaging packet.",
     }
     SolaceSmf {
