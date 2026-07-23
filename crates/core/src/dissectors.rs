@@ -1274,6 +1274,19 @@ pub mod sapni;
 pub mod saprfc;
 pub mod saprouter;
 pub mod sapsnc;
+pub mod ipmi;
+pub mod ipmi_app;
+pub mod ipmi_bridge;
+pub mod ipmi_chassis;
+pub mod ipmi_picmg;
+pub mod ipmi_pps;
+pub mod ipmi_se;
+pub mod ipmi_session;
+pub mod ipmi_storage;
+pub mod ipmi_trace;
+pub mod ipmi_transport;
+pub mod ipmi_update;
+pub mod ipmi_vita;
 
 use std::net::IpAddr;
 
@@ -4334,6 +4347,19 @@ mod robustness {
         "saprfc",
         "saprouter",
         "sapsnc",
+        "ipmi",
+        "ipmi_app",
+        "ipmi_bridge",
+        "ipmi_chassis",
+        "ipmi_picmg",
+        "ipmi_pps",
+        "ipmi_se",
+        "ipmi_session",
+        "ipmi_storage",
+        "ipmi_trace",
+        "ipmi_transport",
+        "ipmi_update",
+        "ipmi_vita",
     ];
 
     /// Every dissector module must be reachable from the dispatch.
