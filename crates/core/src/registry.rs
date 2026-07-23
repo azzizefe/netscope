@@ -9545,6 +9545,88 @@ protocols! {
         aliases:   ["netlink_sock_diag"],
         blurb:     "A NETLINK-SOCK-DIAG protocol frame.",
     }
+    Sapdiag {
+        doc:       "SAPDIAG protocol extension.",
+        display:   "SAPDIAG",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sapdiag"],
+        blurb:     "A SAPDIAG protocol frame.",
+    }
+    Sapenqueue {
+        doc:       "SAPENQUEUE protocol extension.",
+        display:   "SAPENQUEUE",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sapenqueue"],
+        blurb:     "A SAPENQUEUE protocol frame.",
+    }
+    Saphdb {
+        doc:       "SAPHDB protocol extension.",
+        display:   "SAPHDB",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["saphdb"],
+        blurb:     "A SAPHDB protocol frame.",
+    }
+    Sapigs {
+        doc:       "SAPIGS protocol extension.",
+        display:   "SAPIGS",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sapigs"],
+        blurb:     "A SAPIGS protocol frame.",
+    }
+    Sapms {
+        doc:       "SAPMS protocol extension.",
+        display:   "SAPMS",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sapms"],
+        blurb:     "A SAPMS protocol frame.",
+    }
+    Sapni {
+        doc:       "SAPNI protocol extension.",
+        display:   "SAPNI",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sapni"],
+        blurb:     "A SAPNI protocol frame.",
+    }
+    Saprfc {
+        doc:       "SAPRFC protocol extension.",
+        display:   "SAPRFC",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["saprfc"],
+        blurb:     "A SAPRFC protocol frame.",
+    }
+    Saprouter {
+        doc:       "SAPROUTER protocol extension.",
+        display:   "SAPROUTER",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["saprouter"],
+        blurb:     "A SAPROUTER protocol frame.",
+    }
+    Sapsnc {
+        doc:       "SAPSNC protocol extension.",
+        display:   "SAPSNC",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sapsnc"],
+        blurb:     "A SAPSNC protocol frame.",
+    }
+
 
 
 
