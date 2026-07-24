@@ -320,15 +320,6 @@ protocols! {
         aliases:   [],
         blurb:     "HDCP 2.x Content Protection Protocol",
     }
-    Hdfs {
-        doc:       "HDFS traffic.",
-        display:   "HDFS",
-        color:     0x4A9EF5,
-        transport: Tcp,
-        rank:      2,
-        aliases:   [],
-        blurb:     "Hadoop Distributed File System Protocol",
-    }
     Hdmi {
         doc:       "HDMI CEC traffic.",
         display:   "HDMI CEC",
