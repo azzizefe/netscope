@@ -1,3 +1,119 @@
+pub mod nwp;
+pub mod nxp_802154_sniffer;
+pub mod oampdu;
+pub mod obd_ii;
+pub mod obex;
+pub mod ocfs2;
+pub mod ocp1;
+pub mod oer;
+pub mod oicq;
+pub mod oipf;
+pub mod omapi;
+pub mod omron_fins;
+pub mod opa;
+pub mod opa_fe;
+pub mod opa_mad;
+pub mod opa_snc;
+pub mod openflow_v1;
+pub mod openflow_v4;
+pub mod openflow_v5;
+pub mod openflow_v6;
+pub mod openthread;
+pub mod opsi;
+pub mod optommp;
+pub mod opus;
+pub mod oran;
+pub mod oscore;
+pub mod osi;
+pub mod osi_options;
+pub mod ositp;
+pub mod osmo_trx;
+pub mod ossp;
+pub mod otp;
+pub mod ouch;
+pub mod p_mul;
+pub mod p1;
+pub mod p22;
+pub mod p4rpc;
+pub mod p7;
+pub mod p772;
+pub mod pa_hbbackup;
+pub mod packetbb;
+pub mod packetlogger;
+pub mod paltalk;
+pub mod pana;
+pub mod pathport;
+pub mod pcap;
+pub mod pcap_pktdata;
+pub mod pcaplog;
+pub mod pcapng_block;
+pub mod pcli;
+pub mod pcomtcp;
+pub mod pdc;
+pub mod pdu_transport;
+pub mod peap;
+pub mod peekremote;
+pub mod per;
+pub mod pflog;
+pub mod pingpongprotocol;
+pub mod pktc;
+pub mod pktgen;
+pub mod pldm;
+pub mod ple;
+pub mod pmproxy;
+pub mod pnrp;
+pub mod ppcap;
+pub mod ppi;
+pub mod ppi_antenna;
+pub mod ppi_geolocation_common;
+pub mod ppi_gps;
+pub mod ppi_sensor;
+pub mod ppi_vector;
+pub mod procmon;
+pub mod proxy;
+pub mod psn;
+pub mod ptpip;
+pub mod pulse;
+pub mod pvfs2;
+pub mod pw_atm;
+pub mod pw_cesopsn;
+pub mod pw_common;
+pub mod pw_eth;
+pub mod pw_fr;
+pub mod pw_hdlc;
+pub mod pw_oam;
+pub mod pw_satop;
+pub mod q2931;
+pub mod q708;
+pub mod q932;
+pub mod q932_ros;
+pub mod q933;
+pub mod qcdiag;
+pub mod qcdiag_log;
+pub mod qllc;
+pub mod qnet6;
+pub mod qsig;
+pub mod r09;
+pub mod radius_packetcable;
+pub mod raknet;
+pub mod raw;
+pub mod rc_v3;
+pub mod rdm;
+pub mod rdm_etc;
+pub mod rdp_cliprdr;
+pub mod rdp_conctrl;
+pub mod rdp_dr;
+pub mod rdp_drdynvc;
+pub mod rdp_ear;
+pub mod rdp_ecam;
+pub mod rdp_egfx;
+pub mod rdp_multitransport;
+pub mod rdp_rail;
+pub mod rdp_snd;
+pub mod rdpudp;
+pub mod rdt;
+pub mod realtek;
+pub mod redback;
 pub mod mqtt_sn;
 pub mod mrcpv2;
 pub mod mrd;
@@ -4476,6 +4592,126 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "nwp",
+        "nxp_802154_sniffer",
+        "oampdu",
+        "obd_ii",
+        "obex",
+        "ocfs2",
+        "ocp1",
+        "oer",
+        "oicq",
+        "oipf",
+        "omapi",
+        "omron_fins",
+        "opa",
+        "opa_fe",
+        "opa_mad",
+        "opa_snc",
+        "openflow_v1",
+        "openflow_v4",
+        "openflow_v5",
+        "openflow_v6",
+        "openthread",
+        "opsi",
+        "optommp",
+        "opus",
+        "oran",
+        "oscore",
+        "osi",
+        "osi_options",
+        "ositp",
+        "osmo_trx",
+        "ossp",
+        "otp",
+        "ouch",
+        "p_mul",
+        "p1",
+        "p22",
+        "p4rpc",
+        "p7",
+        "p772",
+        "pa_hbbackup",
+        "packetbb",
+        "packetlogger",
+        "paltalk",
+        "pana",
+        "pathport",
+        "pcap",
+        "pcap_pktdata",
+        "pcaplog",
+        "pcapng_block",
+        "pcli",
+        "pcomtcp",
+        "pdc",
+        "pdu_transport",
+        "peap",
+        "peekremote",
+        "per",
+        "pflog",
+        "pgsql",
+        "pingpongprotocol",
+        "pktc",
+        "pktgen",
+        "pldm",
+        "ple",
+        "pmproxy",
+        "pnrp",
+        "pop",
+        "ppcap",
+        "ppi",
+        "ppi_antenna",
+        "ppi_geolocation_common",
+        "ppi_gps",
+        "ppi_sensor",
+        "ppi_vector",
+        "procmon",
+        "protobuf",
+        "proxy",
+        "psn",
+        "ptpip",
+        "pulse",
+        "pvfs2",
+        "pw_atm",
+        "pw_cesopsn",
+        "pw_common",
+        "pw_eth",
+        "pw_fr",
+        "pw_hdlc",
+        "pw_oam",
+        "pw_satop",
+        "q2931",
+        "q708",
+        "q932",
+        "q932_ros",
+        "q933",
+        "qcdiag",
+        "qcdiag_log",
+        "qllc",
+        "qnet6",
+        "qsig",
+        "quic",
+        "r09",
+        "radius_packetcable",
+        "raknet",
+        "raw",
+        "rc_v3",
+        "rdm",
+        "rdm_etc",
+        "rdp_cliprdr",
+        "rdp_conctrl",
+        "rdp_dr",
+        "rdp_drdynvc",
+        "rdp_ear",
+        "rdp_ecam",
+        "rdp_egfx",
+        "rdp_multitransport",
+        "rdp_rail",
+        "rdp_snd",
+        "rdpudp",
+        "rdt",
+        "realtek",
+        "redback",
         "mqtt_sn",
         "mrcpv2",
         "mrd",

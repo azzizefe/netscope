@@ -176,6 +176,1032 @@ macro_rules! protocols {
 }
 
 protocols! {
+    Nwp {
+        doc:       "NWP traffic.",
+        display:   "NWP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nwp"],
+        blurb:     "NWP Protocol",
+    }
+    Nxp802154Sniffer {
+        doc:       "NXP 802.15.4 Sniffer traffic.",
+        display:   "NXP 802.15.4 Sniffer",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nxp_802154_sniffer"],
+        blurb:     "NXP 802.15.4 Packet Sniffer Header",
+    }
+    Oampdu {
+        doc:       "OAM PDU traffic.",
+        display:   "OAM PDU",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["oampdu"],
+        blurb:     "IEEE 802.3ah OAM PDU",
+    }
+    Obex {
+        doc:       "OBEX traffic.",
+        display:   "OBEX",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["obex"],
+        blurb:     "Object Exchange Protocol",
+    }
+    Ocfs2 {
+        doc:       "OCFS2 traffic.",
+        display:   "OCFS2",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["ocfs2"],
+        blurb:     "Oracle Cluster File System 2",
+    }
+    Ocp1 {
+        doc:       "OCP1 traffic.",
+        display:   "OCP1",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ocp1"],
+        blurb:     "Open Control Protocol v1",
+    }
+    Oer {
+        doc:       "OER traffic.",
+        display:   "OER",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["oer"],
+        blurb:     "OCTET Encoding Rules",
+    }
+    Oicq {
+        doc:       "OICQ traffic.",
+        display:   "OICQ",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["oicq"],
+        blurb:     "QQ Instant Messenger Protocol",
+    }
+    Oipf {
+        doc:       "OIPF traffic.",
+        display:   "OIPF",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["oipf"],
+        blurb:     "Open IPTV Forum Protocol",
+    }
+    Omapi {
+        doc:       "OMAPI traffic.",
+        display:   "OMAPI",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["omapi"],
+        blurb:     "Object Management API Protocol",
+    }
+    OmronFins {
+        doc:       "Omron FINS traffic.",
+        display:   "Omron FINS",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["omron_fins"],
+        blurb:     "Omron FINS PLC Protocol",
+    }
+    Opa {
+        doc:       "OPA traffic.",
+        display:   "OPA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["opa"],
+        blurb:     "Omni-Path Architecture Protocol",
+    }
+    OpaFe {
+        doc:       "OPA FE traffic.",
+        display:   "OPA FE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["opa_fe"],
+        blurb:     "Omni-Path Fabric Executive Protocol",
+    }
+    OpaMad {
+        doc:       "OPA MAD traffic.",
+        display:   "OPA MAD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["opa_mad"],
+        blurb:     "Omni-Path Management Datagram",
+    }
+    OpaSnc {
+        doc:       "OPA SNC traffic.",
+        display:   "OPA SNC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["opa_snc"],
+        blurb:     "Omni-Path Subnet Controller Protocol",
+    }
+    OpenflowV1 {
+        doc:       "OpenFlow v1.0 traffic.",
+        display:   "OpenFlow v1.0",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["openflow_v1"],
+        blurb:     "OpenFlow Switch Protocol v1.0",
+    }
+    OpenflowV4 {
+        doc:       "OpenFlow v1.3 traffic.",
+        display:   "OpenFlow v1.3",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["openflow_v4"],
+        blurb:     "OpenFlow Switch Protocol v1.3",
+    }
+    OpenflowV5 {
+        doc:       "OpenFlow v1.4 traffic.",
+        display:   "OpenFlow v1.4",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["openflow_v5"],
+        blurb:     "OpenFlow Switch Protocol v1.4",
+    }
+    OpenflowV6 {
+        doc:       "OpenFlow v1.5 traffic.",
+        display:   "OpenFlow v1.5",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["openflow_v6"],
+        blurb:     "OpenFlow Switch Protocol v1.5",
+    }
+    Openthread {
+        doc:       "OpenThread traffic.",
+        display:   "OpenThread",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["openthread"],
+        blurb:     "OpenThread Mesh Protocol",
+    }
+    Opsi {
+        doc:       "OPSI traffic.",
+        display:   "OPSI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["opsi"],
+        blurb:     "Open Payment System Interface",
+    }
+    Optommp {
+        doc:       "OptoMMP traffic.",
+        display:   "OptoMMP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["optommp"],
+        blurb:     "Opto 22 Memory-Mapped Protocol",
+    }
+    Opus {
+        doc:       "Opus Audio traffic.",
+        display:   "Opus Audio",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["opus"],
+        blurb:     "Opus Interactive Audio Codec Payload",
+    }
+    Oran {
+        doc:       "O-RAN FrontHaul traffic.",
+        display:   "O-RAN FrontHaul",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["oran"],
+        blurb:     "O-RAN Open FrontHaul C/U-Plane Protocol",
+    }
+    Oscore {
+        doc:       "OSCORE traffic.",
+        display:   "OSCORE",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["oscore"],
+        blurb:     "Object Security for Constrained RESTful Environments",
+    }
+    Osi {
+        doc:       "OSI Network Layer traffic.",
+        display:   "OSI Network Layer",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["osi"],
+        blurb:     "OSI Network Layer Protocol",
+    }
+    OsiOptions {
+        doc:       "OSI Options traffic.",
+        display:   "OSI Options",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["osi_options"],
+        blurb:     "OSI Options Header",
+    }
+    Ositp {
+        doc:       "OSI TP traffic.",
+        display:   "OSI TP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ositp"],
+        blurb:     "OSI Transport Protocol",
+    }
+    OsmoTrx {
+        doc:       "OsmoTRX traffic.",
+        display:   "OsmoTRX",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["osmo_trx"],
+        blurb:     "Osmocom TRX Control Protocol",
+    }
+    Ossp {
+        doc:       "OSSP traffic.",
+        display:   "OSSP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ossp"],
+        blurb:     "OSSP Protocol",
+    }
+    Otp {
+        doc:       "OTP traffic.",
+        display:   "OTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["otp"],
+        blurb:     "Open Tree Protocol",
+    }
+    Ouch {
+        doc:       "Nasdaq OUCH traffic.",
+        display:   "Nasdaq OUCH",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["ouch"],
+        blurb:     "Nasdaq OUCH Order Entry Protocol",
+    }
+    PMul {
+        doc:       "P_MUL traffic.",
+        display:   "P_MUL",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["p_mul"],
+        blurb:     "ACP142 Reliable Multicast Protocol",
+    }
+    P1 {
+        doc:       "X.400 P1 traffic.",
+        display:   "X.400 P1",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["p1"],
+        blurb:     "X.400 Message Transfer Protocol (P1)",
+    }
+    P22 {
+        doc:       "X.400 P22 traffic.",
+        display:   "X.400 P22",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["p22"],
+        blurb:     "X.400 Interpersonal Messaging Protocol (P22)",
+    }
+    P4rpc {
+        doc:       "Perforce RPC traffic.",
+        display:   "Perforce RPC",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["p4rpc"],
+        blurb:     "Perforce SCM RPC Protocol",
+    }
+    P7 {
+        doc:       "X.400 P7 traffic.",
+        display:   "X.400 P7",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["p7"],
+        blurb:     "X.400 Message Store Protocol (P7)",
+    }
+    P772 {
+        doc:       "STANAG 4406 P772 traffic.",
+        display:   "STANAG 4406 P772",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["p772"],
+        blurb:     "Military Messaging Protocol STANAG 4406 P772",
+    }
+    PaHbbackup {
+        doc:       "Palo Alto HB Backup traffic.",
+        display:   "Palo Alto HB Backup",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pa_hbbackup"],
+        blurb:     "Palo Alto Heartbeat Backup Protocol",
+    }
+    Packetbb {
+        doc:       "PacketBB traffic.",
+        display:   "PacketBB",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["packetbb"],
+        blurb:     "Generalized MANET Packet Format (RFC 5444)",
+    }
+    Packetlogger {
+        doc:       "PacketLogger traffic.",
+        display:   "PacketLogger",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["packetlogger"],
+        blurb:     "Apple PacketLogger Bluetooth Capture Format",
+    }
+    Paltalk {
+        doc:       "Paltalk traffic.",
+        display:   "Paltalk",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["paltalk"],
+        blurb:     "Paltalk Instant Messenger Protocol",
+    }
+    Pana {
+        doc:       "PANA traffic.",
+        display:   "PANA",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["pana"],
+        blurb:     "Protocol for Carrying Authentication for Network Access",
+    }
+    Pathport {
+        doc:       "Pathport traffic.",
+        display:   "Pathport",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["pathport"],
+        blurb:     "Pathway Connectivity Pathport DMX Protocol",
+    }
+    Pcap {
+        doc:       "PCAP Link Layer traffic.",
+        display:   "PCAP Link Layer",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pcap"],
+        blurb:     "PCAP Link Layer Enclosure Header",
+    }
+    PcapPktdata {
+        doc:       "PCAP Packet Data traffic.",
+        display:   "PCAP Packet Data",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pcap_pktdata"],
+        blurb:     "PCAP Wrapped Packet Data Header",
+    }
+    Pcaplog {
+        doc:       "PCAPLog traffic.",
+        display:   "PCAPLog",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pcaplog"],
+        blurb:     "PCAP Log Format",
+    }
+    PcapngBlock {
+        doc:       "PCAPNG Block traffic.",
+        display:   "PCAPNG Block",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pcapng_block"],
+        blurb:     "PCAPNG Custom Block Record",
+    }
+    Pcli {
+        doc:       "PCLI traffic.",
+        display:   "PCLI",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["pcli"],
+        blurb:     "Packet Cable Lawful Intercept Protocol",
+    }
+    Pcomtcp {
+        doc:       "PCOM TCP traffic.",
+        display:   "PCOM TCP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["pcomtcp"],
+        blurb:     "Unitronics PCOM Protocol over TCP",
+    }
+    Pdc {
+        doc:       "PDC traffic.",
+        display:   "PDC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pdc"],
+        blurb:     "Personal Digital Cellular Protocol",
+    }
+    PduTransport {
+        doc:       "PDU Transport traffic.",
+        display:   "PDU Transport",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pdu_transport"],
+        blurb:     "Generic PDU Transport Header",
+    }
+    Peap {
+        doc:       "PEAP traffic.",
+        display:   "PEAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["peap"],
+        blurb:     "Protected Extensible Authentication Protocol",
+    }
+    Peekremote {
+        doc:       "PeekRemote traffic.",
+        display:   "PeekRemote",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["peekremote"],
+        blurb:     "WildPackets EtherPeek Remote Engine Protocol",
+    }
+    Per {
+        doc:       "PER Encapsulation traffic.",
+        display:   "PER Encapsulation",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["per"],
+        blurb:     "Packed Encoding Rules Encapsulation",
+    }
+    Pflog {
+        doc:       "PFLOG traffic.",
+        display:   "PFLOG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pflog"],
+        blurb:     "OpenBSD Packet Filter Logging Header",
+    }
+    Pingpongprotocol {
+        doc:       "PingPong Protocol traffic.",
+        display:   "PingPong Protocol",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["pingpongprotocol"],
+        blurb:     "PingPong Test Protocol",
+    }
+    Pktc {
+        doc:       "PacketCable Security traffic.",
+        display:   "PacketCable Security",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pktc"],
+        blurb:     "PacketCable Security Protocol",
+    }
+    Pktgen {
+        doc:       "Pktgen traffic.",
+        display:   "Pktgen",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pktgen"],
+        blurb:     "Linux Kernel Pktgen Packet Generator Header",
+    }
+    Pldm {
+        doc:       "PLDM traffic.",
+        display:   "PLDM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pldm"],
+        blurb:     "Platform Level Data Model Protocol",
+    }
+    Ple {
+        doc:       "PLE traffic.",
+        display:   "PLE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ple"],
+        blurb:     "Private Line Emulation Protocol",
+    }
+    Pmproxy {
+        doc:       "PMProxy traffic.",
+        display:   "PMProxy",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["pmproxy"],
+        blurb:     "Performance Co-Pilot PMProxy Protocol",
+    }
+    Pnrp {
+        doc:       "PNRP traffic.",
+        display:   "PNRP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["pnrp"],
+        blurb:     "Peer Name Resolution Protocol",
+    }
+    Ppcap {
+        doc:       "PPCAP traffic.",
+        display:   "PPCAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ppcap"],
+        blurb:     "Parallel PCAP Encapsulation Header",
+    }
+    Ppi {
+        doc:       "PPI traffic.",
+        display:   "PPI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ppi"],
+        blurb:     "Packet Processing Information Header",
+    }
+    PpiAntenna {
+        doc:       "PPI Antenna traffic.",
+        display:   "PPI Antenna",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ppi_antenna"],
+        blurb:     "PPI Antenna Header Extension",
+    }
+    PpiGeolocationCommon {
+        doc:       "PPI Geolocation traffic.",
+        display:   "PPI Geolocation",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ppi_geolocation_common"],
+        blurb:     "PPI Geolocation Common Header Extension",
+    }
+    PpiGps {
+        doc:       "PPI GPS traffic.",
+        display:   "PPI GPS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ppi_gps"],
+        blurb:     "PPI GPS Header Extension",
+    }
+    PpiSensor {
+        doc:       "PPI Sensor traffic.",
+        display:   "PPI Sensor",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ppi_sensor"],
+        blurb:     "PPI Sensor Header Extension",
+    }
+    PpiVector {
+        doc:       "PPI Vector traffic.",
+        display:   "PPI Vector",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ppi_vector"],
+        blurb:     "PPI Vector Header Extension",
+    }
+    Procmon {
+        doc:       "Procmon Log traffic.",
+        display:   "Procmon Log",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["procmon"],
+        blurb:     "Sysinternals Process Monitor Log Frame",
+    }
+    Proxy {
+        doc:       "Proxy Protocol traffic.",
+        display:   "Proxy Protocol",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["proxy"],
+        blurb:     "HAProxy Proxy Protocol Header",
+    }
+    Psn {
+        doc:       "PSN traffic.",
+        display:   "PSN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["psn"],
+        blurb:     "Packet Switched Network Protocol",
+    }
+    Ptpip {
+        doc:       "PTP-IP traffic.",
+        display:   "PTP-IP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["ptpip"],
+        blurb:     "Picture Transfer Protocol over IP",
+    }
+    Pulse {
+        doc:       "PulseAudio Protocol traffic.",
+        display:   "PulseAudio Protocol",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["pulse"],
+        blurb:     "PulseAudio Native Streaming Protocol",
+    }
+    PwAtm {
+        doc:       "PW ATM traffic.",
+        display:   "PW ATM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pw_atm"],
+        blurb:     "Pseudowire ATM Encapsulation",
+    }
+    PwCesopsn {
+        doc:       "PW CESoPSN traffic.",
+        display:   "PW CESoPSN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pw_cesopsn"],
+        blurb:     "Pseudowire Circuit Emulation Services over PSN",
+    }
+    PwCommon {
+        doc:       "PW Control Word traffic.",
+        display:   "PW Control Word",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pw_common"],
+        blurb:     "Pseudowire Common Control Word",
+    }
+    PwEth {
+        doc:       "PW Ethernet traffic.",
+        display:   "PW Ethernet",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pw_eth"],
+        blurb:     "Pseudowire Ethernet Encapsulation",
+    }
+    PwFr {
+        doc:       "PW Frame Relay traffic.",
+        display:   "PW Frame Relay",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pw_fr"],
+        blurb:     "Pseudowire Frame Relay Encapsulation",
+    }
+    PwHdlc {
+        doc:       "PW HDLC traffic.",
+        display:   "PW HDLC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pw_hdlc"],
+        blurb:     "Pseudowire HDLC Encapsulation",
+    }
+    PwOam {
+        doc:       "PW OAM traffic.",
+        display:   "PW OAM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pw_oam"],
+        blurb:     "Pseudowire OAM Protocol",
+    }
+    PwSatop {
+        doc:       "PW SAToP traffic.",
+        display:   "PW SAToP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pw_satop"],
+        blurb:     "Pseudowire Structure-Agnostic TDM over Packet",
+    }
+    Q2931 {
+        doc:       "Q.2931 traffic.",
+        display:   "Q.2931",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["q2931"],
+        blurb:     "ITU-T Q.2931 B-ISDN Signaling Protocol",
+    }
+    Q708 {
+        doc:       "Q.708 traffic.",
+        display:   "Q.708",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["q708"],
+        blurb:     "ITU-T Q.708 ISPC Numbering Protocol",
+    }
+    Q932 {
+        doc:       "Q.932 traffic.",
+        display:   "Q.932",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["q932"],
+        blurb:     "ITU-T Q.932 Supplementary Services Protocol",
+    }
+    Q932Ros {
+        doc:       "Q.932 ROS traffic.",
+        display:   "Q.932 ROS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["q932_ros"],
+        blurb:     "ITU-T Q.932 Remote Operations Service",
+    }
+    Q933 {
+        doc:       "Q.933 traffic.",
+        display:   "Q.933",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["q933"],
+        blurb:     "ITU-T Q.933 Frame Relay Signaling Protocol",
+    }
+    Qcdiag {
+        doc:       "Qualcomm DIAG traffic.",
+        display:   "Qualcomm DIAG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["qcdiag"],
+        blurb:     "Qualcomm Diagnostics Log Protocol",
+    }
+    QcdiagLog {
+        doc:       "Qualcomm DIAG Log traffic.",
+        display:   "Qualcomm DIAG Log",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["qcdiag_log"],
+        blurb:     "Qualcomm Diagnostics Subsystem Log Frame",
+    }
+    Qllc {
+        doc:       "QLLC traffic.",
+        display:   "QLLC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["qllc"],
+        blurb:     "Qualified Logical Link Control Protocol",
+    }
+    Qnet6 {
+        doc:       "QNX QNET6 traffic.",
+        display:   "QNX QNET6",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["qnet6"],
+        blurb:     "QNX Neutrino QNET v6 Protocol",
+    }
+    Qsig {
+        doc:       "QSIG traffic.",
+        display:   "QSIG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["qsig"],
+        blurb:     "QSIG ISDN Supplementary Signaling Protocol",
+    }
+    R09 {
+        doc:       "R09.16 Telematics traffic.",
+        display:   "R09.16 Telematics",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["r09"],
+        blurb:     "VDV R09.16 Telematics Protocol",
+    }
+    RadiusPacketcable {
+        doc:       "RADIUS PacketCable traffic.",
+        display:   "RADIUS PacketCable",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["radius_packetcable"],
+        blurb:     "RADIUS PacketCable Extension Protocol",
+    }
+    Raknet {
+        doc:       "RakNet traffic.",
+        display:   "RakNet",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["raknet"],
+        blurb:     "RakNet Game Networking Engine Protocol",
+    }
+    Raw {
+        doc:       "Raw Payload traffic.",
+        display:   "Raw Payload",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["raw"],
+        blurb:     "Raw Unparsed Packet Payload",
+    }
+    RcV3 {
+        doc:       "RC v3 traffic.",
+        display:   "RC v3",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rc_v3"],
+        blurb:     "RoboCup SSL Vision Protocol v3",
+    }
+    Rdm {
+        doc:       "ANSI E1.20 RDM traffic.",
+        display:   "ANSI E1.20 RDM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rdm"],
+        blurb:     "ANSI E1.20 Remote Device Management Protocol",
+    }
+    RdmEtc {
+        doc:       "RDM ETC Vendor traffic.",
+        display:   "RDM ETC Vendor",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rdm_etc"],
+        blurb:     "ETC Vendor Extension for RDM",
+    }
+    RdpCliprdr {
+        doc:       "RDP Clipboard traffic.",
+        display:   "RDP Clipboard",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_cliprdr"],
+        blurb:     "RDP Clipboard Virtual Channel Extension",
+    }
+    RdpConctrl {
+        doc:       "RDP Connection Control traffic.",
+        display:   "RDP Connection Control",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_conctrl"],
+        blurb:     "RDP Connection Control Channel",
+    }
+    RdpDr {
+        doc:       "RDP Device Redirection traffic.",
+        display:   "RDP Device Redirection",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_dr"],
+        blurb:     "RDP File System & Device Redirection Channel",
+    }
+    RdpDrdynvc {
+        doc:       "RDP Dynamic VC traffic.",
+        display:   "RDP Dynamic VC",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_drdynvc"],
+        blurb:     "RDP Dynamic Virtual Channel Manager",
+    }
+    RdpEar {
+        doc:       "RDP Audio Redirection traffic.",
+        display:   "RDP Audio Redirection",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_ear"],
+        blurb:     "RDP Audio Output Redirection Channel",
+    }
+    RdpEcam {
+        doc:       "RDP Camera Redirection traffic.",
+        display:   "RDP Camera Redirection",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_ecam"],
+        blurb:     "RDP Video Capture Device Redirection",
+    }
+    RdpEgfx {
+        doc:       "RDP Graphics Pipeline traffic.",
+        display:   "RDP Graphics Pipeline",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_egfx"],
+        blurb:     "RDP RemoteFX Graphics Pipeline Extension",
+    }
+    RdpMultitransport {
+        doc:       "RDP Multi-Transport traffic.",
+        display:   "RDP Multi-Transport",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_multitransport"],
+        blurb:     "RDP Multi-Transport Bootstrap Channel",
+    }
+    RdpRail {
+        doc:       "RDP RemoteApp traffic.",
+        display:   "RDP RemoteApp",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_rail"],
+        blurb:     "RDP RemoteApp (RAIL) Virtual Channel",
+    }
+    RdpSnd {
+        doc:       "RDP Sound traffic.",
+        display:   "RDP Sound",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["rdp_snd"],
+        blurb:     "RDP Sound Virtual Channel",
+    }
+    Rdpudp {
+        doc:       "RDP-UDP traffic.",
+        display:   "RDP-UDP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["rdpudp"],
+        blurb:     "RDP UDP Transport Protocol",
+    }
+    Rdt {
+        doc:       "RealData Transport traffic.",
+        display:   "RealData Transport",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["rdt"],
+        blurb:     "RealNetworks RealData Transport Protocol",
+    }
+    Realtek {
+        doc:       "Realtek Header traffic.",
+        display:   "Realtek Header",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["realtek"],
+        blurb:     "Realtek Switch Tag/Header Protocol",
+    }
+    Redback {
+        doc:       "Redback Circuit traffic.",
+        display:   "Redback Circuit",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["redback"],
+        blurb:     "Redback SmartEdge Circuit Protocol",
+    }
     Mrcpv2 {
         doc:       "MRCPv2 traffic.",
         display:   "MRCPv2",
