@@ -209,7 +209,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["bpsec_cose"],
         blurb:     "BPSec COSE Context",
     }
     BpsecDefaultsc {
@@ -218,7 +218,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["bpsec_defaultsc"],
         blurb:     "BPSec Default Security Context",
     }
     Bpv6 {
@@ -227,7 +227,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["bpv6"],
         blurb:     "Bundle Protocol Version 6",
     }
     Bpv7 {
@@ -236,7 +236,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["bpv7"],
         blurb:     "Bundle Protocol Version 7",
     }
     BrcmTag {
@@ -245,7 +245,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["brcm_tag"],
         blurb:     "Broadcom Ethernet Tag",
     }
     Brdwlk {
@@ -266,22 +266,13 @@ protocols! {
         aliases:   [],
         blurb:     "Broadband Remote Protocol",
     }
-    BtDht {
-        doc:       "BitTorrent DHT traffic.",
-        display:   "BitTorrent DHT",
-        color:     0x4A9EF5,
-        transport: Udp,
-        rank:      2,
-        aliases:   [],
-        blurb:     "BitTorrent Mainline DHT",
-    }
     BtTracker {
         doc:       "BitTorrent Tracker traffic.",
         display:   "BitTorrent Tracker",
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
-        aliases:   [],
+        aliases:   ["bt_tracker"],
         blurb:     "BitTorrent Tracker HTTP/UDP Protocol",
     }
     BtUtp {
@@ -290,7 +281,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
-        aliases:   [],
+        aliases:   ["bt_utp"],
         blurb:     "Micro Transport Protocol",
     }
     Bt3ds {
@@ -299,7 +290,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["bt3ds"],
         blurb:     "Bluetooth 3D Synchronization",
     }
     Busmirroring {
@@ -308,7 +299,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["busmirroring"],
         blurb:     "Bus Mirroring Protocol",
     }
     Bvlc {
@@ -335,7 +326,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
-        aliases:   [],
+        aliases:   ["c1222"],
         blurb:     "ANSI C12.22 Smart Grid Protocol",
     }
     C15ch {
@@ -362,7 +353,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
-        aliases:   [],
+        aliases:   ["calcappprotocol"],
         blurb:     "CalcApp Application Protocol",
     }
     Caneth {
@@ -407,7 +398,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["catapult_dct2000"],
         blurb:     "Catapult DCT2000 Log Protocol",
     }
     Cattp {
@@ -452,7 +443,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cell_broadcast"],
         blurb:     "Cell Broadcast Service",
     }
     Cemi {
@@ -491,22 +482,13 @@ protocols! {
         aliases:   [],
         blurb:     "Cisco Group Management Protocol",
     }
-    Chargen {
-        doc:       "CHARGEN traffic.",
-        display:   "CHARGEN",
-        color:     0x4A9EF5,
-        transport: Udp,
-        rank:      2,
-        aliases:   [],
-        blurb:     "Character Generator Protocol",
-    }
     ChargingAse {
         doc:       "Charging ASE traffic.",
         display:   "Charging ASE",
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["charging_ase"],
         blurb:     "Charging Application Service Element",
     }
     Chdlc {
@@ -515,7 +497,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["chdlc"],
         blurb:     "Cisco High-Level Data Link Control",
     }
     Cigi {
@@ -545,22 +527,22 @@ protocols! {
         aliases:   [],
         blurb:     "Cimetrics Protocol",
     }
-    Cipmotion {
+    CipMotion {
         doc:       "CIP Motion traffic.",
         display:   "CIP Motion",
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cipmotion"],
         blurb:     "Common Industrial Protocol Motion Extension",
     }
-    Cipsafety {
+    CipSafety {
         doc:       "CIP Safety traffic.",
         display:   "CIP Safety",
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cipsafety"],
         blurb:     "Common Industrial Protocol Safety Extension",
     }
     CiscoErspan {
@@ -569,7 +551,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_erspan"],
         blurb:     "Cisco Encapsulated Remote Switched Port Analyzer",
     }
     CiscoFpMim {
@@ -578,7 +560,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_fp_mim"],
         blurb:     "Cisco FabricPath MAC-in-MAC",
     }
     CiscoMarker {
@@ -587,7 +569,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_marker"],
         blurb:     "Cisco Marker Protocol",
     }
     CiscoMcp {
@@ -596,7 +578,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_mcp"],
         blurb:     "Cisco Misconfiguration Compression Protocol",
     }
     CiscoMetadata {
@@ -605,7 +587,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_metadata"],
         blurb:     "Cisco Metadata Protocol",
     }
     CiscoOui {
@@ -614,7 +596,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_oui"],
         blurb:     "Cisco OUI Protocol",
     }
     CiscoSm {
@@ -623,7 +605,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_sm"],
         blurb:     "Cisco Session Management Protocol",
     }
     CiscoTtag {
@@ -632,7 +614,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_ttag"],
         blurb:     "Cisco TTAG Protocol",
     }
     CiscoWids {
@@ -641,7 +623,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["cisco_wids"],
         blurb:     "Cisco Wireless IDS",
     }
     Citp {
@@ -677,7 +659,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
-        aliases:   [],
+        aliases:   ["classicstun"],
         blurb:     "Classic STUN Protocol",
     }
     Clearcase {
@@ -704,7 +686,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   [],
+        aliases:   ["clique_rm"],
         blurb:     "Clique Reliable Multicast Protocol",
     }
     Clnp {
@@ -2321,15 +2303,6 @@ protocols! {
         blurb:     "A KNX TP twisted pair building automation telegram.",
     }
 
-    CipMotion {
-        doc:       "ODVA CIP Motion Protocol (UDP 2223).",
-        display:   "CIP Motion",
-        color:     0x7C3AED,
-        transport: Udp,
-        rank:      3,
-        aliases:   ["cip_motion"],
-        blurb:     "An ODVA CIP Motion real-time drive command or status frame.",
-    }
     CipSafetyExt {
         doc:       "ODVA CIP Safety Functional Safety Transport (UDP 2224).",
         display:   "CIP Safety Ext",
@@ -6078,15 +6051,6 @@ protocols! {
         rank:      3,
         aliases:   ["cip"],
         blurb:     "An industrial-control command (CIP) â€” reading or writing a PLC tag, or starting and stopping the controller.",
-    }
-    CipSafety {
-        doc:       "CIP Safety â€” Common Industrial Protocol Safety extensions for fail-safe communication.",
-        display:   "CIP Safety",
-        color:     0xEF4444,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["cip-safety", "cipsafety"],
-        blurb:     "CIP Safety protocol message â€” carrying fail-safe data, validations, or supervisor controls.",
     }
     Dlms {
         doc:       "Smart-meter reading and configuration on TCP 4059 (DLMS/COSEM Green Book).",

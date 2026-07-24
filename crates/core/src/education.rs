@@ -8147,7 +8147,7 @@ reason as a numeric code.",
         Protocol::Bmc => Lesson { title: "BMC", summary: "BMC protocol.", body: "Baseboard Management Controller protocol frame.", look_for: "BMC header or payload." },
         Protocol::Bofl => Lesson { title: "BOFL", summary: "BOFL protocol.", body: "Build On Fault Link protocol frame.", look_for: "BOFL header or payload." },
 
-        Protocol::Unknown(_) | Protocol::Plugin(_) => Lesson {
+        _ => Lesson {
             title: "Unknown / other traffic",
             summary: "Something netscope doesn't decode in detail â€” shown safely anyway.",
             body: "Not every packet is a protocol netscope explains in depth. Rather \
