@@ -5,8 +5,8 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
-/// Dissect a RABBITMQ-STREAM packet.
-pub fn dissect_rabbitmq_stream(
+/// Dissect a REDPANDA-RPC packet.
+pub fn dissect_redpanda_rpc(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
     src_port: u16,
@@ -18,8 +18,8 @@ pub fn dissect_rabbitmq_stream(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::RabbitmqStream,
-        summary: format!("RABBITMQ-STREAM ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::RedpandaRpc,
+        summary: format!("REDPANDA-RPC ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -28,8 +28,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rabbitmq_stream() {
-        let r = dissect_rabbitmq_stream(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::RabbitmqStream);
+    fn test_redpanda_rpc() {
+        let r = dissect_redpanda_rpc(None, None, 0, 0, b"\x00\x01");
+        assert_eq!(r.protocol, Protocol::RedpandaRpc);
     }
 }

@@ -6718,3 +6718,12 @@ pub mod kuma_dp;
 pub mod traefik_hub;
 pub mod cilium_hubble;
 pub mod dapr_sidecar;
+
+pub mod redpanda_rpc;
+pub mod pulsar_bookkeeper;
+pub mod pulsar_binary_v2;
+pub mod nats_leaf;
+pub mod nats_jetstream_internal;
+pub mod amqp_1_0_management;
+pub mod kafka_kraft;
+pub mod kafka_zk_migration;

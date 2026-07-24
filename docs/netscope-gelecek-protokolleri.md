@@ -103,16 +103,16 @@
 
 | | # | Protokol | Açıklama |
 |---|---|---|---|
-| [ ] | 51 | `redpanda_rpc` | Redpanda (Kafka-compatible) internal RPC |
-| [ ] | 52 | `pulsar_bookkeeper` | Apache Pulsar BookKeeper replication protocol |
-| [ ] | 53 | `pulsar_binary_v2` | Apache Pulsar binary protocol v2 |
-| [ ] | 54 | `nats_leaf` | NATS leaf node hub-spoke proto |
-| [ ] | 55 | `nats_jetstream_internal` | JetStream internal stream replication |
-| [ ] | 56 | `rabbitmq_stream` | RabbitMQ stream protocol (new-gen) |
-| [ ] | 57 | `amqp_1_0_management` | AMQP 1.0 management extension |
-| [ ] | 58 | `solace_smf` | Solace SMF (SEMP over Message Format) |
-| [ ] | 59 | `kafka_kraft` | Apache Kafka KRaft consensus metadata proto |
-| [ ] | 60 | `kafka_zk_migration` | Kafka ZooKeeper-to-KRaft migration bridge |
+| [x] | 51 | `redpanda_rpc` | Redpanda (Kafka-compatible) internal RPC |
+| [x] | 52 | `pulsar_bookkeeper` | Apache Pulsar BookKeeper replication protocol |
+| [x] | 53 | `pulsar_binary_v2` | Apache Pulsar binary protocol v2 |
+| [x] | 54 | `nats_leaf` | NATS leaf node hub-spoke proto |
+| [x] | 55 | `nats_jetstream_internal` | JetStream internal stream replication |
+| [x] | 56 | `rabbitmq_stream` | RabbitMQ stream protocol (new-gen) |
+| [x] | 57 | `amqp_1_0_management` | AMQP 1.0 management extension |
+| [x] | 58 | `solace_smf` | Solace SMF (SEMP over Message Format) |
+| [x] | 59 | `kafka_kraft` | Apache Kafka KRaft consensus metadata proto |
+| [x] | 60 | `kafka_zk_migration` | Kafka ZooKeeper-to-KRaft migration bridge |
 
 ### 1.7 Edge / CDN / Serverless (12 adet)
 

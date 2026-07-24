@@ -5,8 +5,8 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
-/// Dissect a RABBITMQ-STREAM packet.
-pub fn dissect_rabbitmq_stream(
+/// Dissect a PULSAR-BINARY-V2 packet.
+pub fn dissect_pulsar_binary_v2(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
     src_port: u16,
@@ -18,8 +18,8 @@ pub fn dissect_rabbitmq_stream(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::RabbitmqStream,
-        summary: format!("RABBITMQ-STREAM ({})", super::bytes(payload.len() as u64)),
+        protocol: Protocol::PulsarBinaryV2,
+        summary: format!("PULSAR-BINARY-V2 ({})", super::bytes(payload.len() as u64)),
     }
 }
 
@@ -28,8 +28,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rabbitmq_stream() {
-        let r = dissect_rabbitmq_stream(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::RabbitmqStream);
+    fn test_pulsar_binary_v2() {
+        let r = dissect_pulsar_binary_v2(None, None, 0, 0, b"\x00\x01");
+        assert_eq!(r.protocol, Protocol::PulsarBinaryV2);
     }
 }

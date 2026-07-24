@@ -18817,6 +18817,79 @@ protocols! {
         aliases:   ["dapr_sidecar"],
         blurb:     "Dapr Sidecar-to-Sidecar Internal gRPC",
     }
+
+    RedpandaRpc {
+        doc:       "REDPANDA-RPC traffic.",
+        display:   "REDPANDA-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["redpanda_rpc"],
+        blurb:     "Redpanda (Kafka-compatible) Internal RPC",
+    }
+    PulsarBookkeeper {
+        doc:       "PULSAR-BOOKKEEPER traffic.",
+        display:   "PULSAR-BOOKKEEPER",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pulsar_bookkeeper"],
+        blurb:     "Apache Pulsar BookKeeper Replication Protocol",
+    }
+    PulsarBinaryV2 {
+        doc:       "PULSAR-BINARY-V2 traffic.",
+        display:   "PULSAR-BINARY-V2",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["pulsar_binary_v2"],
+        blurb:     "Apache Pulsar Binary Protocol v2",
+    }
+    NatsLeaf {
+        doc:       "NATS-LEAF traffic.",
+        display:   "NATS-LEAF",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nats_leaf"],
+        blurb:     "NATS Leaf Node Hub-Spoke Protocol",
+    }
+    NatsJetstreamInternal {
+        doc:       "NATS-JETSTREAM-INTERNAL traffic.",
+        display:   "NATS-JETSTREAM-INTERNAL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nats_jetstream_internal"],
+        blurb:     "JetStream Internal Stream Replication",
+    }
+    Amqp10Management {
+        doc:       "AMQP-1-0-MANAGEMENT traffic.",
+        display:   "AMQP-1-0-MANAGEMENT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["amqp_1_0_management"],
+        blurb:     "AMQP 1.0 Management Extension",
+    }
+    KafkaKraft {
+        doc:       "KAFKA-KRAFT traffic.",
+        display:   "KAFKA-KRAFT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["kafka_kraft"],
+        blurb:     "Apache Kafka KRaft Consensus Metadata Protocol",
+    }
+    KafkaZkMigration {
+        doc:       "KAFKA-ZK-MIGRATION traffic.",
+        display:   "KAFKA-ZK-MIGRATION",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["kafka_zk_migration"],
+        blurb:     "Kafka ZooKeeper-to-KRaft Migration Bridge",
+    }
 }
 
 impl std::fmt::Display for Protocol {

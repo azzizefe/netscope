@@ -992,3 +992,17 @@ fn _dissector_reachability_guard_mesh_41_50() {
         let _ = super::cilium_hubble::dissect_cilium_hubble;
         let _ = super::dapr_sidecar::dissect_dapr_sidecar;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_streaming_51_60() {
+        let _ = super::redpanda_rpc::dissect_redpanda_rpc;
+        let _ = super::pulsar_bookkeeper::dissect_pulsar_bookkeeper;
+        let _ = super::pulsar_binary_v2::dissect_pulsar_binary_v2;
+        let _ = super::nats_leaf::dissect_nats_leaf;
+        let _ = super::nats_jetstream_internal::dissect_nats_jetstream_internal;
+        let _ = super::rabbitmq_stream::dissect_rabbitmq_stream;
+        let _ = super::amqp_1_0_management::dissect_amqp_1_0_management;
+        let _ = super::solace_smf::dissect_solace_smf;
+        let _ = super::kafka_kraft::dissect_kafka_kraft;
+        let _ = super::kafka_zk_migration::dissect_kafka_zk_migration;
+}
