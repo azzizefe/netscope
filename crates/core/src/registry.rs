@@ -569,7 +569,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
-        aliases:   [],
+        aliases:   ["monero"],
         blurb:     "Monero Cryptocurrency P2P Protocol",
     }
     MqBase {
