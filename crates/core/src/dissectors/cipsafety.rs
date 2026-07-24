@@ -18,7 +18,7 @@ pub fn dissect_cipsafety(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Cipsafety,
+        protocol: Protocol::CipSafety,
         summary: format!("CIP Safety ({})", super::bytes(payload.len() as u64)),
     }
 }
@@ -30,6 +30,6 @@ mod tests {
     #[test]
     fn test_cipsafety() {
         let r = dissect_cipsafety(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::Cipsafety);
+        assert_eq!(r.protocol, Protocol::CipSafety);
     }
 }

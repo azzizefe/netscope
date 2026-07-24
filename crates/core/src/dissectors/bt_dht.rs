@@ -18,7 +18,7 @@ pub fn dissect_bt_dht(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::BtDht,
+        protocol: Protocol::Dht,
         summary: format!("BitTorrent DHT ({})", super::bytes(payload.len() as u64)),
     }
 }
@@ -30,6 +30,6 @@ mod tests {
     #[test]
     fn test_bt_dht() {
         let r = dissect_bt_dht(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::BtDht);
+        assert_eq!(r.protocol, Protocol::Dht);
     }
 }

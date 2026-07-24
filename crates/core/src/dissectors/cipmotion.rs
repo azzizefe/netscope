@@ -18,7 +18,7 @@ pub fn dissect_cipmotion(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Cipmotion,
+        protocol: Protocol::CipMotion,
         summary: format!("CIP Motion ({})", super::bytes(payload.len() as u64)),
     }
 }
@@ -30,6 +30,6 @@ mod tests {
     #[test]
     fn test_cipmotion() {
         let r = dissect_cipmotion(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::Cipmotion);
+        assert_eq!(r.protocol, Protocol::CipMotion);
     }
 }
