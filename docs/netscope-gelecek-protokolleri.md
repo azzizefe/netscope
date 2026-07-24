@@ -71,18 +71,18 @@
 
 | | # | Protokol | Açıklama |
 |---|---|---|---|
-| [ ] | 29 | `connect_rpc` | Buf Connect protocol — gRPC-compatible HTTP/1.1 + HTTP/2 |
-| [ ] | 30 | `twirp_v7` | Twirp (Twitch RPC) Protobuf over HTTP/1.1 v7 |
-| [ ] | 31 | `twirp_v8` | Twirp v8 with streaming support |
-| [ ] | 32 | `rpcx` | rpcx — Go microservice RPC framework wire format |
-| [ ] | 33 | `tars_jce` | Tencent Tars JCE encoding protocol |
-| [ ] | 34 | `tars_wup` | Tencent Tars WUP (UniPacket) protocol |
-| [ ] | 35 | `dubbo3_triple` | Apache Dubbo3 Triple protocol (gRPC-compatible) |
-| [ ] | 36 | `brpc_thrift` | Baidu brpc Thrift protocol |
-| [ ] | 37 | `brpc_nshead` | Baidu brpc nshead protocol |
-| [ ] | 38 | `motan2` | Weibo Motan2 RPC binary protocol |
-| [ ] | 39 | `sofa_rpc_bolt` | Ant Group SOFARPC Bolt protocol |
-| [ ] | 40 | `kitex_ttheader` | ByteDance Kitex TTHeader protocol |
+| [x] | 29 | `connect_rpc` | Buf Connect protocol — gRPC-compatible HTTP/1.1 + HTTP/2 |
+| [x] | 30 | `twirp_v7` | Twirp (Twitch RPC) Protobuf over HTTP/1.1 v7 |
+| [x] | 31 | `twirp_v8` | Twirp v8 with streaming support |
+| [x] | 32 | `rpcx` | rpcx — Go microservice RPC framework wire format |
+| [x] | 33 | `tars_jce` | Tencent Tars JCE encoding protocol |
+| [x] | 34 | `tars_wup` | Tencent Tars WUP (UniPacket) protocol |
+| [x] | 35 | `dubbo3_triple` | Apache Dubbo3 Triple protocol (gRPC-compatible) |
+| [x] | 36 | `brpc_thrift` | Baidu brpc Thrift protocol |
+| [x] | 37 | `brpc_nshead` | Baidu brpc nshead protocol |
+| [x] | 38 | `motan2` | Weibo Motan2 RPC binary protocol |
+| [x] | 39 | `sofa_rpc_bolt` | Ant Group SOFARPC Bolt protocol |
+| [x] | 40 | `kitex_ttheader` | ByteDance Kitex TTHeader protocol |
 
 ### 1.5 Service Mesh / Sidecar (10 adet)
 

@@ -962,3 +962,19 @@ fn _dissector_reachability_guard_azure_23_28() {
         let _ = super::cosmos_db_transport::dissect_cosmos_db_transport;
         let _ = super::azure_akv_rpc::dissect_azure_akv_rpc;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_rpc_29_40() {
+        let _ = super::connect_rpc::dissect_connect_rpc;
+        let _ = super::twirp_v7::dissect_twirp_v7;
+        let _ = super::twirp_v8::dissect_twirp_v8;
+        let _ = super::rpcx::dissect_rpcx;
+        let _ = super::tars_jce::dissect_tars_jce;
+        let _ = super::tars_wup::dissect_tars_wup;
+        let _ = super::dubbo3_triple::dissect_dubbo3_triple;
+        let _ = super::brpc_thrift::dissect_brpc_thrift;
+        let _ = super::brpc_nshead::dissect_brpc_nshead;
+        let _ = super::motan2::dissect_motan2;
+        let _ = super::sofa_rpc_bolt::dissect_sofa_rpc_bolt;
+        let _ = super::kitex_ttheader::dissect_kitex_ttheader;
+}

@@ -6694,3 +6694,16 @@ pub mod azure_rdma_smb;
 pub mod azure_sdn_policy;
 pub mod cosmos_db_transport;
 pub mod azure_akv_rpc;
+
+pub mod connect_rpc;
+pub mod twirp_v7;
+pub mod twirp_v8;
+pub mod rpcx;
+pub mod tars_jce;
+pub mod tars_wup;
+pub mod dubbo3_triple;
+pub mod brpc_thrift;
+pub mod brpc_nshead;
+pub mod motan2;
+pub mod sofa_rpc_bolt;
+pub mod kitex_ttheader;

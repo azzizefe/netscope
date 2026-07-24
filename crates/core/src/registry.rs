@@ -18617,6 +18617,115 @@ protocols! {
         aliases:   ["azure_akv_rpc"],
         blurb:     "Azure Key Vault Internal HSM RPC",
     }
+
+    ConnectRpc {
+        doc:       "CONNECT-RPC traffic.",
+        display:   "CONNECT-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["connect_rpc"],
+        blurb:     "Buf Connect Protocol (gRPC-compatible HTTP/1.1 + HTTP/2)",
+    }
+    TwirpV7 {
+        doc:       "TWIRP-V7 traffic.",
+        display:   "TWIRP-V7",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["twirp_v7"],
+        blurb:     "Twirp Protobuf over HTTP/1.1 v7",
+    }
+    TwirpV8 {
+        doc:       "TWIRP-V8 traffic.",
+        display:   "TWIRP-V8",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["twirp_v8"],
+        blurb:     "Twirp v8 with Streaming Support",
+    }
+    Rpcx {
+        doc:       "RPCX traffic.",
+        display:   "RPCX",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rpcx"],
+        blurb:     "rpcx Go Microservice RPC Framework Wire Format",
+    }
+    TarsJce {
+        doc:       "TARS-JCE traffic.",
+        display:   "TARS-JCE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tars_jce"],
+        blurb:     "Tencent Tars JCE Encoding Protocol",
+    }
+    TarsWup {
+        doc:       "TARS-WUP traffic.",
+        display:   "TARS-WUP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tars_wup"],
+        blurb:     "Tencent Tars WUP (UniPacket) Protocol",
+    }
+    Dubbo3Triple {
+        doc:       "DUBBO3-TRIPLE traffic.",
+        display:   "DUBBO3-TRIPLE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dubbo3_triple"],
+        blurb:     "Apache Dubbo3 Triple Protocol",
+    }
+    BrpcThrift {
+        doc:       "BRPC-THRIFT traffic.",
+        display:   "BRPC-THRIFT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["brpc_thrift"],
+        blurb:     "Baidu brpc Thrift Protocol",
+    }
+    BrpcNshead {
+        doc:       "BRPC-NSHEAD traffic.",
+        display:   "BRPC-NSHEAD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["brpc_nshead"],
+        blurb:     "Baidu brpc nshead Protocol",
+    }
+    Motan2 {
+        doc:       "MOTAN2 traffic.",
+        display:   "MOTAN2",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["motan2"],
+        blurb:     "Weibo Motan2 RPC Binary Protocol",
+    }
+    SofaRpcBolt {
+        doc:       "SOFA-RPC-BOLT traffic.",
+        display:   "SOFA-RPC-BOLT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sofa_rpc_bolt"],
+        blurb:     "Ant Group SOFARPC Bolt Protocol",
+    }
+    KitexTtheader {
+        doc:       "KITEX-TTHEADER traffic.",
+        display:   "KITEX-TTHEADER",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["kitex_ttheader"],
+        blurb:     "ByteDance Kitex TTHeader Protocol",
+    }
 }
 
 impl std::fmt::Display for Protocol {
