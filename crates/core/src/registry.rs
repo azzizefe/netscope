@@ -18890,6 +18890,115 @@ protocols! {
         aliases:   ["kafka_zk_migration"],
         blurb:     "Kafka ZooKeeper-to-KRaft Migration Bridge",
     }
+
+    CloudflareWarp {
+        doc:       "CLOUDFLARE-WARP traffic.",
+        display:   "CLOUDFLARE-WARP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cloudflare_warp"],
+        blurb:     "Cloudflare WARP Tunneling Protocol",
+    }
+    CloudflareQuiche {
+        doc:       "CLOUDFLARE-QUICHE traffic.",
+        display:   "CLOUDFLARE-QUICHE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cloudflare_quiche"],
+        blurb:     "Cloudflare QUICHE Internal Extensions",
+    }
+    FastlyEdgeRpc {
+        doc:       "FASTLY-EDGE-RPC traffic.",
+        display:   "FASTLY-EDGE-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["fastly_edge_rpc"],
+        blurb:     "Fastly Compute@Edge Internal Edge RPC",
+    }
+    FlyIoProxy {
+        doc:       "FLY-IO-PROXY traffic.",
+        display:   "FLY-IO-PROXY",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["fly_io_proxy"],
+        blurb:     "Fly.io Fly Proxy TCP Routing Protocol",
+    }
+    VercelEdgeRuntime {
+        doc:       "VERCEL-EDGE-RUNTIME traffic.",
+        display:   "VERCEL-EDGE-RUNTIME",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vercel_edge_runtime"],
+        blurb:     "Vercel Edge Runtime Sandbox IPC",
+    }
+    DenoDeployIsolate {
+        doc:       "DENO-DEPLOY-ISOLATE traffic.",
+        display:   "DENO-DEPLOY-ISOLATE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["deno_deploy_isolate"],
+        blurb:     "Deno Deploy Isolate Message Passing",
+    }
+    CloudflareDurableObject {
+        doc:       "CLOUDFLARE-DURABLE-OBJECT traffic.",
+        display:   "CLOUDFLARE-DURABLE-OBJECT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cloudflare_durable_object"],
+        blurb:     "Cloudflare Durable Object Global Coordination",
+    }
+    WasmtimeWasiNn {
+        doc:       "WASMTIME-WASI-NN traffic.",
+        display:   "WASMTIME-WASI-NN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wasmtime_wasi_nn"],
+        blurb:     "Wasmtime WASI-NN Inference RPC",
+    }
+    Wagi {
+        doc:       "WAGI traffic.",
+        display:   "WAGI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wagi"],
+        blurb:     "WebAssembly Gateway Interface Protocol",
+    }
+    SpinTriggerHttp {
+        doc:       "SPIN-TRIGGER-HTTP traffic.",
+        display:   "SPIN-TRIGGER-HTTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["spin_trigger_http"],
+        blurb:     "Fermyon Spin Trigger-to-Wasm ABI",
+    }
+    AkamaiGhostRpc {
+        doc:       "AKAMAI-GHOST-RPC traffic.",
+        display:   "AKAMAI-GHOST-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["akamai_ghost_rpc"],
+        blurb:     "Akamai Ghost Internal Edge Server RPC",
+    }
+    LambdaAtEdgeRpc {
+        doc:       "LAMBDA-AT-EDGE-RPC traffic.",
+        display:   "LAMBDA-AT-EDGE-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lambda_at_edge_rpc"],
+        blurb:     "CloudFront Lambda@Edge Internal Invoke",
+    }
 }
 
 impl std::fmt::Display for Protocol {

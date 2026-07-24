@@ -1006,3 +1006,19 @@ fn _dissector_reachability_guard_streaming_51_60() {
         let _ = super::kafka_kraft::dissect_kafka_kraft;
         let _ = super::kafka_zk_migration::dissect_kafka_zk_migration;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_edge_61_72() {
+        let _ = super::cloudflare_warp::dissect_cloudflare_warp;
+        let _ = super::cloudflare_quiche::dissect_cloudflare_quiche;
+        let _ = super::fastly_edge_rpc::dissect_fastly_edge_rpc;
+        let _ = super::fly_io_proxy::dissect_fly_io_proxy;
+        let _ = super::vercel_edge_runtime::dissect_vercel_edge_runtime;
+        let _ = super::deno_deploy_isolate::dissect_deno_deploy_isolate;
+        let _ = super::cloudflare_durable_object::dissect_cloudflare_durable_object;
+        let _ = super::wasmtime_wasi_nn::dissect_wasmtime_wasi_nn;
+        let _ = super::wagi::dissect_wagi;
+        let _ = super::spin_trigger_http::dissect_spin_trigger_http;
+        let _ = super::akamai_ghost_rpc::dissect_akamai_ghost_rpc;
+        let _ = super::lambda_at_edge_rpc::dissect_lambda_at_edge_rpc;
+}

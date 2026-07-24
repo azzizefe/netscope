@@ -6727,3 +6727,16 @@ pub mod nats_jetstream_internal;
 pub mod amqp_1_0_management;
 pub mod kafka_kraft;
 pub mod kafka_zk_migration;
+
+pub mod cloudflare_warp;
+pub mod cloudflare_quiche;
+pub mod fastly_edge_rpc;
+pub mod fly_io_proxy;
+pub mod vercel_edge_runtime;
+pub mod deno_deploy_isolate;
+pub mod cloudflare_durable_object;
+pub mod wasmtime_wasi_nn;
+pub mod wagi;
+pub mod spin_trigger_http;
+pub mod akamai_ghost_rpc;
+pub mod lambda_at_edge_rpc;

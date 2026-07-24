@@ -118,18 +118,18 @@
 
 | | # | Protokol | Açıklama |
 |---|---|---|---|
-| [ ] | 61 | `cloudflare_warp` | Cloudflare WARP tunneling protocol (WireGuard fork) |
-| [ ] | 62 | `cloudflare_quiche` | Cloudflare QUICHE internal extensions |
-| [ ] | 63 | `fastly_edge_rpc` | Fastly Compute@Edge internal edge RPC |
-| [ ] | 64 | `fly_io_proxy` | Fly.io Fly Proxy TCP routing protocol |
-| [ ] | 65 | `vercel_edge_runtime` | Vercel Edge Runtime sandbox IPC |
-| [ ] | 66 | `deno_deploy_isolate` | Deno Deploy isolate-to-isolate message passing |
-| [ ] | 67 | `cloudflare_durable_object` | Cloudflare Durable Object global coordination |
-| [ ] | 68 | `wasmtime_wasi_nn` | Wasmtime WASI-NN inference RPC |
-| [ ] | 69 | `wagi` | WebAssembly Gateway Interface protocol |
-| [ ] | 70 | `spin_trigger_http` | Fermyon Spin trigger-to-wasm ABI |
-| [ ] | 71 | `akamai_ghost_rpc` | Akamai Ghost internal edge server RPC |
-| [ ] | 72 | `lambda@edge_rpc` | CloudFront Lambda@Edge internal invoke |
+| [x] | 61 | `cloudflare_warp` | Cloudflare WARP tunneling protocol (WireGuard fork) |
+| [x] | 62 | `cloudflare_quiche` | Cloudflare QUICHE internal extensions |
+| [x] | 63 | `fastly_edge_rpc` | Fastly Compute@Edge internal edge RPC |
+| [x] | 64 | `fly_io_proxy` | Fly.io Fly Proxy TCP routing protocol |
+| [x] | 65 | `vercel_edge_runtime` | Vercel Edge Runtime sandbox IPC |
+| [x] | 66 | `deno_deploy_isolate` | Deno Deploy isolate-to-isolate message passing |
+| [x] | 67 | `cloudflare_durable_object` | Cloudflare Durable Object global coordination |
+| [x] | 68 | `wasmtime_wasi_nn` | Wasmtime WASI-NN inference RPC |
+| [x] | 69 | `wagi` | WebAssembly Gateway Interface protocol |
+| [x] | 70 | `spin_trigger_http` | Fermyon Spin trigger-to-wasm ABI |
+| [x] | 71 | `akamai_ghost_rpc` | Akamai Ghost internal edge server RPC |
+| [x] | 72 | `lambda@edge_rpc` | CloudFront Lambda@Edge internal invoke |
 
 ### 1.8 Cloud DB Internal Protocols (13 adet)
 
