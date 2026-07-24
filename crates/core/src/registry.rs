@@ -17650,6 +17650,718 @@ protocols! {
         aliases:   ["uma"],
         blurb:     "UMA Protocol",
     }
+
+    UserEncap {
+        doc:       "USER-ENCAP traffic.",
+        display:   "USER-ENCAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["user_encap"],
+        blurb:     "USER-ENCAP Protocol",
+    }
+    Userlog {
+        doc:       "USERLOG traffic.",
+        display:   "USERLOG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["userlog"],
+        blurb:     "USERLOG Protocol",
+    }
+    Uts {
+        doc:       "UTS traffic.",
+        display:   "UTS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uts"],
+        blurb:     "UTS Protocol",
+    }
+    V120 {
+        doc:       "V120 traffic.",
+        display:   "V120",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["v120"],
+        blurb:     "V120 Protocol",
+    }
+    V150fw {
+        doc:       "V150FW traffic.",
+        display:   "V150FW",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["v150fw"],
+        blurb:     "V150FW Protocol",
+    }
+    V52 {
+        doc:       "V52 traffic.",
+        display:   "V52",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["v52"],
+        blurb:     "V52 Protocol",
+    }
+    V5dl {
+        doc:       "V5DL traffic.",
+        display:   "V5DL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["v5dl"],
+        blurb:     "V5DL Protocol",
+    }
+    V5ef {
+        doc:       "V5EF traffic.",
+        display:   "V5EF",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["v5ef"],
+        blurb:     "V5EF Protocol",
+    }
+    V5ua {
+        doc:       "V5UA traffic.",
+        display:   "V5UA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["v5ua"],
+        blurb:     "V5UA Protocol",
+    }
+    Vcdu {
+        doc:       "VCDU traffic.",
+        display:   "VCDU",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vcdu"],
+        blurb:     "VCDU Protocol",
+    }
+    Vicp {
+        doc:       "VICP traffic.",
+        display:   "VICP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vicp"],
+        blurb:     "VICP Protocol",
+    }
+    VjComp {
+        doc:       "VJ-COMP traffic.",
+        display:   "VJ-COMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vj_comp"],
+        blurb:     "VJ-COMP Protocol",
+    }
+    Vlan {
+        doc:       "VLAN traffic.",
+        display:   "VLAN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vlan"],
+        blurb:     "VLAN Protocol",
+    }
+    Vlp16 {
+        doc:       "VLP16 traffic.",
+        display:   "VLP16",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vlp16"],
+        blurb:     "VLP16 Protocol",
+    }
+    Vmlab {
+        doc:       "VMLAB traffic.",
+        display:   "VMLAB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vmlab"],
+        blurb:     "VMLAB Protocol",
+    }
+    VmwareHb {
+        doc:       "VMWARE-HB traffic.",
+        display:   "VMWARE-HB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vmware_hb"],
+        blurb:     "VMWARE-HB Protocol",
+    }
+    Vnc {
+        doc:       "VNC traffic.",
+        display:   "VNC Protocol",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vnc_proto"],
+        blurb:     "VNC Protocol",
+    }
+    Vntag {
+        doc:       "VNTAG traffic.",
+        display:   "VNTAG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vntag"],
+        blurb:     "VNTAG Protocol",
+    }
+    Vp8 {
+        doc:       "VP8 traffic.",
+        display:   "VP8",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vp8"],
+        blurb:     "VP8 Protocol",
+    }
+    Vp9 {
+        doc:       "VP9 traffic.",
+        display:   "VP9",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vp9"],
+        blurb:     "VP9 Protocol",
+    }
+    Vpp {
+        doc:       "VPP traffic.",
+        display:   "VPP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vpp"],
+        blurb:     "VPP Protocol",
+    }
+    Vrt {
+        doc:       "VRT traffic.",
+        display:   "VRT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vrt"],
+        blurb:     "VRT Protocol",
+    }
+    Vsip {
+        doc:       "VSIP traffic.",
+        display:   "VSIP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vsip"],
+        blurb:     "VSIP Protocol",
+    }
+    Vsock {
+        doc:       "VSOCK traffic.",
+        display:   "VSOCK",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vsock"],
+        blurb:     "VSOCK Protocol",
+    }
+    Vsomeip {
+        doc:       "VSOMEIP traffic.",
+        display:   "VSOMEIP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vsomeip"],
+        blurb:     "VSOMEIP Protocol",
+    }
+    Vssmonitoring {
+        doc:       "VSSMONITORING traffic.",
+        display:   "VSSMONITORING",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vssmonitoring"],
+        blurb:     "VSSMONITORING Protocol",
+    }
+    VuzeDht {
+        doc:       "VUZE-DHT traffic.",
+        display:   "VUZE-DHT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vuze_dht"],
+        blurb:     "VUZE-DHT Protocol",
+    }
+    Vxi11 {
+        doc:       "VXI11 traffic.",
+        display:   "VXI11",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vxi11"],
+        blurb:     "VXI11 Protocol",
+    }
+    Wai {
+        doc:       "WAI traffic.",
+        display:   "WAI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wai"],
+        blurb:     "WAI Protocol",
+    }
+    Wap {
+        doc:       "WAP traffic.",
+        display:   "WAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wap"],
+        blurb:     "WAP Protocol",
+    }
+    Wassp {
+        doc:       "WASSP traffic.",
+        display:   "WASSP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wassp"],
+        blurb:     "WASSP Protocol",
+    }
+    Waveagent {
+        doc:       "WAVEAGENT traffic.",
+        display:   "WAVEAGENT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["waveagent"],
+        blurb:     "WAVEAGENT Protocol",
+    }
+    Wcp {
+        doc:       "WCP traffic.",
+        display:   "WCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wcp"],
+        blurb:     "WCP Protocol",
+    }
+    WfleetHdlc {
+        doc:       "WFLEET-HDLC traffic.",
+        display:   "WFLEET-HDLC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wfleet_hdlc"],
+        blurb:     "WFLEET-HDLC Protocol",
+    }
+    Who {
+        doc:       "WHO traffic.",
+        display:   "WHO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["who"],
+        blurb:     "WHO Protocol",
+    }
+    WifiDisplay {
+        doc:       "WIFI-DISPLAY traffic.",
+        display:   "WIFI-DISPLAY",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wifi_display"],
+        blurb:     "WIFI-DISPLAY Protocol",
+    }
+    WifiDpp {
+        doc:       "WIFI-DPP traffic.",
+        display:   "WIFI-DPP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wifi_dpp"],
+        blurb:     "WIFI-DPP Protocol",
+    }
+    WifiNan {
+        doc:       "WIFI-NAN traffic.",
+        display:   "WIFI-NAN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wifi_nan"],
+        blurb:     "WIFI-NAN Protocol",
+    }
+    WifiP2p {
+        doc:       "WIFI-P2P traffic.",
+        display:   "WIFI-P2P",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wifi_p2p"],
+        blurb:     "WIFI-P2P Protocol",
+    }
+    WindowsCommon {
+        doc:       "WINDOWS-COMMON traffic.",
+        display:   "WINDOWS-COMMON",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["windows_common"],
+        blurb:     "WINDOWS-COMMON Protocol",
+    }
+    Winsrepl {
+        doc:       "WINSREPL traffic.",
+        display:   "WINSREPL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["winsrepl"],
+        blurb:     "WINSREPL Protocol",
+    }
+    Wlccp {
+        doc:       "WLCCP traffic.",
+        display:   "WLCCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wlccp"],
+        blurb:     "WLCCP Protocol",
+    }
+    Wmio {
+        doc:       "WMIO traffic.",
+        display:   "WMIO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wmio"],
+        blurb:     "WMIO Protocol",
+    }
+    Wps {
+        doc:       "WPS traffic.",
+        display:   "WPS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wps"],
+        blurb:     "WPS Protocol",
+    }
+    Wreth {
+        doc:       "WRETH traffic.",
+        display:   "WRETH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wreth"],
+        blurb:     "WRETH Protocol",
+    }
+    Wsmp {
+        doc:       "WSMP traffic.",
+        display:   "WSMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wsmp"],
+        blurb:     "WSMP Protocol",
+    }
+    Wsp {
+        doc:       "WSP traffic.",
+        display:   "WSP Protocol",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wsp_proto"],
+        blurb:     "WSP Protocol",
+    }
+    Wtls {
+        doc:       "WTLS traffic.",
+        display:   "WTLS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wtls"],
+        blurb:     "WTLS Protocol",
+    }
+    Wtp {
+        doc:       "WTP traffic.",
+        display:   "WTP Protocol",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["wtp_proto"],
+        blurb:     "WTP Protocol",
+    }
+    X25 {
+        doc:       "X25 traffic.",
+        display:   "X25",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["x25"],
+        blurb:     "X25 Protocol",
+    }
+    X29 {
+        doc:       "X29 traffic.",
+        display:   "X29",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["x29"],
+        blurb:     "X29 Protocol",
+    }
+    X75 {
+        doc:       "X75 traffic.",
+        display:   "X75",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["x75"],
+        blurb:     "X75 Protocol",
+    }
+    Xcsl {
+        doc:       "XCSL traffic.",
+        display:   "XCSL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xcsl"],
+        blurb:     "XCSL Protocol",
+    }
+    Xdlc {
+        doc:       "XDLC traffic.",
+        display:   "XDLC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xdlc"],
+        blurb:     "XDLC Protocol",
+    }
+    Xgt {
+        doc:       "XGT traffic.",
+        display:   "XGT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xgt"],
+        blurb:     "XGT Protocol",
+    }
+    Xip {
+        doc:       "XIP traffic.",
+        display:   "XIP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xip"],
+        blurb:     "XIP Protocol",
+    }
+    XipServal {
+        doc:       "XIP-SERVAL traffic.",
+        display:   "XIP-SERVAL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xip_serval"],
+        blurb:     "XIP-SERVAL Protocol",
+    }
+    Xmcp {
+        doc:       "XMCP traffic.",
+        display:   "XMCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xmcp"],
+        blurb:     "XMCP Protocol",
+    }
+    Xml {
+        doc:       "XML traffic.",
+        display:   "XML",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xml"],
+        blurb:     "XML Protocol",
+    }
+    XmppConference {
+        doc:       "XMPP-CONFERENCE traffic.",
+        display:   "XMPP-CONFERENCE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xmpp_conference"],
+        blurb:     "XMPP-CONFERENCE Protocol",
+    }
+    XmppCore {
+        doc:       "XMPP-CORE traffic.",
+        display:   "XMPP-CORE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xmpp_core"],
+        blurb:     "XMPP-CORE Protocol",
+    }
+    XmppGtalk {
+        doc:       "XMPP-GTALK traffic.",
+        display:   "XMPP-GTALK",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xmpp_gtalk"],
+        blurb:     "XMPP-GTALK Protocol",
+    }
+    XmppJingle {
+        doc:       "XMPP-JINGLE traffic.",
+        display:   "XMPP-JINGLE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xmpp_jingle"],
+        blurb:     "XMPP-JINGLE Protocol",
+    }
+    XmppOther {
+        doc:       "XMPP-OTHER traffic.",
+        display:   "XMPP-OTHER",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xmpp_other"],
+        blurb:     "XMPP-OTHER Protocol",
+    }
+    XmppUtils {
+        doc:       "XMPP-UTILS traffic.",
+        display:   "XMPP-UTILS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xmpp_utils"],
+        blurb:     "XMPP-UTILS Protocol",
+    }
+    Xot {
+        doc:       "XOT traffic.",
+        display:   "XOT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xot"],
+        blurb:     "XOT Protocol",
+    }
+    Xra {
+        doc:       "XRA traffic.",
+        display:   "XRA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xra"],
+        blurb:     "XRA Protocol",
+    }
+    Xti {
+        doc:       "XTI traffic.",
+        display:   "XTI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xti"],
+        blurb:     "XTI Protocol",
+    }
+    Xtp {
+        doc:       "XTP traffic.",
+        display:   "XTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xtp"],
+        blurb:     "XTP Protocol",
+    }
+    Xyplex {
+        doc:       "XYPLEX traffic.",
+        display:   "XYPLEX",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["xyplex"],
+        blurb:     "XYPLEX Protocol",
+    }
+    Yami {
+        doc:       "YAMI traffic.",
+        display:   "YAMI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["yami"],
+        blurb:     "YAMI Protocol",
+    }
+    Yhoo {
+        doc:       "YHOO traffic.",
+        display:   "YHOO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["yhoo"],
+        blurb:     "YHOO Protocol",
+    }
+    Ymsg {
+        doc:       "YMSG traffic.",
+        display:   "YMSG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ymsg"],
+        blurb:     "YMSG Protocol",
+    }
+    Z21 {
+        doc:       "Z21 traffic.",
+        display:   "Z21",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["z21"],
+        blurb:     "Z21 Protocol",
+    }
+    Z3950 {
+        doc:       "Z3950 traffic.",
+        display:   "Z3950",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["z3950"],
+        blurb:     "Z3950 Protocol",
+    }
+    Zebra {
+        doc:       "ZEBRA traffic.",
+        display:   "ZEBRA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["zebra"],
+        blurb:     "ZEBRA Protocol",
+    }
+    Zep {
+        doc:       "ZEP traffic.",
+        display:   "ZEP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["zep"],
+        blurb:     "ZEP Protocol",
+    }
+    Ziop {
+        doc:       "ZIOP traffic.",
+        display:   "ZIOP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ziop"],
+        blurb:     "ZIOP Protocol",
+    }
+    Zvt {
+        doc:       "ZVT traffic.",
+        display:   "ZVT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["zvt"],
+        blurb:     "ZVT Protocol",
+    }
 }
 
 impl std::fmt::Display for Protocol {
