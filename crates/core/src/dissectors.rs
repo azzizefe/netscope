@@ -1,3 +1,73 @@
+pub mod iwarp_mpa;
+pub mod ixiatrailer;
+pub mod ixveriwave;
+pub mod jdwp;
+pub mod jmirror;
+pub mod jpeg;
+pub mod json;
+pub mod json_3gpp;
+pub mod juniper;
+pub mod jxta;
+pub mod k12;
+pub mod kadm5;
+pub mod kdp;
+pub mod kdsp;
+pub mod kerberos4;
+pub mod kingfisher;
+pub mod kink;
+pub mod kismet;
+pub mod knet;
+pub mod knxip_decrypt;
+pub mod kpm_v2;
+pub mod kt;
+pub mod l1_events;
+pub mod lanforge;
+pub mod lapb;
+pub mod lapbether;
+pub mod lapd;
+pub mod lapdm;
+pub mod laplink;
+pub mod lapsat;
+pub mod lat;
+pub mod lbm;
+pub mod lbmc;
+pub mod lbmpdm;
+pub mod lbmpdmtcp;
+pub mod lbmr;
+pub mod lbmsrs;
+pub mod lbtrm;
+pub mod lbtru;
+pub mod lbttcp;
+pub mod lda_neo_trailer;
+pub mod ldss;
+pub mod lg8979;
+pub mod lge_monitor;
+pub mod link16;
+pub mod linx;
+pub mod lisp_data;
+pub mod lisp_tcp;
+pub mod lithionics;
+pub mod livewire;
+pub mod lix2;
+pub mod llc;
+pub mod llc_v1;
+pub mod llrp;
+pub mod lls;
+pub mod lls_slt;
+pub mod llt;
+pub mod lltd;
+pub mod lmi;
+pub mod lmp;
+pub mod lnet;
+pub mod lnpdqp;
+pub mod locamation_im;
+pub mod logcat;
+pub mod logcat_text;
+pub mod lon;
+pub mod loop_proto;
+pub mod loratap;
+pub mod lpp;
+pub mod lppa;
 pub mod idrp;
 pub mod igap;
 pub mod ike;
@@ -4288,6 +4358,76 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "iwarp_mpa",
+        "ixiatrailer",
+        "ixveriwave",
+        "jdwp",
+        "jmirror",
+        "jpeg",
+        "json",
+        "json_3gpp",
+        "juniper",
+        "jxta",
+        "k12",
+        "kadm5",
+        "kdp",
+        "kdsp",
+        "kerberos4",
+        "kingfisher",
+        "kink",
+        "kismet",
+        "knet",
+        "knxip_decrypt",
+        "kpm_v2",
+        "kt",
+        "l1_events",
+        "lanforge",
+        "lapb",
+        "lapbether",
+        "lapd",
+        "lapdm",
+        "laplink",
+        "lapsat",
+        "lat",
+        "lbm",
+        "lbmc",
+        "lbmpdm",
+        "lbmpdmtcp",
+        "lbmr",
+        "lbmsrs",
+        "lbtrm",
+        "lbtru",
+        "lbttcp",
+        "lda_neo_trailer",
+        "ldss",
+        "lg8979",
+        "lge_monitor",
+        "link16",
+        "linx",
+        "lisp_data",
+        "lisp_tcp",
+        "lithionics",
+        "livewire",
+        "lix2",
+        "llc",
+        "llc_v1",
+        "llrp",
+        "lls",
+        "lls_slt",
+        "llt",
+        "lltd",
+        "lmi",
+        "lmp",
+        "lnet",
+        "lnpdqp",
+        "locamation_im",
+        "logcat",
+        "logcat_text",
+        "lon",
+        "loop_proto",
+        "loratap",
+        "lpp",
+        "lppa",
         "idrp",
         "igap",
         "ike",
