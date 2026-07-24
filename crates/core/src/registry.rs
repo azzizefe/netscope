@@ -176,6 +176,600 @@ macro_rules! protocols {
 }
 
 protocols! {
+    Cose {
+        doc:       "COSE traffic.",
+        display:   "COSE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CBOR Object Signing and Encryption",
+    }
+    Cql {
+        doc:       "CQL traffic.",
+        display:   "CQL",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cassandra Query Language Protocol",
+    }
+    Cups {
+        doc:       "CUPS traffic.",
+        display:   "CUPS",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Common UNIX Printing System Protocol",
+    }
+    Data {
+        doc:       "DATA traffic.",
+        display:   "DATA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Generic Data Payload",
+    }
+    Dlt {
+        doc:       "DLT traffic.",
+        display:   "DLT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Diagnostic Log and Trace Protocol",
+    }
+    Cmip {
+        doc:       "CMIP traffic.",
+        display:   "CMIP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Common Management Information Protocol",
+    }
+    Cmpp {
+        doc:       "CMPP traffic.",
+        display:   "CMPP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "China Mobile Peer to Peer Protocol",
+    }
+    CoapEap {
+        doc:       "CoAP EAP traffic.",
+        display:   "CoAP EAP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["coap_eap"],
+        blurb:     "CoAP EAP Authentication Protocol",
+    }
+    Cola {
+        doc:       "COLA traffic.",
+        display:   "COLA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "COLA Protocol",
+    }
+    Communityid {
+        doc:       "Community ID traffic.",
+        display:   "Community ID",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["communityid"],
+        blurb:     "Community ID Flow Hashing",
+    }
+    Componentstatus {
+        doc:       "Component Status traffic.",
+        display:   "Component Status",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["componentstatus"],
+        blurb:     "Component Status Protocol",
+    }
+    Cops {
+        doc:       "COPS traffic.",
+        display:   "COPS",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Common Open Policy Service",
+    }
+    CorosyncTotemnet {
+        doc:       "Corosync TotemNET traffic.",
+        display:   "Corosync TotemNET",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["corosync_totemnet"],
+        blurb:     "Corosync TotemNET Protocol",
+    }
+    CorosyncTotemsrp {
+        doc:       "Corosync TotemSRP traffic.",
+        display:   "Corosync TotemSRP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["corosync_totemsrp"],
+        blurb:     "Corosync TotemSRP Protocol",
+    }
+    Coseventcomm {
+        doc:       "COSEventComm traffic.",
+        display:   "COSEventComm",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "COS Event Communication Protocol",
+    }
+    Cosine {
+        doc:       "CoSine traffic.",
+        display:   "CoSine",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CoSine Router Frame Protocol",
+    }
+    Cosnaming {
+        doc:       "CosNaming traffic.",
+        display:   "CosNaming",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CORBA CosNaming Protocol",
+    }
+    Cp2179 {
+        doc:       "CP2179 traffic.",
+        display:   "CP2179",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CP2179 Telecontrol Protocol",
+    }
+    Cpfi {
+        doc:       "CPFI traffic.",
+        display:   "CPFI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cross Point Frame Interface",
+    }
+    Cpha {
+        doc:       "CPHA traffic.",
+        display:   "CPHA",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Check Point High Availability Protocol",
+    }
+    CsmEncaps {
+        doc:       "CSM Encapsulation traffic.",
+        display:   "CSM Encapsulation",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["csm_encaps"],
+        blurb:     "CSM Encapsulation Protocol",
+    }
+    Csn1 {
+        doc:       "CSN.1 traffic.",
+        display:   "CSN.1",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["csn1"],
+        blurb:     "Concrete Syntax Notation One",
+    }
+    Ctdb {
+        doc:       "CTDB traffic.",
+        display:   "CTDB",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Clustered Trivial Database Protocol",
+    }
+    Cvspserver {
+        doc:       "CVS pserver traffic.",
+        display:   "CVS pserver",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["cvspserver"],
+        blurb:     "CVS pserver Protocol",
+    }
+    Daap {
+        doc:       "DAAP traffic.",
+        display:   "DAAP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Digital Audio Access Protocol",
+    }
+    Dap {
+        doc:       "DAP traffic.",
+        display:   "DAP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Directory Access Protocol",
+    }
+    Darwin {
+        doc:       "Darwin Streaming Server traffic.",
+        display:   "Darwin Streaming Server",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["darwin"],
+        blurb:     "Darwin Streaming Server Protocol",
+    }
+    DbLsp {
+        doc:       "Dropbox LSP traffic.",
+        display:   "Dropbox LSP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["db_lsp"],
+        blurb:     "Dropbox LAN Sync Protocol",
+    }
+    Dbus {
+        doc:       "D-Bus traffic.",
+        display:   "D-Bus",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["dbus"],
+        blurb:     "D-Bus Message Bus Protocol",
+    }
+    Dcc {
+        doc:       "DCC traffic.",
+        display:   "DCC",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Direct Client-to-Client Protocol",
+    }
+    Dcm {
+        doc:       "DCM traffic.",
+        display:   "DCM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "DCM Protocol",
+    }
+    DcpEtsi {
+        doc:       "DCP ETSI traffic.",
+        display:   "DCP ETSI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dcp_etsi"],
+        blurb:     "DCP ETSI Protocol",
+    }
+    Ddtp {
+        doc:       "DDTP traffic.",
+        display:   "DDTP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Dynamic DNS Update Protocol",
+    }
+    DecBpdu {
+        doc:       "DEC BPDU traffic.",
+        display:   "DEC BPDU",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dec_bpdu"],
+        blurb:     "DEC Bridge Protocol Data Unit",
+    }
+    DecDnart {
+        doc:       "DEC DNA Routing traffic.",
+        display:   "DEC DNA Routing",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dec_dnart"],
+        blurb:     "DECnet Digital Network Architecture Routing",
+    }
+    Dect {
+        doc:       "DECT traffic.",
+        display:   "DECT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Digital Enhanced Cordless Telecommunications",
+    }
+    DectDlc {
+        doc:       "DECT DLC traffic.",
+        display:   "DECT DLC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dect_dlc"],
+        blurb:     "DECT Data Link Control Layer",
+    }
+    DectMitelEth {
+        doc:       "DECT Mitel Ethernet traffic.",
+        display:   "DECT Mitel Ethernet",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dect_mitel_eth"],
+        blurb:     "DECT Mitel Ethernet Protocol",
+    }
+    DectMitelRfp {
+        doc:       "DECT Mitel RFP traffic.",
+        display:   "DECT Mitel RFP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dect_mitel_rfp"],
+        blurb:     "DECT Mitel Radio Fixed Part Protocol",
+    }
+    DectNr {
+        doc:       "DECT NR traffic.",
+        display:   "DECT NR",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dect_nr"],
+        blurb:     "DECT New Radio Protocol",
+    }
+    DectNwk {
+        doc:       "DECT NWK traffic.",
+        display:   "DECT NWK",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dect_nwk"],
+        blurb:     "DECT Network Layer Protocol",
+    }
+    Diameter3gpp {
+        doc:       "Diameter 3GPP traffic.",
+        display:   "Diameter 3GPP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["diameter_3gpp"],
+        blurb:     "Diameter 3GPP Extension",
+    }
+    DiffservMplsCommon {
+        doc:       "Diffserv MPLS Common traffic.",
+        display:   "Diffserv MPLS Common",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["diffserv_mpls_common"],
+        blurb:     "Diffserv MPLS Common Protocol",
+    }
+    Dis {
+        doc:       "DIS traffic.",
+        display:   "DIS",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Distributed Interactive Simulation",
+    }
+    Disp {
+        doc:       "DISP traffic.",
+        display:   "DISP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Directory Information Shadowing Protocol",
+    }
+    Distcc {
+        doc:       "distcc traffic.",
+        display:   "distcc",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Distributed C/C++ Compilation Protocol",
+    }
+    DjiUav {
+        doc:       "DJI UAV traffic.",
+        display:   "DJI UAV",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["dji_uav"],
+        blurb:     "DJI Drone Communication Protocol",
+    }
+    Dlep {
+        doc:       "DLEP traffic.",
+        display:   "DLEP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Dynamic Link Exchange Protocol",
+    }
+    Dlm3 {
+        doc:       "DLM3 traffic.",
+        display:   "DLM3",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Distributed Lock Manager v3",
+    }
+    Dmp {
+        doc:       "DMP traffic.",
+        display:   "DMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Direct Messaging Protocol",
+    }
+    Dnp {
+        doc:       "DNP traffic.",
+        display:   "DNP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Distributed Network Protocol",
+    }
+    DoIrp {
+        doc:       "DO IRP traffic.",
+        display:   "DO IRP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["do_irp"],
+        blurb:     "DO IRP Protocol",
+    }
+    Docsis {
+        doc:       "DOCSIS traffic.",
+        display:   "DOCSIS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Data Over Cable Service Interface Specification",
+    }
+    DocsisMacmgmt {
+        doc:       "DOCSIS MAC Management traffic.",
+        display:   "DOCSIS MAC Management",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["docsis_macmgmt"],
+        blurb:     "DOCSIS MAC Management Frames",
+    }
+    DocsisTlv {
+        doc:       "DOCSIS TLV traffic.",
+        display:   "DOCSIS TLV",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["docsis_tlv"],
+        blurb:     "DOCSIS TLV Data",
+    }
+    DocsisVendor {
+        doc:       "DOCSIS Vendor traffic.",
+        display:   "DOCSIS Vendor",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["docsis_vendor"],
+        blurb:     "DOCSIS Vendor Specific Frames",
+    }
+    Dof {
+        doc:       "DOF traffic.",
+        display:   "DOF",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "OpenDOF Protocol",
+    }
+    Dop {
+        doc:       "DOP traffic.",
+        display:   "DOP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Directory Operational Binding Management Protocol",
+    }
+    Dpaux {
+        doc:       "DP AUX traffic.",
+        display:   "DP AUX",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dpaux"],
+        blurb:     "DisplayPort AUX Channel",
+    }
+    Dpauxmon {
+        doc:       "DP AUX Mon traffic.",
+        display:   "DP AUX Mon",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dpauxmon"],
+        blurb:     "DisplayPort AUX Monitor",
+    }
+    Dplay {
+        doc:       "DirectPlay traffic.",
+        display:   "DirectPlay",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["dplay"],
+        blurb:     "DirectPlay Gaming Protocol",
+    }
+    Dpnet {
+        doc:       "DirectPlay Network traffic.",
+        display:   "DirectPlay Network",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["dpnet"],
+        blurb:     "DirectPlay Network Service",
+    }
+    Dpnss {
+        doc:       "DPNSS traffic.",
+        display:   "DPNSS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Digital Private Network Signalling System",
+    }
+    DpnssLink {
+        doc:       "DPNSS Link traffic.",
+        display:   "DPNSS Link",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dpnss_link"],
+        blurb:     "DPNSS Link Layer",
+    }
+    Drb {
+        doc:       "DRB traffic.",
+        display:   "DRB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Data Radio Bearer Protocol",
+    }
+    Dsi {
+        doc:       "DSI traffic.",
+        display:   "DSI",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Data Stream Interface",
+    }
     Bpdu {
         doc:       "BPDU traffic.",
         display:   "BPDU",
