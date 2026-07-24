@@ -1,3 +1,151 @@
+pub mod gmhdr;
+pub mod gmr1_bcch;
+pub mod gmr1_common;
+pub mod gmr1_dtap;
+pub mod gmr1_rach;
+pub mod gmr1_rr;
+pub mod gmrp;
+pub mod gpef;
+pub mod gquic;
+pub mod grebonding;
+pub mod grpc;
+pub mod gvrp;
+pub mod gvsp;
+pub mod hazelcast;
+pub mod hcrt;
+pub mod hdcp;
+pub mod hdcp2;
+pub mod hdfs;
+pub mod hdfsdata;
+pub mod hdmi;
+pub mod hi2operations;
+pub mod hicp;
+pub mod hipercontracer;
+pub mod hiqnet;
+pub mod hislip;
+pub mod homeplug;
+pub mod homeplug_av_vendor_vertexcom;
+pub mod homepna;
+pub mod hp_erm;
+pub mod hpext;
+pub mod hpfeeds;
+pub mod hpsw;
+pub mod hpteam;
+pub mod hsfz;
+pub mod hsr_prp_supervision;
+pub mod http_urlencoded;
+pub mod http3;
+pub mod hyperscsi;
+pub mod i2c;
+pub mod iana_oui;
+pub mod iapp;
+pub mod icap;
+pub mod icep;
+pub mod icmpv6;
+pub mod icp;
+pub mod icq;
+pub mod id3v2;
+pub mod idmp;
+pub mod idn;
+pub mod idp;
+pub mod dsp;
+pub mod dsr;
+pub mod dtcp_ip;
+pub mod dtpt;
+pub mod dua;
+pub mod dxl;
+pub mod e100;
+pub mod e164;
+pub mod e212;
+pub mod ebhscr;
+pub mod echo;
+pub mod ecmp;
+pub mod ecp;
+pub mod ecp_oui;
+pub mod edhoc;
+pub mod eero;
+pub mod egd;
+pub mod egnos_ems;
+pub mod ehdlc;
+pub mod ehs;
+pub mod eiss;
+pub mod elcom;
+pub mod elmi;
+pub mod enc;
+pub mod enrp;
+pub mod enttec;
+pub mod eobi;
+pub mod epl;
+pub mod epl_profile_parser;
+pub mod epl_v1;
+pub mod epmd;
+pub mod epon;
+pub mod erf;
+pub mod erldp;
+pub mod esio;
+pub mod esis;
+pub mod esun;
+pub mod etag;
+pub mod etch;
+pub mod eth;
+pub mod ethertype;
+pub mod eti;
+pub mod etv;
+pub mod etw;
+pub mod evrc;
+pub mod evs;
+pub mod exablaze;
+pub mod exec;
+pub mod exported_pdu;
+pub mod extreme;
+pub mod extreme_exeh;
+pub mod extrememesh;
+pub mod f5ethtrailer;
+pub mod fbzero;
+pub mod fc00;
+pub mod fddi;
+pub mod fefd;
+pub mod ff;
+pub mod fip;
+pub mod flexnet;
+pub mod flip;
+pub mod fmp;
+pub mod fmp_notify;
+pub mod fmtp;
+pub mod force10_oui;
+pub mod forces;
+pub mod fortinet_fgcp;
+pub mod fortinet_sso;
+pub mod foundry;
+pub mod fp_hint;
+pub mod fp_mux;
+pub mod fpp;
+pub mod fr;
+pub mod fractalgeneratorprotocol;
+pub mod frame;
+pub mod ftam;
+pub mod ftdi_ft;
+pub mod ftdi_mpsse;
+pub mod fw1;
+pub mod g723;
+pub mod gadu_gadu;
+pub mod gbcs;
+pub mod gcsna;
+pub mod gdb;
+pub mod gdsdb;
+pub mod gdt;
+pub mod ged125;
+pub mod geonw;
+pub mod gfp;
+pub mod gias;
+pub mod gift;
+pub mod giop;
+pub mod glow;
+pub mod gluster_cli;
+pub mod gluster_pmap;
+pub mod glusterd;
+pub mod glusterfs;
+pub mod glusterfs_hndsk;
 pub mod cmip;
 pub mod cmpp;
 pub mod coap_eap;
@@ -4090,6 +4238,156 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "gmhdr",
+        "gmr1_bcch",
+        "gmr1_common",
+        "gmr1_dtap",
+        "gmr1_rach",
+        "gmr1_rr",
+        "gmrp",
+        "gpef",
+        "gquic",
+        "grebonding",
+        "grpc",
+        "gvrp",
+        "gvsp",
+        "hazelcast",
+        "hcrt",
+        "hdcp",
+        "hdcp2",
+        "hdfs",
+        "hdfsdata",
+        "hdmi",
+        "hi2operations",
+        "hicp",
+        "hipercontracer",
+        "hiqnet",
+        "hislip",
+        "homeplug",
+        "homeplug_av_vendor_vertexcom",
+        "homepna",
+        "hp_erm",
+        "hpext",
+        "hpfeeds",
+        "hpsw",
+        "hpteam",
+        "hsfz",
+        "hsr_prp_supervision",
+        "http_urlencoded",
+        "http3",
+        "hyperscsi",
+        "i2c",
+        "iana_oui",
+        "iapp",
+        "icap",
+        "icep",
+        "icmpv6",
+        "icp",
+        "icq",
+        "id3v2",
+        "idmp",
+        "idn",
+        "idp",
+        "dsp",
+        "dsr",
+        "dtcp_ip",
+        "dtpt",
+        "dua",
+        "dxl",
+        "e100",
+        "e164",
+        "e1ap",
+        "e212",
+        "ebhscr",
+        "echo",
+        "ecmp",
+        "ecp",
+        "ecp_oui",
+        "edhoc",
+        "eero",
+        "egd",
+        "egnos_ems",
+        "ehdlc",
+        "ehs",
+        "eiss",
+        "elcom",
+        "elmi",
+        "enc",
+        "enrp",
+        "enttec",
+        "eobi",
+        "epl",
+        "epl_profile_parser",
+        "epl_v1",
+        "epmd",
+        "epon",
+        "erf",
+        "erldp",
+        "esio",
+        "esis",
+        "esun",
+        "etag",
+        "etch",
+        "eth",
+        "ethertype",
+        "eti",
+        "etv",
+        "etw",
+        "evrc",
+        "evs",
+        "exablaze",
+        "exec",
+        "exported_pdu",
+        "extreme",
+        "extreme_exeh",
+        "extrememesh",
+        "f1ap",
+        "f5ethtrailer",
+        "fbzero",
+        "fc00",
+        "fddi",
+        "fefd",
+        "ff",
+        "fip",
+        "flexnet",
+        "flip",
+        "fmp",
+        "fmp_notify",
+        "fmtp",
+        "force10_oui",
+        "forces",
+        "fortinet_fgcp",
+        "fortinet_sso",
+        "foundry",
+        "fp_hint",
+        "fp_mux",
+        "fpp",
+        "fr",
+        "fractalgeneratorprotocol",
+        "frame",
+        "ftam",
+        "ftdi_ft",
+        "ftdi_mpsse",
+        "fw1",
+        "g723",
+        "gadu_gadu",
+        "gbcs",
+        "gcsna",
+        "gdb",
+        "gdsdb",
+        "gdt",
+        "ged125",
+        "geonw",
+        "gfp",
+        "gias",
+        "gift",
+        "giop",
+        "glow",
+        "gluster_cli",
+        "gluster_pmap",
+        "glusterd",
+        "glusterfs",
+        "glusterfs_hndsk",
         "cmip",
         "cmpp",
         "coap_eap",
