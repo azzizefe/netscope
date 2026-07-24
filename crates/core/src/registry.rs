@@ -17028,6 +17028,628 @@ protocols! {
         aliases:   ["synphasor"],
         blurb:     "SYNPHASOR Protocol",
     }
+
+    SysdigEvent {
+        doc:       "SYSDIG-EVENT traffic.",
+        display:   "SYSDIG-EVENT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sysdig_event"],
+        blurb:     "SYSDIG-EVENT Protocol",
+    }
+    SystemdJournal {
+        doc:       "SYSTEMD-JOURNAL traffic.",
+        display:   "SYSTEMD-JOURNAL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["systemd_journal"],
+        blurb:     "SYSTEMD-JOURNAL Protocol",
+    }
+    T124 {
+        doc:       "T124 traffic.",
+        display:   "T124",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["t124"],
+        blurb:     "T124 Protocol",
+    }
+    T125 {
+        doc:       "T125 traffic.",
+        display:   "T125",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["t125"],
+        blurb:     "T125 Protocol",
+    }
+    T30 {
+        doc:       "T30 traffic.",
+        display:   "T30",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["t30"],
+        blurb:     "T30 Protocol",
+    }
+    T38 {
+        doc:       "T38 traffic.",
+        display:   "T38",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["t38"],
+        blurb:     "T38 Protocol",
+    }
+    Tali {
+        doc:       "TALI traffic.",
+        display:   "TALI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tali"],
+        blurb:     "TALI Protocol",
+    }
+    Tango {
+        doc:       "TANGO-PROTO traffic.",
+        display:   "TANGO-PROTO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tango_proto"],
+        blurb:     "TANGO-PROTO Protocol",
+    }
+    Tapa {
+        doc:       "TAPA traffic.",
+        display:   "TAPA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tapa"],
+        blurb:     "TAPA Protocol",
+    }
+    Tcpcl {
+        doc:       "TCPCL traffic.",
+        display:   "TCPCL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tcpcl"],
+        blurb:     "TCPCL Protocol",
+    }
+    Tcpros {
+        doc:       "TCPROS traffic.",
+        display:   "TCPROS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tcpros"],
+        blurb:     "TCPROS Protocol",
+    }
+    Tdmoe {
+        doc:       "TDMOE traffic.",
+        display:   "TDMOE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tdmoe"],
+        blurb:     "TDMOE Protocol",
+    }
+    Tdmop {
+        doc:       "TDMOP traffic.",
+        display:   "TDMOP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tdmop"],
+        blurb:     "TDMOP Protocol",
+    }
+    Teamspeak2 {
+        doc:       "TEAMSPEAK2 traffic.",
+        display:   "TEAMSPEAK2",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["teamspeak2"],
+        blurb:     "TEAMSPEAK2 Protocol",
+    }
+    Teap {
+        doc:       "TEAP traffic.",
+        display:   "TEAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["teap"],
+        blurb:     "TEAP Protocol",
+    }
+    Tecmp {
+        doc:       "TECMP traffic.",
+        display:   "TECMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tecmp"],
+        blurb:     "TECMP Protocol",
+    }
+    Teimanagement {
+        doc:       "TEIMANAGEMENT traffic.",
+        display:   "TEIMANAGEMENT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["teimanagement"],
+        blurb:     "TEIMANAGEMENT Protocol",
+    }
+    Teklink {
+        doc:       "TEKLINK traffic.",
+        display:   "TEKLINK",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["teklink"],
+        blurb:     "TEKLINK Protocol",
+    }
+    Telkonet {
+        doc:       "TELKONET traffic.",
+        display:   "TELKONET",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["telkonet"],
+        blurb:     "TELKONET Protocol",
+    }
+    Tetra {
+        doc:       "TETRA traffic.",
+        display:   "TETRA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tetra"],
+        blurb:     "TETRA Protocol",
+    }
+    TextMedia {
+        doc:       "TEXT-MEDIA traffic.",
+        display:   "TEXT-MEDIA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["text_media"],
+        blurb:     "TEXT-MEDIA Protocol",
+    }
+    Tfp {
+        doc:       "TFP traffic.",
+        display:   "TFP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tfp"],
+        blurb:     "TFP Protocol",
+    }
+    Thread {
+        doc:       "THREAD traffic.",
+        display:   "THREAD Protocol",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["thread_proto"],
+        blurb:     "THREAD Protocol",
+    }
+    Tipc {
+        doc:       "TIPC traffic.",
+        display:   "TIPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tipc"],
+        blurb:     "TIPC Protocol",
+    }
+    Tivoconnect {
+        doc:       "TIVOCONNECT traffic.",
+        display:   "TIVOCONNECT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tivoconnect"],
+        blurb:     "TIVOCONNECT Protocol",
+    }
+    TlsUtils {
+        doc:       "TLS-UTILS traffic.",
+        display:   "TLS-UTILS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tls_utils"],
+        blurb:     "TLS-UTILS Protocol",
+    }
+    Tn3270 {
+        doc:       "TN3270 traffic.",
+        display:   "TN3270",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tn3270"],
+        blurb:     "TN3270 Protocol",
+    }
+    Tn5250 {
+        doc:       "TN5250 traffic.",
+        display:   "TN5250",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tn5250"],
+        blurb:     "TN5250 Protocol",
+    }
+    Tnef {
+        doc:       "TNEF traffic.",
+        display:   "TNEF",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tnef"],
+        blurb:     "TNEF Protocol",
+    }
+    Tpkt {
+        doc:       "TPKT traffic.",
+        display:   "TPKT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tpkt"],
+        blurb:     "TPKT Protocol",
+    }
+    TplinkSmarthome {
+        doc:       "TPLINK-SMARTHOME traffic.",
+        display:   "TPLINK-SMARTHOME",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tplink_smarthome"],
+        blurb:     "TPLINK-SMARTHOME Protocol",
+    }
+    Tpm20 {
+        doc:       "TPM20 traffic.",
+        display:   "TPM20",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tpm20"],
+        blurb:     "TPM20 Protocol",
+    }
+    Tpncp {
+        doc:       "TPNCP traffic.",
+        display:   "TPNCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tpncp"],
+        blurb:     "TPNCP Protocol",
+    }
+    Tr {
+        doc:       "TR traffic.",
+        display:   "TR",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tr"],
+        blurb:     "TR Protocol",
+    }
+    Trdp {
+        doc:       "TRDP traffic.",
+        display:   "TRDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["trdp"],
+        blurb:     "TRDP Protocol",
+    }
+    Trel {
+        doc:       "TREL traffic.",
+        display:   "TREL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["trel"],
+        blurb:     "TREL Protocol",
+    }
+    Trmac {
+        doc:       "TRMAC traffic.",
+        display:   "TRMAC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["trmac"],
+        blurb:     "TRMAC Protocol",
+    }
+    Trueconf {
+        doc:       "TRUECONF traffic.",
+        display:   "TRUECONF",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["trueconf"],
+        blurb:     "TRUECONF Protocol",
+    }
+    Tsdns {
+        doc:       "TSDNS traffic.",
+        display:   "TSDNS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tsdns"],
+        blurb:     "TSDNS Protocol",
+    }
+    Tte {
+        doc:       "TTE traffic.",
+        display:   "TTE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tte"],
+        blurb:     "TTE Protocol",
+    }
+    TtePcf {
+        doc:       "TTE-PCF traffic.",
+        display:   "TTE-PCF",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tte_pcf"],
+        blurb:     "TTE-PCF Protocol",
+    }
+    Ttl {
+        doc:       "TTL traffic.",
+        display:   "TTL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ttl"],
+        blurb:     "TTL Protocol",
+    }
+    Turbocell {
+        doc:       "TURBOCELL traffic.",
+        display:   "TURBOCELL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["turbocell"],
+        blurb:     "TURBOCELL Protocol",
+    }
+    Turnchannel {
+        doc:       "TURNCHANNEL traffic.",
+        display:   "TURNCHANNEL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["turnchannel"],
+        blurb:     "TURNCHANNEL Protocol",
+    }
+    Tuxedo {
+        doc:       "TUXEDO traffic.",
+        display:   "TUXEDO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tuxedo"],
+        blurb:     "TUXEDO Protocol",
+    }
+    Tzsp {
+        doc:       "TZSP traffic.",
+        display:   "TZSP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tzsp"],
+        blurb:     "TZSP Protocol",
+    }
+    U3v {
+        doc:       "U3V traffic.",
+        display:   "U3V",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["u3v"],
+        blurb:     "U3V Protocol",
+    }
+    Ua {
+        doc:       "UA traffic.",
+        display:   "UA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ua"],
+        blurb:     "UA Protocol",
+    }
+    Ua3g {
+        doc:       "UA3G traffic.",
+        display:   "UA3G",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ua3g"],
+        blurb:     "UA3G Protocol",
+    }
+    Uasip {
+        doc:       "UASIP traffic.",
+        display:   "UASIP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uasip"],
+        blurb:     "UASIP Protocol",
+    }
+    Uaudp {
+        doc:       "UAUDP traffic.",
+        display:   "UAUDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uaudp"],
+        blurb:     "UAUDP Protocol",
+    }
+    UavcanCan {
+        doc:       "UAVCAN-CAN traffic.",
+        display:   "UAVCAN-CAN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uavcan_can"],
+        blurb:     "UAVCAN-CAN Protocol",
+    }
+    UavcanDsdl {
+        doc:       "UAVCAN-DSDL traffic.",
+        display:   "UAVCAN-DSDL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uavcan_dsdl"],
+        blurb:     "UAVCAN-DSDL Protocol",
+    }
+    Ubdp {
+        doc:       "UBDP traffic.",
+        display:   "UBDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ubdp"],
+        blurb:     "UBDP Protocol",
+    }
+    Ubertooth {
+        doc:       "UBERTOOTH traffic.",
+        display:   "UBERTOOTH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ubertooth"],
+        blurb:     "UBERTOOTH Protocol",
+    }
+    Ubx {
+        doc:       "UBX traffic.",
+        display:   "UBX",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ubx"],
+        blurb:     "UBX Protocol",
+    }
+    UbxGalileoE1bInav {
+        doc:       "UBX-GALILEO-E1B-INAV traffic.",
+        display:   "UBX-GALILEO-E1B-INAV",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ubx_galileo_e1b_inav"],
+        blurb:     "UBX-GALILEO-E1B-INAV Protocol",
+    }
+    UbxGpsL1Lnav {
+        doc:       "UBX-GPS-L1-LNAV traffic.",
+        display:   "UBX-GPS-L1-LNAV",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ubx_gps_l1_lnav"],
+        blurb:     "UBX-GPS-L1-LNAV Protocol",
+    }
+    Uci {
+        doc:       "UCI traffic.",
+        display:   "UCI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uci"],
+        blurb:     "UCI Protocol",
+    }
+    Ucp {
+        doc:       "UCP traffic.",
+        display:   "UCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ucp"],
+        blurb:     "UCP Protocol",
+    }
+    Udpcp {
+        doc:       "UDPCP traffic.",
+        display:   "UDPCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["udpcp"],
+        blurb:     "UDPCP Protocol",
+    }
+    Udt {
+        doc:       "UDT traffic.",
+        display:   "UDT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["udt"],
+        blurb:     "UDT Protocol",
+    }
+    Uet {
+        doc:       "UET traffic.",
+        display:   "UET",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uet"],
+        blurb:     "UET Protocol",
+    }
+    Uftp {
+        doc:       "UFTP traffic.",
+        display:   "UFTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uftp"],
+        blurb:     "UFTP Protocol",
+    }
+    Uftp4 {
+        doc:       "UFTP4 traffic.",
+        display:   "UFTP4",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uftp4"],
+        blurb:     "UFTP4 Protocol",
+    }
+    Uftp5 {
+        doc:       "UFTP5 traffic.",
+        display:   "UFTP5",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uftp5"],
+        blurb:     "UFTP5 Protocol",
+    }
+    Uhd {
+        doc:       "UHD traffic.",
+        display:   "UHD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uhd"],
+        blurb:     "UHD Protocol",
+    }
+    Ulp {
+        doc:       "ULP traffic.",
+        display:   "ULP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ulp"],
+        blurb:     "ULP Protocol",
+    }
+    Uma {
+        doc:       "UMA traffic.",
+        display:   "UMA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["uma"],
+        blurb:     "UMA Protocol",
+    }
 }
 
 impl std::fmt::Display for Protocol {
