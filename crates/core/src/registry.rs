@@ -16436,11 +16436,11 @@ protocols! {
     }
     Sap {
         doc:       "SAP traffic.",
-        display:   "SAP",
+        display:   "SAP Protocol",
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   ["sap"],
+        aliases:   ["sap_proto"],
         blurb:     "SAP Protocol",
     }
     Sasp {
@@ -16895,11 +16895,11 @@ protocols! {
     }
     Spnego {
         doc:       "SPNEGO traffic.",
-        display:   "SPNEGO",
+        display:   "SPNEGO Protocol",
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        aliases:   ["spnego"],
+        aliases:   ["spnego_proto"],
         blurb:     "SPNEGO Protocol",
     }
     Spp {
