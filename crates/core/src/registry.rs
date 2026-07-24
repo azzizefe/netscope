@@ -176,6 +176,618 @@ macro_rules! protocols {
 }
 
 protocols! {
+    IwarpMpa {
+        doc:       "iWARP MPA traffic.",
+        display:   "iWARP MPA",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["iwarp_mpa"],
+        blurb:     "iWARP Marker PDU Aligned Framing",
+    }
+    Ixiatrailer {
+        doc:       "Ixia Trailer traffic.",
+        display:   "Ixia Trailer",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ixiatrailer"],
+        blurb:     "Ixia Packet Trailer Protocol",
+    }
+    Ixveriwave {
+        doc:       "Ixia VeriWave traffic.",
+        display:   "Ixia VeriWave",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ixveriwave"],
+        blurb:     "Ixia VeriWave Test Protocol",
+    }
+    Jdwp {
+        doc:       "JDWP traffic.",
+        display:   "JDWP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Java Debug Wire Protocol",
+    }
+    Jmirror {
+        doc:       "Juniper J-Mirror traffic.",
+        display:   "Juniper J-Mirror",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["jmirror"],
+        blurb:     "Juniper Packet Mirroring Protocol",
+    }
+    Jpeg {
+        doc:       "JPEG Payload traffic.",
+        display:   "JPEG Payload",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["jpeg"],
+        blurb:     "JPEG Image Stream Payload",
+    }
+    Json {
+        doc:       "JSON traffic.",
+        display:   "JSON",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "JavaScript Object Notation Data",
+    }
+    Json3gpp {
+        doc:       "3GPP JSON traffic.",
+        display:   "3GPP JSON",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["json_3gpp"],
+        blurb:     "3GPP JSON Data Protocol",
+    }
+    Juniper {
+        doc:       "Juniper Header traffic.",
+        display:   "Juniper Header",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["juniper"],
+        blurb:     "Juniper Networks Packet Header",
+    }
+    Jxta {
+        doc:       "JXTA traffic.",
+        display:   "JXTA",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "JXTA P2P Networking Protocol",
+    }
+    K12 {
+        doc:       "K12 Text Format traffic.",
+        display:   "K12 Text Format",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["k12"],
+        blurb:     "Tektronix K12 Text Capture Format",
+    }
+    Kadm5 {
+        doc:       "Kerberos Admin v5 traffic.",
+        display:   "Kerberos Admin v5",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["kadm5"],
+        blurb:     "Kerberos Administration Protocol v5",
+    }
+    Kdp {
+        doc:       "KDP traffic.",
+        display:   "KDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "KDP Protocol",
+    }
+    Kdsp {
+        doc:       "KDSP traffic.",
+        display:   "KDSP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "KDSP Protocol",
+    }
+    Kerberos4 {
+        doc:       "Kerberos v4 traffic.",
+        display:   "Kerberos v4",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["kerberos4"],
+        blurb:     "Kerberos Authentication Protocol v4",
+    }
+    Kingfisher {
+        doc:       "Kingfisher SCADA traffic.",
+        display:   "Kingfisher SCADA",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["kingfisher"],
+        blurb:     "Kingfisher SCADA Protocol",
+    }
+    Kink {
+        doc:       "KINK traffic.",
+        display:   "KINK",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Kerberized Internet Negotiation of Keys",
+    }
+    Kismet {
+        doc:       "Kismet traffic.",
+        display:   "Kismet",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Kismet Wireless Monitoring Protocol",
+    }
+    Knet {
+        doc:       "Kronos KNET traffic.",
+        display:   "Kronos KNET",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["knet"],
+        blurb:     "Kronos KNET Communications Protocol",
+    }
+    KnxipDecrypt {
+        doc:       "KNX/IP Decrypted traffic.",
+        display:   "KNX/IP Decrypted",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["knxip_decrypt"],
+        blurb:     "KNX/IP Secure Decrypted Frame",
+    }
+    KpmV2 {
+        doc:       "E2KPM v2 traffic.",
+        display:   "E2KPM v2",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["kpm_v2"],
+        blurb:     "O-RAN E2 KPM Service Model v2",
+    }
+    Kt {
+        doc:       "KT traffic.",
+        display:   "KT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "KT Protocol",
+    }
+    L1Events {
+        doc:       "L1 Events traffic.",
+        display:   "L1 Events",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["l1_events"],
+        blurb:     "Physical Layer L1 Event Logging",
+    }
+    Lanforge {
+        doc:       "LANforge traffic.",
+        display:   "LANforge",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Candela LANforge Traffic Protocol",
+    }
+    Lapb {
+        doc:       "LAPB traffic.",
+        display:   "LAPB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Link Access Procedure Balanced",
+    }
+    Lapbether {
+        doc:       "LAPB over Ethernet traffic.",
+        display:   "LAPB over Ethernet",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lapbether"],
+        blurb:     "LAPB Encapsulation over Ethernet",
+    }
+    Lapd {
+        doc:       "LAPD traffic.",
+        display:   "LAPD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Link Access Procedure on D-Channel",
+    }
+    Lapdm {
+        doc:       "LAPDm traffic.",
+        display:   "LAPDm",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Link Access Procedure on Mobile D-Channel",
+    }
+    Laplink {
+        doc:       "LapLink traffic.",
+        display:   "LapLink",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "LapLink File Transfer Protocol",
+    }
+    Lapsat {
+        doc:       "LAPSAT traffic.",
+        display:   "LAPSAT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "LAPSAT Satellite Link Protocol",
+    }
+    Lbm {
+        doc:       "29West LBM traffic.",
+        display:   "29West LBM",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["lbm"],
+        blurb:     "29West Ultra Messaging LBM",
+    }
+    Lbmc {
+        doc:       "29West LBMC traffic.",
+        display:   "29West LBMC",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["lbmc"],
+        blurb:     "29West Ultra Messaging LBMC",
+    }
+    Lbmpdm {
+        doc:       "29West LBMPDM traffic.",
+        display:   "29West LBMPDM",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["lbmpdm"],
+        blurb:     "29West Ultra Messaging LBMPDM Payload",
+    }
+    Lbmpdmtcp {
+        doc:       "29West LBMPDM TCP traffic.",
+        display:   "29West LBMPDM TCP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["lbmpdmtcp"],
+        blurb:     "29West Ultra Messaging LBMPDM TCP Payload",
+    }
+    Lbmr {
+        doc:       "29West LBMR traffic.",
+        display:   "29West LBMR",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["lbmr"],
+        blurb:     "29West Ultra Messaging LBMR Router",
+    }
+    Lbmsrs {
+        doc:       "29West LBMSRS traffic.",
+        display:   "29West LBMSRS",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["lbmsrs"],
+        blurb:     "29West Ultra Messaging State Store",
+    }
+    Lbtrm {
+        doc:       "29West LBTRM traffic.",
+        display:   "29West LBTRM",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["lbtrm"],
+        blurb:     "29West Ultra Messaging Reliable Multicast",
+    }
+    Lbtru {
+        doc:       "29West LBTRU traffic.",
+        display:   "29West LBTRU",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["lbtru"],
+        blurb:     "29West Ultra Messaging Reliable Unicast",
+    }
+    Lbttcp {
+        doc:       "29West LBTTCP traffic.",
+        display:   "29West LBTTCP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["lbttcp"],
+        blurb:     "29West Ultra Messaging Unicast TCP",
+    }
+    LdaNeoTrailer {
+        doc:       "LDA NEO Trailer traffic.",
+        display:   "LDA NEO Trailer",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lda_neo_trailer"],
+        blurb:     "LDA NEO Timestamp Trailer",
+    }
+    Ldss {
+        doc:       "LDSS traffic.",
+        display:   "LDSS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "LDSS Protocol",
+    }
+    Lg8979 {
+        doc:       "LG 8979 SCADA traffic.",
+        display:   "LG 8979 SCADA",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["lg8979"],
+        blurb:     "Landis & Gyr 8979 SCADA Protocol",
+    }
+    LgeMonitor {
+        doc:       "LGE Monitor traffic.",
+        display:   "LGE Monitor",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lge_monitor"],
+        blurb:     "LGE Monitor Protocol",
+    }
+    Link16 {
+        doc:       "Link 16 Tactical Data traffic.",
+        display:   "Link 16 Tactical Data",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["link16"],
+        blurb:     "Link 16 Tactical Data Information Exchange",
+    }
+    Linx {
+        doc:       "Enea LINX traffic.",
+        display:   "Enea LINX",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["linx"],
+        blurb:     "Enea LINX IPC Protocol",
+    }
+    LispData {
+        doc:       "LISP Data traffic.",
+        display:   "LISP Data",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["lisp_data"],
+        blurb:     "LISP Data Encapsulated Frame",
+    }
+    LispTcp {
+        doc:       "LISP Control TCP traffic.",
+        display:   "LISP Control TCP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["lisp_tcp"],
+        blurb:     "LISP Control Message over TCP",
+    }
+    Lithionics {
+        doc:       "Lithionics BMS traffic.",
+        display:   "Lithionics BMS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lithionics"],
+        blurb:     "Lithionics Battery Management System",
+    }
+    Livewire {
+        doc:       "Axia Livewire traffic.",
+        display:   "Axia Livewire",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["livewire"],
+        blurb:     "Axia Livewire Audio-over-IP Protocol",
+    }
+    Lix2 {
+        doc:       "LIX2 traffic.",
+        display:   "LIX2",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "LIX2 Protocol",
+    }
+    Llc {
+        doc:       "802.2 LLC traffic.",
+        display:   "802.2 LLC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["llc"],
+        blurb:     "IEEE 802.2 Logical Link Control",
+    }
+    LlcV1 {
+        doc:       "LLC v1 traffic.",
+        display:   "LLC v1",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["llc_v1"],
+        blurb:     "Logical Link Control Version 1",
+    }
+    Llrp {
+        doc:       "LLRP traffic.",
+        display:   "LLRP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Low Level Reader Protocol",
+    }
+    Lls {
+        doc:       "LLS traffic.",
+        display:   "LLS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Low Level Signaling Protocol",
+    }
+    LlsSlt {
+        doc:       "LLS SLT traffic.",
+        display:   "LLS SLT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lls_slt"],
+        blurb:     "LLS Service Layer Table",
+    }
+    Llt {
+        doc:       "Veritas LLT traffic.",
+        display:   "Veritas LLT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["llt"],
+        blurb:     "Veritas Low Latency Transport",
+    }
+    Lltd {
+        doc:       "LLTD traffic.",
+        display:   "LLTD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Link Layer Topology Discovery",
+    }
+    Lmi {
+        doc:       "LMI traffic.",
+        display:   "LMI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Local Management Interface Protocol",
+    }
+    Lmp {
+        doc:       "LMP traffic.",
+        display:   "LMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Link Management Protocol",
+    }
+    Lnpdqp {
+        doc:       "LNPDQP traffic.",
+        display:   "LNPDQP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "LNPDQP Protocol",
+    }
+    LocamationIm {
+        doc:       "Locamation IM traffic.",
+        display:   "Locamation IM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["locamation_im"],
+        blurb:     "Locamation Interface Module Protocol",
+    }
+    Logcat {
+        doc:       "Android Logcat Binary traffic.",
+        display:   "Android Logcat Binary",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["logcat"],
+        blurb:     "Android Logcat Binary Log Frame",
+    }
+    LogcatText {
+        doc:       "Android Logcat Text traffic.",
+        display:   "Android Logcat Text",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["logcat_text"],
+        blurb:     "Android Logcat Text Log Frame",
+    }
+    Lon {
+        doc:       "Echelon LonTalk traffic.",
+        display:   "Echelon LonTalk",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lon"],
+        blurb:     "Echelon LonWorks LonTalk Protocol",
+    }
+    Loopback {
+        doc:       "Loopback traffic.",
+        display:   "Loopback",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["loop"],
+        blurb:     "Local Loopback Interface Frame",
+    }
+    Loratap {
+        doc:       "LoRaTAP traffic.",
+        display:   "LoRaTAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["loratap"],
+        blurb:     "LoRa TAP Header Protocol",
+    }
+    Lpp {
+        doc:       "LTE Positioning Protocol traffic.",
+        display:   "LTE Positioning Protocol",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lpp"],
+        blurb:     "3GPP LTE Positioning Protocol",
+    }
+    Lppa {
+        doc:       "LPPa traffic.",
+        display:   "LPPa",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "LTE Positioning Protocol Annex",
+    }
     Idrp {
         doc:       "IDRP traffic.",
         display:   "IDRP",
