@@ -1,3 +1,73 @@
+pub mod cmip;
+pub mod cmpp;
+pub mod coap_eap;
+pub mod cola;
+pub mod communityid;
+pub mod componentstatus;
+pub mod cops;
+pub mod corosync_totemnet;
+pub mod corosync_totemsrp;
+pub mod cose;
+pub mod cosem;
+pub mod coseventcomm;
+pub mod cosine;
+pub mod cosnaming;
+pub mod cp2179;
+pub mod cpfi;
+pub mod cpha;
+pub mod cql;
+pub mod csm_encaps;
+pub mod csn1;
+pub mod ctdb;
+pub mod cups;
+pub mod cvspserver;
+pub mod daap;
+pub mod dap;
+pub mod darwin;
+pub mod data;
+pub mod daytime;
+pub mod db_lsp;
+pub mod dbus;
+pub mod dcc;
+pub mod dcm;
+pub mod dcp_etsi;
+pub mod ddtp;
+pub mod dec_bpdu;
+pub mod dec_dnart;
+pub mod dect;
+pub mod dect_dlc;
+pub mod dect_mitel_eth;
+pub mod dect_mitel_rfp;
+pub mod dect_nr;
+pub mod dect_nwk;
+pub mod dhcp_failover;
+pub mod diameter_3gpp;
+pub mod diffserv_mpls_common;
+pub mod dis;
+pub mod discard;
+pub mod disp;
+pub mod distcc;
+pub mod dji_uav;
+pub mod dlep;
+pub mod dlm3;
+pub mod dlt;
+pub mod dmp;
+pub mod dnp;
+pub mod do_irp;
+pub mod docsis;
+pub mod docsis_macmgmt;
+pub mod docsis_tlv;
+pub mod docsis_vendor;
+pub mod dof;
+pub mod dop;
+pub mod dpaux;
+pub mod dpauxmon;
+pub mod dplay;
+pub mod dpnet;
+pub mod dpnss;
+pub mod dpnss_link;
+pub mod drb;
+pub mod dsi;
 pub mod bpdu;
 pub mod bpq;
 pub mod bpsec;
@@ -4020,6 +4090,76 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "cmip",
+        "cmpp",
+        "coap_eap",
+        "cola",
+        "communityid",
+        "componentstatus",
+        "cops",
+        "corosync_totemnet",
+        "corosync_totemsrp",
+        "cose",
+        "cosem",
+        "coseventcomm",
+        "cosine",
+        "cosnaming",
+        "cp2179",
+        "cpfi",
+        "cpha",
+        "cql",
+        "csm_encaps",
+        "csn1",
+        "ctdb",
+        "cups",
+        "cvspserver",
+        "daap",
+        "dap",
+        "darwin",
+        "data",
+        "daytime",
+        "db_lsp",
+        "dbus",
+        "dcc",
+        "dcm",
+        "dcp_etsi",
+        "ddtp",
+        "dec_bpdu",
+        "dec_dnart",
+        "dect",
+        "dect_dlc",
+        "dect_mitel_eth",
+        "dect_mitel_rfp",
+        "dect_nr",
+        "dect_nwk",
+        "dhcp_failover",
+        "diameter_3gpp",
+        "diffserv_mpls_common",
+        "dis",
+        "discard",
+        "disp",
+        "distcc",
+        "dji_uav",
+        "dlep",
+        "dlm3",
+        "dlt",
+        "dmp",
+        "dnp",
+        "do_irp",
+        "docsis",
+        "docsis_macmgmt",
+        "docsis_tlv",
+        "docsis_vendor",
+        "dof",
+        "dop",
+        "dpaux",
+        "dpauxmon",
+        "dplay",
+        "dpnet",
+        "dpnss",
+        "dpnss_link",
+        "drb",
+        "dsi",
         "bpdu",
         "bpq",
         "bpsec",
