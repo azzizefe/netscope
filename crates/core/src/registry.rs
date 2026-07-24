@@ -18999,6 +18999,124 @@ protocols! {
         aliases:   ["lambda_at_edge_rpc"],
         blurb:     "CloudFront Lambda@Edge Internal Invoke",
     }
+
+    SpannerTrueTime {
+        doc:       "SPANNER-TRUE-TIME traffic.",
+        display:   "SPANNER-TRUE-TIME",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["spanner_true_time"],
+        blurb:     "Google Spanner TrueTime API Protocol",
+    }
+    SpannerSplitMgr {
+        doc:       "SPANNER-SPLIT-MGR traffic.",
+        display:   "SPANNER-SPLIT-MGR",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["spanner_split_mgr"],
+        blurb:     "Spanner Split Management RPC",
+    }
+    CassandraGossipV4 {
+        doc:       "CASSANDRA-GOSSIP-V4 traffic.",
+        display:   "CASSANDRA-GOSSIP-V4",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cassandra_gossip_v4"],
+        blurb:     "Apache Cassandra Internode Gossip v4",
+    }
+    CassandraMurmur3Partition {
+        doc:       "CASSANDRA-MURMUR3-PARTITION traffic.",
+        display:   "CASSANDRA-MURMUR3-PARTITION",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cassandra_murmur3_partition"],
+        blurb:     "Cassandra Consistent Hash-Aware Proxy Layer",
+    }
+    CockroachdbKvRpc {
+        doc:       "COCKROACHDB-KV-RPC traffic.",
+        display:   "COCKROACHDB-KV-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cockroachdb_kv_rpc"],
+        blurb:     "CockroachDB KV Layer RPC",
+    }
+    CockroachdbDistSql {
+        doc:       "COCKROACHDB-DIST-SQL traffic.",
+        display:   "COCKROACHDB-DIST-SQL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cockroachdb_dist_sql"],
+        blurb:     "CockroachDB Distributed SQL Data Exchange",
+    }
+    YugabyteDocdbRpc {
+        doc:       "YUGABYTE-DOCDB-RPC traffic.",
+        display:   "YUGABYTE-DOCDB-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["yugabyte_docdb_rpc"],
+        blurb:     "YugabyteDB DocDB Tablet RPC",
+    }
+    FoundationdbNative {
+        doc:       "FOUNDATIONDB-NATIVE traffic.",
+        display:   "FOUNDATIONDB-NATIVE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["foundationdb_native"],
+        blurb:     "Apple FoundationDB Native Wire Protocol",
+    }
+    TikvRaft {
+        doc:       "TIKV-RAFT traffic.",
+        display:   "TIKV-RAFT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tikv_raft"],
+        blurb:     "TiKV Raft Consensus Transport",
+    }
+    TikvTitan {
+        doc:       "TIKV-TITAN traffic.",
+        display:   "TIKV-TITAN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tikv_titan"],
+        blurb:     "TiKV Titan Blob Storage Layer",
+    }
+    VitessVtgate {
+        doc:       "VITESS-VTGATE traffic.",
+        display:   "VITESS-VTGATE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["vitess_vtgate"],
+        blurb:     "Vitess VtGate Query Routing Internal",
+    }
+    PlanetscaleDbRpc {
+        doc:       "PLANETSCALE-DB-RPC traffic.",
+        display:   "PLANETSCALE-DB-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["planetscale_db_rpc"],
+        blurb:     "PlanetScale Database RPC",
+    }
+    ScylladbRpc {
+        doc:       "SCYLLADB-RPC traffic.",
+        display:   "SCYLLADB-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["scylladb_rpc"],
+        blurb:     "ScyllaDB Internode RPC",
+    }
 }
 
 impl std::fmt::Display for Protocol {

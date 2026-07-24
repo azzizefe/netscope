@@ -135,19 +135,19 @@
 
 | | # | Protokol | Açıklama |
 |---|---|---|---|
-| [ ] | 73 | `spanner_true_time` | Google Spanner TrueTime API protocol |
-| [ ] | 74 | `spanner_split_mgr` | Spanner split management RPC |
-| [ ] | 75 | `cassandra_gossip_v4` | Apache Cassandra internode gossip v4 |
-| [ ] | 76 | `cassandra_murmur3_partition` | Cassandra consistent hash-aware proxy layer |
-| [ ] | 77 | `cockroachdb_kv_rpc` | CockroachDB KV layer RPC |
-| [ ] | 78 | `cockroachdb_dist_sql` | CockroachDB distributed SQL data exchange |
-| [ ] | 79 | `yugabyte_docdb_rpc` | YugabyteDB DocDB tablet RPC |
-| [ ] | 80 | `foundationdb_native` | Apple FoundationDB native wire protocol |
-| [ ] | 81 | `tikv_raft` | TiKV Raft consensus transport |
-| [ ] | 82 | `tikv_titan` | TiKV Titan blob storage layer |
-| [ ] | 83 | `vitess_vtgate` | Vitess VtGate query routing internal |
-| [ ] | 84 | `planetscale_db_rpc` | PlanetScale database RPC (Vitess-based) |
-| [ ] | 85 | `scylladb_rpc` | ScyllaDB internode RPC (Seastar-based) |
+| [x] | 73 | `spanner_true_time` | Google Spanner TrueTime API protocol |
+| [x] | 74 | `spanner_split_mgr` | Spanner split management RPC |
+| [x] | 75 | `cassandra_gossip_v4` | Apache Cassandra internode gossip v4 |
+| [x] | 76 | `cassandra_murmur3_partition` | Cassandra consistent hash-aware proxy layer |
+| [x] | 77 | `cockroachdb_kv_rpc` | CockroachDB KV layer RPC |
+| [x] | 78 | `cockroachdb_dist_sql` | CockroachDB distributed SQL data exchange |
+| [x] | 79 | `yugabyte_docdb_rpc` | YugabyteDB DocDB tablet RPC |
+| [x] | 80 | `foundationdb_native` | Apple FoundationDB native wire protocol |
+| [x] | 81 | `tikv_raft` | TiKV Raft consensus transport |
+| [x] | 82 | `tikv_titan` | TiKV Titan blob storage layer |
+| [x] | 83 | `vitess_vtgate` | Vitess VtGate query routing internal |
+| [x] | 84 | `planetscale_db_rpc` | PlanetScale database RPC (Vitess-based) |
+| [x] | 85 | `scylladb_rpc` | ScyllaDB internode RPC (Seastar-based) |
 
 ---
 

@@ -1022,3 +1022,20 @@ fn _dissector_reachability_guard_edge_61_72() {
         let _ = super::akamai_ghost_rpc::dissect_akamai_ghost_rpc;
         let _ = super::lambda_at_edge_rpc::dissect_lambda_at_edge_rpc;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_clouddb_73_85() {
+        let _ = super::spanner_true_time::dissect_spanner_true_time;
+        let _ = super::spanner_split_mgr::dissect_spanner_split_mgr;
+        let _ = super::cassandra_gossip_v4::dissect_cassandra_gossip_v4;
+        let _ = super::cassandra_murmur3_partition::dissect_cassandra_murmur3_partition;
+        let _ = super::cockroachdb_kv_rpc::dissect_cockroachdb_kv_rpc;
+        let _ = super::cockroachdb_dist_sql::dissect_cockroachdb_dist_sql;
+        let _ = super::yugabyte_docdb_rpc::dissect_yugabyte_docdb_rpc;
+        let _ = super::foundationdb_native::dissect_foundationdb_native;
+        let _ = super::tikv_raft::dissect_tikv_raft;
+        let _ = super::tikv_titan::dissect_tikv_titan;
+        let _ = super::vitess_vtgate::dissect_vitess_vtgate;
+        let _ = super::planetscale_db_rpc::dissect_planetscale_db_rpc;
+        let _ = super::scylladb_rpc::dissect_scylladb_rpc;
+}

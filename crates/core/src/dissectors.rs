@@ -6740,3 +6740,17 @@ pub mod wagi;
 pub mod spin_trigger_http;
 pub mod akamai_ghost_rpc;
 pub mod lambda_at_edge_rpc;
+
+pub mod spanner_true_time;
+pub mod spanner_split_mgr;
+pub mod cassandra_gossip_v4;
+pub mod cassandra_murmur3_partition;
+pub mod cockroachdb_kv_rpc;
+pub mod cockroachdb_dist_sql;
+pub mod yugabyte_docdb_rpc;
+pub mod foundationdb_native;
+pub mod tikv_raft;
+pub mod tikv_titan;
+pub mod vitess_vtgate;
+pub mod planetscale_db_rpc;
+pub mod scylladb_rpc;
