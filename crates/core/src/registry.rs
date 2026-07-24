@@ -15983,6 +15983,1051 @@ protocols! {
 
 
 
+
+    Redbackli {
+        doc:       "REDBACKLI traffic.",
+        display:   "REDBACKLI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["redbackli"],
+        blurb:     "REDBACKLI Protocol",
+    }
+    Reload {
+        doc:       "RELOAD traffic.",
+        display:   "RELOAD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["reload"],
+        blurb:     "RELOAD Protocol",
+    }
+    ReloadFraming {
+        doc:       "RELOAD-FRAMING traffic.",
+        display:   "RELOAD-FRAMING",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["reload_framing"],
+        blurb:     "RELOAD-FRAMING Protocol",
+    }
+    Resp {
+        doc:       "RESP traffic.",
+        display:   "RESP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["resp"],
+        blurb:     "RESP Protocol",
+    }
+    RetixBpdu {
+        doc:       "RETIX-BPDU traffic.",
+        display:   "RETIX-BPDU",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["retix_bpdu"],
+        blurb:     "RETIX-BPDU Protocol",
+    }
+    Rfc2190 {
+        doc:       "RFC2190 traffic.",
+        display:   "RFC2190",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rfc2190"],
+        blurb:     "RFC2190 Protocol",
+    }
+    RfidFelica {
+        doc:       "RFID-FELICA traffic.",
+        display:   "RFID-FELICA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rfid_felica"],
+        blurb:     "RFID-FELICA Protocol",
+    }
+    RfidMifare {
+        doc:       "RFID-MIFARE traffic.",
+        display:   "RFID-MIFARE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rfid_mifare"],
+        blurb:     "RFID-MIFARE Protocol",
+    }
+    RfidPn532 {
+        doc:       "RFID-PN532 traffic.",
+        display:   "RFID-PN532",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rfid_pn532"],
+        blurb:     "RFID-PN532 Protocol",
+    }
+    RfidPn532Hci {
+        doc:       "RFID-PN532-HCI traffic.",
+        display:   "RFID-PN532-HCI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rfid_pn532_hci"],
+        blurb:     "RFID-PN532-HCI Protocol",
+    }
+    Rftap {
+        doc:       "RFTAP traffic.",
+        display:   "RFTAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rftap"],
+        blurb:     "RFTAP Protocol",
+    }
+    Rgmp {
+        doc:       "RGMP traffic.",
+        display:   "RGMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rgmp"],
+        blurb:     "RGMP Protocol",
+    }
+    Rk512 {
+        doc:       "RK512 traffic.",
+        display:   "RK512",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rk512"],
+        blurb:     "RK512 Protocol",
+    }
+    Rlm {
+        doc:       "RLM traffic.",
+        display:   "RLM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rlm"],
+        blurb:     "RLM Protocol",
+    }
+    Rmi {
+        doc:       "RMI traffic.",
+        display:   "RMI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rmi"],
+        blurb:     "RMI Protocol",
+    }
+    Rmp {
+        doc:       "RMP traffic.",
+        display:   "RMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rmp"],
+        blurb:     "RMP Protocol",
+    }
+    RmtAlc {
+        doc:       "RMT-ALC traffic.",
+        display:   "RMT-ALC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rmt_alc"],
+        blurb:     "RMT-ALC Protocol",
+    }
+    RmtFec {
+        doc:       "RMT-FEC traffic.",
+        display:   "RMT-FEC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rmt_fec"],
+        blurb:     "RMT-FEC Protocol",
+    }
+    RmtLct {
+        doc:       "RMT-LCT traffic.",
+        display:   "RMT-LCT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rmt_lct"],
+        blurb:     "RMT-LCT Protocol",
+    }
+    RmtNorm {
+        doc:       "RMT-NORM traffic.",
+        display:   "RMT-NORM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rmt_norm"],
+        blurb:     "RMT-NORM Protocol",
+    }
+    Rohc {
+        doc:       "ROHC traffic.",
+        display:   "ROHC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rohc"],
+        blurb:     "ROHC Protocol",
+    }
+    Romon {
+        doc:       "ROMON traffic.",
+        display:   "ROMON",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["romon"],
+        blurb:     "ROMON Protocol",
+    }
+    Roofnet {
+        doc:       "ROOFNET traffic.",
+        display:   "ROOFNET",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["roofnet"],
+        blurb:     "ROOFNET Protocol",
+    }
+    RoonDiscovery {
+        doc:       "ROON-DISCOVERY traffic.",
+        display:   "ROON-DISCOVERY",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["roon_discovery"],
+        blurb:     "ROON-DISCOVERY Protocol",
+    }
+    Ros {
+        doc:       "ROS traffic.",
+        display:   "ROS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ros"],
+        blurb:     "ROS Protocol",
+    }
+    Rrc {
+        doc:       "RRC traffic.",
+        display:   "RRC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rrc"],
+        blurb:     "RRC Protocol",
+    }
+    Rrlp {
+        doc:       "RRLP traffic.",
+        display:   "RRLP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rrlp"],
+        blurb:     "RRLP Protocol",
+    }
+    Rsip {
+        doc:       "RSIP traffic.",
+        display:   "RSIP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rsip"],
+        blurb:     "RSIP Protocol",
+    }
+    Rsl {
+        doc:       "RSL traffic.",
+        display:   "RSL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rsl"],
+        blurb:     "RSL Protocol",
+    }
+    Rsvd {
+        doc:       "RSVD traffic.",
+        display:   "RSVD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rsvd"],
+        blurb:     "RSVD Protocol",
+    }
+    Rtacser {
+        doc:       "RTACSER traffic.",
+        display:   "RTACSER",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtacser"],
+        blurb:     "RTACSER Protocol",
+    }
+    Rtag {
+        doc:       "RTAG traffic.",
+        display:   "RTAG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtag"],
+        blurb:     "RTAG Protocol",
+    }
+    Rtcdc {
+        doc:       "RTCDC traffic.",
+        display:   "RTCDC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtcdc"],
+        blurb:     "RTCDC Protocol",
+    }
+    Rtitcp {
+        doc:       "RTITCP traffic.",
+        display:   "RTITCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtitcp"],
+        blurb:     "RTITCP Protocol",
+    }
+    Rtls {
+        doc:       "RTLS traffic.",
+        display:   "RTLS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtls"],
+        blurb:     "RTLS Protocol",
+    }
+    Rtmpt {
+        doc:       "RTMPT traffic.",
+        display:   "RTMPT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtmpt"],
+        blurb:     "RTMPT Protocol",
+    }
+    Rtnet {
+        doc:       "RTNET traffic.",
+        display:   "RTNET",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtnet"],
+        blurb:     "RTNET Protocol",
+    }
+    RtpEd137 {
+        doc:       "RTP-ED137 traffic.",
+        display:   "RTP-ED137",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtp_ed137"],
+        blurb:     "RTP-ED137 Protocol",
+    }
+    RtpEvents {
+        doc:       "RTP-EVENTS traffic.",
+        display:   "RTP-EVENTS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtp_events"],
+        blurb:     "RTP-EVENTS Protocol",
+    }
+    Rtpproxy {
+        doc:       "RTPPROXY traffic.",
+        display:   "RTPPROXY",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtpproxy"],
+        blurb:     "RTPPROXY Protocol",
+    }
+    RtpsProcessed {
+        doc:       "RTPS-PROCESSED traffic.",
+        display:   "RTPS-PROCESSED",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtps_processed"],
+        blurb:     "RTPS-PROCESSED Protocol",
+    }
+    RtpsVirtualTransport {
+        doc:       "RTPS-VIRTUAL-TRANSPORT traffic.",
+        display:   "RTPS-VIRTUAL-TRANSPORT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtps_virtual_transport"],
+        blurb:     "RTPS-VIRTUAL-TRANSPORT Protocol",
+    }
+    Rtse {
+        doc:       "RTSE traffic.",
+        display:   "RTSE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rtse"],
+        blurb:     "RTSE Protocol",
+    }
+    Rttrp {
+        doc:       "RTTRP traffic.",
+        display:   "RTTRP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rttrp"],
+        blurb:     "RTTRP Protocol",
+    }
+    Rudp {
+        doc:       "RUDP traffic.",
+        display:   "RUDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["rudp"],
+        blurb:     "RUDP Protocol",
+    }
+    S101 {
+        doc:       "S101 traffic.",
+        display:   "S101",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["s101"],
+        blurb:     "S101 Protocol",
+    }
+    S5066dts {
+        doc:       "S5066DTS traffic.",
+        display:   "S5066DTS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["s5066dts"],
+        blurb:     "S5066DTS Protocol",
+    }
+    S5066sis {
+        doc:       "S5066SIS traffic.",
+        display:   "S5066SIS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["s5066sis"],
+        blurb:     "S5066SIS Protocol",
+    }
+    S7commSzlIds {
+        doc:       "S7COMM-SZL-IDS traffic.",
+        display:   "S7COMM-SZL-IDS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["s7comm_szl_ids"],
+        blurb:     "S7COMM-SZL-IDS Protocol",
+    }
+    Sametime {
+        doc:       "SAMETIME traffic.",
+        display:   "SAMETIME",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sametime"],
+        blurb:     "SAMETIME Protocol",
+    }
+    Sap {
+        doc:       "SAP traffic.",
+        display:   "SAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sap"],
+        blurb:     "SAP Protocol",
+    }
+    Sasp {
+        doc:       "SASP traffic.",
+        display:   "SASP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sasp"],
+        blurb:     "SASP Protocol",
+    }
+    SbasL1 {
+        doc:       "SBAS-L1 traffic.",
+        display:   "SBAS-L1",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sbas_l1"],
+        blurb:     "SBAS-L1 Protocol",
+    }
+    SbasL5 {
+        doc:       "SBAS-L5 traffic.",
+        display:   "SBAS-L5",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sbas_l5"],
+        blurb:     "SBAS-L5 Protocol",
+    }
+    Sbc {
+        doc:       "SBC traffic.",
+        display:   "SBC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sbc"],
+        blurb:     "SBC Protocol",
+    }
+    Sbus {
+        doc:       "SBUS traffic.",
+        display:   "SBUS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sbus"],
+        blurb:     "SBUS Protocol",
+    }
+    Sccpmg {
+        doc:       "SCCPMG traffic.",
+        display:   "SCCPMG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sccpmg"],
+        blurb:     "SCCPMG Protocol",
+    }
+    Scop {
+        doc:       "SCOP traffic.",
+        display:   "SCOP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["scop"],
+        blurb:     "SCOP Protocol",
+    }
+    Scriptingservice {
+        doc:       "SCRIPTINGSERVICE traffic.",
+        display:   "SCRIPTINGSERVICE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["scriptingservice"],
+        blurb:     "SCRIPTINGSERVICE Protocol",
+    }
+    Scylla {
+        doc:       "SCYLLA traffic.",
+        display:   "SCYLLA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["scylla"],
+        blurb:     "SCYLLA Protocol",
+    }
+    Sdh {
+        doc:       "SDH traffic.",
+        display:   "SDH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sdh"],
+        blurb:     "SDH Protocol",
+    }
+    Sdlc {
+        doc:       "SDLC traffic.",
+        display:   "SDLC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sdlc"],
+        blurb:     "SDLC Protocol",
+    }
+    Sebek {
+        doc:       "SEBEK traffic.",
+        display:   "SEBEK",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sebek"],
+        blurb:     "SEBEK Protocol",
+    }
+    Selfm {
+        doc:       "SELFM traffic.",
+        display:   "SELFM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["selfm"],
+        blurb:     "SELFM Protocol",
+    }
+    Sercosiii {
+        doc:       "SERCOSIII traffic.",
+        display:   "SERCOSIII",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sercosiii"],
+        blurb:     "SERCOSIII Protocol",
+    }
+    Ses {
+        doc:       "SES traffic.",
+        display:   "SES",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ses"],
+        blurb:     "SES Protocol",
+    }
+    Sftp {
+        doc:       "SFTP traffic.",
+        display:   "SFTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sftp"],
+        blurb:     "SFTP Protocol",
+    }
+    Sgp22 {
+        doc:       "SGP22 traffic.",
+        display:   "SGP22",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sgp22"],
+        blurb:     "SGP22 Protocol",
+    }
+    Sgp32 {
+        doc:       "SGP32 traffic.",
+        display:   "SGP32",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sgp32"],
+        blurb:     "SGP32 Protocol",
+    }
+    Shicp {
+        doc:       "SHICP traffic.",
+        display:   "SHICP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["shicp"],
+        blurb:     "SHICP Protocol",
+    }
+    Sigcomp {
+        doc:       "SIGCOMP traffic.",
+        display:   "SIGCOMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sigcomp"],
+        blurb:     "SIGCOMP Protocol",
+    }
+    SignalPdu {
+        doc:       "SIGNAL-PDU traffic.",
+        display:   "SIGNAL-PDU",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["signal_pdu"],
+        blurb:     "SIGNAL-PDU Protocol",
+    }
+    SilabsDch {
+        doc:       "SILABS-DCH traffic.",
+        display:   "SILABS-DCH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["silabs_dch"],
+        blurb:     "SILABS-DCH Protocol",
+    }
+    Simple {
+        doc:       "SIMPLE traffic.",
+        display:   "SIMPLE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["simple"],
+        blurb:     "SIMPLE Protocol",
+    }
+    Simulcrypt {
+        doc:       "SIMULCRYPT traffic.",
+        display:   "SIMULCRYPT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["simulcrypt"],
+        blurb:     "SIMULCRYPT Protocol",
+    }
+    Sinecap {
+        doc:       "SINECAP traffic.",
+        display:   "SINECAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sinecap"],
+        blurb:     "SINECAP Protocol",
+    }
+    Sipfrag {
+        doc:       "SIPFRAG traffic.",
+        display:   "SIPFRAG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sipfrag"],
+        blurb:     "SIPFRAG Protocol",
+    }
+    Sita {
+        doc:       "SITA traffic.",
+        display:   "SITA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sita"],
+        blurb:     "SITA Protocol",
+    }
+    Skype {
+        doc:       "SKYPE traffic.",
+        display:   "SKYPE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["skype"],
+        blurb:     "SKYPE Protocol",
+    }
+    Slimp3 {
+        doc:       "SLIMP3 traffic.",
+        display:   "SLIMP3",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["slimp3"],
+        blurb:     "SLIMP3 Protocol",
+    }
+    Slowprotocols {
+        doc:       "SLOWPROTOCOLS traffic.",
+        display:   "SLOWPROTOCOLS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["slowprotocols"],
+        blurb:     "SLOWPROTOCOLS Protocol",
+    }
+    Slsk {
+        doc:       "SLSK traffic.",
+        display:   "SLSK",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["slsk"],
+        blurb:     "SLSK Protocol",
+    }
+    SmbBrowse {
+        doc:       "SMB-BROWSE traffic.",
+        display:   "SMB-BROWSE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smb_browse"],
+        blurb:     "SMB-BROWSE Protocol",
+    }
+    SmbCommon {
+        doc:       "SMB-COMMON traffic.",
+        display:   "SMB-COMMON",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smb_common"],
+        blurb:     "SMB-COMMON Protocol",
+    }
+    SmbLogon {
+        doc:       "SMB-LOGON traffic.",
+        display:   "SMB-LOGON",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smb_logon"],
+        blurb:     "SMB-LOGON Protocol",
+    }
+    SmbMailslot {
+        doc:       "SMB-MAILSLOT traffic.",
+        display:   "SMB-MAILSLOT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smb_mailslot"],
+        blurb:     "SMB-MAILSLOT Protocol",
+    }
+    SmbPipe {
+        doc:       "SMB-PIPE traffic.",
+        display:   "SMB-PIPE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smb_pipe"],
+        blurb:     "SMB-PIPE Protocol",
+    }
+    SmbSidsnooping {
+        doc:       "SMB-SIDSNOOPING traffic.",
+        display:   "SMB-SIDSNOOPING",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smb_sidsnooping"],
+        blurb:     "SMB-SIDSNOOPING Protocol",
+    }
+    Smb2 {
+        doc:       "SMB2 traffic.",
+        display:   "SMB2",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smb2"],
+        blurb:     "SMB2 Protocol",
+    }
+    Smc {
+        doc:       "SMC traffic.",
+        display:   "SMC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smc"],
+        blurb:     "SMC Protocol",
+    }
+    Sml {
+        doc:       "SML traffic.",
+        display:   "SML",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sml"],
+        blurb:     "SML Protocol",
+    }
+    Smpte211020 {
+        doc:       "SMPTE-2110-20 traffic.",
+        display:   "SMPTE-2110-20",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smpte_2110_20"],
+        blurb:     "SMPTE-2110-20 Protocol",
+    }
+    Smrse {
+        doc:       "SMRSE traffic.",
+        display:   "SMRSE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["smrse"],
+        blurb:     "SMRSE Protocol",
+    }
+    Snaeth {
+        doc:       "SNAETH traffic.",
+        display:   "SNAETH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["snaeth"],
+        blurb:     "SNAETH Protocol",
+    }
+    SndcpXid {
+        doc:       "SNDCP-XID traffic.",
+        display:   "SNDCP-XID",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sndcp_xid"],
+        blurb:     "SNDCP-XID Protocol",
+    }
+    Snort {
+        doc:       "SNORT traffic.",
+        display:   "SNORT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["snort"],
+        blurb:     "SNORT Protocol",
+    }
+    SnortConfig {
+        doc:       "SNORT-CONFIG traffic.",
+        display:   "SNORT-CONFIG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["snort_config"],
+        blurb:     "SNORT-CONFIG Protocol",
+    }
+    Socketcan {
+        doc:       "SOCKETCAN traffic.",
+        display:   "SOCKETCAN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["socketcan"],
+        blurb:     "SOCKETCAN Protocol",
+    }
+    Solaredge {
+        doc:       "SOLAREDGE traffic.",
+        display:   "SOLAREDGE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["solaredge"],
+        blurb:     "SOLAREDGE Protocol",
+    }
+    Soupbintcp {
+        doc:       "SOUPBINTCP traffic.",
+        display:   "SOUPBINTCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["soupbintcp"],
+        blurb:     "SOUPBINTCP Protocol",
+    }
+    Sparkplug {
+        doc:       "SPARKPLUG traffic.",
+        display:   "SPARKPLUG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sparkplug"],
+        blurb:     "SPARKPLUG Protocol",
+    }
+    Spnego {
+        doc:       "SPNEGO traffic.",
+        display:   "SPNEGO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["spnego"],
+        blurb:     "SPNEGO Protocol",
+    }
+    Spp {
+        doc:       "SPP traffic.",
+        display:   "SPP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["spp"],
+        blurb:     "SPP Protocol",
+    }
+    Sprt {
+        doc:       "SPRT traffic.",
+        display:   "SPRT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sprt"],
+        blurb:     "SPRT Protocol",
+    }
+    Srvloc {
+        doc:       "SRVLOC traffic.",
+        display:   "SRVLOC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["srvloc"],
+        blurb:     "SRVLOC Protocol",
+    }
+    SscfNni {
+        doc:       "SSCF-NNI traffic.",
+        display:   "SSCF-NNI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sscf_nni"],
+        blurb:     "SSCF-NNI Protocol",
+    }
+    Sscop {
+        doc:       "SSCOP traffic.",
+        display:   "SSCOP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sscop"],
+        blurb:     "SSCOP Protocol",
+    }
+    Ssyncp {
+        doc:       "SSYNCP traffic.",
+        display:   "SSYNCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ssyncp"],
+        blurb:     "SSYNCP Protocol",
+    }
+    Stanag4607 {
+        doc:       "STANAG4607 traffic.",
+        display:   "STANAG4607",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["stanag4607"],
+        blurb:     "STANAG4607 Protocol",
+    }
+    Starteam {
+        doc:       "STARTEAM traffic.",
+        display:   "STARTEAM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["starteam"],
+        blurb:     "STARTEAM Protocol",
+    }
+    Stcsig {
+        doc:       "STCSIG traffic.",
+        display:   "STCSIG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["stcsig"],
+        blurb:     "STCSIG Protocol",
+    }
+    Swipe {
+        doc:       "SWIPE traffic.",
+        display:   "SWIPE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["swipe"],
+        blurb:     "SWIPE Protocol",
+    }
+    Symantec {
+        doc:       "SYMANTEC traffic.",
+        display:   "SYMANTEC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["symantec"],
+        blurb:     "SYMANTEC Protocol",
+    }
+    Sync {
+        doc:       "SYNC traffic.",
+        display:   "SYNC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["sync"],
+        blurb:     "SYNC Protocol",
+    }
+    Synergy {
+        doc:       "SYNERGY traffic.",
+        display:   "SYNERGY",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["synergy"],
+        blurb:     "SYNERGY Protocol",
+    }
+    Synphasor {
+        doc:       "SYNPHASOR traffic.",
+        display:   "SYNPHASOR",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["synphasor"],
+        blurb:     "SYNPHASOR Protocol",
+    }
 }
 
 impl std::fmt::Display for Protocol {
