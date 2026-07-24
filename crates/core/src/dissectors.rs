@@ -1,3 +1,53 @@
+pub mod idrp;
+pub mod igap;
+pub mod ike;
+pub mod ilnp;
+pub mod ilp;
+pub mod imf;
+pub mod indigocare_icall;
+pub mod indigocare_netrix;
+pub mod infiniband;
+pub mod infiniband_sdp;
+pub mod interlink;
+pub mod ipars;
+pub mod ipdc;
+pub mod ipdr;
+pub mod iperf;
+pub mod iperf3;
+pub mod ipfc;
+pub mod ipnet;
+pub mod ipoib;
+pub mod ipos;
+pub mod ippusb;
+pub mod ipsec_tcp;
+pub mod ipsec_udp;
+pub mod ipsi_ctl;
+pub mod ipv6;
+pub mod ipvs_syncd;
+pub mod ipxwan;
+pub mod irdma;
+pub mod isdn;
+pub mod isdn_sup;
+pub mod isi;
+pub mod isis_clv;
+pub mod isis_hello;
+pub mod isis_lsp;
+pub mod isis_snp;
+pub mod isl;
+pub mod ismacryp;
+pub mod ismp;
+pub mod iso10681;
+pub mod iso14443;
+pub mod iso15765;
+pub mod iso7816;
+pub mod iso8583;
+pub mod isobus;
+pub mod isobus_vt;
+pub mod itdm;
+pub mod its;
+pub mod iua;
+pub mod iuup;
+pub mod iwarp_ddp_rdmap;
 pub mod gmhdr;
 pub mod gmr1_bcch;
 pub mod gmr1_common;
@@ -4238,6 +4288,56 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "idrp",
+        "igap",
+        "ike",
+        "ilnp",
+        "ilp",
+        "imf",
+        "indigocare_icall",
+        "indigocare_netrix",
+        "infiniband",
+        "infiniband_sdp",
+        "interlink",
+        "ipars",
+        "ipdc",
+        "ipdr",
+        "iperf",
+        "iperf3",
+        "ipfc",
+        "ipnet",
+        "ipoib",
+        "ipos",
+        "ippusb",
+        "ipsec_tcp",
+        "ipsec_udp",
+        "ipsi_ctl",
+        "ipv6",
+        "ipvs_syncd",
+        "ipxwan",
+        "irdma",
+        "isdn",
+        "isdn_sup",
+        "isi",
+        "isis_clv",
+        "isis_hello",
+        "isis_lsp",
+        "isis_snp",
+        "isl",
+        "ismacryp",
+        "ismp",
+        "iso10681",
+        "iso14443",
+        "iso15765",
+        "iso7816",
+        "iso8583",
+        "isobus",
+        "isobus_vt",
+        "itdm",
+        "its",
+        "iua",
+        "iuup",
+        "iwarp_ddp_rdmap",
         "gmhdr",
         "gmr1_bcch",
         "gmr1_common",

@@ -176,6 +176,438 @@ macro_rules! protocols {
 }
 
 protocols! {
+    Idrp {
+        doc:       "IDRP traffic.",
+        display:   "IDRP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Inter-Domain Routing Protocol",
+    }
+    Igap {
+        doc:       "IGAP traffic.",
+        display:   "IGAP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "IGMP Authentication Protocol",
+    }
+    Ilnp {
+        doc:       "ILNP traffic.",
+        display:   "ILNP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Identifier-Locator Network Protocol",
+    }
+    Ilp {
+        doc:       "ILP traffic.",
+        display:   "ILP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Internal Location Protocol",
+    }
+    Imf {
+        doc:       "IMF traffic.",
+        display:   "IMF",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Internet Message Format",
+    }
+    IndigocareIcall {
+        doc:       "IndigoCare iCALL traffic.",
+        display:   "IndigoCare iCALL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["indigocare_icall"],
+        blurb:     "IndigoCare iCALL Protocol",
+    }
+    IndigocareNetrix {
+        doc:       "IndigoCare Netrix traffic.",
+        display:   "IndigoCare Netrix",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["indigocare_netrix"],
+        blurb:     "IndigoCare Netrix Protocol",
+    }
+    Infiniband {
+        doc:       "InfiniBand traffic.",
+        display:   "InfiniBand",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["infiniband"],
+        blurb:     "InfiniBand Architecture Link Protocol",
+    }
+    InfinibandSdp {
+        doc:       "InfiniBand SDP traffic.",
+        display:   "InfiniBand SDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["infiniband_sdp"],
+        blurb:     "InfiniBand Sockets Direct Protocol",
+    }
+    Interlink {
+        doc:       "Interlink traffic.",
+        display:   "Interlink",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Interlink Protocol",
+    }
+    Ipars {
+        doc:       "IPARS traffic.",
+        display:   "IPARS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "International Airline Reservations System Protocol",
+    }
+    Ipdc {
+        doc:       "IPDC traffic.",
+        display:   "IPDC",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "IP Device Control Protocol",
+    }
+    Ipdr {
+        doc:       "IPDR traffic.",
+        display:   "IPDR",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "IP Detail Record Protocol",
+    }
+    Iperf {
+        doc:       "iperf traffic.",
+        display:   "iperf",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "iperf Network Testing Protocol",
+    }
+    Iperf3 {
+        doc:       "iperf3 traffic.",
+        display:   "iperf3",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "iperf3 Bandwidth Measurement Protocol",
+    }
+    Ipfc {
+        doc:       "IPFC traffic.",
+        display:   "IPFC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "IP over Fibre Channel Protocol",
+    }
+    Ipnet {
+        doc:       "IPNET traffic.",
+        display:   "IPNET",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Solaris IPNET Packet Header",
+    }
+    Ipoib {
+        doc:       "IPoIB traffic.",
+        display:   "IPoIB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ipoib"],
+        blurb:     "IP over InfiniBand Protocol",
+    }
+    Ipos {
+        doc:       "IPOS traffic.",
+        display:   "IPOS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "IPOS Protocol",
+    }
+    Ippusb {
+        doc:       "IPP-over-USB traffic.",
+        display:   "IPP-over-USB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ippusb"],
+        blurb:     "Internet Printing Protocol over USB",
+    }
+    IpsecTcp {
+        doc:       "IPsec over TCP traffic.",
+        display:   "IPsec over TCP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["ipsec_tcp"],
+        blurb:     "IPsec Encapsulation over TCP",
+    }
+    IpsecUdp {
+        doc:       "IPsec over UDP traffic.",
+        display:   "IPsec over UDP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["ipsec_udp"],
+        blurb:     "IPsec Encapsulation over UDP",
+    }
+    IpsiCtl {
+        doc:       "IPSI Control traffic.",
+        display:   "IPSI Control",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ipsi_ctl"],
+        blurb:     "IPSI Control Protocol",
+    }
+    Ipv6 {
+        doc:       "IPv6 Header traffic.",
+        display:   "IPv6 Header",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ipv6"],
+        blurb:     "Internet Protocol Version 6 Header",
+    }
+    IpvsSyncd {
+        doc:       "IPVS Syncd traffic.",
+        display:   "IPVS Syncd",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["ipvs_syncd"],
+        blurb:     "IP Virtual Server Connection Sync Protocol",
+    }
+    Ipxwan {
+        doc:       "IPX WAN traffic.",
+        display:   "IPX WAN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ipxwan"],
+        blurb:     "IPX Wide Area Network Protocol",
+    }
+    Irdma {
+        doc:       "iRDMA traffic.",
+        display:   "iRDMA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Intel Ethernet RDMA Protocol",
+    }
+    Isdn {
+        doc:       "ISDN traffic.",
+        display:   "ISDN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Integrated Services Digital Network Protocol",
+    }
+    IsdnSup {
+        doc:       "ISDN Supplementary Services traffic.",
+        display:   "ISDN Supplementary Services",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["isdn_sup"],
+        blurb:     "ISDN Supplementary Services Protocol",
+    }
+    Isi {
+        doc:       "ISI traffic.",
+        display:   "ISI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Intelligent System Interface Protocol",
+    }
+    IsisClv {
+        doc:       "IS-IS CLV traffic.",
+        display:   "IS-IS CLV",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["isis_clv"],
+        blurb:     "IS-IS Code-Length-Value Data",
+    }
+    IsisHello {
+        doc:       "IS-IS Hello traffic.",
+        display:   "IS-IS Hello",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["isis_hello"],
+        blurb:     "IS-IS Hello PDU",
+    }
+    IsisLsp {
+        doc:       "IS-IS LSP traffic.",
+        display:   "IS-IS LSP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["isis_lsp"],
+        blurb:     "IS-IS Link State PDU",
+    }
+    IsisSnp {
+        doc:       "IS-IS SNP traffic.",
+        display:   "IS-IS SNP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["isis_snp"],
+        blurb:     "IS-IS Sequence Numbers PDU",
+    }
+    Isl {
+        doc:       "Cisco ISL traffic.",
+        display:   "Cisco ISL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["isl"],
+        blurb:     "Cisco Inter-Switch Link Protocol",
+    }
+    Ismacryp {
+        doc:       "ISMACryp traffic.",
+        display:   "ISMACryp",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "ISMA Encryption Protocol",
+    }
+    Ismp {
+        doc:       "ISMP traffic.",
+        display:   "ISMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Inter-Switch Message Protocol",
+    }
+    Iso10681 {
+        doc:       "ISO 10681 traffic.",
+        display:   "ISO 10681",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["iso10681"],
+        blurb:     "ISO 10681 Communication on FlexRay",
+    }
+    Iso14443 {
+        doc:       "ISO 14443 traffic.",
+        display:   "ISO 14443",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["iso14443"],
+        blurb:     "ISO 14443 RFID Contactless Smart Card",
+    }
+    Iso7816 {
+        doc:       "ISO 7816 traffic.",
+        display:   "ISO 7816",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["iso7816"],
+        blurb:     "ISO 7816 Contact Smart Card Protocol",
+    }
+    Iso8583 {
+        doc:       "ISO 8583 Financial Transaction traffic.",
+        display:   "ISO 8583 Financial Transaction",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["iso8583"],
+        blurb:     "ISO 8583 Financial Transaction Card Originated Messages",
+    }
+    Isobus {
+        doc:       "ISOBUS traffic.",
+        display:   "ISOBUS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "ISO 11783 Agricultural Tractor & Machinery Bus",
+    }
+    IsobusVt {
+        doc:       "ISOBUS Virtual Terminal traffic.",
+        display:   "ISOBUS Virtual Terminal",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["isobus_vt"],
+        blurb:     "ISOBUS Virtual Terminal Messages",
+    }
+    Itdm {
+        doc:       "ITDM traffic.",
+        display:   "ITDM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Internal Time Division Multiplexing Protocol",
+    }
+    Its {
+        doc:       "ETSI ITS traffic.",
+        display:   "ETSI ITS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["its"],
+        blurb:     "ETSI Intelligent Transport Systems",
+    }
+    Iua {
+        doc:       "IUA traffic.",
+        display:   "IUA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "ISDN Q.921 User Adaptation Layer",
+    }
+    Iuup {
+        doc:       "IuUP traffic.",
+        display:   "IuUP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Iu User Plane Protocol",
+    }
+    IwarpDdpRdmap {
+        doc:       "iWARP DDP/RDMAP traffic.",
+        display:   "iWARP DDP/RDMAP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["iwarp_ddp_rdmap"],
+        blurb:     "iWARP Direct Data Placement and Remote Direct Memory Access",
+    }
     Gmhdr {
         doc:       "GMHDR traffic.",
         display:   "GMHDR",
