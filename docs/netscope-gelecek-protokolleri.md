@@ -60,12 +60,12 @@
 
 | | # | Protokol | Açıklama |
 |---|---|---|---|
-| [ ] | 23 | `azure_fabric_rpc` | Azure Service Fabric internal RPC |
-| [ ] | 24 | `azure_hcsshim` | Azure Host Compute Service shim protocol |
-| [ ] | 25 | `azure_rdma_smb` | Azure RDMA-capable SMB direct |
-| [ ] | 26 | `azure_sdn_policy` | Azure SDN policy distribution protocol |
-| [ ] | 27 | `cosmos_db_transport` | Cosmos DB internal transport (not client-facing) |
-| [ ] | 28 | `azure_akv_rpc` | Azure Key Vault internal HSM RPC |
+| [x] | 23 | `azure_fabric_rpc` | Azure Service Fabric internal RPC |
+| [x] | 24 | `azure_hcsshim` | Azure Host Compute Service shim protocol |
+| [x] | 25 | `azure_rdma_smb` | Azure RDMA-capable SMB direct |
+| [x] | 26 | `azure_sdn_policy` | Azure SDN policy distribution protocol |
+| [x] | 27 | `cosmos_db_transport` | Cosmos DB internal transport (not client-facing) |
+| [x] | 28 | `azure_akv_rpc` | Azure Key Vault internal HSM RPC |
 
 ### 1.4 Modern RPC Framework'leri (12 adet)
 

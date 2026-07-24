@@ -18562,6 +18562,61 @@ protocols! {
         aliases:   ["aws_aurora_storage"],
         blurb:     "Aurora Storage Layer RPC Log Replication",
     }
+
+    AzureFabricRpc {
+        doc:       "AZURE-FABRIC-RPC traffic.",
+        display:   "AZURE-FABRIC-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["azure_fabric_rpc"],
+        blurb:     "Azure Service Fabric Internal RPC",
+    }
+    AzureHcsshim {
+        doc:       "AZURE-HCSSHIM traffic.",
+        display:   "AZURE-HCSSHIM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["azure_hcsshim"],
+        blurb:     "Azure Host Compute Service Shim Protocol",
+    }
+    AzureRdmaSmb {
+        doc:       "AZURE-RDMA-SMB traffic.",
+        display:   "AZURE-RDMA-SMB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["azure_rdma_smb"],
+        blurb:     "Azure RDMA-Capable SMB Direct",
+    }
+    AzureSdnPolicy {
+        doc:       "AZURE-SDN-POLICY traffic.",
+        display:   "AZURE-SDN-POLICY",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["azure_sdn_policy"],
+        blurb:     "Azure SDN Policy Distribution Protocol",
+    }
+    CosmosDbTransport {
+        doc:       "COSMOS-DB-TRANSPORT traffic.",
+        display:   "COSMOS-DB-TRANSPORT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cosmos_db_transport"],
+        blurb:     "Cosmos DB Internal Transport",
+    }
+    AzureAkvRpc {
+        doc:       "AZURE-AKV-RPC traffic.",
+        display:   "AZURE-AKV-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["azure_akv_rpc"],
+        blurb:     "Azure Key Vault Internal HSM RPC",
+    }
 }
 
 impl std::fmt::Display for Protocol {

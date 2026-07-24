@@ -952,3 +952,13 @@ fn _dissector_reachability_guard_aws_13_22() {
         let _ = super::aws_sqs_internal::dissect_aws_sqs_internal;
         let _ = super::aws_aurora_storage::dissect_aws_aurora_storage;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_azure_23_28() {
+        let _ = super::azure_fabric_rpc::dissect_azure_fabric_rpc;
+        let _ = super::azure_hcsshim::dissect_azure_hcsshim;
+        let _ = super::azure_rdma_smb::dissect_azure_rdma_smb;
+        let _ = super::azure_sdn_policy::dissect_azure_sdn_policy;
+        let _ = super::cosmos_db_transport::dissect_cosmos_db_transport;
+        let _ = super::azure_akv_rpc::dissect_azure_akv_rpc;
+}

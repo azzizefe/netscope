@@ -6687,3 +6687,10 @@ pub mod aws_kms_rpc;
 pub mod ec2_nitro_vsock;
 pub mod aws_sqs_internal;
 pub mod aws_aurora_storage;
+
+pub mod azure_fabric_rpc;
+pub mod azure_hcsshim;
+pub mod azure_rdma_smb;
+pub mod azure_sdn_policy;
+pub mod cosmos_db_transport;
+pub mod azure_akv_rpc;
