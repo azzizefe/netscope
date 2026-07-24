@@ -1,3 +1,63 @@
+pub mod bpdu;
+pub mod bpq;
+pub mod bpsec;
+pub mod bpsec_cose;
+pub mod bpsec_defaultsc;
+pub mod bpv6;
+pub mod bpv7;
+pub mod brcm_tag;
+pub mod brdwlk;
+pub mod brp;
+pub mod bt_dht;
+pub mod bt_tracker;
+pub mod bt_utp;
+pub mod bt3ds;
+pub mod busmirroring;
+pub mod bvlc;
+pub mod bzr;
+pub mod c1222;
+pub mod c15ch;
+pub mod c2p;
+pub mod calcappprotocol;
+pub mod caneth;
+pub mod canopen;
+pub mod carp;
+pub mod cast;
+pub mod catapult_dct2000;
+pub mod cattp;
+pub mod cbor;
+pub mod ccsds;
+pub mod cdma2k;
+pub mod cell_broadcast;
+pub mod cemi;
+pub mod cesoeth;
+pub mod cfdp;
+pub mod cgmp;
+pub mod chargen;
+pub mod charging_ase;
+pub mod chdlc;
+pub mod cigi;
+pub mod cimd;
+pub mod cimetrics;
+pub mod cipmotion;
+pub mod cipsafety;
+pub mod cisco_erspan;
+pub mod cisco_fp_mim;
+pub mod cisco_marker;
+pub mod cisco_mcp;
+pub mod cisco_metadata;
+pub mod cisco_oui;
+pub mod cisco_sm;
+pub mod cisco_ttag;
+pub mod cisco_wids;
+pub mod citp;
+pub mod cl3;
+pub mod cl3dcw;
+pub mod classicstun;
+pub mod clearcase;
+pub mod clip;
+pub mod clique_rm;
+pub mod clnp;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 pub mod aarp;
@@ -5118,3 +5178,4 @@ mod robustness {
         );
     }
 }
+

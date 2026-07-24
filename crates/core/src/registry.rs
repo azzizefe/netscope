@@ -176,6 +176,546 @@ macro_rules! protocols {
 }
 
 protocols! {
+    Bpdu {
+        doc:       "BPDU traffic.",
+        display:   "BPDU",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Bridge Protocol Data Unit",
+    }
+    Bpq {
+        doc:       "BPQ traffic.",
+        display:   "BPQ",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "AX.25 BPQ Protocol",
+    }
+    Bpsec {
+        doc:       "BPSec traffic.",
+        display:   "BPSec",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Bundle Protocol Security",
+    }
+    BpsecCose {
+        doc:       "BPSec COSE traffic.",
+        display:   "BPSec COSE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "BPSec COSE Context",
+    }
+    BpsecDefaultsc {
+        doc:       "BPSec Default SC traffic.",
+        display:   "BPSec Default SC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "BPSec Default Security Context",
+    }
+    Bpv6 {
+        doc:       "Bundle Protocol v6 traffic.",
+        display:   "Bundle Protocol v6",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Bundle Protocol Version 6",
+    }
+    Bpv7 {
+        doc:       "Bundle Protocol v7 traffic.",
+        display:   "Bundle Protocol v7",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Bundle Protocol Version 7",
+    }
+    BrcmTag {
+        doc:       "Broadcom Tag traffic.",
+        display:   "Broadcom Tag",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Broadcom Ethernet Tag",
+    }
+    Brdwlk {
+        doc:       "Boardwalk traffic.",
+        display:   "Boardwalk",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Boardwalk Protocol",
+    }
+    Brp {
+        doc:       "BRP traffic.",
+        display:   "BRP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Broadband Remote Protocol",
+    }
+    BtDht {
+        doc:       "BitTorrent DHT traffic.",
+        display:   "BitTorrent DHT",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "BitTorrent Mainline DHT",
+    }
+    BtTracker {
+        doc:       "BitTorrent Tracker traffic.",
+        display:   "BitTorrent Tracker",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "BitTorrent Tracker HTTP/UDP Protocol",
+    }
+    BtUtp {
+        doc:       "BitTorrent uTP traffic.",
+        display:   "BitTorrent uTP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Micro Transport Protocol",
+    }
+    Bt3ds {
+        doc:       "Bluetooth 3DS traffic.",
+        display:   "Bluetooth 3DS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Bluetooth 3D Synchronization",
+    }
+    Busmirroring {
+        doc:       "Bus Mirroring traffic.",
+        display:   "Bus Mirroring",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Bus Mirroring Protocol",
+    }
+    Bvlc {
+        doc:       "BVLC traffic.",
+        display:   "BVLC",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "BACnet Virtual Link Control",
+    }
+    Bzr {
+        doc:       "Bazaar traffic.",
+        display:   "Bazaar",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Bazaar Control Version Protocol",
+    }
+    C1222 {
+        doc:       "ANSI C12.22 traffic.",
+        display:   "ANSI C12.22",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "ANSI C12.22 Smart Grid Protocol",
+    }
+    C15ch {
+        doc:       "C15CH traffic.",
+        display:   "C15CH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "C15CH Protocol",
+    }
+    C2p {
+        doc:       "C2P traffic.",
+        display:   "C2P",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "C2P Protocol",
+    }
+    Calcappprotocol {
+        doc:       "CalcApp Protocol traffic.",
+        display:   "CalcApp Protocol",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CalcApp Application Protocol",
+    }
+    Caneth {
+        doc:       "CANeth traffic.",
+        display:   "CANeth",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CAN over Ethernet",
+    }
+    Canopen {
+        doc:       "CANopen traffic.",
+        display:   "CANopen",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CANopen Industrial Automation Protocol",
+    }
+    Carp {
+        doc:       "CARP traffic.",
+        display:   "CARP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Common Address Redundancy Protocol",
+    }
+    Cast {
+        doc:       "CAST traffic.",
+        display:   "CAST",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CAST Protocol",
+    }
+    CatapultDct2000 {
+        doc:       "Catapult DCT2000 traffic.",
+        display:   "Catapult DCT2000",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Catapult DCT2000 Log Protocol",
+    }
+    Cattp {
+        doc:       "CATTP traffic.",
+        display:   "CATTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CATTP Protocol",
+    }
+    Cbor {
+        doc:       "CBOR traffic.",
+        display:   "CBOR",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Concise Binary Object Representation",
+    }
+    Ccsds {
+        doc:       "CCSDS traffic.",
+        display:   "CCSDS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Consultative Committee for Space Data Systems",
+    }
+    Cdma2k {
+        doc:       "CDMA2000 traffic.",
+        display:   "CDMA2000",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CDMA2000 Cellular Protocol",
+    }
+    CellBroadcast {
+        doc:       "Cell Broadcast traffic.",
+        display:   "Cell Broadcast",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cell Broadcast Service",
+    }
+    Cemi {
+        doc:       "cEMI traffic.",
+        display:   "cEMI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Common External Message Interface",
+    }
+    Cesoeth {
+        doc:       "CESoETH traffic.",
+        display:   "CESoETH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Circuit Emulation Service over Ethernet",
+    }
+    Cfdp {
+        doc:       "CFDP traffic.",
+        display:   "CFDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CCSDS File Delivery Protocol",
+    }
+    Cgmp {
+        doc:       "CGMP traffic.",
+        display:   "CGMP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco Group Management Protocol",
+    }
+    Chargen {
+        doc:       "CHARGEN traffic.",
+        display:   "CHARGEN",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Character Generator Protocol",
+    }
+    ChargingAse {
+        doc:       "Charging ASE traffic.",
+        display:   "Charging ASE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Charging Application Service Element",
+    }
+    Chdlc {
+        doc:       "Cisco HDLC traffic.",
+        display:   "Cisco HDLC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco High-Level Data Link Control",
+    }
+    Cigi {
+        doc:       "CIGI traffic.",
+        display:   "CIGI",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Common Image Generator Interface",
+    }
+    Cimd {
+        doc:       "CIMD traffic.",
+        display:   "CIMD",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Computer Interface to Message Distribution",
+    }
+    Cimetrics {
+        doc:       "Cimetrics traffic.",
+        display:   "Cimetrics",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cimetrics Protocol",
+    }
+    Cipmotion {
+        doc:       "CIP Motion traffic.",
+        display:   "CIP Motion",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Common Industrial Protocol Motion Extension",
+    }
+    Cipsafety {
+        doc:       "CIP Safety traffic.",
+        display:   "CIP Safety",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Common Industrial Protocol Safety Extension",
+    }
+    CiscoErspan {
+        doc:       "Cisco ERSPAN traffic.",
+        display:   "Cisco ERSPAN",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco Encapsulated Remote Switched Port Analyzer",
+    }
+    CiscoFpMim {
+        doc:       "Cisco FP-MiM traffic.",
+        display:   "Cisco FP-MiM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco FabricPath MAC-in-MAC",
+    }
+    CiscoMarker {
+        doc:       "Cisco Marker traffic.",
+        display:   "Cisco Marker",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco Marker Protocol",
+    }
+    CiscoMcp {
+        doc:       "Cisco MCP traffic.",
+        display:   "Cisco MCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco Misconfiguration Compression Protocol",
+    }
+    CiscoMetadata {
+        doc:       "Cisco Metadata traffic.",
+        display:   "Cisco Metadata",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco Metadata Protocol",
+    }
+    CiscoOui {
+        doc:       "Cisco OUI traffic.",
+        display:   "Cisco OUI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco OUI Protocol",
+    }
+    CiscoSm {
+        doc:       "Cisco SM traffic.",
+        display:   "Cisco SM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco Session Management Protocol",
+    }
+    CiscoTtag {
+        doc:       "Cisco TTAG traffic.",
+        display:   "Cisco TTAG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco TTAG Protocol",
+    }
+    CiscoWids {
+        doc:       "Cisco WIDS traffic.",
+        display:   "Cisco WIDS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Cisco Wireless IDS",
+    }
+    Citp {
+        doc:       "CITP traffic.",
+        display:   "CITP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Controller Interface Transfer Protocol",
+    }
+    Cl3 {
+        doc:       "CL3 traffic.",
+        display:   "CL3",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CL3 Protocol",
+    }
+    Cl3dcw {
+        doc:       "CL3DCW traffic.",
+        display:   "CL3DCW",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "CL3DCW Protocol",
+    }
+    Classicstun {
+        doc:       "Classic STUN traffic.",
+        display:   "Classic STUN",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Classic STUN Protocol",
+    }
+    Clearcase {
+        doc:       "ClearCase traffic.",
+        display:   "ClearCase",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Rational ClearCase Protocol",
+    }
+    Clip {
+        doc:       "CLIP traffic.",
+        display:   "CLIP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Classical IP over ATM",
+    }
+    CliqueRm {
+        doc:       "Clique RM traffic.",
+        display:   "Clique RM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Clique Reliable Multicast Protocol",
+    }
+    Clnp {
+        doc:       "CLNP traffic.",
+        display:   "CLNP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Connectionless Network Protocol",
+    }
     Tcp {
         doc:       "TCP traffic.",
         display:   "TCP",
@@ -10733,3 +11273,4 @@ mod tests {
         assert_eq!(Protocol::Unknown("x".into()).rank(), 0);
     }
 }
+
