@@ -978,3 +978,17 @@ fn _dissector_reachability_guard_rpc_29_40() {
         let _ = super::sofa_rpc_bolt::dissect_sofa_rpc_bolt;
         let _ = super::kitex_ttheader::dissect_kitex_ttheader;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_mesh_41_50() {
+        let _ = super::envoy_xds_v3::dissect_envoy_xds_v3;
+        let _ = super::envoy_hcm::dissect_envoy_hcm;
+        let _ = super::istio_mcp::dissect_istio_mcp;
+        let _ = super::linkerd_h2::dissect_linkerd_h2;
+        let _ = super::linkerd_dst::dissect_linkerd_dst;
+        let _ = super::consul_connect_mesh::dissect_consul_connect_mesh;
+        let _ = super::kuma_dp::dissect_kuma_dp;
+        let _ = super::traefik_hub::dissect_traefik_hub;
+        let _ = super::cilium_hubble::dissect_cilium_hubble;
+        let _ = super::dapr_sidecar::dissect_dapr_sidecar;
+}

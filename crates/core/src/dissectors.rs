@@ -6707,3 +6707,14 @@ pub mod brpc_nshead;
 pub mod motan2;
 pub mod sofa_rpc_bolt;
 pub mod kitex_ttheader;
+
+pub mod envoy_xds_v3;
+pub mod envoy_hcm;
+pub mod istio_mcp;
+pub mod linkerd_h2;
+pub mod linkerd_dst;
+pub mod consul_connect_mesh;
+pub mod kuma_dp;
+pub mod traefik_hub;
+pub mod cilium_hubble;
+pub mod dapr_sidecar;

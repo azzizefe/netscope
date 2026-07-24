@@ -88,16 +88,16 @@
 
 | | # | Protokol | Açıklama |
 |---|---|---|---|
-| [ ] | 41 | `envoy_xds_v3` | Envoy xDS v3 discovery protocol (LDS/RDS/CDS/EDS) |
-| [ ] | 42 | `envoy_hcm` | Envoy HTTP connection manager internal |
-| [ ] | 43 | `istio_mcp` | Istio Mesh Configuration Protocol |
-| [ ] | 44 | `linkerd_h2` | Linkerd2-proxy internal HTTP/2 mesh proto |
-| [ ] | 45 | `linkerd_dst` | Linkerd destination service discovery |
-| [ ] | 46 | `consul_connect_mesh` | Consul Connect sidecar mesh wire |
-| [ ] | 47 | `kuma_dp` | Kuma (Kong Mesh) data plane protocol |
-| [ ] | 48 | `traefik_hub` | Traefik Hub mesh control plane |
-| [ ] | 49 | `cilium_hubble` | Cilium Hubble observability eBPF export |
-| [ ] | 50 | `dapr_sidecar` | Dapr sidecar-to-sidecar internal gRPC |
+| [x] | 41 | `envoy_xds_v3` | Envoy xDS v3 discovery protocol (LDS/RDS/CDS/EDS) |
+| [x] | 42 | `envoy_hcm` | Envoy HTTP connection manager internal |
+| [x] | 43 | `istio_mcp` | Istio Mesh Configuration Protocol |
+| [x] | 44 | `linkerd_h2` | Linkerd2-proxy internal HTTP/2 mesh proto |
+| [x] | 45 | `linkerd_dst` | Linkerd destination service discovery |
+| [x] | 46 | `consul_connect_mesh` | Consul Connect sidecar mesh wire |
+| [x] | 47 | `kuma_dp` | Kuma (Kong Mesh) data plane protocol |
+| [x] | 48 | `traefik_hub` | Traefik Hub mesh control plane |
+| [x] | 49 | `cilium_hubble` | Cilium Hubble observability eBPF export |
+| [x] | 50 | `dapr_sidecar` | Dapr sidecar-to-sidecar internal gRPC |
 
 ### 1.6 Cloud-Native Streaming & Messaging (10 adet)
 

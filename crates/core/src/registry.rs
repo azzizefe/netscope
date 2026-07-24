@@ -18726,6 +18726,97 @@ protocols! {
         aliases:   ["kitex_ttheader"],
         blurb:     "ByteDance Kitex TTHeader Protocol",
     }
+
+    EnvoyXdsV3 {
+        doc:       "ENVOY-XDS-V3 traffic.",
+        display:   "ENVOY-XDS-V3",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["envoy_xds_v3"],
+        blurb:     "Envoy xDS v3 Discovery Protocol",
+    }
+    EnvoyHcm {
+        doc:       "ENVOY-HCM traffic.",
+        display:   "ENVOY-HCM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["envoy_hcm"],
+        blurb:     "Envoy HTTP Connection Manager Internal",
+    }
+    IstioMcp {
+        doc:       "ISTIO-MCP traffic.",
+        display:   "ISTIO-MCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["istio_mcp"],
+        blurb:     "Istio Mesh Configuration Protocol",
+    }
+    LinkerdH2 {
+        doc:       "LINKERD-H2 traffic.",
+        display:   "LINKERD-H2",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["linkerd_h2"],
+        blurb:     "Linkerd2-Proxy Internal HTTP/2 Mesh Protocol",
+    }
+    LinkerdDst {
+        doc:       "LINKERD-DST traffic.",
+        display:   "LINKERD-DST",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["linkerd_dst"],
+        blurb:     "Linkerd Destination Service Discovery",
+    }
+    ConsulConnectMesh {
+        doc:       "CONSUL-CONNECT-MESH traffic.",
+        display:   "CONSUL-CONNECT-MESH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["consul_connect_mesh"],
+        blurb:     "Consul Connect Sidecar Mesh Wire",
+    }
+    KumaDp {
+        doc:       "KUMA-DP traffic.",
+        display:   "KUMA-DP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["kuma_dp"],
+        blurb:     "Kuma Data Plane Protocol",
+    }
+    TraefikHub {
+        doc:       "TRAEFIK-HUB traffic.",
+        display:   "TRAEFIK-HUB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["traefik_hub"],
+        blurb:     "Traefik Hub Mesh Control Plane",
+    }
+    CiliumHubble {
+        doc:       "CILIUM-HUBBLE traffic.",
+        display:   "CILIUM-HUBBLE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cilium_hubble"],
+        blurb:     "Cilium Hubble Observability eBPF Export",
+    }
+    DaprSidecar {
+        doc:       "DAPR-SIDECAR traffic.",
+        display:   "DAPR-SIDECAR",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dapr_sidecar"],
+        blurb:     "Dapr Sidecar-to-Sidecar Internal gRPC",
+    }
 }
 
 impl std::fmt::Display for Protocol {
