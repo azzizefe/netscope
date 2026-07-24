@@ -18471,6 +18471,97 @@ protocols! {
         aliases:   ["cfs_rpc"],
         blurb:     "Google Colossus File System RPC",
     }
+
+    AwsSigv4 {
+        doc:       "AWS-SIGV4 traffic.",
+        display:   "AWS-SIGV4",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["aws_sigv4"],
+        blurb:     "AWS Signature v4 Signing Protocol Extension",
+    }
+    S3SelectRpc {
+        doc:       "S3-SELECT-RPC traffic.",
+        display:   "S3-SELECT-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["s3_select_rpc"],
+        blurb:     "Amazon S3 Select Internal RPC",
+    }
+    DynamodbInternal {
+        doc:       "DYNAMODB-INTERNAL traffic.",
+        display:   "DYNAMODB-INTERNAL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["dynamodb_internal"],
+        blurb:     "DynamoDB Partition-Level Internal Gossip",
+    }
+    LambdaInvoke {
+        doc:       "LAMBDA-INVOKE traffic.",
+        display:   "LAMBDA-INVOKE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lambda_invoke"],
+        blurb:     "AWS Lambda Invoke Wire Protocol",
+    }
+    AwsTls {
+        doc:       "AWS-TLS traffic.",
+        display:   "AWS-TLS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["aws_tls"],
+        blurb:     "AWS TLS Termination Internal Next-Hop Protocol",
+    }
+    NitroEnclave {
+        doc:       "NITRO-ENCLAVE traffic.",
+        display:   "NITRO-ENCLAVE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nitro_enclave"],
+        blurb:     "AWS Nitro Enclave Vsock Protocol",
+    }
+    AwsKmsRpc {
+        doc:       "AWS-KMS-RPC traffic.",
+        display:   "AWS-KMS-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["aws_kms_rpc"],
+        blurb:     "AWS KMS Internal HSM-to-Frontend RPC",
+    }
+    Ec2NitroVsock {
+        doc:       "EC2-NITRO-VSOCK traffic.",
+        display:   "EC2-NITRO-VSOCK",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ec2_nitro_vsock"],
+        blurb:     "EC2 Nitro Hypervisor Vsock Extensions",
+    }
+    AwsSqsInternal {
+        doc:       "AWS-SQS-INTERNAL traffic.",
+        display:   "AWS-SQS-INTERNAL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["aws_sqs_internal"],
+        blurb:     "SQS Internal Broker Replication Log Protocol",
+    }
+    AwsAuroraStorage {
+        doc:       "AWS-AURORA-STORAGE traffic.",
+        display:   "AWS-AURORA-STORAGE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["aws_aurora_storage"],
+        blurb:     "Aurora Storage Layer RPC Log Replication",
+    }
 }
 
 impl std::fmt::Display for Protocol {

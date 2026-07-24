@@ -45,16 +45,16 @@
 
 | | # | Protokol | Açıklama |
 |---|---|---|---|
-| [ ] | 13 | `aws_sigv4` | AWS Signature v4 signing protocol extension |
-| [ ] | 14 | `s3_select_rpc` | Amazon S3 Select internal RPC |
-| [ ] | 15 | `dynamodb_internal` | DynamoDB partition-level internal gossip |
-| [ ] | 16 | `lambda_invoke` | AWS Lambda invoke wire protocol (internal) |
-| [ ] | 17 | `aws_tls` | AWS TLS termination internal next-hop proto |
-| [ ] | 18 | `nitro_enclave` | AWS Nitro Enclave vsock protocol |
-| [ ] | 19 | `aws_kms_rpc` | AWS KMS internal HSM-to-frontend RPC |
-| [ ] | 20 | `ec2_nitro_vsock` | EC2 Nitro hypervisor vsock extensions |
-| [ ] | 21 | `aws_sqs_internal` | SQS internal broker replication log proto |
-| [ ] | 22 | `aws_aurora_storage` | Aurora storage layer RPC (log-based replication) |
+| [x] | 13 | `aws_sigv4` | AWS Signature v4 signing protocol extension |
+| [x] | 14 | `s3_select_rpc` | Amazon S3 Select internal RPC |
+| [x] | 15 | `dynamodb_internal` | DynamoDB partition-level internal gossip |
+| [x] | 16 | `lambda_invoke` | AWS Lambda invoke wire protocol (internal) |
+| [x] | 17 | `aws_tls` | AWS TLS termination internal next-hop proto |
+| [x] | 18 | `nitro_enclave` | AWS Nitro Enclave vsock protocol |
+| [x] | 19 | `aws_kms_rpc` | AWS KMS internal HSM-to-frontend RPC |
+| [x] | 20 | `ec2_nitro_vsock` | EC2 Nitro hypervisor vsock extensions |
+| [x] | 21 | `aws_sqs_internal` | SQS internal broker replication log proto |
+| [x] | 22 | `aws_aurora_storage` | Aurora storage layer RPC (log-based replication) |
 
 ### 1.3 Microsoft Azure / Internal (6 adet)
 

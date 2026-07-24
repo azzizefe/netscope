@@ -938,3 +938,17 @@ fn _dissector_reachability_guard_google_1_12() {
         let _ = super::gws_http::dissect_gws_http;
         let _ = super::cfs_rpc::dissect_cfs_rpc;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_aws_13_22() {
+        let _ = super::aws_sigv4::dissect_aws_sigv4;
+        let _ = super::s3_select_rpc::dissect_s3_select_rpc;
+        let _ = super::dynamodb_internal::dissect_dynamodb_internal;
+        let _ = super::lambda_invoke::dissect_lambda_invoke;
+        let _ = super::aws_tls::dissect_aws_tls;
+        let _ = super::nitro_enclave::dissect_nitro_enclave;
+        let _ = super::aws_kms_rpc::dissect_aws_kms_rpc;
+        let _ = super::ec2_nitro_vsock::dissect_ec2_nitro_vsock;
+        let _ = super::aws_sqs_internal::dissect_aws_sqs_internal;
+        let _ = super::aws_aurora_storage::dissect_aws_aurora_storage;
+}

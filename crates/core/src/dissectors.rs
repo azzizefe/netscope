@@ -6676,3 +6676,14 @@ pub mod tango_core;
 pub mod gmock_rpc;
 pub mod gws_http;
 pub mod cfs_rpc;
+
+pub mod aws_sigv4;
+pub mod s3_select_rpc;
+pub mod dynamodb_internal;
+pub mod lambda_invoke;
+pub mod aws_tls;
+pub mod nitro_enclave;
+pub mod aws_kms_rpc;
+pub mod ec2_nitro_vsock;
+pub mod aws_sqs_internal;
+pub mod aws_aurora_storage;
