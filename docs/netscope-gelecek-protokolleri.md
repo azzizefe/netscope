@@ -28,18 +28,18 @@
 
 | | # | Protokol | Açıklama |
 |---|---|---|---|
-| [ ] | 1 | `stubby` | Google'ın internal RPC framework'ü, gRPC'nin atası |
-| [ ] | 2 | `stubby_v3` | Stubby v3 wire format — Google Cloud internal |
-| [ ] | 3 | `borg_task` | Borg cluster manager task iletişim protokolü |
-| [ ] | 4 | `borgmaster_api` | Borg master scheduling API iletişimi |
-| [ ] | 5 | `boq_metro` | Google Boq (Book of Queries) metro batching protokolü |
-| [ ] | 6 | `loom` | Google Loom — cross-datacenter tenant isolation protocol |
-| [ ] | 7 | `balsa` | Google Balsa — low-latency RPC for search backend |
-| [ ] | 8 | `aquila` | Google Aquila — in-memory storage rpc |
-| [ ] | 9 | `tango_core` | Google Tango core messaging (internal pub/sub kernel) |
-| [ ] | 10 | `gmock_rpc` | Google mock RPC test framework wire format |
-| [ ] | 11 | `gws_http` | Google Web Server internal HTTP extensions |
-| [ ] | 12 | `cfs_rpc` | Google Colossus File System RPC |
+| [x] | 1 | `stubby` | Google'ın internal RPC framework'ü, gRPC'nin atası |
+| [x] | 2 | `stubby_v3` | Stubby v3 wire format — Google Cloud internal |
+| [x] | 3 | `borg_task` | Borg cluster manager task iletişim protokolü |
+| [x] | 4 | `borgmaster_api` | Borg master scheduling API iletişimi |
+| [x] | 5 | `boq_metro` | Google Boq (Book of Queries) metro batching protokolü |
+| [x] | 6 | `loom` | Google Loom — cross-datacenter tenant isolation protocol |
+| [x] | 7 | `balsa` | Google Balsa — low-latency RPC for search backend |
+| [x] | 8 | `aquila` | Google Aquila — in-memory storage rpc |
+| [x] | 9 | `tango_core` | Google Tango core messaging (internal pub/sub kernel) |
+| [x] | 10 | `gmock_rpc` | Google mock RPC test framework wire format |
+| [x] | 11 | `gws_http` | Google Web Server internal HTTP extensions |
+| [x] | 12 | `cfs_rpc` | Google Colossus File System RPC |
 
 ### 1.2 Amazon Internal / AWS Ekosistemi (10 adet)
 

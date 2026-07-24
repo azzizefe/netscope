@@ -922,3 +922,19 @@ fn _dissector_reachability_guard_931_1009() {
         let _ = super::ziop::dissect_ziop;
         let _ = super::zvt::dissect_zvt;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_google_1_12() {
+        let _ = super::stubby::dissect_stubby;
+        let _ = super::stubby_v3::dissect_stubby_v3;
+        let _ = super::borg_task::dissect_borg_task;
+        let _ = super::borgmaster_api::dissect_borgmaster_api;
+        let _ = super::boq_metro::dissect_boq_metro;
+        let _ = super::loom::dissect_loom;
+        let _ = super::balsa::dissect_balsa;
+        let _ = super::aquila::dissect_aquila;
+        let _ = super::tango_core::dissect_tango_core;
+        let _ = super::gmock_rpc::dissect_gmock_rpc;
+        let _ = super::gws_http::dissect_gws_http;
+        let _ = super::cfs_rpc::dissect_cfs_rpc;
+}

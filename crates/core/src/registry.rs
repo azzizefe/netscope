@@ -18362,6 +18362,115 @@ protocols! {
         aliases:   ["zvt"],
         blurb:     "ZVT Protocol",
     }
+
+    Stubby {
+        doc:       "STUBBY traffic.",
+        display:   "STUBBY",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["stubby"],
+        blurb:     "Google Internal RPC Framework",
+    }
+    StubbyV3 {
+        doc:       "STUBBY-V3 traffic.",
+        display:   "STUBBY-V3",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["stubby_v3"],
+        blurb:     "Stubby v3 Wire Format",
+    }
+    BorgTask {
+        doc:       "BORG-TASK traffic.",
+        display:   "BORG-TASK",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["borg_task"],
+        blurb:     "Borg Cluster Manager Task Communication",
+    }
+    BorgmasterApi {
+        doc:       "BORGMASTER-API traffic.",
+        display:   "BORGMASTER-API",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["borgmaster_api"],
+        blurb:     "Borg Master Scheduling API",
+    }
+    BoqMetro {
+        doc:       "BOQ-METRO traffic.",
+        display:   "BOQ-METRO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["boq_metro"],
+        blurb:     "Google Boq Metro Batching Protocol",
+    }
+    Loom {
+        doc:       "LOOM-PROTO traffic.",
+        display:   "LOOM-PROTO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["loom_proto"],
+        blurb:     "Google Loom Cross-Datacenter Isolation Protocol",
+    }
+    Balsa {
+        doc:       "BALSA traffic.",
+        display:   "BALSA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["balsa"],
+        blurb:     "Google Balsa Low-Latency Search RPC",
+    }
+    Aquila {
+        doc:       "AQUILA traffic.",
+        display:   "AQUILA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["aquila"],
+        blurb:     "Google Aquila In-Memory Storage RPC",
+    }
+    TangoCore {
+        doc:       "TANGO-CORE traffic.",
+        display:   "TANGO-CORE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["tango_core"],
+        blurb:     "Google Tango Core Messaging Kernel",
+    }
+    GmockRpc {
+        doc:       "GMOCK-RPC traffic.",
+        display:   "GMOCK-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["gmock_rpc"],
+        blurb:     "Google Mock RPC Wire Format",
+    }
+    GwsHttp {
+        doc:       "GWS-HTTP traffic.",
+        display:   "GWS-HTTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["gws_http"],
+        blurb:     "Google Web Server Internal HTTP Extensions",
+    }
+    CfsRpc {
+        doc:       "CFS-RPC traffic.",
+        display:   "CFS-RPC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["cfs_rpc"],
+        blurb:     "Google Colossus File System RPC",
+    }
 }
 
 impl std::fmt::Display for Protocol {

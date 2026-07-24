@@ -6663,3 +6663,16 @@ pub mod zebra;
 pub mod zep;
 pub mod ziop;
 pub mod zvt;
+
+pub mod stubby;
+pub mod stubby_v3;
+pub mod borg_task;
+pub mod borgmaster_api;
+pub mod boq_metro;
+pub mod loom;
+pub mod balsa;
+pub mod aquila;
+pub mod tango_core;
+pub mod gmock_rpc;
+pub mod gws_http;
+pub mod cfs_rpc;
