@@ -18,7 +18,7 @@ pub fn dissect_hdfs(
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
-        protocol: Protocol::Hdfs,
+        protocol: Protocol::HadoopRpc,
         summary: format!("HDFS ({})", super::bytes(payload.len() as u64)),
     }
 }
@@ -30,6 +30,6 @@ mod tests {
     #[test]
     fn test_hdfs() {
         let r = dissect_hdfs(None, None, 0, 0, b"\x00\x01");
-        assert_eq!(r.protocol, Protocol::Hdfs);
+        assert_eq!(r.protocol, Protocol::HadoopRpc);
     }
 }
