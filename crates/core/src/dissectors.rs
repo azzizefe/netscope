@@ -1,3 +1,71 @@
+pub mod mqtt_sn;
+pub mod mrcpv2;
+pub mod mrd;
+pub mod mrp_mmrp;
+pub mod mrp_msrp;
+pub mod mrp_mvrp;
+pub mod ms_do;
+pub mod ms_mms;
+pub mod ms_nns;
+pub mod msgpack;
+pub mod msn_messenger;
+pub mod msnip;
+pub mod msnlb;
+pub mod msproxy;
+pub mod msrcp;
+pub mod mstp;
+pub mod mswsp;
+pub mod mtp3mg;
+pub mod mudurl;
+pub mod multipart;
+pub mod mux27010;
+pub mod nano;
+pub mod nasdaq_itch;
+pub mod nasdaq_soup;
+pub mod nat_pmp;
+pub mod navitrol;
+pub mod nb_rtpmux;
+pub mod nbipx;
+pub mod nbt;
+pub mod ncp_nmas;
+pub mod ncp_sss;
+pub mod ncp2222;
+pub mod ncs;
+pub mod ncsi;
+pub mod ndp;
+pub mod ndps;
+pub mod negoex;
+pub mod netanalyzer;
+pub mod netbios;
+pub mod netdump;
+pub mod netgear_ensemble;
+pub mod netmon;
+pub mod netperfmeter;
+pub mod netrom;
+pub mod netsync;
+pub mod nettl;
+pub mod newmail;
+pub mod nlsp;
+pub mod nmea0183;
+pub mod nmf;
+pub mod noe;
+pub mod nordic_ble;
+pub mod ns_ha;
+pub mod ns_mep;
+pub mod ns_rpc;
+pub mod nsrp;
+pub mod nstrace;
+pub mod nt_oui;
+pub mod nt_tpcp;
+pub mod ntlmssp;
+pub mod nts_ke;
+pub mod null_proto;
+pub mod nvme_mi;
+pub mod nvme_mi_admin;
+pub mod nvme_mi_control;
+pub mod nvme_mi_mi;
+pub mod nvme_rdma;
+pub mod nwmtp;
 pub mod lppe;
 pub mod lsc;
 pub mod lsd;
@@ -4408,6 +4476,76 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "mqtt_sn",
+        "mrcpv2",
+        "mrd",
+        "mrp_mmrp",
+        "mrp_msrp",
+        "mrp_mvrp",
+        "ms_do",
+        "ms_mms",
+        "ms_nns",
+        "msgpack",
+        "msn_messenger",
+        "msnip",
+        "msnlb",
+        "msproxy",
+        "msrcp",
+        "mstp",
+        "mswsp",
+        "mtp3mg",
+        "mudurl",
+        "multipart",
+        "mux27010",
+        "nano",
+        "nasdaq_itch",
+        "nasdaq_soup",
+        "nat_pmp",
+        "navitrol",
+        "nb_rtpmux",
+        "nbipx",
+        "nbt",
+        "ncp_nmas",
+        "ncp_sss",
+        "ncp2222",
+        "ncs",
+        "ncsi",
+        "ndp",
+        "ndps",
+        "negoex",
+        "netanalyzer",
+        "netbios",
+        "netdump",
+        "netgear_ensemble",
+        "netmon",
+        "netperfmeter",
+        "netrom",
+        "netsync",
+        "nettl",
+        "newmail",
+        "nlsp",
+        "nmea0183",
+        "nmf",
+        "noe",
+        "nordic_ble",
+        "ns_ha",
+        "ns_mep",
+        "ns_rpc",
+        "nsh",
+        "nsrp",
+        "nstrace",
+        "nt_oui",
+        "nt_tpcp",
+        "ntlmssp",
+        "nts_ke",
+        "null_proto",
+        "nvme",
+        "nvme_mi",
+        "nvme_mi_admin",
+        "nvme_mi_control",
+        "nvme_mi_mi",
+        "nvme_rdma",
+        "nwmtp",
         "lppe",
         "lsc",
         "lsd",

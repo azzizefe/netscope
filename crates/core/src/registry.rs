@@ -176,6 +176,609 @@ macro_rules! protocols {
 }
 
 protocols! {
+    Mrcpv2 {
+        doc:       "MRCPv2 traffic.",
+        display:   "MRCPv2",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["mrcpv2"],
+        blurb:     "Media Resource Control Protocol v2",
+    }
+    Mrd {
+        doc:       "MRD traffic.",
+        display:   "MRD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mrd"],
+        blurb:     "Multicast Reachability Detection Protocol",
+    }
+    MrpMmrp {
+        doc:       "MRP MMRP traffic.",
+        display:   "MRP MMRP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mrp_mmrp"],
+        blurb:     "Multiple MAC Registration Protocol",
+    }
+    MrpMsrp {
+        doc:       "MRP MSRP traffic.",
+        display:   "MRP MSRP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mrp_msrp"],
+        blurb:     "Multiple Stream Reservation Protocol",
+    }
+    MrpMvrp {
+        doc:       "MRP MVRP traffic.",
+        display:   "MRP MVRP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mrp_mvrp"],
+        blurb:     "Multiple VLAN Registration Protocol",
+    }
+    MsDo {
+        doc:       "MS DO traffic.",
+        display:   "MS DO",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ms_do"],
+        blurb:     "Microsoft Delivery Optimization Protocol",
+    }
+    MsMms {
+        doc:       "MS MMS traffic.",
+        display:   "MS MMS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ms_mms"],
+        blurb:     "Microsoft Media Server Protocol",
+    }
+    MsNns {
+        doc:       "MS NNS traffic.",
+        display:   "MS NNS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ms_nns"],
+        blurb:     "Microsoft Network News Protocol",
+    }
+    Msgpack {
+        doc:       "MessagePack traffic.",
+        display:   "MessagePack",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["msgpack"],
+        blurb:     "MessagePack Binary Data Serialization",
+    }
+    MsnMessenger {
+        doc:       "MSN Messenger traffic.",
+        display:   "MSN Messenger",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["msn_messenger"],
+        blurb:     "MSN Instant Messenger Protocol",
+    }
+    Msnip {
+        doc:       "MSNIP traffic.",
+        display:   "MSNIP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["msnip"],
+        blurb:     "Multicast Source Notification Protocol",
+    }
+    Msnlb {
+        doc:       "MS NLB traffic.",
+        display:   "MS NLB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["msnlb"],
+        blurb:     "Microsoft Network Load Balancing Protocol",
+    }
+    Msproxy {
+        doc:       "MS Proxy traffic.",
+        display:   "MS Proxy",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["msproxy"],
+        blurb:     "Microsoft Proxy Client Protocol",
+    }
+    Msrcp {
+        doc:       "Msrcp traffic.",
+        display:   "Msrcp",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["msrcp"],
+        blurb:     "MSRCP Protocol",
+    }
+    Mstp {
+        doc:       "BACnet MS/TP traffic.",
+        display:   "BACnet MS/TP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mstp"],
+        blurb:     "BACnet Master-Slave/Token-Passing Protocol",
+    }
+    Mswsp {
+        doc:       "MS WSP traffic.",
+        display:   "MS WSP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["mswsp"],
+        blurb:     "Microsoft Windows Search Protocol",
+    }
+    Mtp3mg {
+        doc:       "MTP3MG traffic.",
+        display:   "MTP3MG",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mtp3mg"],
+        blurb:     "MTP3 Management Protocol",
+    }
+    Mudurl {
+        doc:       "MUD URL traffic.",
+        display:   "MUD URL",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mudurl"],
+        blurb:     "Manufacturer Usage Description URL Extension",
+    }
+    Multipart {
+        doc:       "MIME Multipart traffic.",
+        display:   "MIME Multipart",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["multipart"],
+        blurb:     "MIME Multipart Encapsulation",
+    }
+    Mux27010 {
+        doc:       "MUX27010 traffic.",
+        display:   "MUX27010",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mux27010"],
+        blurb:     "3GPP TS 27.010 Multiplexer Protocol",
+    }
+    Nano {
+        doc:       "Nano Currency P2P traffic.",
+        display:   "Nano Currency P2P",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["nano"],
+        blurb:     "Nano Cryptocurrency P2P Protocol",
+    }
+    NasdaqItch {
+        doc:       "Nasdaq ITCH traffic.",
+        display:   "Nasdaq ITCH",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["nasdaq_itch"],
+        blurb:     "Nasdaq ITCH Financial Market Data Protocol",
+    }
+    NasdaqSoup {
+        doc:       "Nasdaq SoupBinTCP traffic.",
+        display:   "Nasdaq SoupBinTCP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["nasdaq_soup"],
+        blurb:     "Nasdaq SoupBinTCP Financial Messaging Protocol",
+    }
+    NatPmp {
+        doc:       "NAT-PMP traffic.",
+        display:   "NAT-PMP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["nat_pmp"],
+        blurb:     "NAT Port Mapping Protocol",
+    }
+    Navitrol {
+        doc:       "Navitrol traffic.",
+        display:   "Navitrol",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["navitrol"],
+        blurb:     "Navitrol Protocol",
+    }
+    NbRtpmux {
+        doc:       "NB RTP Mux traffic.",
+        display:   "NB RTP Mux",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["nb_rtpmux"],
+        blurb:     "3GPP Nb Interface RTP Multiplexing",
+    }
+    Nbipx {
+        doc:       "NetBIOS over IPX traffic.",
+        display:   "NetBIOS over IPX",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nbipx"],
+        blurb:     "NetBIOS Encapsulation over IPX",
+    }
+    Nbt {
+        doc:       "NetBIOS Datagram traffic.",
+        display:   "NetBIOS Datagram",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["nbt"],
+        blurb:     "NetBIOS Datagram Service Protocol",
+    }
+    NcpNmas {
+        doc:       "NCP NMAS traffic.",
+        display:   "NCP NMAS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ncp_nmas"],
+        blurb:     "Novell NCP NMAS Authentication Protocol",
+    }
+    NcpSss {
+        doc:       "NCP SSS traffic.",
+        display:   "NCP SSS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ncp_sss"],
+        blurb:     "Novell NCP Secret Store Service Protocol",
+    }
+    Ncp2222 {
+        doc:       "NCP 2222 traffic.",
+        display:   "NCP 2222",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ncp2222"],
+        blurb:     "Novell Core Protocol Command 2222",
+    }
+    Ncs {
+        doc:       "NCS traffic.",
+        display:   "NCS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ncs"],
+        blurb:     "Network Computing System Protocol",
+    }
+    Ncsi {
+        doc:       "NC-SI traffic.",
+        display:   "NC-SI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ncsi"],
+        blurb:     "Network Controller Sideband Interface Protocol",
+    }
+    Ndp {
+        doc:       "IPv6 NDP traffic.",
+        display:   "IPv6 NDP",
+        color:     0x4A9EF5,
+        transport: Icmp,
+        rank:      2,
+        aliases:   ["ndp"],
+        blurb:     "IPv6 Neighbor Discovery Protocol",
+    }
+    Ndps {
+        doc:       "NDPS traffic.",
+        display:   "NDPS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ndps"],
+        blurb:     "Novell Distributed Print Services Protocol",
+    }
+    Negoex {
+        doc:       "NegoEx traffic.",
+        display:   "NegoEx",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["negoex"],
+        blurb:     "Extended SPNEGO Negotiation Mechanism",
+    }
+    Netanalyzer {
+        doc:       "Hilscher netANALYZER traffic.",
+        display:   "Hilscher netANALYZER",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["netanalyzer"],
+        blurb:     "Hilscher netANALYZER Frame Header",
+    }
+    Netbios {
+        doc:       "NetBIOS traffic.",
+        display:   "NetBIOS",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["netbios"],
+        blurb:     "Network Basic Input/Output System Protocol",
+    }
+    Netdump {
+        doc:       "Linux Netdump traffic.",
+        display:   "Linux Netdump",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["netdump"],
+        blurb:     "Linux Kernel Netdump Protocol",
+    }
+    NetgearEnsemble {
+        doc:       "NETGEAR Ensemble traffic.",
+        display:   "NETGEAR Ensemble",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["netgear_ensemble"],
+        blurb:     "NETGEAR Ensemble Stacking Protocol",
+    }
+    Netmon {
+        doc:       "Microsoft Network Monitor traffic.",
+        display:   "Microsoft Network Monitor",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["netmon"],
+        blurb:     "Microsoft Network Monitor Frame Header",
+    }
+    Netperfmeter {
+        doc:       "NetPerfMeter traffic.",
+        display:   "NetPerfMeter",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["netperfmeter"],
+        blurb:     "NetPerfMeter Performance Measurement Protocol",
+    }
+    Netrom {
+        doc:       "NET/ROM traffic.",
+        display:   "NET/ROM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["netrom"],
+        blurb:     "Amateur Radio NET/ROM Network Protocol",
+    }
+    Netsync {
+        doc:       "NetSync traffic.",
+        display:   "NetSync",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["netsync"],
+        blurb:     "NetSync Network Synchronization Protocol",
+    }
+    Nettl {
+        doc:       "HP NETTL Trace Header traffic.",
+        display:   "HP NETTL Trace Header",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nettl"],
+        blurb:     "HP NETTL Trace File Record Header",
+    }
+    Newmail {
+        doc:       "NewMail Protocol traffic.",
+        display:   "NewMail Protocol",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["newmail"],
+        blurb:     "Microsoft NewMail Notification Protocol",
+    }
+    Nlsp {
+        doc:       "NLSP traffic.",
+        display:   "NLSP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nlsp"],
+        blurb:     "Novell NetWare Link Services Protocol",
+    }
+    Nmea0183 {
+        doc:       "NMEA 0183 traffic.",
+        display:   "NMEA 0183",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nmea0183"],
+        blurb:     "NMEA 0183 Marine Electronics Serial Protocol",
+    }
+    Nmf {
+        doc:       "NMF Protocol traffic.",
+        display:   "NMF Protocol",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nmf"],
+        blurb:     ".NET Message Framing Protocol",
+    }
+    Noe {
+        doc:       "Alcatel NOE traffic.",
+        display:   "Alcatel NOE",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["noe"],
+        blurb:     "Alcatel-Lucent New Office Environment Protocol",
+    }
+    NordicBle {
+        doc:       "Nordic BLE traffic.",
+        display:   "Nordic BLE",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nordic_ble"],
+        blurb:     "Nordic Semiconductor BLE Sniffer Protocol",
+    }
+    NsHa {
+        doc:       "NetScaler HA traffic.",
+        display:   "NetScaler HA",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["ns_ha"],
+        blurb:     "Citrix NetScaler High Availability Protocol",
+    }
+    NsMep {
+        doc:       "NetScaler MEP traffic.",
+        display:   "NetScaler MEP",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["ns_mep"],
+        blurb:     "Citrix NetScaler Metric Exchange Protocol",
+    }
+    NsRpc {
+        doc:       "NetScaler RPC traffic.",
+        display:   "NetScaler RPC",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["ns_rpc"],
+        blurb:     "Citrix NetScaler RPC Protocol",
+    }
+    Nsrp {
+        doc:       "Juniper NSRP traffic.",
+        display:   "Juniper NSRP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nsrp"],
+        blurb:     "Juniper Netscreen Redundancy Protocol",
+    }
+    Nstrace {
+        doc:       "NetScaler Trace Header traffic.",
+        display:   "NetScaler Trace Header",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nstrace"],
+        blurb:     "Citrix NetScaler Packet Trace Header",
+    }
+    NtOui {
+        doc:       "Nortel OUI traffic.",
+        display:   "Nortel OUI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nt_oui"],
+        blurb:     "Nortel OUI Header Protocol",
+    }
+    NtTpcp {
+        doc:       "Nortel TPCP traffic.",
+        display:   "Nortel TPCP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nt_tpcp"],
+        blurb:     "Nortel Trunk Pack Control Protocol",
+    }
+    Ntlmssp {
+        doc:       "NTLMSSP traffic.",
+        display:   "NTLMSSP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["ntlmssp"],
+        blurb:     "NTLM Security Support Provider Protocol",
+    }
+    NtsKe {
+        doc:       "NTS-KE traffic.",
+        display:   "NTS-KE",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["nts_ke"],
+        blurb:     "Network Time Security Key Establishment",
+    }
+    Null {
+        doc:       "Null/Loopback Header traffic.",
+        display:   "Null/Loopback Header",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["null"],
+        blurb:     "BSD Null/Loopback Link Layer Header",
+    }
+    NvmeMi {
+        doc:       "NVMe-MI traffic.",
+        display:   "NVMe-MI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nvme_mi"],
+        blurb:     "NVM Express Management Interface",
+    }
+    NvmeMiAdmin {
+        doc:       "NVMe-MI Admin traffic.",
+        display:   "NVMe-MI Admin",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nvme_mi_admin"],
+        blurb:     "NVMe-MI Admin Command Protocol",
+    }
+    NvmeMiControl {
+        doc:       "NVMe-MI Control traffic.",
+        display:   "NVMe-MI Control",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nvme_mi_control"],
+        blurb:     "NVMe-MI Control Message Protocol",
+    }
+    NvmeMiMi {
+        doc:       "NVMe-MI MI Command traffic.",
+        display:   "NVMe-MI MI Command",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nvme_mi_mi"],
+        blurb:     "NVMe-MI Management Command Protocol",
+    }
+    NvmeRdma {
+        doc:       "NVMe-oF RDMA traffic.",
+        display:   "NVMe-oF RDMA",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nvme_rdma"],
+        blurb:     "NVMe over Fabrics RDMA Protocol",
+    }
+    Nwmtp {
+        doc:       "NWMTP traffic.",
+        display:   "NWMTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["nwmtp"],
+        blurb:     "NWMTP Protocol",
+    }
     Lppe {
         doc:       "LPPe traffic.",
         display:   "LPPe",
