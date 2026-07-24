@@ -1,3 +1,53 @@
+pub mod lppe;
+pub mod lsc;
+pub mod lsd;
+pub mod lsdp;
+pub mod ltp;
+pub mod lwm;
+pub mod lwm2mtlv;
+pub mod lwres;
+pub mod m2tp;
+pub mod maap;
+pub mod maccontrol;
+pub mod mactelnet;
+pub mod manolito;
+pub mod marker;
+pub mod mausb;
+pub mod mbim;
+pub mod mbtcp;
+pub mod mc_nmf;
+pub mod mctp;
+pub mod mctp_control;
+pub mod mctp_smbus;
+pub mod mdb;
+pub mod mdp;
+pub mod mdshdr;
+pub mod media;
+pub mod media_type;
+pub mod memcache;
+pub mod mesh;
+pub mod messageanalyzer;
+pub mod meta;
+pub mod metamako;
+pub mod midi;
+pub mod midi_sysex_digitech;
+pub mod mih;
+pub mod mikey;
+pub mod mime_encap;
+pub mod mint;
+pub mod miop;
+pub mod mip;
+pub mod miwi_p2pstar;
+pub mod mmse;
+pub mod mndp;
+pub mod mojito;
+pub mod moldudp;
+pub mod moldudp64;
+pub mod monero;
+pub mod mongo;
+pub mod mq;
+pub mod mq_base;
+pub mod mq_pcf;
 pub mod iwarp_mpa;
 pub mod ixiatrailer;
 pub mod ixveriwave;
@@ -4358,6 +4408,56 @@ mod robustness {
     /// or a nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
     const HELPER_MODULES: &[&str] = &[
+        "lppe",
+        "lsc",
+        "lsd",
+        "lsdp",
+        "ltp",
+        "lwm",
+        "lwm2mtlv",
+        "lwres",
+        "m2tp",
+        "maap",
+        "maccontrol",
+        "mactelnet",
+        "manolito",
+        "marker",
+        "mausb",
+        "mbim",
+        "mbtcp",
+        "mc_nmf",
+        "mctp",
+        "mctp_control",
+        "mctp_smbus",
+        "mdb",
+        "mdp",
+        "mdshdr",
+        "media",
+        "media_type",
+        "memcache",
+        "mesh",
+        "messageanalyzer",
+        "meta",
+        "metamako",
+        "midi",
+        "midi_sysex_digitech",
+        "mih",
+        "mikey",
+        "mime_encap",
+        "mint",
+        "miop",
+        "mip",
+        "miwi_p2pstar",
+        "mmse",
+        "mndp",
+        "mojito",
+        "moldudp",
+        "moldudp64",
+        "monero",
+        "mongo",
+        "mq",
+        "mq_base",
+        "mq_pcf",
         "iwarp_mpa",
         "ixiatrailer",
         "ixveriwave",

@@ -176,6 +176,420 @@ macro_rules! protocols {
 }
 
 protocols! {
+    Lppe {
+        doc:       "LPPe traffic.",
+        display:   "LPPe",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "LTE Positioning Protocol Extensions",
+    }
+    Lsc {
+        doc:       "LSC traffic.",
+        display:   "LSC",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "LSC Protocol",
+    }
+    Lsd {
+        doc:       "LSD traffic.",
+        display:   "LSD",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Label Distribution Protocol Discovery",
+    }
+    Lsdp {
+        doc:       "LSDP traffic.",
+        display:   "LSDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Link State Distribution Protocol",
+    }
+    Ltp {
+        doc:       "LTP traffic.",
+        display:   "LTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Licklider Transmission Protocol",
+    }
+    Lwm {
+        doc:       "LWM traffic.",
+        display:   "LWM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Light Weight Multicast Protocol",
+    }
+    Lwm2mtlv {
+        doc:       "LwM2M TLV traffic.",
+        display:   "LwM2M TLV",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["lwm2mtlv"],
+        blurb:     "Lightweight M2M TLV Payload",
+    }
+    Lwres {
+        doc:       "LWRES traffic.",
+        display:   "LWRES",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Lightweight Resolver Protocol",
+    }
+    M2tp {
+        doc:       "M2TP traffic.",
+        display:   "M2TP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "M2UA Transport Protocol",
+    }
+    Maap {
+        doc:       "MAAP traffic.",
+        display:   "MAAP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Multicast Address Allocation Protocol",
+    }
+    Mactelnet {
+        doc:       "MAC-Telnet traffic.",
+        display:   "MAC-Telnet",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["mactelnet"],
+        blurb:     "MikroTik MAC-Telnet Protocol",
+    }
+    Manolito {
+        doc:       "Manolito traffic.",
+        display:   "Manolito",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Manolito P2P Protocol",
+    }
+    Marker {
+        doc:       "Marker Protocol traffic.",
+        display:   "Marker Protocol",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["marker"],
+        blurb:     "LACP/LAMP Marker Protocol",
+    }
+    Mausb {
+        doc:       "MA-USB traffic.",
+        display:   "MA-USB",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["mausb"],
+        blurb:     "Media Agnostic USB Protocol",
+    }
+    Mbim {
+        doc:       "MBIM traffic.",
+        display:   "MBIM",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Mobile Broadband Interface Model",
+    }
+    Mbtcp {
+        doc:       "Modbus TCP Encapsulation traffic.",
+        display:   "Modbus TCP Encapsulation",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["mbtcp"],
+        blurb:     "Modbus TCP Frame Encapsulation",
+    }
+    McNmf {
+        doc:       "MC-NMF traffic.",
+        display:   "MC-NMF",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["mc_nmf"],
+        blurb:     ".NET Message Framing Protocol",
+    }
+    Mctp {
+        doc:       "MCTP traffic.",
+        display:   "MCTP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Management Component Transport Protocol",
+    }
+    MctpControl {
+        doc:       "MCTP Control traffic.",
+        display:   "MCTP Control",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mctp_control"],
+        blurb:     "MCTP Control Protocol",
+    }
+    MctpSmbus {
+        doc:       "MCTP over SMBus traffic.",
+        display:   "MCTP over SMBus",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mctp_smbus"],
+        blurb:     "MCTP over SMBus Binding",
+    }
+    Mdb {
+        doc:       "MDB traffic.",
+        display:   "MDB",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Multi-Drop Bus Vending Protocol",
+    }
+    Mdp {
+        doc:       "MDP traffic.",
+        display:   "MDP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Multicast Dissemination Protocol",
+    }
+    Mdshdr {
+        doc:       "MDS Header traffic.",
+        display:   "MDS Header",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mdshdr"],
+        blurb:     "Cisco MDS Header Protocol",
+    }
+    Media {
+        doc:       "Media Stream traffic.",
+        display:   "Media Stream",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["media"],
+        blurb:     "Generic Media Stream Data",
+    }
+    MediaType {
+        doc:       "Media Type traffic.",
+        display:   "Media Type",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["media_type"],
+        blurb:     "MIME Media Type Payload",
+    }
+    Mesh {
+        doc:       "802.11s Mesh traffic.",
+        display:   "802.11s Mesh",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mesh"],
+        blurb:     "IEEE 802.11s Wireless Mesh Networking",
+    }
+    MessageAnalyzer {
+        doc:       "Message Analyzer traffic.",
+        display:   "Message Analyzer",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["messageanalyzer"],
+        blurb:     "Microsoft Message Analyzer Header",
+    }
+    Meta {
+        doc:       "Meta Header traffic.",
+        display:   "Meta Header",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["meta"],
+        blurb:     "Generic Metadata Container Header",
+    }
+    Metamako {
+        doc:       "Metamako Trailer traffic.",
+        display:   "Metamako Trailer",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["metamako"],
+        blurb:     "Metamako Switch Trailer Protocol",
+    }
+    Midi {
+        doc:       "MIDI traffic.",
+        display:   "MIDI",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Musical Instrument Digital Interface",
+    }
+    MidiSysexDigitech {
+        doc:       "MIDI SysEx DigiTech traffic.",
+        display:   "MIDI SysEx DigiTech",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["midi_sysex_digitech"],
+        blurb:     "MIDI System Exclusive DigiTech Format",
+    }
+    Mih {
+        doc:       "MIH traffic.",
+        display:   "MIH",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "IEEE 802.21 Media Independent Handover",
+    }
+    Mikey {
+        doc:       "MIKEY traffic.",
+        display:   "MIKEY",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Multimedia Internet KEYing Protocol",
+    }
+    MimeEncap {
+        doc:       "MIME Encapsulation traffic.",
+        display:   "MIME Encapsulation",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mime_encap"],
+        blurb:     "MIME Encapsulated Payload Protocol",
+    }
+    Mint {
+        doc:       "MiNT traffic.",
+        display:   "MiNT",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   [],
+        blurb:     "MiNT Mesh Network Protocol",
+    }
+    Miop {
+        doc:       "MIOP traffic.",
+        display:   "MIOP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Multicast Uncompressed Interactive Video",
+    }
+    Mip {
+        doc:       "Mobile IP traffic.",
+        display:   "Mobile IP",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mip"],
+        blurb:     "Mobile IP Network Protocol",
+    }
+    MiwiP2pstar {
+        doc:       "MiWi P2P/Star traffic.",
+        display:   "MiWi P2P/Star",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["miwi_p2pstar"],
+        blurb:     "Microchip MiWi P2P and Star Protocol",
+    }
+    Mmse {
+        doc:       "MMS Encapsulation traffic.",
+        display:   "MMS Encapsulation",
+        color:     0x4A9EF5,
+        transport: Other,
+        rank:      2,
+        aliases:   ["mmse"],
+        blurb:     "Multimedia Messaging Service Encapsulation",
+    }
+    Mndp {
+        doc:       "MNDP traffic.",
+        display:   "MNDP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "MikroTik Neighbor Discovery Protocol",
+    }
+    Mojito {
+        doc:       "Mojito DHT traffic.",
+        display:   "Mojito DHT",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   ["mojito"],
+        blurb:     "LimeWire Mojito DHT Protocol",
+    }
+    Moldudp {
+        doc:       "MoldUDP traffic.",
+        display:   "MoldUDP",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Nasdaq MoldUDP Multicast Protocol",
+    }
+    Moldudp64 {
+        doc:       "MoldUDP64 traffic.",
+        display:   "MoldUDP64",
+        color:     0x4A9EF5,
+        transport: Udp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Nasdaq MoldUDP64 Multicast Protocol",
+    }
+    Monero {
+        doc:       "Monero P2P traffic.",
+        display:   "Monero P2P",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   [],
+        blurb:     "Monero Cryptocurrency P2P Protocol",
+    }
+    MqBase {
+        doc:       "MQ Base traffic.",
+        display:   "MQ Base",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["mq_base"],
+        blurb:     "MQ Base Message Header",
+    }
+    MqPcf {
+        doc:       "MQ PCF traffic.",
+        display:   "MQ PCF",
+        color:     0x4A9EF5,
+        transport: Tcp,
+        rank:      2,
+        aliases:   ["mq_pcf"],
+        blurb:     "MQ Programmable Command Formats",
+    }
     IwarpMpa {
         doc:       "iWARP MPA traffic.",
         display:   "iWARP MPA",
