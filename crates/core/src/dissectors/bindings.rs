@@ -62,6 +62,15 @@ use super::{
     psn_matchmaking_v3, nintendo_npln_p2p,
 };
 
+// Imports only needed by the reachability guard (test only).
+#[cfg(test)]
+use super::{
+    apex_legends_netprop, cs2_subtick, fortnite_replay_stream,
+    fortnite_server_replicator, overwatch2_state_sync, pubg_net_field_array,
+    rainbow6_siege_netvoice, valorant_fog_of_war, valorant_net_var,
+    warzone_netcode_rigid,
+};
+
 /// The signature every port-dispatched dissector shares.
 pub type PortDissector = fn(Option<IpAddr>, Option<IpAddr>, u16, u16, &[u8]) -> DissectedResult;
 
@@ -1082,4 +1091,18 @@ fn _dissector_reachability_guard_aaa_online_services_101_112() {
         let _ = super::psn_matchmaking_v3::dissect_psn_matchmaking_v3;
         let _ = super::psn_rtc_signaling::dissect_psn_rtc_signaling;
         let _ = super::nintendo_npln_p2p::dissect_nintendo_npln_p2p;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_br_fps_113_122() {
+        let _ = super::fortnite_replay_stream::dissect_fortnite_replay_stream;
+        let _ = super::fortnite_server_replicator::dissect_fortnite_server_replicator;
+        let _ = super::pubg_net_field_array::dissect_pubg_net_field_array;
+        let _ = super::warzone_netcode_rigid::dissect_warzone_netcode_rigid;
+        let _ = super::valorant_fog_of_war::dissect_valorant_fog_of_war;
+        let _ = super::valorant_net_var::dissect_valorant_net_var;
+        let _ = super::apex_legends_netprop::dissect_apex_legends_netprop;
+        let _ = super::overwatch2_state_sync::dissect_overwatch2_state_sync;
+        let _ = super::cs2_subtick::dissect_cs2_subtick;
+        let _ = super::rainbow6_siege_netvoice::dissect_rainbow6_siege_netvoice;
 }

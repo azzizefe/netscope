@@ -19343,6 +19343,96 @@ protocols! {
         aliases:   ["nintendo_npln_p2p", "npln_p2p"],
         blurb:     "Nintendo NPLN P2P \u{2014} Nintendo\u{2019}s NPLN matchmaking and P2P transport protocol.",
     }
+    FortniteReplayStream {
+        doc:       "Fortnite replay stream wire format traffic.",
+        display:   "Fortnite Replay Stream",
+        color:     0x9C27B0,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["fortnite_replay", "fn_replay"],
+        blurb:     "Fortnite replay stream wire format \u{2014} recorded game state playback chunks over the network.",
+    }
+    FortniteServerReplicator {
+        doc:       "Fortnite server-side replicator actor traffic.",
+        display:   "Fortnite Server Replicator",
+        color:     0x7B1FA2,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["fortnite_replicator", "fn_replicator"],
+        blurb:     "Fortnite server-side replicator actor \u{2014} actor property replication and RPC dispatch on Unreal Engine servers.",
+    }
+    PubgNetFieldArray {
+        doc:       "PUBG net field fast-array delta compression traffic.",
+        display:   "PUBG Net Field Array",
+        color:     0xE67E22,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["pubg_net_field", "pubg_fast_array"],
+        blurb:     "PUBG net field fast-array delta compression \u{2014} PUBG\u{2019}s custom delta-compressed array replication over Unreal Engine.",
+    }
+    WarzoneNetcodeRigid {
+        doc:       "Call of Duty Warzone rigid body net sync traffic.",
+        display:   "Warzone Rigid Body",
+        color:     0xD4A017,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["warzone_rigid", "cod_rigid_body"],
+        blurb:     "Call of Duty Warzone rigid body net sync \u{2014} physics object state synchronisation for vehicles and debris.",
+    }
+    ValorantFogOfWar {
+        doc:       "Valorant Fog of War anti-cheat visibility traffic.",
+        display:   "Valorant Fog of War",
+        color:     0xFD4556,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["valorant_fow", "vct_fow"],
+        blurb:     "Valorant Fog of War \u{2014} Riot\u{2019}s anti-cheat visibility system that controls what each player can see.",
+    }
+    ValorantNetVar {
+        doc:       "Valorant network variable replication traffic.",
+        display:   "Valorant NetVar",
+        color:     0xBD3944,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["valorant_netvar", "vct_netvar"],
+        blurb:     "Valorant network variable replication \u{2014} replicated game state variables in Riot\u{2019}s custom netcode.",
+    }
+    ApexLegendsNetprop {
+        doc:       "Apex Legends Source-based netprop extension traffic.",
+        display:   "Apex Netprop",
+        color:     0xC62828,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["apex_netprop", "apex_legends_netprop"],
+        blurb:     "Apex Legends Source-based netprop extension \u{2014} modified Source engine networked property system.",
+    }
+    Overwatch2StateSync {
+        doc:       "Overwatch 2 state synchronization protocol traffic.",
+        display:   "Overwatch 2 State Sync",
+        color:     0xFF8C00,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ow2_state_sync", "overwatch2_sync"],
+        blurb:     "Overwatch 2 state synchronization \u{2014} Blizzard\u{2019}s entity and world state synchronisation for high-tickrate gameplay.",
+    }
+    Cs2Subtick {
+        doc:       "Counter-Strike 2 sub-tick system protocol traffic.",
+        display:   "CS2 SubTick",
+        color:     0xE8A317,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["cs2_subtick", "cs2_subtick_system"],
+        blurb:     "Counter-Strike 2 sub-tick system \u{2014} sub-frame precision input and state processing for Source 2.",
+    }
+    Rainbow6SiegeNetvoice {
+        doc:       "Rainbow Six Siege in-game voice and netcode hybrid traffic.",
+        display:   "R6 Siege NetVoice",
+        color:     0x38B2CE,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["r6s_netvoice", "rainbow6_voice"],
+        blurb:     "Rainbow Six Siege in-game voice + netcode hybrid \u{2014} voice chat multiplexed with game netcode over UDP.",
+    }
 }
 
 impl std::fmt::Display for Protocol {
