@@ -74,6 +74,8 @@ use super::{
     steam_remote_play_together, steam_link_transport, moonlight_rtsp_game,
     vrchat_udon_net, vrchat_ik_sync, roblox_physics_replicator, roblox_voice_internal,
     recroom_room_server, horizon_worlds_sync, spatial_io_webxr_sync, secondlife_lludp,
+    playfab_party, playfab_multiplayer_v2, phaser_heroiclabs, darkrift2_netcode,
+    photon_realtime_v5, photon_bolt_internal, fishnet_teleport, mirror_transport_fallback,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1136,4 +1138,16 @@ fn _dissector_reachability_guard_metaverse_social_vr_133_140() {
         let _ = super::horizon_worlds_sync::dissect_horizon_worlds_sync;
         let _ = super::spatial_io_webxr_sync::dissect_spatial_io_webxr_sync;
         let _ = super::secondlife_lludp::dissect_secondlife_lludp;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_game_baas_141_148() {
+        let _ = super::playfab_party::dissect_playfab_party;
+        let _ = super::playfab_multiplayer_v2::dissect_playfab_multiplayer_v2;
+        let _ = super::phaser_heroiclabs::dissect_phaser_heroiclabs;
+        let _ = super::darkrift2_netcode::dissect_darkrift2_netcode;
+        let _ = super::photon_realtime_v5::dissect_photon_realtime_v5;
+        let _ = super::photon_bolt_internal::dissect_photon_bolt_internal;
+        let _ = super::fishnet_teleport::dissect_fishnet_teleport;
+        let _ = super::mirror_transport_fallback::dissect_mirror_transport_fallback;
 }

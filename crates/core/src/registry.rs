@@ -19595,6 +19595,78 @@ protocols! {
         aliases:   ["secondlife_lludp", "sl_lludp"],
         blurb:     "Second Life LLUDP message template protocol \u{2014} packetised message system with zero-encoding, ACK, and sequence-numbered templates for world-state replication.",
     }
+    PlayfabParty {
+        doc:       "Microsoft PlayFab Party voice/chat transport traffic.",
+        display:   "PlayFab Party",
+        color:     0x0055CC,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["playfab_party", "pf_party"],
+        blurb:     "Microsoft PlayFab Party voice/chat transport \u{2014} Opus-encoded voice chat with peer-to-peer relay and lobby management.",
+    }
+    PlayfabMultiplayerV2 {
+        doc:       "PlayFab multiplayer server allocation v2 traffic.",
+        display:   "PlayFab Multiplayer v2",
+        color:     0x0044AA,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["playfab_multiplayer_v2", "pf_multiplayer_v2"],
+        blurb:     "PlayFab multiplayer server allocation v2 \u{2014} dedicated server lifecycle management over datagram control channel.",
+    }
+    PhaserHeroiclabs {
+        doc:       "HeroicLabs Nakama (Phaser backend) binary protocol traffic.",
+        display:   "Nakama Binary",
+        color:     0x00CC88,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["phaser_heroiclabs", "nakama_binary", "heroiclabs"],
+        blurb:     "HeroicLabs Nakama binary protocol \u{2014} game server backend socket messages for real-time multiplayer, chat, and leaderboards.",
+    }
+    Darkrift2Netcode {
+        doc:       "DarkRift 2 networking binary protocol traffic.",
+        display:   "DarkRift 2",
+        color:     0x663399,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["darkrift2", "dr2_netcode"],
+        blurb:     "DarkRift 2 networking binary protocol \u{2014} reliable UDP-over-TCP plugin architecture for Unity multiplayer.",
+    }
+    PhotonRealtimeV5 {
+        doc:       "Photon Realtime protocol v5 (binary) traffic.",
+        display:   "Photon Realtime v5",
+        color:     0x0088FF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["photon_realtime_v5", "photon_v5"],
+        blurb:     "Photon Realtime protocol v5 \u{2014} binary datagram protocol for matchmaking, room management, and reliable/ unreliable event channels.",
+    }
+    PhotonBoltInternal {
+        doc:       "Photon Bolt internal determinism sync traffic.",
+        display:   "Photon Bolt",
+        color:     0x00AA44,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["photon_bolt", "bolt_internal"],
+        blurb:     "Photon Bolt internal determinism sync \u{2014} lockstep state synchronisation with input replay and deterministic physics.",
+    }
+    FishnetTeleport {
+        doc:       "Fish-Networking (Unity) teleport serialization traffic.",
+        display:   "Fish-Networking Teleport",
+        color:     0x3388BB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fishnet_teleport", "fish_networking"],
+        blurb:     "Fish-Networking teleport serialization \u{2014} Unity transport-layer binary protocol for reliable sequenced messages and object replication.",
+    }
+    MirrorTransportFallback {
+        doc:       "Mirror Networking fallback transport traffic.",
+        display:   "Mirror Transport Fallback",
+        color:     0x55AACC,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mirror_fallback", "mirror_transport"],
+        blurb:     "Mirror Networking fallback transport \u{2014} TCP-based reliable transport layer for Unity multiplayer when UDP/Steam is unavailable.",
+    }
 }
 
 impl std::fmt::Display for Protocol {
