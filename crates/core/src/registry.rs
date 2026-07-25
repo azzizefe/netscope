@@ -21215,6 +21215,141 @@ protocols! {
         aliases:   ["nitro_attest", "aws_nitro"],
         blurb:     "AWS Nitro Attestation \u{2014} AWS Nitro Enclave attestation document with PCR measurements, certificate chain, and user data signature for enclave identity verification.",
     }
+    OpenaiChatStream {
+        doc:       "OpenAI Chat Completions streaming (SSE).",
+        display:   "OpenAI Chat Stream",
+        color:     0x10A37F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openai_chat_stream", "chatgpt_stream"],
+        blurb:     "OpenAI Chat Stream \u{2014} OpenAI Chat Completions server-sent events stream with delta-based token output, finish reason, and usage metadata.",
+    }
+    OpenaiRealtimeWs {
+        doc:       "OpenAI Realtime API binary/audio/text WebSocket.",
+        display:   "OpenAI Realtime WS",
+        color:     0x00B884,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openai_realtime", "realtime_ws"],
+        blurb:     "OpenAI Realtime WS \u{2014} OpenAI Realtime API WebSocket with audio/text bidirectional frames, transcript events, and function call handling.",
+    }
+    OpenaiResponsesApi {
+        doc:       "OpenAI Responses API streaming protocol.",
+        display:   "OpenAI Responses API",
+        color:     0x1E8E3E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openai_responses", "responses_api"],
+        blurb:     "OpenAI Responses API \u{2014} OpenAI Responses API SSE stream with typed events, output items, and structured data for agent-based interactions.",
+    }
+    AnthropicStreamEvt {
+        doc:       "Anthropic SSE event stream (message_start/delta/stop).",
+        display:   "Anthropic Stream Event",
+        color:     0x9B8D7E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["anthropic_stream", "claude_stream"],
+        blurb:     "Anthropic Stream Event \u{2014} Anthropic Claude API SSE event stream with message_start, content_block_delta, content_block_stop, and message_stop events.",
+    }
+    GoogleGeminiBidi {
+        doc:       "Gemini bidirectional live API WebSocket.",
+        display:   "Google Gemini BiDi",
+        color:     0x4285F4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gemini_bidi", "gemini_live"],
+        blurb:     "Google Gemini BiDi \u{2014} Google Gemini Live API bidirectional WebSocket for multimodal streaming with audio/video/text frames and real-time interaction.",
+    }
+    GoogleGeminiRestStream {
+        doc:       "Gemini generateContent SSE streaming.",
+        display:   "Google Gemini REST Stream",
+        color:     0x34A853,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gemini_rest", "gemini_sse"],
+        blurb:     "Google Gemini REST Stream \u{2014} Google Gemini generateContent REST SSE streaming with candidate chunks, safety ratings, and citation metadata.",
+    }
+    AzureAoaiStream {
+        doc:       "Azure OpenAI Service streaming (proprietary extensions).",
+        display:   "Azure AOAI Stream",
+        color:     0x0078D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["azure_aoai", "azure_openai_stream"],
+        blurb:     "Azure AOAI Stream \u{2014} Azure OpenAI Service streaming with proprietary extensions including apim-request-id, content filtering annotations, and prompt filter results.",
+    }
+    CohereStreamV2 {
+        doc:       "Cohere Generate/Stream v2 event protocol.",
+        display:   "Cohere Stream v2",
+        color:     0x39594D,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cohere_stream", "cohere_v2"],
+        blurb:     "Cohere Stream v2 \u{2014} Cohere Generate and Stream v2 event protocol with text generation events, finish reason, and token likelihood metadata.",
+    }
+    MistralChatStream {
+        doc:       "Mistral AI chat streaming protocol.",
+        display:   "Mistral Chat Stream",
+        color:     0xFF6B00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mistral_stream", "mistral_chat"],
+        blurb:     "Mistral Chat Stream \u{2014} Mistral AI chat completion SSE streaming with delta token output, finish reason, and usage statistics.",
+    }
+    GroqLpcuStream {
+        doc:       "Groq LPU (Language Processing Unit) streaming.",
+        display:   "Groq LPU Stream",
+        color:     0xF55036,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["groq_lpu", "groq_stream"],
+        blurb:     "Groq LPU Stream \u{2014} Groq LPU inference engine streaming with x-groq headers, fast token generation, and real-time chat completion output.",
+    }
+    TogetherStream {
+        doc:       "Together AI inference streaming.",
+        display:   "Together AI Stream",
+        color:     0x6B46C1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["together_stream", "together_ai"],
+        blurb:     "Together AI Stream \u{2014} Together AI inference SSE streaming for open-source model deployment with delta token output and model metadata.",
+    }
+    FireworksStream {
+        doc:       "Fireworks.ai streaming inference protocol.",
+        display:   "Fireworks Stream",
+        color:     0xFB923C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fireworks_stream", "fireworks_ai"],
+        blurb:     "Fireworks Stream \u{2014} Fireworks.ai fast inference SSE streaming with x-request-id tracing, delta token output, and usage reporting.",
+    }
+    DeepseekStream {
+        doc:       "DeepSeek API streaming protocol.",
+        display:   "DeepSeek Stream",
+        color:     0x4F6BF5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["deepseek_stream", "deepseek_api"],
+        blurb:     "DeepSeek Stream \u{2014} DeepSeek API SSE streaming for chat completion with delta token output, reasoning traces, and usage counters.",
+    }
+    XaiGrokStream {
+        doc:       "xAI Grok API streaming WS protocol.",
+        display:   "xAI Grok Stream",
+        color:     0x1A1A2E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["grok_stream", "xai_grok"],
+        blurb:     "xAI Grok Stream \u{2014} xAI Grok API streaming with SSE event output for chat completion, real-time token generation, and reasoning steps.",
+    }
+    BedrockInvokeStream {
+        doc:       "AWS Bedrock InvokeModelWithResponseStream.",
+        display:   "AWS Bedrock Invoke Stream",
+        color:     0xFF9900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bedrock_stream", "bedrock_invoke"],
+        blurb:     "AWS Bedrock Invoke Stream \u{2014} AWS Bedrock InvokeModelWithResponseStream for streaming inference from foundation models with chunked response payloads.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

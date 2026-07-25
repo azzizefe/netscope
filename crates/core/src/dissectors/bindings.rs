@@ -162,6 +162,14 @@ use super::{
     pkcs11_3_1, tpm2_remote_attestation,
     hsm_kmip_2_1, gp_tui_tee,
     aws_nitro_attestation,
+    openai_chat_stream, openai_realtime_ws,
+    openai_responses_api, anthropic_stream_evt,
+    google_gemini_bidi, google_gemini_rest_stream,
+    azure_aoai_stream, cohere_stream_v2,
+    mistral_chat_stream, groq_lpcu_stream,
+    together_stream, fireworks_stream,
+    deepseek_stream, xai_grok_stream,
+    bedrock_invoke_stream,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1526,4 +1534,23 @@ fn _dissector_reachability_guard_crypto_hardware_tee_hsm_342_350() {
         let _ = super::hsm_kmip_2_1::dissect_hsm_kmip_2_1;
         let _ = super::gp_tui_tee::dissect_gp_tui_tee;
         let _ = super::aws_nitro_attestation::dissect_aws_nitro_attestation;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_llm_streaming_351_365() {
+        let _ = super::openai_chat_stream::dissect_openai_chat_stream;
+        let _ = super::openai_realtime_ws::dissect_openai_realtime_ws;
+        let _ = super::openai_responses_api::dissect_openai_responses_api;
+        let _ = super::anthropic_stream_evt::dissect_anthropic_stream_evt;
+        let _ = super::google_gemini_bidi::dissect_google_gemini_bidi;
+        let _ = super::google_gemini_rest_stream::dissect_google_gemini_rest_stream;
+        let _ = super::azure_aoai_stream::dissect_azure_aoai_stream;
+        let _ = super::cohere_stream_v2::dissect_cohere_stream_v2;
+        let _ = super::mistral_chat_stream::dissect_mistral_chat_stream;
+        let _ = super::groq_lpcu_stream::dissect_groq_lpcu_stream;
+        let _ = super::together_stream::dissect_together_stream;
+        let _ = super::fireworks_stream::dissect_fireworks_stream;
+        let _ = super::deepseek_stream::dissect_deepseek_stream;
+        let _ = super::xai_grok_stream::dissect_xai_grok_stream;
+        let _ = super::bedrock_invoke_stream::dissect_bedrock_invoke_stream;
 }
