@@ -119,6 +119,11 @@ use super::{
     sae_j2735_spat, autoware_zenoh,
     apollo_cyber_rtps, apollo_perception_bridge,
     tesla_fsd_inference, waymo_fleet_rpc,
+    ros2_dds_fastrtps, ros2_dds_cyclone,
+    ros2_rmw_zenoh, ros2_iceoryx,
+    micro_ros_serial, micro_ros_udp,
+    rosbridge_websocket_v3, moveit2_motion_service,
+    isaac_sim_ros2_bridge,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1365,4 +1370,17 @@ fn _dissector_reachability_guard_autonomous_v2x_adas_259_268() {
         let _ = super::apollo_perception_bridge::dissect_apollo_perception_bridge;
         let _ = super::tesla_fsd_inference::dissect_tesla_fsd_inference;
         let _ = super::waymo_fleet_rpc::dissect_waymo_fleet_rpc;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_robotics_ros2_269_277() {
+        let _ = super::ros2_dds_fastrtps::dissect_ros2_dds_fastrtps;
+        let _ = super::ros2_dds_cyclone::dissect_ros2_dds_cyclone;
+        let _ = super::ros2_rmw_zenoh::dissect_ros2_rmw_zenoh;
+        let _ = super::ros2_iceoryx::dissect_ros2_iceoryx;
+        let _ = super::micro_ros_serial::dissect_micro_ros_serial;
+        let _ = super::micro_ros_udp::dissect_micro_ros_udp;
+        let _ = super::rosbridge_websocket_v3::dissect_rosbridge_websocket_v3;
+        let _ = super::moveit2_motion_service::dissect_moveit2_motion_service;
+        let _ = super::isaac_sim_ros2_bridge::dissect_isaac_sim_ros2_bridge;
 }

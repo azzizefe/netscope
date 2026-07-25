@@ -20477,6 +20477,87 @@ protocols! {
         aliases:   ["waymo_fleet", "waymo_rpc"],
         blurb:     "Waymo Fleet RPC \u{2014} Waymo fleet management RPC protocol for vehicle dispatch, telemetry reporting, route planning, and fleet status monitoring over TCP.",
     }
+    Ros2DdsFastrtps {
+        doc:       "ROS2 eProsima Fast DDS discovery protocol (RTPS).",
+        display:   "ROS2 Fast DDS",
+        color:     0xD32F2F,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["fast_dds", "fastrtps"],
+        blurb:     "ROS2 Fast DDS \u{2014} eProsima Fast DDS RTPS discovery and transport for ROS2 nodes with participant discovery, topic matching, and serialized message exchange.",
+    }
+    Ros2DdsCyclone {
+        doc:       "ROS2 Eclipse Cyclone DDS with Iceoryx shared memory.",
+        display:   "ROS2 Cyclone DDS",
+        color:     0x1565C0,
+        transport: Other,
+        rank:      3,
+        aliases:   ["cyclone_dds", "iceoryx_dds"],
+        blurb:     "ROS2 Cyclone DDS \u{2014} Eclipse Cyclone DDS with Iceoryx zero-copy shared memory transport for high-bandwidth sensor data in ROS2 applications.",
+    }
+    Ros2RmwZenoh {
+        doc:       "ROS2 rmw_zenoh middleware peer-to-peer transport.",
+        display:   "ROS2 rmw_zenoh",
+        color:     0x7B2D8E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["rmw_zenoh", "ros2_zenoh"],
+        blurb:     "ROS2 rmw_zenoh \u{2014} peer-to-peer ROS2 middleware over Zenoh protocol for topic-based pub/sub with low-latency and multi-node discovery.",
+    }
+    Ros2Iceoryx {
+        doc:       "ROS2 rmw_iceoryx shared memory transport.",
+        display:   "ROS2 Iceoryx",
+        color:     0x00838F,
+        transport: Other,
+        rank:      3,
+        aliases:   ["iceoryx", "rmw_iceoryx"],
+        blurb:     "ROS2 Iceoryx \u{2014} rmw_iceoryx shared memory transport for zero-copy inter-process communication of high-frequency sensor and actuator data.",
+    }
+    MicroRosSerial {
+        doc:       "micro-ROS serial transport (XRCE-DDS over serial).",
+        display:   "micro-ROS Serial",
+        color:     0x4CAF50,
+        transport: Other,
+        rank:      3,
+        aliases:   ["micro_ros_serial", "xrce_serial"],
+        blurb:     "micro-ROS Serial \u{2014} XRCE-DDS serial transport for resource-constrained microcontrollers with topic pub/sub, service calls, and parameter sync over UART.",
+    }
+    MicroRosUdp {
+        doc:       "micro-ROS custom UDP transport.",
+        display:   "micro-ROS UDP",
+        color:     0x66BB6A,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["micro_ros_udp", "xrce_udp"],
+        blurb:     "micro-ROS UDP \u{2014} XRCE-DDS over UDP transport for wireless microcontroller ROS2 communication with stream-based reliability and fragmentation.",
+    }
+    RosbridgeWebsocketV3 {
+        doc:       "rosbridge_suite WebSocket protocol v3.",
+        display:   "rosbridge WebSocket v3",
+        color:     0xFF9800,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["rosbridge_v3", "rosbridge_ws"],
+        blurb:     "rosbridge WebSocket v3 \u{2014} JSON-based ROS bridge protocol over WebSocket for browser and external application integration with topic pub/sub and service calls.",
+    }
+    Moveit2MotionService {
+        doc:       "MoveIt2 motion planning service RPC.",
+        display:   "MoveIt2 Motion Service",
+        color:     0xE91E63,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["moveit2", "moveit_motion"],
+        blurb:     "MoveIt2 Motion Service \u{2014} ROS2 service interface for motion planning queries with joint-space and Cartesian trajectory computation, collision checking, and kinematics.",
+    }
+    IsaacSimRos2Bridge {
+        doc:       "NVIDIA Isaac Sim-to-ROS2 bridge protocol.",
+        display:   "Isaac Sim ROS2 Bridge",
+        color:     0x76B900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["isaac_ros2", "isaac_bridge"],
+        blurb:     "Isaac Sim ROS2 Bridge \u{2014} NVIDIA Isaac Sim to ROS2 bridge for simulation data exchange including scene geometry, sensor streams, and robot state over ROS2 topics.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",
