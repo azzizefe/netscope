@@ -91,6 +91,10 @@ use super::{
     google_edge_tpu_compiler, mediatek_apusys_delegate,
     onnx_runtime_execution_provider, openvino_npu_plugin,
     qualcomm_snpe_hexagon, samsung_exynos_npu,
+    aegis_guard_llama, anthropic_constitutional,
+    azure_ai_content_safety, guardrails_ai_validator,
+    llama_guard_safeguard, nemo_guardrails_http,
+    openai_moderation_async,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1258,4 +1262,15 @@ fn _dissector_reachability_guard_on_device_edge_ai_206_213() {
         let _ = super::samsung_exynos_npu::dissect_samsung_exynos_npu;
         let _ = super::onnx_runtime_execution_provider::dissect_onnx_runtime_execution_provider;
         let _ = super::openvino_npu_plugin::dissect_openvino_npu_plugin;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_ai_safety_governance_214_220() {
+        let _ = super::guardrails_ai_validator::dissect_guardrails_ai_validator;
+        let _ = super::nemo_guardrails_http::dissect_nemo_guardrails_http;
+        let _ = super::openai_moderation_async::dissect_openai_moderation_async;
+        let _ = super::anthropic_constitutional::dissect_anthropic_constitutional;
+        let _ = super::aegis_guard_llama::dissect_aegis_guard_llama;
+        let _ = super::llama_guard_safeguard::dissect_llama_guard_safeguard;
+        let _ = super::azure_ai_content_safety::dissect_azure_ai_content_safety;
 }

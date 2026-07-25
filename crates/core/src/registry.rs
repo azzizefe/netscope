@@ -19982,6 +19982,69 @@ protocols! {
         aliases:   ["exynos_npu", "samsung_npu"],
         blurb:     "Samsung Exynos NPU mailbox IPC \u{2014} command queue submission, model load, inference trigger, and result notification via shared mailbox registers on Exynos SoCs.",
     }
+    GuardrailsAiValidator {
+        doc:       "Guardrails AI output validation RPC protocol.",
+        display:   "Guardrails AI Validator",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["guardrails_ai", "gr_ai_validator"],
+        blurb:     "Guardrails AI output validation RPC \u{2014} structured output validation with configurable validators for PII, tone, safety, and custom rules via RPC.",
+    }
+    NemoGuardrailsHttp {
+        doc:       "NVIDIA NeMo Guardrails server protocol.",
+        display:   "NeMo Guardrails HTTP",
+        color:     0x76B900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nemo_guardrails", "nemo_gr"],
+        blurb:     "NVIDIA NeMo Guardrails HTTP \u{2014} REST server for Colang-based dialogue guardrails with topic enforcement, safety fences, and user intent classification.",
+    }
+    OpenaiModerationAsync {
+        doc:       "OpenAI Moderation API async pipeline protocol.",
+        display:   "OpenAI Moderation Async",
+        color:     0x10A37F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openai_moderation", "oai_moderation"],
+        blurb:     "OpenAI Moderation API async pipeline \u{2014} content moderation with category classification, severity scoring, and async batch processing for text and images.",
+    }
+    AnthropicConstitutional {
+        doc:       "Anthropic Constitutional AI classifier protocol.",
+        display:   "Anthropic Constitutional AI",
+        color:     0xCC7700,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["anthropic_constitutional", "claude_constitution"],
+        blurb:     "Anthropic Constitutional AI classifier \u{2014} principle-based output classification with critique-revision cycles, constitution definitions, and harmlessness scoring.",
+    }
+    AegisGuardLlama {
+        doc:       "NVIDIA Aegis content safety guard protocol.",
+        display:   "Aegis Guard Llama",
+        color:     0x76B900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["aegis_llama", "nvidia_aegis"],
+        blurb:     "NVIDIA Aegis content safety guard \u{2014} Llama-based content safety classifier with guard scores, harm category detection, and policy-based filtering for LLM outputs.",
+    }
+    LlamaGuardSafeguard {
+        doc:       "Meta Llama Guard safeguard output format.",
+        display:   "Llama Guard Safeguard",
+        color:     0x316194,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["llama_guard", "meta_safeguard"],
+        blurb:     "Meta Llama Guard safeguard output \u{2014} token-level safety classification with unsafe content categories, policy violation descriptions, and binary safe/unsafe verdicts.",
+    }
+    AzureAiContentSafety {
+        doc:       "Azure AI Content Safety streaming eval protocol.",
+        display:   "Azure AI Content Safety",
+        color:     0x0078D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["azure_content_safety", "acs_eval"],
+        blurb:     "Azure AI Content Safety streaming eval \u{2014} real-time content safety evaluation with severity-based category analysis, prompt injection detection, and streaming verdicts.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",
