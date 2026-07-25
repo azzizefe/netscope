@@ -1215,3 +1215,15 @@ fn _dissector_reachability_guard_distributed_training_180_189() {
         let _ = super::pytorch_rpc_framework::dissect_pytorch_rpc_framework;
         let _ = super::jax_pjit_sharding::dissect_jax_pjit_sharding;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_vector_db_190_197() {
+        let _ = super::pinecone_grpc_index::dissect_pinecone_grpc_index;
+        let _ = super::pinecone_collection_stream::dissect_pinecone_collection_stream;
+        let _ = super::weaviate_graphql_grpc::dissect_weaviate_graphql_grpc;
+        let _ = super::weaviate_hnsw_replication::dissect_weaviate_hnsw_replication;
+        let _ = super::qdrant_raft_log::dissect_qdrant_raft_log;
+        let _ = super::qdrant_quantization_sync::dissect_qdrant_quantization_sync;
+        let _ = super::milvus_proxy_grpc::dissect_milvus_proxy_grpc;
+        let _ = super::milvus_sealed_seg_stream::dissect_milvus_sealed_seg_stream;
+}

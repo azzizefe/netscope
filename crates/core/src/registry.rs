@@ -20036,6 +20036,78 @@ protocols! {
         aliases:   ["jax_pjit", "gspmd_sharding"],
         blurb:     "JAX pjit GSPMD sharding communication \u{2014} sharding-annotation-driven collective communication for partitioned computations with all-gather, reduce-scatter, and dynamic-slice for automated parallelisation.",
     }
+    PineconeGrpcIndex {
+        doc:       "Pinecone gRPC index upsert/query protocol traffic.",
+        display:   "Pinecone gRPC Index",
+        color:     0x35A560,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pinecone_index", "pc_index_grpc"],
+        blurb:     "Pinecone gRPC index upsert/query protocol \u{2014} Protobuf-based vector index operations including Upsert, Query, Fetch, Update, and Delete with namespace-scoped vector and scalar metadata filtering.",
+    }
+    PineconeCollectionStream {
+        doc:       "Pinecone collection internal consistency stream traffic.",
+        display:   "Pinecone Collection Stream",
+        color:     0x2D8C50,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pinecone_collection", "pc_col_stream"],
+        blurb:     "Pinecone collection internal consistency stream \u{2014} shard-level streaming for collection creation and hydration, with segment alignment, record acknowledgment, and back-pressure signalling across index replicas.",
+    }
+    WeaviateGraphqlGrpc {
+        doc:       "Weaviate GraphQL-over-gRPC internal traffic.",
+        display:   "Weaviate GraphQL gRPC",
+        color:     0x4D6BFE,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["weaviate_gql_grpc", "weaviate_grpc"],
+        blurb:     "Weaviate GraphQL-over-gRPC internal \u{2014} gRPC-based GraphQL query execution with batched vector search, hybrid (BM25 + vector) retrieval, and object-level aggregations across shards.",
+    }
+    WeaviateHnswReplication {
+        doc:       "Weaviate HNSW index replication log traffic.",
+        display:   "Weaviate HNSW Replication",
+        color:     0x3D5AFE,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["weaviate_hnsw", "hnsw_repl_log"],
+        blurb:     "Weaviate HNSW index replication log \u{2014} incremental HNSW graph mutation log for multi-node replication, carrying insert/delete operations with layer assignment and per-entry vector data.",
+    }
+    QdrantRaftLog {
+        doc:       "Qdrant Raft consensus log replication traffic.",
+        display:   "Qdrant Raft Log",
+        color:     0xEB5454,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["qdrant_raft", "raft_log"],
+        blurb:     "Qdrant Raft consensus log replication \u{2014} Raft-based log entry replication for distributed collection state, with term-index addressing, snapshot install, and leader-election messaging.",
+    }
+    QdrantQuantizationSync {
+        doc:       "Qdrant binary/splat quantization segment sync traffic.",
+        display:   "Qdrant Quantization Sync",
+        color:     0xD43A3A,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["qdrant_quant", "quant_sync"],
+        blurb:     "Qdrant binary/splat quantization segment sync \u{2014} quantised vector segment synchronisation with binary, scalar, and product-quantisation codebooks, delta-encoded subvectors, and chunked transfer.",
+    }
+    MilvusProxyGrpc {
+        doc:       "Milvus proxy-to-data-node gRPC traffic.",
+        display:   "Milvus Proxy gRPC",
+        color:     0x00A1D6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["milvus_proxy", "proxy_grpc"],
+        blurb:     "Milvus proxy-to-data-node gRPC \u{2014} query and insert forwarding from proxy to data nodes, with channel-level routing, segment ID assignment, and batch result streaming for vector search.",
+    }
+    MilvusSealedSegStream {
+        doc:       "Milvus sealed segment streaming protocol traffic.",
+        display:   "Milvus Sealed Segment Stream",
+        color:     0x008BBB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["milvus_sealed", "sealed_seg_stream"],
+        blurb:     "Milvus sealed segment streaming protocol \u{2014} chunked streaming of sealed segment data from data nodes to query nodes, including vector fields, scalar fields, and deletion bitmaps.",
+    }
 }
 
 impl std::fmt::Display for Protocol {
