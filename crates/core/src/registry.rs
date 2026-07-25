@@ -19523,6 +19523,78 @@ protocols! {
         aliases:   ["moonlight_rtsp", "sunshine_rtsp"],
         blurb:     "Moonlight/Sunshine game stream RTSP extension \u{2014} custom RTSP methods for session negotiation, codec config, and stream control.",
     }
+    VrchatUdonNet {
+        doc:       "VRChat Udon networking layer traffic.",
+        display:   "VRChat Udon Net",
+        color:     0xCC6677,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["udon_net", "vrchat_udon"],
+        blurb:     "VRChat Udon networking layer \u{2014} event-driven synchronisation for user-created world logic and inter-object messages.",
+    }
+    VrchatIkSync {
+        doc:       "VRChat IK (full-body tracking) sync protocol traffic.",
+        display:   "VRChat IK Sync",
+        color:     0xBB5566,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["vrchat_ik", "vrchat_fullbody"],
+        blurb:     "VRChat IK sync protocol \u{2014} low-latency full-body tracking data including hip, feet, and elbow transforms.",
+    }
+    RobloxPhysicsReplicator {
+        doc:       "Roblox physics custom replication traffic.",
+        display:   "Roblox Physics Replicator",
+        color:     0xE2231A,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["roblox_physics", "rbx_physics"],
+        blurb:     "Roblox physics custom replication \u{2014} authoritative physics state deltas for rigid bodies, collisions, and constraints.",
+    }
+    RobloxVoiceInternal {
+        doc:       "Roblox spatial voice internal transport traffic.",
+        display:   "Roblox Voice Internal",
+        color:     0xC41E1A,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["roblox_voice", "rbx_voice"],
+        blurb:     "Roblox spatial voice internal transport \u{2014} Opus-encoded audio with 3D positional metadata and talker-state signalling.",
+    }
+    RecroomRoomServer {
+        doc:       "Rec Room room-server protocol traffic.",
+        display:   "Rec Room Room Server",
+        color:     0x7766AA,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["recroom_room", "rec_room_server"],
+        blurb:     "Rec Room room-server protocol \u{2014} authoritative room-state replication, player position, and custom game logic events.",
+    }
+    HorizonWorldsSync {
+        doc:       "Meta Horizon Worlds entity sync traffic.",
+        display:   "Horizon Worlds Sync",
+        color:     0x0066FF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["horizon_worlds", "meta_horizon"],
+        blurb:     "Meta Horizon Worlds entity sync \u{2014} real-time transform, animation, and scene-object state replication.",
+    }
+    SpatialIoWebxrSync {
+        doc:       "Spatial.io WebXR object sync traffic.",
+        display:   "Spatial.io WebXR Sync",
+        color:     0x22CC88,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["spatial_io_webxr", "spatial_webxr"],
+        blurb:     "Spatial.io WebXR object sync \u{2014} synchronised 3D object transforms, avatar poses, and spatial audio metadata.",
+    }
+    SecondlifeLludp {
+        doc:       "Second Life LLUDP message template protocol traffic.",
+        display:   "Second Life LLUDP",
+        color:     0xCC8822,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["secondlife_lludp", "sl_lludp"],
+        blurb:     "Second Life LLUDP message template protocol \u{2014} packetised message system with zero-encoding, ACK, and sequence-numbered templates for world-state replication.",
+    }
 }
 
 impl std::fmt::Display for Protocol {

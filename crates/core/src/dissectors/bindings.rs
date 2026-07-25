@@ -72,6 +72,8 @@ use super::{
     nvidia_gfn_stream, nvidia_gfn_ctrl, xcloud_fragment, xcloud_input_pipe,
     stadia_controller_wifi, luna_stream_proto, ps_remote_play_v3,
     steam_remote_play_together, steam_link_transport, moonlight_rtsp_game,
+    vrchat_udon_net, vrchat_ik_sync, roblox_physics_replicator, roblox_voice_internal,
+    recroom_room_server, horizon_worlds_sync, spatial_io_webxr_sync, secondlife_lludp,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1122,4 +1124,16 @@ fn _dissector_reachability_guard_game_streaming_123_132() {
         let _ = super::steam_remote_play_together::dissect_steam_remote_play_together;
         let _ = super::steam_link_transport::dissect_steam_link_transport;
         let _ = super::moonlight_rtsp_game::dissect_moonlight_rtsp_game;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_metaverse_social_vr_133_140() {
+        let _ = super::vrchat_udon_net::dissect_vrchat_udon_net;
+        let _ = super::vrchat_ik_sync::dissect_vrchat_ik_sync;
+        let _ = super::roblox_physics_replicator::dissect_roblox_physics_replicator;
+        let _ = super::roblox_voice_internal::dissect_roblox_voice_internal;
+        let _ = super::recroom_room_server::dissect_recroom_room_server;
+        let _ = super::horizon_worlds_sync::dissect_horizon_worlds_sync;
+        let _ = super::spatial_io_webxr_sync::dissect_spatial_io_webxr_sync;
+        let _ = super::secondlife_lludp::dissect_secondlife_lludp;
 }
