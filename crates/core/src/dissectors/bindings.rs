@@ -151,6 +151,12 @@ use super::{
     fhe_tfhe_bootstrapping, fhe_openfhe_pke,
     fhe_ibm_helib_op, fhe_google_shell,
     fhe_transpiler_cggi,
+    ethereum_devp2p_v5, ethereum_snap_sync,
+    ethereum_consensus_p2p, ethereum_blob_sidecar,
+    solana_tpu_proto, solana_turbine_block,
+    solana_gulf_stream, libp2p_gossipsub_v1_2,
+    libp2p_kad_dht_v2, libp2p_quic_transport,
+    libp2p_webrtc_browser, hotstuff_consensus,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1486,4 +1492,20 @@ fn _dissector_reachability_guard_fhe_323_329() {
         let _ = super::fhe_ibm_helib_op::dissect_fhe_ibm_helib_op;
         let _ = super::fhe_google_shell::dissect_fhe_google_shell;
         let _ = super::fhe_transpiler_cggi::dissect_fhe_transpiler_cggi;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_blockchain_web3_330_341() {
+        let _ = super::ethereum_devp2p_v5::dissect_ethereum_devp2p_v5;
+        let _ = super::ethereum_snap_sync::dissect_ethereum_snap_sync;
+        let _ = super::ethereum_consensus_p2p::dissect_ethereum_consensus_p2p;
+        let _ = super::ethereum_blob_sidecar::dissect_ethereum_blob_sidecar;
+        let _ = super::solana_tpu_proto::dissect_solana_tpu_proto;
+        let _ = super::solana_turbine_block::dissect_solana_turbine_block;
+        let _ = super::solana_gulf_stream::dissect_solana_gulf_stream;
+        let _ = super::libp2p_gossipsub_v1_2::dissect_libp2p_gossipsub_v1_2;
+        let _ = super::libp2p_kad_dht_v2::dissect_libp2p_kad_dht_v2;
+        let _ = super::libp2p_quic_transport::dissect_libp2p_quic_transport;
+        let _ = super::libp2p_webrtc_browser::dissect_libp2p_webrtc_browser;
+        let _ = super::hotstuff_consensus::dissect_hotstuff_consensus;
 }

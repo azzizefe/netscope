@@ -21026,6 +21026,114 @@ protocols! {
         aliases:   ["cggi_transpiler", "fhe_cggi"],
         blurb:     "FHE Transpiler CGGI \u{2014} CGGI-to-TFHE bridge protocol for converting high-level circuit descriptions to TFHE gate bootstrapping operations with programmable LUTs.",
     }
+    EthereumDevp2pV5 {
+        doc:       "Ethereum discv5 (Node Discovery v5) protocol.",
+        display:   "Ethereum discv5",
+        color:     0x627EEA,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["discv5", "devp2p_v5"],
+        blurb:     "Ethereum discv5 \u{2014} Ethereum Node Discovery v5 using ENR (Ethereum Node Records) for peer discovery with PING/PONG, FINDNODE/NEIGHBORS, and TALK messages over UDP.",
+    }
+    EthereumSnapSync {
+        doc:       "Ethereum snap sync (state heal) protocol.",
+        display:   "Ethereum Snap Sync",
+        color:     0x3C3C3D,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["snap_sync", "eth_snap"],
+        blurb:     "Ethereum Snap Sync \u{2014} snap sync protocol for serving Ethereum state trie data with account range, storage range, and bytecode serving for fast state healing.",
+    }
+    EthereumConsensusP2p {
+        doc:       "Ethereum Consensus Layer p2p (libp2p + SSZ).",
+        display:   "Ethereum CL p2p",
+        color:     0x28A745,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["eth_cl_p2p", "consensus_p2p"],
+        blurb:     "Ethereum CL p2p \u{2014} Ethereum Beacon Chain consensus layer p2p over libp2p with SSZ-serialized messages for beacon blocks, attestations, and aggregate gossip.",
+    }
+    EthereumBlobSidecar {
+        doc:       "EIP-4844 blob sidecar gossip protocol.",
+        display:   "Ethereum Blob Sidecar",
+        color:     0xE67E22,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["blob_sidecar", "eip4844_blob"],
+        blurb:     "Ethereum Blob Sidecar \u{2014} EIP-4844 protodanksharding blob sidecar gossip with KZG commitments, blob proofs, and versioned hashes for layer-2 data availability.",
+    }
+    SolanaTpuProto {
+        doc:       "Solana TPU (Transaction Processing Unit) protocol.",
+        display:   "Solana TPU",
+        color:     0x9945FF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["solana_tpu", "tpu_proto"],
+        blurb:     "Solana TPU \u{2014} Solana Transaction Processing Unit protocol for leader transaction ingestion with packet forwarding, signature verification, and banking stage scheduling.",
+    }
+    SolanaTurbineBlock {
+        doc:       "Solana Turbine block propagation tree.",
+        display:   "Solana Turbine Block",
+        color:     0x19FB9B,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["turbine", "solana_turbine"],
+        blurb:     "Solana Turbine Block \u{2014} Solana Turbine block propagation protocol using shred-based FEC coding and retransmission trees for efficient validator block distribution.",
+    }
+    SolanaGulfStream {
+        doc:       "Solana Gulf Stream mempool forwarding protocol.",
+        display:   "Solana Gulf Stream",
+        color:     0x00D18C,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["gulf_stream", "solana_gulf"],
+        blurb:     "Solana Gulf Stream \u{2014} Solana Gulf Stream mempool forwarding with leader schedule-aware transaction push for zero-candidate-block latency.",
+    }
+    Libp2pGossipsubV12 {
+        doc:       "libp2p GossipSub v1.2 mesh protocol.",
+        display:   "libp2p GossipSub v1.2",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gossipsub_v12", "libp2p_gossip"],
+        blurb:     "libp2p GossipSub v1.2 \u{2014} libp2p GossipSub pub-sub mesh protocol with IHAVE/IWANT/GRAFT/PRUNE control messages, peer scoring, and topic discovery.",
+    }
+    Libp2pKadDhtV2 {
+        doc:       "libp2p Kademlia DHT (Amino DHT + provider).",
+        display:   "libp2p Kademlia DHT v2",
+        color:     0x4F46E5,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["kad_dht_v2", "amino_dht"],
+        blurb:     "libp2p Kademlia DHT v2 \u{2014} libp2p Kademlia Distributed Hash Table with FIND_NODE, GET_PROVIDERS, ADD_PROVIDER for peer discovery and content routing.",
+    }
+    Libp2pQuicTransport {
+        doc:       "libp2p QUIC transport (WebTransport + QUIC).",
+        display:   "libp2p QUIC Transport",
+        color:     0x10B981,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["quic_transport", "libp2p_quic"],
+        blurb:     "libp2p QUIC Transport \u{2014} libp2p QUIC and WebTransport multiplexed transport for low-latency browser-to-server and server-to-server connections.",
+    }
+    Libp2pWebrtcBrowser {
+        doc:       "libp2p WebRTC browser-to-browser transport.",
+        display:   "libp2p WebRTC Browser",
+        color:     0xF59E0B,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["webrtc_browser", "libp2p_wrtc"],
+        blurb:     "libp2p WebRTC Browser \u{2014} libp2p WebRTC transport for browser-to-browser connectivity with SDP signalling, ICE negotiation, and STUN/TURN relays.",
+    }
+    HotstuffConsensus {
+        doc:       "Diem/Libra2 HotStuff BFT consensus protocol.",
+        display:   "HotStuff Consensus",
+        color:     0xEF4444,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hotstuff", "hotstuff_bft"],
+        blurb:     "HotStuff Consensus \u{2014} Diem/Libra2 HotStuff BFT consensus with prepare, pre-commit, commit, and decide phases using QC (Quorum Certificate) chaining for linear SMR.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",
