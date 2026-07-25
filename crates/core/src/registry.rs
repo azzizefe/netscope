@@ -19730,6 +19730,114 @@ protocols! {
         aliases:   ["denuvo_net", "denuvo_anti_tamper"],
         blurb:     "Denuvo Anti-Tamper online check-in protocol \u{2014} periodic activation validation, integrity token exchange, and entitlement verification.",
     }
+    OpenaiRealtime {
+        doc:       "OpenAI Realtime API WebSocket protocol traffic.",
+        display:   "OpenAI Realtime",
+        color:     0x008080,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openai_realtime", "oai_realtime"],
+        blurb:     "OpenAI Realtime API WebSocket protocol \u{2014} bidirectional streaming of audio, text, and function calls over WebSocket with JSON or binary event framing.",
+    }
+    OpenaiBatchApi {
+        doc:       "OpenAI Batch API async job protocol traffic.",
+        display:   "OpenAI Batch API",
+        color:     0x006060,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openai_batch", "oai_batch"],
+        blurb:     "OpenAI Batch API async job protocol \u{2014} long-running batch inference with job submission, status polling, and result retrieval over HTTPS.",
+    }
+    OpenaiStreamingSse {
+        doc:       "OpenAI streaming SSE token-level protocol traffic.",
+        display:   "OpenAI Streaming SSE",
+        color:     0x009999,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openai_sse", "oai_streaming"],
+        blurb:     "OpenAI streaming SSE token-level protocol \u{2014} server-sent events for token-by-token chat completion delivery with usage metadata.",
+    }
+    AnthropicMessagesStream {
+        doc:       "Anthropic Messages API streaming SSE extensions traffic.",
+        display:   "Anthropic Messages Stream",
+        color:     0xCC7700,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["anthropic_messages_stream", "anthropic_stream"],
+        blurb:     "Anthropic Messages API streaming SSE extensions \u{2014} server-sent events with content block deltas, stop reasons, and rate-limit headers.",
+    }
+    AnthropicToolUseBridge {
+        doc:       "Anthropic tool_use content block bridge protocol traffic.",
+        display:   "Anthropic Tool Use Bridge",
+        color:     0xBB6600,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["anthropic_tool_use", "claude_tool_bridge"],
+        blurb:     "Anthropic tool_use content block bridge protocol \u{2014} structured JSON-RPC-style tool call and result transport within the Messages API.",
+    }
+    GoogleGeminiStream {
+        doc:       "Google Gemini API streaming gRPC-web protocol traffic.",
+        display:   "Gemini Stream",
+        color:     0x4285F4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gemini_stream", "google_gemini"],
+        blurb:     "Google Gemini API streaming gRPC-web protocol \u{2014} bidirectional gRPC-web transport for token-level generateContent and streamGenerateContent.",
+    }
+    GoogleAistudioWs {
+        doc:       "Google AI Studio WebSocket connect protocol traffic.",
+        display:   "AI Studio WebSocket",
+        color:     0x3367D6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["aistudio_ws", "google_aistudio"],
+        blurb:     "Google AI Studio WebSocket connect protocol \u{2014} interactive prompt-editing WebSocket with model configuration, context injection, and streaming output.",
+    }
+    VllmAsyncEngine {
+        doc:       "vLLM async engine scheduler IPC traffic.",
+        display:   "vLLM Async Engine",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["vllm_async", "vllm_scheduler"],
+        blurb:     "vLLM async engine scheduler IPC \u{2014} inter-process communication between the HTTP frontend and the async engine scheduler for request queuing and KV-cache management.",
+    }
+    TgiMessages {
+        doc:       "HuggingFace TGI (Text Generation Inference) gRPC traffic.",
+        display:   "TGI Messages",
+        color:     0xFFD700,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tgi_grpc", "huggingface_tgi"],
+        blurb:     "HuggingFace TGI gRPC protocol \u{2014} protobuf-defined generate and tokenize RPCs with streaming response chunks and model metadata.",
+    }
+    TritonInferenceGrpc {
+        doc:       "NVIDIA Triton Inference Server gRPC traffic.",
+        display:   "Triton Inference gRPC",
+        color:     0x76B900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["triton_grpc", "triton_inference"],
+        blurb:     "NVIDIA Triton Inference Server gRPC \u{2014} protobuf inference, model control, and health-check RPCs with tensor streaming.",
+    }
+    TritonModelRepoStream {
+        doc:       "Triton model repository file streaming traffic.",
+        display:   "Triton Model Repo Stream",
+        color:     0x5E9B00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["triton_repo_stream", "triton_model_repo"],
+        blurb:     "Triton model repository file streaming \u{2014} chunked file transfer for model version upload, download, and concurrent reader synchronisation.",
+    }
+    SglangRadixCache {
+        doc:       "SGLang RadixAttention cache sharing protocol traffic.",
+        display:   "SGLang Radix Cache",
+        color:     0xEC4899,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sglang_radix", "radix_cache"],
+        blurb:     "SGLang RadixAttention cache sharing protocol \u{2014} distributed radix-tree prefix sharing for KV-cache between concurrent inference requests.",
+    }
 }
 
 impl std::fmt::Display for Protocol {

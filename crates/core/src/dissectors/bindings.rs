@@ -78,6 +78,11 @@ use super::{
     photon_realtime_v5, photon_bolt_internal, fishnet_teleport, mirror_transport_fallback,
     faceit_server_plugin, esea_client_anti_cheat, esl_wire_proto, riot_vanguard_net,
     battleye_packet_filter, easy_anti_cheat_stream, denuvo_anti_tamper_net,
+    openai_realtime, openai_batch_api, openai_streaming_sse,
+    anthropic_messages_stream, anthropic_tool_use_bridge,
+    google_gemini_stream, google_aistudio_ws,
+    vllm_async_engine, tgi_messages, triton_inference_grpc,
+    triton_model_repo_stream, sglang_radix_cache,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1163,4 +1168,20 @@ fn _dissector_reachability_guard_esport_anti_cheat_149_155() {
         let _ = super::battleye_packet_filter::dissect_battleye_packet_filter;
         let _ = super::easy_anti_cheat_stream::dissect_easy_anti_cheat_stream;
         let _ = super::denuvo_anti_tamper_net::dissect_denuvo_anti_tamper_net;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_llm_inference_156_167() {
+        let _ = super::openai_realtime::dissect_openai_realtime;
+        let _ = super::openai_batch_api::dissect_openai_batch_api;
+        let _ = super::openai_streaming_sse::dissect_openai_streaming_sse;
+        let _ = super::anthropic_messages_stream::dissect_anthropic_messages_stream;
+        let _ = super::anthropic_tool_use_bridge::dissect_anthropic_tool_use_bridge;
+        let _ = super::google_gemini_stream::dissect_google_gemini_stream;
+        let _ = super::google_aistudio_ws::dissect_google_aistudio_ws;
+        let _ = super::vllm_async_engine::dissect_vllm_async_engine;
+        let _ = super::tgi_messages::dissect_tgi_messages;
+        let _ = super::triton_inference_grpc::dissect_triton_inference_grpc;
+        let _ = super::triton_model_repo_stream::dissect_triton_model_repo_stream;
+        let _ = super::sglang_radix_cache::dissect_sglang_radix_cache;
 }
