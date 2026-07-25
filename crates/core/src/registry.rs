@@ -20558,6 +20558,78 @@ protocols! {
         aliases:   ["isaac_ros2", "isaac_bridge"],
         blurb:     "Isaac Sim ROS2 Bridge \u{2014} NVIDIA Isaac Sim to ROS2 bridge for simulation data exchange including scene geometry, sensor streams, and robot state over ROS2 topics.",
     }
+    ProfisafeOver5g {
+        doc:       "PROFIsafe over 5G URLLC bridge protocol.",
+        display:   "PROFIsafe over 5G",
+        color:     0xE60000,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["profisafe_5g", "profisafe_urllc"],
+        blurb:     "PROFIsafe over 5G \u{2014} safety protocol bridging PROFIsafe fail-safe communication over 5G URLLC with F-destination addressing and cyclic safety PDUs.",
+    }
+    EthercatOverTsn {
+        doc:       "EtherCAT over TSN (EoE TSN profile) protocol.",
+        display:   "EtherCAT over TSN",
+        color:     0x0078D4,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ethercat_tsn", "eoe_tsn"],
+        blurb:     "EtherCAT over TSN \u{2014} EtherCAT on TSN profile for deterministic industrial Ethernet with time-aware scheduling, frame preemption, and cycle-synchronised data exchange.",
+    }
+    ProfinetCcA {
+        doc:       "PROFINET CC-A over 5G URLLC protocol.",
+        display:   "PROFINET CC-A over 5G",
+        color:     0xFF6600,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["profinet_cca", "pn_cca_5g"],
+        blurb:     "PROFINET CC-A over 5G \u{2014} PROFINET Conformance Class A over 5G URLLC for cyclic IO data, alarm handling, and parameterisation with deterministic latency.",
+    }
+    ModbusTcpSecure {
+        doc:       "Modbus/TCP Security (TLS profile) protocol.",
+        display:   "Modbus/TCP Secure",
+        color:     0x00A650,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["modbus_tls", "modbus_secure"],
+        blurb:     "Modbus/TCP Secure \u{2014} Modbus/TCP with TLS encryption per IETF draft for authenticated and encrypted industrial control communication with session establishment.",
+    }
+    HartIpAdvanced {
+        doc:       "HART-IP Advanced (WirelessHART over IP) protocol.",
+        display:   "HART-IP Advanced",
+        color:     0x3399FF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hart_ip", "wirelesshart_ip"],
+        blurb:     "HART-IP Advanced \u{2014} HART over IP with WirelessHART gateway bridging for process variable reporting, device diagnostics, and network management over TCP/IP.",
+    }
+    OpcUaFxUafx {
+        doc:       "OPC UA FX (Field eXchange) UAFX protocol.",
+        display:   "OPC UA FX UAFX",
+        color:     0xDA291C,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ua_fx", "opcua_uafx"],
+        blurb:     "OPC UA FX UAFX \u{2014} OPC UA Field eXchange protocol for deterministic field-level communication with cyclic data, alarms, and configuration on TSN networks.",
+    }
+    Pubsub5gTsn {
+        doc:       "OPC UA PubSub 5G TSN bridge protocol.",
+        display:   "OPC UA PubSub 5G TSN",
+        color:     0x005BBB,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["pubsub_5g_tsn", "ua_pubsub_tsn"],
+        blurb:     "OPC UA PubSub 5G TSN \u{2014} OPC UA PubSub bridging over 5G and TSN for deterministic publisher-subscriber data distribution with configurable dataset and writer groups.",
+    }
+    SixPIndustrial5g {
+        doc:       "6G-P Industrial 5G ultra-low-latency fabric protocol.",
+        display:   "6G-P Industrial 5G",
+        color:     0x7B2D8E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["6g_p", "industrial_5g_fabric"],
+        blurb:     "6G-P Industrial 5G \u{2014} 6G-P paradigm ultra-low-latency fabric for industrial 5G with sub-millisecond cycle times, time-sensitive forwarding, and deterministic scheduling.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

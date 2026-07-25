@@ -124,6 +124,10 @@ use super::{
     micro_ros_serial, micro_ros_udp,
     rosbridge_websocket_v3, moveit2_motion_service,
     isaac_sim_ros2_bridge,
+    profisafe_over_5g, ethercat_over_tsn,
+    profinet_cc_a, modbus_tcp_secure,
+    hart_ip_advanced, opc_ua_fx_uafx,
+    pubsub_5g_tsn, six_p_industrial_5g,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1383,4 +1387,16 @@ fn _dissector_reachability_guard_robotics_ros2_269_277() {
         let _ = super::rosbridge_websocket_v3::dissect_rosbridge_websocket_v3;
         let _ = super::moveit2_motion_service::dissect_moveit2_motion_service;
         let _ = super::isaac_sim_ros2_bridge::dissect_isaac_sim_ros2_bridge;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_industrial_5g_urllc_278_285() {
+        let _ = super::profisafe_over_5g::dissect_profisafe_over_5g;
+        let _ = super::ethercat_over_tsn::dissect_ethercat_over_tsn;
+        let _ = super::profinet_cc_a::dissect_profinet_cc_a;
+        let _ = super::modbus_tcp_secure::dissect_modbus_tcp_secure;
+        let _ = super::hart_ip_advanced::dissect_hart_ip_advanced;
+        let _ = super::opc_ua_fx_uafx::dissect_opc_ua_fx_uafx;
+        let _ = super::pubsub_5g_tsn::dissect_pubsub_5g_tsn;
+        let _ = super::six_p_industrial_5g::dissect_six_p_industrial_5g;
 }
