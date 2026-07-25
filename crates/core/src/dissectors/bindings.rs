@@ -157,6 +157,11 @@ use super::{
     solana_gulf_stream, libp2p_gossipsub_v1_2,
     libp2p_kad_dht_v2, libp2p_quic_transport,
     libp2p_webrtc_browser, hotstuff_consensus,
+    intel_sgx_dcap_quote, intel_tdx_attestation,
+    amd_sev_snp_attest, arm_cca_realm_attest,
+    pkcs11_3_1, tpm2_remote_attestation,
+    hsm_kmip_2_1, gp_tui_tee,
+    aws_nitro_attestation,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1508,4 +1513,17 @@ fn _dissector_reachability_guard_blockchain_web3_330_341() {
         let _ = super::libp2p_quic_transport::dissect_libp2p_quic_transport;
         let _ = super::libp2p_webrtc_browser::dissect_libp2p_webrtc_browser;
         let _ = super::hotstuff_consensus::dissect_hotstuff_consensus;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_crypto_hardware_tee_hsm_342_350() {
+        let _ = super::intel_sgx_dcap_quote::dissect_intel_sgx_dcap_quote;
+        let _ = super::intel_tdx_attestation::dissect_intel_tdx_attestation;
+        let _ = super::amd_sev_snp_attest::dissect_amd_sev_snp_attest;
+        let _ = super::arm_cca_realm_attest::dissect_arm_cca_realm_attest;
+        let _ = super::pkcs11_3_1::dissect_pkcs11_3_1;
+        let _ = super::tpm2_remote_attestation::dissect_tpm2_remote_attestation;
+        let _ = super::hsm_kmip_2_1::dissect_hsm_kmip_2_1;
+        let _ = super::gp_tui_tee::dissect_gp_tui_tee;
+        let _ = super::aws_nitro_attestation::dissect_aws_nitro_attestation;
 }

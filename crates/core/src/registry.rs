@@ -21134,6 +21134,87 @@ protocols! {
         aliases:   ["hotstuff", "hotstuff_bft"],
         blurb:     "HotStuff Consensus \u{2014} Diem/Libra2 HotStuff BFT consensus with prepare, pre-commit, commit, and decide phases using QC (Quorum Certificate) chaining for linear SMR.",
     }
+    IntelSgxDcapQuote {
+        doc:       "Intel SGX DCAP quote verification extension.",
+        display:   "Intel SGX DCAP Quote",
+        color:     0x0071C5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sgx_dcap", "sgx_quote"],
+        blurb:     "Intel SGX DCAP Quote \u{2014} Intel SGX Data Center Attestation Primitives quote verification with MRENCLAVE, MRSIGNER, and TCB status for enclave identity attestation.",
+    }
+    IntelTdxAttestation {
+        doc:       "Intel TDX attestation protocol.",
+        display:   "Intel TDX Attestation",
+        color:     0x00A4EF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tdx_attest", "intel_tdx"],
+        blurb:     "Intel TDX Attestation \u{2014} Intel Trust Domain Extension attestation with TDQUOTE, TEE TCB, and SEAM measurements for confidential VM verification.",
+    }
+    AmdSevSnpAttest {
+        doc:       "AMD SEV-SNP attestation report protocol.",
+        display:   "AMD SEV-SNP Attestation",
+        color:     0xED8B00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sev_snp", "amd_sev"],
+        blurb:     "AMD SEV-SNP Attestation \u{2014} AMD Secure Encrypted Virtualization-Secure Nested Paging attestation with ATTEST_REPORT, TCB version, and chip ID for VM isolation proof.",
+    }
+    ArmCcaRealmAttest {
+        doc:       "Arm CCA Realm attestation token protocol.",
+        display:   "Arm CCA Realm Attestation",
+        color:     0x0091BD,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cca_realm", "arm_cca"],
+        blurb:     "Arm CCA Realm Attestation \u{2014} Arm Confidential Compute Architecture Realm attestation token with RPV, platform claims, and CCA token for confidential compute verification.",
+    }
+    Pkcs1131 {
+        doc:       "PKCS#11 v3.1 cryptographic token interface.",
+        display:   "PKCS#11 v3.1",
+        color:     0x689F38,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pkcs11_3_1", "cryptoki"],
+        blurb:     "PKCS#11 v3.1 \u{2014} OASIS PKCS#11 Cryptoki interface v3.1 for cryptographic token operations with encryption, decryption, signing, and key management across HSM devices.",
+    }
+    Tpm2RemoteAttestation {
+        doc:       "TPM 2.0 Remote Attestation DICE extension.",
+        display:   "TPM 2.0 Remote Attestation",
+        color:     0x757575,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tpm2_attest", "tpm2_dice"],
+        blurb:     "TPM 2.0 Remote Attestation \u{2014} TPM 2.0 remote attestation with DICE extension for TPMS_ATTEST quote, PCR measurements, and certified device identity.",
+    }
+    HsmKmip21 {
+        doc:       "KMIP 2.1 Key Management Interoperability Protocol.",
+        display:   "KMIP 2.1",
+        color:     0x1565C0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["kmip_2_1", "hsm_kmip"],
+        blurb:     "KMIP 2.1 \u{2014} OASIS Key Management Interoperability Protocol for HSM key lifecycle with Create, Get, Import, and Destroy operations over TCP/TLS.",
+    }
+    GpTuiTee {
+        doc:       "GlobalPlatform TUI (Trusted UI) internal protocol.",
+        display:   "GP TUI TEE",
+        color:     0xE91E63,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gp_tui", "tee_tui"],
+        blurb:     "GP TUI TEE \u{2014} GlobalPlatform Trusted User Interface TEE internal protocol for secure display and input handling in trusted execution environments.",
+    }
+    AwsNitroAttestation {
+        doc:       "AWS Nitro Enclave attestation extended protocol.",
+        display:   "AWS Nitro Attestation",
+        color:     0xFF9900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nitro_attest", "aws_nitro"],
+        blurb:     "AWS Nitro Attestation \u{2014} AWS Nitro Enclave attestation document with PCR measurements, certificate chain, and user data signature for enclave identity verification.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",
