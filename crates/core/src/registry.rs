@@ -20738,6 +20738,69 @@ protocols! {
         aliases:   ["crl_merkle_pq", "merkle_crl"],
         blurb:     "CRL Merkle Tree PQ \u{2014} certificate revocation list using Merkle hash tree for compact, privacy-preserving PQ-revocation with inclusion proofs and tree root signing.",
     }
+    WireguardPqHybrid {
+        doc:       "WireGuard PQ-hybrid key exchange (wg-pq).",
+        display:   "WireGuard PQ Hybrid",
+        color:     0x881136,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["wg_pq", "wireguard_pq"],
+        blurb:     "WireGuard PQ Hybrid \u{2014} WireGuard with post-quantum hybrid key exchange combining Curve25519 with PQC KEM (ML-KEM) for quantum-resistant tunnel establishment.",
+    }
+    WireguardKyberPoly {
+        doc:       "WireGuard Kyber + Poly1305 hybrid cipher.",
+        display:   "WireGuard Kyber+Poly",
+        color:     0xE91E63,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["wg_kyber", "kyber_poly"],
+        blurb:     "WireGuard Kyber+Poly \u{2014} WireGuard with Kyber PQC KEM and Poly1305 AEAD hybrid for post-quantum encrypted tunnel with authenticated data.",
+    }
+    IpsecIkev2Pq {
+        doc:       "IKEv2 with PQ DH groups (RFC 9382 PQC groups).",
+        display:   "IKEv2 PQ DH",
+        color:     0x1565C0,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ikev2_pq", "ike_pq_dh"],
+        blurb:     "IKEv2 PQ DH \u{2014} IKEv2 with post-quantum Diffie-Hellman groups per RFC 9382 using KEM-based PQC groups for IPSec tunnel key agreement.",
+    }
+    IpsecIkev2Frodo {
+        doc:       "IKEv2 with FrodoKEM extension.",
+        display:   "IKEv2 FrodoKEM",
+        color:     0x00838F,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ikev2_frodo", "ike_frodo"],
+        blurb:     "IKEv2 FrodoKEM \u{2014} IKEv2 with FrodoKEM-1344-AES extension for post-quantum key agreement in IPSec SA establishment.",
+    }
+    OpenvpnPqCipher {
+        doc:       "OpenVPN 2.7+ PQC cipher negotiation.",
+        display:   "OpenVPN PQ Cipher",
+        color:     0xFF6600,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["openvpn_pq", "ovpn_pqc"],
+        blurb:     "OpenVPN PQ Cipher \u{2014} OpenVPN 2.7+ post-quantum cipher negotiation with ML-KEM key encapsulation and Dilithium authentication for the TLS control channel.",
+    }
+    TailscalePqNoise {
+        doc:       "Tailscale Noise IK + PQ hybrid extension.",
+        display:   "Tailscale PQ Noise",
+        color:     0x7B2D8E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ts_pq", "tailscale_noise_pq"],
+        blurb:     "Tailscale PQ Noise \u{2014} Tailscale Noise IK handshake with post-quantum hybrid extension using X25519 + ML-KEM for quantum-resistant peer-to-peer tunnel setup.",
+    }
+    NebulaPqHandshake {
+        doc:       "Slack Nebula PQ handshake extension.",
+        display:   "Nebula PQ Handshake",
+        color:     0x4CAF50,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["nebula_pq", "nebula_handshake_pq"],
+        blurb:     "Nebula PQ Handshake \u{2014} Slack Nebula overlay network with post-quantum handshake extension using KEM-based key exchange for quantum-resistant mesh VPN tunnels.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

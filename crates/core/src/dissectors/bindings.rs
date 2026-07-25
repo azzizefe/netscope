@@ -134,6 +134,10 @@ use super::{
     tls_bike_l5, tls_hqc,
     x509_composite_certs, x509_alt_cms_pq,
     acme_pq_challenge, crl_merkle_tree_pq,
+    wireguard_pq_hybrid, wireguard_kyber_poly,
+    ipsec_ikev2_pq, ipsec_ikev2_frodo,
+    openvpn_pq_cipher, tailscale_pq_noise,
+    nebula_pq_handshake,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1421,4 +1425,15 @@ fn _dissector_reachability_guard_quantum_tls_pki_286_297() {
         let _ = super::x509_alt_cms_pq::dissect_x509_alt_cms_pq;
         let _ = super::acme_pq_challenge::dissect_acme_pq_challenge;
         let _ = super::crl_merkle_tree_pq::dissect_crl_merkle_tree_pq;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_quantum_vpn_tunnel_298_304() {
+        let _ = super::wireguard_pq_hybrid::dissect_wireguard_pq_hybrid;
+        let _ = super::wireguard_kyber_poly::dissect_wireguard_kyber_poly;
+        let _ = super::ipsec_ikev2_pq::dissect_ipsec_ikev2_pq;
+        let _ = super::ipsec_ikev2_frodo::dissect_ipsec_ikev2_frodo;
+        let _ = super::openvpn_pq_cipher::dissect_openvpn_pq_cipher;
+        let _ = super::tailscale_pq_noise::dissect_tailscale_pq_noise;
+        let _ = super::nebula_pq_handshake::dissect_nebula_pq_handshake;
 }
