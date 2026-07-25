@@ -30,6 +30,7 @@ fn packets(count: usize) -> Vec<Packet> {
                 length: raw.len(),
                 summary: d.summary,
                 data: raw.into(),
+                llm: None,
             }
         })
         .collect()

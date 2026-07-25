@@ -126,6 +126,7 @@ mod tests {
             length: 60,
             summary: "Client \"Hello\"".into(),
             data: bytes::Bytes::new(),
+            llm: None,
         }
     }
 

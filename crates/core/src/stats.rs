@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
+use crate::llm_analytics::LlmAnalytics;
 use crate::models::{Packet, Protocol};
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,7 @@ pub struct StatsSnapshot {
     pub top_domains: Vec<(String, u64)>,
     pub len_distribution: [u64; 5],
     pub protocol_hierarchy: Vec<(String, u64, u64)>,
+    pub llm: LlmAnalytics,
 }
 
 #[derive(Debug)]
@@ -52,6 +54,7 @@ pub struct StatsEngine {
     udp_bytes: u64,
     icmp_packets: u64,
     icmp_bytes: u64,
+    llm: LlmAnalytics,
 }
 
 impl Default for StatsEngine {
@@ -87,6 +90,7 @@ impl StatsEngine {
             udp_bytes: 0,
             icmp_packets: 0,
             icmp_bytes: 0,
+            llm: LlmAnalytics::default(),
         }
     }
 
@@ -199,6 +203,11 @@ impl StatsEngine {
             if let Some(domain) = extract_domain_from_summary(&packet.summary) {
                 *self.domain_counts.entry(domain).or_insert(0) += 1;
             }
+        }
+
+        // Track LLM analytics
+        if let Some(ref meta) = packet.llm {
+            self.llm.record(meta);
         }
     }
 
@@ -355,6 +364,7 @@ impl StatsEngine {
             top_domains,
             len_distribution: self.len_distribution,
             protocol_hierarchy,
+            llm: self.llm.clone(),
         }
     }
 }
@@ -391,6 +401,7 @@ mod tests {
             length: len,
             summary: summary.into(),
             data: vec![0u8; len].into(),
+            llm: None,
         }
     }
 

@@ -281,6 +281,7 @@ mod tests {
             length: 54,
             summary: "TCP 50000 → 443 [SYN]".into(),
             data: syn_frame(),
+            llm: None,
         }
     }
 

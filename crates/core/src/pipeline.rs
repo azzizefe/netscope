@@ -31,6 +31,7 @@ use crossbeam_channel::Sender;
 use crossbeam_queue::ArrayQueue;
 
 use crate::dissectors;
+use crate::llm_analytics;
 use crate::models::Packet;
 
 /// Default ring size. 64k frames ≈ a full second of 10GbE minimum-size burst
@@ -252,6 +253,7 @@ pub(crate) fn dissect_frame(frame: RawFrame, linktype: i32) -> Packet {
     let timestamp =
         chrono::DateTime::from_timestamp(frame.ts_sec, frame.ts_nanos).unwrap_or_default();
     let d = dissectors::dissect_linktype(&frame.data, linktype);
+    let llm = llm_analytics::extract_llm_metadata(&frame.data, &d.protocol);
     Packet {
         timestamp,
         src_addr: d.src_addr,
@@ -262,6 +264,7 @@ pub(crate) fn dissect_frame(frame: RawFrame, linktype: i32) -> Packet {
         length: frame.orig_len as usize,
         summary: d.summary,
         data: frame.data.into(),
+        llm,
     }
 }
 

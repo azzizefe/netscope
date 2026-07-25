@@ -33,6 +33,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 
 use crate::dissectors;
+use crate::llm_analytics;
 use crate::models::Packet;
 
 /// Magic numbers for the classic pcap global header.
@@ -400,6 +401,7 @@ impl LazyCapture {
         let e = *self.index.get(i)?;
         let data = self.raw(i)?;
         let d = dissectors::dissect_linktype(data, self.linktype);
+        let llm = llm_analytics::extract_llm_metadata(data, &d.protocol);
         Some(Packet {
             timestamp: self.entry_time(&e),
             src_addr: d.src_addr,
@@ -410,6 +412,7 @@ impl LazyCapture {
             length: e.orig_len as usize,
             summary: d.summary,
             data: bytes::Bytes::copy_from_slice(data),
+            llm,
         })
     }
 }
@@ -881,6 +884,7 @@ mod tests {
             length: n,
             summary: format!("p{n}"),
             data: bytes::Bytes::new(),
+            llm: None,
         };
         let mut lru = LruCache::new(2);
         lru.put(1, mk(1));

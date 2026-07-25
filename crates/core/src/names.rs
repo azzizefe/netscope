@@ -141,6 +141,7 @@ mod tests {
             length: frame.len(),
             summary: String::new(),
             data: frame.into(),
+            llm: None,
         }
     }
 

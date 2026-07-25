@@ -21,6 +21,7 @@ pub mod flows;
 pub mod forensics;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod formats;
+pub mod llm_analytics;
 pub mod models;
 pub mod names;
 #[cfg(not(target_arch = "wasm32"))]

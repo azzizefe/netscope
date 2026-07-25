@@ -175,6 +175,7 @@ mod tests {
             length: 100,
             summary: summary.into(),
             data: Default::default(),
+            llm: None,
         }
     }
 

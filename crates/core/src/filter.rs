@@ -862,6 +862,7 @@ mod tests {
             length: len,
             summary: summary.into(),
             data: bytes::Bytes::new(),
+            llm: None,
         }
     }
 

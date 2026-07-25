@@ -774,6 +774,7 @@ mod tests {
             length: 60,
             summary: format!("packet-{n}"),
             data: bytes::Bytes::from_static(&[0u8; 60]),
+            llm: None,
         }
     }
 

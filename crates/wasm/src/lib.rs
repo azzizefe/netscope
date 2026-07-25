@@ -157,6 +157,7 @@ impl JsPacket {
             length: self.length,
             summary: self.summary,
             data: Bytes::from(self.raw),
+            llm: None,
         }
     }
 }

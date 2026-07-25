@@ -567,6 +567,7 @@ mod tests {
             length: 128,
             summary: "GET / HTTP/1.1".to_string(),
             data: bytes::Bytes::new(),
+            llm: None,
         };
         buffer.push(pkt);
 

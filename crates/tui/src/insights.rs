@@ -401,6 +401,7 @@ mod tests {
             length: len,
             summary: summary.into(),
             data: Bytes::new(),
+            llm: None,
         }
     }
 

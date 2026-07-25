@@ -65,6 +65,7 @@ fn dissect_to_packet(raw: &[u8]) -> Packet {
         length: raw.len(),
         summary: d.summary,
         data: raw.to_vec().into(),
+        llm: None,
     }
 }
 

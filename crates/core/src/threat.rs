@@ -375,6 +375,7 @@ mod tests {
             length: 120,
             summary: "GET / HTTP/1.1".to_string(),
             data: Bytes::from("GET / HTTP/1.1\r\nHost: example.com\r\n\r\nbad_code_here"),
+            llm: None,
         };
 
         assert!(rule.matches(&pkt));

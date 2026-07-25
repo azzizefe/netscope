@@ -8450,6 +8450,7 @@ mod tests {
             length: 0,
             summary: summary.into(),
             data: bytes::Bytes::new(),
+            llm: None,
         }
     }
 

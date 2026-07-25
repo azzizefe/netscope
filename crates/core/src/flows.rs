@@ -212,6 +212,7 @@ mod tests {
             length: len,
             summary: format!("{src}:{src_port} → {dst}:{dst_port}"),
             data: bytes::Bytes::new(),
+            llm: None,
         }
     }
 

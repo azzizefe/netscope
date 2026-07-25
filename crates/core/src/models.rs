@@ -11,6 +11,8 @@ use chrono::{DateTime, Utc};
 // has always lived at `models::Protocol` and callers depend on that path.
 pub use crate::registry::Protocol;
 
+use crate::llm_analytics::LlmMetadata;
+
 /// The transport a plugin-recognised protocol runs over. Kept minimal (and
 /// local to `models`) because `flows::Transport` can't be referenced here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -51,6 +53,9 @@ pub struct Packet {
     /// flows, the stream LRU cache, UI copies — shares one refcounted buffer
     /// instead of reallocating the payload (ROADMAP §4.2).
     pub data: Bytes,
+    /// LLM-specific metadata extracted from the payload.
+    /// `None` for non-LLM traffic.
+    pub llm: Option<LlmMetadata>,
 }
 
 #[derive(Debug, Clone)]
@@ -129,6 +134,7 @@ mod tests {
             length: 100,
             summary: "TCP test".into(),
             data: vec![0u8; 100].into(),
+            llm: None,
         };
         assert_eq!(pkt.src_port, Some(12345));
         assert_eq!(pkt.dst_port, Some(80));
@@ -152,6 +158,7 @@ mod tests {
             length: 50,
             summary: String::new(),
             data: bytes::Bytes::new(),
+            llm: None,
         };
 
         let info = ConnectionInfo {

@@ -509,6 +509,7 @@ mod tests {
             length: 54 + payload.len(),
             summary: "HTTP".into(),
             data: http_frame(sport, dport, payload),
+            llm: None,
         }
     }
 
