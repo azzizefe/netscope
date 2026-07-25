@@ -170,6 +170,10 @@ use super::{
     together_stream, fireworks_stream,
     deepseek_stream, xai_grok_stream,
     bedrock_invoke_stream,
+    litellm_proxy_stream, portkey_stream_relay,
+    helicone_log_stream, langfuse_ingest_v2,
+    mlflow_gateway_stream, openrouter_stream,
+    cloudflare_ai_gateway, kong_ai_gateway_stream,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1553,4 +1557,16 @@ fn _dissector_reachability_guard_llm_streaming_351_365() {
         let _ = super::deepseek_stream::dissect_deepseek_stream;
         let _ = super::xai_grok_stream::dissect_xai_grok_stream;
         let _ = super::bedrock_invoke_stream::dissect_bedrock_invoke_stream;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_llm_proxy_gateway_366_373() {
+        let _ = super::litellm_proxy_stream::dissect_litellm_proxy_stream;
+        let _ = super::portkey_stream_relay::dissect_portkey_stream_relay;
+        let _ = super::helicone_log_stream::dissect_helicone_log_stream;
+        let _ = super::langfuse_ingest_v2::dissect_langfuse_ingest_v2;
+        let _ = super::mlflow_gateway_stream::dissect_mlflow_gateway_stream;
+        let _ = super::openrouter_stream::dissect_openrouter_stream;
+        let _ = super::cloudflare_ai_gateway::dissect_cloudflare_ai_gateway;
+        let _ = super::kong_ai_gateway_stream::dissect_kong_ai_gateway_stream;
 }

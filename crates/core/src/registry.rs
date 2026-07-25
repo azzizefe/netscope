@@ -21350,6 +21350,78 @@ protocols! {
         aliases:   ["bedrock_stream", "bedrock_invoke"],
         blurb:     "AWS Bedrock Invoke Stream \u{2014} AWS Bedrock InvokeModelWithResponseStream for streaming inference from foundation models with chunked response payloads.",
     }
+    LitellmProxyStream {
+        doc:       "LiteLLM proxy streaming relay protocol.",
+        display:   "LiteLLM Proxy Stream",
+        color:     0x00A67E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["litellm_proxy", "litellm_stream"],
+        blurb:     "LiteLLM Proxy Stream \u{2014} LiteLLM proxy streaming relay with model routing, call IDs, and provider-agnostic SSE forwarding for multi-provider LLM access.",
+    }
+    PortkeyStreamRelay {
+        doc:       "Portkey gateway streaming relay.",
+        display:   "Portkey Stream Relay",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["portkey_relay", "portkey_stream"],
+        blurb:     "Portkey Stream Relay \u{2014} Portkey AI gateway streaming relay with virtual key management, trace IDs, and config-based model routing for observability and fallback.",
+    }
+    HeliconeLogStream {
+        doc:       "Helicone async log shipping protocol.",
+        display:   "Helicone Log Stream",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["helicone_log", "helicone_async"],
+        blurb:     "Helicone Log Stream \u{2014} Helicone async log shipping with provider metadata, request/response capture, and usage tracking for LLM observability.",
+    }
+    LangfuseIngestV2 {
+        doc:       "Langfuse trace ingest v2 protocol.",
+        display:   "Langfuse Ingest v2",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["langfuse_v2", "langfuse_ingest"],
+        blurb:     "Langfuse Ingest v2 \u{2014} Langfuse trace and observation ingestion with generation tracking, usage metrics, and hierarchical span modelling for LLM observability.",
+    }
+    MlflowGatewayStream {
+        doc:       "MLflow AI Gateway route streaming.",
+        display:   "MLflow Gateway Stream",
+        color:     0x0194E2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mlflow_gw", "mlflow_route"],
+        blurb:     "MLflow Gateway Stream \u{2014} MLflow AI Gateway streaming inference with route-based model selection, endpoint abstraction, and multi-model serving for MLOps.",
+    }
+    OpenrouterStream {
+        doc:       "OpenRouter multi-provider SSE stream.",
+        display:   "OpenRouter Stream",
+        color:     0xFF6B35,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openrouter", "openrouter_sse"],
+        blurb:     "OpenRouter Stream \u{2014} OpenRouter multi-provider LLM SSE streaming with metadata headers, model selection, and provider-agnostic chat completion forwarding.",
+    }
+    CloudflareAiGateway {
+        doc:       "Cloudflare AI Gateway WAF + streaming proxy.",
+        display:   "Cloudflare AI Gateway",
+        color:     0xF38020,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cf_ai_gateway", "cloudflare_ai"],
+        blurb:     "Cloudflare AI Gateway \u{2014} Cloudflare AI Gateway streaming with WAF integration, workers-ai routing, and model-based rate limiting for edge LLM inference.",
+    }
+    KongAiGatewayStream {
+        doc:       "Kong AI Gateway LLM streaming middleware.",
+        display:   "Kong AI Gateway Stream",
+        color:     0x003459,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["kong_ai", "kong_llm"],
+        blurb:     "Kong AI Gateway Stream \u{2014} Kong AI Gateway streaming middleware with AI route plugins, LLM model header injection, and rate-limited model proxying for API management.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",
