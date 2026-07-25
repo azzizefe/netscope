@@ -138,6 +138,15 @@ use super::{
     ipsec_ikev2_pq, ipsec_ikev2_frodo,
     openvpn_pq_cipher, tailscale_pq_noise,
     nebula_pq_handshake,
+    bb84_qkd_classical, e91_qkd_entanglement,
+    etsi_gs_qkd_014, qkd_network_routing,
+    decoy_state_bb84_err, cascade_info_recon,
+    tweaked_ldpc_privacy_amp, quantum_repeater_link_layer,
+    zk_snark_groth16, zk_snark_plonk,
+    zk_stark_fri, bulletproofs_rangeproof,
+    zk_email_dkim, mpc_ggm_3party,
+    mpc_spdz_online, mpc_ttp_preprocessing,
+    pir_sealpir, pir_spiral_stream,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1436,4 +1445,30 @@ fn _dissector_reachability_guard_quantum_vpn_tunnel_298_304() {
         let _ = super::openvpn_pq_cipher::dissect_openvpn_pq_cipher;
         let _ = super::tailscale_pq_noise::dissect_tailscale_pq_noise;
         let _ = super::nebula_pq_handshake::dissect_nebula_pq_handshake;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_quantum_qkd_305_312() {
+        let _ = super::bb84_qkd_classical::dissect_bb84_qkd_classical;
+        let _ = super::e91_qkd_entanglement::dissect_e91_qkd_entanglement;
+        let _ = super::etsi_gs_qkd_014::dissect_etsi_gs_qkd_014;
+        let _ = super::qkd_network_routing::dissect_qkd_network_routing;
+        let _ = super::decoy_state_bb84_err::dissect_decoy_state_bb84_err;
+        let _ = super::cascade_info_recon::dissect_cascade_info_recon;
+        let _ = super::tweaked_ldpc_privacy_amp::dissect_tweaked_ldpc_privacy_amp;
+        let _ = super::quantum_repeater_link_layer::dissect_quantum_repeater_link_layer;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_zk_smpc_313_322() {
+        let _ = super::zk_snark_groth16::dissect_zk_snark_groth16;
+        let _ = super::zk_snark_plonk::dissect_zk_snark_plonk;
+        let _ = super::zk_stark_fri::dissect_zk_stark_fri;
+        let _ = super::bulletproofs_rangeproof::dissect_bulletproofs_rangeproof;
+        let _ = super::zk_email_dkim::dissect_zk_email_dkim;
+        let _ = super::mpc_ggm_3party::dissect_mpc_ggm_3party;
+        let _ = super::mpc_spdz_online::dissect_mpc_spdz_online;
+        let _ = super::mpc_ttp_preprocessing::dissect_mpc_ttp_preprocessing;
+        let _ = super::pir_sealpir::dissect_pir_sealpir;
+        let _ = super::pir_spiral_stream::dissect_pir_spiral_stream;
 }

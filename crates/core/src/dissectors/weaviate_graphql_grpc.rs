@@ -10,7 +10,7 @@ pub fn dissect_weaviate_graphql_grpc(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 28 {
         let _version = payload[0];
         let msg_type = payload[1];

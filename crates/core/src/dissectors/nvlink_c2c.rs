@@ -10,7 +10,7 @@ pub fn dissect_nvlink_c2c(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 12 {
         let _ver = payload[0];
         let proto_type = payload[1];

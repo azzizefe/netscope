@@ -10,7 +10,7 @@ pub fn dissect_jax_pjit_sharding(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 24 {
         let _version = payload[0];
         let msg_type = payload[1];

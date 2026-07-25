@@ -10,7 +10,7 @@ pub fn dissect_nvme_over_fabrics_tcp(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 16 {
         let pdu_type = payload[0];
         let _flags = payload[1];

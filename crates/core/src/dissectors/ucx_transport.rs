@@ -10,7 +10,7 @@ pub fn dissect_ucx_transport(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 20 {
         let _version = payload[0];
         let _flags = payload[1];

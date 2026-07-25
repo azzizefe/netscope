@@ -10,7 +10,7 @@ pub fn dissect_gpu_direct_storage(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 24 {
         let _version = payload[0];
         let cmd = payload[1];

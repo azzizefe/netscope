@@ -10,7 +10,7 @@ pub fn dissect_pinecone_grpc_index(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 20 {
         let _version = payload[0];
         let msg_type = payload[1];

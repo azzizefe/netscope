@@ -10,7 +10,7 @@ pub fn dissect_deepspark_glootcp(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 32 {
         let _version = payload[0];
         let op_type = payload[1];

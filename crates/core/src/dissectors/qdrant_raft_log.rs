@@ -10,7 +10,7 @@ pub fn dissect_qdrant_raft_log(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 40 {
         let _version = payload[0];
         let entry_type = payload[1];

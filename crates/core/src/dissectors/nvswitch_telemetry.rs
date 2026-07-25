@@ -10,7 +10,7 @@ pub fn dissect_nvswitch_telemetry(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 14 {
         let _version = payload[0];
         let pkt_type = payload[1];

@@ -10,7 +10,7 @@ pub fn dissect_weaviate_hnsw_replication(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 28 {
         let _version = payload[0];
         let op_type = payload[1];

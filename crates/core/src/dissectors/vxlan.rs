@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! VXLAN (RFC 7348) — Virtual eXtensible LAN encapsulation, UDP 4789.
 //!

@@ -20801,6 +20801,168 @@ protocols! {
         aliases:   ["nebula_pq", "nebula_handshake_pq"],
         blurb:     "Nebula PQ Handshake \u{2014} Slack Nebula overlay network with post-quantum handshake extension using KEM-based key exchange for quantum-resistant mesh VPN tunnels.",
     }
+    Bb84QkdClassical {
+        doc:       "BB84 QKD classical post-processing channel.",
+        display:   "BB84 QKD Classical",
+        color:     0x1565C0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bb84_qkd", "bb84_classical"],
+        blurb:     "BB84 QKD Classical \u{2014} BB84 quantum key distribution classical post-processing channel for basis sifting, parameter estimation, error reconciliation, and privacy amplification.",
+    }
+    E91QkdEntanglement {
+        doc:       "E91 entanglement-based QKD classical channel.",
+        display:   "E91 QKD Entanglement",
+        color:     0x6A1B9A,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["e91_qkd", "entanglement_qkd"],
+        blurb:     "E91 QKD Entanglement \u{2014} entanglement-based quantum key distribution classical channel for Bell inequality violation checks, basis matching, and key extraction.",
+    }
+    EtsiGsQkd014 {
+        doc:       "ETSI GS QKD 014 REST-based key delivery API.",
+        display:   "ETSI GS QKD 014",
+        color:     0x00838F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["etsi_qkd_014", "qkd_014"],
+        blurb:     "ETSI GS QKD 014 \u{2014} ETSI standard REST API for QKD key delivery from KME to applications with key request, status, and key consumption reporting.",
+    }
+    QkdNetworkRouting {
+        doc:       "QKD network SDN routing protocol (ITU-T Q.4160).",
+        display:   "QKD Network Routing",
+        color:     0xFF8F00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["qkd_routing", "qkd_sdn"],
+        blurb:     "QKD Network Routing \u{2014} ITU-T Q.4160 SDN-based routing protocol for QKD networks with link-state topology discovery, trusted-node path computation, and key relay scheduling.",
+    }
+    DecoyStateBb84Err {
+        doc:       "Decoy-state BB84 error reconciliation (CASCADE).",
+        display:   "Decoy-state BB84 Error",
+        color:     0xC62828,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["decoy_bb84", "decoy_state_bb84"],
+        blurb:     "Decoy-state BB84 Error \u{2014} decoy-state protocol error reconciliation using CASCADE iterative parity checks for BB84 QKD with photon-number-splitting attack resistance.",
+    }
+    CascadeInfoRecon {
+        doc:       "CASCADE information reconciliation protocol (IR).",
+        display:   "CASCADE Info Recon",
+        color:     0x2E7D32,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cascade_ir", "cascade_recon"],
+        blurb:     "CASCADE Info Recon \u{2014} CASCADE information reconciliation protocol with iterative parity checks, block splitting, and bidirectional communication for QKD error correction.",
+    }
+    TweakedLdpcPrivacyAmp {
+        doc:       "Tweak-based LDPC privacy amplification protocol.",
+        display:   "Tweaked LDPC Privacy Amp",
+        color:     0xE65100,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ldpc_pa", "tweaked_ldpc"],
+        blurb:     "Tweaked LDPC Privacy Amp \u{2014} tweak-based LDPC privacy amplification using universal hashing for QKD key distillation with compression ratio negotiation.",
+    }
+    QuantumRepeaterLinkLayer {
+        doc:       "Quantum repeater entanglement link layer protocol.",
+        display:   "Quantum Repeater Link",
+        color:     0x0077B6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["qr_link", "repeater_link"],
+        blurb:     "Quantum Repeater Link \u{2014} quantum repeater entanglement link layer for Bell state distribution, entanglement swapping, purification, and heralded connections.",
+    }
+    ZkSnarkGroth16 {
+        doc:       "Groth16 zk-SNARK proof verification wire format.",
+        display:   "zk-SNARK Groth16",
+        color:     0x1565C0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["groth16", "snark_groth16"],
+        blurb:     "Groth16 \u{2014} pairing-based zk-SNARK proving system with constant-size proofs (3 group elements) and fast verification for arbitrary circuit satisfiability.",
+    }
+    ZkSnarkPlonk {
+        doc:       "PLONK universal zk-SNARK proof format.",
+        display:   "zk-SNARK PLONK",
+        color:     0xE65100,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["plonk", "snark_plonk"],
+        blurb:     "PLONK \u{2014} universal and updatable zk-SNARK with permutation arguments and polynomial commitments for reusable trusted setup across multiple circuits.",
+    }
+    ZkStarkFri {
+        doc:       "zk-STARK FRI (Fast Reed-Solomon IOPP) proof.",
+        display:   "zk-STARK FRI",
+        color:     0x2E7D32,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["stark_fri", "zk_stark"],
+        blurb:     "zk-STARK FRI \u{2014} transparent scalable zk-STARK using Fast Reed-Solomon IOPP for low-latency proof generation without trusted setup.",
+    }
+    BulletproofsRangeproof {
+        doc:       "Bulletproofs range proof protocol.",
+        display:   "Bulletproofs RangeProof",
+        color:     0x6A1B9A,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bulletproofs", "bp_rangeproof"],
+        blurb:     "Bulletproofs RangeProof \u{2014} short zero-knowledge range proofs without trusted setup using inner-product arguments for confidential transaction validation.",
+    }
+    ZkEmailDkim {
+        doc:       "zk-email DKIM regex proof verification.",
+        display:   "zk-email DKIM",
+        color:     0x00838F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["zk_email", "zke_dkim"],
+        blurb:     "zk-email DKIM \u{2014} zero-knowledge proof of valid DKIM-signed email content using regex circuit verification for privacy-preserving email attestation.",
+    }
+    MpcGgm3party {
+        doc:       "Goldreich-Goldwasser-Micali 3-party MPC protocol.",
+        display:   "MPC GGM 3-Party",
+        color:     0xC62828,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ggm_3pc", "mpc_ggm"],
+        blurb:     "MPC GGM 3-Party \u{2014} Goldreich-Goldwasser-Micali 3-party secure computation using garbled circuits and secret sharing for honest-majority MPC.",
+    }
+    MpcSpdzOnline {
+        doc:       "SPDZ online phase protocol.",
+        display:   "MPC SPDZ Online",
+        color:     0xFF8F00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["spdz_online", "mpc_spdz"],
+        blurb:     "SPDZ Online \u{2014} Smart-Past Nielsen Damg\u{00e5}rd Zakarias MPC online phase with Beaver triples, MAC-checked multiplication, and information-theoretic security.",
+    }
+    MpcTtpPreprocessing {
+        doc:       "MPC trusted-third-party preprocessing protocol.",
+        display:   "MPC TTP Preprocessing",
+        color:     0x4E342E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ttp_preproc", "mpc_ttp"],
+        blurb:     "MPC TTP Preprocessing \u{2014} trusted third party preprocessing protocol for Beaver triple generation, correlated randomness, and offline material distribution.",
+    }
+    PirSealpir {
+        doc:       "Private Information Retrieval SealPIR protocol.",
+        display:   "PIR SealPIR",
+        color:     0x0077B6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sealpir", "pir_seal"],
+        blurb:     "SealPIR \u{2014} private information retrieval using BFV homomorphic encryption with query compression and database packing for efficient single-server PIR.",
+    }
+    PirSpiralStream {
+        doc:       "SPIRAL PIR streaming setup protocol.",
+        display:   "PIR SPIRAL Stream",
+        color:     0x43A047,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["spiral_pir", "pir_spiral"],
+        blurb:     "SPIRAL PIR Stream \u{2014} streaming private information retrieval with hint-based preprocessing, linear-time query, and sublinear communication for large databases.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

@@ -10,7 +10,7 @@ pub fn dissect_nvlink_fabric(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 8 {
         let version = payload[0];
         let cmd_type = payload[1];

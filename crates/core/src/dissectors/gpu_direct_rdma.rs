@@ -10,7 +10,7 @@ pub fn dissect_gpu_direct_rdma(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 16 {
         let _version = payload[0];
         let opcode = payload[1];

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! USB dissector — bus captures from Linux usbmon (`LINKTYPE_USB_LINUX`
 //! DLT 189, `LINKTYPE_USB_LINUX_MMAPPED` DLT 220) and Windows USBPcap

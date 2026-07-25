@@ -10,7 +10,7 @@ pub fn dissect_infiniband_ipoib_enhanced(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 12 {
         let _version = payload[0];
         let _flags = payload[1];

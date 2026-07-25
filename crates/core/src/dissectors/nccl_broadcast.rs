@@ -10,7 +10,7 @@ pub fn dissect_nccl_broadcast(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let mut summary = String::new();
+    let summary;
     if payload.len() >= 25 {
         let _version = payload[0];
         let algo = payload[1];
