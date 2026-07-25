@@ -19433,6 +19433,96 @@ protocols! {
         aliases:   ["r6s_netvoice", "rainbow6_voice"],
         blurb:     "Rainbow Six Siege in-game voice + netcode hybrid \u{2014} voice chat multiplexed with game netcode over UDP.",
     }
+    NvidiaGfnStream {
+        doc:       "NVIDIA GeForce NOW game streaming video/audio traffic.",
+        display:   "NVIDIA GFN Stream",
+        color:     0x76B900,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["gfn_stream", "nvidia_gfn_stream"],
+        blurb:     "NVIDIA GeForce NOW streaming protocol \u{2014} low-latency video and audio transport for cloud gaming.",
+    }
+    NvidiaGfnCtrl {
+        doc:       "NVIDIA GFN control channel traffic (input / feedback).",
+        display:   "NVIDIA GFN Control",
+        color:     0x5E9B00,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["gfn_ctrl", "nvidia_gfn_ctrl"],
+        blurb:     "NVIDIA GFN control channel \u{2014} keyboard, mouse, gamepad input upstream and haptic feedback downstream.",
+    }
+    XcloudFragment {
+        doc:       "Xbox Cloud Gaming (xCloud) fragment protocol traffic.",
+        display:   "xCloud Fragment",
+        color:     0x107C10,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["xcloud_fragment", "xcloud_frag"],
+        blurb:     "Xbox Cloud Gaming fragment protocol \u{2014} fragmented video/audio transport over QUIC-like datagrams.",
+    }
+    XcloudInputPipe {
+        doc:       "xCloud low-latency input pipeline traffic.",
+        display:   "xCloud Input Pipe",
+        color:     0x0E6B0E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["xcloud_input", "xcloud_pipe"],
+        blurb:     "xCloud low-latency input pipeline \u{2014} controller input multiplexed with game telemetry on a dedicated reliable channel.",
+    }
+    StadiaControllerWifi {
+        doc:       "Google Stadia WiFi controller protocol traffic.",
+        display:   "Stadia Controller WiFi",
+        color:     0x4285F4,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["stadia_ctrl_wifi", "stadia_wifi"],
+        blurb:     "Google Stadia WiFi controller protocol \u{2014} direct controller-to-datacenter input over WiFi with custom transport.",
+    }
+    LunaStreamProto {
+        doc:       "Amazon Luna streaming transport traffic.",
+        display:   "Luna Stream",
+        color:     0xFF9900,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["luna_stream", "amazon_luna"],
+        blurb:     "Amazon Luna streaming transport \u{2014} video/audio frame delivery with adaptive bitrate chunks.",
+    }
+    PsRemotePlayV3 {
+        doc:       "PlayStation Remote Play v3 protocol traffic.",
+        display:   "PS Remote Play v3",
+        color:     0x003791,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ps_remote_play_v3", "ps_remote_play"],
+        blurb:     "PlayStation Remote Play v3 \u{2014} console-to-client video/audio streaming and input feedback for PS4/PS5.",
+    }
+    SteamRemotePlayTogether {
+        doc:       "Steam Remote Play Together relay traffic.",
+        display:   "Steam Remote Play Together",
+        color:     0x171A21,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["steam_rpt", "remote_play_together"],
+        blurb:     "Steam Remote Play Together relay \u{2014} peer-to-peer game streaming relay with multiplexed controller inputs.",
+    }
+    SteamLinkTransport {
+        doc:       "Steam Link transport protocol traffic.",
+        display:   "Steam Link",
+        color:     0x2A475E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["steam_link", "steam_link_transport"],
+        blurb:     "Steam Link transport protocol \u{2014} in-home game streaming audio/video capture and rendering pipeline.",
+    }
+    MoonlightRtspGame {
+        doc:       "Moonlight/Sunshine game stream RTSP extension traffic.",
+        display:   "Moonlight RTSP",
+        color:     0x7F3FBF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["moonlight_rtsp", "sunshine_rtsp"],
+        blurb:     "Moonlight/Sunshine game stream RTSP extension \u{2014} custom RTSP methods for session negotiation, codec config, and stream control.",
+    }
 }
 
 impl std::fmt::Display for Protocol {

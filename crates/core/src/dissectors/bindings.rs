@@ -69,6 +69,9 @@ use super::{
     fortnite_server_replicator, overwatch2_state_sync, pubg_net_field_array,
     rainbow6_siege_netvoice, valorant_fog_of_war, valorant_net_var,
     warzone_netcode_rigid,
+    nvidia_gfn_stream, nvidia_gfn_ctrl, xcloud_fragment, xcloud_input_pipe,
+    stadia_controller_wifi, luna_stream_proto, ps_remote_play_v3,
+    steam_remote_play_together, steam_link_transport, moonlight_rtsp_game,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1105,4 +1108,18 @@ fn _dissector_reachability_guard_br_fps_113_122() {
         let _ = super::overwatch2_state_sync::dissect_overwatch2_state_sync;
         let _ = super::cs2_subtick::dissect_cs2_subtick;
         let _ = super::rainbow6_siege_netvoice::dissect_rainbow6_siege_netvoice;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_game_streaming_123_132() {
+        let _ = super::nvidia_gfn_stream::dissect_nvidia_gfn_stream;
+        let _ = super::nvidia_gfn_ctrl::dissect_nvidia_gfn_ctrl;
+        let _ = super::xcloud_fragment::dissect_xcloud_fragment;
+        let _ = super::xcloud_input_pipe::dissect_xcloud_input_pipe;
+        let _ = super::stadia_controller_wifi::dissect_stadia_controller_wifi;
+        let _ = super::luna_stream_proto::dissect_luna_stream_proto;
+        let _ = super::ps_remote_play_v3::dissect_ps_remote_play_v3;
+        let _ = super::steam_remote_play_together::dissect_steam_remote_play_together;
+        let _ = super::steam_link_transport::dissect_steam_link_transport;
+        let _ = super::moonlight_rtsp_game::dissect_moonlight_rtsp_game;
 }
