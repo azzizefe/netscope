@@ -1201,3 +1201,17 @@ fn _dissector_reachability_guard_gpu_interconnect_168_179() {
         let _ = super::cxl_memory_protocol::dissect_cxl_memory_protocol;
         let _ = super::ucx_transport::dissect_ucx_transport;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_distributed_training_180_189() {
+        let _ = super::nccl_allreduce::dissect_nccl_allreduce;
+        let _ = super::nccl_allgather::dissect_nccl_allgather;
+        let _ = super::nccl_broadcast::dissect_nccl_broadcast;
+        let _ = super::fsdp_shard_state::dissect_fsdp_shard_state;
+        let _ = super::deepspark_glootcp::dissect_deepspark_glootcp;
+        let _ = super::horovod_elastic::dissect_horovod_elastic;
+        let _ = super::megatron_tp_overlap::dissect_megatron_tp_overlap;
+        let _ = super::megatron_pipeline_flush::dissect_megatron_pipeline_flush;
+        let _ = super::pytorch_rpc_framework::dissect_pytorch_rpc_framework;
+        let _ = super::jax_pjit_sharding::dissect_jax_pjit_sharding;
+}

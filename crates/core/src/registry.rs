@@ -19946,6 +19946,96 @@ protocols! {
         aliases:   ["ucx_tl", "ucx_transport"],
         blurb:     "OpenUCX transport layer \u{2014} unified communication framework with support for RDMA (UCX-IB), TCP (UCX-TCP), shared memory (UCX-SM), and NVLink transports for HPC and AI workloads.",
     }
+    NcclAllreduce {
+        doc:       "NVIDIA NCCL collective allreduce ring protocol traffic.",
+        display:   "NCCL Allreduce",
+        color:     0x76B900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nccl_allreduce"],
+        blurb:     "NVIDIA NCCL allreduce ring protocol \u{2014} GPU collective communication using ring-based allreduce with chunked data transfer, segmented ring construction, and pipelined reduce-scatter / all-gather phases.",
+    }
+    NcclAllgather {
+        doc:       "NCCL allgather algorithm protocol traffic.",
+        display:   "NCCL Allgather",
+        color:     0x5E9B00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nccl_allgather"],
+        blurb:     "NCCL allgather algorithm \u{2014} GPU collective allgather communication supporting ring, tree, and NVLink direct topologies with multi-chunk scatter-gather and fused reduce operations.",
+    }
+    NcclBroadcast {
+        doc:       "NCCL broadcast tree protocol traffic.",
+        display:   "NCCL Broadcast",
+        color:     0x8CD400,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nccl_broadcast"],
+        blurb:     "NCCL broadcast tree protocol \u{2014} GPU broadcast communication using spanning-tree topologies with pipelined chunk transfer, root-to-leaf propagation, and NVLink-aware tree construction.",
+    }
+    FsdpShardState {
+        doc:       "PyTorch FSDP shard state synchronisation protocol traffic.",
+        display:   "FSDP Shard State",
+        color:     0xEE4C2C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["fsdp_shard", "pytorch_fsdp"],
+        blurb:     "PyTorch Fully Sharded Data Parallel (FSDP) shard state sync protocol \u{2014} sharded parameter exchange with stateful unshard/reshard collectives and gradient synchronisation across data-parallel workers.",
+    }
+    DeepsparkGlootcp {
+        doc:       "DeepSpeed Gloo-TCP custom allreduce backend traffic.",
+        display:   "DeepSpeed Gloo-TCP",
+        color:     0x0066CC,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["deepspeed_gloo", "gloo_tcp"],
+        blurb:     "DeepSpeed Gloo-TCP custom allreduce backend \u{2014} GPU collective allreduce using Gloo\u{2019}s TCP transport with chunked reduction, hierarchical aggregation, and mixed-precision support for ZeRO optimisation stages.",
+    }
+    HorovodElastic {
+        doc:       "Horovod elastic training worker discovery traffic.",
+        display:   "Horovod Elastic",
+        color:     0x9B59B6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["horovod_elastic"],
+        blurb:     "Horovod elastic training worker discovery \u{2014} dynamic worker registration, hostlist synchronisation, and rank assignment for elastic scaling of distributed Horovod training jobs.",
+    }
+    MegatronTpOverlap {
+        doc:       "Megatron-LM tensor parallelism overlap IPC traffic.",
+        display:   "Megatron TP Overlap",
+        color:     0xE67E22,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["megatron_tp", "tp_overlap"],
+        blurb:     "Megatron-LM tensor parallelism overlap IPC \u{2014} intra-layer tensor-parallel communication with compute-communication overlap, fused allreduce/fp32-allreduce for transformer blocks.",
+    }
+    MegatronPipelineFlush {
+        doc:       "Megatron-LM pipeline flush scheduling protocol traffic.",
+        display:   "Megatron Pipeline Flush",
+        color:     0xD35400,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["megatron_pp", "pipeline_flush"],
+        blurb:     "Megatron-LM pipeline flush scheduling protocol \u{2014} inter-microbatch pipeline flush messages for scheduling one-forward-one-backward passes with explicit flush tokens and barrier synchronisation.",
+    }
+    PytorchRpcFramework {
+        doc:       "PyTorch distributed RPC framework traffic.",
+        display:   "PyTorch RPC",
+        color:     0xEE4C2C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pytorch_rpc", "torch_rpc"],
+        blurb:     "PyTorch distributed RPC framework \u{2014} remote procedure call protocol with request-reply semantics, reference-counted distributed autograd, and profiler events for multi-machine model-parallel training.",
+    }
+    JaxPjitSharding {
+        doc:       "JAX pjit GSPMD sharding communication traffic.",
+        display:   "JAX pjit Sharding",
+        color:     0x1A76D2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["jax_pjit", "gspmd_sharding"],
+        blurb:     "JAX pjit GSPMD sharding communication \u{2014} sharding-annotation-driven collective communication for partitioned computations with all-gather, reduce-scatter, and dynamic-slice for automated parallelisation.",
+    }
 }
 
 impl std::fmt::Display for Protocol {
