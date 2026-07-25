@@ -21422,6 +21422,60 @@ protocols! {
         aliases:   ["kong_ai", "kong_llm"],
         blurb:     "Kong AI Gateway Stream \u{2014} Kong AI Gateway streaming middleware with AI route plugins, LLM model header injection, and rate-limited model proxying for API management.",
     }
+    TiktokenBpeHeader {
+        doc:       "OpenAI tiktoken BPE encoding metadata.",
+        display:   "Tiktoken BPE Header",
+        color:     0x10A37F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tiktoken", "cl100k_base"],
+        blurb:     "Tiktoken BPE Header \u{2014} OpenAI tiktoken BPE encoding metadata for cl100k_base, o200k_base, p50k_base, and r50k_base tokenizer vocabularies with vocab size and merge data.",
+    }
+    SentencepieceProto {
+        doc:       "Google SentencePiece tokenizer model proto.",
+        display:   "SentencePiece Proto",
+        color:     0x4285F4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sentencepiece", "sp_model"],
+        blurb:     "SentencePiece Proto \u{2014} Google SentencePiece tokenizer model protocol with piece vocabulary, normalizer rules, byte fallback, and model configuration for subword tokenization.",
+    }
+    HuggingfaceTokenizerConfig {
+        doc:       "HuggingFace tokenizer.json fast tokenizer metadata.",
+        display:   "HF Tokenizer Config",
+        color:     0xFFD21E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hf_tokenizer", "tokenizer_json"],
+        blurb:     "HuggingFace Tokenizer Config \u{2014} HuggingFace tokenizer.json metadata with added tokens, normalizer, pre-tokenizer, decoder, and model configuration for fast tokenization.",
+    }
+    GemmaTokenizerHeader {
+        doc:       "Google Gemma SentencePiece tokenizer variant.",
+        display:   "Gemma Tokenizer Header",
+        color:     0x1A73E8,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gemma_tokenizer", "gemma_sp"],
+        blurb:     "Gemma Tokenizer Header \u{2014} Google Gemma SentencePiece tokenizer variant with gemma-specific vocabulary, gemma2 extensions, and subword tokenization metadata.",
+    }
+    LlamaTokenizerHeader {
+        doc:       "Meta Llama BPE tokenizer metadata exchange.",
+        display:   "Llama Tokenizer Header",
+        color:     0xFB9400,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["llama_tokenizer", "llama_spm"],
+        blurb:     "Llama Tokenizer Header \u{2014} Meta Llama BPE tokenizer metadata with vocabulary, bos/eos token IDs, and SentencePiece-compatible model configuration for Llama-family models.",
+    }
+    AnthropicClaudeTokenizer {
+        doc:       "Anthropic Claude custom tokenizer header.",
+        display:   "Claude Tokenizer",
+        color:     0x9B8D7E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["claude_tokenizer", "anthropic_token"],
+        blurb:     "Anthropic Claude Tokenizer \u{2014} Anthropic Claude custom BPE tokenizer with claude-specific vocabulary, token IDs, and encoding metadata for Claude model family.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

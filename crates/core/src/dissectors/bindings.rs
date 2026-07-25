@@ -174,6 +174,9 @@ use super::{
     helicone_log_stream, langfuse_ingest_v2,
     mlflow_gateway_stream, openrouter_stream,
     cloudflare_ai_gateway, kong_ai_gateway_stream,
+    tiktoken_bpe_header, sentencepiece_proto,
+    huggingface_tokenizer_config, gemma_tokenizer_header,
+    llama_tokenizer_header, anthropic_claude_tokenizer,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1569,4 +1572,14 @@ fn _dissector_reachability_guard_llm_proxy_gateway_366_373() {
         let _ = super::openrouter_stream::dissect_openrouter_stream;
         let _ = super::cloudflare_ai_gateway::dissect_cloudflare_ai_gateway;
         let _ = super::kong_ai_gateway_stream::dissect_kong_ai_gateway_stream;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_tokenizer_encoding_374_379() {
+        let _ = super::tiktoken_bpe_header::dissect_tiktoken_bpe_header;
+        let _ = super::sentencepiece_proto::dissect_sentencepiece_proto;
+        let _ = super::huggingface_tokenizer_config::dissect_huggingface_tokenizer_config;
+        let _ = super::gemma_tokenizer_header::dissect_gemma_tokenizer_header;
+        let _ = super::llama_tokenizer_header::dissect_llama_tokenizer_header;
+        let _ = super::anthropic_claude_tokenizer::dissect_anthropic_claude_tokenizer;
 }
