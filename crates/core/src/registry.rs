@@ -19838,6 +19838,114 @@ protocols! {
         aliases:   ["sglang_radix", "radix_cache"],
         blurb:     "SGLang RadixAttention cache sharing protocol \u{2014} distributed radix-tree prefix sharing for KV-cache between concurrent inference requests.",
     }
+    NvlinkFabric {
+        doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
+        display:   "NVLink Fabric",
+        color:     0x76B900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nvlink"],
+        blurb:     "NVIDIA NVLink multi-node fabric protocol \u{2014} high-bandwidth GPU interconnect with packetised transaction-layer messages for peer-to-peer memory access and synchronisation across NVSwitch topologies.",
+    }
+    NvswitchTelemetry {
+        doc:       "NVIDIA NVSwitch internal telemetry traffic.",
+        display:   "NVSwitch Telemetry",
+        color:     0x5E9B00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nvswitch_tele"],
+        blurb:     "NVIDIA NVSwitch internal telemetry \u{2014} in-band fabric health, temperature, power, and error-counter reporting from NVSwitch ASICs to the management plane.",
+    }
+    NvlinkC2c {
+        doc:       "NVLink-C2C (chip-to-chip) interconnect protocol traffic.",
+        display:   "NVLink-C2C",
+        color:     0x8CD400,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["c2c"],
+        blurb:     "NVLink-C2C chip-to-chip interconnect protocol \u{2014} NVIDIA\u{2019}s die-to-die and chip-to-chip PHY-link layer used for coherent CPU-GPU and GPU-GPU attachment over short-reach electrical channels.",
+    }
+    InfinibandRdmacmV2 {
+        doc:       "InfiniBand RDMA CM (Connection Manager) v2 traffic.",
+        display:   "InfiniBand RDMA CM v2",
+        color:     0x00549F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ib_rdmacm_v2", "rdmacm_v2"],
+        blurb:     "InfiniBand RDMA Connection Manager v2 \u{2014} connection-establishment and address-resolution protocol for RC/UC/UD QPs over InfiniBand fabric, replacing the legacy CM v1 signalling.",
+    }
+    InfinibandIpoibEnhanced {
+        doc:       "IPoIB enhanced datagram mode traffic.",
+        display:   "IPoIB Enhanced",
+        color:     0x0077C8,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ipoib_enhanced", "ipoib_enh"],
+        blurb:     "IPoIB enhanced datagram mode \u{2014} improved IP-over-InfiniBand encapsulation with larger MTU, checksum offload, and scatter-gather support for high-performance Ethernet-over-IB bridging.",
+    }
+    NvmeOverFabricsTcp {
+        doc:       "NVMe-oF (NVMe over Fabrics) TCP transport traffic.",
+        display:   "NVMe over Fabrics TCP",
+        color:     0xE95420,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["nvmeof_tcp", "nvme_tcp"],
+        blurb:     "NVMe-over-Fabrics TCP transport \u{2014} NVMe command submission and completion queues encapsulated in TCP PDUs with header-digest and data-digest protection for remote NVMe drive access.",
+    }
+    GpuDirectRdma {
+        doc:       "NVIDIA GPUDirect RDMA peer-to-peer protocol traffic.",
+        display:   "GPUDirect RDMA",
+        color:     0x76B900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gdr_rdma", "gpudirect_rdma"],
+        blurb:     "NVIDIA GPUDirect RDMA peer-to-peer protocol \u{2014} direct GPU-to-GPU and GPU-to-NIC data-path bypassing host memory, using registered memory regions and RDMA read/write primitives.",
+    }
+    GpuDirectStorage {
+        doc:       "NVIDIA GPUDirect Storage (GDS) DMA protocol traffic.",
+        display:   "GPUDirect Storage",
+        color:     0x5E9B00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["gds_dma", "gpudirect_storage"],
+        blurb:     "NVIDIA GPUDirect Storage DMA protocol \u{2014} direct GPU-to-NVMe data-path with DMA scatter-gather lists, chunked transfers, and completion notifications for accelerated storage access.",
+    }
+    CxlIoProtocol {
+        doc:       "CXL.io protocol (PCIe 5.0/6.0 CXL) traffic.",
+        display:   "CXL.io",
+        color:     0xFF6B35,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cxl_io"],
+        blurb:     "CXL.io protocol \u{2014} PCIe 5.0/6.0-based I/O semantics for CXL-attached devices, carrying configuration-space accesses, MMIO transactions, and DMA operations over the Compute Express Link fabric.",
+    }
+    CxlCacheProtocol {
+        doc:       "CXL.cache coherent caching protocol traffic.",
+        display:   "CXL.cache",
+        color:     0xE63946,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cxl_cache"],
+        blurb:     "CXL.cache coherent caching protocol \u{2014} device-initiated cache coherence transactions including snoops, evictions, and writeback for coherently shared memory between host processors and CXL-attached accelerators.",
+    }
+    CxlMemoryProtocol {
+        doc:       "CXL.mem memory access protocol traffic.",
+        display:   "CXL.mem",
+        color:     0x457B9D,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cxl_mem"],
+        blurb:     "CXL.mem memory access protocol \u{2014} host-initiated and device-initiated memory load/store requests, with support for pooled memory expansion and tiered memory semantics over CXL fabric.",
+    }
+    UcxTransport {
+        doc:       "OpenUCX transport layer protocol traffic.",
+        display:   "UCX Transport",
+        color:     0x6A4C93,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ucx_tl", "ucx_transport"],
+        blurb:     "OpenUCX transport layer \u{2014} unified communication framework with support for RDMA (UCX-IB), TCP (UCX-TCP), shared memory (UCX-SM), and NVLink transports for HPC and AI workloads.",
+    }
 }
 
 impl std::fmt::Display for Protocol {

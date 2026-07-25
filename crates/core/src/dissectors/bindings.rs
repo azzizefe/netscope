@@ -1185,3 +1185,19 @@ fn _dissector_reachability_guard_llm_inference_156_167() {
         let _ = super::triton_model_repo_stream::dissect_triton_model_repo_stream;
         let _ = super::sglang_radix_cache::dissect_sglang_radix_cache;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_gpu_interconnect_168_179() {
+        let _ = super::nvlink_fabric::dissect_nvlink_fabric;
+        let _ = super::nvswitch_telemetry::dissect_nvswitch_telemetry;
+        let _ = super::nvlink_c2c::dissect_nvlink_c2c;
+        let _ = super::infiniband_rdmacm_v2::dissect_infiniband_rdmacm_v2;
+        let _ = super::infiniband_ipoib_enhanced::dissect_infiniband_ipoib_enhanced;
+        let _ = super::nvme_over_fabrics_tcp::dissect_nvme_over_fabrics_tcp;
+        let _ = super::gpu_direct_rdma::dissect_gpu_direct_rdma;
+        let _ = super::gpu_direct_storage::dissect_gpu_direct_storage;
+        let _ = super::cxl_io_protocol::dissect_cxl_io_protocol;
+        let _ = super::cxl_cache_protocol::dissect_cxl_cache_protocol;
+        let _ = super::cxl_memory_protocol::dissect_cxl_memory_protocol;
+        let _ = super::ucx_transport::dissect_ucx_transport;
+}
