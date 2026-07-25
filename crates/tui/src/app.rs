@@ -57,6 +57,8 @@ pub struct App {
     pub learn_scroll: u16,
     /// Vertical scroll offset in the Insights view.
     pub insights_scroll: u16,
+    /// Vertical scroll offset in the AI Traffic view.
+    pub ai_scroll: u16,
     /// User-defined coloring rules (first match tints the packet row).
     pub color_rules: crate::colors::ColorRules,
     /// Index into [`THEMES`] of the active chrome theme (cycled with `t`).
@@ -128,6 +130,7 @@ impl App {
             status_msg: None,
             learn_scroll: 0,
             insights_scroll: 0,
+            ai_scroll: 0,
             color_rules,
             // Startup theme: honour $NETSCOPE_THEME (e.g. "dracula"), else dark.
             theme_idx: std::env::var("NETSCOPE_THEME")
@@ -610,6 +613,7 @@ impl App {
             }
             View::Learn => self.learn_scroll = step(self.learn_scroll, down),
             View::Insights => self.insights_scroll = step(self.insights_scroll, down),
+            View::AiTraffic => self.ai_scroll = step(self.ai_scroll, down),
             _ => {}
         }
     }
@@ -738,6 +742,7 @@ mod tests {
             status_msg: None,
             learn_scroll: 0,
             insights_scroll: 0,
+            ai_scroll: 0,
             color_rules: crate::colors::ColorRules::parse(""),
             theme_idx: 0,
             columns: Columns::default(),

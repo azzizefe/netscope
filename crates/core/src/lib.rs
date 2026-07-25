@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 #[cfg(not(target_arch = "wasm32"))]
+pub mod ai_traffic;
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod capture;

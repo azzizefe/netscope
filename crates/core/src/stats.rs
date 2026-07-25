@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
+use crate::ai_traffic::AiTrafficRecord;
+use crate::ai_traffic::AiTrafficTracker;
 use crate::llm_analytics::LlmAnalytics;
 use crate::models::{Packet, Protocol};
 
@@ -26,6 +28,8 @@ pub struct StatsSnapshot {
     pub len_distribution: [u64; 5],
     pub protocol_hierarchy: Vec<(String, u64, u64)>,
     pub llm: LlmAnalytics,
+    pub ai_records: Vec<AiTrafficRecord>,
+    pub ai_active_sessions: usize,
 }
 
 #[derive(Debug)]
@@ -55,6 +59,7 @@ pub struct StatsEngine {
     icmp_packets: u64,
     icmp_bytes: u64,
     llm: LlmAnalytics,
+    ai_traffic: AiTrafficTracker,
 }
 
 impl Default for StatsEngine {
@@ -91,6 +96,7 @@ impl StatsEngine {
             icmp_packets: 0,
             icmp_bytes: 0,
             llm: LlmAnalytics::default(),
+            ai_traffic: AiTrafficTracker::new(),
         }
     }
 
@@ -208,6 +214,19 @@ impl StatsEngine {
         // Track LLM analytics
         if let Some(ref meta) = packet.llm {
             self.llm.record(meta);
+            if let (Some(src), Some(dst)) = (packet.src_addr, packet.dst_addr) {
+                let src_port = packet.src_port.unwrap_or(0);
+                let dst_port = packet.dst_port.unwrap_or(0);
+                self.ai_traffic.record_packet(
+                    meta,
+                    src,
+                    src_port,
+                    dst,
+                    dst_port,
+                    &packet.data,
+                    packet.timestamp,
+                );
+            }
         }
     }
 
@@ -365,6 +384,8 @@ impl StatsEngine {
             len_distribution: self.len_distribution,
             protocol_hierarchy,
             llm: self.llm.clone(),
+            ai_records: self.ai_traffic.completed_records().to_vec(),
+            ai_active_sessions: self.ai_traffic.active_session_count(),
         }
     }
 }

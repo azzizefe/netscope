@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+pub mod ai_traffic;
 pub mod connections;
 pub mod dashboard;
 pub mod dns_log;
@@ -15,6 +16,7 @@ pub enum View {
     DnsLog,
     Insights,
     Learn,
+    AiTraffic,
 }
 
 impl View {
@@ -25,29 +27,32 @@ impl View {
             View::Connections => View::DnsLog,
             View::DnsLog => View::Insights,
             View::Insights => View::Learn,
-            View::Learn => View::Packets,
+            View::Learn => View::AiTraffic,
+            View::AiTraffic => View::Packets,
         }
     }
 
     pub fn prev(self) -> Self {
         match self {
-            View::Packets => View::Learn,
+            View::Packets => View::AiTraffic,
             View::Dashboard => View::Packets,
             View::Connections => View::Dashboard,
             View::DnsLog => View::Connections,
             View::Insights => View::DnsLog,
             View::Learn => View::Insights,
+            View::AiTraffic => View::Learn,
         }
     }
 
     /// The tab titles, in `next()` order, for the tab strip.
-    pub const ORDER: [View; 6] = [
+    pub const ORDER: [View; 7] = [
         View::Packets,
         View::Dashboard,
         View::Connections,
         View::DnsLog,
         View::Insights,
         View::Learn,
+        View::AiTraffic,
     ];
 
     pub fn title(self) -> &'static str {
@@ -58,6 +63,7 @@ impl View {
             View::DnsLog => "DNS Log",
             View::Insights => "Insights",
             View::Learn => "Learn",
+            View::AiTraffic => "AI Traffic",
         }
     }
 }

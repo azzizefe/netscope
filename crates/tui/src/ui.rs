@@ -9,7 +9,7 @@ use ratatui::Frame;
 use crate::app::App;
 use crate::columns::Column;
 use crate::theme::Theme;
-use crate::views::{connections, dashboard, dns_log, insights, learn, packets, View};
+use crate::views::{ai_traffic, connections, dashboard, dns_log, insights, learn, packets, View};
 
 pub fn render(frame: &mut Frame, app: &mut App) {
     let theme = app.theme();
@@ -138,7 +138,7 @@ fn render_keybinding_bar(frame: &mut Frame, area: Rect, app: &App, theme: Theme)
             " ? help ",
             " q quit ",
         ]
-    } else if app.view == View::Learn || app.view == View::Insights {
+    } else if app.view == View::Learn || app.view == View::Insights || app.view == View::AiTraffic {
         &[
             " ↑↓/jk scroll ",
             " Tab switch ",
@@ -183,6 +183,7 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &mut App) {
         View::DnsLog => dns_log::render(frame, area, app),
         View::Insights => insights::render(frame, area, app),
         View::Learn => learn::render(frame, area, app),
+        View::AiTraffic => ai_traffic::render(frame, area, app),
     }
 }
 
@@ -484,6 +485,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect, theme: Theme) {
         Line::from("   DNS Log      All DNS queries"),
         Line::from("   Insights     Automatic security/privacy findings"),
         Line::from("   Learn        Plain-language protocol guide + glossary"),
+        Line::from("   AI Traffic   LLM API session tracking & analytics"),
     ];
 
     let block = Block::default()

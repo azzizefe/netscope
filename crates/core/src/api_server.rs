@@ -11,6 +11,7 @@ use std::thread;
 
 use crate::capture::CaptureEngine;
 use crate::models::Packet;
+use crate::stats::StatsEngine;
 use chrono::Utc;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
@@ -92,18 +93,25 @@ pub struct ApiServer {
     port: u16,
     packet_buffer: ApiPacketBuffer,
     engine: Arc<Mutex<CaptureEngine>>,
+    stats_engine: Arc<Mutex<StatsEngine>>,
     sessions: Arc<Mutex<HashMap<String, User>>>,
     db: Arc<Mutex<crate::db::Database>>,
 }
 
 impl ApiServer {
-    pub fn new(port: u16, packet_buffer: ApiPacketBuffer, engine: CaptureEngine) -> Self {
+    pub fn new(
+        port: u16,
+        packet_buffer: ApiPacketBuffer,
+        engine: CaptureEngine,
+        stats_engine: StatsEngine,
+    ) -> Self {
         let db = crate::db::Database::open().expect("Failed to open SQLite database");
 
         Self {
             port,
             packet_buffer,
             engine: Arc::new(Mutex::new(engine)),
+            stats_engine: Arc::new(Mutex::new(stats_engine)),
             sessions: Arc::new(Mutex::new(HashMap::new())),
             db: Arc::new(Mutex::new(db)),
         }
@@ -113,11 +121,16 @@ impl ApiServer {
         self.engine.clone()
     }
 
+    pub fn stats(&self) -> Arc<Mutex<StatsEngine>> {
+        self.stats_engine.clone()
+    }
+
     /// Spawn the API server on a background thread.
     pub fn start(self) -> thread::JoinHandle<()> {
         let port = self.port;
         let buffer = self.packet_buffer.clone();
         let engine = self.engine.clone();
+        let stats_engine = self.stats_engine.clone();
         let sessions = self.sessions.clone();
         let db = self.db.clone();
 
@@ -138,10 +151,11 @@ impl ApiServer {
                 };
                 let buffer = buffer.clone();
                 let engine = engine.clone();
+                let stats_engine = stats_engine.clone();
                 let sessions = sessions.clone();
                 let db = db.clone();
                 thread::spawn(move || {
-                    let _ = handle_connection(stream, buffer, engine, sessions, db);
+                    let _ = handle_connection(stream, buffer, engine, stats_engine, sessions, db);
                 });
             }
         })
@@ -152,6 +166,7 @@ fn handle_connection(
     mut stream: TcpStream,
     buffer: ApiPacketBuffer,
     engine: Arc<Mutex<CaptureEngine>>,
+    stats_engine: Arc<Mutex<StatsEngine>>,
     sessions: Arc<Mutex<HashMap<String, User>>>,
     db: Arc<Mutex<crate::db::Database>>,
 ) -> std::io::Result<()> {
@@ -272,6 +287,7 @@ fn handle_connection(
                 && path != "/api/v1/packets"
                 && !path.starts_with("/api/v1/bookmarks")
                 && !path.starts_with("/api/v1/annotations")
+                && !path.starts_with("/api/v1/ai")
             {
                 return send_response(
                     &mut stream,
@@ -481,6 +497,83 @@ fn handle_connection(
             json.push(']');
             send_response(&mut stream, 200, "OK", "application/json", &json)
         }
+        // AI Traffic Records
+        ("GET", "/api/v1/ai/traffic") => {
+            let stats = stats_engine.lock().unwrap();
+            let snapshot = stats.snapshot();
+            let mut json = String::from("[");
+            for (i, rec) in snapshot.ai_records.iter().enumerate() {
+                if i > 0 {
+                    json.push(',');
+                }
+                json.push_str(&format!(
+                    "{{\"session_id\":{},\"provider\":\"{:?}\",\"model\":\"{}\",\"prompt_tokens\":{},\"completion_tokens\":{},\"total_tokens\":{},\"ttft_ms\":{},\"cost_usd\":{:.6},\"streaming\":{},\"finish_reason\":\"{}\"}}",
+                    rec.session_id,
+                    rec.provider,
+                    rec.model_name,
+                    rec.prompt_token_count,
+                    rec.completion_tokens,
+                    rec.prompt_token_count + rec.completion_tokens,
+                    rec.first_token_latency_ms,
+                    rec.total_cost_usd,
+                    rec.total_stream_duration_ms > 0,
+                    rec.finish_reason,
+                ));
+            }
+            json.push(']');
+            let _ = db
+                .lock()
+                .unwrap()
+                .log_action(&user.username, "Read AI Traffic", "-");
+            send_response(&mut stream, 200, "OK", "application/json", &json)
+        }
+        // AI Analytics Summary
+        ("GET", "/api/v1/ai/stats") => {
+            let stats = stats_engine.lock().unwrap();
+            let snapshot = stats.snapshot();
+            let llm = &snapshot.llm;
+            let mut json = format!(
+                "{{\"total_requests\":{},\"total_tokens\":{},\"total_cost\":{:.6},\"model_stats\":[",
+                llm.total_requests, llm.total_tokens, llm.total_cost
+            );
+            let mut first = true;
+            for (model, ms) in llm.per_model.iter().take(20) {
+                if !first {
+                    json.push(',');
+                }
+                first = false;
+                json.push_str(&format!(
+                    "{{\"model\":\"{}\",\"requests\":{},\"tokens\":{},\"cost\":{:.6}}}",
+                    model,
+                    ms.requests,
+                    ms.total_tokens,
+                    ms.cost,
+                ));
+            }
+            json.push_str("],\"provider_stats\":[");
+            let mut first = true;
+            for (provider, ps) in llm.per_provider.iter().take(20) {
+                if !first {
+                    json.push(',');
+                }
+                first = false;
+                json.push_str(&format!(
+                    "{{\"provider\":\"{}\",\"requests\":{},\"tokens\":{},\"cost\":{:.6}}}",
+                    provider,
+                    ps.requests,
+                    ps.total_tokens,
+                    ps.cost,
+                ));
+            }
+            json.push_str(&format!(
+                "]}}"
+            ));
+            let _ = db
+                .lock()
+                .unwrap()
+                .log_action(&user.username, "Read AI Stats", "-");
+            send_response(&mut stream, 200, "OK", "application/json", &json)
+        }
         // Executive Forensic Report (HTML/JSON format)
         ("GET", "/api/v1/report") => {
             let packets = buffer.get_all();
@@ -572,7 +665,8 @@ mod tests {
         buffer.push(pkt);
 
         let engine = CaptureEngine::new();
-        let server = ApiServer::new(19090, buffer, engine);
+        let stats_engine = crate::stats::StatsEngine::new();
+        let server = ApiServer::new(19090, buffer, engine, stats_engine);
         let _handle = server.start();
 
         // Seeded passwords are random; set a known one on the shared on-disk DB
@@ -626,5 +720,132 @@ mod tests {
         client.read_to_string(&mut resp).unwrap();
         assert!(resp.contains("HTTP/1.1 200 OK"));
         assert!(resp.contains("received"));
+    }
+
+    #[test]
+    fn test_ai_traffic_endpoints() {
+        let buffer = ApiPacketBuffer::new();
+        let engine = CaptureEngine::new();
+        let mut stats_engine = StatsEngine::new();
+
+        let meta = crate::llm_analytics::LlmMetadata {
+            provider: "openai".into(),
+            model: "gpt-4".into(),
+            model_family: "gpt".into(),
+            prompt_tokens: Some(50),
+            completion_tokens: Some(30),
+            total_tokens: Some(80),
+            finish_reason: Some("stop".into()),
+            request_type: "chat".into(),
+            streaming: false,
+            error_type: None,
+            tool_calls: false,
+            cost_usd: Some(0.001),
+            latency_ms: Some(200),
+        };
+
+        let pkt = Packet {
+            timestamp: Utc::now(),
+            src_addr: Some("10.0.0.1".parse().unwrap()),
+            dst_addr: Some("10.0.0.2".parse().unwrap()),
+            src_port: Some(50000),
+            dst_port: Some(443),
+            protocol: Protocol::Http,
+            length: 512,
+            summary: "POST /v1/chat/completions".to_string(),
+            data: bytes::Bytes::from("{\"model\":\"gpt-4\"}"),
+            llm: Some(meta),
+        };
+        stats_engine.record_packet(&pkt);
+
+        let server = ApiServer::new(19091, buffer, engine, stats_engine);
+        let _handle = server.start();
+
+        crate::db::Database::open()
+            .unwrap()
+            .upsert_user("admin", "test-ai-pw", "Admin")
+            .unwrap();
+
+        thread::sleep(Duration::from_millis(100));
+
+        let mut client = TcpStream::connect("127.0.0.1:19091").unwrap();
+        let login_body = "{\"username\":\"admin\",\"password\":\"test-ai-pw\"}";
+        let login_req = format!(
+            "POST /api/v1/auth/login HTTP/1.1\r\n\
+             Content-Length: {}\r\n\
+             Content-Type: application/json\r\n\r\n\
+             {}",
+            login_body.len(),
+            login_body
+        );
+        client.write_all(login_req.as_bytes()).unwrap();
+        let mut resp = String::new();
+        client.read_to_string(&mut resp).unwrap();
+        assert!(resp.contains("HTTP/1.1 200 OK"));
+        let token_line = resp.split("\r\n\r\n").nth(1).unwrap();
+        let json_value: serde_json::Value = serde_json::from_str(token_line).unwrap();
+        let token = json_value.get("token").unwrap().as_str().unwrap();
+
+        let mut client = TcpStream::connect("127.0.0.1:19091").unwrap();
+        let ai_traffic_req = format!(
+            "GET /api/v1/ai/traffic HTTP/1.1\r\n\
+             Authorization: Bearer {}\r\n\r\n",
+            token
+        );
+        client.write_all(ai_traffic_req.as_bytes()).unwrap();
+        let mut resp = String::new();
+        client.read_to_string(&mut resp).unwrap();
+        assert!(resp.contains("gpt-4"));
+        assert!(resp.contains("Openai"));
+        assert!(resp.contains("stop"));
+        assert!(resp.contains("cost_usd"));
+
+        let mut client = TcpStream::connect("127.0.0.1:19091").unwrap();
+        let ai_stats_req = format!(
+            "GET /api/v1/ai/stats HTTP/1.1\r\n\
+             Authorization: Bearer {}\r\n\r\n",
+            token
+        );
+        client.write_all(ai_stats_req.as_bytes()).unwrap();
+        let mut resp = String::new();
+        client.read_to_string(&mut resp).unwrap();
+        assert!(resp.contains("HTTP/1.1 200 OK"));
+        assert!(resp.contains("total_requests"));
+    }
+
+    #[test]
+    fn test_ai_endpoint_requires_auth() {
+        let buffer = ApiPacketBuffer::new();
+        let engine = CaptureEngine::new();
+        let stats_engine = StatsEngine::new();
+        let server = ApiServer::new(19092, buffer, engine, stats_engine);
+        let _handle = server.start();
+        thread::sleep(Duration::from_millis(100));
+
+        let mut client = TcpStream::connect("127.0.0.1:19092").unwrap();
+        let req = "GET /api/v1/ai/traffic HTTP/1.1\r\n\r\n";
+        client.write_all(req.as_bytes()).unwrap();
+        let mut resp = String::new();
+        client.read_to_string(&mut resp).unwrap();
+        assert!(resp.contains("HTTP/1.1 401"));
+        assert!(resp.contains("Unauthorized"));
+    }
+
+    #[test]
+    fn test_ai_stats_endpoint_requires_auth() {
+        let buffer = ApiPacketBuffer::new();
+        let engine = CaptureEngine::new();
+        let stats_engine = StatsEngine::new();
+        let server = ApiServer::new(19093, buffer, engine, stats_engine);
+        let _handle = server.start();
+        thread::sleep(Duration::from_millis(100));
+
+        let mut client = TcpStream::connect("127.0.0.1:19093").unwrap();
+        let req = "GET /api/v1/ai/stats HTTP/1.1\r\n\r\n";
+        client.write_all(req.as_bytes()).unwrap();
+        let mut resp = String::new();
+        client.read_to_string(&mut resp).unwrap();
+        assert!(resp.contains("HTTP/1.1 401"));
+        assert!(resp.contains("Unauthorized"));
     }
 }

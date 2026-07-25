@@ -4,6 +4,7 @@ use anyhow::Result;
 use netscope_core::capture::CaptureEngine;
 use netscope_core::models::Packet;
 use netscope_core::names::NameCache;
+use netscope_core::stats::StatsEngine;
 
 use crate::Cli;
 
@@ -22,22 +23,26 @@ pub fn run(cli: Cli) -> Result<()> {
 
     let api_server = if let Some(port) = cli.serve {
         let buffer = netscope_core::api_server::ApiPacketBuffer::new();
+        let stats_engine = StatsEngine::new();
         let server = netscope_core::api_server::ApiServer::new(
             port,
             buffer.clone(),
             capture.take().unwrap(),
+            stats_engine,
         );
         let engine_lock = server.engine();
+        let stats_lock = server.stats();
         let _server_handle = server.start();
-        Some((buffer, engine_lock))
+        Some((buffer, engine_lock, stats_lock))
     } else {
         None
     };
 
     while let Ok(pkt) = packet_rx.recv() {
         names.observe(&pkt);
-        if let Some((ref buffer, _)) = api_server {
+        if let Some((ref buffer, _, ref stats_lock)) = api_server {
             buffer.push(pkt.clone());
+            stats_lock.lock().unwrap().record_packet(&pkt);
         }
         if use_json {
             println!("{}", format_json(&pkt));
@@ -46,7 +51,7 @@ pub fn run(cli: Cli) -> Result<()> {
         }
     }
 
-    if let Some((_, ref engine_lock)) = api_server {
+    if let Some((_, ref engine_lock, _)) = api_server {
         let mut eng = engine_lock.lock().unwrap();
         eng.stop();
     } else if let Some(mut cap) = capture {
