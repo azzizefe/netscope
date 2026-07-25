@@ -20630,6 +20630,114 @@ protocols! {
         aliases:   ["6g_p", "industrial_5g_fabric"],
         blurb:     "6G-P Industrial 5G \u{2014} 6G-P paradigm ultra-low-latency fabric for industrial 5G with sub-millisecond cycle times, time-sensitive forwarding, and deterministic scheduling.",
     }
+    TlsHybridKem {
+        doc:       "TLS 1.3 hybrid key exchange (ECDH + PQC KEM).",
+        display:   "TLS Hybrid KEM",
+        color:     0x1565C0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tls_hybrid_kem", "hybrid_kem"],
+        blurb:     "TLS Hybrid KEM \u{2014} TLS 1.3 hybrid key exchange combining ECDH (X25519) with PQC KEM for post-quantum safety and classical security in a single handshake.",
+    }
+    TlsKyber1024 {
+        doc:       "TLS Kyber-1024 KEM (NIST ML-KEM-1024).",
+        display:   "TLS Kyber-1024",
+        color:     0x2E7D32,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["kyber1024", "ml_kem_1024"],
+        blurb:     "TLS Kyber-1024 \u{2014} NIST ML-KEM-1024 lattice-based key encapsulation mechanism in TLS with ciphertext and shared secret for post-quantum key agreement.",
+    }
+    TlsDilithium5 {
+        doc:       "TLS Dilithium5 signature (NIST ML-DSA-87).",
+        display:   "TLS Dilithium5",
+        color:     0xC62828,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["dilithium5", "ml_dsa_87"],
+        blurb:     "TLS Dilithium5 \u{2014} NIST ML-DSA-87 lattice-based digital signature for TLS authentication with high-security post-quantum certificate signing.",
+    }
+    TlsSphincsPlus {
+        doc:       "TLS SPHINCS+ signature (NIST SLH-DSA).",
+        display:   "TLS SPHINCS+",
+        color:     0x6A1B9A,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sphincs_plus", "slh_dsa"],
+        blurb:     "TLS SPHINCS+ \u{2014} NIST SLH-DSA stateless hash-based digital signature for TLS with conservative post-quantum security based on SHA-256.",
+    }
+    TlsFrodoKem {
+        doc:       "TLS FrodoKEM-1344-AES hybrid exchange.",
+        display:   "TLS FrodoKEM",
+        color:     0x00838F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["frodo_kem", "frodokem_aes"],
+        blurb:     "TLS FrodoKEM \u{2014} FrodoKEM-1344-AES lattice-based key encapsulation with AES encryption for hybrid post-quantum key agreement in TLS.",
+    }
+    TlsClassicMcEliece {
+        doc:       "TLS Classic McEliece KEM exchange.",
+        display:   "TLS Classic McEliece",
+        color:     0xE65100,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["classic_mceliece", "mceliece_kem"],
+        blurb:     "TLS Classic McEliece \u{2014} code-based key encapsulation mechanism in TLS with Niederreiter cryptosystem for high-security post-quantum key agreement.",
+    }
+    TlsBikeL5 {
+        doc:       "TLS BIKE L5 KEM exchange.",
+        display:   "TLS BIKE L5",
+        color:     0x4E342E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bike_l5", "bike_kem"],
+        blurb:     "TLS BIKE L5 \u{2014} BIKE (Bit Flipping Key Encapsulation) L5 code-based KEM with QC-MDPC codes for post-quantum key agreement in TLS.",
+    }
+    TlsHqc {
+        doc:       "TLS HQC (Hamming Quasi-Cyclic) KEM.",
+        display:   "TLS HQC",
+        color:     0x37474F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["hqc", "hqc_kem"],
+        blurb:     "TLS HQC \u{2014} Hamming Quasi-Cyclic code-based key encapsulation mechanism with efficient decryption for post-quantum TLS key agreement.",
+    }
+    X509CompositeCerts {
+        doc:       "X.509 composite (traditional + PQ) certificates.",
+        display:   "X.509 Composite Certs",
+        color:     0x1976D2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["x509_composite", "composite_certs"],
+        blurb:     "X.509 Composite Certs \u{2014} X.509 certificates combining traditional (ECDSA/RSA) and post-quantum (ML-DSA) signatures for hybrid certification authority deployment.",
+    }
+    X509AltCmsPq {
+        doc:       "X.509 Alternative CMS PQ signature.",
+        display:   "X.509 Alt CMS PQ",
+        color:     0x7CB342,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["x509_alt_cms", "alt_cms_pq"],
+        blurb:     "X.509 Alt CMS PQ \u{2014} alternative CMS (Cryptographic Message Syntax) post-quantum signature alongside traditional X.509 certificate signatures for hybrid PKI.",
+    }
+    AcmePqChallenge {
+        doc:       "ACME PQ-hybrid domain validation challenge.",
+        display:   "ACME PQ Challenge",
+        color:     0xFF8F00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["acme_pq", "pq_challenge"],
+        blurb:     "ACME PQ Challenge \u{2014} ACME protocol extension for hybrid post-quantum domain validation with token-based challenge and PQ signature proof-of-possession.",
+    }
+    CrlMerkleTreePq {
+        doc:       "CRL Merkle-tree-based PQ revocation list.",
+        display:   "CRL Merkle Tree PQ",
+        color:     0x5D4037,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["crl_merkle_pq", "merkle_crl"],
+        blurb:     "CRL Merkle Tree PQ \u{2014} certificate revocation list using Merkle hash tree for compact, privacy-preserving PQ-revocation with inclusion proofs and tree root signing.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

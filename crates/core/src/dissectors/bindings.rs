@@ -128,6 +128,12 @@ use super::{
     profinet_cc_a, modbus_tcp_secure,
     hart_ip_advanced, opc_ua_fx_uafx,
     pubsub_5g_tsn, six_p_industrial_5g,
+    tls_hybrid_kem, tls_kyber1024,
+    tls_dilithium5, tls_sphincs_plus,
+    tls_frodo_kem, tls_classic_mceliece,
+    tls_bike_l5, tls_hqc,
+    x509_composite_certs, x509_alt_cms_pq,
+    acme_pq_challenge, crl_merkle_tree_pq,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1399,4 +1405,20 @@ fn _dissector_reachability_guard_industrial_5g_urllc_278_285() {
         let _ = super::opc_ua_fx_uafx::dissect_opc_ua_fx_uafx;
         let _ = super::pubsub_5g_tsn::dissect_pubsub_5g_tsn;
         let _ = super::six_p_industrial_5g::dissect_six_p_industrial_5g;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_quantum_tls_pki_286_297() {
+        let _ = super::tls_hybrid_kem::dissect_tls_hybrid_kem;
+        let _ = super::tls_kyber1024::dissect_tls_kyber1024;
+        let _ = super::tls_dilithium5::dissect_tls_dilithium5;
+        let _ = super::tls_sphincs_plus::dissect_tls_sphincs_plus;
+        let _ = super::tls_frodo_kem::dissect_tls_frodo_kem;
+        let _ = super::tls_classic_mceliece::dissect_tls_classic_mceliece;
+        let _ = super::tls_bike_l5::dissect_tls_bike_l5;
+        let _ = super::tls_hqc::dissect_tls_hqc;
+        let _ = super::x509_composite_certs::dissect_x509_composite_certs;
+        let _ = super::x509_alt_cms_pq::dissect_x509_alt_cms_pq;
+        let _ = super::acme_pq_challenge::dissect_acme_pq_challenge;
+        let _ = super::crl_merkle_tree_pq::dissect_crl_merkle_tree_pq;
 }
