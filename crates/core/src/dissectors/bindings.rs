@@ -87,6 +87,10 @@ use super::{
     langfuse_ingest, langsmith_trace_push,
     liteserve_grpc, mlflow_gateway,
     openllmetry_otlp, portkey_gateway_router,
+    apple_aneclientd, coreml_model_compile_rpc,
+    google_edge_tpu_compiler, mediatek_apusys_delegate,
+    onnx_runtime_execution_provider, openvino_npu_plugin,
+    qualcomm_snpe_hexagon, samsung_exynos_npu,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1242,4 +1246,16 @@ fn _dissector_reachability_guard_llm_observability_gateway_198_205() {
         let _ = super::helicone_worker_queue::dissect_helicone_worker_queue;
         let _ = super::langsmith_trace_push::dissect_langsmith_trace_push;
         let _ = super::arize_phoenix_collect::dissect_arize_phoenix_collect;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_on_device_edge_ai_206_213() {
+        let _ = super::coreml_model_compile_rpc::dissect_coreml_model_compile_rpc;
+        let _ = super::apple_aneclientd::dissect_apple_aneclientd;
+        let _ = super::qualcomm_snpe_hexagon::dissect_qualcomm_snpe_hexagon;
+        let _ = super::mediatek_apusys_delegate::dissect_mediatek_apusys_delegate;
+        let _ = super::google_edge_tpu_compiler::dissect_google_edge_tpu_compiler;
+        let _ = super::samsung_exynos_npu::dissect_samsung_exynos_npu;
+        let _ = super::onnx_runtime_execution_provider::dissect_onnx_runtime_execution_provider;
+        let _ = super::openvino_npu_plugin::dissect_openvino_npu_plugin;
 }

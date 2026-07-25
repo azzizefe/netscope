@@ -19910,6 +19910,78 @@ protocols! {
         aliases:   ["arize_phoenix", "phoenix_collect"],
         blurb:     "Arize Phoenix OTLP collector extensions \u{2014} OpenTelemetry-protobuf exports with LLM-specific semantic conventions for embeddings, token counts, and retrieval-augmented generation spans.",
     }
+    AppleAneclientd {
+        doc:       "Apple Neural Engine daemon (aneclientd) protocol.",
+        display:   "Apple ANEClientd",
+        color:     0xA2AAAD,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["aneclientd", "apple_neural"],
+        blurb:     "Apple Neural Engine daemon (aneclientd) protocol \u{2014} XPC-based IPC for neural network model compilation, loading, and inference on Apple Silicon ANE hardware.",
+    }
+    CoremlModelCompileRpc {
+        doc:       "Apple Core ML model compilation IPC (ANED).",
+        display:   "Core ML Compile RPC",
+        color:     0x8E8E93,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["coreml_compile", "aned_compile"],
+        blurb:     "Apple Core ML model compilation IPC (ANED) \u{2014} ANE daemon RPC for compiling .mlmodelc bundles, optimizing compute graph for Apple Silicon ANE.",
+    }
+    GoogleEdgeTpuCompiler {
+        doc:       "Google Edge TPU compiler-to-runtime protocol.",
+        display:   "Edge TPU Compiler",
+        color:     0x4285F4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["edgetpu_compiler", "google_tpu"],
+        blurb:     "Google Edge TPU compiler-to-runtime protocol \u{2014} model compilation pipeline communication for deploying quantized TFLite models to Coral Edge TPU hardware.",
+    }
+    MediatekApusysDelegate {
+        doc:       "MediaTek APUSYS NPU delegate IPC protocol.",
+        display:   "MediaTek APUSYS Delegate",
+        color:     0xE81B1B,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["apusys", "mediatek_npu"],
+        blurb:     "MediaTek APUSYS NPU delegate IPC \u{2014} runtime delegation of neural network ops to the MediaTek NPU via the APUSYS kernel driver with shared memory buffers.",
+    }
+    OnnxRuntimeExecutionProvider {
+        doc:       "ONNX Runtime EP (Execution Provider) bridge protocol.",
+        display:   "ONNX Runtime EP",
+        color:     0x512BD4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["onnxruntime_ep", "ort_ep"],
+        blurb:     "ONNX Runtime Execution Provider bridge \u{2014} session creation, tensor binding, and kernel invocation across custom EP backends for hardware-accelerated ONNX inference.",
+    }
+    OpenvinoNpuPlugin {
+        doc:       "Intel OpenVINO NPU plugin driver IPC protocol.",
+        display:   "OpenVINO NPU Plugin",
+        color:     0x0078D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openvino_npu", "ov_npu_plugin"],
+        blurb:     "Intel OpenVINO NPU plugin driver IPC \u{2014} compiled graph upload, inference request submission, and tensor I/O for Intel NPU accelerator via the OpenVINO plugin architecture.",
+    }
+    QualcommSnpeHexagon {
+        doc:       "Qualcomm SNPE Hexagon DSP RPC protocol.",
+        display:   "SNPE Hexagon DSP",
+        color:     0x325D32,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["snpe_hexagon", "qcom_snpe"],
+        blurb:     "Qualcomm SNPE Hexagon DSP RPC \u{2014} remote procedure calls for network load, graph execution, and tensor I/O on Qualcomm Hexagon DSP via the SNPE runtime.",
+    }
+    SamsungExynosNpu {
+        doc:       "Samsung Exynos NPU mailbox IPC protocol.",
+        display:   "Exynos NPU Mailbox",
+        color:     0x1428A0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["exynos_npu", "samsung_npu"],
+        blurb:     "Samsung Exynos NPU mailbox IPC \u{2014} command queue submission, model load, inference trigger, and result notification via shared mailbox registers on Exynos SoCs.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",
