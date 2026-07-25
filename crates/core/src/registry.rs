@@ -19667,6 +19667,69 @@ protocols! {
         aliases:   ["mirror_fallback", "mirror_transport"],
         blurb:     "Mirror Networking fallback transport \u{2014} TCP-based reliable transport layer for Unity multiplayer when UDP/Steam is unavailable.",
     }
+    FaceitServerPlugin {
+        doc:       "FACEIT server plugin anti-cheat RPC traffic.",
+        display:   "FACEIT Server Plugin",
+        color:     0xFF6600,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["faceit_ac", "faceit_plugin"],
+        blurb:     "FACEIT server plugin anti-cheat RPC \u{2014} server-side agent communication for match integrity verification and player validation.",
+    }
+    EseaClientAntiCheat {
+        doc:       "ESEA client anti-cheat packet protocol traffic.",
+        display:   "ESEA Anti-Cheat",
+        color:     0x00A878,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["esea_ac", "esea_client"],
+        blurb:     "ESEA client anti-cheat packet protocol \u{2014} ring-3 agent telemetry, process enumeration, and screen capture challenge-response.",
+    }
+    EslWireProto {
+        doc:       "ESL Wire anti-cheat server verification traffic.",
+        display:   "ESL Wire",
+        color:     0xCC3333,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["esl_wire", "esl_ac"],
+        blurb:     "ESL Wire anti-cheat server verification \u{2014} trusted server attestation and match integrity heartbeat over TLS-encapsulated channel.",
+    }
+    RiotVanguardNet {
+        doc:       "Riot Vanguard kernel-to-userspace net intercept traffic.",
+        display:   "Riot Vanguard Net",
+        color:     0xD13639,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["vanguard_net", "riot_vanguard"],
+        blurb:     "Riot Vanguard kernel-to-userspace net intercept \u{2014} encrypted telemetry channel between kernel driver and user-space service for process introspection.",
+    }
+    BattleyePacketFilter {
+        doc:       "BattlEye packet filter signaling traffic.",
+        display:   "BattlEye Packet Filter",
+        color:     0x444444,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["battleye_pf", "be_packet_filter"],
+        blurb:     "BattlEye packet filter signalling \u{2014} challenge-response heartbeat and game-state integrity checks via NDIS filter driver.",
+    }
+    EasyAntiCheatStream {
+        doc:       "Easy Anti-Cheat stream verification traffic.",
+        display:   "Easy Anti-Cheat Stream",
+        color:     0x1DB100,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["easy_anticheat_stream", "eac_stream"],
+        blurb:     "Easy Anti-Cheat stream verification \u{2014} continuous integrity stream with heartbeat, memory-scan commands, and behavioural analysis telemetry.",
+    }
+    DenuvoAntiTamperNet {
+        doc:       "Denuvo Anti-Tamper online check-in protocol traffic.",
+        display:   "Denuvo Anti-Tamper Net",
+        color:     0x990000,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["denuvo_net", "denuvo_anti_tamper"],
+        blurb:     "Denuvo Anti-Tamper online check-in protocol \u{2014} periodic activation validation, integrity token exchange, and entitlement verification.",
+    }
 }
 
 impl std::fmt::Display for Protocol {

@@ -76,6 +76,8 @@ use super::{
     recroom_room_server, horizon_worlds_sync, spatial_io_webxr_sync, secondlife_lludp,
     playfab_party, playfab_multiplayer_v2, phaser_heroiclabs, darkrift2_netcode,
     photon_realtime_v5, photon_bolt_internal, fishnet_teleport, mirror_transport_fallback,
+    faceit_server_plugin, esea_client_anti_cheat, esl_wire_proto, riot_vanguard_net,
+    battleye_packet_filter, easy_anti_cheat_stream, denuvo_anti_tamper_net,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1150,4 +1152,15 @@ fn _dissector_reachability_guard_game_baas_141_148() {
         let _ = super::photon_bolt_internal::dissect_photon_bolt_internal;
         let _ = super::fishnet_teleport::dissect_fishnet_teleport;
         let _ = super::mirror_transport_fallback::dissect_mirror_transport_fallback;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_esport_anti_cheat_149_155() {
+        let _ = super::faceit_server_plugin::dissect_faceit_server_plugin;
+        let _ = super::esea_client_anti_cheat::dissect_esea_client_anti_cheat;
+        let _ = super::esl_wire_proto::dissect_esl_wire_proto;
+        let _ = super::riot_vanguard_net::dissect_riot_vanguard_net;
+        let _ = super::battleye_packet_filter::dissect_battleye_packet_filter;
+        let _ = super::easy_anti_cheat_stream::dissect_easy_anti_cheat_stream;
+        let _ = super::denuvo_anti_tamper_net::dissect_denuvo_anti_tamper_net;
 }
