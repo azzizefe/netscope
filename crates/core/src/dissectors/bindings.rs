@@ -100,6 +100,12 @@ use super::{
     intel_realsense_dds, keyence_cv_x_ftp,
     ouster_lidar_tcp, seeed_grove_vision_ai,
     sick_lidar_rms, velodyne_vlp_packet,
+    cc_link_ie_tsn, detnet_service_layer,
+    ieee802_1as_rev, ieee802_1qbv_tas,
+    ieee802_1qbu_frame_preemption, ieee802_1qci_psfp,
+    opc_ua_alarm_condition, opc_ua_gds_push,
+    opc_ua_pubsub_mqtt, opc_ua_pubsub_udp,
+    tsn_stream_reservation, tsn_universal_windows,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1292,4 +1298,20 @@ fn _dissector_reachability_guard_industrial_edge_ai_221_230() {
         let _ = super::intel_realsense_dds::dissect_intel_realsense_dds;
         let _ = super::edge_impulse_studio_data::dissect_edge_impulse_studio_data;
         let _ = super::seeed_grove_vision_ai::dissect_seeed_grove_vision_ai;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_opcua_tsn_231_242() {
+        let _ = super::opc_ua_pubsub_udp::dissect_opc_ua_pubsub_udp;
+        let _ = super::opc_ua_pubsub_mqtt::dissect_opc_ua_pubsub_mqtt;
+        let _ = super::opc_ua_gds_push::dissect_opc_ua_gds_push;
+        let _ = super::opc_ua_alarm_condition::dissect_opc_ua_alarm_condition;
+        let _ = super::ieee802_1qbv_tas::dissect_ieee802_1qbv_tas;
+        let _ = super::ieee802_1qbu_frame_preemption::dissect_ieee802_1qbu_frame_preemption;
+        let _ = super::ieee802_1qci_psfp::dissect_ieee802_1qci_psfp;
+        let _ = super::ieee802_1as_rev::dissect_ieee802_1as_rev;
+        let _ = super::tsn_stream_reservation::dissect_tsn_stream_reservation;
+        let _ = super::detnet_service_layer::dissect_detnet_service_layer;
+        let _ = super::tsn_universal_windows::dissect_tsn_universal_windows;
+        let _ = super::cc_link_ie_tsn::dissect_cc_link_ie_tsn;
 }

@@ -20135,6 +20135,114 @@ protocols! {
         aliases:   ["grove_vision", "seeed_vision"],
         blurb:     "Seeed Grove Vision AI module WebSocket \u{2014} real-time object detection and classification results over WebSocket from the Grove Vision AI module.",
     }
+    OpcUaPubsubUdp {
+        doc:       "OPC UA PubSub UDP multicast (UADP) protocol.",
+        display:   "OPC UA PubSub UDP",
+        color:     0x0066CC,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["opcua_pubsub_udp", "uadp"],
+        blurb:     "OPC UA PubSub UDP multicast (UADP) \u{2014} UDP multicast transport for OPC UA PubSub with UADP network message encoding, dataset payloads, and security headers.",
+    }
+    OpcUaPubsubMqtt {
+        doc:       "OPC UA PubSub MQTT JSON encoding protocol.",
+        display:   "OPC UA PubSub MQTT",
+        color:     0x3399FF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["opcua_pubsub_mqtt", "ua_mqtt"],
+        blurb:     "OPC UA PubSub MQTT JSON encoding \u{2014} OPC UA PubSub messages over MQTT with JSON payload encoding for cloud and edge IoT interoperability.",
+    }
+    OpcUaGdsPush {
+        doc:       "OPC UA Global Discovery Server push protocol.",
+        display:   "OPC UA GDS Push",
+        color:     0x005BB5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["opcua_gds", "gds_push"],
+        blurb:     "OPC UA Global Discovery Server push \u{2014} server registration, discovery, and certificate push for OPC UA GDS with FindServers and RegisterServer services.",
+    }
+    OpcUaAlarmCondition {
+        doc:       "OPC UA A&C (Alarms & Conditions) client protocol.",
+        display:   "OPC UA Alarm Condition",
+        color:     0xCC3300,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["opcua_alarm", "ua_alarm_condition"],
+        blurb:     "OPC UA Alarms & Conditions client \u{2014} alarm notification, condition state, severity, and acknowledgement for OPC UA A&C event monitoring.",
+    }
+    Ieee8021qbvTas {
+        doc:       "IEEE 802.1Qbv Time-Aware Shaper schedule protocol.",
+        display:   "802.1Qbv TAS",
+        color:     0xE67E22,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee8021qbv", "tas_schedule"],
+        blurb:     "IEEE 802.1Qbv Time-Aware Shaper \u{2014} gate control list scheduling for deterministic Ethernet traffic with time-triggered queue opening and closing.",
+    }
+    Ieee8021qbuFramePreemption {
+        doc:       "IEEE 802.1Qbu Frame Preemption MAC merge protocol.",
+        display:   "802.1Qbu Frame Preemption",
+        color:     0xF39C12,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee8021qbu", "frame_preemption"],
+        blurb:     "IEEE 802.1Qbu Frame Preemption \u{2014} MAC merge sublayer for preemptable and express frame fragment interleaving on full-duplex Ethernet links.",
+    }
+    Ieee8021qciPsfp {
+        doc:       "IEEE 802.1Qci Per-Stream Filtering and Policing protocol.",
+        display:   "802.1Qci PSFP",
+        color:     0xD35400,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee8021qci", "psfp"],
+        blurb:     "IEEE 802.1Qci Per-Stream Filtering and Policing \u{2014} stream gate control, flow meter policing, and filtering for individual TSN traffic streams.",
+    }
+    Ieee8021asRev {
+        doc:       "IEEE 802.1AS-Rev (gPTP revision) protocol.",
+        display:   "802.1AS-Rev gPTP",
+        color:     0x2980B9,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ieee8021as", "gptp_rev"],
+        blurb:     "IEEE 802.1AS-Rev gPTP \u{2014} generalized precision time protocol revision for time synchronisation in TSN networks with hot-join and redundancy.",
+    }
+    TsnStreamReservation {
+        doc:       "IEEE 802.1Qat SRP (Stream Reservation Protocol).",
+        display:   "TSN Stream Reservation",
+        color:     0x27AE60,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tsn_srp", "stream_reservation"],
+        blurb:     "IEEE 802.1Qat Stream Reservation Protocol \u{2014} talker-to-listener stream reservation with accumulated latency and bandwidth registration for TSN flows.",
+    }
+    DetnetServiceLayer {
+        doc:       "DetNet Service Layer (IETF draft) protocol.",
+        display:   "DetNet Service Layer",
+        color:     0x8E44AD,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["detnet", "detnet_service"],
+        blurb:     "DetNet Service Layer \u{2014} IETF Deterministic Networking application flow specification, TSPEC parameter negotiation, and path selection for bounded-latency services.",
+    }
+    TsnUniversalWindows {
+        doc:       "Microsoft TSN-capable NIC driver wire extensions.",
+        display:   "TSN Universal Windows",
+        color:     0x00A4EF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["windows_tsn", "tsn_nic"],
+        blurb:     "Microsoft TSN-capable NIC driver wire extensions \u{2014} NDIS driver extensions for hardware TSN offload, schedule programming, and Qbv gate control on Windows.",
+    }
+    CcLinkIeTsn {
+        doc:       "CC-Link IE TSN (Mitsubishi FA) protocol.",
+        display:   "CC-Link IE TSN",
+        color:     0xE60012,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cclink_tsn", "mitsubishi_tsn"],
+        blurb:     "CC-Link IE TSN \u{2014} Mitsubishi FA field network combining CC-Link IE with TSN for cyclic/transient data exchange, slave synchronisation, and open FA networking.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",
