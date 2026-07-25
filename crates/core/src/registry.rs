@@ -20387,6 +20387,96 @@ protocols! {
         aliases:   ["iso15118", "v2g_proto"],
         blurb:     "ISO 15118 V2G \u{2014} vehicle-to-grid communication interface for EV charging with session setup, service discovery, payment, and smart charging scheduling over TCP.",
     }
+    DsrcWsmp {
+        doc:       "IEEE 802.11p DSRC WAVE Short Message Protocol.",
+        display:   "DSRC WSMP",
+        color:     0x005A9E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["dsrc_wsmp", "wave_wsmp"],
+        blurb:     "DSRC WSMP \u{2014} WAVE Short Message Protocol for IEEE 802.11p DSRC, carrying safety and mobility messages with channel switching and provider service identifiers.",
+    }
+    CV2xPc5 {
+        doc:       "3GPP C-V2X PC5 sidelink communication (Mode 4).",
+        display:   "C-V2X PC5",
+        color:     0x0078D4,
+        transport: Other,
+        rank:      3,
+        aliases:   ["c_v2x_pc5", "pc5_sidelink"],
+        blurb:     "C-V2X PC5 \u{2014} 3GPP LTE/NR sidelink interface for direct vehicle-to-vehicle and vehicle-to-infrastructure communication without cellular infrastructure.",
+    }
+    CV2xUu {
+        doc:       "3GPP C-V2X Uu interface (cellular V2X).",
+        display:   "C-V2X Uu",
+        color:     0x1E90FF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["c_v2x_uu", "uu_v2x"],
+        blurb:     "C-V2X Uu \u{2014} 3GPP cellular V2X interface for wide-area vehicle-to-network communication with RRC signalling, V2X control, and application-layer messaging.",
+    }
+    SaeJ2735Bsm {
+        doc:       "SAE J2735 Basic Safety Message (BSM).",
+        display:   "J2735 BSM",
+        color:     0xFF6600,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["j2735_bsm", "sae_bsm"],
+        blurb:     "SAE J2735 BSM \u{2014} Basic Safety Message for V2V safety with vehicle position, speed, heading, brake status, and path history for collision avoidance.",
+    }
+    SaeJ2735Spat {
+        doc:       "SAE J2735 Signal Phase and Timing (SPAT).",
+        display:   "J2735 SPAT",
+        color:     0x33CC33,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["j2735_spat", "sae_spat"],
+        blurb:     "SAE J2735 SPAT \u{2014} Signal Phase and Timing message broadcasting intersection signal state, phase timing, and movement event data for V2I situational awareness.",
+    }
+    AutowareZenoh {
+        doc:       "Autoware (ROS2) Zenoh autonomous vehicle node transport.",
+        display:   "Autoware Zenoh",
+        color:     0x7B2D8E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["autoware_zenoh", "aw_zenoh"],
+        blurb:     "Autoware Zenoh \u{2014} ROS2-over-Zenoh transport for autonomous vehicle nodes, providing topic-based pub/sub with low-latency for planning, control, and perception data.",
+    }
+    ApolloCyberRtps {
+        doc:       "Baidu Apollo Cyber RT fast RTPS transport.",
+        display:   "Apollo Cyber RTPS",
+        color:     0x00A6D6,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["apollo_cyber_rtps", "cyber_rtps"],
+        blurb:     "Apollo Cyber RTPS \u{2014} Baidu Apollo Cyber RT real-time publish-subscribe over RTPS for autonomous driving sensor fusion, planning, and control message passing.",
+    }
+    ApolloPerceptionBridge {
+        doc:       "Apollo perception-to-planning bridge protocol.",
+        display:   "Apollo Perception Bridge",
+        color:     0xE8751A,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["apollo_perception_bridge", "perception_bridge"],
+        blurb:     "Apollo Perception Bridge \u{2014} bridge protocol between perception and planning modules in Baidu Apollo, carrying obstacle, lane, and trajectory prediction data.",
+    }
+    TeslaFsdInference {
+        doc:       "Tesla FSD (Full Self-Driving) inference fabric protocol.",
+        display:   "Tesla FSD Inference",
+        color:     0xCC0000,
+        transport: Other,
+        rank:      3,
+        aliases:   ["tesla_fsd", "fsd_inference"],
+        blurb:     "Tesla FSD Inference \u{2014} internal inference fabric protocol for Tesla Full Self-Driving hardware, carrying tensor operations, model layer outputs, and neural network activations.",
+    }
+    WaymoFleetRpc {
+        doc:       "Waymo Fleet response RPC protocol.",
+        display:   "Waymo Fleet RPC",
+        color:     0x00BFA5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["waymo_fleet", "waymo_rpc"],
+        blurb:     "Waymo Fleet RPC \u{2014} Waymo fleet management RPC protocol for vehicle dispatch, telemetry reporting, route planning, and fleet status monitoring over TCP.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

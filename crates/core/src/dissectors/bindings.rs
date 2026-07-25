@@ -114,6 +114,11 @@ use super::{
     iec_61850_sv, iec_61850_r_goose,
     iec_61970_cim_xml, openadr_3_0,
     ocpp_2_1, iso_15118_v2g,
+    dsrc_wsmp, c_v2x_pc5,
+    c_v2x_uu, sae_j2735_bsm,
+    sae_j2735_spat, autoware_zenoh,
+    apollo_cyber_rtps, apollo_perception_bridge,
+    tesla_fsd_inference, waymo_fleet_rpc,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1346,4 +1351,18 @@ fn _dissector_reachability_guard_smart_grid_energy_251_258() {
         let _ = super::openadr_3_0::dissect_openadr_3_0;
         let _ = super::ocpp_2_1::dissect_ocpp_2_1;
         let _ = super::iso_15118_v2g::dissect_iso_15118_v2g;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_autonomous_v2x_adas_259_268() {
+        let _ = super::dsrc_wsmp::dissect_dsrc_wsmp;
+        let _ = super::c_v2x_pc5::dissect_c_v2x_pc5;
+        let _ = super::c_v2x_uu::dissect_c_v2x_uu;
+        let _ = super::sae_j2735_bsm::dissect_sae_j2735_bsm;
+        let _ = super::sae_j2735_spat::dissect_sae_j2735_spat;
+        let _ = super::autoware_zenoh::dissect_autoware_zenoh;
+        let _ = super::apollo_cyber_rtps::dissect_apollo_cyber_rtps;
+        let _ = super::apollo_perception_bridge::dissect_apollo_perception_bridge;
+        let _ = super::tesla_fsd_inference::dissect_tesla_fsd_inference;
+        let _ = super::waymo_fleet_rpc::dissect_waymo_fleet_rpc;
 }
