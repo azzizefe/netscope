@@ -58,6 +58,8 @@ use super::{
     wbxml, dns_over_quic, matrix_federation, gemini_proto,
     epics_ca, epics_pva, slurm_rpc, pmix, tango_controls, gbt26982, of_config, ethercat_mailbox,
     opc_ua_pubsub, cip_motion, cip_safety, gbt_20414, gbt_19582, fiveg_n4, mpi_wire, ucx_hpc, safetynet_p, hart_wireless, isa100_11a,
+    steam_datagram_relay, epic_online_eos_p2p, xbox_live_sdv2,
+    psn_matchmaking_v3, nintendo_npln_p2p,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -463,6 +465,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (2727, mgcp::dissect_mgcp),
     (2944, megaco::dissect_megaco),
     (2945, megaco::dissect_megaco),
+    (3074, xbox_live_sdv2::dissect_xbox_live_sdv2),
     (3205, isns::dissect_isns),
     (3222, glbp::dissect_glbp),
     (3386, gtpprime::dissect_gtpprime),
@@ -543,6 +546,8 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (9009, questdb::dissect_questdb),
     (9200, wbxml::dissect_wbxml),
     (9201, wap_wsp_wtp::dissect_wap_wsp_wtp),
+    (9302, psn_matchmaking_v3::dissect_psn_matchmaking_v3),
+    (9303, psn_matchmaking_v3::dissect_psn_matchmaking_v3),
     (9600, fins::dissect_fins),
     (9761, insteon::dissect_insteon),
     (9875, sap_announce::dissect_sap_announce),
@@ -564,6 +569,10 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (24130, isa100_11a::dissect_isa100_11a),
     (25826, collectd::dissect_collectd),
     (25827, collectd_v5::dissect_collectd_v5),
+    (27018, epic_online_eos_p2p::dissect_epic_online_eos_p2p),
+    (27019, epic_online_eos_p2p::dissect_epic_online_eos_p2p),
+    (27036, steam_datagram_relay::dissect_steam_datagram_relay),
+    (30211, nintendo_npln_p2p::dissect_nintendo_npln_p2p),
     (34980, ethercat_mailbox::dissect_ethercat_mailbox),
     (34981, safetynet_p::dissect_safetynet_p),
     (38463, oran_e1::dissect_oran_e1),
@@ -1057,4 +1066,20 @@ fn _dissector_reachability_guard_game_engines_86_100() {
         let _ = super::cryengine_net_channel::dissect_cryengine_net_channel;
         let _ = super::source2_netmessage::dissect_source2_netmessage;
         let _ = super::source2_svcmsg::dissect_source2_svcmsg;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_aaa_online_services_101_112() {
+        let _ = super::steam_datagram_relay::dissect_steam_datagram_relay;
+        let _ = super::steam_sdr_relay_v3::dissect_steam_sdr_relay_v3;
+        let _ = super::steam_game_networking_s2::dissect_steam_game_networking_s2;
+        let _ = super::epic_online_eos_p2p::dissect_epic_online_eos_p2p;
+        let _ = super::epic_online_voice::dissect_epic_online_voice;
+        let _ = super::epic_dtls_p2p::dissect_epic_dtls_p2p;
+        let _ = super::xbox_live_sdv2::dissect_xbox_live_sdv2;
+        let _ = super::xbox_live_mpsd::dissect_xbox_live_mpsd;
+        let _ = super::xbox_reliable_udp::dissect_xbox_reliable_udp;
+        let _ = super::psn_matchmaking_v3::dissect_psn_matchmaking_v3;
+        let _ = super::psn_rtc_signaling::dissect_psn_rtc_signaling;
+        let _ = super::nintendo_npln_p2p::dissect_nintendo_npln_p2p;
 }

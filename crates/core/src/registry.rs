@@ -19235,6 +19235,114 @@ protocols! {
         aliases:   ["scylladb_rpc"],
         blurb:     "ScyllaDB Internode RPC",
     }
+    SteamDatagramRelay {
+        doc:       "STEAM-DATAGRAM-RELAY traffic.",
+        display:   "STEAM-DATAGRAM-RELAY",
+        color:     0x1B2838,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["steam_datagram_relay", "sdr"],
+        blurb:     "Steam Datagram Relay (SDR) \u{2014} Valve\u{2019}s UDP relay and NAT traversal protocol for Steam.",
+    }
+    SteamSdrRelayV3 {
+        doc:       "STEAM-SDR-RELAY-V3 traffic.",
+        display:   "STEAM-SDR-RELAY-V3",
+        color:     0x2A4759,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["steam_sdr_relay_v3", "sdr_v3"],
+        blurb:     "Steam SDR Relay v3 \u{2014} Valve\u{2019}s TURN-like relay routing for Steam Datagram Relay.",
+    }
+    SteamGameNetworkingS2 {
+        doc:       "STEAM-GAME-NETWORKING-S2 traffic.",
+        display:   "STEAM-GAME-NETWORKING-S2",
+        color:     0x66C0F4,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["steam_game_networking_s2", "steamnet_s2"],
+        blurb:     "Steam GameNetworkingSockets v2 \u{2014} Valve\u{2019}s encrypted UDP transport with connection management.",
+    }
+    EpicOnlineEosP2p {
+        doc:       "EPIC-ONLINE-EOS-P2P traffic.",
+        display:   "EPIC-ONLINE-EOS-P2P",
+        color:     0x313131,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["epic_online_eos_p2p", "eos_p2p"],
+        blurb:     "Epic Online Services P2P \u{2014} peer-to-peer transport layer for Epic games.",
+    }
+    EpicOnlineVoice {
+        doc:       "EPIC-ONLINE-VOICE traffic.",
+        display:   "EPIC-ONLINE-VOICE",
+        color:     0x555555,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["epic_online_voice", "eos_voice"],
+        blurb:     "EOS Voice \u{2014} Epic Online Services voice chat protocol.",
+    }
+    EpicDtlsP2p {
+        doc:       "EPIC-DTLS-P2P traffic.",
+        display:   "EPIC-DTLS-P2P",
+        color:     0x7F7F7F,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["epic_dtls_p2p", "epic_dtls"],
+        blurb:     "Epic DTLS P2P \u{2014} Epic\u{2019}s custom DTLS-based peer-to-peer transport.",
+    }
+    XboxLiveSdv2 {
+        doc:       "XBOX-LIVE-SDV2 traffic.",
+        display:   "XBOX-LIVE-SDV2",
+        color:     0x107C10,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["xbox_live_sdv2", "xbox_sdv2"],
+        blurb:     "Xbox Live SDv2 \u{2014} Microsoft\u{2019}s Secure Device Association protocol.",
+    }
+    XboxLiveMpsd {
+        doc:       "XBOX-LIVE-MPSD traffic.",
+        display:   "XBOX-LIVE-MPSD",
+        color:     0x2F8E2F,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["xbox_live_mpsd", "xbox_mpsd"],
+        blurb:     "Xbox Live MPSD \u{2014} Multiplayer Session Directory for Xbox Live sessions.",
+    }
+    XboxReliableUdp {
+        doc:       "XBOX-RELIABLE-UDP traffic.",
+        display:   "XBOX-RELIABLE-UDP",
+        color:     0x50B450,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["xbox_reliable_udp", "xbox_ru"],
+        blurb:     "Xbox Reliable UDP \u{2014} Microsoft\u{2019}s reliable UDP transport for Xbox game traffic.",
+    }
+    PsnMatchmakingV3 {
+        doc:       "PSN-MATCHMAKING-V3 traffic.",
+        display:   "PSN-MATCHMAKING-V3",
+        color:     0x003791,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["psn_matchmaking_v3", "psn_mm_v3"],
+        blurb:     "PSN Matchmaking v3 \u{2014} PlayStation Network matchmaking and session management protocol.",
+    }
+    PsnRtcSignaling {
+        doc:       "PSN-RTC-SIGNALING traffic.",
+        display:   "PSN-RTC-SIGNALING",
+        color:     0x0070D1,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["psn_rtc_signaling", "psn_rtc"],
+        blurb:     "PSN RTC Signaling \u{2014} PlayStation Network Real-Time Communication signaling (offer/answer/ICE).",
+    }
+    NintendoNplnP2p {
+        doc:       "NINTENDO-NPLN-P2P traffic.",
+        display:   "NINTENDO-NPLN-P2P",
+        color:     0xE60012,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["nintendo_npln_p2p", "npln_p2p"],
+        blurb:     "Nintendo NPLN P2P \u{2014} Nintendo\u{2019}s NPLN matchmaking and P2P transport protocol.",
+    }
 }
 
 impl std::fmt::Display for Protocol {
