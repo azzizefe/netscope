@@ -15967,23 +15967,141 @@ protocols! {
         aliases:   ["woww"],
         blurb:     "A WOWW game protocol packet.",
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    UnrealIris {
+        doc:       "Unreal Engine 5 Iris replication system traffic.",
+        display:   "Unreal Iris",
+        color:     0x00BFFF,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["unreal_iris", "ue5_iris"],
+        blurb:     "Unreal Engine 5 Iris replication system \u{2014} object state replication and prioritization.",
+    }
+    UnrealIrisFastArray {
+        doc:       "Unreal Engine Iris fast array serializer traffic.",
+        display:   "Unreal Iris FastArray",
+        color:     0x00A8E8,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["unreal_iris_fast_array"],
+        blurb:     "Unreal Engine Iris fast array serializer \u{2014} delta-compressed array replication.",
+    }
+    UnrealReplicationGraph {
+        doc:       "Unreal Engine ReplicationGraph node protocol traffic.",
+        display:   "Unreal RepGraph",
+        color:     0x0090D0,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["unreal_replication_graph", "repgraph"],
+        blurb:     "Unreal Engine ReplicationGraph \u{2014} spatial cell-based actor replication routing.",
+    }
+    UnrealNetDriverV2 {
+        doc:       "Unreal Engine 5 custom net driver extensions traffic.",
+        display:   "Unreal NetDriverV2",
+        color:     0x0078B8,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["unreal_net_driver_v2"],
+        blurb:     "Unreal Engine 5 extended net driver \u{2014} custom channel and packet sequencing.",
+    }
+    UnityTransport {
+        doc:       "Unity Transport Package wire format (UTP 2.x) traffic.",
+        display:   "Unity Transport",
+        color:     0xFF6A00,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["unity_transport"],
+        blurb:     "Unity Transport Package (UTP 2.x) \u{2014} reliable/unreliable UDP transport layer.",
+    }
+    UnityNgo {
+        doc:       "Unity Netcode for GameObjects serialization traffic.",
+        display:   "Unity NGO",
+        color:     0xE55E00,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["unity_ngo"],
+        blurb:     "Unity Netcode for GameObjects \u{2014} network variables, RPCs, and object spawning.",
+    }
+    UnityEntitiesNetcode {
+        doc:       "Unity Netcode for Entities (DOTS) transport traffic.",
+        display:   "Unity Entities Netcode",
+        color:     0xCC5200,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["unity_entities_netcode", "dots_netcode"],
+        blurb:     "Unity Netcode for Entities (DOTS) \u{2014} component-based entity replication over UDP.",
+    }
+    UnityRelay {
+        doc:       "Unity Relay service protocol traffic.",
+        display:   "Unity Relay",
+        color:     0xFF4444,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["unity_relay"],
+        blurb:     "Unity Relay service \u{2014} NAT traversal and signalling for peer-to-peer connectivity.",
+    }
+    GodotEnet {
+        doc:       "Godot Engine ENet multiplayer peer traffic.",
+        display:   "Godot ENet",
+        color:     0x22C55E,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["godot_enet"],
+        blurb:     "Godot Engine ENet multiplayer peer \u{2014} ENet-based reliable UDP transport.",
+    }
+    GodotWebsocketMp {
+        doc:       "Godot Engine WebSocket multiplayer peer traffic.",
+        display:   "Godot WebSocket MP",
+        color:     0x1DA853,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["godot_websocket_mp"],
+        blurb:     "Godot Engine WebSocket multiplayer peer \u{2014} WebSocket-based peer-to-peer transport.",
+    }
+    GodotRpcMp {
+        doc:       "Godot Engine high-level multiplayer RPC traffic.",
+        display:   "Godot RPC MP",
+        color:     0x14B8A6,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["godot_rpc_mp"],
+        blurb:     "Godot Engine high-level multiplayer RPC \u{2014} remote procedure call serialization.",
+    }
+    O3deAznetworking {
+        doc:       "Open 3D Engine AzNetworking transport traffic.",
+        display:   "O3DE AzNetworking",
+        color:     0x8B5CF6,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["o3de_aznetworking", "aznetworking"],
+        blurb:     "Open 3D Engine AzNetworking \u{2014} packet header, compression, and encryption.",
+    }
+    CryengineNetChannel {
+        doc:       "CRYENGINE NetChannel protocol traffic.",
+        display:   "CryEngine NetChannel",
+        color:     0xEAB308,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["cryengine_net_channel"],
+        blurb:     "CRYENGINE NetChannel \u{2014} channel-based streaming and RPC transport.",
+    }
+    Source2Netmessage {
+        doc:       "Source 2 engine NetMessage serialization traffic.",
+        display:   "Source 2 NetMessage",
+        color:     0xF97316,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["source2_netmessage"],
+        blurb:     "Source 2 engine NetMessage \u{2014} serialized network message framing.",
+    }
+    Source2Svcmsg {
+        doc:       "Source 2 SVC_Messages (server-to-client) traffic.",
+        display:   "Source 2 SVC_Msg",
+        color:     0xE8630F,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["source2_svcmsg"],
+        blurb:     "Source 2 SVC_Messages \u{2014} server-to-client system messages (SVC_ServerInfo, SVC_PacketEntities, etc.).",
+    }
     Redbackli {
         doc:       "REDBACKLI traffic.",
         display:   "REDBACKLI",

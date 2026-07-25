@@ -1039,3 +1039,22 @@ fn _dissector_reachability_guard_clouddb_73_85() {
         let _ = super::planetscale_db_rpc::dissect_planetscale_db_rpc;
         let _ = super::scylladb_rpc::dissect_scylladb_rpc;
 }
+
+#[cfg(test)]
+fn _dissector_reachability_guard_game_engines_86_100() {
+        let _ = super::unreal_iris::dissect_unreal_iris;
+        let _ = super::unreal_iris_fast_array::dissect_unreal_iris_fast_array;
+        let _ = super::unreal_replication_graph::dissect_unreal_replication_graph;
+        let _ = super::unreal_net_driver_v2::dissect_unreal_net_driver_v2;
+        let _ = super::unity_transport::dissect_unity_transport;
+        let _ = super::unity_ngo::dissect_unity_ngo;
+        let _ = super::unity_entities_netcode::dissect_unity_entities_netcode;
+        let _ = super::unity_relay::dissect_unity_relay;
+        let _ = super::godot_enet::dissect_godot_enet;
+        let _ = super::godot_websocket_mp::dissect_godot_websocket_mp;
+        let _ = super::godot_rpc_mp::dissect_godot_rpc_mp;
+        let _ = super::o3de_aznetworking::dissect_o3de_aznetworking;
+        let _ = super::cryengine_net_channel::dissect_cryengine_net_channel;
+        let _ = super::source2_netmessage::dissect_source2_netmessage;
+        let _ = super::source2_svcmsg::dissect_source2_svcmsg;
+}
