@@ -20141,7 +20141,7 @@ protocols! {
         color:     0x0066CC,
         transport: Udp,
         rank:      3,
-        aliases:   ["opcua_pubsub_udp", "uadp"],
+        aliases:   ["opcua_pubsub_udp", "uadp_udp"],
         blurb:     "OPC UA PubSub UDP multicast (UADP) \u{2014} UDP multicast transport for OPC UA PubSub with UADP network message encoding, dataset payloads, and security headers.",
     }
     OpcUaPubsubMqtt {
@@ -21230,7 +21230,7 @@ protocols! {
         color:     0x00B884,
         transport: Tcp,
         rank:      3,
-        aliases:   ["openai_realtime", "realtime_ws"],
+        aliases:   ["openai_realtime_ws", "realtime_ws"],
         blurb:     "OpenAI Realtime WS \u{2014} OpenAI Realtime API WebSocket with audio/text bidirectional frames, transcript events, and function call handling.",
     }
     OpenaiResponsesApi {
@@ -21248,7 +21248,7 @@ protocols! {
         color:     0x9B8D7E,
         transport: Tcp,
         rank:      3,
-        aliases:   ["anthropic_stream", "claude_stream"],
+        aliases:   ["anthropic_sse_stream", "claude_stream"],
         blurb:     "Anthropic Stream Event \u{2014} Anthropic Claude API SSE event stream with message_start, content_block_delta, content_block_stop, and message_stop events.",
     }
     GoogleGeminiBidi {
@@ -21383,7 +21383,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
-        aliases:   ["langfuse_v2", "langfuse_ingest"],
+        aliases:   ["langfuse_v2", "langfuse_trace_ingest"],
         blurb:     "Langfuse Ingest v2 \u{2014} Langfuse trace and observation ingestion with generation tracking, usage metrics, and hierarchical span modelling for LLM observability.",
     }
     MlflowGatewayStream {

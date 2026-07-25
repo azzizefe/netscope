@@ -669,17 +669,27 @@ mod tests {
         let server = ApiServer::new(19090, buffer, engine, stats_engine);
         let _handle = server.start();
 
-        // Seeded passwords are random; set a known one on the shared on-disk DB
-        // the server reads from so the login below is deterministic.
+        // Use a unique username per test to avoid cross-test credential races
+        // when the harness runs tests in parallel and they share the same SQLite DB.
         crate::db::Database::open()
             .unwrap()
-            .upsert_user("admin", "test-admin-pw", "Admin")
+            .upsert_user("test_admin_routes", "test-admin-pw", "Admin")
             .unwrap();
 
-        thread::sleep(Duration::from_millis(100));
+        // Retry the initial connect — the server thread may need a moment to
+        // bind the port, especially when multiple tests run in parallel and
+        // the machine is under I/O pressure from ~4400 assertions.
+        let mut client = None;
+        for _ in 0..20 {
+            thread::sleep(Duration::from_millis(50));
+            if let Ok(c) = TcpStream::connect("127.0.0.1:19090") {
+                client = Some(c);
+                break;
+            }
+        }
+        let mut client = client.expect("API server did not start within 1 s");
 
-        let mut client = TcpStream::connect("127.0.0.1:19090").unwrap();
-        let login_body = "{\"username\":\"admin\",\"password\":\"test-admin-pw\"}";
+        let login_body = "{\"username\":\"test_admin_routes\",\"password\":\"test-admin-pw\"}";
         let login_req = format!(
             "POST /api/v1/auth/login HTTP/1.1\r\n\
              Content-Length: {}\r\n\
@@ -691,7 +701,11 @@ mod tests {
         client.write_all(login_req.as_bytes()).unwrap();
         let mut resp = String::new();
         client.read_to_string(&mut resp).unwrap();
-        assert!(resp.contains("HTTP/1.1 200 OK"));
+        assert!(
+            resp.contains("HTTP/1.1 200 OK"),
+            "expected 200 OK, got:\n{}",
+            resp
+        );
 
         let token_line = resp.split("\r\n\r\n").nth(1).unwrap();
         let json_value: serde_json::Value = serde_json::from_str(token_line).unwrap();
@@ -763,13 +777,20 @@ mod tests {
 
         crate::db::Database::open()
             .unwrap()
-            .upsert_user("admin", "test-ai-pw", "Admin")
+            .upsert_user("test_admin_ai", "test-ai-pw", "Admin")
             .unwrap();
 
-        thread::sleep(Duration::from_millis(100));
+        let mut client = None;
+        for _ in 0..20 {
+            thread::sleep(Duration::from_millis(50));
+            if let Ok(c) = TcpStream::connect("127.0.0.1:19091") {
+                client = Some(c);
+                break;
+            }
+        }
+        let mut client = client.expect("API server did not start within 1 s");
 
-        let mut client = TcpStream::connect("127.0.0.1:19091").unwrap();
-        let login_body = "{\"username\":\"admin\",\"password\":\"test-ai-pw\"}";
+        let login_body = "{\"username\":\"test_admin_ai\",\"password\":\"test-ai-pw\"}";
         let login_req = format!(
             "POST /api/v1/auth/login HTTP/1.1\r\n\
              Content-Length: {}\r\n\
@@ -781,7 +802,11 @@ mod tests {
         client.write_all(login_req.as_bytes()).unwrap();
         let mut resp = String::new();
         client.read_to_string(&mut resp).unwrap();
-        assert!(resp.contains("HTTP/1.1 200 OK"));
+        assert!(
+            resp.contains("HTTP/1.1 200 OK"),
+            "expected 200 OK, got:\n{}",
+            resp
+        );
         let token_line = resp.split("\r\n\r\n").nth(1).unwrap();
         let json_value: serde_json::Value = serde_json::from_str(token_line).unwrap();
         let token = json_value.get("token").unwrap().as_str().unwrap();
@@ -820,9 +845,16 @@ mod tests {
         let stats_engine = StatsEngine::new();
         let server = ApiServer::new(19092, buffer, engine, stats_engine);
         let _handle = server.start();
-        thread::sleep(Duration::from_millis(100));
+        let mut client = None;
+        for _ in 0..20 {
+            thread::sleep(Duration::from_millis(50));
+            if let Ok(c) = TcpStream::connect("127.0.0.1:19092") {
+                client = Some(c);
+                break;
+            }
+        }
+        let mut client = client.expect("API server did not start within 1 s");
 
-        let mut client = TcpStream::connect("127.0.0.1:19092").unwrap();
         let req = "GET /api/v1/ai/traffic HTTP/1.1\r\n\r\n";
         client.write_all(req.as_bytes()).unwrap();
         let mut resp = String::new();
@@ -838,9 +870,16 @@ mod tests {
         let stats_engine = StatsEngine::new();
         let server = ApiServer::new(19093, buffer, engine, stats_engine);
         let _handle = server.start();
-        thread::sleep(Duration::from_millis(100));
+        let mut client = None;
+        for _ in 0..20 {
+            thread::sleep(Duration::from_millis(50));
+            if let Ok(c) = TcpStream::connect("127.0.0.1:19093") {
+                client = Some(c);
+                break;
+            }
+        }
+        let mut client = client.expect("API server did not start within 1 s");
 
-        let mut client = TcpStream::connect("127.0.0.1:19093").unwrap();
         let req = "GET /api/v1/ai/stats HTTP/1.1\r\n\r\n";
         client.write_all(req.as_bytes()).unwrap();
         let mut resp = String::new();
