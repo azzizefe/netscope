@@ -19838,6 +19838,78 @@ protocols! {
         aliases:   ["sglang_radix", "radix_cache"],
         blurb:     "SGLang RadixAttention cache sharing protocol \u{2014} distributed radix-tree prefix sharing for KV-cache between concurrent inference requests.",
     }
+    OpenllmetryOtlp {
+        doc:       "OpenLLMetry OTLP trace extensions for LLM observability.",
+        display:   "OpenLLMetry OTLP",
+        color:     0x6C5CE7,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openllmetry", "llmetry_otlp"],
+        blurb:     "OpenLLMetry OTLP trace extensions \u{2014} OpenTelemetry-protobuf traces with LLM-specific semantic conventions for model calls, token usage, and latency attribution.",
+    }
+    LangfuseIngest {
+        doc:       "Langfuse trace ingestion API protocol.",
+        display:   "Langfuse Ingest",
+        color:     0x8B5CF6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["langfuse", "langfuse_ingest"],
+        blurb:     "Langfuse trace ingestion API \u{2014} JSON-based trace, observation, and score ingestion with batching and idempotency keys for LLM observability pipelines.",
+    }
+    MlflowGateway {
+        doc:       "MLflow AI Gateway route protocol.",
+        display:   "MLflow Gateway",
+        color:     0x0194E2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mlflow_gateway", "mlflow_ai"],
+        blurb:     "MLflow AI Gateway route protocol \u{2014} REST API for provider-agnostic LLM routing with endpoint definitions, route aliases, and request/response transformation.",
+    }
+    LiteserveGrpc {
+        doc:       "LiteLLM proxy internal scoring/fallback gRPC protocol.",
+        display:   "LiteServe gRPC",
+        color:     0x10B981,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["liteserve", "litellm_scoring"],
+        blurb:     "LiteLLM proxy internal scoring/fallback gRPC \u{2014} protobuf RPCs for model scoring, fallback routing, and spend tracking within the LiteLLM proxy layer.",
+    }
+    PortkeyGatewayRouter {
+        doc:       "Portkey Gateway router RPC protocol.",
+        display:   "Portkey Gateway Router",
+        color:     0xF59E0B,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["portkey", "portkey_router"],
+        blurb:     "Portkey Gateway router RPC \u{2014} provider selection, failover, and load-balancing RPCs with latency-based, cost-based, and fallback routing strategies.",
+    }
+    HeliconeWorkerQueue {
+        doc:       "Helicone async log worker queue protocol.",
+        display:   "Helicone Worker Queue",
+        color:     0xEF4444,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["helicone", "helicone_queue"],
+        blurb:     "Helicone async log worker queue \u{2014} batched log ingestion with request/response capture, provider metadata, and backpressure signalling for LLM observability.",
+    }
+    LangsmithTracePush {
+        doc:       "LangSmith trace push internal protocol.",
+        display:   "LangSmith Trace Push",
+        color:     0x3B82F6,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["langsmith", "langsmith_trace"],
+        blurb:     "LangSmith trace push protocol \u{2014} run and trace ingestion over HTTPS with nested child runs, feedback scoring, and dataset versioning for LLM application debugging.",
+    }
+    ArizePhoenixCollect {
+        doc:       "Arize Phoenix OTLP collector extensions for LLM.",
+        display:   "Arize Phoenix Collect",
+        color:     0x06B6D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["arize_phoenix", "phoenix_collect"],
+        blurb:     "Arize Phoenix OTLP collector extensions \u{2014} OpenTelemetry-protobuf exports with LLM-specific semantic conventions for embeddings, token counts, and retrieval-augmented generation spans.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

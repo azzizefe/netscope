@@ -83,6 +83,10 @@ use super::{
     google_gemini_stream, google_aistudio_ws,
     vllm_async_engine, tgi_messages, triton_inference_grpc,
     triton_model_repo_stream, sglang_radix_cache,
+    arize_phoenix_collect, helicone_worker_queue,
+    langfuse_ingest, langsmith_trace_push,
+    liteserve_grpc, mlflow_gateway,
+    openllmetry_otlp, portkey_gateway_router,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1226,4 +1230,16 @@ fn _dissector_reachability_guard_vector_db_190_197() {
         let _ = super::qdrant_quantization_sync::dissect_qdrant_quantization_sync;
         let _ = super::milvus_proxy_grpc::dissect_milvus_proxy_grpc;
         let _ = super::milvus_sealed_seg_stream::dissect_milvus_sealed_seg_stream;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_llm_observability_gateway_198_205() {
+        let _ = super::openllmetry_otlp::dissect_openllmetry_otlp;
+        let _ = super::langfuse_ingest::dissect_langfuse_ingest;
+        let _ = super::mlflow_gateway::dissect_mlflow_gateway;
+        let _ = super::liteserve_grpc::dissect_liteserve_grpc;
+        let _ = super::portkey_gateway_router::dissect_portkey_gateway_router;
+        let _ = super::helicone_worker_queue::dissect_helicone_worker_queue;
+        let _ = super::langsmith_trace_push::dissect_langsmith_trace_push;
+        let _ = super::arize_phoenix_collect::dissect_arize_phoenix_collect;
 }
