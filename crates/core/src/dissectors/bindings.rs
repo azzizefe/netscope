@@ -106,6 +106,14 @@ use super::{
     opc_ua_alarm_condition, opc_ua_gds_push,
     opc_ua_pubsub_mqtt, opc_ua_pubsub_udp,
     tsn_stream_reservation, tsn_universal_windows,
+    aws_iot_twinmaker_knowledge, azure_digital_twin_dtdl,
+    eclipse_ditto_twin, eclipse_vorto_sync,
+    nvidia_omniverse_nucleus, nvidia_omniverse_usd_stream,
+    ptc_thingworx_alwayson, siemens_mindsphere_twinsync,
+    iec_61850_mms, iec_61850_goose,
+    iec_61850_sv, iec_61850_r_goose,
+    iec_61970_cim_xml, openadr_3_0,
+    ocpp_2_1, iso_15118_v2g,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1314,4 +1322,28 @@ fn _dissector_reachability_guard_opcua_tsn_231_242() {
         let _ = super::detnet_service_layer::dissect_detnet_service_layer;
         let _ = super::tsn_universal_windows::dissect_tsn_universal_windows;
         let _ = super::cc_link_ie_tsn::dissect_cc_link_ie_tsn;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_digital_twin_243_250() {
+        let _ = super::azure_digital_twin_dtdl::dissect_azure_digital_twin_dtdl;
+        let _ = super::aws_iot_twinmaker_knowledge::dissect_aws_iot_twinmaker_knowledge;
+        let _ = super::nvidia_omniverse_nucleus::dissect_nvidia_omniverse_nucleus;
+        let _ = super::nvidia_omniverse_usd_stream::dissect_nvidia_omniverse_usd_stream;
+        let _ = super::eclipse_ditto_twin::dissect_eclipse_ditto_twin;
+        let _ = super::eclipse_vorto_sync::dissect_eclipse_vorto_sync;
+        let _ = super::siemens_mindsphere_twinsync::dissect_siemens_mindsphere_twinsync;
+        let _ = super::ptc_thingworx_alwayson::dissect_ptc_thingworx_alwayson;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_smart_grid_energy_251_258() {
+        let _ = super::iec_61850_mms::dissect_iec_61850_mms;
+        let _ = super::iec_61850_goose::dissect_iec_61850_goose;
+        let _ = super::iec_61850_sv::dissect_iec_61850_sv;
+        let _ = super::iec_61850_r_goose::dissect_iec_61850_r_goose;
+        let _ = super::iec_61970_cim_xml::dissect_iec_61970_cim_xml;
+        let _ = super::openadr_3_0::dissect_openadr_3_0;
+        let _ = super::ocpp_2_1::dissect_ocpp_2_1;
+        let _ = super::iso_15118_v2g::dissect_iso_15118_v2g;
 }

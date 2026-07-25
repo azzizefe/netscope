@@ -20243,6 +20243,150 @@ protocols! {
         aliases:   ["cclink_tsn", "mitsubishi_tsn"],
         blurb:     "CC-Link IE TSN \u{2014} Mitsubishi FA field network combining CC-Link IE with TSN for cyclic/transient data exchange, slave synchronisation, and open FA networking.",
     }
+    AzureDigitalTwinDtdl {
+        doc:       "Azure Digital Twins DTDL model sync protocol.",
+        display:   "Azure Digital Twins DTDL",
+        color:     0x0078D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["azure_dtdl", "digitaltwins"],
+        blurb:     "Azure Digital Twins DTDL model sync \u{2014} Digital Twins Definition Language model exchange with interface definitions, telemetry schemas, and component relationships for Azure digital twins.",
+    }
+    AwsIotTwinmakerKnowledge {
+        doc:       "AWS IoT TwinMaker Knowledge Graph sync protocol.",
+        display:   "AWS IoT TwinMaker",
+        color:     0xFF9900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["twinmaker", "aws_twinmaker"],
+        blurb:     "AWS IoT TwinMaker Knowledge Graph sync \u{2014} workspace, entity, and component type definitions for digital twin knowledge graphs with property bindings and data connectors.",
+    }
+    NvidiaOmniverseNucleus {
+        doc:       "NVIDIA Omniverse Nucleus DB replication protocol.",
+        display:   "Omniverse Nucleus DB",
+        color:     0x76B900,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["omniverse_nucleus", "nvidia_nucleus"],
+        blurb:     "NVIDIA Omniverse Nucleus DB replication \u{2014} asset versioning, collaborative layer replication, and metadata synchronisation for Omniverse Nucleus database servers.",
+    }
+    NvidiaOmniverseUsdStream {
+        doc:       "Omniverse USD (Universal Scene Description) stream protocol.",
+        display:   "Omniverse USD Stream",
+        color:     0x56B400,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["omniverse_usd", "usd_stream"],
+        blurb:     "Omniverse USD stream \u{2014} Universal Scene Description stage composition, primitive streaming, and layer editing over the Omniverse USD transport protocol.",
+    }
+    EclipseDittoTwin {
+        doc:       "Eclipse Ditto digital twin CRUD protocol.",
+        display:   "Eclipse Ditto Twin",
+        color:     0xFF6600,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ditto_twin", "eclipse_ditto"],
+        blurb:     "Eclipse Ditto digital twin CRUD \u{2014} HTTP/SSE-based thing management with CRUD operations on digital twin features, policies, and connectivity for IoT devices.",
+    }
+    EclipseVortoSync {
+        doc:       "Eclipse Vorto information model sync protocol.",
+        display:   "Eclipse Vorto Sync",
+        color:     0xE6007E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["vorto_sync", "eclipse_vorto"],
+        blurb:     "Eclipse Vorto information model sync \u{2014} function block definition, namespace resolution, and mapping specification synchronisation for IoT device information models.",
+    }
+    SiemensMindsphereTwinsync {
+        doc:       "Siemens MindSphere twin synchronization protocol.",
+        display:   "MindSphere TwinSync",
+        color:     0x009999,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["mindsphere", "twinsync"],
+        blurb:     "Siemens MindSphere twin sync \u{2014} asset twin synchronisation with aspect templates, property updates, and twin instance management for MindSphere IoT platform.",
+    }
+    PtcThingworxAlwayson {
+        doc:       "PTC ThingWorx AlwaysOn binary protocol.",
+        display:   "ThingWorx AlwaysOn",
+        color:     0xDA291C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["thingworx", "thingworx_alwayson"],
+        blurb:     "PTC ThingWorx AlwaysOn binary protocol \u{2014} persistent binary connection for property updates, service invocation, and event subscription with ThingWorx industrial IoT platform.",
+    }
+    Iec61850Mms {
+        doc:       "IEC 61850 MMS (Manufacturing Message Specification) protocol.",
+        display:   "IEC 61850 MMS",
+        color:     0x005BBB,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["iec61850_mms", "mms_proto"],
+        blurb:     "IEC 61850 MMS \u{2014} client-server manufacturing message specification for substation automation with read/write, report, and control services over TCP/IP.",
+    }
+    Iec61850Goose {
+        doc:       "IEC 61850 GOOSE fast multicast protocol.",
+        display:   "IEC 61850 GOOSE",
+        color:     0xE60000,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["iec61850_goose", "goose_multicast"],
+        blurb:     "IEC 61850 GOOSE \u{2014} generic object-oriented substation event fast multicast for high-speed peer-to-peer status and control data in substation automation.",
+    }
+    Iec61850Sv {
+        doc:       "IEC 61850 Sampled Values (SV) streaming protocol.",
+        display:   "IEC 61850 SV",
+        color:     0xFF6600,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["iec61850_sv", "sampled_values"],
+        blurb:     "IEC 61850 Sampled Values \u{2014} streaming of voltage and current sampled measurements from merging units to protection and control IEDs over Ethernet.",
+    }
+    Iec61850RGoose {
+        doc:       "IEC 61850 Routable-GOOSE (R-GOOSE over IP) protocol.",
+        display:   "IEC 61850 R-GOOSE",
+        color:     0xCC3300,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["iec61850_rgoose", "routable_goose"],
+        blurb:     "IEC 61850 R-GOOSE \u{2014} routable GOOSE messages over IP networks with VLAN tagging, time-to-live, and extended addressing for wide-area substation communication.",
+    }
+    Iec61970CimXml {
+        doc:       "IEC 61970 CIM (Common Information Model) XML protocol.",
+        display:   "IEC 61970 CIM XML",
+        color:     0x3399FF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["iec61970_cim", "cim_xml"],
+        blurb:     "IEC 61970 CIM XML \u{2014} Common Information Model RDF/XML exchange for power system resource definitions, topology, and equipment connectivity in energy management systems.",
+    }
+    Openadr30 {
+        doc:       "OpenADR 3.0 demand-response protocol.",
+        display:   "OpenADR 3.0",
+        color:     0x00A650,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openadr", "oadr30"],
+        blurb:     "OpenADR 3.0 \u{2014} open automated demand response protocol for utility-to-customer event signalling, resource registration, and report-based load management.",
+    }
+    Ocpp21 {
+        doc:       "OCPP 2.1 (Open Charge Point Protocol for EV) protocol.",
+        display:   "OCPP 2.1",
+        color:     0x0078D4,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ocpp", "ocpp21"],
+        blurb:     "OCPP 2.1 \u{2014} open charge point protocol for EV charging station management with boot, authorize, transaction, and firmware update services over WebSocket/JSON.",
+    }
+    Iso15118V2g {
+        doc:       "ISO 15118 vehicle-to-grid (V2G) protocol.",
+        display:   "ISO 15118 V2G",
+        color:     0x00A4EF,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["iso15118", "v2g_proto"],
+        blurb:     "ISO 15118 V2G \u{2014} vehicle-to-grid communication interface for EV charging with session setup, service discovery, payment, and smart charging scheduling over TCP.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",
