@@ -20963,6 +20963,69 @@ protocols! {
         aliases:   ["spiral_pir", "pir_spiral"],
         blurb:     "SPIRAL PIR Stream \u{2014} streaming private information retrieval with hint-based preprocessing, linear-time query, and sublinear communication for large databases.",
     }
+    FheCkksSerialize {
+        doc:       "CKKS homomorphic encryption ciphertext serialize.",
+        display:   "FHE CKKS Serialize",
+        color:     0x1565C0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ckks_serialize", "fhe_ckks"],
+        blurb:     "CKKS Ciphertext Serialize \u{2014} CKKS approximate homomorphic encryption ciphertext serialization with real/imaginary parts, slot count, and scaling factor for encrypted floating-point exchange.",
+    }
+    FheBfvCiphertext {
+        doc:       "BFV (Brakerski-Fan-Vercauteren) ciphertext wire format.",
+        display:   "FHE BFV Ciphertext",
+        color:     0xE65100,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["bfv_ciphertext", "fhe_bfv"],
+        blurb:     "BFV Ciphertext \u{2014} Brakerski-Fan-Vercauteren RLWE-based homomorphic encryption ciphertext wire format with plaintext modulus and ring dimension for integer arithmetic.",
+    }
+    FheTfheBootstrapping {
+        doc:       "TFHE gate bootstrapping RPC protocol.",
+        display:   "FHE TFHE Bootstrapping",
+        color:     0x6A1B9A,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tfhe_bootstrap", "fhe_tfhe"],
+        blurb:     "TFHE Bootstrapping \u{2014} TFHE gate bootstrapping RPC with lookup tables, key switching, and programmable gate evaluation for fast FHE boolean circuit execution.",
+    }
+    FheOpenfhePke {
+        doc:       "OpenFHE public key encryption API.",
+        display:   "FHE OpenFHE PKE",
+        color:     0x2E7D32,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["openfhe_pke", "fhe_openfhe"],
+        blurb:     "OpenFHE PKE \u{2014} OpenFHE public key encryption API supporting multiple FHE schemes (CKKS, BFV, BGV) with key generation, encryption, and evaluation operations.",
+    }
+    FheIbmHelibOp {
+        doc:       "IBM HELib homomorphic operation pipeline.",
+        display:   "FHE IBM HELib Op",
+        color:     0x00838F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["helib_op", "ibm_helib"],
+        blurb:     "IBM HELib Op \u{2014} IBM HELib homomorphic operation pipeline with multiplication, rotation, and bootstrapping on BGV-encrypted data for deep circuit evaluation.",
+    }
+    FheGoogleShell {
+        doc:       "Google SHELL (Symmetric Homomorphic Encryption).",
+        display:   "FHE Google SHELL",
+        color:     0xC62828,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["google_shell", "shell_fhe"],
+        blurb:     "Google SHELL \u{2014} Google symmetric homomorphic encryption with keyed nonce-based encryption for low-latency FHE on resource-constrained clients.",
+    }
+    FheTranspilerCggi {
+        doc:       "FHE Transpiler CGGI-to-TFHE bridge protocol.",
+        display:   "FHE Transpiler CGGI",
+        color:     0xFF8F00,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cggi_transpiler", "fhe_cggi"],
+        blurb:     "FHE Transpiler CGGI \u{2014} CGGI-to-TFHE bridge protocol for converting high-level circuit descriptions to TFHE gate bootstrapping operations with programmable LUTs.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

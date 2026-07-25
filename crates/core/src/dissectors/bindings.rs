@@ -147,6 +147,10 @@ use super::{
     zk_email_dkim, mpc_ggm_3party,
     mpc_spdz_online, mpc_ttp_preprocessing,
     pir_sealpir, pir_spiral_stream,
+    fhe_ckks_serialize, fhe_bfv_ciphertext,
+    fhe_tfhe_bootstrapping, fhe_openfhe_pke,
+    fhe_ibm_helib_op, fhe_google_shell,
+    fhe_transpiler_cggi,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1471,4 +1475,15 @@ fn _dissector_reachability_guard_zk_smpc_313_322() {
         let _ = super::mpc_ttp_preprocessing::dissect_mpc_ttp_preprocessing;
         let _ = super::pir_sealpir::dissect_pir_sealpir;
         let _ = super::pir_spiral_stream::dissect_pir_spiral_stream;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_fhe_323_329() {
+        let _ = super::fhe_ckks_serialize::dissect_fhe_ckks_serialize;
+        let _ = super::fhe_bfv_ciphertext::dissect_fhe_bfv_ciphertext;
+        let _ = super::fhe_tfhe_bootstrapping::dissect_fhe_tfhe_bootstrapping;
+        let _ = super::fhe_openfhe_pke::dissect_fhe_openfhe_pke;
+        let _ = super::fhe_ibm_helib_op::dissect_fhe_ibm_helib_op;
+        let _ = super::fhe_google_shell::dissect_fhe_google_shell;
+        let _ = super::fhe_transpiler_cggi::dissect_fhe_transpiler_cggi;
 }
