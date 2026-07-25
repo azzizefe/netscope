@@ -20045,6 +20045,96 @@ protocols! {
         aliases:   ["azure_content_safety", "acs_eval"],
         blurb:     "Azure AI Content Safety streaming eval \u{2014} real-time content safety evaluation with severity-based category analysis, prompt injection detection, and streaming verdicts.",
     }
+    CognexVisionProtocol {
+        doc:       "Cognex In-Sight vision system streaming protocol.",
+        display:   "Cognex Vision",
+        color:     0x00A650,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["cognex", "cognex_insight"],
+        blurb:     "Cognex In-Sight vision system streaming \u{2014} industrial image inspection results, pass/fail verdicts, and image data streaming over TCP/IP from Cognex vision controllers.",
+    }
+    KeyenceCvXFtp {
+        doc:       "Keyence CV-X series image transfer protocol.",
+        display:   "Keyence CV-X FTP",
+        color:     0xE31A1A,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["keyence", "keyence_cvx"],
+        blurb:     "Keyence CV-X series image transfer \u{2014} FTP-based image acquisition from Keyence CV-X vision controllers with inspection result metadata.",
+    }
+    BaslerBlazeTof {
+        doc:       "Basler blaze ToF camera gRPC streaming protocol.",
+        display:   "Basler Blaze ToF",
+        color:     0x005B94,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["basler_blaze", "blaze_tof"],
+        blurb:     "Basler blaze ToF camera gRPC streaming \u{2014} time-of-flight depth map and point cloud streaming over gRPC with camera configuration and trigger control.",
+    }
+    FlirAtlasSdk {
+        doc:       "FLIR Atlas SDK thermal streaming protocol.",
+        display:   "FLIR Atlas SDK",
+        color:     0xEE3124,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["flir_atlas", "flir_sdk"],
+        blurb:     "FLIR Atlas SDK thermal streaming \u{2014} radiometric thermal data streaming with temperature measurement, palette configuration, and analysis region definitions.",
+    }
+    SickLidarRms {
+        doc:       "SICK LiDAR RMS (Robot Monitoring System) protocol.",
+        display:   "SICK LiDAR RMS",
+        color:     0x00853E,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["sick_lidar", "sick_rms"],
+        blurb:     "SICK LiDAR Robot Monitoring System \u{2014} laser scan data streaming, RMS health monitoring, and safety zone configuration for SICK LiDAR sensors.",
+    }
+    VelodyneVlpPacket {
+        doc:       "Velodyne VLP LiDAR raw packet format.",
+        display:   "Velodyne VLP Packet",
+        color:     0x00A3E0,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["velodyne", "vlp_packet"],
+        blurb:     "Velodyne VLP LiDAR raw packet format \u{2014} UDP data blocks containing laser firing sequence measurements for VLP-16, VLP-32 and HDL-64E LiDAR sensors.",
+    }
+    OusterLidarTcp {
+        doc:       "Ouster LiDAR TCP command protocol.",
+        display:   "Ouster LiDAR TCP",
+        color:     0x6C1D45,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ouster", "ouster_lidar"],
+        blurb:     "Ouster LiDAR TCP command protocol \u{2014} device configuration, sensor info queries, and lidar mode control over TCP for Ouster OS-series LiDAR.",
+    }
+    IntelRealsenseDds {
+        doc:       "Intel RealSense DDS (ROS2) camera node protocol.",
+        display:   "RealSense DDS",
+        color:     0x0071C5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["realsense", "realsense_dds"],
+        blurb:     "Intel RealSense DDS ROS2 camera node \u{2014} depth, color, and IMU stream topics published over DDS for RealSense depth cameras in ROS2 environments.",
+    }
+    EdgeImpulseStudioData {
+        doc:       "Edge Impulse Studio data acquisition daemon protocol.",
+        display:   "Edge Impulse Studio",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["edge_impulse", "ei_studio"],
+        blurb:     "Edge Impulse Studio data acquisition daemon \u{2014} sensor data ingestion, device management, and acquisition control for Edge Impulse machine learning pipelines.",
+    }
+    SeeedGroveVisionAi {
+        doc:       "Seeed Grove Vision AI module WebSocket protocol.",
+        display:   "Grove Vision AI",
+        color:     0x10A37F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["grove_vision", "seeed_vision"],
+        blurb:     "Seeed Grove Vision AI module WebSocket \u{2014} real-time object detection and classification results over WebSocket from the Grove Vision AI module.",
+    }
     NvlinkFabric {
         doc:       "NVIDIA NVLink multi-node fabric protocol traffic.",
         display:   "NVLink Fabric",

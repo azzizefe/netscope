@@ -95,6 +95,11 @@ use super::{
     azure_ai_content_safety, guardrails_ai_validator,
     llama_guard_safeguard, nemo_guardrails_http,
     openai_moderation_async,
+    basler_blaze_tof, cognex_vision_protocol,
+    edge_impulse_studio_data, flir_atlas_sdk,
+    intel_realsense_dds, keyence_cv_x_ftp,
+    ouster_lidar_tcp, seeed_grove_vision_ai,
+    sick_lidar_rms, velodyne_vlp_packet,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -1273,4 +1278,18 @@ fn _dissector_reachability_guard_ai_safety_governance_214_220() {
         let _ = super::aegis_guard_llama::dissect_aegis_guard_llama;
         let _ = super::llama_guard_safeguard::dissect_llama_guard_safeguard;
         let _ = super::azure_ai_content_safety::dissect_azure_ai_content_safety;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_industrial_edge_ai_221_230() {
+        let _ = super::cognex_vision_protocol::dissect_cognex_vision_protocol;
+        let _ = super::keyence_cv_x_ftp::dissect_keyence_cv_x_ftp;
+        let _ = super::basler_blaze_tof::dissect_basler_blaze_tof;
+        let _ = super::flir_atlas_sdk::dissect_flir_atlas_sdk;
+        let _ = super::sick_lidar_rms::dissect_sick_lidar_rms;
+        let _ = super::velodyne_vlp_packet::dissect_velodyne_vlp_packet;
+        let _ = super::ouster_lidar_tcp::dissect_ouster_lidar_tcp;
+        let _ = super::intel_realsense_dds::dissect_intel_realsense_dds;
+        let _ = super::edge_impulse_studio_data::dissect_edge_impulse_studio_data;
+        let _ = super::seeed_grove_vision_ai::dissect_seeed_grove_vision_ai;
 }
