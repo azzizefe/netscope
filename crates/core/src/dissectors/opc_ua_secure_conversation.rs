@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_sec_conv_unrecognized() {
-        let r = dissect_opc_ua_secure_conversation(None, None, 0, 0, b"GET / ");
+        let r = dissect_opc_ua_secure_conversation(None, None, 0, 0, b"GET / HTTP/1.1");
         assert!(r.summary.contains("unrecognized"));
     }
 

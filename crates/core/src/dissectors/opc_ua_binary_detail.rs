@@ -183,21 +183,56 @@ pub fn dissect_opc_ua_binary_detail(
     }
     let mut off = 0;
     let first = payload[0];
-    if (first & 0xC0) == 0 && first < 0x3F {
+    let encoding = first & 0x3F;
+    let ns_bit = first & 0x40;
+    if encoding == 0x00 && payload.len() >= 3 {
+        let node_val = payload[1];
+        if (1..=3).contains(&node_val) && payload.len() >= 4 {
+            let enc_byte = payload[2];
+            if enc_byte <= 2 {
+                return fallback(format!("OPC UA Binary ExtensionObject typeId={} encoding={}", node_val, match enc_byte { 0 => "NoBody", 1 => "ByteString", _ => "Xml" }));
+            }
+        }
+    }
+    if payload.len() >= 5 && encoding == 0x02 {
+        let val = u32::from_le_bytes([payload[1], payload[2], payload[3], payload[4]]);
+        if (1..=10).contains(&val) && off + 5 < payload.len() {
+            let enc_byte = payload[5];
+            if enc_byte <= 2 {
+                return fallback(format!("OPC UA Binary ExtensionObject typeId={val} encoding={}", match enc_byte { 0 => "NoBody", 1 => "ByteString", _ => "Xml" }));
+            }
+        }
+    }
+    if ns_bit != 0 {
         let node_id = parse_node_id_str(payload, &mut off);
         return fallback(format!("OPC UA Binary NodeId: {node_id}"));
     }
-    if first <= 29 || (first >= 32 && first <= 63) {
-        let variant = parse_variant_str(payload, &mut off);
-        return fallback(format!("OPC UA Binary {variant}"));
-    }
-    if payload.len() >= 4 {
-        let type_id = u32::from_le_bytes([payload[0], payload[1], payload[2], payload[3]]);
-        if type_id == 1 || type_id == 2 || type_id == 3 {
-            return fallback(format!("OPC UA Binary ExtensionObject typeId={type_id}"));
+    match encoding {
+        0x00 if payload.len() >= 2 => {
+            let node_id = parse_node_id_str(payload, &mut off);
+            fallback(format!("OPC UA Binary NodeId: {node_id}"))
+        }
+        0x01 if payload.len() >= 3 => {
+            let node_id = parse_node_id_str(payload, &mut off);
+            fallback(format!("OPC UA Binary NodeId: {node_id}"))
+        }
+        0x02 if payload.len() >= 5 => {
+            let node_id = parse_node_id_str(payload, &mut off);
+            fallback(format!("OPC UA Binary NodeId: {node_id}"))
+        }
+        0x03 | 0x04 | 0x05 => {
+            let node_id = parse_node_id_str(payload, &mut off);
+            fallback(format!("OPC UA Binary NodeId: {node_id}"))
+        }
+        _ => {
+            let variant = parse_variant_str(payload, &mut off);
+            if variant != "?" && variant != "Variant(?)" {
+                fallback(format!("OPC UA Binary {variant}"))
+            } else {
+                fallback(format!("OPC UA Binary Detail ({})", super::bytes(payload.len() as u64)))
+            }
         }
     }
-    fallback(format!("OPC UA Binary Detail ({})", super::bytes(payload.len() as u64)))
 }
 
 #[cfg(test)]
@@ -255,9 +290,10 @@ mod tests {
 
     #[test]
     fn test_extension_object() {
-        let buf = &[0x01, 0x00, 0x00, 0x00];
+        let buf = &[0x00, 0x01, 0x01, 0x04, 0x00, 0x00, 0x00];
         let r = dissect_opc_ua_binary_detail(None, None, 0, 0, buf);
         assert!(r.summary.contains("ExtensionObject"));
+        assert!(r.summary.contains("typeId=1"));
     }
 
     #[test]

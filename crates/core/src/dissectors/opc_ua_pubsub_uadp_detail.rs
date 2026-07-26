@@ -91,7 +91,7 @@ pub fn dissect_opc_ua_pubsub_uadp_detail(
     parts.push(format!("pubIdType={published_id_type}"));
     if !tags1.is_empty() { parts.push(format!("flags1=[{}]", tags1.join(","))); }
     if !tags2.is_empty() { parts.push(format!("flags2=[{}]", tags2.join(","))); }
-    if payload.len() > 4 && (payload[0] & 0x0F) != 0 {
+    if payload.len() >= 4 && (payload[0] & 0x0F) != 0 {
         let count = payload[0] & 0x0F;
         parts.push(format!("dataSets={count}"));
     }

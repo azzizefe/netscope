@@ -20180,6 +20180,96 @@ protocols! {
         aliases:   ["opcua_sec_conv", "ua_secureconv"],
         blurb:     "OPC UA SecureConversation \u{2014} hybrid security message layer wrapping OPC UA binary traffic with secure-channel identifiers, token management, and sequence-number tracking for authenticated and encrypted industrial communication.",
     }
+    OpcUaBinaryDetail {
+        doc:       "OPC UA Binary encoding detail dissector — NodeId, Variant, ExtensionObject parsers.",
+        display:   "OPC UA Binary Detail",
+        color:     0x2A7070,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_binary_det", "ua_binary_detail"],
+        blurb:     "OPC UA Binary Detail \u{2014} deep OPC UA binary encoding layer parser for NodeId (TwoByte/FourByte/Numeric/String/Guid/ByteString), Variant (all 29 data types with array and dimension flags), and ExtensionObject type identification for forensic protocol analysis.",
+    }
+    OpcUaSecureConversation {
+        doc:       "OPC UA SecureConversation channel detail analysis.",
+        display:   "OPC UA SecureConv Detail",
+        color:     0x1F6A6A,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_sec_conv_det", "ua_sec_conv_detail"],
+        blurb:     "OPC UA SecureConversation Detail \u{2014} in-depth secure channel analysis with token lifecycle tracking (initial/active/renewed), sequence-number ordering, security header type identification (Asymmetric/Symmetric), and channel state machine monitoring for OPC UA security auditing.",
+    }
+    OpcUaPubsubUadpDetail {
+        doc:       "OPC UA PubSub UADP NetworkMessage detailed parser.",
+        display:   "OPC UA PubSub UADP Detail",
+        color:     0x1E7A6A,
+        transport: Udp,
+        rank:      5,
+        aliases:   ["opcua_uadp_det", "uadp_detail"],
+        blurb:     "OPC UA PubSub UADP Detail \u{2014} deep OPC UA UADP network message parser with extended flags decoding (PublisherId, WriterGroupId, WriterId, DataSetWriterId), payload header analysis, dataset message type classification, and DataSetMessage header field identification for UADP telemetry.",
+    }
+    OpcUaPubsubJsonDetail {
+        doc:       "OPC UA PubSub JSON NetworkMessage detailed parser.",
+        display:   "OPC UA PubSub JSON Detail",
+        color:     0x3A7A5A,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_json_det", "ua_pubsub_json"],
+        blurb:     "OPC UA PubSub JSON Detail \u{2014} detailed OPC UA JSON NetworkMessage parser for DataSetMessage, KeyValueDataSet, MetaData, KeepAlive, and Event message types with PublisherId, DataSetWriterId, WriterGroupId, and SequenceNumber field extraction from JSON-encoded telemetry.",
+    }
+    OpcUaGdsCertPush {
+        doc:       "OPC UA GDS Certificate push/pull detail dissector.",
+        display:   "OPC UA GDS Cert Push",
+        color:     0x4A5A7A,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_gds_cert", "gds_cert_push"],
+        blurb:     "OPC UA GDS Cert Push \u{2014} OPC UA Global Discovery Server certificate management dissector for PushCertificate, PullCertificate, GetTrustList, GetCertificateGroups, RegisterServer, and ApplyChanges operations with certificate group type and status classification.",
+    }
+    OpcUaCompanionSpec {
+        doc:       "OPC UA Companion Specification metadata parser.",
+        display:   "OPC UA Companion Spec",
+        color:     0x5A6A4A,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_companion", "ua_companion_spec"],
+        blurb:     "OPC UA Companion Spec \u{2014} OPC UA Companion Specification metadata identification for ISA-95, MTConnect, AutoID, PLCopen, IO-Link, PROFINET, EtherNet/IP, MODBUS, BACnet, PackML, and 20+ other industry-specific companion specifications with version extraction and namespace URI parsing.",
+    }
+    OpcUaAlarmShell {
+        doc:       "OPC UA A&C (Alarms & Conditions) event detail dissector.",
+        display:   "OPC UA Alarm Shell",
+        color:     0xCC4400,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_alarm_shell", "ua_alarm_detail"],
+        blurb:     "OPC UA Alarm Shell \u{2014} deep OPC UA Alarms & Conditions event parser with alarm type classification (ExclusiveLimit, InclusiveLimit, Trip, RateOfChange, Discrete), state tracking (Active/Inactive/Acknowledged/Confirmed/Suppressed/Shelved), severity scoring (0-1000), and condition variable extraction for industrial safety monitoring.",
+    }
+    OpcUaHistoryReadDetail {
+        doc:       "OPC UA Historical Access raw/processed data detail parser.",
+        display:   "OPC UA History Read Detail",
+        color:     0x5A4A6A,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_history", "ua_history_read"],
+        blurb:     "OPC UA History Read Detail \u{2014} OPC UA Historical Access dissector for ReadRaw, ReadProcessed, and ReadAtTime operations with aggregate function identification (Interpolative, Average, Minimum, Maximum, StdDev), time range extraction, and continuation point tracking for historian data retrieval analysis.",
+    }
+    OpcUaReverseConnect {
+        doc:       "OPC UA Reverse Connect protocol dissector.",
+        display:   "OPC UA ReverseConnect",
+        color:     0x6A4A5A,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_rev_conn", "ua_reverse_connect"],
+        blurb:     "OPC UA ReverseConnect \u{2014} OPC UA Reverse Connection protocol dissector for ReverseHello message parsing, server-initiated connection endpoint extraction, session lifecycle tracking (CreateSession/SessionActivate/CloseSession), and client-server role reversal detection for firewall traversal and DMZ deployment monitoring.",
+    }
+    OpcUaMqttJsonNetwork {
+        doc:       "OPC UA MQTT JSON NetworkMessage encoding dissector.",
+        display:   "OPC UA MQTT JSON Network",
+        color:     0x3A6A7A,
+        transport: Tcp,
+        rank:      5,
+        aliases:   ["opcua_mqtt_json", "ua_mqtt_json_net"],
+        blurb:     "OPC UA MQTT JSON Network \u{2014} OPC UA PubSub MQTT JSON NetworkMessage parser for DataSetMessage, MetaData, KeepAlive, Event, WriterGroup/DataSetWriter/ReaderGroup configuration, and Status messages with MQTT topic inference, payload format classification (KeyValuePair/RawData/DataSetArray), and field extraction for cloud-edge telemetry.",
+    }
     OpcUaAlarmCondition {
         doc:       "OPC UA A&C (Alarms & Conditions) client protocol.",
         display:   "OPC UA Alarm Condition",
