@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::{Line, Span};
@@ -15,26 +13,37 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(6),
-            Constraint::Min(8),
+            Constraint::Min(6),
             Constraint::Length(3),
             Constraint::Length(6),
+            Constraint::Length(7),
+            Constraint::Length(5),
         ])
         .split(area);
 
     let snap = app.stats.snapshot();
     render_stats_panel(frame, layout[0], &snap, border);
 
-    // Split layout[1] horizontally for Protocol Hierarchy and Packet Lengths
-    let sub_layout = Layout::default()
+    let sub_mid = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(layout[1]);
 
-    render_protocol_hierarchy(frame, sub_layout[0], &snap, border);
-    render_packet_lengths(frame, sub_layout[1], &snap, border);
+    render_protocol_hierarchy(frame, sub_mid[0], &snap, border);
+    render_packet_lengths(frame, sub_mid[1], &snap, border);
 
     render_bandwidth_panel(frame, layout[2], &snap, border);
     render_top_talkers(frame, layout[3], &snap, border);
+
+    let sub_llm = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .split(layout[4]);
+
+    render_llm_model_stats(frame, sub_llm[0], &snap, border);
+    render_cost_counter(frame, sub_llm[1], &snap, border);
+
+    render_anomaly_alerts(frame, layout[5], &snap, border);
 }
 
 fn render_stats_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
@@ -158,7 +167,6 @@ fn render_top_talkers(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, borde
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(area);
 
-    // Top senders
     let sent_lines: Vec<Line> = snap
         .top_talkers_sent
         .iter()
@@ -187,7 +195,6 @@ fn render_top_talkers(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, borde
         layout[0],
     );
 
-    // Top receivers
     let recv_lines: Vec<Line> = snap
         .top_talkers_received
         .iter()
@@ -215,4 +222,198 @@ fn render_top_talkers(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, borde
         .block(recv_block),
         layout[1],
     );
+}
+
+fn render_llm_model_stats(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
+    let llm = &snap.llm;
+    let mut lines: Vec<Line> = Vec::new();
+
+    if llm.per_model.is_empty() {
+        lines.push(Line::from(Span::styled(
+            " No AI model data yet.",
+            Style::new().dim().italic(),
+        )));
+    } else {
+        let header = format!(
+            " {:<12} {:>5} {:>5} {:>5} {:>5} {:>5} {:>6} {:>7}",
+            "Model", "Req", "TTFT", "TPOT", "Tok/s", "Hata%", "TopTok", "Maliyet"
+        );
+        lines.push(Line::from(Span::styled(
+            header,
+            Style::new().bold().white().underlined(),
+        )));
+
+        let mut models: Vec<_> = llm.per_model.iter().collect();
+        models.sort_by_key(|(_, ms)| std::cmp::Reverse(ms.requests));
+
+        for (model, ms) in models.iter().take(5) {
+            let avg_ttft = if ms.ttft_count > 0 {
+                ms.ttft_sum_ms as f64 / ms.ttft_count as f64
+            } else {
+                0.0
+            };
+            let avg_tpot = if ms.tpot_count > 0 {
+                ms.tpot_sum_us as f64 / ms.tpot_count as f64 / 1000.0
+            } else {
+                0.0
+            };
+            let avg_tps = if ms.tokens_per_second_count > 0 {
+                ms.tokens_per_second_sum / ms.tokens_per_second_count as f64
+            } else {
+                0.0
+            };
+            let error_rate = if ms.requests > 0 {
+                (ms.error_4xx + ms.error_5xx) as f64 / ms.requests as f64 * 100.0
+            } else {
+                0.0
+            };
+
+            let model_short = if model.len() > 11 {
+                format!("{}…", &model[..10])
+            } else {
+                model.to_string()
+            };
+
+            lines.push(Line::from(vec![
+                Span::raw(format!(" {:<12}", model_short)),
+                Span::raw(format!(" {:>5}", ms.requests)),
+                Span::styled(
+                    format!(" {:>4}ms", if avg_ttft > 0.0 { format!("{:.0}", avg_ttft) } else { "-".into() }),
+                    if avg_ttft > 500.0 {
+                        Style::new().fg(Color::Red).bold()
+                    } else if avg_ttft > 200.0 {
+                        Style::new().fg(Color::Yellow)
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
+                ),
+                Span::styled(
+                    format!(" {:>4}ms", if avg_tpot > 0.0 { format!("{:.0}", avg_tpot) } else { "-".into() }),
+                    if avg_tpot > 80.0 {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
+                ),
+                Span::styled(
+                    format!(" {:>4.0}", avg_tps),
+                    if avg_tps > 0.0 && avg_tps < 20.0 {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
+                ),
+                Span::styled(
+                    format!(" {:>4.0}%", error_rate),
+                    if error_rate > 5.0 {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
+                ),
+                Span::raw(format!(" {:>6}", ms.total_tokens)),
+                Span::raw(format!(" ${:.4}", ms.cost)),
+            ]));
+        }
+    }
+
+    let block = Block::default()
+        .title(" Model Stats ")
+        .borders(Borders::ALL)
+        .border_style(Style::new().fg(border));
+    frame.render_widget(Paragraph::new(lines).block(block), area);
+}
+
+fn render_cost_counter(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
+    let llm = &snap.llm;
+    let lines = vec![
+        Line::from(vec![
+            Span::raw(" Session Cost:  "),
+            Span::styled(
+                format!("${:.4}", llm.session_cost),
+                Style::new().fg(Color::Cyan).bold(),
+            ),
+        ]),
+        Line::from(vec![
+            Span::raw(" Daily Cost:    "),
+            Span::styled(
+                format!("${:.4}", llm.daily_cost),
+                Style::new().fg(Color::Yellow).bold(),
+            ),
+        ]),
+        Line::from(vec![
+            Span::raw(" Total Cost:    "),
+            Span::styled(
+                format!("${:.4}", llm.total_cost),
+                Style::new().fg(Color::White).bold(),
+            ),
+        ]),
+        Line::from(vec![
+            Span::raw(" Active Sessions: "),
+            Span::styled(
+                format!("{}", snap.ai_active_sessions),
+                Style::new().fg(Color::Magenta).bold(),
+            ),
+        ]),
+        Line::from(vec![
+            Span::raw(" Completed:     "),
+            Span::styled(
+                format!("{}", snap.ai_records.len()),
+                Style::new().fg(Color::Green).bold(),
+            ),
+        ]),
+    ];
+
+    let block = Block::default()
+        .title(" Maliyet Sayaci ")
+        .borders(Borders::ALL)
+        .border_style(Style::new().fg(border));
+    frame.render_widget(Paragraph::new(lines).block(block), area);
+}
+
+fn render_anomaly_alerts(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, border: Color) {
+    let llm = &snap.llm;
+    let mut lines: Vec<Line> = Vec::new();
+
+    let alerts: Vec<_> = llm.anomalies.iter().rev().take(4).collect();
+
+    if alerts.is_empty() {
+        lines.push(Line::from(Span::styled(
+            " No anomalies detected.",
+            Style::new().dim().italic(),
+        )));
+    } else {
+        for alert in &alerts {
+            lines.push(Line::from(vec![
+                Span::styled(" ⚠ ", Style::new().fg(Color::Red).bold()),
+                Span::styled(
+                    format!("{} ", alert.metric),
+                    Style::new().fg(Color::Red).bold(),
+                ),
+                Span::raw(format!(
+                    "{} → {} ({}: {}) ",
+                    alert.model, alert.value, alert.metric, alert.threshold
+                )),
+            ]));
+        }
+    }
+
+    let active_alerts = llm
+        .anomalies
+        .iter()
+        .filter(|a| {
+            (chrono::Utc::now() - a.timestamp).num_seconds() < 30
+        })
+        .count();
+    let title = if active_alerts > 0 {
+        format!(" Anomali Uyarilari ({} aktif) ", active_alerts)
+    } else {
+        " Anomali Uyarilari ".to_string()
+    };
+
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_style(Style::new().fg(if active_alerts > 0 { Color::Red } else { border }));
+    frame.render_widget(Paragraph::new(lines).block(block), area);
 }

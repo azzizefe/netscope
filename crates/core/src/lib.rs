@@ -14,6 +14,8 @@ pub mod dissectors;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod export;
 pub mod expert;
 pub mod filter;
 pub mod firewall;

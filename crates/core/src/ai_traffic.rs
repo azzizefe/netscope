@@ -193,6 +193,8 @@ pub struct AiTrafficRecord {
     pub geo_region: Option<String>,
     pub correlation_id: Option<String>,
     pub correlation_method: Option<String>,
+    pub prompt_text_snippet: String,
+    pub response_text_snippet: String,
 }
 
 impl AiTrafficRecord {
@@ -206,6 +208,14 @@ impl AiTrafficRecord {
 
     pub fn ttft_ms(&self) -> u32 {
         self.first_token_latency_ms
+    }
+
+    pub fn tpot_ms(&self) -> f64 {
+        if self.completion_tokens > 0 {
+            self.total_stream_duration_ms as f64 / self.completion_tokens as f64
+        } else {
+            0.0
+        }
     }
 
     pub fn is_streaming(&self) -> bool {
@@ -247,6 +257,8 @@ struct ActiveSession {
     correlation_id: Option<String>,
     correlation_method: Option<String>,
     timestamp_start: DateTime<Utc>,
+    prompt_text_snippet: String,
+    response_text_snippet: String,
 }
 
 impl ActiveSession {
@@ -297,10 +309,19 @@ impl ActiveSession {
                 .filter(|s| !s.is_empty()),
 
             timestamp_start: timestamp,
+            prompt_text_snippet: extract_text_snippet(payload, 500),
+            response_text_snippet: String::new(),
         }
     }
 
-    fn record_chunk(&mut self, meta: &LlmMetadata, timestamp: DateTime<Utc>, _payload: &[u8]) {
+    fn record_chunk(&mut self, meta: &LlmMetadata, timestamp: DateTime<Utc>, payload: &[u8]) {
+        let snippet = extract_text_snippet(payload, 200);
+        if !snippet.is_empty() && self.response_text_snippet.len() < 2000 {
+            self.response_text_snippet.push_str(&snippet);
+            if self.response_text_snippet.len() > 2000 {
+                self.response_text_snippet.truncate(2000);
+            }
+        }
         if let Some(ct) = meta.completion_tokens {
             self.accumulated_completion_tokens += ct as u32;
         }
@@ -402,7 +423,27 @@ impl ActiveSession {
             geo_region: self.geo_region,
             correlation_id: self.correlation_id.clone(),
             correlation_method: self.correlation_method.clone(),
+            prompt_text_snippet: self.prompt_text_snippet,
+            response_text_snippet: self.response_text_snippet,
         }
+    }
+}
+
+fn extract_text_snippet(data: &[u8], max: usize) -> String {
+    let s = String::from_utf8_lossy(data);
+    let s = s.trim();
+    if s.is_empty() {
+        return String::new();
+    }
+    let cleaned: String = s
+        .chars()
+        .filter(|c| c.is_ascii_graphic() || c.is_ascii_whitespace())
+        .collect();
+    let cleaned = cleaned.trim();
+    if cleaned.len() <= max {
+        cleaned.to_string()
+    } else {
+        format!("{}…", &cleaned[..max])
     }
 }
 

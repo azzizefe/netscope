@@ -91,6 +91,11 @@ pub struct App {
     pub show_bookmarks: bool,
     pub show_expert: bool,
     pub _temp_guard: Option<crate::setup::TempFileGuard>,
+    pub ai_selected: Option<usize>,
+    pub show_ai_detail: bool,
+    pub show_ai_prompt_response: bool,
+    pub show_ai_heatmap: bool,
+    pub ai_detail_scroll: u16,
 }
 
 impl App {
@@ -151,6 +156,11 @@ impl App {
             time_reference: None,
             show_bookmarks: false,
             show_expert: false,
+            ai_selected: None,
+            show_ai_detail: false,
+            show_ai_prompt_response: false,
+            show_ai_heatmap: false,
+            ai_detail_scroll: 0,
         })
     }
 
@@ -496,6 +506,15 @@ impl App {
                     self.show_hex = false;
                     self.detail_expanded = true;
                     self.detail_focus = true;
+                } else if self.view == View::AiTraffic {
+                    let snap = self.stats.snapshot();
+                    let records = &snap.ai_records;
+                    let idx = self.ai_scroll as usize;
+                    if idx < records.len() {
+                        self.ai_selected = Some(idx);
+                        self.show_ai_detail = true;
+                        self.ai_detail_scroll = 0;
+                    }
                 }
             }
             KeyCode::Tab => {
@@ -513,6 +532,23 @@ impl App {
                 self.show_hex = !self.show_hex;
                 if self.show_hex {
                     self.detail_focus = false;
+                }
+            }
+            KeyCode::Char('d') => {
+                if self.view == View::AiTraffic {
+                    self.show_ai_detail = false;
+                    self.ai_selected = None;
+                }
+            }
+            KeyCode::Char('p') => {
+                if self.view == View::AiTraffic && self.show_ai_detail {
+                    self.show_ai_prompt_response = !self.show_ai_prompt_response;
+                    self.ai_detail_scroll = 0;
+                }
+            }
+            KeyCode::Char('H') => {
+                if self.view == View::AiTraffic {
+                    self.show_ai_heatmap = !self.show_ai_heatmap;
                 }
             }
             KeyCode::Char('F') => {
@@ -613,7 +649,13 @@ impl App {
             }
             View::Learn => self.learn_scroll = step(self.learn_scroll, down),
             View::Insights => self.insights_scroll = step(self.insights_scroll, down),
-            View::AiTraffic => self.ai_scroll = step(self.ai_scroll, down),
+            View::AiTraffic => {
+                if self.show_ai_detail {
+                    self.ai_detail_scroll = step(self.ai_detail_scroll, down);
+                } else {
+                    self.ai_scroll = step(self.ai_scroll, down);
+                }
+            }
             _ => {}
         }
     }

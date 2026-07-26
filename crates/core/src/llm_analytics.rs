@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
+
+use chrono::{DateTime, Utc};
 
 use crate::models::Protocol;
 
@@ -548,6 +550,18 @@ pub struct LlmSessionMetrics {
     pub streaming: bool,
     pub finish_reason: String,
     pub error_type: Option<String>,
+    pub prompt_text: String,
+    pub response_text: String,
+}
+
+/// Anomaly alert triggered when a metric threshold is exceeded.
+#[derive(Debug, Clone)]
+pub struct AnomalyAlert {
+    pub model: String,
+    pub metric: String,
+    pub value: String,
+    pub threshold: String,
+    pub timestamp: DateTime<Utc>,
 }
 
 /// Aggregated LLM analytics across all recorded packets.
@@ -566,6 +580,14 @@ pub struct LlmAnalytics {
     pub per_model_family: HashMap<String, LlmModelFamilyStats>,
     pub per_request_type: HashMap<String, u64>,
     pub latency_buckets: [u64; 6],
+    pub latency_heatmap: VecDeque<(DateTime<Utc>, String, u64)>,
+    pub cost_timeline: VecDeque<(DateTime<Utc>, f64)>,
+    pub session_cost: f64,
+    pub daily_cost: f64,
+    pub last_cost_reset: DateTime<Utc>,
+    pub anomalies: VecDeque<AnomalyAlert>,
+    pub max_heatmap_points: usize,
+    pub max_anomalies: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -644,6 +666,14 @@ impl Default for LlmAnalytics {
             per_model_family: HashMap::new(),
             per_request_type: HashMap::new(),
             latency_buckets: [0; 6],
+            latency_heatmap: VecDeque::with_capacity(1000),
+            cost_timeline: VecDeque::with_capacity(10000),
+            session_cost: 0.0,
+            daily_cost: 0.0,
+            last_cost_reset: Utc::now(),
+            anomalies: VecDeque::with_capacity(100),
+            max_heatmap_points: 1000,
+            max_anomalies: 100,
         }
     }
 }
@@ -828,6 +858,87 @@ impl LlmAnalytics {
             .per_request_type
             .entry(sm.request_type.clone())
             .or_insert(0) += 1;
+
+        let now = Utc::now();
+
+        if sm.ttft_ms > 0 {
+            self.latency_heatmap.push_back((now, sm.model.clone(), sm.ttft_ms));
+            if self.latency_heatmap.len() > self.max_heatmap_points {
+                self.latency_heatmap.pop_front();
+            }
+        }
+
+        self.cost_timeline.push_back((now, sm.cost));
+        if self.cost_timeline.len() > 10000 {
+            self.cost_timeline.pop_front();
+        }
+        self.session_cost += sm.cost;
+        if (now - self.last_cost_reset).num_days() >= 1 {
+            self.daily_cost = sm.cost;
+            self.last_cost_reset = now;
+        } else {
+            self.daily_cost += sm.cost;
+        }
+
+        let mut check = |cond: bool, metric: &str, val: String, thr: String| {
+            if cond {
+                self.anomalies.push_back(AnomalyAlert {
+                    model: sm.model.clone(),
+                    metric: metric.to_string(),
+                    value: val,
+                    threshold: thr,
+                    timestamp: now,
+                });
+                if self.anomalies.len() > self.max_anomalies {
+                    self.anomalies.pop_front();
+                }
+            }
+        };
+
+        if sm.ttft_ms > 0 {
+            check(
+                sm.ttft_ms > 500,
+                "TTFT",
+                format!("{}ms", sm.ttft_ms),
+                "500ms".into(),
+            );
+        }
+        if sm.completion_tokens > 0 && sm.stream_duration_ms > 0 {
+            let tpot = sm.stream_duration_ms as f64 / sm.completion_tokens as f64;
+            check(tpot > 80.0, "TPOT", format!("{:.0}ms", tpot), "80ms".into());
+            let tps = sm.completion_tokens as f64 / (sm.stream_duration_ms as f64 / 1000.0);
+            check(tps < 20.0, "Tok/s", format!("{:.1}", tps), "20".into());
+        }
+        if sm.cost > 0.0 {
+            check(sm.cost > 0.10, "Maliyet", format!("${:.4}", sm.cost), "$0.10".into());
+        }
+        match sm.http_status {
+            429 => check(true, "Rate Limit", "429".into(), "429".into()),
+            400..=499 => check(true, "4xx Hata", format!("{}", sm.http_status), "4xx".into()),
+            500..=599 => check(true, "5xx Hata", format!("{}", sm.http_status), "5xx".into()),
+            _ => {}
+        }
+        if sm.streaming && sm.finish_reason != "stop" {
+            check(
+                true,
+                "Stream Kesintisi",
+                sm.finish_reason.clone(),
+                "stop".into(),
+            );
+        }
+    }
+
+    pub fn peek_anomalies(&self) -> &VecDeque<AnomalyAlert> {
+        &self.anomalies
+    }
+
+    pub fn drain_anomalies(&mut self) -> Vec<AnomalyAlert> {
+        self.anomalies.drain(..).collect()
+    }
+
+    pub fn clear_timelines(&mut self) {
+        self.latency_heatmap.clear();
+        self.cost_timeline.clear();
     }
 }
 

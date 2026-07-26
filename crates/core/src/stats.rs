@@ -242,6 +242,8 @@ impl StatsEngine {
                         streaming: rec.total_stream_duration_ms > 0,
                         finish_reason: rec.finish_reason.clone(),
                         error_type: rec.error_type.clone(),
+                        prompt_text: rec.prompt_text_snippet.clone(),
+                        response_text: rec.response_text_snippet.clone(),
                     };
                     self.llm.record_session_metrics(&sm);
                 }
