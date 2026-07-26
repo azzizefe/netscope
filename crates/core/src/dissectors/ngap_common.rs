@@ -2,9 +2,6 @@
 // Copyright (c) 2026 netscope contributors
 //! Shared helpers for NGAP-family dissectors (NGAP, RANAP, S1AP, X2AP, etc.).
 
-use std::net::IpAddr;
-use crate::models::Protocol;
-
 /// Kind of NGAP/RANAP message for procedure code lookup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessageKind {
@@ -17,11 +14,13 @@ pub enum MessageKind {
 pub fn summarize(
     name: &str,
     _payload: &[u8],
-    procedure: Option<u16>,
+    procedure_fn: fn(u8) -> Option<&'static str>,
 ) -> String {
-    match procedure {
-        Some(code) => format!("{name} procedure 0x{code:04X}"),
-        None => format!("{name} PDU"),
+    // Without actual ASN.1 PER decoding, try the first byte as a procedure code
+    let code = _payload.first().copied().unwrap_or(0);
+    match procedure_fn(code) {
+        Some(desc) => format!("{name} {desc}"),
+        None => format!("{name} procedure {code} [reject]"),
     }
 }
 

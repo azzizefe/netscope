@@ -336,8 +336,21 @@ fn dissect_tcp_inner(
         // first 2 KiB instead of UTF-8-scanning every payload (ROADMAP §4.1).
         let head = &tcp_payload[..tcp_payload.len().min(2048)];
         if let Ok(text) = std::str::from_utf8(head) {
-            if websocket::upgrade_note(text).is_some() || http2::upgrade_note(text).is_some() {
-                return http::dissect_http(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+            if let Some(note) = websocket::upgrade_note(text) {
+                return DissectedResult {
+                    src_addr: src_ip, dst_addr: dst_ip,
+                    src_port: Some(src_port), dst_port: Some(dst_port),
+                    protocol: Protocol::WebSocket,
+                    summary: note.to_string(),
+                };
+            }
+            if http2::upgrade_note(text).is_some() {
+                return DissectedResult {
+                    src_addr: src_ip, dst_addr: dst_ip,
+                    src_port: Some(src_port), dst_port: Some(dst_port),
+                    protocol: Protocol::Http2,
+                    summary: "HTTP/2 upgrade".into(),
+                };
             }
         }
         if let Some(ws) = websocket::try_dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload) {

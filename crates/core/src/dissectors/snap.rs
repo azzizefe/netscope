@@ -7,7 +7,7 @@
 //! follows: a 3-byte vendor OUI and a 2-byte protocol id. Cisco's control-plane
 //! protocols (CDP, VTP, DTP, PAgP, UDLD) all live under OUI 00:00:0C.
 
-use super::{cdp, dtp, edp, fdp, pagp, sonmp, udld, vtp, DissectedResult};
+use super::{cdp, dtp, pagp, udld, vtp, DissectedResult};
 
 /// Cisco's OUI, under which its control protocols are registered.
 const OUI_CISCO: [u8; 3] = [0x00, 0x00, 0x0C];
@@ -26,16 +26,6 @@ pub fn dissect_snap(payload: &[u8]) -> Option<DissectedResult> {
     let oui = [payload[3], payload[4], payload[5]];
     let pid = u16::from_be_bytes([payload[6], payload[7]]);
     let body = &payload[8..];
-
-    if oui == OUI_EXTREME {
-        return Some(edp::dissect_edp(None, None, 0, 0, body));
-    }
-    if oui == OUI_FOUNDRY {
-        return Some(fdp::dissect_fdp(None, None, 0, 0, body));
-    }
-    if oui == OUI_NORTEL {
-        return Some(sonmp::dissect_sonmp(body));
-    }
 
     if oui != OUI_CISCO {
         return None;

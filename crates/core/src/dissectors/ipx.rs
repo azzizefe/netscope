@@ -13,14 +13,20 @@ pub fn dissect_ipx(payload: &[u8]) -> DissectedResult {
         let dst_sock = u16::from_be_bytes([payload[16], payload[17]]);
         let src_sock = u16::from_be_bytes([payload[28], payload[29]]);
         if pkt_type == 5 {
-            let mut res = super::spx::dissect_spx(&payload[30..]);
-            res.summary = format!("IPX · {}", res.summary);
-            return res;
+            return DissectedResult {
+                src_addr: None, dst_addr: None,
+                src_port: Some(src_sock), dst_port: Some(dst_sock),
+                protocol: Protocol::Spx,
+                summary: "IPX · SPX segment".into(),
+            };
         }
         if pkt_type == 17 || dst_sock == 0x0451 || src_sock == 0x0451 {
-            let mut res = super::ncp::dissect_ncp(None, None, src_sock, dst_sock, &payload[30..]);
-            res.summary = format!("IPX · {}", res.summary);
-            return res;
+            return DissectedResult {
+                src_addr: None, dst_addr: None,
+                src_port: Some(src_sock), dst_port: Some(dst_sock),
+                protocol: Protocol::Ncp,
+                summary: "IPX · NCP request".into(),
+            };
         }
     }
     let summary = if payload.len() >= 6 {

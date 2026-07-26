@@ -764,12 +764,6 @@ pub fn dissect_tls(
             h2.summary = format!("[HTTPS] {}", h2.summary);
             return h2;
         }
-        let mut http_res =
-            super::http::dissect_http(src_ip, dst_ip, src_port, dst_port, &decrypted_payload);
-        if http_res.protocol == Protocol::Http {
-            http_res.summary = format!("[HTTPS] {}", http_res.summary);
-            return http_res;
-        }
     }
 
     let summary = if let Some(h) = client_hello {

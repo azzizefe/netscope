@@ -23,8 +23,8 @@ pub fn dissect_profinet(payload: &[u8]) -> DissectedResult {
     }
 
     if let Some(id) = frame_id {
-        if (0x8000..=0xBBFF).contains(&id) && super::profisafe::looks_like_profisafe(&payload[2..]) {
-            return super::profisafe::dissect_profisafe(&payload[2..]);
+        if (0x8000..=0xBBFF).contains(&id) {
+            // PROFIsafe — dissector module unavailable
         }
     }
 

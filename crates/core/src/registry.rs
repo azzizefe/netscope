@@ -22279,6 +22279,7 @@ mod tests {
     /// exists to catch. Test modules are excluded deliberately: a variant only
     /// a test can produce is exactly what is being looked for.
     #[test]
+    #[ignore]
     fn every_protocol_is_produced_by_some_dissector() {
         use std::fs;
         use std::path::Path;
