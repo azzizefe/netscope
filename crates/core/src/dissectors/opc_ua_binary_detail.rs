@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn test_string_node_id() {
-        let buf = b"\x03\x0C\x00\x00\x00test_value";
+        let buf = b"\x03\x0A\x00\x00\x00test_value";
         let r = dissect_opc_ua_binary_detail(None, None, 0, 0, buf);
         assert!(r.summary.contains("String"));
         assert!(r.summary.contains("test_value"));
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_variant_string() {
-        let buf = b"\x0C\x0A\x00\x00\x00hello UA";
+        let buf = b"\x0C\x08\x00\x00\x00hello UA";
         let r = dissect_opc_ua_binary_detail(None, None, 0, 0, buf);
         assert!(r.summary.contains("String"));
         assert!(r.summary.contains("hello"));
