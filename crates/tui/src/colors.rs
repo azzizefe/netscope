@@ -65,6 +65,7 @@ const DEFAULT_RULES: &[(&str, &str)] = &[
     ("f97316", "http.response.code >= 400"),
     ("94a3b8", "tcp.flags.syn == 1 || tcp.flags.fin == 1"),
     ("a78bfa", "dns || mdns"),
+    ("c084fc", "ai_traffic"),
     ("fbbf24", "icmp"),
     ("9ca3af", "arp"),
 ];

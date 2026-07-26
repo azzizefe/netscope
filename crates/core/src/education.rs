@@ -8,6 +8,7 @@
 //! that person â€” accurate, but no jargon without a definition.
 
 use crate::models::{Packet, Protocol};
+use crate::registry::Category;
 
 /// A beginner-friendly lesson about one protocol.
 pub struct Lesson {
@@ -8349,6 +8350,37 @@ than crash or hide it, netscope shows what it can (addresses, size, IP protocol 
 number) and moves on. This includes things like IGMP, GRE tunnels, or IPsec.",
             look_for: "A protocol label in parentheses and a size, e.g. \"IGMP (32 bytes)\".",
         },
+    }
+}
+
+/// General lesson for a high-level protocol category.
+pub fn category_lesson(category: Category) -> Option<Lesson> {
+    match category {
+        Category::AiTraffic => Some(Lesson {
+            title: "AI / LLM API Traffic",
+            summary: "HTTP requests to large-language-model APIs from providers like OpenAI, Anthropic, and Google.",
+            body: "When applications use AI models, they send HTTP requests containing \
+prompts (the input) and receive streaming responses with generated text (the \
+completions). netscope decodes these provider-specific formats so you can see \
+what prompt was sent, what the model replied, how long it took (TTFT / TPOT), \
+and token usage. Use the AI traffic view to track per-model latency, error \
+rates, and cost in real time.",
+            look_for: "Protocols like OpenaiChatStream, AnthropicStreamEvt, \
+GoogleGeminiBidi. Look for streaming SSE or WebSocket data with model names, \
+token counts, and timing headers.",
+        }),
+        Category::AiInfra => Some(Lesson {
+            title: "AI / ML Infrastructure",
+            summary: "Distributed training, vector databases, and tokenizer metadata for ML workloads.",
+            body: "AI infrastructure includes NCCL collective communication (GPU-to-GPU \
+data transfer during training), vector database protocols like Pinecone and \
+Milvus, and tokenizer metadata files that define how text is split for model \
+input. These appear as inter-node or inter-service traffic in AI clusters and \
+ML pipelines of production environments.",
+            look_for: "NcclAllgather for GPU collective ops, PineconeGrpcIndex for \
+vector DB updates, TiktokenBpeHeader for tokenizer metadata.",
+        }),
+        _ => None,
     }
 }
 

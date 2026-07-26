@@ -321,31 +321,32 @@ impl StatsEngine {
                 ));
                 for (proto, stats) in &self.per_protocol {
                     if proto != &Protocol::Tcp
-                        && matches!(
-                            proto,
-                            Protocol::Http
-                                | Protocol::Tls
-                                | Protocol::Ssh
-                                | Protocol::Ftp
-                                | Protocol::Smtp
-                                | Protocol::Imap
-                                | Protocol::Pop3
-                                | Protocol::Telnet
-                                | Protocol::Rdp
-                                | Protocol::WebSocket
-                                | Protocol::Http2
-                                | Protocol::Grpc
-                                | Protocol::Postgres
-                                | Protocol::Mysql
-                                | Protocol::Mongodb
-                                | Protocol::Redis
-                                | Protocol::Cassandra
-                                | Protocol::Modbus
-                                | Protocol::Dnp3
-                                | Protocol::Enip
-                                | Protocol::OpcUa
-                                | Protocol::Ntlm
-                        )
+                        && (proto.is_ai_traffic()
+                            || matches!(
+                                proto,
+                                Protocol::Http
+                                    | Protocol::Tls
+                                    | Protocol::Ssh
+                                    | Protocol::Ftp
+                                    | Protocol::Smtp
+                                    | Protocol::Imap
+                                    | Protocol::Pop3
+                                    | Protocol::Telnet
+                                    | Protocol::Rdp
+                                    | Protocol::WebSocket
+                                    | Protocol::Http2
+                                    | Protocol::Grpc
+                                    | Protocol::Postgres
+                                    | Protocol::Mysql
+                                    | Protocol::Mongodb
+                                    | Protocol::Redis
+                                    | Protocol::Cassandra
+                                    | Protocol::Modbus
+                                    | Protocol::Dnp3
+                                    | Protocol::Enip
+                                    | Protocol::OpcUa
+                                    | Protocol::Ntlm
+                            ))
                     {
                         protocol_hierarchy.push((
                             format!("          └─ {:?}", proto),

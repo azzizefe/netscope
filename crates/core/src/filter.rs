@@ -43,7 +43,7 @@ fn known_protos() -> &'static [String] {
     static TOKENS: OnceLock<Vec<String>> = OnceLock::new();
     TOKENS.get_or_init(|| {
         let mut tokens = crate::registry::filter_tokens();
-        tokens.extend(["ip", "ipv4", "ipv6"].iter().map(|s| s.to_string()));
+        tokens.extend(["ip", "ipv4", "ipv6", "ai_traffic"].iter().map(|s| s.to_string()));
         tokens.sort();
         tokens.dedup();
         tokens
@@ -192,6 +192,8 @@ fn proto_matches(pkt: &Packet, name: &str) -> bool {
         "udp" => transport == Transport::Udp,
         "icmp" => transport == Transport::Icmp,
         "arp" => transport == Transport::Arp,
+        // Category-based predicate: `ai_traffic` matches any LLM API protocol.
+        "ai_traffic" => pkt.protocol.is_ai_traffic(),
         other => crate::registry::Protocol::from_filter_token(other) == Some(pkt.protocol.clone()),
     }
 }
@@ -1319,5 +1321,43 @@ mod tests {
         );
         assert!(matches("http3.method == GET", &quic_pkt));
         assert!(matches("http3.status == 200", &quic_pkt));
+    }
+
+    #[test]
+    fn ai_traffic_filter() {
+        fn matches(filter: &str, pkt: &Packet) -> bool {
+            Filter::parse(filter).unwrap().matches(pkt)
+        }
+
+        let openai = pkt(
+            Protocol::OpenaiChatStream,
+            "10.0.0.1",
+            "52.84.126.64",
+            Some(51000),
+            Some(443),
+            1024,
+            "OpenAI Chat Completion — gpt-4, streaming chunks",
+        );
+        assert!(
+            matches("ai_traffic", &openai),
+            "OpenAI chat stream should match ai_traffic"
+        );
+
+        let http = pkt(
+            Protocol::Http,
+            "10.0.0.1",
+            "10.0.0.2",
+            Some(12345),
+            Some(80),
+            512,
+            "HTTP GET /index.html",
+        );
+        assert!(
+            !matches("ai_traffic", &http),
+            "HTTP should NOT match ai_traffic"
+        );
+
+        assert!(matches("openai_chat_stream", &openai));
+        assert!(!matches("openai_chat_stream", &http));
     }
 }

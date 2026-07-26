@@ -21748,6 +21748,82 @@ protocols! {
     }
 }
 
+/// High-level protocol category for grouping in the UI and filter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Category {
+    Network,
+    Security,
+    AiTraffic,
+    AiInfra,
+    Other,
+}
+
+fn builtin_category(p: &Protocol) -> Category {
+    // Use string-based matching to avoid LLVM stack overflow on huge matches
+    // during debug test builds.
+    fn cat_names() -> &'static [(&'static [&'static str], Category)] {
+        &[
+            (&["OpenaiChatStream","OpenaiRealtimeWs","OpenaiResponsesApi",
+               "OpenaiRealtime","OpenaiBatchApi","OpenaiStreamingSse",
+               "OpenaiModerationAsync","AnthropicStreamEvt",
+               "AnthropicMessagesStream","AnthropicToolUseBridge",
+               "AnthropicConstitutional","GoogleGeminiBidi",
+               "GoogleGeminiRestStream","GoogleGeminiStream","GoogleAistudioWs",
+               "AzureAoaiStream","AzureAiContentSafety","CohereStreamV2",
+               "MistralChatStream","GroqLpcuStream","TogetherStream",
+               "FireworksStream","DeepseekStream","XaiGrokStream",
+               "BedrockInvokeStream","LitellmProxyStream","PortkeyStreamRelay",
+               "PortkeyGatewayRouter","MlflowGatewayStream","MlflowGateway",
+               "OpenrouterStream","CloudflareAiGateway","KongAiGatewayStream",
+               "VllmAsyncEngine","TgiMessages","TritonInferenceGrpc",
+               "TritonModelRepoStream","SglangRadixCache","HeliconeLogStream",
+               "HeliconeWorkerQueue","LangfuseIngestV2","LangfuseIngest",
+               "LiteserveGrpc","OpenllmetryOtlp","ArizePhoenixCollect",
+               "AegisGuardLlama","LlamaGuardSafeguard","NemoGuardrailsHttp",
+               "GuardrailsAiValidator"], Category::AiTraffic),
+            (&["NcclAllgather","NcclBroadcast","FsdpShardState",
+               "DeepsparkGlootcp","HorovodElastic","MegatronTpOverlap",
+               "MegatronPipelineFlush","PytorchRpcFramework","JaxPjitSharding",
+               "PineconeGrpcIndex","PineconeCollectionStream",
+               "WeaviateGraphqlGrpc","WeaviateHnswReplication","QdrantRaftLog",
+               "QdrantQuantizationSync","MilvusProxyGrpc","MilvusSealedSegStream",
+               "TiktokenBpeHeader","SentencepieceProto",
+               "HuggingfaceTokenizerConfig","GemmaTokenizerHeader",
+               "LlamaTokenizerHeader","AnthropicClaudeTokenizer"],
+             Category::AiInfra),
+            (&["Tcp","Udp","Icmp","Arp","Dhcp","Dhcpv6","Dns","Mdns","Ntp",
+               "Snmp","Quic","Ssh","Ftp","Smtp","Imap","Pop3","Telnet","Rdp",
+               "Http","Http2","WebSocket","Grpc","Sip","Rtp","Rtcp","Stun",
+               "Turn","Igmp","Ospf","Bgp","Vxlan","Gre","Geneve","Mpls","Ppp",
+               "Pppoe","Lldp","Stp","Vlan","Ipv6"], Category::Network),
+            (&["Tls","Dtls","Isakmp","Eapol","Radius","Diameter","Kerberos",
+               "Ldap"], Category::Security),
+        ]
+    }
+    let tag = match p {
+        Protocol::Plugin(_) | Protocol::Unknown(_) => return Category::Other,
+        other => format!("{other:?}"),
+    };
+    for (names, cat) in cat_names() {
+        if names.iter().any(|n| *n == tag) {
+            return *cat;
+        }
+    }
+    Category::Other
+}
+
+impl Protocol {
+    /// The high-level category this protocol belongs to.
+    pub fn category(&self) -> Category {
+        builtin_category(self)
+    }
+
+    /// Convenience check — is this an AI/LLM API protocol?
+    pub fn is_ai_traffic(&self) -> bool {
+        builtin_category(self) == Category::AiTraffic
+    }
+}
+
 impl std::fmt::Display for Protocol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
