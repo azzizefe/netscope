@@ -277,7 +277,7 @@ fn extract_model(raw: &str, provider: &str) -> String {
     String::new()
 }
 
-fn classify_model_family(model: &str) -> String {
+pub fn classify_model_family(model: &str) -> String {
     let m = model.to_lowercase();
     if m.contains("gpt-4") || m.contains("gpt4") {
         "gpt-4".into()
@@ -530,6 +530,26 @@ fn extract_nested_json_number(raw: &str, key: &str) -> Option<u64> {
     }
 }
 
+/// Session-level metrics computed from a completed LLM request/response pair.
+/// Used to populate per-model statistics like TTFT, TPOT, tokens/s, etc.
+#[derive(Debug, Clone)]
+pub struct LlmSessionMetrics {
+    pub model: String,
+    pub provider: String,
+    pub model_family: String,
+    pub request_type: String,
+    pub prompt_tokens: u64,
+    pub completion_tokens: u64,
+    pub total_tokens: u64,
+    pub cost: f64,
+    pub ttft_ms: u64,
+    pub stream_duration_ms: u64,
+    pub http_status: u16,
+    pub streaming: bool,
+    pub finish_reason: String,
+    pub error_type: Option<String>,
+}
+
 /// Aggregated LLM analytics across all recorded packets.
 #[derive(Debug, Clone)]
 pub struct LlmAnalytics {
@@ -556,7 +576,18 @@ pub struct LlmModelStats {
     pub total_tokens: u64,
     pub cost: f64,
     pub errors: u64,
-}
+    pub ttft_sum_ms: u64,
+    pub ttft_count: u64,
+    pub tpot_sum_us: u64,
+    pub tpot_count: u64,
+    pub tokens_per_second_sum: f64,
+    pub tokens_per_second_count: u64,
+    pub error_4xx: u64,
+    pub error_5xx: u64,
+    pub rate_limited: u64,
+    pub incomplete_streams: u64,
+    pub total_streams: u64,
+} 
 
 #[derive(Debug, Clone)]
 pub struct LlmProviderStats {
@@ -571,6 +602,30 @@ pub struct LlmModelFamilyStats {
     pub requests: u64,
     pub total_tokens: u64,
     pub cost: f64,
+}
+
+impl Default for LlmModelStats {
+    fn default() -> Self {
+        Self {
+            requests: 0,
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+            cost: 0.0,
+            errors: 0,
+            ttft_sum_ms: 0,
+            ttft_count: 0,
+            tpot_sum_us: 0,
+            tpot_count: 0,
+            tokens_per_second_sum: 0.0,
+            tokens_per_second_count: 0,
+            error_4xx: 0,
+            error_5xx: 0,
+            rate_limited: 0,
+            incomplete_streams: 0,
+            total_streams: 0,
+        }
+    }
 }
 
 impl Default for LlmAnalytics {
@@ -635,14 +690,7 @@ impl LlmAnalytics {
         }
 
         let model = self.per_model.entry(meta.model.clone()).or_insert_with(|| {
-            LlmModelStats {
-                requests: 0,
-                prompt_tokens: 0,
-                completion_tokens: 0,
-                total_tokens: 0,
-                cost: 0.0,
-                errors: 0,
-            }
+            LlmModelStats::default()
         });
         model.requests += 1;
         if meta.error_type.is_some() {
@@ -700,6 +748,85 @@ impl LlmAnalytics {
         *self
             .per_request_type
             .entry(meta.request_type.clone())
+            .or_insert(0) += 1;
+    }
+
+    pub fn record_session_metrics(&mut self, sm: &LlmSessionMetrics) {
+        let model = self
+            .per_model
+            .entry(sm.model.clone())
+            .or_insert_with(LlmModelStats::default);
+        model.requests += 1;
+        model.prompt_tokens += sm.prompt_tokens;
+        model.completion_tokens += sm.completion_tokens;
+        model.total_tokens += sm.total_tokens;
+        model.cost += sm.cost;
+        if sm.error_type.is_some() {
+            model.errors += 1;
+        }
+
+        if sm.ttft_ms > 0 {
+            model.ttft_sum_ms += sm.ttft_ms;
+            model.ttft_count += 1;
+        }
+
+        if sm.stream_duration_ms > 0 && sm.completion_tokens > 0 {
+            let tpot_us = (sm.stream_duration_ms as u64 * 1000) / sm.completion_tokens;
+            model.tpot_sum_us += tpot_us;
+            model.tpot_count += 1;
+        }
+
+        if sm.stream_duration_ms > 0 {
+            let tps = sm.completion_tokens as f64 / (sm.stream_duration_ms as f64 / 1000.0);
+            model.tokens_per_second_sum += tps;
+            model.tokens_per_second_count += 1;
+        }
+
+        match sm.http_status {
+            429 => model.rate_limited += 1,
+            400..=499 => model.error_4xx += 1,
+            500..=599 => model.error_5xx += 1,
+            _ => {}
+        }
+
+        if sm.streaming {
+            model.total_streams += 1;
+            if sm.finish_reason != "stop" {
+                model.incomplete_streams += 1;
+            }
+        }
+
+        let provider = self
+            .per_provider
+            .entry(sm.provider.clone())
+            .or_insert_with(|| LlmProviderStats {
+                requests: 0,
+                total_tokens: 0,
+                cost: 0.0,
+                errors: 0,
+            });
+        provider.requests += 1;
+        provider.total_tokens += sm.total_tokens;
+        provider.cost += sm.cost;
+        if sm.error_type.is_some() {
+            provider.errors += 1;
+        }
+
+        let family = self
+            .per_model_family
+            .entry(sm.model_family.clone())
+            .or_insert_with(|| LlmModelFamilyStats {
+                requests: 0,
+                total_tokens: 0,
+                cost: 0.0,
+            });
+        family.requests += 1;
+        family.total_tokens += sm.total_tokens;
+        family.cost += sm.cost;
+
+        *self
+            .per_request_type
+            .entry(sm.request_type.clone())
             .or_insert(0) += 1;
     }
 }

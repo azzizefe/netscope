@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use crate::ai_traffic::AiTrafficRecord;
 use crate::ai_traffic::AiTrafficTracker;
-use crate::llm_analytics::LlmAnalytics;
+use crate::llm_analytics::{classify_model_family, LlmAnalytics, LlmSessionMetrics};
 use crate::models::{Packet, Protocol};
 
 #[derive(Debug, Clone)]
@@ -217,7 +217,7 @@ impl StatsEngine {
             if let (Some(src), Some(dst)) = (packet.src_addr, packet.dst_addr) {
                 let src_port = packet.src_port.unwrap_or(0);
                 let dst_port = packet.dst_port.unwrap_or(0);
-                self.ai_traffic.record_packet(
+                let new_records = self.ai_traffic.record_packet(
                     meta,
                     src,
                     src_port,
@@ -226,6 +226,25 @@ impl StatsEngine {
                     &packet.data,
                     packet.timestamp,
                 );
+                for rec in &new_records {
+                    let sm = LlmSessionMetrics {
+                        model: rec.model_name.clone(),
+                        provider: rec.provider.to_string(),
+                        model_family: classify_model_family(&rec.model_name),
+                        request_type: meta.request_type.clone(),
+                        prompt_tokens: rec.prompt_token_count as u64,
+                        completion_tokens: rec.completion_tokens as u64,
+                        total_tokens: rec.response_total_tokens as u64,
+                        cost: rec.total_cost_usd,
+                        ttft_ms: rec.first_token_latency_ms as u64,
+                        stream_duration_ms: rec.total_stream_duration_ms as u64,
+                        http_status: rec.http_status,
+                        streaming: rec.total_stream_duration_ms > 0,
+                        finish_reason: rec.finish_reason.clone(),
+                        error_type: rec.error_type.clone(),
+                    };
+                    self.llm.record_session_metrics(&sm);
+                }
             }
         }
     }

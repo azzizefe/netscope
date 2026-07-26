@@ -542,12 +542,31 @@ fn handle_connection(
                     json.push(',');
                 }
                 first = false;
+                let avg_ttft = if ms.ttft_count > 0 { ms.ttft_sum_ms as f64 / ms.ttft_count as f64 } else { 0.0 };
+                let avg_tpot = if ms.tpot_count > 0 { ms.tpot_sum_us as f64 / ms.tpot_count as f64 / 1000.0 } else { 0.0 };
+                let avg_tps = if ms.tokens_per_second_count > 0 { ms.tokens_per_second_sum / ms.tokens_per_second_count as f64 } else { 0.0 };
+                let error_rate = if ms.requests > 0 { (ms.error_4xx + ms.error_5xx) as f64 / ms.requests as f64 * 100.0 } else { 0.0 };
+                let rate_limit_rate = if ms.requests > 0 { ms.rate_limited as f64 / ms.requests as f64 * 100.0 } else { 0.0 };
+                let stream_kesintisi = if ms.total_streams > 0 { ms.incomplete_streams as f64 / ms.total_streams as f64 * 100.0 } else { 0.0 };
                 json.push_str(&format!(
-                    "{{\"model\":\"{}\",\"requests\":{},\"tokens\":{},\"cost\":{:.6}}}",
+                    "{{\"model\":\"{}\",\"requests\":{},\"prompt_tokens\":{},\"completion_tokens\":{},\"total_tokens\":{},\"cost\":{:.6},\"avg_ttft_ms\":{:.1},\"avg_tpot_ms\":{:.1},\"avg_tokens_per_second\":{:.1},\"errors_4xx\":{},\"errors_5xx\":{},\"rate_limited\":{},\"incomplete_streams\":{},\"total_streams\":{},\"error_rate_pct\":{:.1},\"rate_limit_rate_pct\":{:.1},\"stream_kesintisi_pct\":{:.1}}}",
                     model,
                     ms.requests,
+                    ms.prompt_tokens,
+                    ms.completion_tokens,
                     ms.total_tokens,
                     ms.cost,
+                    avg_ttft,
+                    avg_tpot,
+                    avg_tps,
+                    ms.error_4xx,
+                    ms.error_5xx,
+                    ms.rate_limited,
+                    ms.incomplete_streams,
+                    ms.total_streams,
+                    error_rate,
+                    rate_limit_rate,
+                    stream_kesintisi,
                 ));
             }
             json.push_str("],\"provider_stats\":[");

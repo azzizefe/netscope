@@ -460,8 +460,8 @@ impl AiTrafficTracker {
         dst_port: u16,
         payload: &[u8],
         timestamp: DateTime<Utc>,
-    ) {
-        self.record_packet_with_correlation(meta, src_ip, src_port, dst_ip, dst_port, payload, timestamp, None);
+    ) -> Vec<AiTrafficRecord> {
+        self.record_packet_with_correlation(meta, src_ip, src_port, dst_ip, dst_port, payload, timestamp, None)
     }
 
     pub fn record_packet_with_correlation(
@@ -474,7 +474,8 @@ impl AiTrafficTracker {
         payload: &[u8],
         timestamp: DateTime<Utc>,
         correlation: Option<&CorrelationInfo>,
-    ) {
+    ) -> Vec<AiTrafficRecord> {
+        let mut new_records = Vec::new();
         let key = (src_ip, src_port, dst_ip, dst_port);
         let session = self.sessions.get_mut(&key);
         match session {
@@ -487,6 +488,7 @@ impl AiTrafficTracker {
                             record.retry_count = retries;
                             self.next_retry.remove(&key);
                         }
+                        new_records.push(record.clone());
                         self.completed.push(record);
                     }
                 }
@@ -495,7 +497,7 @@ impl AiTrafficTracker {
                 if meta.request_type == "moderation"
                     || meta.request_type == "observability"
                 {
-                    return;
+                    return new_records;
                 }
                 let session = ActiveSession::new(
                     next_session_id(),
@@ -512,12 +514,14 @@ impl AiTrafficTracker {
                         record.retry_count = retries;
                         self.next_retry.remove(&key);
                     }
+                    new_records.push(record.clone());
                     self.completed.push(record);
                 } else {
                     self.sessions.insert(key, session);
                 }
             }
         }
+        new_records
     }
 
     pub fn record_retry(&mut self, src_ip: IpAddr, src_port: u16, dst_ip: IpAddr, dst_port: u16) {
