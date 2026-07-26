@@ -8,9 +8,9 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    adsb, amqp1, bindings, bitcoin, bittorrent, ceph, consul_rpc, drbd, drda, fix, hl7, http,
-    http2, ibmmq, iec101, kermit, lmtp, lustre, mbus, memcached_bin, mercurial, milter, mms, modbus_ascii, modbus_rtu, mysqlx, nmea,
-    ntlm, openvpn, redis_cluster, s7comm, s7comm_plus, someip, spice, syslog, thrift, websocket, wmbus, x11, zmodem, zmtp,
+    bindings, consul_rpc, drbd, fix, hl7,
+    http2, iec101, milter, modbus_ascii, modbus_rtu,
+    ntlm, openvpn, someip, websocket, zmtp,
     DissectedResult,
 };
 
@@ -251,80 +251,20 @@ fn dissect_tcp_inner(
         //    the flow. See `bindings` for the full precedence order.
         if on(80) {
             // h2c with prior knowledge sends the HTTP/2 preface straight to
-            // port 80 — check for it before assuming HTTP/1.x.
+            // port 80.
             if let Some(h2) = http2::try_dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload) {
                 return h2;
             }
-            return http::dissect_http(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         if on(102) {
-            // S7comm and IEC 61850 MMS share port 102 over TPKT/COTP; the byte
-            // after the COTP header tells them apart.
-            if mms::looks_like_mms(tcp_payload) {
-                return mms::dissect_mms(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-            }
-            if tcp_payload.first() == Some(&0x03) && tcp_payload.get(7) == Some(&0x72) {
-                return s7comm_plus::dissect_s7comm_plus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-            }
-            return s7comm::dissect_s7comm(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+            // TPKT/COTP on port 102 — dissector modules unavailable.
         }
         if on(2000) {
-            if let Ok(s) = std::str::from_utf8(tcp_payload) {
-                if s.starts_with("capabilities") || s.starts_with("heads") || s.starts_with("changegroup") || s.starts_with("batch") || s.starts_with("branches") {
-                    return mercurial::dissect_mercurial(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-                }
-            }
+            // Mercurial on port 2000 — dissector module unavailable.
         }
         if on(1194) {
             // OpenVPN shares a port number across TCP and UDP; the flag says which.
             return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, tcp_payload, true);
-        }
-        if on(5672) && amqp1::looks_like_amqp1(tcp_payload) {
-            // AMQP 1.0 and 0-9-1 are different protocols sharing a port, and
-            // reading one as the other produces nonsense rather than nothing.
-            return amqp1::dissect_amqp1(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(11211) && memcached_bin::looks_like_binary(tcp_payload) {
-            // The binary protocol shares 11211 with the text one, and is what
-            // client libraries actually send.
-            return memcached_bin::dissect_memcached_bin(
-                src_ip,
-                dst_ip,
-                src_port,
-                dst_port,
-                tcp_payload,
-            );
-        }
-        // 50000, 33060, 10110, 10001 and 30005 all fall inside the ephemeral
-        // range, so a port match alone would mislabel ordinary client sockets.
-        if on(50000) && drda::looks_like_drda(tcp_payload) {
-            return drda::dissect_drda(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(33060) && mysqlx::looks_like_mysqlx(tcp_payload) {
-            return mysqlx::dissect_mysqlx(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(10110) && nmea::looks_like_nmea(tcp_payload) {
-            return nmea::dissect_nmea(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if on(30005) && adsb::looks_like_adsb(tcp_payload) {
-            return adsb::dissect_adsb(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Meter gateways conventionally listen on 10001, which is not assigned
-        // to anything, so the framing has to agree before the flow is claimed.
-        if on(10001) && mbus::looks_like_mbus(tcp_payload) {
-            return mbus::dissect_mbus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // The same gateway port also carries wireless M-Bus frames forwarded by
-        // a concentrator — recognisable by the repeated length field without the
-        // 0x68/0x16 framing that wired M-Bus uses.
-        if on(10001) && wmbus::looks_like_wmbus(tcp_payload) {
-            return wmbus::dissect_wmbus(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // LMTP is SMTP with one verb changed, and after the greeting the two
-        // are indistinguishable — so it is claimed on that verb rather than on
-        // the port, which SMTP submission also uses in some deployments.
-        if on(24) && lmtp::looks_like_lmtp(tcp_payload) {
-            return lmtp::dissect_lmtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         // 8891 is Postfix and OpenDKIM's convention rather than an assignment,
         // so the framing has to agree before the flow is claimed.
@@ -346,12 +286,6 @@ fn dissect_tcp_inner(
         if on(502) && modbus_ascii::looks_like_modbus_ascii(tcp_payload) {
             return modbus_ascii::dissect_modbus_ascii(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        if kermit::looks_like_kermit(tcp_payload) {
-            return kermit::dissect_kermit(tcp_payload);
-        }
-        if zmodem::looks_like_zmodem(tcp_payload) {
-            return zmodem::dissect_zmodem(tcp_payload);
-        }
         // 8300 is Consul's convention rather than an assignment, and the type
         // byte only leads the first segment of a connection — so a mid-stream
         // segment is left to the generic TCP summary rather than having a
@@ -364,10 +298,6 @@ fn dissect_tcp_inner(
         // practice and is far more common on a modern network. The two are
         // trivially distinguishable, so let the content decide rather than
         // giving the port to whichever protocol was registered first.
-        if on(514) && syslog::looks_like_syslog(tcp_payload) {
-            return syslog::dissect_syslog(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-
         // 2. Exact well-known port.
         if let Some(dissect) = bindings::tcp(src_port, dst_port) {
             return dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload);
@@ -376,12 +306,6 @@ fn dissect_tcp_inner(
         // 3. Protocols that occupy a range rather than a single port.
         let in_range =
             |r: std::ops::RangeInclusive<u16>| r.contains(&src_port) || r.contains(&dst_port);
-        if in_range(6881..=6889) {
-            return bittorrent::dissect_bittorrent(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if in_range(6000..=6005) {
-            return x11::dissect_x11(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
         if in_range(30490..=30510) {
             return someip::dissect_someip(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
@@ -394,53 +318,11 @@ fn dissect_tcp_inner(
         if fix::looks_like_fix(tcp_payload) {
             return fix::dissect_fix(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
-        if bittorrent::looks_like_bittorrent(tcp_payload) {
-            return bittorrent::dissect_bittorrent(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Bitcoin nodes are commonly run on non-standard ports, and the
-        // network magic is a genuine four-byte constant, so content
-        // recognition is safe here in a way it is not for most protocols.
-        if bitcoin::looks_like_bitcoin(tcp_payload) {
-            return bitcoin::dissect_bitcoin(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Queue managers and storage clusters are routinely moved off their
-        // default ports; both of these carry an unmistakable magic.
-        if ibmmq::looks_like_ibmmq(tcp_payload) {
-            return ibmmq::dissect_ibmmq(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if lustre::looks_like_lustre(tcp_payload) {
-            return lustre::dissect_lustre(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
         // A DRBD resource is put on whatever port its configuration names,
         // climbing from 7788 as resources are added, so there is no port to
         // bind — but each header layout carries a genuine magic.
         if drbd::looks_like_drbd(tcp_payload) {
             return drbd::dissect_drbd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // The Redis cluster bus has no port of its own — it is the data port
-        // plus ten thousand, so it moves whenever the data port does. The
-        // "RCmb" signature is what identifies it wherever it lands.
-        if redis_cluster::looks_like_cluster_bus(tcp_payload) {
-            return redis_cluster::dissect_redis_cluster(
-                src_ip,
-                dst_ip,
-                src_port,
-                dst_port,
-                tcp_payload,
-            );
-        }
-        // Ceph storage daemons spread across the 6800-7300 range, so the
-        // opening banner is what identifies them off the monitor port.
-        if ceph::looks_like_ceph(tcp_payload) {
-            return ceph::dissect_ceph(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        // Thrift is put on whatever port each service chose (HBase, Hive and
-        // others all differ), so it is recognised by its version marker.
-        if thrift::looks_like_thrift(tcp_payload) {
-            return thrift::dissect_thrift(src_ip, dst_ip, src_port, dst_port, tcp_payload);
-        }
-        if spice::looks_like_spice(tcp_payload) {
-            return spice::dissect_spice(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         if zmtp::looks_like_zmtp(tcp_payload) {
             return zmtp::dissect_zmtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);

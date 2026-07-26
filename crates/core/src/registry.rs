@@ -22064,7 +22064,6 @@ protocols! {
         blurb:     "Schneider EcoStruxure edge-to-cloud bridge protocol — secure data exchange between EcoStruxure Automation Expert edge devices and cloud analytics platforms, with asset model synchronization and time-series ingestion.",
     }
 }
-}
 
 /// High-level protocol category for grouping in the UI and filter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
