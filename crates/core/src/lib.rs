@@ -20,6 +20,7 @@ pub mod expert;
 pub mod filter;
 pub mod firewall;
 pub mod flows;
+pub mod game_plugins;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod forensics;
 #[cfg(not(target_arch = "wasm32"))]
