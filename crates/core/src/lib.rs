@@ -31,6 +31,7 @@ pub mod names;
 pub mod pair_correlation;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pcapng;
+pub mod pqc_analytics;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pipeline;
 pub mod plugins;

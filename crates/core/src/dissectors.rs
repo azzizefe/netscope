@@ -6974,6 +6974,17 @@ pub mod ipsec_ikev2_frodo;
 pub mod openvpn_pq_cipher;
 pub mod tailscale_pq_noise;
 pub mod nebula_pq_handshake;
+// ── PQC Monitoring Tools (§8.1.1) ────────────────────────────────────
+pub mod tls_pqc_handshake_ext;
+pub mod tls_pqc_cert_chain;
+pub mod tls_pqc_migration_signal;
+pub mod ikev2_pqc_dh_group;
+pub mod wireguard_pqc_handshake;
+pub mod ssh_pqc_kex;
+pub mod dnssec_pqc_signing;
+pub mod pqc_cert_transparency;
+pub mod oqs_provider_telemetry;
+pub mod pqc_hsm_bridge;
 pub mod bb84_qkd_classical;
 pub mod e91_qkd_entanglement;
 pub mod etsi_gs_qkd_014;

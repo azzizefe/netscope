@@ -20801,6 +20801,97 @@ protocols! {
         aliases:   ["nebula_pq", "nebula_handshake_pq"],
         blurb:     "Nebula PQ Handshake \u{2014} Slack Nebula overlay network with post-quantum handshake extension using KEM-based key exchange for quantum-resistant mesh VPN tunnels.",
     }
+    // ── PQC Monitoring Tools (§8.1.1) ──────────────────────────────────
+    TlsPqcHandshakeExt {
+        doc:       "TLS 1.3 PQC handshake extension (hybrid KEM parsing).",
+        display:   "TLS PQC Handshake Ext",
+        color:     0x0D47A1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tls_pqc_hsk_ext", "pqc_handshake_ext"],
+        blurb:     "TLS PQC Handshake Ext — TLS 1.3 PQC handshake extension dissector for hybrid KEM parsing of supported_groups, key_share, and signature_algorithms extensions carrying post-quantum identifiers.",
+    }
+    TlsPqcCertChain {
+        doc:       "X.509 PQC composite certificate chain parser.",
+        display:   "TLS PQC Cert Chain",
+        color:     0x1565C0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["tls_pqc_cert", "pqc_cert_chain"],
+        blurb:     "TLS PQC Cert Chain — X.509 PQC composite certificate chain parser extracting traditional (ECDSA/RSA) and post-quantum (ML-DSA/SLH-DSA) signature certificates from TLS Certificate messages.",
+    }
+    TlsPqcMigrationSignal {
+        doc:       "PQC migration signaling extension (RFC draft).",
+        display:   "TLS PQC Migration Signal",
+        color:     0x7B1FA2,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pqc_migration", "migration_signal"],
+        blurb:     "TLS PQC Migration Signal — PQC migration signaling extension per RFC draft for negotiating PQC readiness, capability advertisement, and fallback mechanisms between TLS peers.",
+    }
+    Ikev2PqcDhGroup {
+        doc:       "IKEv2 PQC DH group negotiation dissector.",
+        display:   "IKEv2 PQC DH Group",
+        color:     0xE65100,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["ikev2_pqc_dh", "pqc_dh_group"],
+        blurb:     "IKEv2 PQC DH Group — IKEv2 PQC Diffie-Hellman group negotiation dissector for post-quantum key exchange in IPsec IKEv2 with ML-KEM and FrodoKEM transform attributes.",
+    }
+    WireguardPqcHandshake {
+        doc:       "WireGuard PQC handshake extension.",
+        display:   "WireGuard PQC Handshake",
+        color:     0x880E4F,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["wg_pqc_hsk", "wireguard_pqc_handshake"],
+        blurb:     "WireGuard PQC Handshake — WireGuard PQC handshake extension with KEM-based post-quantum key exchange wrapping the standard Curve25519 Noise handshake for quantum-resistant tunnel establishment.",
+    }
+    SshPqcKex {
+        doc:       "OpenSSH 9.x PQC key exchange (sntrup761x25519-sha512).",
+        display:   "SSH PQC KEX",
+        color:     0x2E7D32,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ssh_pqc", "sntrup761", "ssh_pq_kex"],
+        blurb:     "SSH PQC KEX — OpenSSH 9.x post-quantum key exchange using sntrup761x25519-sha512 (Streamlined NTRU Prime 761 + X25519 hybrid) for quantum-resistant SSH session key agreement.",
+    }
+    DnssecPqcSigning {
+        doc:       "DNSSEC PQC signing algorithm (Falcon/Dilithium RRSIG).",
+        display:   "DNSSEC PQC Signing",
+        color:     0x00695C,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["dnssec_pqc", "pqc_rrsig"],
+        blurb:     "DNSSEC PQC Signing — DNSSEC post-quantum signing algorithm dissection for RRSIG records using Falcon-512/1024 or Dilithium (ML-DSA) signatures for quantum-resistant DNS zone signing and validation.",
+    }
+    PqcCertTransparency {
+        doc:       "Certificate Transparency with PQ-hybrid SCT.",
+        display:   "PQC Cert Transparency",
+        color:     0x37474F,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pqc_ct", "pq_sct"],
+        blurb:     "PQC Cert Transparency — Certificate Transparency with post-quantum hybrid Signed Certificate Timestamps (SCT) using ML-DSA or SLH-DSA signatures for quantum-resistant certificate log verification.",
+    }
+    OqsProviderTelemetry {
+        doc:       "Open Quantum Safe provider telemetry proto.",
+        display:   "OQS Provider Telemetry",
+        color:     0x4A148C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["oqs_telemetry", "oqs_provider"],
+        blurb:     "OQS Provider Telemetry — Open Quantum Safe (OQS) provider telemetry protocol for reporting PQC algorithm availability, performance benchmarks, and provider version information from OQS-enabled TLS stacks.",
+    }
+    PqcHsmBridge {
+        doc:       "PQC-capable HSM-to-application bridge.",
+        display:   "PQC HSM Bridge",
+        color:     0xBF360C,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pqc_hsm", "hsm_bridge"],
+        blurb:     "PQC HSM Bridge — PQC-capable HSM-to-application bridge protocol for post-quantum key generation, signing, and key encapsulation operations offloaded to hardware security modules with ML-KEM, ML-DSA, and SLH-DSA support.",
+    }
     Bb84QkdClassical {
         doc:       "BB84 QKD classical post-processing channel.",
         display:   "BB84 QKD Classical",

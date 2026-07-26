@@ -138,6 +138,12 @@ use super::{
     ipsec_ikev2_pq, ipsec_ikev2_frodo,
     openvpn_pq_cipher, tailscale_pq_noise,
     nebula_pq_handshake,
+    tls_pqc_handshake_ext, tls_pqc_cert_chain,
+    tls_pqc_migration_signal,
+    ikev2_pqc_dh_group, wireguard_pqc_handshake,
+    ssh_pqc_kex, dnssec_pqc_signing,
+    pqc_cert_transparency, oqs_provider_telemetry,
+    pqc_hsm_bridge,
     bb84_qkd_classical, e91_qkd_entanglement,
     etsi_gs_qkd_014, qkd_network_routing,
     decoy_state_bb84_err, cascade_info_recon,
@@ -1475,6 +1481,20 @@ fn _dissector_reachability_guard_quantum_vpn_tunnel_298_304() {
         let _ = super::openvpn_pq_cipher::dissect_openvpn_pq_cipher;
         let _ = super::tailscale_pq_noise::dissect_tailscale_pq_noise;
         let _ = super::nebula_pq_handshake::dissect_nebula_pq_handshake;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_pqc_monitoring_380_389() {
+        let _ = super::tls_pqc_handshake_ext::dissect_tls_pqc_handshake_ext;
+        let _ = super::tls_pqc_cert_chain::dissect_tls_pqc_cert_chain;
+        let _ = super::tls_pqc_migration_signal::dissect_tls_pqc_migration_signal;
+        let _ = super::ikev2_pqc_dh_group::dissect_ikev2_pqc_dh_group;
+        let _ = super::wireguard_pqc_handshake::dissect_wireguard_pqc_handshake;
+        let _ = super::ssh_pqc_kex::dissect_ssh_pqc_kex;
+        let _ = super::dnssec_pqc_signing::dissect_dnssec_pqc_signing;
+        let _ = super::pqc_cert_transparency::dissect_pqc_cert_transparency;
+        let _ = super::oqs_provider_telemetry::dissect_oqs_provider_telemetry;
+        let _ = super::pqc_hsm_bridge::dissect_pqc_hsm_bridge;
 }
 
 #[cfg(test)]
