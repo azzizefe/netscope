@@ -103,7 +103,7 @@ use super::{
     cc_link_ie_tsn, detnet_service_layer,
     ieee802_1as_rev, ieee802_1qbv_tas,
     ieee802_1qbu_frame_preemption, ieee802_1qci_psfp,
-    opc_ua_alarm_condition, opc_ua_gds_push,
+    opc_ua_alarm_condition, opc_ua_dpi, opc_ua_gds_push,
     opc_ua_pubsub_mqtt, opc_ua_pubsub_udp,
     tsn_stream_reservation, tsn_universal_windows,
     aws_iot_twinmaker_knowledge, azure_digital_twin_dtdl,
@@ -1384,6 +1384,8 @@ fn _dissector_reachability_guard_opcua_tsn_231_242() {
         let _ = super::opc_ua_pubsub_mqtt::dissect_opc_ua_pubsub_mqtt;
         let _ = super::opc_ua_gds_push::dissect_opc_ua_gds_push;
         let _ = super::opc_ua_alarm_condition::dissect_opc_ua_alarm_condition;
+        let _ = super::opc_ua_dpi::dissect_opc_ua_dpi;
+        let _ = super::opc_ua_dpi::dissect_opc_ua_secure_conv;
         let _ = super::ieee802_1qbv_tas::dissect_ieee802_1qbv_tas;
         let _ = super::ieee802_1qbu_frame_preemption::dissect_ieee802_1qbu_frame_preemption;
         let _ = super::ieee802_1qci_psfp::dissect_ieee802_1qci_psfp;

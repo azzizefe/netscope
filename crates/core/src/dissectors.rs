@@ -6907,6 +6907,7 @@ pub mod ieee802_1qbv_tas;
 pub mod ieee802_1qbu_frame_preemption;
 pub mod ieee802_1qci_psfp;
 pub mod opc_ua_alarm_condition;
+pub mod opc_ua_dpi;
 pub mod opc_ua_gds_push;
 pub mod opc_ua_pubsub_mqtt;
 pub mod opc_ua_pubsub_udp;

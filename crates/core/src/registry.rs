@@ -20162,6 +20162,24 @@ protocols! {
         aliases:   ["opcua_gds", "gds_push"],
         blurb:     "OPC UA Global Discovery Server push \u{2014} server registration, discovery, and certificate push for OPC UA GDS with FindServers and RegisterServer services.",
     }
+    OpcUaDpi {
+        doc:       "OPC UA Deep Packet Inspection (DPI) — full binary UA-TCP protocol analysis.",
+        display:   "OPC UA DPI",
+        color:     0x307070,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["opcua_dpi", "ua_dpi"],
+        blurb:     "OPC UA DPI \u{2014} deep packet inspection layer for OPC UA binary protocol (UA-TCP) with full message-type parsing, handshake analysis, security-policy extraction, service-call identification, and anomaly detection for industrial network monitoring.",
+    }
+    OpcUaSecureConv {
+        doc:       "OPC UA SecureConversation — hybrid security message layer.",
+        display:   "OPC UA SecureConv",
+        color:     0x1F7A7A,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["opcua_sec_conv", "ua_secureconv"],
+        blurb:     "OPC UA SecureConversation \u{2014} hybrid security message layer wrapping OPC UA binary traffic with secure-channel identifiers, token management, and sequence-number tracking for authenticated and encrypted industrial communication.",
+    }
     OpcUaAlarmCondition {
         doc:       "OPC UA A&C (Alarms & Conditions) client protocol.",
         display:   "OPC UA Alarm Condition",
