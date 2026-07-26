@@ -2,6 +2,37 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
+fn extract_delta(payload: &[u8]) -> Option<String> {
+    let raw = String::from_utf8_lossy(payload);
+    let trimmed = raw.trim();
+    if trimmed == "[DONE]" || trimmed == "data: [DONE]" {
+        return None;
+    }
+    let json_str = trimmed
+        .strip_prefix("data: ")
+        .or_else(|| trimmed.strip_prefix("data:"))
+        .map(|s| s.trim())
+        .unwrap_or(trimmed);
+    if json_str == "[DONE]" {
+        return None;
+    }
+    let val: serde_json::Value = serde_json::from_str(json_str).ok()?;
+    let token = val
+        .get("choices")?
+        .as_array()?
+        .first()?
+        .get("delta")?
+        .get("content")?
+        .as_str()?;
+    if token.is_empty() { None } else { Some(token.to_string()) }
+}
+
+fn is_done(payload: &[u8]) -> bool {
+    let raw = String::from_utf8_lossy(payload);
+    let trimmed = raw.trim();
+    trimmed == "[DONE]" || trimmed == "data: [DONE]"
+}
+
 pub fn dissect_mistral_chat_stream(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
@@ -11,17 +42,15 @@ pub fn dissect_mistral_chat_stream(
 ) -> DissectedResult {
     let summary = if payload.len() < 8 {
         "Mistral Chat Stream (malformed)".into()
+    } else if is_done(payload) {
+        "Mistral Chat Stream: [DONE]".into()
+    } else if let Some(token) = extract_delta(payload) {
+        let preview = super::truncate(&token, 80);
+        format!("Mistral Chat Stream: token:\"{}\"", preview)
     } else {
         let raw = String::from_utf8_lossy(payload);
-        if raw.contains("mistral") && (raw.contains("stream") || raw.contains("chat")) {
-            let end = raw.len().min(80);
-            format!("Mistral Chat Stream: {}", &raw[..end])
-        } else if raw.contains("choices") && raw.contains("delta") && raw.contains("mistral") {
-            let end = raw.len().min(80);
-            format!("Mistral Chat Stream: {}", &raw[..end])
-        } else {
-            format!("Mistral Chat Stream ({})", super::bytes(payload.len() as u64))
-        }
+        let preview = super::truncate(&raw, 60);
+        format!("Mistral Chat Stream: {}", preview)
     };
     DissectedResult {
         src_addr: src_ip,
@@ -38,11 +67,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_mistral_chat_stream_sse() {
-        let buf = b"mistral:data:{\"choices\":[{\"delta\":{\"content\":\"bonjour\"}}]}";
+    fn test_mistral_chat_stream_delta() {
+        let buf = b"data: {\"choices\":[{\"delta\":{\"content\":\"bonjour\"}}]}\n\n";
         let r = dissect_mistral_chat_stream(None, None, 0, 0, buf);
         assert_eq!(r.protocol, Protocol::MistralChatStream);
-        assert!(r.summary.contains("Mistral Chat"));
+        assert!(r.summary.contains("bonjour"));
+    }
+
+    #[test]
+    fn test_mistral_chat_stream_done() {
+        let buf = b"data: [DONE]\n\n";
+        let r = dissect_mistral_chat_stream(None, None, 0, 0, buf);
+        assert_eq!(r.protocol, Protocol::MistralChatStream);
+        assert!(r.summary.contains("[DONE]"));
     }
 
     #[test]
