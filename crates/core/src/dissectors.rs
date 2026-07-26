@@ -826,6 +826,16 @@ pub mod zookeeper;
 pub mod zrtp;
 pub mod zwave;
 pub mod x10;
+pub mod edge_inference_onnx;
+pub mod edge_tensorflow_lite;
+pub mod edge_pytorch_mobile;
+pub mod nxp_eiq_inference;
+pub mod stm_stm32cube_ai;
+pub mod siemens_industrial_edge;
+pub mod bosch_nexeed_edge;
+pub mod beckhoff_twincat_analytics;
+pub mod rockwell_factorytalk_edge;
+pub mod schneider_ecostruxure_edge;
 
 use std::net::IpAddr;
 

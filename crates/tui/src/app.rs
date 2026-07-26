@@ -96,6 +96,7 @@ pub struct App {
     pub show_ai_prompt_response: bool,
     pub show_ai_heatmap: bool,
     pub ai_detail_scroll: u16,
+    pub edge_ai_scroll: u16,
 }
 
 impl App {
@@ -161,6 +162,7 @@ impl App {
             show_ai_prompt_response: false,
             show_ai_heatmap: false,
             ai_detail_scroll: 0,
+            edge_ai_scroll: 0,
         })
     }
 

@@ -96,7 +96,7 @@ use super::{
     llama_guard_safeguard, nemo_guardrails_http,
     openai_moderation_async,
     basler_blaze_tof, cognex_vision_protocol,
-    edge_impulse_studio_data, flir_atlas_sdk,
+    edge_impulse_studio_data, edge_inference_onnx, edge_tensorflow_lite, edge_pytorch_mobile, nxp_eiq_inference, stm_stm32cube_ai, siemens_industrial_edge, bosch_nexeed_edge, beckhoff_twincat_analytics, rockwell_factorytalk_edge, schneider_ecostruxure_edge, flir_atlas_sdk,
     intel_realsense_dds, keyence_cv_x_ftp,
     ouster_lidar_tcp, seeed_grove_vision_ai,
     sick_lidar_rms, velodyne_vlp_packet,
@@ -512,6 +512,16 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (61616, openwire::dissect_openwire),
     (61617, artemis_core::dissect_artemis_core),
     (64738, mumble::dissect_mumble),
+    // Edge AI inference protocols (industrial IoT / edge ML)
+    (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
+    (4861, bosch_nexeed_edge::dissect_bosch_nexeed_edge),
+    (8502, edge_tensorflow_lite::dissect_edge_tensorflow_lite),
+    (40001, nxp_eiq_inference::dissect_nxp_eiq_inference),
+    (40002, stm_stm32cube_ai::dissect_stm_stm32cube_ai),
+    (44819, rockwell_factorytalk_edge::dissect_rockwell_factorytalk_edge),
+    (4843, schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge),
+    (50052, edge_inference_onnx::dissect_edge_inference_onnx),
+    (51000, edge_pytorch_mobile::dissect_edge_pytorch_mobile),
 ];
 
 /// UDP service ports, sorted by port number. See [`TCP_PORTS`].
@@ -706,6 +716,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (51820, wireguard::dissect_wireguard),
     (60001, mosh::dissect_mosh),
     (61450, cclink_ie_field_basic::dissect_cclink_ie_field_basic),
+    (48899, beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics),
 ];
 
 /// Every port either table claims. Used by the robustness sweep to fuzz each
@@ -1622,4 +1633,18 @@ fn _dissector_reachability_guard_tokenizer_encoding_374_379() {
         let _ = super::gemma_tokenizer_header::dissect_gemma_tokenizer_header;
         let _ = super::llama_tokenizer_header::dissect_llama_tokenizer_header;
         let _ = super::anthropic_claude_tokenizer::dissect_anthropic_claude_tokenizer;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_edge_ai_industrial_400_409() {
+        let _ = super::edge_inference_onnx::dissect_edge_inference_onnx;
+        let _ = super::edge_tensorflow_lite::dissect_edge_tensorflow_lite;
+        let _ = super::edge_pytorch_mobile::dissect_edge_pytorch_mobile;
+        let _ = super::nxp_eiq_inference::dissect_nxp_eiq_inference;
+        let _ = super::stm_stm32cube_ai::dissect_stm_stm32cube_ai;
+        let _ = super::siemens_industrial_edge::dissect_siemens_industrial_edge;
+        let _ = super::bosch_nexeed_edge::dissect_bosch_nexeed_edge;
+        let _ = super::beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics;
+        let _ = super::rockwell_factorytalk_edge::dissect_rockwell_factorytalk_edge;
+        let _ = super::schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge;
 }

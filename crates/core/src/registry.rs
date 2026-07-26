@@ -21971,8 +21971,99 @@ protocols! {
         transport: Tcp,
         rank:      3,
         aliases:   ["milvus_sealed", "sealed_seg_stream"],
-        blurb:     "Milvus sealed segment streaming protocol \u{2014} chunked streaming of sealed segment data from data nodes to query nodes, including vector fields, scalar fields, and deletion bitmaps.",
+        blurb:     "Milvus sealed segment streaming protocol — chunked streaming of sealed segment data from data nodes to query nodes, including vector fields, scalar fields, and deletion bitmaps.",
     }
+    EdgeInferenceOnnx {
+        doc:       "ONNX Runtime edge inference IPC protocol traffic.",
+        display:   "Edge Inference ONNX",
+        color:     0xE67E22,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["edge_onnx", "onnx_runtime_edge"],
+        blurb:     "ONNX Runtime edge inference IPC protocol — high-performance machine learning model inference using ONNX Runtime on edge devices, with session management, tensor I/O, and hardware accelerator binding.",
+    }
+    EdgeTensorflowLite {
+        doc:       "TensorFlow Lite Micro inference protocol traffic.",
+        display:   "Edge TensorFlow Lite",
+        color:     0xFF6F00,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["edge_tflite", "tflite_micro"],
+        blurb:     "TensorFlow Lite Micro inference protocol — lightweight ML inference for microcontrollers and edge devices, with quantized model execution, tensor arena management, and interpreter control.",
+    }
+    EdgePytorchMobile {
+        doc:       "PyTorch Mobile/Lite interpreter IPC protocol traffic.",
+        display:   "Edge PyTorch Mobile",
+        color:     0xEE4C2C,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["edge_pytorch", "pytorch_mobile"],
+        blurb:     "PyTorch Mobile/Lite interpreter IPC protocol — on-device ML inference using PyTorch's optimized mobile runtime, with model serialization, tensor transport, and delegate dispatching.",
+    }
+    NxpEiqInference {
+        doc:       "NXP eIQ (edge intelligence) inference protocol traffic.",
+        display:   "NXP eIQ Inference",
+        color:     0x00A9E0,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["nxp_eiq", "eiq_inference"],
+        blurb:     "NXP eIQ edge intelligence inference protocol — NXP's ML inference stack for i.MX RT and LPC MCUs, with delegate dispatch to NPU, DSP, and CPU backends.",
+    }
+    StmStm32cubeAi {
+        doc:       "STMicroelectronics STM32Cube.AI runtime protocol traffic.",
+        display:   "STM32Cube.AI",
+        color:     0x03234B,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["stm32cube_ai", "stm_ai"],
+        blurb:     "STMicroelectronics STM32Cube.AI runtime protocol — AI model inference on STM32 MCUs using X-CUBE-AI, with neural network activation, memory pooling, and peripheral integration.",
+    }
+    SiemensIndustrialEdge {
+        doc:       "Siemens Industrial Edge runtime app-to-app IPC protocol traffic.",
+        display:   "Siemens Industrial Edge",
+        color:     0x009999,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["siemens_edge", "industrial_edge"],
+        blurb:     "Siemens Industrial Edge runtime app-to-app IPC protocol — inter-application communication on Siemens Industrial Edge devices, with app lifecycle, data pipeline, and OPC UA bridge integration.",
+    }
+    BoschNexeedEdge {
+        doc:       "Bosch Nexeed edge analytics transport protocol traffic.",
+        display:   "Bosch Nexeed Edge",
+        color:     0xE20015,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["bosch_nexeed", "nexeed_edge"],
+        blurb:     "Bosch Nexeed edge analytics transport protocol — real-time production data analytics transport for Bosch Nexeed Industrial Application System, with sensor fusion and predictive maintenance streams.",
+    }
+    BeckhoffTwincatAnalytics {
+        doc:       "Beckhoff TwinCAT Analytics data streaming protocol traffic.",
+        display:   "Beckhoff TwinCAT Analytics",
+        color:     0x00B4E6,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["beckhoff_twincat", "twincat_analytics"],
+        blurb:     "Beckhoff TwinCAT Analytics data streaming protocol — real-time data acquisition and analysis for Beckhoff TwinCAT systems, with cyclic data streaming, event-triggered logging, and cloud connectivity.",
+    }
+    RockwellFactorytalkEdge {
+        doc:       "Rockwell FactoryTalk Edge Gateway protocol traffic.",
+        display:   "Rockwell FactoryTalk Edge",
+        color:     0x007B3D,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["rockwell_factorytalk", "factorytalk_edge"],
+        blurb:     "Rockwell FactoryTalk Edge Gateway protocol — edge-to-cloud data transport for Rockwell Automation's FactoryTalk ecosystem, with tag-based data publishing, alarm/event forwarding, and secure tunneling.",
+    }
+    SchneiderEcostruxureEdge {
+        doc:       "Schneider EcoStruxure edge-to-cloud bridge protocol traffic.",
+        display:   "Schneider EcoStruxure Edge",
+        color:     0x00B050,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["schneider_ecostruxure", "ecostruxure_edge"],
+        blurb:     "Schneider EcoStruxure edge-to-cloud bridge protocol — secure data exchange between EcoStruxure Automation Expert edge devices and cloud analytics platforms, with asset model synchronization and time-series ingestion.",
+    }
+}
 }
 
 /// High-level protocol category for grouping in the UI and filter.
