@@ -222,8 +222,6 @@ pub mod dec_lat;
 pub mod dec_mop;
 pub mod decnet;
 pub mod der;
-#[cfg(feature = "ot")]
-#[cfg(not(feature = "ot"))]
 pub mod devicenet {
     pub(crate) fn looks_like_devicenet(_id: u32) -> bool {
         false
@@ -390,6 +388,7 @@ pub mod linktypes;
 pub mod lisp;
 pub mod lldp;
 pub mod lmtp;
+pub mod lontalk;
 pub mod lorawan;
 pub mod lpd;
 pub mod lustre;

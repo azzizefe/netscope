@@ -8,12 +8,6 @@
 //! module extracts that wrapper and hands back a label, so each dissector only
 //! needs to supply its own procedure-code table.
 
-use std::net::IpAddr;
-
-use crate::models::Protocol;
-
-use super::DissectedResult;
-
 /// The message kind signalled inside the ASN.1 PER wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessageKind {
