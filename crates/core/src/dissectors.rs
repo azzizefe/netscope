@@ -6974,6 +6974,10 @@ pub mod ipsec_ikev2_frodo;
 pub mod openvpn_pq_cipher;
 pub mod tailscale_pq_noise;
 pub mod nebula_pq_handshake;
+// ── CANopen (§9) ────────────────────────────────────────────────────
+pub mod canopen_nmt;
+pub mod canopen_pdo;
+pub mod canopen_sdo;
 // ── PQC Monitoring Tools (§8.1.1) ────────────────────────────────────
 pub mod tls_pqc_handshake_ext;
 pub mod tls_pqc_cert_chain;

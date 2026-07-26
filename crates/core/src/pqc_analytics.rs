@@ -461,7 +461,7 @@ mod tests {
         assert_eq!(k.algorithm.security_level(), PqcSecurityLevel::Level5);
         tracker.record(&k, &Protocol::TlsKyber1024, "a", "b", 443, 443);
         assert_eq!(tracker.algorithm_counts().len(), 1);
-        let (l1, l3, l5, unk) = tracker.security_level_distribution();
+        let (_l1, _l3, l5, _unk) = tracker.security_level_distribution();
         assert_eq!(l5, 1, "expected Kyber1024 to be Level5");
     }
 

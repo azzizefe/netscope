@@ -144,6 +144,7 @@ use super::{
     ssh_pqc_kex, dnssec_pqc_signing,
     pqc_cert_transparency, oqs_provider_telemetry,
     pqc_hsm_bridge,
+    canopen_nmt, canopen_pdo, canopen_sdo,
     bb84_qkd_classical, e91_qkd_entanglement,
     etsi_gs_qkd_014, qkd_network_routing,
     decoy_state_bb84_err, cascade_info_recon,
@@ -1495,6 +1496,13 @@ fn _dissector_reachability_guard_pqc_monitoring_380_389() {
         let _ = super::pqc_cert_transparency::dissect_pqc_cert_transparency;
         let _ = super::oqs_provider_telemetry::dissect_oqs_provider_telemetry;
         let _ = super::pqc_hsm_bridge::dissect_pqc_hsm_bridge;
+}
+
+#[cfg(test)]
+fn _dissector_reachability_guard_canopen_9() {
+        let _ = super::canopen_nmt::dissect_canopen_nmt;
+        let _ = super::canopen_pdo::dissect_canopen_pdo;
+        let _ = super::canopen_sdo::dissect_canopen_sdo;
 }
 
 #[cfg(test)]

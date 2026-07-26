@@ -20892,6 +20892,34 @@ protocols! {
         aliases:   ["pqc_hsm", "hsm_bridge"],
         blurb:     "PQC HSM Bridge — PQC-capable HSM-to-application bridge protocol for post-quantum key generation, signing, and key encapsulation operations offloaded to hardware security modules with ML-KEM, ML-DSA, and SLH-DSA support.",
     }
+    // ── CANopen (§9) ─────────────────────────────────────────────────
+    CanopenNmt {
+        doc:       "CANopen Network Management (NMT) protocol.",
+        display:   "CANopen NMT",
+        color:     0x00695C,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["canopen_nmt", "co_nmt"],
+        blurb:     "CANopen NMT — CANopen Network Management protocol for node state control with Start/Stop/Reset commands, boot-up messages, and state machine transitions between Initialisation, Pre-Operational, Operational, and Stopped modes.",
+    }
+    CanopenPdo {
+        doc:       "CANopen Process Data Object (PDO) protocol.",
+        display:   "CANopen PDO",
+        color:     0x00838F,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["canopen_pdo", "co_pdo"],
+        blurb:     "CANopen PDO — CANopen Process Data Object protocol for real-time cyclic data exchange with up to 8 bytes of process data per PDO, supporting synchronous/asynchronous transmission and 4 receive + 4 transmit PDO channels.",
+    }
+    CanopenSdo {
+        doc:       "CANopen Service Data Object (SDO) protocol.",
+        display:   "CANopen SDO",
+        color:     0x004D40,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["canopen_sdo", "co_sdo"],
+        blurb:     "CANopen SDO — CANopen Service Data Object protocol for acyclic configuration access using index/subindex addressing, supporting expedited/segmented/block upload and download with comprehensive abort code reporting.",
+    }
     Bb84QkdClassical {
         doc:       "BB84 QKD classical post-processing channel.",
         display:   "BB84 QKD Classical",

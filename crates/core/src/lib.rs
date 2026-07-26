@@ -21,6 +21,7 @@ pub mod filter;
 pub mod firewall;
 pub mod flows;
 pub mod game_plugins;
+pub mod industrial_edge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod forensics;
 #[cfg(not(target_arch = "wasm32"))]
@@ -32,6 +33,8 @@ pub mod pair_correlation;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pcapng;
 pub mod pqc_analytics;
+pub mod pqc_dashboard;
+pub mod pqc_handshake;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pipeline;
 pub mod plugins;
