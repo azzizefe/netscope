@@ -25,6 +25,7 @@ pub mod formats;
 pub mod llm_analytics;
 pub mod models;
 pub mod names;
+pub mod pair_correlation;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pcapng;
 #[cfg(not(target_arch = "wasm32"))]

@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
 
 use crate::llm_analytics::LlmMetadata;
+use crate::pair_correlation::CorrelationInfo;
 
 static NEXT_SESSION_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -190,6 +191,8 @@ pub struct AiTrafficRecord {
     pub timestamp_first_token: Option<DateTime<Utc>>,
     pub timestamp_end: Option<DateTime<Utc>>,
     pub geo_region: Option<String>,
+    pub correlation_id: Option<String>,
+    pub correlation_method: Option<String>,
 }
 
 impl AiTrafficRecord {
@@ -241,6 +244,8 @@ struct ActiveSession {
     retry_count: u8,
     geo_region: Option<String>,
 
+    correlation_id: Option<String>,
+    correlation_method: Option<String>,
     timestamp_start: DateTime<Utc>,
 }
 
@@ -252,6 +257,7 @@ impl ActiveSession {
         timestamp: DateTime<Utc>,
         _src_ip: IpAddr,
         _dst_ip: IpAddr,
+        correlation: Option<&CorrelationInfo>,
     ) -> Self {
         let hash = Sha256Digest::compute(payload);
         ActiveSession {
@@ -286,6 +292,9 @@ impl ActiveSession {
             http_status: 200,
             retry_count: 0,
             geo_region: None,
+            correlation_id: correlation.and_then(|c| c.correlation_id.clone()),
+            correlation_method: Some(correlation.map(|c| c.method.to_string()).unwrap_or_default())
+                .filter(|s| !s.is_empty()),
 
             timestamp_start: timestamp,
         }
@@ -391,6 +400,8 @@ impl ActiveSession {
             timestamp_first_token: self.first_chunk_time,
             timestamp_end: self.last_chunk_time,
             geo_region: self.geo_region,
+            correlation_id: self.correlation_id.clone(),
+            correlation_method: self.correlation_method.clone(),
         }
     }
 }
@@ -450,6 +461,20 @@ impl AiTrafficTracker {
         payload: &[u8],
         timestamp: DateTime<Utc>,
     ) {
+        self.record_packet_with_correlation(meta, src_ip, src_port, dst_ip, dst_port, payload, timestamp, None);
+    }
+
+    pub fn record_packet_with_correlation(
+        &mut self,
+        meta: &LlmMetadata,
+        src_ip: IpAddr,
+        src_port: u16,
+        dst_ip: IpAddr,
+        dst_port: u16,
+        payload: &[u8],
+        timestamp: DateTime<Utc>,
+        correlation: Option<&CorrelationInfo>,
+    ) {
         let key = (src_ip, src_port, dst_ip, dst_port);
         let session = self.sessions.get_mut(&key);
         match session {
@@ -479,6 +504,7 @@ impl AiTrafficTracker {
                     timestamp,
                     src_ip,
                     dst_ip,
+                    correlation,
                 );
                 if session.is_complete() {
                     let mut record = session.into_record();
@@ -519,7 +545,6 @@ impl AiTrafficTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm_analytics::LlmMetadata;
 
     fn sample_meta(model: &str, provider: &str, finish: Option<&str>, ct: Option<u64>, tt: Option<u64>) -> LlmMetadata {
         LlmMetadata {
