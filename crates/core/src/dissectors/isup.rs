@@ -1,17 +1,59 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-//! ISDN User Part (ISUP) dissector.
-//!
-//! ISUP carries call-setup and teardown signalling within SS7 networks. It
-//! rides inside MTP3 and is the layer that actually places, answers and
-//! tears down a telephone call.
-
 use std::net::IpAddr;
 
 use crate::models::Protocol;
 
 use super::DissectedResult;
 
+/// ISUP message types (ITU-T Q.763 §1.0). These are the states of a telephone
+/// call as it is set up, answered and released between switches.
+fn message_name(t: u8) -> Option<&'static str> {
+    Some(match t {
+        0x01 => "IAM (Initial Address)",
+        0x02 => "SAM (Subsequent Address)",
+        0x03 => "INR (Information Request)",
+        0x04 => "INF (Information)",
+        0x05 => "COT (Continuity)",
+        0x06 => "ACM (Address Complete)",
+        0x07 => "CON (Connect)",
+        0x08 => "FOT (Forward Transfer)",
+        0x09 => "ANM (Answer)",
+        0x0C => "REL (Release)",
+        0x10 => "RLC (Release Complete)",
+        0x11 => "CCR (Continuity Check Request)",
+        0x12 => "RSC (Reset Circuit)",
+        0x13 => "BLO (Blocking)",
+        0x14 => "UBL (Unblocking)",
+        0x15 => "BLA (Blocking Ack)",
+        0x16 => "UBA (Unblocking Ack)",
+        0x17 => "GRS (Circuit Group Reset)",
+        0x18 => "CGB (Circuit Group Blocking)",
+        0x19 => "CGU (Circuit Group Unblocking)",
+        0x1A => "CGBA (Circuit Group Blocking Ack)",
+        0x1B => "CGUA (Circuit Group Unblocking Ack)",
+        0x2C => "CPG (Call Progress)",
+        0x2D => "USR (User-to-User)",
+        0x2E => "UCIC (Unequipped Circuit)",
+        0x2F => "CFN (Confusion)",
+        0x31 => "OLM (Overload)",
+        0x32 => "CRG (Charge Information)",
+        0x36 => "NRM (Network Resource Management)",
+        0x37 => "FAC (Facility)",
+        0x38 => "UPT (User Part Test)",
+        0x39 => "UPA (User Part Available)",
+        0x3B => "IDR (Identification Request)",
+        0x3C => "IRS (Identification Response)",
+        0x3D => "SGM (Segmentation)",
+        _ => return None,
+    })
+}
+
+/// Dissect an ISUP message. ISUP rides inside M3UA (service indicator 5) rather
+/// than on a port of its own, so it is reached from the M3UA dissector.
+///
+/// The message begins with a 2-byte circuit identification code — which
+/// physical or logical trunk the call is on — followed by the message type.
 pub fn dissect_isup(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
@@ -19,74 +61,23 @@ pub fn dissect_isup(
     dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    if payload.len() < 2 {
-        return DissectedResult {
-            src_addr: src_ip,
-            dst_addr: dst_ip,
-            src_port: Some(src_port),
-            dst_port: Some(dst_port),
-            protocol: Protocol::Isup,
-            summary: "ISUP — truncated".into(),
-        };
-    }
-    // CIC is in the first two bytes (lower 12 bits in some variants).
-    let cic = u16::from_be_bytes([payload[0], payload[1]]) & 0x0FFF;
-    let msg_type = *payload.get(2).unwrap_or(&0);
-    let name = isup_message_name(msg_type);
+    let summary = if payload.len() < 3 {
+        format!("ISUP ({})", super::bytes(payload.len() as u64))
+    } else {
+        // The circuit identification code is little-endian, unlike most of SS7.
+        let cic = u16::from_le_bytes([payload[0], payload[1]]) & 0x0FFF;
+        match message_name(payload[2]) {
+            Some(name) => format!("ISUP {name} — CIC {cic}"),
+            None => format!("ISUP message 0x{:02x} — CIC {cic}", payload[2]),
+        }
+    };
     DissectedResult {
         src_addr: src_ip,
         dst_addr: dst_ip,
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::Isup,
-        summary: format!("ISUP {name} (CIC {cic})"),
-    }
-}
-
-fn isup_message_name(code: u8) -> &'static str {
-    match code {
-        1 => "IAM",
-        2 => "SAM",
-        3 => "INR",
-        4 => "COX",
-        5 => "EXM",
-        6 => "ACM",
-        7 => "CON",
-        8 => "FOT",
-        9 => "ANM",
-        10 => "CPG",
-        11 => "USIS",
-        12 => "UBL",
-        13 => "BLO",
-        14 => "BLA",
-        15 => "UBA",
-        16 => "RES",
-        17 => "RESET",
-        18 => "UBLK",
-        19 => "UCIC",
-        20 => "CCR",
-        21 => "RSC",
-        22 => "GRS",
-        23 => "CGB",
-        24 => "CGU",
-        25 => "CGQA",
-        26 => "CQR",
-        27 => "GRA",
-        28 => "SGM",
-        29 => "CFN",
-        30 => "LPA",
-        31 => "OPR",
-        32 => "IDR",
-        33 => "IRS",
-        34 => "LOP",
-        35 => "PAM",
-        36 => "PRI",
-        37 => "FAA",
-        38 => "FRJ",
-        39 => "FAR",
-        40 => "RLC",
-        41 => "REL",
-        _ => "unknown ISUP message",
+        summary,
     }
 }
 
@@ -95,16 +86,40 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_isup_iam() {
-        let payload = [0x00, 0x01, 0x01]; // CIC 1, IAM
-        let r = dissect_isup(None, None, 0, 0, &payload);
-        assert!(r.summary.contains("IAM"));
-        assert!(r.summary.contains("CIC 1"));
+    fn initial_address_starts_a_call() {
+        let r = dissect_isup(None, None, 2905, 2905, &[0x2A, 0x00, 0x01, 0x00]);
+        assert_eq!(r.protocol, Protocol::Isup);
+        assert_eq!(r.summary, "ISUP IAM (Initial Address) — CIC 42");
     }
 
     #[test]
-    fn test_isup_truncated() {
-        let r = dissect_isup(None, None, 0, 0, &[0x00]);
-        assert!(r.summary.contains("truncated"));
+    fn answer_and_release() {
+        let r = dissect_isup(None, None, 2905, 2905, &[0x01, 0x00, 0x09]);
+        assert_eq!(r.summary, "ISUP ANM (Answer) — CIC 1");
+        let r = dissect_isup(None, None, 2905, 2905, &[0x01, 0x00, 0x0C]);
+        assert_eq!(r.summary, "ISUP REL (Release) — CIC 1");
+    }
+
+    /// The circuit code is little-endian and only 12 bits wide; reading it as
+    /// big-endian or a full 16 bits would report the wrong trunk.
+    #[test]
+    fn circuit_code_is_little_endian_and_masked() {
+        let r = dissect_isup(None, None, 2905, 2905, &[0x34, 0x02, 0x01]);
+        assert_eq!(r.summary, "ISUP IAM (Initial Address) — CIC 564");
+        // The top four bits belong to the spare field and must be masked off.
+        let r = dissect_isup(None, None, 2905, 2905, &[0x01, 0xF0, 0x09]);
+        assert_eq!(r.summary, "ISUP ANM (Answer) — CIC 1");
+    }
+
+    #[test]
+    fn unknown_type_reports_its_byte() {
+        let r = dissect_isup(None, None, 2905, 2905, &[0x01, 0x00, 0x7E]);
+        assert_eq!(r.summary, "ISUP message 0x7e — CIC 1");
+    }
+
+    #[test]
+    fn truncated_does_not_panic() {
+        let r = dissect_isup(None, None, 2905, 2905, &[0x01, 0x00]);
+        assert_eq!(r.summary, "ISUP (2 bytes)");
     }
 }

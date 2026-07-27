@@ -63,6 +63,7 @@ use super::{
  , rtsp
  , stun
  , syslog
+ , iax2
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -240,6 +241,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (3784, bfd::dissect_bfd),
  (3956, gvcp::dissect_gvcp),
  (4500, ipsec::dissect_nat_traversal),
+ (4569, iax2::dissect_iax2),
  (4739, netflow::dissect_netflow),
  (4790, vxlangpe::dissect_vxlangpe),
  // OPC UA PubSub (UADP) shares UDP 4840 with OPC UA TCP on the same port,

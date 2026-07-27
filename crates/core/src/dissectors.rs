@@ -20,6 +20,8 @@ pub mod bgp;
 pub mod bier;
 pub mod bindings;
 pub mod bluetooth;
+pub mod cfm;
+pub mod erps;
 pub mod gprscdr;
 pub mod gsm_a_bssmap;
 pub mod gsm_a_common;
@@ -50,6 +52,7 @@ pub mod gsm_um;
 pub mod gsmtap;
 pub mod gsmtap_log;
 
+pub mod iax2;
 pub mod isup;
 pub mod m3ua;
 pub mod modbus_ascii;
@@ -57,9 +60,11 @@ pub mod e1ap;
 pub mod f1ap;
 pub mod nvgre;
 pub mod evpn;
+pub mod profisafe;
 pub mod redis;
 pub mod redis_cluster;
 pub mod rtsp;
+pub mod smb;
 pub mod srv6;
 pub mod nsh;
 pub mod bssap;
@@ -954,6 +959,11 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_ETHERCAT => ethercat::dissect_ethercat(payload),
         ETHERTYPE_MACSEC => macsec::dissect_macsec(payload),
         ETHERTYPE_FCOE => fcoe::dissect_fcoe(payload),
+        // ERPS ring protection borrows CFM's EtherType rather than taking one
+        // of its own, and is told apart by the opcode — a ring switching to its
+        // backup path is a different event from a connectivity check.
+        ETHERTYPE_CFM if payload.get(1) == Some(&cfm::OPCODE_RAPS) => erps::dissect_erps(payload),
+        ETHERTYPE_CFM => cfm::dissect_cfm(payload),
         ETHERTYPE_MPLS_UCAST | ETHERTYPE_MPLS_MCAST => dissect_mpls(payload, vlan_depth),
         // 802.3 length-form frames carry an LLC header; the STP BPDU is the one
         // we recognise there (DSAP/SSAP 0x42).

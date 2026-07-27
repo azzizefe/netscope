@@ -139,13 +139,13 @@ pub fn dissect_smb_direct(
     let data_length =
         u32::from_le_bytes([payload[16], payload[17], payload[18], payload[19]]) as usize;
 
+    // SMB Direct is an envelope: the credits are worth reporting, but what the
+    // payload actually *is* is an SMB2 message, and that is what a reader wants
+    // to see. Hand it on rather than stopping at the transport.
     if data_length > 0 && data_offset + data_length <= payload.len() {
         if let Some(data) = payload.get(data_offset..data_offset + data_length) {
-            return DissectedResult {
-                summary: format!("SMB Direct Data (req {credits_requested}, grant {credits_granted})"),
-                protocol: Protocol::SmbDirect,
-                ..base
-            };
+            let inner = super::smb::dissect_smb(src_ip, dst_ip, src_port, dst_port, data);
+            return inner;
         }
     }
 

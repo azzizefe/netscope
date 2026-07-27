@@ -22,9 +22,12 @@ pub fn dissect_profinet(payload: &[u8]) -> DissectedResult {
         return super::pn_ptcp::dissect_pn_ptcp(id, &payload[2..]);
     }
 
+    // A FrameID in the cyclic-IO range can carry a PROFIsafe payload inside the
+    // ordinary one, so the framing decides rather than the range alone.
     if let Some(id) = frame_id {
-        if (0x8000..=0xBBFF).contains(&id) {
-            // PROFIsafe — dissector module unavailable
+        if (0x8000..=0xBBFF).contains(&id) && super::profisafe::looks_like_profisafe(&payload[2..])
+        {
+            return super::profisafe::dissect_profisafe(&payload[2..]);
         }
     }
 
