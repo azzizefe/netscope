@@ -67,7 +67,6 @@ export function loadApp() {
     document,
     setTimeout: noop, clearTimeout: noop, setInterval: () => 0, clearInterval: noop,
     fetch: () => Promise.reject(new Error('network disabled in tests')),
-    I18N: { t: (k) => k, apply: noop, lang: () => 'en', has: () => true },
     TextDecoder,
     TextEncoder,
   };
@@ -77,6 +76,14 @@ export function loadApp() {
 
   vm.createContext(ctx);
   initWasmInContext(ctx);
+  // The real translation table, not a stub that echoes keys back. A stub makes
+  // every string look present, so a hardcoded English literal in a render
+  // function — the exact bug the packet-list empty state had — passes silently.
+  vm.runInContext(
+    readFileSync(path.join(here, '..', 'frontend', 'i18n.js'), 'utf8'),
+    ctx,
+    { filename: 'i18n.js' },
+  );
   // filter.js must run first: app.js references the NetscopeFilter global it
   // defines (exactly as index.html loads them in order).
   vm.runInContext(stripESM(filterSource), ctx, { filename: 'filter.js' });

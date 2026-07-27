@@ -865,6 +865,8 @@ const ETHERTYPE_MMRP: u16 = 0x88F6; // 802.1ak multicast registration
 const ETHERTYPE_RARP: u16 = 0x8035; // Reverse ARP
 const ETHERTYPE_ETHERCAT: u16 = 0x88A4; // EtherCAT industrial fieldbus
 const ETHERTYPE_MACSEC: u16 = 0x88E5; // 802.1AE MACsec link encryption
+const ETHERTYPE_CCLINK_IE: u16 = 0x890F; // CC-Link IE Control/Field
+const ETHERTYPE_VARAN: u16 = 0x88B7; // VARAN real-time industrial Ethernet
 const ETHERTYPE_FCOE: u16 = 0x8906; // Fibre Channel over Ethernet
 const ETHERTYPE_PBB: u16 = 0x88E7; // 802.1ah provider backbone bridging
 const ETHERTYPE_NSH: u16 = 0x894F; // Service function chaining (RFC 8300)
@@ -915,7 +917,6 @@ mod unwired {
     pub const DLT_SHADOWSOCKS: i32 = 300;
     pub const DLT_VMESS: i32 = 301;
     pub const DLT_OBFS4: i32 = 302;
-    pub const ETHERTYPE_CCLINK_IE: u16 = 0x890F; // CC-Link IE Control/Field
     pub const ETHERTYPE_MAC_CONTROL: u16 = 0x8808; // Ethernet flow control (PAUSE)
     pub const ETHERTYPE_BATMAN: u16 = 0x4305; // B.A.T.M.A.N. advanced mesh
     pub const ETHERTYPE_TRILL: u16 = 0x22F3; // Routed Ethernet (RFC 6325)
@@ -980,6 +981,19 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_ETHERCAT => ethercat::dissect_ethercat(payload),
         ETHERTYPE_MACSEC => macsec::dissect_macsec(payload),
         ETHERTYPE_FCOE => fcoe::dissect_fcoe(payload),
+        // CC-Link IE runs the field network Mitsubishi lines are built on, and
+        // the leading byte says whether a frame is cyclic I/O or a transient
+        // message — the difference between the live control loop and someone
+        // reading a register out of band.
+        ETHERTYPE_CCLINK_IE => {
+            mitsubishi_cc_link_ie_field::dissect_mitsubishi_cc_link_ie_field(
+                None, None, 0, 0, payload,
+            )
+        }
+        // VARAN rides the local-experimental EtherType, and its function code
+        // separates the cyclic control loop from mailbox, safety and
+        // diagnostics traffic sharing the same wire.
+        ETHERTYPE_VARAN => varan_bus::dissect_varan_bus(None, None, 0, 0, payload),
         // ERPS ring protection borrows CFM's EtherType rather than taking one
         // of its own, and is told apart by the opcode — a ring switching to its
         // backup path is a different event from a connectivity check.
@@ -2094,6 +2108,38 @@ mod tests {
         let ccm = build_eth_frame(0x8902, &[0xE1, 0x01, 0x00, 0x04]);
         assert_eq!(dissect(&raps).protocol, Protocol::Erps);
         assert_eq!(dissect(&ccm).protocol, Protocol::Cfm);
+    }
+
+    /// Two industrial fieldbuses that each own an EtherType. Both used to fall
+    /// through to "unknown ethertype" — the dissectors existed and nothing
+    /// reached them.
+    #[test]
+    fn end_to_end_industrial_ethertypes_via_dissect() {
+        // CC-Link IE Field: leading byte 1 is cyclic I/O, the live control loop.
+        let cclink = build_eth_frame(0x890F, &[0x01, 0x05, 0x02, 0x00, 0x00, 0x2A, 0, 0]);
+        let r = dissect(&cclink);
+        assert_eq!(r.protocol, Protocol::MitsubishiCcLinkIeField);
+        assert!(r.summary.contains("Cyclic data"), "{}", r.summary);
+
+        // VARAN: function code 1 is the cyclic channel.
+        let varan = build_eth_frame(0x88B7, &[0x01, 0x00, 0x00, 0x00, 0x00, 0x20, 0, 0]);
+        let r = dissect(&varan);
+        assert_eq!(r.protocol, Protocol::VaranBus);
+        assert!(r.summary.contains("CyclicIO"), "{}", r.summary);
+    }
+
+    /// An EtherCAT mailbox carrying a firmware transfer, through the real
+    /// dispatch — a device having its firmware replaced used to read as an
+    /// ordinary EtherCAT frame.
+    #[test]
+    fn end_to_end_ethercat_firmware_transfer_via_dissect() {
+        let mut body = 4u16.to_le_bytes().to_vec(); // frame type 4 = mailbox
+        body[1] |= 0x40;
+        let mut mbox = vec![0x07, 0x00, 0x00, 0x00, 0x00, 0x04]; // len, addr, chan, FoE
+        mbox.extend_from_slice(&[0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
+        body.extend_from_slice(&mbox);
+        let frame = build_eth_frame(0x88A4, &body);
+        assert_eq!(dissect(&frame).protocol, Protocol::EthercatFoeDetail);
     }
 
     #[test]
@@ -4451,6 +4497,9 @@ mod robustness {
             // A PROFINET FrameID in the DCP range selects discovery and
             // configuration, which is a different protocol from cyclic IO.
             include_str!("dissectors/profinet.rs"),
+            // An EtherCAT mailbox carries an acyclic protocol of its own, and
+            // a datagram aimed at the clock registers is a synchronisation.
+            include_str!("dissectors/ethercat.rs"),
             // DVMRP borrows an IGMP type rather than a protocol number.
             include_str!("dissectors/igmp.rs"),
             // An HTTP body can carry a protocol of its own (E1), and an ONC RPC

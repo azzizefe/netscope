@@ -971,3 +971,40 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
   background: var(--bg-elev-2); padding: 0 4px; border-radius: 3px;
   font-size: 11px; color: var(--text);
 }
+
+/* ---- Empty packet list ----
+   The largest pane on screen, and the first thing a new user sees. It used to
+   hold four untranslated words in the middle of a very large void, so it now
+   says what to do next and what the build can read. Centred as a block rather
+   than filling the pane: a wall of text across a 1500px window is harder to
+   read than a column. */
+.packets-empty {
+  max-width: 46ch;
+  margin: 12vh auto 0;
+  padding: 0 24px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.packets-empty .empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.packets-empty .empty-body {
+  font-size: 13px;
+  line-height: 1.65;
+}
+.packets-empty .empty-body b {
+  color: var(--text);
+  font-weight: 600;
+}
+/* Separated from the instruction above it: it is context, not a step. */
+.packets-empty .empty-count {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.packets-empty .empty-count b { color: var(--accent); }

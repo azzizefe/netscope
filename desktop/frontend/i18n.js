@@ -466,6 +466,9 @@ const I18N = (() => {
   // labels the render functions inject). Merged into the per-language tables.
   const EXTRA = {
     en: {
+      'packets.empty.title': 'No packets yet',
+      'packets.empty.body': 'Press <b>Start</b> to capture from the selected interface, or open a saved capture with <b>File → Open capture…</b>',
+      'packets.empty.count': '{n} protocols are recognised — from HTTP and DNS to PROFINET, CANopen and NGAP.',
       'empty.capture': 'No packets captured yet. Start a capture (or open a .pcap), then scan.',
       'insights.nofindings': 'Nothing notable found — no cleartext secrets, scans, or errors in this capture.',
       'privacy.nosites': 'No external sites in this capture.',
@@ -479,6 +482,9 @@ const I18N = (() => {
       'geoip.db.hint': 'Point at a MaxMind .mmdb file (e.g. the free GeoLite2-City) and locations resolve locally — private and fully offline.',
     },
     de: {
+      'packets.empty.title': 'Noch keine Pakete',
+      'packets.empty.body': 'Klicken Sie auf <b>Start</b>, um von der gewählten Schnittstelle aufzuzeichnen, oder öffnen Sie eine gespeicherte Aufzeichnung über <b>Datei → Aufzeichnung öffnen…</b>',
+      'packets.empty.count': '{n} Protokolle werden erkannt — von HTTP und DNS bis PROFINET, CANopen und NGAP.',
       'empty.capture': 'Noch keine Pakete aufgezeichnet. Starten Sie eine Aufzeichnung (oder öffnen Sie eine .pcap), dann scannen.',
       'insights.nofindings': 'Nichts Auffälliges gefunden — keine Klartext-Geheimnisse, Scans oder Fehler in dieser Aufzeichnung.',
       'privacy.nosites': 'Keine externen Seiten in dieser Aufzeichnung.',
@@ -492,6 +498,9 @@ const I18N = (() => {
       'geoip.db.hint': 'Wählen Sie eine MaxMind-.mmdb-Datei (z. B. das kostenlose GeoLite2-City) — Standorte werden lokal aufgelöst: privat und vollständig offline.',
     },
     fr: {
+      'packets.empty.title': 'Aucun paquet',
+      'packets.empty.body': 'Cliquez sur <b>Démarrer</b> pour capturer depuis l’interface sélectionnée, ou ouvrez une capture enregistrée via <b>Fichier → Ouvrir une capture…</b>',
+      'packets.empty.count': '{n} protocoles reconnus — de HTTP et DNS à PROFINET, CANopen et NGAP.',
       'empty.capture': 'Aucun paquet capturé. Démarrez une capture (ou ouvrez un .pcap), puis analysez.',
       'insights.nofindings': 'Rien de notable — aucun secret en clair, scan ou erreur dans cette capture.',
       'privacy.nosites': 'Aucun site externe dans cette capture.',
@@ -505,6 +514,9 @@ const I18N = (() => {
       'geoip.db.hint': 'Indiquez un fichier MaxMind .mmdb (p. ex. le GeoLite2-City gratuit) : les localisations sont résolues localement — privé et entièrement hors ligne.',
     },
     it: {
+      'packets.empty.title': 'Nessun pacchetto',
+      'packets.empty.body': 'Premi <b>Avvia</b> per acquisire dall’interfaccia selezionata, oppure apri un’acquisizione salvata da <b>File → Apri acquisizione…</b>',
+      'packets.empty.count': '{n} protocolli riconosciuti — da HTTP e DNS a PROFINET, CANopen e NGAP.',
       'empty.capture': 'Nessun pacchetto acquisito. Avvia un’acquisizione (o apri un .pcap), poi analizza.',
       'insights.nofindings': 'Nulla di rilevante — nessun segreto in chiaro, scansione o errore in questa acquisizione.',
       'privacy.nosites': 'Nessun sito esterno in questa acquisizione.',
@@ -518,6 +530,9 @@ const I18N = (() => {
       'geoip.db.hint': 'Indica un file MaxMind .mmdb (es. il GeoLite2-City gratuito): le posizioni si risolvono in locale — privato e completamente offline.',
     },
     pt: {
+      'packets.empty.title': 'Nenhum pacote ainda',
+      'packets.empty.body': 'Clique em <b>Iniciar</b> para capturar da interface selecionada, ou abra uma captura salva em <b>Arquivo → Abrir captura…</b>',
+      'packets.empty.count': '{n} protocolos reconhecidos — de HTTP e DNS a PROFINET, CANopen e NGAP.',
       'empty.capture': 'Nenhum pacote capturado. Inicie uma captura (ou abra um .pcap) e depois analise.',
       'insights.nofindings': 'Nada notável — nenhum segredo em texto claro, varredura ou erro nesta captura.',
       'privacy.nosites': 'Nenhum site externo nesta captura.',
@@ -531,6 +546,9 @@ const I18N = (() => {
       'geoip.db.hint': 'Aponte para um arquivo MaxMind .mmdb (ex.: o GeoLite2-City gratuito) e as localizações são resolvidas localmente — privado e totalmente offline.',
     },
     ar: {
+      'packets.empty.title': 'لا توجد حزم بعد',
+      'packets.empty.body': 'اضغط <b>ابدأ</b> للالتقاط من الواجهة المحددة، أو افتح التقاطاً محفوظاً من <b>ملف ← فتح التقاط…</b>',
+      'packets.empty.count': 'يتم التعرّف على {n} بروتوكولاً — من HTTP وDNS إلى PROFINET وCANopen وNGAP.',
       'empty.capture': 'لم تُلتقط أي حزم بعد. ابدأ التقاطاً (أو افتح ملف ‎.pcap) ثم افحص.',
       'insights.nofindings': 'لم يُعثر على شيء ملحوظ — لا أسرار بنص واضح ولا فحوصات ولا أخطاء في هذا الالتقاط.',
       'privacy.nosites': 'لا مواقع خارجية في هذا الالتقاط.',
@@ -544,6 +562,9 @@ const I18N = (() => {
       'geoip.db.hint': 'حدّد ملف MaxMind ‏.mmdb (مثل GeoLite2-City المجاني) لتُحلّ المواقع محلياً — خصوصية تامة ويعمل دون اتصال بالكامل.',
     },
     tr: {
+      'packets.empty.title': 'Henüz paket yok',
+      'packets.empty.body': 'Seçili arayüzden yakalamak için <b>Başlat</b>’a basın, ya da kayıtlı bir yakalamayı <b>Dosya → Yakalama aç…</b> ile açın.',
+      'packets.empty.count': '{n} protokol tanınıyor — HTTP ve DNS’ten PROFINET, CANopen ve NGAP’a kadar.',
       'empty.capture': 'Henüz paket yakalanmadı. Bir yakalama başlatın (ya da bir .pcap açın), sonra tarayın.',
       'insights.nofindings': 'Kayda değer bir şey bulunamadı — bu yakalamada açık metin sır, tarama veya hata yok.',
       'privacy.nosites': 'Bu yakalamada dış site yok.',

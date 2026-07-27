@@ -91,6 +91,76 @@ describe('virtual packet list', () => {
     const { ctx, list } = appWithPackets(0);
     ctx.renderPacketList();
     expect(list.style.height).toBe('auto');
+    expect(list.innerHTML).toContain('packets-empty');
+  });
+
+  // The pane is the first thing a new user sees and it is the largest thing on
+  // screen. It has to say what to do next, and it has to do so in the language
+  // the rest of the window is in — it was hardcoded English while the chrome
+  // around it translated.
+  it('the empty state is translated and tells the user what to do', () => {
+    const { ctx, list } = appWithPackets(0);
+    ctx.renderPacketList();
+    const html = list.innerHTML;
+    expect(html).toContain('empty-title');
+    expect(html).toContain('empty-body');
+    // The body names the buttons in bold, and that markup has to survive the
+    // escaping the rest of the string goes through.
+    expect(html).toMatch(/<b>[^<]+<\/b>/);
+    expect(html).not.toContain('&lt;b&gt;');
+  });
+
+  // The count is decoration that must never be invented: until the backend
+  // answers, the line is left out rather than showing a placeholder or a
+  // number written into the frontend that would drift.
+  it('omits the protocol count until the backend reports one', () => {
+    const { ctx, list } = appWithPackets(0);
+    ctx.renderPacketList();
+    expect(list.innerHTML).not.toContain('empty-count');
+    expect(list.innerHTML).not.toContain('{n}');
+  });
+
+  // Once the backend answers, the number appears — and it is the backend's
+  // number, so it cannot disagree with what the build actually recognises.
+  it('shows the protocol count the backend reports', async () => {
+    const { ctx, list } = appWithPackets(0);
+    await ctx.loadProtocolCount(async (cmd) => {
+      expect(cmd).toBe('protocol_count');
+      return 2531;
+    });
+    ctx.renderPacketList();
+    expect(list.innerHTML).toContain('empty-count');
+    expect(list.innerHTML).toMatch(/2[.,  ]?531/);
+  });
+
+  // An older backend has no such command. The pane still has to render.
+  it('still renders when the backend has no protocol count', async () => {
+    const { ctx, list } = appWithPackets(0);
+    await ctx.loadProtocolCount(async () => {
+      throw new Error('unknown command');
+    });
+    ctx.renderPacketList();
+    expect(list.innerHTML).toContain('packets-empty');
+    expect(list.innerHTML).not.toContain('empty-count');
+  });
+
+  // The bug this replaced: the chrome around this pane translated, and the
+  // pane itself said "No packets yet" in English regardless of the language.
+  it('follows the selected language', () => {
+    const { ctx, list } = appWithPackets(0);
+
+    ctx.I18N.apply('tr');
+    ctx.renderPacketList();
+    expect(list.innerHTML).toContain('Henüz paket yok');
+    expect(list.innerHTML).toContain('Başlat');
+    expect(list.innerHTML).not.toContain('No packets yet');
+
+    ctx.I18N.apply('de');
+    ctx.renderPacketList();
+    expect(list.innerHTML).toContain('Noch keine Pakete');
+
+    ctx.I18N.apply('en');
+    ctx.renderPacketList();
     expect(list.innerHTML).toContain('No packets yet');
   });
 });

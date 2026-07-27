@@ -55,8 +55,11 @@ pub fn dissect_ethercat(payload: &[u8]) -> DissectedResult {
             return inner;
         }
     }
-    if frame_type != Some(FRAME_TYPE_MAILBOX) {
-        if let Some(dc) = distributed_clocks(&payload[2.min(payload.len())..]) {
+    // Clock registers are addressed by a datagram, so only a datagram frame is
+    // examined for them — a mailbox body could otherwise land in the register
+    // range by coincidence.
+    if frame_type == Some(FRAME_TYPE_DATAGRAMS) {
+        if let Some(dc) = distributed_clocks(&payload[2..]) {
             return dc;
         }
     }

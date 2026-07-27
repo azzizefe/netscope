@@ -4,7 +4,7 @@
 // Talks to the Rust backend over Tauri IPC (window.__TAURI__).
 
 import { invoke, listen, loadInterfaces, startCapture, stopCapture, onCaptureStopped, openCaptureOptions, openRemoteCapture, startRemoteCapture, doBlock, doUnblock } from './modules/api.js';
-import { packetRowHtml, renderPacketRows, renderPacketList, transportName, fieldRanges, treeNode, buildDetailTree, showDetail, hideDetail, hexDump, highlightBytes } from './modules/views/packets.js';
+import { packetRowHtml, renderPacketRows, renderPacketList, transportName, fieldRanges, treeNode, buildDetailTree, showDetail, hideDetail, hexDump, highlightBytes, loadProtocolCount } from './modules/views/packets.js';
 import { closeVoipModal, switchVoipTab, renderVoipFlow, playVoipAudio, stopVoipAudio, renderVoipPlayer, showVoip } from './modules/views/voip.js';
 import initWasm from './wasm/netscope_wasm.js';
 import { observeDevice, renderWifi, initWifi } from './modules/wifi.js';
@@ -4817,6 +4817,9 @@ async function init() {
   try {
     state.elevated = await invoke('is_elevated');
     if (!state.elevated) els.elevationBadge.classList.remove('hidden');
+    // Fills in the protocol count on the empty packet list. Not awaited: the
+    // number is decoration, and nothing else waits on it.
+    loadProtocolCount(invoke);
     const blocked = await invoke('list_blocked');
     if (blocked) blocked.forEach((ip) => state.blocked.add(ip));
   } catch (e) { console.error(e); }

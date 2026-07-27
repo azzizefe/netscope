@@ -13,6 +13,56 @@ import { $, beautifyPayload, colorRuleFor, decodeStreamText, els, endpointLabel,
 const ROW_H = 24;
 const VSCROLL_OVERSCAN = 12;
 
+/// How many protocols this build recognises, filled in once from the backend.
+///
+/// Left `null` until it answers, and the line is simply left out until then —
+/// showing a placeholder number, or a stale one written into the frontend,
+/// would be worse than showing nothing.
+let protocolCount = null;
+
+/// Ask the backend for the protocol count and redraw if the list is still empty.
+export async function loadProtocolCount(invoke) {
+  try {
+    const n = await invoke('protocol_count');
+    if (typeof n === 'number' && n > 0) {
+      protocolCount = n;
+      if (!state.packets.length && typeof window.renderPacketList === 'function') {
+        window.renderPacketList();
+      }
+    }
+  } catch {
+    // An older backend has no such command. The empty state still works
+    // without the line, so there is nothing to report.
+  }
+}
+
+/// What the packet list shows before anything has been captured.
+///
+/// The pane is the largest thing on screen and it used to hold four untranslated
+/// words. It is the first thing a new user sees, so it says what to do next —
+/// and names the scale of what the build can read, because "start a capture"
+/// gives no reason to expect anything interesting back.
+function emptyStateHtml() {
+  const t = (k) => (typeof I18N !== 'undefined' ? I18N.t(k) : k);
+  const count =
+    protocolCount === null
+      ? ''
+      : `<div class="empty-count">${esc(t('packets.empty.count')).replace(
+          '{n}',
+          `<b>${protocolCount.toLocaleString()}</b>`,
+        )}</div>`;
+  // The body copy carries deliberate <b> markup naming the buttons, so it is
+  // escaped first and only those tags put back.
+  const body = esc(t('packets.empty.body'))
+    .replace(/&lt;b&gt;/g, '<b>')
+    .replace(/&lt;\/b&gt;/g, '</b>');
+  return `<div class="packets-empty">
+    <div class="empty-title">${esc(t('packets.empty.title'))}</div>
+    <div class="empty-body">${body}</div>
+    ${count}
+  </div>`;
+}
+
 export function packetRowHtml(pkt, idx) {
   const c = protoColor(pkt.protocol);
   const isSel = idx === state.selectedIndex;
@@ -89,7 +139,7 @@ export function renderPacketList() {
 
   if (!packets.length) {
     els.packetList.style.height = 'auto';
-    els.packetList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No packets yet</div>';
+    els.packetList.innerHTML = emptyStateHtml();
     return;
   }
 

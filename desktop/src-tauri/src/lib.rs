@@ -408,6 +408,16 @@ fn is_elevated() -> bool {
     netscope_core::firewall::is_elevated()
 }
 
+/// How many protocols the build recognises.
+///
+/// Read from the registry rather than written down in the UI, because the
+/// registry is the only place that knows — a number typed into the frontend
+/// starts drifting the moment a protocol is added.
+#[tauri::command]
+fn protocol_count() -> usize {
+    netscope_core::models::Protocol::ALL.len()
+}
+
 #[tauri::command]
 fn list_blocked() -> Vec<String> {
     netscope_core::firewall::blocked_ips()
@@ -1147,6 +1157,7 @@ pub fn run() {
             get_lessons,
             get_glossary,
             is_elevated,
+            protocol_count,
             list_blocked,
             block_ip,
             unblock_ip,
