@@ -241,11 +241,11 @@ mod tests {
         assert!(!is_soap_type(""));
     }
 
-    /// End to end through the real HTTP dissector — this is what E1 was for.
-    /// Without the body being reached, every one of these reads as
+    /// Starting from a whole HTTP request, which is what E1 was for. Without
+    /// the body being reached, every one of these reads as
     /// "HTTP POST /onvif/device_service" and nothing more.
     #[test]
-    fn an_onvif_call_is_read_through_the_http_dissector() {
+    fn an_onvif_call_is_read_out_of_an_http_request() {
         let body = envelope(
             "xmlns:tds=\"http://www.onvif.org/ver10/device/wsdl\"",
             "<tds:CreateUsers><tds:User/></tds:CreateUsers>",
@@ -255,24 +255,22 @@ mod tests {
             .to_vec();
         request.extend_from_slice(&body);
 
-        let r = super::super::http::dissect_http(None, None, 40000, 80, &request);
+        let m = super::super::http_body::split(&request).expect("a complete header block");
+        assert!(is_soap_type(m.content_type.as_deref().unwrap_or("")));
+        let r = dissect_soap(None, None, 40000, 80, m.body);
         assert_eq!(r.protocol, Protocol::Soap);
-        assert_eq!(r.summary, "HTTP · ONVIF CreateUsers");
+        assert_eq!(r.summary, "ONVIF CreateUsers");
     }
 
-    /// An ordinary API call must still read as HTTP — only content types that
-    /// are actually claimed take the body path.
+    /// An ordinary API call must be left alone — only content types that are
+    /// actually claimed take the body path.
     #[test]
-    fn an_ordinary_body_still_reads_as_http() {
+    fn an_ordinary_body_is_not_claimed() {
         let request = b"POST /api/data HTTP/1.1\r\n\
             Content-Type: application/json\r\n\r\n{\"k\":1}";
-        let r = super::super::http::dissect_http(None, None, 40000, 80, request);
-        assert_eq!(r.protocol, Protocol::Http);
-        assert!(
-            r.summary.starts_with("HTTP POST /api/data"),
-            "{}",
-            r.summary
-        );
+        let m = super::super::http_body::split(request).expect("a complete header block");
+        assert_eq!(m.content_type.as_deref(), Some("application/json"));
+        assert!(!is_soap_type(m.content_type.as_deref().unwrap_or("")));
     }
 
     #[test]

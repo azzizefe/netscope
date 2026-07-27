@@ -29,17 +29,18 @@ use std::net::IpAddr;
 
 use super::DissectedResult;
 use super::{
- aerospike, afp, amt, bacnet, beckhoff_twincat_analytics, bfcp, bfd, bgp, bosch_nexeed_edge
- , capwap, cassandra, ccp, cmp, coap, dhcp, dhcpv6, dicom, dmx, dnp3, doip, e1ap
- , edge_inference_onnx, edge_pytorch_mobile, edge_tensorflow_lite, enip, epic_online_eos_p2p
- , f1ap, finger, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp, h225ras, hl7, hnbap, hsrp
- , ipsec, isakmp, iscsi, isns, kerberos, kpasswd, l2tp, lcsap, ldap, ldp, m2ap, m2pa, m2ua, m3ap
- , matter, modbus, mongodb, mqtt, mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap
- , nintendo_npln_p2p, nsip, ntp, nxp_eiq_inference, opcua, openflow, pfcp, psn_matchmaking_v3
- , ptp, radius, rdp, rip, ripng, rockwell_factorytalk_edge, rpkirtr, rtpmidi, rua, s1ap, sabp
- , sbcap, schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_edge, sip, snmp
- , steam_datagram_relay, stm_stm32cube_ai, sua, tacacs, tls, uadp, vxlangpe, wccp, wireguard
- , wsd, xbox_live_sdv2, xcp, xnap
+ aerospike, afp, amt, as_interface, bacnet, beckhoff_twincat_analytics, bfcp, bfd, bgp
+ , bosch_nexeed_edge, capwap, cassandra, ccp, cip_safety, cmp, coap, controlnet, dhcp, dhcpv6
+ , dicom, dmx, dnp3, doip, e1ap, edge_inference_onnx, edge_pytorch_mobile, edge_tensorflow_lite
+ , enip, epic_online_eos_p2p, f1ap, finger, fsoe, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp
+ , h225ras, hl7, hnbap, hsrp, interbus, iolink, ipsec, isakmp, iscsi, isns, kerberos, kpasswd
+ , l2tp, lcsap, ldap, ldp, m2ap, m2pa, m2ua, m3ap, matter, mechatrolink, modbus, mongodb, mqtt
+ , mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap, nintendo_npln_p2p, nsip, ntp
+ , nxp_eiq_inference, opcua, openflow, p_net, pfcp, profidrive, psn_matchmaking_v3, ptp, radius
+ , rdp, rip, ripng, rockwell_factorytalk_edge, rpkirtr, rtpmidi, rua, s1ap, sabp, sbcap
+ , schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_edge, sip, snmp
+ , steam_datagram_relay, stm_stm32cube_ai, sua, tacacs, tls, uadp, varan_bus, vxlangpe, wccp
+ , wireguard, wsd, xbox_live_sdv2, xcp, xnap
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -128,9 +129,11 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (3238, bfcp::dissect_bfcp),
  (3260, iscsi::dissect_iscsi),
  (3306, mysql::dissect_mysql),
- (3389, rdp::dissect_rdp),
-  (4840, opcua::dissect_opcua),
-  (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
+  (3389, rdp::dissect_rdp),
+   (4121, interbus::dissect_interbus),
+   (4840, opcua::dissect_opcua),
+   (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
+
   (6653, openflow::dissect_openflow),
   (8001, edge_inference_onnx::dissect_edge_inference_onnx),
   (8080, schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge),
@@ -186,10 +189,13 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (2123, gtp::dissect_gtp),
  (2152, gtp::dissect_gtp),
  (2157, nsip::dissect_nsip),
- (2222, enip::dissect_enip),
- (2268, amt::dissect_amt),
- (3074, xbox_live_sdv2::dissect_xbox_live_sdv2),
- (3205, isns::dissect_isns),
+  (2222, enip::dissect_enip),
+  (2224, cip_safety::dissect_cip_safety),
+  (2268, amt::dissect_amt),
+  (3074, xbox_live_sdv2::dissect_xbox_live_sdv2),
+  (3205, isns::dissect_isns),
+  (5100, p_net::dissect_p_net),
+  (5500, mechatrolink::dissect_mechatrolink),
  (3222, glbp::dissect_glbp),
  (3386, gtpprime::dissect_gtpprime),
  (3702, wsd::dissect_wsd),

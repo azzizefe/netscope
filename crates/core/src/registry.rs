@@ -22063,6 +22063,88 @@ protocols! {
         aliases:   ["schneider_ecostruxure", "ecostruxure_edge"],
         blurb:     "Schneider EcoStruxure edge-to-cloud bridge protocol — secure data exchange between EcoStruxure Automation Expert edge devices and cloud analytics platforms, with asset model synchronization and time-series ingestion.",
     }
+    // ── Proprietary Fieldbus Protocols (§10) ──────────────────────────
+    IoLink {
+        doc:       "IO-Link (IEC 61131-9) smart sensor/actuator protocol.",
+        display:   "IO-Link",
+        color:     0x005A9E,
+        transport: Other,
+        rank:      3,
+        aliases:   ["iolink", "iec_61131_9"],
+        blurb:     "IO-Link (IEC 61131-9) — point-to-point communication protocol for smart sensors and actuators with cyclic process data exchange, acyclic on-request data (ISDU), and event-driven diagnostics.",
+    }
+    AsInterface {
+        doc:       "AS-Interface (Actuator-Sensor Interface) v3.0 bus.",
+        display:   "AS-Interface",
+        color:     0xFF6600,
+        transport: Other,
+        rank:      3,
+        aliases:   ["as_interface", "asi"],
+        blurb:     "AS-Interface (Actuator-Sensor Interface) — two-wire fieldbus for binary sensors and actuators with cyclic I/O data exchange, master-slave polling, and safety monitor extensions.",
+    }
+    Interbus {
+        doc:       "INTERBUS Phoenix Contact fieldbus protocol.",
+        display:   "INTERBUS",
+        color:     0x008B8B,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["interbus", "phoenix_interbus"],
+        blurb:     "INTERBUS — Phoenix Contact's shift-register-based fieldbus for cyclic process data, parameter channel access, and TCP/IP encapsulation for remote diagnostics and configuration.",
+    }
+    ControlNet {
+        doc:       "ControlNet Rockwell Automation fieldbus protocol.",
+        display:   "ControlNet",
+        color:     0x6B3FA0,
+        transport: Other,
+        rank:      3,
+        aliases:   ["controlnet", "rockwell_controlnet"],
+        blurb:     "ControlNet — Rockwell Automation deterministic control network using CTDMA (Concurrent Time Domain Multiple Access) with scheduled I/O, unscheduled messaging, and redundant media support.",
+    }
+    Mechatrolink {
+        doc:       "MECHATROLINK motion control fieldbus (I/II/III/IV).",
+        display:   "MECHATROLINK",
+        color:     0xDC143C,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["mechatrolink", "yaskawa_motion"],
+        blurb:     "MECHATROLINK — Yaskawa motion control fieldbus with cyclic position/velocity/torque commands, synchronous axes coordination, and distributed servo drive control over RS-485 (M-I/II) or Ethernet (M-III/IV).",
+    }
+    VaranBus {
+        doc:       "VARAN Bus real-time Ethernet fieldbus.",
+        display:   "VARAN Bus",
+        color:     0x2E8B57,
+        transport: Other,
+        rank:      3,
+        aliases:   ["varan_bus", "varan"],
+        blurb:     "VARAN Bus — Versatile Automation Random Access Network real-time Ethernet fieldbus for deterministic machine control with cyclic I/O, event-driven messaging, and fail-safe safety communication.",
+    }
+    PNet {
+        doc:       "P-NET multi-master fieldbus (IEC 61158).",
+        display:   "P-NET",
+        color:     0x4169E1,
+        transport: Udp,
+        rank:      3,
+        aliases:   ["p_net", "pnet", "process_net"],
+        blurb:     "P-NET — multi-master token-passing fieldbus for process automation with segmented addressing, acyclic client-server services, and UDP/IP encapsulation for remote access and diagnostics.",
+    }
+    Fsoe {
+        doc:       "Fail Safe over EtherCAT (FSoE) safety protocol.",
+        display:   "FSoE",
+        color:     0xFF4500,
+        transport: Other,
+        rank:      4,
+        aliases:   ["fsoe", "fail_safe_ethercat", "safety_over_ethercat"],
+        blurb:     "FSoE (Fail Safe over EtherCAT) — functional safety protocol embedded within EtherCAT datagrams for SIL 3 safety communication with connection monitoring, CRC integrity, and watchdog-based fail-safe state transitions.",
+    }
+    Profidrive {
+        doc:       "PROFIdrive drive profile over PROFIBUS/PROFINET.",
+        display:   "PROFIdrive",
+        color:     0x00695C,
+        transport: Other,
+        rank:      4,
+        aliases:   ["profidrive", "drive_profile", "pi_drive"],
+        blurb:     "PROFIdrive — application profile for drive technology over PROFIBUS and PROFINET with standardized parameter access, cyclic setpoint/actual value exchange, and isochronous axis control.",
+    }
 }
 
 /// High-level protocol category for grouping in the UI and filter.

@@ -503,6 +503,18 @@ pub mod schneider_ecostruxure_edge;
 pub mod siemens_industrial_edge;
 pub mod stm_stm32cube_ai;
 
+// ── Proprietary Fieldbus Protocols (§10) ──
+pub mod iolink;
+pub mod as_interface;
+pub mod interbus;
+pub mod controlnet;
+pub mod mechatrolink;
+pub mod varan_bus;
+pub mod p_net;
+pub mod cip_safety;
+pub mod fsoe;
+pub mod profidrive;
+
 use std::net::IpAddr;
 
 use crate::models::Protocol;
@@ -4261,15 +4273,12 @@ mod robustness {
             include_str!("dissectors/sctp.rs"),
             include_str!("dissectors/gre.rs"),
             include_str!("dissectors/ipsec.rs"),
-            include_str!("dissectors/m3ua.rs"),
             include_str!("dissectors/sccp.rs"),
             include_str!("dissectors/enip.rs"),
-            include_str!("dissectors/rpc.rs"),
             include_str!("dissectors/gtp.rs"),
             include_str!("dissectors/zigbee.rs"),
             include_str!("dissectors/pktap.rs"),
             include_str!("dissectors/sip.rs"),
-            include_str!("dissectors/sap_announce.rs"),
             include_str!("dissectors/nflog.rs"),
             include_str!("dissectors/linktypes.rs"),
             // Intermediate layers that dispatch further: an LLC frame selects
@@ -4295,17 +4304,12 @@ mod robustness {
             include_str!("dissectors/profinet.rs"),
             // DVMRP borrows an IGMP type rather than a protocol number.
             include_str!("dissectors/igmp.rs"),
-            // An HTTP body can carry a protocol of its own (E1).
-            include_str!("dissectors/http.rs"),
             // An RDMA SEND can carry an upper-layer storage protocol.
             include_str!("dissectors/roce.rs"),
-            // Both IEC 60870-5 carriers hand their ASDU to the shared decoder.
-            include_str!("dissectors/iec104.rs"),
+            // The serial IEC 60870-5 carrier hands its ASDU to the shared decoder.
             include_str!("dissectors/iec101.rs"),
             // A LIN diagnostic frame carries the same transport CAN does.
             include_str!("dissectors/lin.rs"),
-            // LonTalk is only ever reached inside a CN/IP tunnel.
-            include_str!("dissectors/cnip.rs"),
             // A segmented SOME/IP message is handed on by the plain one.
             include_str!("dissectors/someip.rs"),
             // BSSGP is always carried inside an NS data PDU.
