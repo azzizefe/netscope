@@ -529,6 +529,28 @@ pub mod tia_portal_online_diag;
 pub mod siemens_opc_ua_model;
 pub mod siemens_industrial_5g;
 
+// ── Rockwell / Allen-Bradley Ecosystem (§10.2.2) ──
+pub mod ether_net_ip_rockwell;
+pub mod cip_safety_rockwell;
+pub mod pccc_extended;
+pub mod df1_full_duplex_ext;
+pub mod studio5000_online_comm;
+pub mod factorytalk_view_hmi;
+pub mod stratix_switch_telemetry;
+pub mod powerflex_drive_cip;
+pub mod control_logix_backplane;
+pub mod guard_i_o_safety;
+
+// ── Beckhoff / EtherCAT Ecosystem (§10.2.3) ──
+pub mod ethercat_beckhoff_mdp;
+pub mod ethercat_safety_beckhoff;
+pub mod twincat_ads_detail;
+pub mod twincat_router_telemetry;
+pub mod twincat_scope_view;
+pub mod ethercat_foe_detail;
+pub mod ethercat_distributed_clocks;
+pub mod beckhoff_xplanar_mover;
+
 use std::net::IpAddr;
 
 use crate::models::Protocol;

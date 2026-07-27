@@ -29,22 +29,26 @@ use std::net::IpAddr;
 
 use super::DissectedResult;
 use super::{
- aerospike, afp, amt, as_interface, bacnet, beckhoff_twincat_analytics, bfcp, bfd, bgp
- , bosch_nexeed_edge, capwap, cassandra, ccp, cip_safety, cmp, coap, controlnet, dhcp, dhcpv6
+ aerospike, afp, amt, as_interface, bacnet, beckhoff_twincat_analytics, beckhoff_xplanar_mover
+ , bfcp, bfd, bgp, bosch_nexeed_edge, capwap, cassandra, ccp, cip_safety, cip_safety_rockwell
+ , cmp, coap, control_logix_backplane, controlnet, df1_full_duplex_ext, dhcp, dhcpv6
  , dicom, dmx, dnp3, doip, e1ap, edge_inference_onnx, edge_pytorch_mobile, edge_tensorflow_lite
- , enip, epic_online_eos_p2p, f1ap, finger, fsoe, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp
- , h225ras, hl7, hnbap, hsrp, interbus, iolink, ipsec, isakmp, iscsi, isns, kerberos, kpasswd
- , l2tp, lcsap, ldap, ldp, m2ap, m2pa, m2ua, m3ap, matter, mechatrolink, modbus, mongodb, mqtt
- , mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap, nintendo_npln_p2p, nsip, ntp
- , nxp_eiq_inference, opcua, openflow, p_net, pfcp, profidrive, profinet_rt_siemens
- , profinet_irt_siemens, profibus_dp_siemens, psn_matchmaking_v3, ptp, radius
- , rdp, rip, ripng, rockwell_factorytalk_edge, rpkirtr, rtpmidi, rua, s1ap, sabp, sbcap
- , s7comm_plus_detail, schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_edge
- , siemens_industrial_5g, siemens_l2_telegram, simatic_hmi_smartsrv, sinamics_drive_profile
- , sinumerik_nck_channel, sip, snmp, scalance_x_ring
- , steam_datagram_relay, stm_stm32cube_ai, sua, tacacs, tia_portal_online_diag, tls, uadp
- , varan_bus, vxlangpe, wccp
- , wireguard, wsd, xbox_live_sdv2, xcp, xnap
+ , enip, epic_online_eos_p2p, ether_net_ip_rockwell, ethercat_beckhoff_mdp
+ , ethercat_distributed_clocks, ethercat_foe_detail, ethercat_safety_beckhoff, f1ap
+ , factorytalk_view_hmi, finger, fsoe, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp
+ , guard_i_o_safety, h225ras, hl7, hnbap, hsrp, interbus, iolink, ipsec, isakmp, iscsi, isns
+ , kerberos, kpasswd, l2tp, lcsap, ldap, ldp, m2ap, m2pa, m2ua, m3ap, matter, mechatrolink
+ , modbus, mongodb, mqtt, mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap
+ , nintendo_npln_p2p, nsip, ntp, nxp_eiq_inference, opcua, openflow, p_net, pccc_extended
+ , pfcp, powerflex_drive_cip, profibus_dp_siemens, profidrive, profinet_irt_siemens
+ , profinet_rt_siemens, psn_matchmaking_v3, ptp, radius, rdp, rip, ripng
+ , rockwell_factorytalk_edge, rpkirtr, rtpmidi, rua, s1ap, sabp, sbcap, s7comm_plus_detail
+ , scalance_x_ring, schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_5g
+ , siemens_industrial_edge, siemens_l2_telegram, simatic_hmi_smartsrv, sinamics_drive_profile
+ , sinumerik_nck_channel, sip, snmp, steam_datagram_relay, stm_stm32cube_ai
+ , stratix_switch_telemetry, studio5000_online_comm, sua, tacacs, tia_portal_online_diag, tls
+ , twincat_ads_detail, twincat_router_telemetry, twincat_scope_view, uadp, varan_bus
+ , vxlangpe, wccp, wireguard, wsd, xbox_live_sdv2, xcp, xnap
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -139,11 +143,14 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (4121, interbus::dissect_interbus),
     (4410, tia_portal_online_diag::dissect_tia_portal_online_diag),
     (4840, opcua::dissect_opcua),
-   (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
+    (4841, studio5000_online_comm::dissect_studio5000_online_comm),
+    (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
+   (6002, factorytalk_view_hmi::dissect_factorytalk_view_hmi),
 
   (6653, openflow::dissect_openflow),
   (8001, edge_inference_onnx::dissect_edge_inference_onnx),
    (8080, schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge),
+    (8087, twincat_scope_view::dissect_twincat_scope_view),
     (8090, simatic_hmi_smartsrv::dissect_simatic_hmi_smartsrv),
    (8501, edge_tensorflow_lite::dissect_edge_tensorflow_lite),
   (8910, bosch_nexeed_edge::dissect_bosch_nexeed_edge),
@@ -153,8 +160,9 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (20001, dnp3::dissect_dnp3),
  (27017, mongodb::dissect_mongodb),
   (44818, enip::dissect_enip),
-  (44819, rockwell_factorytalk_edge::dissect_rockwell_factorytalk_edge),
-  (48400, beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics),
+   (44819, rockwell_factorytalk_edge::dissect_rockwell_factorytalk_edge),
+   (48400, beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics),
+   (48899, twincat_router_telemetry::dissect_twincat_router_telemetry),
   (51000, edge_pytorch_mobile::dissect_edge_pytorch_mobile),
   (51001, nxp_eiq_inference::dissect_nxp_eiq_inference),
   (51002, stm_stm32cube_ai::dissect_stm_stm32cube_ai),
@@ -202,8 +210,6 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
   (2268, amt::dissect_amt),
   (3074, xbox_live_sdv2::dissect_xbox_live_sdv2),
   (3205, isns::dissect_isns),
-  (5100, p_net::dissect_p_net),
-  (5500, mechatrolink::dissect_mechatrolink),
  (3222, glbp::dissect_glbp),
  (3386, gtpprime::dissect_gtpprime),
  (3702, wsd::dissect_wsd),
@@ -219,8 +225,10 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (5005, rtpmidi::dissect_rtpmidi),
  (5060, sip::dissect_sip),
  (5061, sip::dissect_sip),
+ (5100, p_net::dissect_p_net),
  (5246, capwap::dissect_capwap),
  (5247, capwap::dissect_capwap),
+ (5500, mechatrolink::dissect_mechatrolink),
  (5540, matter::dissect_matter),
  (5554, ccp::dissect_ccp),
  (5555, xcp::dissect_xcp),

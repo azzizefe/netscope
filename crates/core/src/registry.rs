@@ -22254,6 +22254,170 @@ protocols! {
         aliases:   ["siemens_industrial_5g", "ind_5g_siemens"],
         blurb:     "Siemens Industrial 5G — private 5G network management protocol for industrial campuses with Siemens-specific UPF (User Plane Function) configuration, NEF (Network Exposure Function) extensions for deterministic latency, and 5G TSN integration for time-critical control.",
     }
+    // ── Rockwell / Allen-Bradley Ecosystem (§10.2.2) ──────────────────
+    EtherNetIpRockwell {
+        doc:       "Rockwell EtherNet/IP CIP extended services.",
+        display:   "EtherNet/IP (Rockwell)",
+        color:     0xE11D48,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["ether_net_ip_rockwell", "rockwell_enip"],
+        blurb:     "Rockwell EtherNet/IP CIP extended services — Rockwell-specific Class 1 implicit messaging extensions for high-performance I/O, including multiple producer-consumer relationships, connection priority modulation, and extended forward-open service parameters beyond the ODVA specification.",
+    }
+    CipSafetyRockwell {
+        doc:       "Rockwell CIP Safety detailed decode.",
+        display:   "CIP Safety (Rockwell)",
+        color:     0xDC2626,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["cip_safety_rockwell", "rockwell_cip_safety"],
+        blurb:     "Rockwell CIP Safety — GuardLogix-specific safety signature verification, safety timestamp synchronization, and SIL 3 safety connection management with dual-channel comparison and discrepancy time monitoring for fail-safe operation.",
+    }
+    PcccExtended {
+        doc:       "Allen-Bradley PCCC extended command set.",
+        display:   "PCCC (Extended)",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["pccc_extended", "ab_pccc", "plc5_commands"],
+        blurb:     "Allen-Bradley PCCC (Programmable Controller Communications Commands) — extended command set for PLC-5, SLC-500, and MicroLogix controllers including protected file read/write, file copy/fill, diagnostic counters, and online program changes beyond the basic PCCC command set.",
+    }
+    Df1FullDuplexExt {
+        doc:       "Allen-Bradley DF1 Full-Duplex extended mode.",
+        display:   "DF1 Full-Duplex (Extended)",
+        color:     0x0891B2,
+        transport: Other,
+        rank:      4,
+        aliases:   ["df1_full_duplex_ext", "ab_df1_ext"],
+        blurb:     "Allen-Bradley DF1 Full-Duplex — extended CRC/BCC error-checking modes with packet sequence numbering, extended status byte reporting, and multi-packet transfers for large block reads/writes on DH-485 and RS-232 serial links.",
+    }
+    Studio5000OnlineComm {
+        doc:       "Studio 5000 Logix Designer online edit/communication protocol.",
+        display:   "Studio 5000 Online",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["studio5000_online_comm", "studio5k_online", "logix_online"],
+        blurb:     "Studio 5000 Logix Designer — online communication protocol for tag browsing, cross-reference queries, online rung editing (ladder logic), task/ program upload/download, and controller synchronization during live production without stopping the processor.",
+    }
+    FactorytalkViewHmi {
+        doc:       "FactoryTalk View Machine Edition HMI protocol.",
+        display:   "FactoryTalk View HMI",
+        color:     0x9333EA,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["factorytalk_view_hmi", "ft_view_me", "rockwell_hmi"],
+        blurb:     "FactoryTalk View Machine Edition — Rockwell HMI tag subscription protocol with cyclic tag value publishing, alarm/event notifications, data log queries for historical trends, and multi-client display session management for PanelView Plus terminals.",
+    }
+    StratixSwitchTelemetry {
+        doc:       "Rockwell Stratix switch (Cisco IE) extended telemetry.",
+        display:   "Stratix Switch Telemetry",
+        color:     0x0D9488,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["stratix_switch_telemetry", "stratix_telemetry"],
+        blurb:     "Rockwell Stratix Switch — CIP-based industrial Ethernet switch telemetry for port mirroring configuration, QoS policy deployment, ring health monitoring, and CIP-to-SNMP bridge integration on Stratix 5400/5700 managed switches powered by Cisco IOS.",
+    }
+    PowerflexDriveCip {
+        doc:       "PowerFlex drive CIP energy/torque profile.",
+        display:   "PowerFlex CIP Drive",
+        color:     0x0E7490,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["powerflex_drive_cip", "pf_drive_cip", "ab_powerflex"],
+        blurb:     "Rockwell PowerFlex Drive — CIP energy object (Class 0x4E) for drive energy consumption monitoring, torque profiling, motor thermal capacity tracking, and Rockwell-specific drive configuration parameters for PowerFlex 525/527/755 series variable-frequency drives.",
+    }
+    ControlLogixBackplane {
+        doc:       "ControlLogix 1756 backplane bus decode.",
+        display:   "ControlLogix Backplane",
+        color:     0x065F46,
+        transport: Other,
+        rank:      4,
+        aliases:   ["control_logix_backplane", "clx_backplane", "1756_backplane"],
+        blurb:     "ControlLogix 1756 backplane — chassis-level bus protocol for multi-controller communication across the ControlLogix backplane, covering owner/observer controller relationships, redundant controller synchronization, and module-level health monitoring across standard/redundant chassis configurations.",
+    }
+    GuardIOSafety {
+        doc:       "Guard I/O safety module safe-state telemetry.",
+        display:   "Guard I/O Safety",
+        color:     0xDC2626,
+        transport: Other,
+        rank:      4,
+        aliases:   ["guard_i_o_safety", "guard_io_safety", "ab_guard_safety"],
+        blurb:     "Rockwell Guard I/O — safety module telemetry with per-channel individual diagnostics, discrepancy time monitoring for dual-channel inputs, safe-state output assertion, and SIL 3 certified communication integrity verification for distributed safety I/O modules on EtherNet/IP.",
+    }
+    // ── Beckhoff / EtherCAT Ecosystem (§10.2.3) ────────────────────────
+    EthercatBeckhoffMdp {
+        doc:       "Beckhoff EtherCAT MDP (Modular Device Profile).",
+        display:   "EtherCAT MDP (Beckhoff)",
+        color:     0x0284C7,
+        transport: Other,
+        rank:      4,
+        aliases:   ["ethercat_beckhoff_mdp", "ec_mdp_beckhoff", "beckhoff_mdp"],
+        blurb:     "Beckhoff EtherCAT MDP — Modular Device Profile with Beckhoff-specific CoE (CANopen over EtherCAT) object dictionary extensions for modular I/O configuration, distributed clock synchronization parameters, and vendor-specific startup parameters for EL-series EtherCAT terminals.",
+    }
+    EthercatSafetyBeckhoff {
+        doc:       "Beckhoff TwinSAFE/FSoE safety protocol.",
+        display:   "TwinSAFE (Beckhoff)",
+        color:     0xEA580C,
+        transport: Other,
+        rank:      4,
+        aliases:   ["ethercat_safety_beckhoff", "twinsafe", "beckhoff_fsoe"],
+        blurb:     "Beckhoff TwinSAFE — Fail Safe over EtherCAT (FSoE) safety protocol with Beckhoff safe logic editor connection validation, safety function block parameterization, and TwinSAFE group communication for distributed safe I/O and drive safety via the EL6900/EL6910 safety logic terminals.",
+    }
+    TwincatAdsDetail {
+        doc:       "Beckhoff TwinCAT ADS detailed decode.",
+        display:   "TwinCAT ADS (Detail)",
+        color:     0x1D4ED8,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["twincat_ads_detail", "ads_detail", "ams_netid"],
+        blurb:     "Beckhoff TwinCAT ADS (Automation Device Specification) — detailed decode of the ADS command structure including AMS NetID routing between TwinCAT runtimes, sum commands for batch register access, device notification subscriptions, and symbolic access via the AMS router.",
+    }
+    TwincatRouterTelemetry {
+        doc:       "TwinCAT ADS Router telemetry stream.",
+        display:   "TwinCAT Router Telemetry",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["twincat_router_telemetry", "ads_router_telemetry"],
+        blurb:     "TwinCAT ADS Router telemetry — real-time task jitter measurement, cycle time exceedance notifications, CPU load monitoring per TwinCAT runtime, and communication load statistics for the AMS router diagnostic data stream used by the TwinCAT System Manager.",
+    }
+    TwincatScopeView {
+        doc:       "TwinCAT Scope View data streaming.",
+        display:   "TwinCAT Scope View",
+        color:     0x16A34A,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["twincat_scope_view", "tc_scope_stream"],
+        blurb:     "TwinCAT Scope View — multi-channel synchronized oscilloscope data acquisition protocol for real-time process variable recording, multi-axis synchronized chart capture, YX scatter plot streaming, and trigger-based scope acquisition across distributed TwinCAT runtimes.",
+    }
+    EthercatFoeDetail {
+        doc:       "EtherCAT FoE firmware access protocol.",
+        display:   "EtherCAT FoE (Detail)",
+        color:     0x059669,
+        transport: Other,
+        rank:      4,
+        aliases:   ["ethercat_foe_detail", "ec_foe", "file_over_ethercat"],
+        blurb:     "EtherCAT FoE (File Access over EtherCAT) — detailed decode of firmware update operations using the Beckhoff bootloader protocol with flash segment mapping, file password authentication, CRC-32 integrity verification, and multi-segment firmware transfer for EtherCAT slaves.",
+    }
+    EthercatDistributedClocks {
+        doc:       "EtherCAT Distributed Clocks sync detail.",
+        display:   "EtherCAT DC Sync",
+        color:     0x0D9488,
+        transport: Other,
+        rank:      4,
+        aliases:   ["ethercat_distributed_clocks", "ec_dc", "ethercat_clocks"],
+        blurb:     "EtherCAT Distributed Clocks — detailed synchronization protocol for sub-microsecond clock alignment across all EtherCAT slaves including Beckhoff DC mode selection (free-run, SM-sync, DC-sync), drift compensation via system time propagation, and cycle time synchronization monitoring for coordinated motion control.",
+    }
+    BeckhoffXplanarMover {
+        doc:       "Beckhoff XPlanar free-moving transport system.",
+        display:   "XPlanar Mover",
+        color:     0x6366F1,
+        transport: Other,
+        rank:      4,
+        aliases:   ["beckhoff_xplanar_mover", "xplanar", "xplanar_mover"],
+        blurb:     "Beckhoff XPlanar — protocol for free-moving planar transport system with maglev mover position tracking, 6-DOF tilt sensing, collision domain management, trajectory planning commands, and wireless coil commutation data exchange for the XPlanar planar motor system.",
+    }
 }
 
 /// High-level protocol category for grouping in the UI and filter.

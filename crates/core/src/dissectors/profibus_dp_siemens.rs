@@ -6,8 +6,6 @@ const SD1_FIXED_WITHOUT_FC: u8 = 0x05;
 const SD2_VARIABLE_LENGTH: u8 = 0x68;
 const SD3_FIXED_WITH_FC: u8 = 0x07;
 const SD4_FIXED_TOKEN: u8 = 0x0C;
-const SD5_RESERVED: u8 = 0x06;
-
 pub fn dissect_profibus_dp_siemens(
     _src_ip: Option<IpAddr>,
     _dst_ip: Option<IpAddr>,
@@ -33,7 +31,7 @@ pub fn dissect_profibus_dp_siemens(
             0x21 => "DP-V1",
             0x22 => "DP-V2",
             0x23 => "DP-V3 (Siemens ext)",
-            v => "",
+            _ => "",
         };
 
         format!("PROFIBUS DP (Siemens) — {sd_name} fc:0x{fc:02x} {version_info} ({len} bytes)", len = payload.len())
