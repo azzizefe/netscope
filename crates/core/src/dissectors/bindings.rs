@@ -29,48 +29,22 @@ use std::net::IpAddr;
 
 use super::DissectedResult;
 use super::{
- abb_robot_web_service, aerospike, afp, amt, as_interface, bacnet, beckhoff_twincat_analytics
- , beckhoff_xplanar_mover, bfcp, bfd, bgp, bosch_nexeed_edge, bosch_rexroth_open_core
- , b_r_automation_pvi, capwap
- , cassandra, ccp, cip_safety, cip_safety_rockwell
- , cmp, coap, control_logix_backplane, controlnet, df1_full_duplex_ext, dhcp, dhcpv6
- , dicom, dmx, dnp3, doip, e1ap, edge_inference_onnx, edge_pytorch_mobile, edge_tensorflow_lite
- , enip, epic_online_eos_p2p, ether_net_ip_rockwell, ethercat_beckhoff_mdp
- , ethercat_distributed_clocks, ethercat_foe_detail, ethercat_safety_beckhoff, f1ap
- , factorytalk_view_hmi, fanuc_focas2, finger, fsoe, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp
- , guard_i_o_safety, h225ras, hl7, hnbap, hsrp, interbus, iolink, ipsec, isakmp, iscsi, isns
- , kerberos, keyence_kv_ethernet, kpasswd, kuka_robot_sensor_interface, l2tp, lcsap, ldap, ldp
- , m2ap, m2pa, m2ua, m3ap, matter, mechatrolink, mitsubishi_cc_link_ie_field
- , mitsubishi_melsec_proto, modbus, mongodb, mqtt, mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap
- , nintendo_npln_p2p, nsip, ntp, nxp_eiq_inference, omron_fins_udp_detail, opcua, openflow, p_net, pccc_extended
- , pfcp, powerflex_drive_cip, profibus_dp_siemens, profidrive, profinet_irt_siemens
- , profinet_rt_siemens, psn_matchmaking_v3, ptp, radius, rdp, rip, ripng
- , rockwell_factorytalk_edge, rpkirtr, rtpmidi, rua, s1ap, sabp, sbcap, s7comm_plus_detail
- , scalance_x_ring, schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_5g
- , siemens_industrial_edge, siemens_l2_telegram, simatic_hmi_smartsrv, sinamics_drive_profile
- , sinumerik_nck_channel, sip, snmp, steam_datagram_relay, stm_stm32cube_ai
-  , stratix_switch_telemetry, studio5000_online_comm, sua, tacacs, tia_portal_online_diag, tls
-  , tls_cert_transparency_v3, tls_downgrade_detector, tls_ech_pqc_interop
-  , tls_key_share_prediction, tls_middlebox_detector, tls_perf_benchmark_model
-  , tls_pqc_wizard_scan, tls_session_resumption_pqc
-  , twincat_ads_detail, twincat_router_telemetry, twincat_scope_view, uadp, varan_bus
-  , vxlangpe, wccp, wireguard, wsd , xbox_live_sdv2, xcp, xnap, yaskawa_memobus_tcp_detail
-  , pqc_compliance_checker, pqc_cve_feed_integration
- , amqp
- , memcached
- , ninep
- , redis
- , rtsp
- , stun
- , syslog
- , iax2
- , rwho
- , mssqlbrowser
- , lisp
- , pcp
- , dhcp_failover
- , q931
- , m3ua
+   aerospike, afp, amqp, amt, b_r_automation_pvi, bacnet, beckhoff_twincat_analytics, bfcp,
+   bfd, bgp, bosch_nexeed_edge, bosch_rexroth_open_core, capwap, cassandra, ccp, cip_safety,
+   cmp, coap, dhcp, dhcp_failover, dhcpv6, dicom, dmx, dnp3, doip, e1ap, edge_inference_onnx,
+   edge_pytorch_mobile, edge_tensorflow_lite, enip, epic_online_eos_p2p, f1ap,
+   factorytalk_view_hmi, fanuc_focas2, finger, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp,
+   h225ras, hl7, hnbap, hsrp, iax2, interbus, ipsec, isakmp, iscsi, isns, kerberos, kpasswd,
+   l2tp, lcsap, ldap, ldp, lisp, m2ap, m2pa, m2ua, m3ap, m3ua, matter, mechatrolink, memcached,
+   mitsubishi_melsec_proto, modbus, mongodb, mqtt, mqttsn, mssqlbrowser, mumble, mysql, nbap,
+   nbds, nbns, netflow, ngap, ninep, nintendo_npln_p2p, nsip, ntp, nxp_eiq_inference,
+   omron_fins_udp_detail, opcua, openflow, p_net, pcp, pfcp, psn_matchmaking_v3, ptp, q931,
+   radius, rdp, redis, rip, ripng, rockwell_factorytalk_edge, rpc, rpkirtr, rtpmidi, rtsp, rua,
+   rwho, s1ap, s7comm_plus_detail, sabp, sbcap, sflow, siemens_industrial_edge,
+   simatic_hmi_smartsrv, sinumerik_nck_channel, sip, snmp, steam_datagram_relay,
+   stm_stm32cube_ai, studio5000_online_comm, stun, sua, syslog, tacacs, tia_portal_online_diag,
+   tls, twincat_router_telemetry, twincat_scope_view, uadp, vxlangpe, wccp, wireguard, wsd,
+   xbox_live_sdv2, xcp, xnap,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -143,6 +117,7 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
   (88, kerberos::dissect_kerberos),
    (102, s7comm_plus_detail::dissect_s7comm_plus_detail),
   (104, dicom::dissect_dicom),
+ (111, rpc::dissect_rpc),
  (179, bgp::dissect_bgp),
  (323, rpkirtr::dissect_rpkirtr),
  (389, ldap::dissect_ldap),
@@ -158,6 +133,7 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (1720, q931::dissect_q931),
   (1883, mqtt::dissect_mqtt),
    (2020, sinumerik_nck_channel::dissect_sinumerik_nck_channel),
+ (2049, rpc::dissect_rpc),
   (2575, hl7::dissect_hl7),
  (3000, aerospike::dissect_aerospike),
  // iSNS sits just below iSCSI's own port, and is where an initiator's
@@ -190,6 +166,7 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (11211, memcached::dissect_memcached),
  (13400, doip::dissect_doip),
  (20001, dnp3::dissect_dnp3),
+ (24007, rpc::dissect_rpc),
  (27017, mongodb::dissect_mongodb),
   (41100, bosch_rexroth_open_core::dissect_bosch_rexroth_open_core),
   (44818, enip::dissect_enip),
@@ -210,6 +187,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (67, dhcp::dissect_dhcp),
  (68, dhcp::dissect_dhcp),
  (88, kerberos::dissect_kerberos),
+ (111, rpc::dissect_rpc),
  (123, ntp::dissect_ntp),
  (137, nbns::dissect_nbns),
  (138, nbds::dissect_nbds),
@@ -237,6 +215,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (1883, mqttsn::dissect_mqttsn),
  (1985, hsrp::dissect_hsrp),
  (2048, wccp::dissect_wccp),
+ (2049, rpc::dissect_rpc),
  (2055, netflow::dissect_netflow),
  (2123, gtp::dissect_gtp),
  (2152, gtp::dissect_gtp),

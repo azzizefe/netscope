@@ -10,7 +10,7 @@ use crate::models::Protocol;
 use super::{
     amqp1, bindings, consul_rpc, drbd, fix, hl7,
     http, http2, iec101, memcached_bin, milter, modbus_ascii, modbus_rtu,
-    ntlm, openvpn, redis_cluster, schneider_ecostruxure_edge, someip, websocket, zmtp,
+    ntlm, openvpn, redis_cluster, schneider_ecostruxure_edge, someip, syslog, websocket, zmtp,
     DissectedResult,
 };
 
@@ -337,6 +337,10 @@ fn dissect_tcp_inner(
         // practice and is far more common on a modern network. The two are
         // trivially distinguishable, so let the content decide rather than
         // giving the port to whichever protocol was registered first.
+        if on(514) && syslog::looks_like_syslog(tcp_payload) {
+            return syslog::dissect_syslog(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+
         // 2. Exact well-known port.
         if let Some(dissect) = bindings::tcp(src_port, dst_port) {
             return dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload);

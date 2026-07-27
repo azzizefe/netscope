@@ -119,6 +119,13 @@ pub fn dissect_can(data: &[u8]) -> DissectedResult {
         if !extended && super::devicenet::looks_like_devicenet(id) {
             return super::devicenet::result(id, payload);
         }
+        // CANopen assigns the whole 11-bit space below 0x780 to services, so
+        // the identifier alone would claim any standard-identifier bus. Each
+        // service has to agree with its own frame shape as well — see
+        // `canopen` for what that costs and where it is weakest.
+        if super::canopen::owns(id, extended, payload) {
+            return super::canopen::result(id, payload);
+        }
         // Diagnostics ride ISO-TP, which is what carries a UDS message too long
         // for one frame. It is claimed on the *identifier* first: ISO-TP has no
         // magic and its frame type is four bits, so one payload in four looks

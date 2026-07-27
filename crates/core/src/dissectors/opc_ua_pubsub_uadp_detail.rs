@@ -37,7 +37,6 @@ fn dataset_message_type(tag: u16) -> &'static str {
         0x0004 => "KeepAlive",
         0x0005..=0x7FFF => "Reserved",
         0x8000..=0xFFFF => "Vendor",
-        _ => "Unknown",
     }
 }
 
@@ -81,7 +80,6 @@ pub fn dissect_opc_ua_pubsub_uadp_detail(
     let uadp_flags = payload[0];
     let ext_flags1 = payload[1];
     let ext_flags2 = if payload.len() > 2 { payload[2] } else { 0 };
-    let dim_flags = if payload.len() > 3 { payload[3] } else { 0 };
     let has_ext1 = uadp_flags & 0x01 != 0;
     let has_ext2 = uadp_flags & 0x02 != 0;
     let published_id_type = publisher_id_type(uadp_flags);

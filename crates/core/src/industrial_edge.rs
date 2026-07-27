@@ -510,7 +510,7 @@ mod tests {
     #[test]
     fn record_excessive_read_rate() {
         let mut a = IndustrialSecurityAnalyzer::new();
-        for i in 0..120 {
+        for _ in 0..120 {
             let mut op = IndustrialOperation::new(
                 "Modbus", IndustrialCategory::IoControl,
                 "Read Holding Registers", "read", "10.0.0.99", "10.0.0.2",

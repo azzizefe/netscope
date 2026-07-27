@@ -139,7 +139,6 @@ enum Expr {
     In(String, Vec<Value>),
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
-    True,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -435,7 +434,6 @@ fn eval_expr(expr: &Expr, ctx: &RuleContext) -> bool {
         }
         Expr::And(a, b) => eval_expr(a, ctx) && eval_expr(b, ctx),
         Expr::Or(a, b) => eval_expr(a, ctx) || eval_expr(b, ctx),
-        Expr::True => true,
     }
 }
 
@@ -554,9 +552,8 @@ pub fn scan_rules(records: &[PqcHandshakeRecord]) -> Vec<VulnerabilityFinding> {
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{KemId, NamedGroup, PqcKem, SigAlgorithm, TlsVersion};
+    use crate::pqc_handshake::{KemId, PqcKem, SigAlgorithm, TlsVersion};
     use chrono::Utc;
-    use std::net::IpAddr;
 
     fn test_record() -> PqcHandshakeRecord {
         PqcHandshakeRecord {

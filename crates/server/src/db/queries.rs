@@ -149,23 +149,23 @@ pub async fn list_events(pool: &PgPool, filter: &EventFilter) -> Result<Vec<Even
     );
     let mut idx = 1u32;
 
-    if let Some(ref sev) = filter.severity {
+    if filter.severity.is_some() {
         sql.push_str(&format!(" AND severity = ${idx}"));
         idx += 1;
     }
-    if let Some(sid) = filter.sensor_id {
+    if filter.sensor_id.is_some() {
         sql.push_str(&format!(" AND sensor_id = ${idx}"));
         idx += 1;
     }
-    if let Some(ts) = filter.timerange_start {
+    if filter.timerange_start.is_some() {
         sql.push_str(&format!(" AND timestamp >= ${idx}"));
         idx += 1;
     }
-    if let Some(te) = filter.timerange_end {
+    if filter.timerange_end.is_some() {
         sql.push_str(&format!(" AND timestamp <= ${idx}"));
         idx += 1;
     }
-    if let Some(ref et) = filter.event_type {
+    if filter.event_type.is_some() {
         sql.push_str(&format!(" AND event_type = ${idx}"));
         idx += 1;
     }
@@ -210,23 +210,23 @@ pub async fn list_alerts(pool: &PgPool, filter: &AlertFilter) -> Result<Vec<Aler
     );
     let mut idx = 1u32;
 
-    if let Some(ref s) = filter.status {
+    if filter.status.is_some() {
         sql.push_str(&format!(" AND status = ${idx}"));
         idx += 1;
     }
-    if let Some(ref sev) = filter.severity {
+    if filter.severity.is_some() {
         sql.push_str(&format!(" AND severity = ${idx}"));
         idx += 1;
     }
-    if let Some(sid) = filter.sensor_id {
+    if filter.sensor_id.is_some() {
         sql.push_str(&format!(" AND sensor_id = ${idx}"));
         idx += 1;
     }
-    if let Some(ts) = filter.timerange_start {
+    if filter.timerange_start.is_some() {
         sql.push_str(&format!(" AND created_at >= ${idx}"));
         idx += 1;
     }
-    if let Some(te) = filter.timerange_end {
+    if filter.timerange_end.is_some() {
         sql.push_str(&format!(" AND created_at <= ${idx}"));
         idx += 1;
     }

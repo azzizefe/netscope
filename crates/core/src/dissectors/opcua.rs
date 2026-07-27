@@ -34,6 +34,21 @@ pub fn dissect_opcua(
         return result("OPC UA (partial)".into());
     }
 
+    // A ReverseHello is the message where the *server* dials out to the client,
+    // so the endpoint URL it carries is the whole content of the message —
+    // naming it "ReverseHello" and stopping throws that away.
+    //
+    // Only this type is handed on. `opc_ua_dpi` and `opc_ua_secure_conversation`
+    // both decode the other six more deeply, but routing those through either
+    // one relabels every OPC UA packet as a different protocol, which is a
+    // product decision rather than a dispatch fix — the tests below pin the
+    // current contract.
+    if &payload[0..3] == b"RHE" {
+        return super::opc_ua_reverse_connect::dissect_opc_ua_reverse_connect(
+            src_ip, dst_ip, src_port, dst_port, payload,
+        );
+    }
+
     let msg_type = &payload[0..3];
     let chunk = payload[3];
     let name = match msg_type {

@@ -4,7 +4,7 @@ use std::net::IpAddr;
 
 use crate::models::Protocol;
 
-use super::{cmp, http2, ocsp, soap, tsp, websocket, DissectedResult};
+use super::{cmp, http2, ocsp, soap, sse, tsp, websocket, DissectedResult};
 
 #[derive(Debug)]
 pub struct HttpRequest {
@@ -87,6 +87,14 @@ pub fn dissect_http(
                     dst_port,
                     message.body,
                     tsp::is_reply_type(content_type),
+                ))
+            } else if sse::is_event_stream(content_type) && sse::provider_is_known(message.body) {
+                Some(sse::dissect_sse(
+                    src_ip,
+                    dst_ip,
+                    src_port,
+                    dst_port,
+                    message.body,
                 ))
             } else if ocsp::is_request_type(content_type) || ocsp::is_response_type(content_type) {
                 Some(ocsp::dissect_ocsp(

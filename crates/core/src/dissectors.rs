@@ -68,6 +68,7 @@ pub mod profisafe;
 pub mod q931;
 pub mod redis;
 pub mod redis_cluster;
+pub mod rpc;
 pub mod rtsp;
 pub mod rwho;
 pub mod smb;
@@ -462,6 +463,7 @@ pub mod someip;
 pub mod someip_sd;
 pub mod source_query;
 pub mod srt;
+pub mod sse;
 pub mod stp;
 pub mod stun;
 pub mod sua;
@@ -695,50 +697,19 @@ const DLT_LIN: i32 = 212; // LIN bus, with a capture pseudo-header
 const DLT_FLEXRAY: i32 = 210; // FlexRay, with a two-byte measurement header
 const DLT_MOST: i32 = 217; // MOST automotive network
 const DLT_NMEA2000: i32 = 247; // NMEA 2000 marine CAN network
-const DLT_CAN_XL: i32 = 257; // CAN XL eXtra Long CAN frame
 const DLT_DOCAN: i32 = 259; // DoCAN (ISO 15765-2 / UDS over CAN)
-const DLT_AUTOSAR_PDU: i32 = 260; // AUTOSAR Container I-PDU
-const DLT_SECOC: i32 = 261; // AUTOSAR SecOC
 const DLT_AVDECC: i32 = 262; // IEEE 1722.1 AVDECC
-const DLT_CPRI: i32 = 263;
-const DLT_NAS_EPS: i32 = 264;
-const DLT_NAS_5GS: i32 = 265;
-const DLT_GPRS_LLC: i32 = 266;
 const DLT_SNDCP: i32 = 267;
 const DLT_INAP: i32 = 268;
 const DLT_CAMEL: i32 = 269;
-const DLT_MTP2: i32 = 270;
 const DLT_SGSAP: i32 = 271;
-const DLT_GTP_SV: i32 = 272;
 const DLT_RRC_LTE: i32 = 273;
 const DLT_RRC_NR: i32 = 274;
 const DLT_PDCP: i32 = 275;
 const DLT_RLC: i32 = 277;
-const DLT_GTPV1U: i32 = 278;
-const DLT_SHIM6: i32 = 279;
-const DLT_OPENR: i32 = 280;
-const DLT_GUE: i32 = 281;
-const DLT_FOU: i32 = 282;
-const DLT_6TO4: i32 = 283;
-const DLT_ISATAP: i32 = 284;
 const DLT_IKEV2: i32 = 285;
-const DLT_SSTP: i32 = 286;
-const DLT_SOFTETHER: i32 = 287;
-const DLT_STT: i32 = 288;
 const DLT_NVGRE: i32 = 289;
-const DLT_MPLS_IN_UDP: i32 = 290;
-const DLT_OPENCONNECT: i32 = 291;
-const DLT_SCEP: i32 = 292;
-const DLT_EST: i32 = 293;
-const DLT_TSP_TIMESTAMP: i32 = 294;
 const DLT_SASL: i32 = 295;
-const DLT_GSSAPI: i32 = 296;
-const DLT_SRP: i32 = 297;
-const DLT_DTLS_SRTP: i32 = 298;
-const DLT_TACACS_LEGACY: i32 = 299;
-const DLT_SHADOWSOCKS: i32 = 300;
-const DLT_VMESS: i32 = 301;
-const DLT_OBFS4: i32 = 302;
 const DLT_USBPCAP: i32 = 249; // Windows USBPcap
 const DLT_IEEE802_15_4: i32 = 195; // IEEE 802.15.4 Wireless PAN (Zigbee)
                                    // Captures that carry IP with no Ethernet header. Treating these as Ethernet
@@ -874,7 +845,6 @@ const ETHERTYPE_PROFINET: u16 = 0x8892; // PROFINET real-time industrial
 const ETHERTYPE_WOL: u16 = 0x0842; // Wake-on-LAN magic packet
 const ETHERTYPE_AOE: u16 = 0x88A2; // ATA over Ethernet
 const ETHERTYPE_ROCE: u16 = 0x8915; // RDMA over Converged Ethernet
-const ETHERTYPE_CCLINK_IE: u16 = 0x890F; // CC-Link IE Control/Field
 const ETHERTYPE_DECNET: u16 = 0x6003; // DECnet Phase IV
 const ETHERTYPE_VINES: u16 = 0x0BAD; // Banyan VINES
 const ETHERTYPE_IPX: u16 = 0x8137; // Novell NetWare IPX
@@ -896,23 +866,68 @@ const ETHERTYPE_RARP: u16 = 0x8035; // Reverse ARP
 const ETHERTYPE_ETHERCAT: u16 = 0x88A4; // EtherCAT industrial fieldbus
 const ETHERTYPE_MACSEC: u16 = 0x88E5; // 802.1AE MACsec link encryption
 const ETHERTYPE_FCOE: u16 = 0x8906; // Fibre Channel over Ethernet
-const ETHERTYPE_MAC_CONTROL: u16 = 0x8808; // Ethernet flow control (PAUSE)
 const ETHERTYPE_PBB: u16 = 0x88E7; // 802.1ah provider backbone bridging
 const ETHERTYPE_NSH: u16 = 0x894F; // Service function chaining (RFC 8300)
-const ETHERTYPE_BATMAN: u16 = 0x4305; // B.A.T.M.A.N. advanced mesh
-const ETHERTYPE_TRILL: u16 = 0x22F3; // Routed Ethernet (RFC 6325)
-const ETHERTYPE_DLR: u16 = 0x80E1; // EtherNet/IP Device Level Ring (ODVA)
 const ETHERTYPE_CFM: u16 = 0x8902; // Connectivity Fault Management (802.1ag)
-const ETHERTYPE_SNA: u16 = 0x80D5; // IBM SNA / APPN
-const ETHERTYPE_DEC_LAT: u16 = 0x6004; // DEC Local Area Transport
-const ETHERTYPE_DEC_MOP: u16 = 0x6002; // DEC Maintenance Operation Protocol
-const ETHERTYPE_CHAOSNET: u16 = 0x0804; // Chaosnet
-const ETHERTYPE_XNS: u16 = 0x0600; // Xerox Network Systems IDP
-const ETHERTYPE_COBRANET: u16 = 0x8819; // CobraNet audio-over-Ethernet
 const ETHERTYPE_MPLS_UCAST: u16 = 0x8847; // MPLS unicast
 const ETHERTYPE_MPLS_MCAST: u16 = 0x8848; // MPLS multicast
                                           // EtherType values at or below this are actually 802.3 length fields (LLC).
 const ETHERTYPE_MAX_LENGTH: u16 = 0x05DC; // 1500
+
+/// Link types and EtherTypes with no dispatch arm yet.
+///
+/// Each number is a real assignment, and the assignment is the thing worth
+/// keeping — it is exactly what a future arm keys on, and re-deriving it means
+/// going back to the tcpdump and IEEE registries. They lost their arms when the
+/// dissectors behind them were removed, not because the numbers changed.
+///
+/// Moving one out of here is half of wiring it up; the other half is the arm.
+#[allow(dead_code)]
+mod unwired {
+    pub const DLT_CAN_XL: i32 = 257; // CAN XL eXtra Long CAN frame
+    pub const DLT_AUTOSAR_PDU: i32 = 260; // AUTOSAR Container I-PDU
+    pub const DLT_SECOC: i32 = 261; // AUTOSAR SecOC
+    pub const DLT_CPRI: i32 = 263;
+    pub const DLT_NAS_EPS: i32 = 264;
+    pub const DLT_NAS_5GS: i32 = 265;
+    pub const DLT_GPRS_LLC: i32 = 266;
+    pub const DLT_MTP2: i32 = 270;
+    pub const DLT_GTP_SV: i32 = 272;
+    pub const DLT_GTPV1U: i32 = 278;
+    pub const DLT_SHIM6: i32 = 279;
+    pub const DLT_OPENR: i32 = 280;
+    pub const DLT_GUE: i32 = 281;
+    pub const DLT_FOU: i32 = 282;
+    pub const DLT_6TO4: i32 = 283;
+    pub const DLT_ISATAP: i32 = 284;
+    pub const DLT_SSTP: i32 = 286;
+    pub const DLT_SOFTETHER: i32 = 287;
+    pub const DLT_STT: i32 = 288;
+    pub const DLT_MPLS_IN_UDP: i32 = 290;
+    pub const DLT_OPENCONNECT: i32 = 291;
+    pub const DLT_SCEP: i32 = 292;
+    pub const DLT_EST: i32 = 293;
+    pub const DLT_TSP_TIMESTAMP: i32 = 294;
+    pub const DLT_GSSAPI: i32 = 296;
+    pub const DLT_SRP: i32 = 297;
+    pub const DLT_DTLS_SRTP: i32 = 298;
+    pub const DLT_TACACS_LEGACY: i32 = 299;
+    pub const DLT_SHADOWSOCKS: i32 = 300;
+    pub const DLT_VMESS: i32 = 301;
+    pub const DLT_OBFS4: i32 = 302;
+    pub const ETHERTYPE_CCLINK_IE: u16 = 0x890F; // CC-Link IE Control/Field
+    pub const ETHERTYPE_MAC_CONTROL: u16 = 0x8808; // Ethernet flow control (PAUSE)
+    pub const ETHERTYPE_BATMAN: u16 = 0x4305; // B.A.T.M.A.N. advanced mesh
+    pub const ETHERTYPE_TRILL: u16 = 0x22F3; // Routed Ethernet (RFC 6325)
+    pub const ETHERTYPE_DLR: u16 = 0x80E1; // EtherNet/IP Device Level Ring (ODVA)
+    pub const ETHERTYPE_SNA: u16 = 0x80D5; // IBM SNA / APPN
+    pub const ETHERTYPE_DEC_LAT: u16 = 0x6004; // DEC Local Area Transport
+    pub const ETHERTYPE_DEC_MOP: u16 = 0x6002; // DEC Maintenance Operation Protocol
+    pub const ETHERTYPE_CHAOSNET: u16 = 0x0804; // Chaosnet
+    pub const ETHERTYPE_XNS: u16 = 0x0600; // Xerox Network Systems IDP
+    pub const ETHERTYPE_COBRANET: u16 = 0x8819; // CobraNet audio-over-Ethernet
+}
+
 
 /// Dispatch on the L3 EtherType. Recurses through VLAN (802.1Q / QinQ) tags,
 /// unwrapping each 4-byte tag and re-dispatching on the inner EtherType so a
@@ -2738,7 +2753,43 @@ mod unknown_value_summaries {
 
     #[test]
     fn unknown_values_do_not_repeat_the_label() {
-        // Test cases removed — protocols no longer registered.
+        let cases: Vec<(&str, String)> = vec![
+            (
+                "Source Query message",
+                source_query::dissect_source_query(
+                    None,
+                    None,
+                    27015,
+                    27015,
+                    &[0xff, 0xff, 0xff, 0xff, b'Z'],
+                )
+                .summary,
+            ),
+            (
+                "IAX2 full frame — unknown type 0",
+                iax2::dissect_iax2(None, None, 4569, 4569, &{
+                    let mut p = vec![0x80, 0x01];
+                    p.extend_from_slice(&[0u8; 9]);
+                    p
+                })
+                .summary,
+            ),
+        ];
+
+        for (want, got) in cases {
+            assert_eq!(got, want);
+            let words: Vec<String> = got
+                .split_whitespace()
+                .map(|w| {
+                    w.trim_matches(|c: char| !c.is_alphanumeric())
+                        .to_lowercase()
+                })
+                .filter(|w| w.len() > 2)
+                .collect();
+            for pair in words.windows(2) {
+                assert_ne!(pair[0], pair[1], "summary repeats a word: {got:?}");
+            }
+        }
     }
 }
 
@@ -3014,12 +3065,27 @@ mod robustness {
         );
     }
 
-    /// Modules that deliberately expose no `dissect_*` entry point.
+    /// Modules that are deliberately not reached from the packet dispatch.
     ///
-    /// Each is either a shared parser (several protocols use the same header)
-    /// or a nested dissector whose parent builds the result, because the parent
+    /// Most are a shared parser (several protocols use the same header) or a
+    /// nested dissector whose parent builds the result, because the parent
     /// holds the context the summary needs.
+    ///
+    /// A few are something else: analysis passes that happen to wear a
+    /// dissector's signature. They ignore the payload entirely and report over
+    /// accumulated state instead — `tls_downgrade_detector` drains the
+    /// handshake store and compares sessions against each other. No packet *is*
+    /// one of those, so giving them a port would mean claiming an unrelated
+    /// flow in order to print a report. They belong to the analysis layer, and
+    /// listing them here is what says so.
     const HELPER_MODULES: &[&str] = &[
+        // Analysis passes over accumulated TLS/PQC state — no wire form.
+        "tls_pqc_wizard_scan",
+        "tls_key_share_prediction",
+        "tls_downgrade_detector",
+        "tls_perf_benchmark_model",
+        "tls_middlebox_detector",
+        "pqc_compliance_checker",
         "nwp",
         "nxp_802154_sniffer",
         "oampdu",
@@ -4351,6 +4417,7 @@ mod robustness {
             include_str!("dissectors/sctp.rs"),
             include_str!("dissectors/gre.rs"),
             include_str!("dissectors/ipsec.rs"),
+            include_str!("dissectors/m3ua.rs"),
             include_str!("dissectors/sccp.rs"),
             include_str!("dissectors/enip.rs"),
             include_str!("dissectors/gtp.rs"),
@@ -4371,6 +4438,10 @@ mod robustness {
             include_str!("dissectors/wlan.rs"),
             // A CAN frame's identifier selects the bus protocol above it.
             include_str!("dissectors/can.rs"),
+            // CANopen's own identifier then selects the service inside it.
+            include_str!("dissectors/canopen.rs"),
+            // A ReverseHello carries the endpoint the server dialled out from.
+            include_str!("dissectors/opcua.rs"),
             // The slow-protocol subtype selects link OAM or ESMC.
             include_str!("dissectors/lacp.rs"),
             // Both of these carry another protocol as their body: SOME/IP's
@@ -4382,6 +4453,14 @@ mod robustness {
             include_str!("dissectors/profinet.rs"),
             // DVMRP borrows an IGMP type rather than a protocol number.
             include_str!("dissectors/igmp.rs"),
+            // An HTTP body can carry a protocol of its own (E1), and an ONC RPC
+            // call names the program whose procedure list decodes it.
+            include_str!("dissectors/http.rs"),
+            // An event-stream body then names which model API produced it.
+            include_str!("dissectors/sse.rs"),
+            include_str!("dissectors/rpc.rs"),
+            // An SMB Direct envelope hands its payload to SMB2.
+            include_str!("dissectors/smb_direct.rs"),
             // An RDMA SEND can carry an upper-layer storage protocol.
             include_str!("dissectors/roce.rs"),
             // The serial IEC 60870-5 carrier hands its ASDU to the shared decoder.
@@ -4917,6 +4996,7 @@ pub mod opc_ua_pubsub_uadp_detail;
 pub mod opc_ua_reverse_connect;
 pub mod opc_ua_secure_conversation;
 // ── CANopen (§9) ────────────────────────────────────────────────────
+pub mod canopen;
 pub mod canopen_nmt;
 pub mod canopen_pdo;
 pub mod canopen_sdo;

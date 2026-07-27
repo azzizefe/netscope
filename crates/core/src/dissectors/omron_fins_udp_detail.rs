@@ -11,7 +11,6 @@ pub fn dissect_omron_fins_udp_detail(
 ) -> DissectedResult {
     let summary = if payload.len() >= 8 {
         let icf = payload[0];
-        let rsv = payload[1];
         let gct = payload[2];
         let dna = payload[3];
         let da1 = payload[4];

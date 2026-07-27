@@ -9,7 +9,6 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::api::ApiState;
-use crate::auth::require_permission;
 use crate::db::models::RegisterSensor;
 use crate::db::queries;
 

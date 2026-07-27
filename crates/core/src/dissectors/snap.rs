@@ -10,10 +10,12 @@
 use super::{cdp, dtp, pagp, udld, vtp, DissectedResult};
 
 /// Cisco's OUI, under which its control protocols are registered.
+///
+/// The only one dispatched. Other vendors register control protocols the same
+/// way and would be added here — Extreme is 00:E0:2B, Foundry 00:E0:52 and
+/// Nortel 00:00:81 — but nothing decodes them yet, so a frame under those OUIs
+/// falls through to the generic 802.3 summary rather than being half-read.
 const OUI_CISCO: [u8; 3] = [0x00, 0x00, 0x0C];
-const OUI_EXTREME: [u8; 3] = [0x00, 0xE0, 0x2B];
-const OUI_FOUNDRY: [u8; 3] = [0x00, 0xE0, 0x52];
-const OUI_NORTEL: [u8; 3] = [0x00, 0x00, 0x81];
 
 /// Parse an LLC/SNAP header and hand the payload to the right dissector.
 /// Returns `None` when the frame isn't SNAP or the protocol id is unknown, so

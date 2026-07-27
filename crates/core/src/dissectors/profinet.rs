@@ -31,6 +31,30 @@ pub fn dissect_profinet(payload: &[u8]) -> DissectedResult {
         }
     }
 
+    // The low FrameIDs are isochronous real-time — RT Class 3, the scheduled
+    // traffic a synchronised line depends on. Nothing claimed this range, so
+    // an IRT frame read as a generic "PROFINET frame" lost the one thing worth
+    // knowing about it: which isochronous class it belongs to.
+    if let Some(id) = frame_id.filter(|&id| id <= 0x01FF) {
+        let _ = id;
+        return super::profinet_irt_siemens::dissect_profinet_irt_siemens(
+            None, None, 0, 0, payload,
+        );
+    }
+
+    // Siemens puts its alarm and diagnosis channels inside the ordinary alarm
+    // FrameIDs, numbered 0xA0 and 0xA1. The channel number is what says the
+    // frame carries a Siemens-specific channel rather than a standard alarm,
+    // so it decides — an alarm from another vendor's device stays a plain
+    // PROFINET alarm.
+    if let Some(id) = frame_id {
+        if matches!(id, 0xFC01 | 0xFE01) && matches!(payload.get(2), Some(0xA0 | 0xA1)) {
+            return super::profinet_rt_siemens::dissect_profinet_rt_siemens(
+                None, None, 0, 0, payload,
+            );
+        }
+    }
+
     let summary = if payload.len() >= 2 {
         let frame_id = u16::from_be_bytes([payload[0], payload[1]]);
         let name = match frame_id {
@@ -105,5 +129,40 @@ mod tests {
         let r = dissect_profinet(&p);
         assert_eq!(r.protocol, Protocol::Profisafe);
         assert!(r.summary.contains("PROFIsafe"), "{}", r.summary);
+    }
+
+    /// The low FrameIDs are isochronous traffic — the scheduled frames a
+    /// synchronised line runs on. Nothing claimed the range, so every one of
+    /// them read as an unnamed "PROFINET frame".
+    #[test]
+    fn the_low_frame_ids_are_isochronous_real_time() {
+        for id in [0x0000u16, 0x0080, 0x0100, 0x01FF] {
+            let mut p = id.to_be_bytes().to_vec();
+            p.extend_from_slice(&[0u8; 10]);
+            let r = dissect_profinet(&p);
+            assert_eq!(r.protocol, Protocol::ProfinetIrtSiemens, "{id:#06x}");
+        }
+        // Just past the range is not isochronous.
+        let mut p = 0x0200u16.to_be_bytes().to_vec();
+        p.extend_from_slice(&[0u8; 10]);
+        assert_eq!(dissect_profinet(&p).protocol, Protocol::Profinet);
+    }
+
+    /// The Siemens channel number is what distinguishes a Siemens alarm from
+    /// any other vendor's — the FrameID alone is shared, so it cannot decide.
+    #[test]
+    fn only_a_siemens_channel_number_claims_the_alarm() {
+        let siemens = [0xFC, 0x01, 0xA0, 0x00, 0x00, 0x00];
+        assert_eq!(
+            dissect_profinet(&siemens).protocol,
+            Protocol::ProfinetRtSiemens
+        );
+
+        // Same alarm FrameID, a channel number Siemens does not use: it stays
+        // a plain PROFINET alarm rather than being attributed to Siemens.
+        let other = [0xFC, 0x01, 0x07, 0x00, 0x00, 0x00];
+        let r = dissect_profinet(&other);
+        assert_eq!(r.protocol, Protocol::Profinet);
+        assert!(r.summary.contains("Alarm (high priority)"), "{}", r.summary);
     }
 }

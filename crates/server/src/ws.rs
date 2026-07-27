@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::response::IntoResponse;
-use futures::StreamExt;
+use axum::extract::ws::{Message, WebSocket};
 use crate::db::models::Event;
 use parking_lot::RwLock;
 use tokio::sync::broadcast;

@@ -10,7 +10,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::api::ApiState;
-use crate::auth::{require_permission, Claims};
+use crate::auth::Claims;
 use crate::db::models::{AlertFilter, UpdateAlertStatus};
 use crate::db::queries;
 

@@ -6,7 +6,6 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::post;
 use serde_json::json;
-use uuid::Uuid;
 
 use crate::api::ApiState;
 use crate::auth::{self, AuthResponse, JwtState, LoginRequest};

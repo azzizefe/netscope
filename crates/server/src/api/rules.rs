@@ -4,7 +4,7 @@ use axum::{Json, Router};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::{delete, get, post, put};
+use axum::routing::{get, put};
 use serde_json::json;
 use uuid::Uuid;
 

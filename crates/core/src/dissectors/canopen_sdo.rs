@@ -2,16 +2,30 @@ use std::net::IpAddr;
 use crate::models::Protocol;
 use super::DissectedResult;
 
-/// SDO command specifier.
-fn sdo_command_name(ccs: u8) -> &'static str {
-    match ccs >> 5 {
-        0 => "SDO Segment Download",
-        1 => "SDO Download Initiate",
-        2 => "SDO Segment Upload",
-        3 => "SDO Upload Initiate",
-        4 => "SDO Abort Transfer",
-        5 | 6 | 7 => "SDO Multiplexed",
-        _ => "Unknown",
+/// What the command specifier in the top three bits means.
+///
+/// The same three bits mean different things in each direction — CiA 301 calls
+/// them the *client* command specifier and the *server* command specifier, and
+/// they are not the same list. A `3` from the client is an upload segment; a
+/// `3` from the server is the response to an initiate-download. Reading one as
+/// the other reports the opposite operation, so the direction has to be known
+/// before the byte can be named, and only the identifier carries it.
+fn sdo_command_name(command: u8, server: bool) -> &'static str {
+    match (command >> 5, server) {
+        (4, _) => "Abort",
+        (0, false) => "Download Segment",
+        (1, false) => "Initiate Download",
+        (2, false) => "Initiate Upload",
+        (3, false) => "Upload Segment",
+        (5, false) => "Block Upload",
+        (6, false) => "Block Download",
+        (0, true) => "Upload Segment response",
+        (1, true) => "Download Segment response",
+        (2, true) => "Initiate Upload response",
+        (3, true) => "Initiate Download response",
+        (5, true) => "Block Download response",
+        (6, true) => "Block Upload response",
+        _ => "unknown command",
     }
 }
 
@@ -43,25 +57,35 @@ fn sdo_abort_reason(abort: u32) -> &'static str {
     }
 }
 
+/// Dissect an SDO. `node` and `server` come from the COB-ID, which is the only
+/// place either is carried — see [`sdo_command_name`] for why the direction has
+/// to be known.
 pub fn dissect_canopen_sdo(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
     src_port: u16,
     dst_port: u16,
     payload: &[u8],
+    node: u8,
+    server: bool,
 ) -> DissectedResult {
+    let who = if server { "server" } else { "client" };
     let summary = if payload.len() < 4 {
-        "CANopen SDO (malformed)".into()
+        format!("CANopen SDO {who} — node {node} (malformed)")
     } else {
-        let cmd = sdo_command_name(payload[0]);
-        let index = ((payload[2] as u16) << 8) | payload[1] as u16;
+        let cmd = sdo_command_name(payload[0], server);
+        // Index is little-endian across bytes 1-2, sub-index is byte 3.
+        let index = u16::from_le_bytes([payload[1], payload[2]]);
         let subindex = payload[3];
-        if cmd == "SDO Abort Transfer" && payload.len() >= 8 {
+        if payload[0] >> 5 == 4 && payload.len() >= 8 {
             let abort = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]);
             let reason = sdo_abort_reason(abort);
-            format!("CANopen SDO: {cmd} index={index:#06X} sub={subindex:#04X} abort=0x{abort:08X} ({reason})")
+            format!(
+                "CANopen SDO {cmd} — node {node} {index:#06X}:{subindex:#04X} \
+                 abort 0x{abort:08X} ({reason})"
+            )
         } else {
-            format!("CANopen SDO: {cmd} index={index:#06X} sub={subindex:#04X}")
+            format!("CANopen SDO {cmd} — node {node} {index:#06X}:{subindex:#04X}")
         }
     };
     DissectedResult {
@@ -78,34 +102,45 @@ pub fn dissect_canopen_sdo(
 mod tests {
     use super::*;
 
+    /// A read of object 0x1000 (device type) — the request every CANopen
+    /// master makes first.
     #[test]
-    fn sdo_upload_initiate() {
-        let buf = &[0x60, 0x00, 0x10, 0x01];
-        let r = dissect_canopen_sdo(None, None, 0, 0, buf);
+    fn an_upload_request_names_the_object_it_reads() {
+        let buf = &[0x40, 0x00, 0x10, 0x00, 0, 0, 0, 0];
+        let r = dissect_canopen_sdo(None, None, 0, 0, buf, 10, false);
         assert_eq!(r.protocol, Protocol::CanopenSdo);
-        assert!(r.summary.contains("Upload Initiate"));
-        assert!(r.summary.contains("index=0x1000"));
+        assert_eq!(
+            r.summary,
+            "CANopen SDO Initiate Upload — node 10 0x1000:0x00"
+        );
     }
 
+    /// The same three bits mean different things in each direction. This is
+    /// the pair that would otherwise be reported as its own opposite.
     #[test]
-    fn sdo_download_initiate() {
-        let buf = &[0x21, 0x00, 0x10, 0x00];
-        let r = dissect_canopen_sdo(None, None, 0, 0, buf);
-        assert!(r.summary.contains("Download Initiate"));
+    fn the_direction_changes_what_the_command_byte_means() {
+        let three = &[0x60, 0x00, 0x10, 0x00, 0, 0, 0, 0];
+        assert!(dissect_canopen_sdo(None, None, 0, 0, three, 1, false)
+            .summary
+            .contains("Upload Segment"));
+        assert!(dissect_canopen_sdo(None, None, 0, 0, three, 1, true)
+            .summary
+            .contains("Initiate Download response"));
     }
 
+    /// An abort is why a configuration write failed, and the code is the
+    /// reason — this is usually what the capture was taken for.
     #[test]
-    fn sdo_abort() {
+    fn an_abort_reports_its_reason() {
         let buf = &[0x80, 0x00, 0x10, 0x01, 0x00, 0x00, 0x03, 0x05];
-        let r = dissect_canopen_sdo(None, None, 0, 0, buf);
-        assert!(r.summary.contains("Abort"));
-        assert!(r.summary.contains("Toggle bit"));
+        let r = dissect_canopen_sdo(None, None, 0, 0, buf, 4, true);
+        assert!(r.summary.contains("Abort"), "{}", r.summary);
+        assert!(r.summary.contains("Toggle bit"), "{}", r.summary);
     }
 
     #[test]
-    fn sdo_malformed() {
-        let buf = &[0x40, 0x00];
-        let r = dissect_canopen_sdo(None, None, 0, 0, buf);
-        assert!(r.summary.contains("malformed"));
+    fn a_truncated_sdo_still_names_its_node() {
+        let r = dissect_canopen_sdo(None, None, 0, 0, &[0x40, 0x00], 9, false);
+        assert_eq!(r.summary, "CANopen SDO client — node 9 (malformed)");
     }
 }

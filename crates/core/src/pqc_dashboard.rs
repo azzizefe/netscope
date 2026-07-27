@@ -187,7 +187,7 @@ impl PqcDashboard {
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, SigAlgorithm, TlsVersion, Timestamp, PqcKem, KemId};
+    use crate::pqc_handshake::{PqcHandshakeRecord, SigAlgorithm, TlsVersion, KemId};
     use chrono::Utc;
     use std::net::IpAddr;
 
