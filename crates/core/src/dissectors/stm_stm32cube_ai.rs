@@ -19,9 +19,9 @@ pub fn dissect_stm_stm32cube_ai(
             _ => "Unknown",
         };
         let cycles = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]);
-        format!("STM32Cube.AI — net:{net} {state} cycles:{cycles} ({} bytes)", payload.len())
+        format!("STM32Cube.AI — net:{net} {state} cycles:{cycles} ({})", super::bytes(payload.len() as u64))
     } else {
-        format!("STM32Cube.AI — {} bytes", payload.len())
+        format!("STM32Cube.AI — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

@@ -99,9 +99,9 @@ fn byte_string(payload: &[u8], offset: &mut usize) -> String {
     let hex: String = payload[*offset..*offset + hex_len].iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ");
     *offset += len;
     if len > 32 {
-        format!("({} bytes, start: {hex}...)", super::bytes(len as u64))
+        format!("({}, start: {hex}...)", super::bytes(len as u64))
     } else {
-        format!("({} bytes: {hex})", super::bytes(len as u64))
+        format!("({}: {hex})", super::bytes(len as u64))
     }
 }
 

@@ -22,9 +22,9 @@ pub fn dissect_bosch_nexeed_edge(
             payload[8], payload[9], payload[10], payload[11],
             payload[12], payload[13], payload[14], payload[15],
         ]);
-        format!("Bosch Nexeed — stream:{stream_id:x} type:{data_type} ts:{timestamp} ({} bytes)", payload.len())
+        format!("Bosch Nexeed — stream:{stream_id:x} type:{data_type} ts:{timestamp} ({})", super::bytes(payload.len() as u64))
     } else {
-        format!("Bosch Nexeed — {} bytes", payload.len())
+        format!("Bosch Nexeed — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

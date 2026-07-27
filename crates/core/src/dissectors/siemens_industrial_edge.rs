@@ -20,9 +20,9 @@ pub fn dissect_siemens_industrial_edge(
             _ => "Data",
         };
         let seq = u32::from_le_bytes([payload[8], payload[9], payload[10], payload[11]]);
-        format!("Siemens Industrial Edge — app:{app_id:x} {msg_type} seq:{seq} ({} bytes)", payload.len())
+        format!("Siemens Industrial Edge — app:{app_id:x} {msg_type} seq:{seq} ({})", super::bytes(payload.len() as u64))
     } else {
-        format!("Siemens Industrial Edge — {} bytes", payload.len())
+        format!("Siemens Industrial Edge — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

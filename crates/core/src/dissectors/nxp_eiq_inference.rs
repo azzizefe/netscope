@@ -25,9 +25,9 @@ pub fn dissect_nxp_eiq_inference(
             _ => "Unknown",
         };
         let inference_id = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]);
-        format!("NXP eIQ — backend:{backend} status:{status} id:{inference_id} ({} bytes)", payload.len())
+        format!("NXP eIQ — backend:{backend} status:{status} id:{inference_id} ({})", super::bytes(payload.len() as u64))
     } else {
-        format!("NXP eIQ — {} bytes", payload.len())
+        format!("NXP eIQ — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

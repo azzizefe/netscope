@@ -21,9 +21,9 @@ pub fn dissect_profidrive(
             _ => "Service",
         };
         let drive = payload[1];
-        format!("PROFIdrive — {} drive:{} ({} bytes)", svc, drive, payload.len())
+        format!("PROFIdrive — {} drive:{} ({})", svc, drive, super::bytes(payload.len() as u64))
     } else {
-        format!("PROFIdrive — {} bytes", payload.len())
+        format!("PROFIdrive — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

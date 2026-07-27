@@ -157,7 +157,6 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
 
   (6653, openflow::dissect_openflow),
   (8001, edge_inference_onnx::dissect_edge_inference_onnx),
-   (8080, schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge),
     (8087, twincat_scope_view::dissect_twincat_scope_view),
     (8090, simatic_hmi_smartsrv::dissect_simatic_hmi_smartsrv),
     (8193, fanuc_focas2::dissect_fanuc_focas2),

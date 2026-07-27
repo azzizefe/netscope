@@ -19,9 +19,9 @@ pub fn dissect_edge_tensorflow_lite(
             _ => "Unknown",
         };
         let arena_size = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]);
-        format!("TFLite Micro — {op} arena:{arena_size}B ({} bytes)", payload.len())
+        format!("TFLite Micro — {op} arena:{arena_size}B ({})", super::bytes(payload.len() as u64))
     } else {
-        format!("TFLite Micro — {} bytes", payload.len())
+        format!("TFLite Micro — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

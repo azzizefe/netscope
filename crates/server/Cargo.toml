@@ -1,0 +1,80 @@
+[package]
+name = "netscope-server"
+description = "Netscope Central Management Server — sensor fleet management, telemetry, alerts, RBAC"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP / Web
+axum = { version = "0.8", features = ["macros", "ws"] }
+axum-extra = { version = "0.10", features = ["typed-header"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip", "validate-request"]}
+http = "1"
+hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+
+# gRPC
+tonic = { version = "0.14", features = ["transport", "channel", "server", "tls-webpki-roots"] }
+prost = "0.13"
+
+[build-dependencies]
+tonic-build = "0.14"
+
+# TLS
+rustls = "0.23"
+rustls-pemfile = "2"
+tokio-rustls = "0.26"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "uuid", "migrate"] }
+
+# Cache
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
+
+# Auth
+jsonwebtoken = "9"
+argon2 = "0.5"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# IDs
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Errors
+anyhow = "1"
+thiserror = "2"
+
+# Utilities
+futures = "0.3"
+dashmap = "6"
+parking_lot = "0.12"
+
+# Crypto (used in tests and salt generation)
+rand = "0.8"
+
+[lints]
+workspace = true

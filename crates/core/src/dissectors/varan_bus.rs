@@ -20,9 +20,9 @@ pub fn dissect_varan_bus(
             _ => "Data",
         };
         let len = u16::from_be_bytes([payload[4], payload[5]]);
-        format!("VARAN Bus — {} len:{} ({} bytes)", fc, len, payload.len())
+        format!("VARAN Bus — {} len:{} ({})", fc, len, super::bytes(payload.len() as u64))
     } else {
-        format!("VARAN Bus — {} bytes", payload.len())
+        format!("VARAN Bus — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

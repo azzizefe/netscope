@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package netscope;
+
+service SensorService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc SendHeartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc StreamEvents(stream EventMessage) returns (EventSummary);
+  rpc SendCommand(SensorCommand) returns (SensorCommandAck);
+}
+
+message RegisterRequest {
+  string hostname = 1;
+  string ip_address = 2;
+  string os = 3;
+  string version = 4;
+}
+
+message RegisterResponse {
+  string sensor_id = 1;
+  string status = 2;
+}
+
+message HeartbeatRequest {
+  string sensor_id = 1;
+  float cpu_load_pct = 2;
+  int32 ram_used_mb = 3;
+  int64 capture_throughput_bps = 4;
+  int64 uptime_secs = 5;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+}
+
+message EventMessage {
+  string sensor_id = 1;
+  string event_type = 2;
+  string severity = 3;
+  string title = 4;
+  string description = 5;
+  string protocol = 6;
+  string source_ip = 7;
+  string dest_ip = 8;
+  int32 port = 9;
+  string raw_data = 10;
+}
+
+message EventSummary {
+  int64 accepted = 1;
+  string status = 2;
+}
+
+message SensorCommand {
+  string sensor_id = 1;
+  string command = 2;
+  string parameters = 3;
+}
+
+message SensorCommandAck {
+  string status = 1;
+  string message = 2;
+}

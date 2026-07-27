@@ -23,9 +23,9 @@ pub fn dissect_mechatrolink(
             _ => "Command",
         };
         let axis = payload[1];
-        format!("MECHATROLINK — {} axis:{} seq:{} ({} bytes)", cmd, axis, payload[2], payload.len())
+        format!("MECHATROLINK — {} axis:{} seq:{} ({})", cmd, axis, payload[2], super::bytes(payload.len() as u64))
     } else {
-        format!("MECHATROLINK — {} bytes", payload.len())
+        format!("MECHATROLINK — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

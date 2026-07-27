@@ -19,9 +19,9 @@ pub fn dissect_controlnet(
             _ => "Data",
         };
         let slot = payload[1];
-        format!("ControlNet — {} slot:{} ({} bytes)", pkt_type, slot, payload.len())
+        format!("ControlNet — {} slot:{} ({})", pkt_type, slot, super::bytes(payload.len() as u64))
     } else {
-        format!("ControlNet — {} bytes", payload.len())
+        format!("ControlNet — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

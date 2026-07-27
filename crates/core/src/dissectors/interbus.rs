@@ -20,9 +20,9 @@ pub fn dissect_interbus(
             _ => "Data",
         };
         let len = u16::from_be_bytes([payload[2], payload[3]]);
-        format!("INTERBUS — {} len:{} ({} bytes)", fc, len, payload.len())
+        format!("INTERBUS — {} len:{} ({})", fc, len, super::bytes(payload.len() as u64))
     } else {
-        format!("INTERBUS — {} bytes", payload.len())
+        format!("INTERBUS — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

@@ -10,7 +10,7 @@ use crate::models::Protocol;
 use super::{
     bindings, consul_rpc, drbd, fix, hl7,
     http2, iec101, milter, modbus_ascii, modbus_rtu,
-    ntlm, openvpn, someip, websocket, zmtp,
+    ntlm, openvpn, schneider_ecostruxure_edge, someip, websocket, zmtp,
     DissectedResult,
 };
 
@@ -265,6 +265,20 @@ fn dissect_tcp_inner(
         if on(1194) {
             // OpenVPN shares a port number across TCP and UDP; the flag says which.
             return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, tcp_payload, true);
+        }
+        // 8080 is the HTTP alternate port, which the EcoStruxure gateway's own
+        // web UI also serves — so the framing decides, and ordinary HTTP on
+        // 8080 is not relabelled as a Schneider protocol.
+        if on(8080)
+            && schneider_ecostruxure_edge::looks_like_schneider_ecostruxure_edge(tcp_payload)
+        {
+            return schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge(
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                tcp_payload,
+            );
         }
         // 8891 is Postfix and OpenDKIM's convention rather than an assignment,
         // so the framing has to agree before the flow is claimed.

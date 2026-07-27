@@ -20,9 +20,9 @@ pub fn dissect_as_interface(
             _ => "Command",
         };
         let slave = payload[1] & 0x1F;
-        format!("AS-Interface — {} slave:{} data:{:02x} ({} bytes)", cmd, slave, payload[4], payload.len())
+        format!("AS-Interface — {} slave:{} data:{:02x} ({})", cmd, slave, payload[4], super::bytes(payload.len() as u64))
     } else {
-        format!("AS-Interface — {} bytes", payload.len())
+        format!("AS-Interface — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

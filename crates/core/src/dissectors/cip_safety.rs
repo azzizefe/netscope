@@ -20,9 +20,9 @@ pub fn dissect_cip_safety(
             _ => "SafetyMsg",
         };
         let conn_id = u32::from_le_bytes([payload[2], payload[3], payload[4], payload[5]]);
-        format!("CIP Safety — {} conn:0x{:08x} ({} bytes)", msg_type, conn_id, payload.len())
+        format!("CIP Safety — {} conn:0x{:08x} ({})", msg_type, conn_id, super::bytes(payload.len() as u64))
     } else {
-        format!("CIP Safety — {} bytes", payload.len())
+        format!("CIP Safety — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

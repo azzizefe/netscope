@@ -25,9 +25,9 @@ pub fn dissect_iolink(
             3 => "Error",
             _ => "Unknown",
         };
-        format!("IO-Link — {} status:{} seq:{} ({} bytes)", pdu_type, status, payload[3] & 0x0F, payload.len())
+        format!("IO-Link — {} status:{} seq:{} ({})", pdu_type, status, payload[3] & 0x0F, super::bytes(payload.len() as u64))
     } else {
-        format!("IO-Link — {} bytes", payload.len())
+        format!("IO-Link — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

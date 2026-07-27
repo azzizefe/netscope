@@ -19,9 +19,9 @@ pub fn dissect_edge_pytorch_mobile(
             _ => "Unknown",
         };
         let tensor_count = u16::from_le_bytes([payload[4], payload[5]]);
-        format!("PyTorch Mobile — v{version} {method} tensors:{tensor_count} ({} bytes)", payload.len())
+        format!("PyTorch Mobile — v{version} {method} tensors:{tensor_count} ({})", super::bytes(payload.len() as u64))
     } else {
-        format!("PyTorch Mobile — {} bytes", payload.len())
+        format!("PyTorch Mobile — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

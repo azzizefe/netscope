@@ -20,9 +20,9 @@ pub fn dissect_fsoe(
             _ => "Command",
         };
         let crc = u16::from_le_bytes([payload[4], payload[5]]);
-        format!("FSoE — {} crc:0x{:04x} ({} bytes)", cmd, crc, payload.len())
+        format!("FSoE — {} crc:0x{:04x} ({})", cmd, crc, super::bytes(payload.len() as u64))
     } else {
-        format!("FSoE — {} bytes", payload.len())
+        format!("FSoE — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

@@ -20,9 +20,9 @@ pub fn dissect_p_net(
             _ => "Service",
         };
         let node = payload[1];
-        format!("P-NET — {} node:{} seg:{} ({} bytes)", svc, node, payload[3], payload.len())
+        format!("P-NET — {} node:{} seg:{} ({})", svc, node, payload[3], super::bytes(payload.len() as u64))
     } else {
-        format!("P-NET — {} bytes", payload.len())
+        format!("P-NET — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

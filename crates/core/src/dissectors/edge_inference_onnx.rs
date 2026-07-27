@@ -24,12 +24,12 @@ pub fn dissect_edge_inference_onnx(
             "".into()
         };
         if model.is_empty() {
-            format!("ONNX Edge — {op} ({} bytes)", payload.len())
+            format!("ONNX Edge — {op} ({})", super::bytes(payload.len() as u64))
         } else {
-            format!("ONNX Edge — {op} model:{model} ({} bytes)", payload.len())
+            format!("ONNX Edge — {op} model:{model} ({})", super::bytes(payload.len() as u64))
         }
     } else {
-        format!("ONNX Edge — {} bytes", payload.len())
+        format!("ONNX Edge — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {

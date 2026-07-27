@@ -20,9 +20,9 @@ pub fn dissect_beckhoff_twincat_analytics(
         };
         let sample_count = u16::from_le_bytes([payload[4], payload[5]]);
         let cycle_counter = u32::from_le_bytes([payload[8], payload[9], payload[10], payload[11]]);
-        format!("TwinCAT Analytics — ch:{channel} {mode} samples:{sample_count} cycle:{cycle_counter} ({} bytes)", payload.len())
+        format!("TwinCAT Analytics — ch:{channel} {mode} samples:{sample_count} cycle:{cycle_counter} ({})", super::bytes(payload.len() as u64))
     } else {
-        format!("TwinCAT Analytics — {} bytes", payload.len())
+        format!("TwinCAT Analytics — {}", super::bytes(payload.len() as u64))
     };
 
     DissectedResult {
