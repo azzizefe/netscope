@@ -804,6 +804,12 @@ mod tests {
             show_bookmarks: false,
             show_expert: false,
             _temp_guard: None,
+            ai_selected: None,
+            show_ai_detail: false,
+            show_ai_prompt_response: false,
+            show_ai_heatmap: false,
+            ai_detail_scroll: 0,
+            edge_ai_scroll: 0,
         };
         (app, packet_tx)
     }
