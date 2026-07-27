@@ -22418,6 +22418,97 @@ protocols! {
         aliases:   ["beckhoff_xplanar_mover", "xplanar", "xplanar_mover"],
         blurb:     "Beckhoff XPlanar — protocol for free-moving planar transport system with maglev mover position tracking, 6-DOF tilt sensing, collision domain management, trajectory planning commands, and wireless coil commutation data exchange for the XPlanar planar motor system.",
     }
+    // ── Other Vendor Fieldbuses (§10.2.4) ─────────────────────────────
+    MitsubishiMelsecProto {
+        doc:       "Mitsubishi MELSEC MC protocol (binary & ASCII).",
+        display:   "MELSEC MC Protocol",
+        color:     0xDC2626,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["mitsubishi_melsec_proto", "melsec_mc", "mitsubishi_mc"],
+        blurb:     "Mitsubishi MELSEC MC (MELSEC Communication) protocol — binary and ASCII communication frames for iQ-R, iQ-F, and L-series PLCs with extended device memory map access (label access, intelligent function module buffers, multiple CPU shared memory), and online program monitoring.",
+    }
+    MitsubishiCcLinkIeField {
+        doc:       "Mitsubishi CC-Link IE Field basic extension.",
+        display:   "CC-Link IE Field (Ext)",
+        color:     0x0891B2,
+        transport: Other,
+        rank:      4,
+        aliases:   ["mitsubishi_cc_link_ie_field", "cclink_ie_ext", "mitsubishi_cclink"],
+        blurb:     "Mitsubishi CC-Link IE Field basic extended protocol — cyclic and transient data exchange for Motion CPU and simple motion module network variables, with servo parameter access, synchronous axis control, and multiple CPU shared memory across CC-Link IE Field networks.",
+    }
+    OmronFinsUdpDetail {
+        doc:       "Omron FINS/UDP extended command decode.",
+        display:   "OMRON FINS/UDP (Detail)",
+        color:     0x0284C7,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["omron_fins_udp_detail", "fins_udp_detail", "omron_fins"],
+        blurb:     "Omron FINS (Factory Interface Network Service) over UDP — extended command decode for Sysmac NJ/NX series controllers with CIP routing information, expanded memory area access beyond the standard FINS specification, and automatic clock synchronization via FINS frame exchange.",
+    }
+    KeyenceKvEthernet {
+        doc:       "Keyence KV-8000/Nano Ethernet protocol.",
+        display:   "Keyence KV Ethernet",
+        color:     0x16A34A,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["keyence_kv_ethernet", "kv_ethernet", "keyence_kv"],
+        blurb:     "Keyence KV-8000 and KV Nano series Ethernet protocol — PLC communication with ladder program upload/download, device memory read/write, remote run/stop control, and Keyence vision system trigger and inspection result relay over TCP/IP.",
+    }
+    BrAutomationPvi {
+        doc:       "B&R Automation PVI protocol.",
+        display:   "B&R Automation PVI",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["b_r_automation_pvi", "br_pvi", "automation_pvi"],
+        blurb:     "B&R Automation PVI (Process Visualization Interface) — Automation Studio PVI transfer protocol for process variable access, cyclic data publication from the Automation Runtime, alarm handling, and device enumeration across B&R's POWERLINK and Ethernet networks.",
+    }
+    AbbRobotWebService {
+        doc:       "ABB Robot Web Services (RW 7.x) motion data.",
+        display:   "ABB Robot Web Services",
+        color:     0xE11D48,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["abb_robot_web_service", "abb_rw", "abb_robot_ws"],
+        blurb:     "ABB Robot Web Services (RW 7.x) — RESTful bridge for RAPID-to-controller communication enabling motion data streaming, program upload/download, I/O signal monitoring, and real-time robot state subscription through the ABB controller's built-in web server.",
+    }
+    KukaRobotSensorInterface {
+        doc:       "KUKA Robot Sensor Interface real-time XML stream.",
+        display:   "KUKA RSI",
+        color:     0x2563EB,
+        transport: Udp,
+        rank:      4,
+        aliases:   ["kuka_robot_sensor_interface", "kuka_rsi", "robot_sensor_iface"],
+        blurb:     "KUKA Robot Sensor Interface (RSI) — real-time XML frame stream for sensor-guided robot motion with KUKA-specific sensor correction vectors, force/torque feedback integration, and position override commands transmitted cyclically over UDP at up to 1 kHz for closed-loop sensor-based robot control.",
+    }
+    FanucFocas2 {
+        doc:       "FANUC FOCAS2 CNC/PMC data window protocol.",
+        display:   "FANUC FOCAS2",
+        color:     0xB45309,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["fanuc_focas2", "focas2", "fanuc_cnc"],
+        blurb:     "FANUC FOCAS2 (FANUC Open CNC API Specification 2) — CNC and PMC data window protocol for reading/writing CNC variables, tool offset tables, macro variables, alarm history, servo/spindle tuning parameters, and PMC register access across Ethernet for Series 0i/30i/31i/32i controllers.",
+    }
+    YaskawaMemobusTcpDetail {
+        doc:       "Yaskawa MEMOBUS/TCP extended register access.",
+        display:   "Yaskawa MEMOBUS/TCP",
+        color:     0x0E7490,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["yaskawa_memobus_tcp_detail", "memobus_tcp", "yaskawa_memobus"],
+        blurb:     "Yaskawa MEMOBUS/TCP — extended register access protocol for Yaskawa drive and motion controllers with Sigma-7 EtherCAT to MEMOBUS gateway bridging, inverter parameter access beyond standard Modbus addressing, and multi-drive register block reads over TCP port 502.",
+    }
+    BoschRexrothOpenCore {
+        doc:       "Bosch Rexroth Open Core Interface Protocol.",
+        display:   "Rexroth Open Core",
+        color:     0x9333EA,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["bosch_rexroth_open_core", "rexroth_open_core", "b_r_open_core"],
+        blurb:     "Bosch Rexroth Open Core Interface — cross-platform communication protocol for IndraMotion MLC/XLC controllers enabling app-to-app bridging between IEC 61131-3 PLC programs, high-level language applications (C++, Java, C#), and IIoT cloud connectivity through the Open Core Engineering interface.",
+    }
 }
 
 /// High-level protocol category for grouping in the UI and filter.

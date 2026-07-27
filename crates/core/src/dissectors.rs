@@ -551,6 +551,18 @@ pub mod ethercat_foe_detail;
 pub mod ethercat_distributed_clocks;
 pub mod beckhoff_xplanar_mover;
 
+// ── Other Vendor Fieldbuses (§10.2.4) ──
+pub mod mitsubishi_melsec_proto;
+pub mod mitsubishi_cc_link_ie_field;
+pub mod omron_fins_udp_detail;
+pub mod keyence_kv_ethernet;
+pub mod b_r_automation_pvi;
+pub mod abb_robot_web_service;
+pub mod kuka_robot_sensor_interface;
+pub mod fanuc_focas2;
+pub mod yaskawa_memobus_tcp_detail;
+pub mod bosch_rexroth_open_core;
+
 use std::net::IpAddr;
 
 use crate::models::Protocol;

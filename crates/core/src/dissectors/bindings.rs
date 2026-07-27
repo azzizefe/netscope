@@ -29,17 +29,20 @@ use std::net::IpAddr;
 
 use super::DissectedResult;
 use super::{
- aerospike, afp, amt, as_interface, bacnet, beckhoff_twincat_analytics, beckhoff_xplanar_mover
- , bfcp, bfd, bgp, bosch_nexeed_edge, capwap, cassandra, ccp, cip_safety, cip_safety_rockwell
+ abb_robot_web_service, aerospike, afp, amt, as_interface, bacnet, beckhoff_twincat_analytics
+ , beckhoff_xplanar_mover, bfcp, bfd, bgp, bosch_nexeed_edge, bosch_rexroth_open_core
+ , b_r_automation_pvi, capwap
+ , cassandra, ccp, cip_safety, cip_safety_rockwell
  , cmp, coap, control_logix_backplane, controlnet, df1_full_duplex_ext, dhcp, dhcpv6
  , dicom, dmx, dnp3, doip, e1ap, edge_inference_onnx, edge_pytorch_mobile, edge_tensorflow_lite
  , enip, epic_online_eos_p2p, ether_net_ip_rockwell, ethercat_beckhoff_mdp
  , ethercat_distributed_clocks, ethercat_foe_detail, ethercat_safety_beckhoff, f1ap
- , factorytalk_view_hmi, finger, fsoe, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp
+ , factorytalk_view_hmi, fanuc_focas2, finger, fsoe, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp
  , guard_i_o_safety, h225ras, hl7, hnbap, hsrp, interbus, iolink, ipsec, isakmp, iscsi, isns
- , kerberos, kpasswd, l2tp, lcsap, ldap, ldp, m2ap, m2pa, m2ua, m3ap, matter, mechatrolink
- , modbus, mongodb, mqtt, mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap
- , nintendo_npln_p2p, nsip, ntp, nxp_eiq_inference, opcua, openflow, p_net, pccc_extended
+ , kerberos, keyence_kv_ethernet, kpasswd, kuka_robot_sensor_interface, l2tp, lcsap, ldap, ldp
+ , m2ap, m2pa, m2ua, m3ap, matter, mechatrolink, mitsubishi_cc_link_ie_field
+ , mitsubishi_melsec_proto, modbus, mongodb, mqtt, mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap
+ , nintendo_npln_p2p, nsip, ntp, nxp_eiq_inference, omron_fins_udp_detail, opcua, openflow, p_net, pccc_extended
  , pfcp, powerflex_drive_cip, profibus_dp_siemens, profidrive, profinet_irt_siemens
  , profinet_rt_siemens, psn_matchmaking_v3, ptp, radius, rdp, rip, ripng
  , rockwell_factorytalk_edge, rpkirtr, rtpmidi, rua, s1ap, sabp, sbcap, s7comm_plus_detail
@@ -48,7 +51,7 @@ use super::{
  , sinumerik_nck_channel, sip, snmp, steam_datagram_relay, stm_stm32cube_ai
  , stratix_switch_telemetry, studio5000_online_comm, sua, tacacs, tia_portal_online_diag, tls
  , twincat_ads_detail, twincat_router_telemetry, twincat_scope_view, uadp, varan_bus
- , vxlangpe, wccp, wireguard, wsd, xbox_live_sdv2, xcp, xnap
+ , vxlangpe, wccp, wireguard, wsd , xbox_live_sdv2, xcp, xnap, yaskawa_memobus_tcp_detail
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -145,6 +148,7 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (4840, opcua::dissect_opcua),
     (4841, studio5000_online_comm::dissect_studio5000_online_comm),
     (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
+    (5007, mitsubishi_melsec_proto::dissect_mitsubishi_melsec_proto),
    (6002, factorytalk_view_hmi::dissect_factorytalk_view_hmi),
 
   (6653, openflow::dissect_openflow),
@@ -152,13 +156,16 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
    (8080, schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge),
     (8087, twincat_scope_view::dissect_twincat_scope_view),
     (8090, simatic_hmi_smartsrv::dissect_simatic_hmi_smartsrv),
+    (8193, fanuc_focas2::dissect_fanuc_focas2),
    (8501, edge_tensorflow_lite::dissect_edge_tensorflow_lite),
   (8910, bosch_nexeed_edge::dissect_bosch_nexeed_edge),
   (9042, cassandra::dissect_cassandra),
  (11112, dicom::dissect_dicom),
+  (11157, b_r_automation_pvi::dissect_br_automation_pvi),
  (13400, doip::dissect_doip),
  (20001, dnp3::dissect_dnp3),
  (27017, mongodb::dissect_mongodb),
+  (41100, bosch_rexroth_open_core::dissect_bosch_rexroth_open_core),
   (44818, enip::dissect_enip),
    (44819, rockwell_factorytalk_edge::dissect_rockwell_factorytalk_edge),
    (48400, beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics),
@@ -243,7 +250,8 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (8805, pfcp::dissect_pfcp),
  (9302, psn_matchmaking_v3::dissect_psn_matchmaking_v3),
  (9303, psn_matchmaking_v3::dissect_psn_matchmaking_v3),
- (9995, netflow::dissect_netflow),
+  (9600, omron_fins_udp_detail::dissect_omron_fins_udp_detail),
+  (9995, netflow::dissect_netflow),
  (12201, gelf::dissect_gelf),
  (13400, doip::dissect_doip),
  (20000, dnp3::dissect_dnp3),

@@ -11,6 +11,7 @@ pub mod crypto;
 pub mod db;
 pub mod discover;
 pub mod dissectors;
+pub mod fieldbus;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
@@ -35,6 +36,7 @@ pub mod pair_correlation;
 pub mod pcapng;
 pub mod pqc_analytics;
 pub mod pqc_dashboard;
+pub mod pqc_wizard;
 pub mod pqc_handshake;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pipeline;
