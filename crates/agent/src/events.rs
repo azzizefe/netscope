@@ -97,8 +97,9 @@ async fn flush_batch(state: &AgentState, batch: &mut Vec<BatchEvent>, compress: 
         return;
     }
 
-    let payload = if compress {
-        let json = serde_json::to_vec(batch).unwrap_or_default();
+    let json = serde_json::to_vec(batch).unwrap_or_default();
+
+    if compress {
         let compressed = zstd_compress(&json);
         match state.http_post_raw(
             "/api/v1/events/batch",
@@ -112,34 +113,29 @@ async fn flush_batch(state: &AgentState, batch: &mut Vec<BatchEvent>, compress: 
             }
             Err(e) => {
                 tracing::warn!("Failed to push compressed events: {}", e);
-                json
             }
         }
-    } else {
-        let json = serde_json::to_vec(batch).unwrap_or_default();
-        match state.http_post_raw(
-            "/api/v1/events/batch",
-            json.clone(),
-            "application/json",
-        ).await {
-            Ok(_) => {
-                tracing::debug!("Pushed {} events", batch.len());
-                batch.clear();
-                return;
-            }
-            Err(e) => {
-                tracing::warn!("Failed to push events: {}", e);
-                json
-            }
-        }
-    };
+    }
 
-    offline_fallback(state, batch, &payload);
+    match state.http_post_raw(
+        "/api/v1/events/batch",
+        json,
+        "application/json",
+    ).await {
+        Ok(_) => {
+            tracing::debug!("Pushed {} events", batch.len());
+            batch.clear();
+        }
+        Err(e) => {
+            tracing::warn!("Failed to push events: {}", e);
+            offline_fallback(state, batch).await;
+        }
+    }
     batch.clear();
 }
 
-fn offline_fallback(state: &AgentState, batch: &[BatchEvent], _raw_json: &[u8]) {
-    let mut offline = state.offline.write();
+async fn offline_fallback(state: &AgentState, batch: &[BatchEvent]) {
+    let offline = state.offline.lock().await;
     for event in batch {
         let oe = OfflineEvent {
             id: None,
@@ -153,10 +149,9 @@ fn offline_fallback(state: &AgentState, batch: &[BatchEvent], _raw_json: &[u8]) 
             protocol: event.protocol.clone(),
             port: event.port,
             raw_data: event.raw_data.clone(),
-            payload: None,
             created_at: Utc::now().to_rfc3339(),
         };
-        if let Err(e) = offline.push(&oe) {
+        if let Err(e) = offline.push(&oe).await {
             tracing::error!("Offline buffer write failed: {}", e);
         }
     }
@@ -167,14 +162,8 @@ pub async fn flush_offline_buffer(state: &AgentState) {
 
     loop {
         let batch = {
-            let offline = state.offline.read();
-            match offline.pop_batch(BATCH_SIZE) {
-                Ok(events) => events,
-                Err(e) => {
-                    tracing::error!("Offline buffer read failed: {}", e);
-                    break;
-                }
-            }
+            let offline = state.offline.lock().await;
+            offline.pop_batch(BATCH_SIZE).await.unwrap_or_default()
         };
 
         if batch.is_empty() {
@@ -199,8 +188,8 @@ pub async fn flush_offline_buffer(state: &AgentState) {
         match state.http_post_raw("/api/v1/events/batch", payload, "application/json").await {
             Ok(_) => {
                 let ids: Vec<i64> = batch.iter().filter_map(|e| e.id).collect();
-                let offline = state.offline.read();
-                if let Err(e) = offline.delete_batch(&ids) {
+                let offline = state.offline.lock().await;
+                if let Err(e) = offline.delete_batch(&ids).await {
                     tracing::error!("Offline buffer cleanup failed: {}", e);
                 }
                 tracing::info!("Flushed {} offline events", ids.len());

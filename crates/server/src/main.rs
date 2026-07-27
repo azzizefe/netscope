@@ -101,9 +101,11 @@ async fn main() -> Result<()> {
 
     // WebSocket broadcast
     let ws_state = Arc::new(WsState::new());
+    let commands = crate::api::sensors::CommandStore::new();
     let api_state = Arc::new(ApiState {
         pool: pool.clone(),
         cache: cache.clone(),
+        commands,
     });
 
     // ── Build router ──

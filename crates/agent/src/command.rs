@@ -76,7 +76,7 @@ async fn execute_command(state: &AgentState, cmd: &ServerCommand) -> CommandResu
             "success".into()
         }
         "upgrade" => {
-            match crate::upgrade::do_upgrade(state).await {
+            match crate::upgrade::do_upgrade(&state).await {
                 Ok(_) => "success".into(),
                 Err(e) => {
                     tracing::error!("Upgrade failed: {}", e);

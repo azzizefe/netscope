@@ -1,16 +1,16 @@
-use std::path::PathBuf;
+use std::path::Path;
 
-use rusqlite::Connection;
+use tokio::sync::Mutex;
 
 pub struct OfflineBuffer {
-    conn: Connection,
+    conn: Mutex<rusqlite::Connection>,
     max_bytes: u64,
-    db_path: PathBuf,
+    db_path: std::path::PathBuf,
 }
 
 impl OfflineBuffer {
-    pub fn new(db_path: PathBuf, max_disk_mb: u64) -> anyhow::Result<Self> {
-        let conn = Connection::open(&db_path)?;
+    pub fn new(db_path: &Path, max_disk_mb: u64) -> anyhow::Result<Self> {
+        let conn = rusqlite::Connection::open(db_path)?;
         conn.execute_batch(
             "PRAGMA journal_mode=WAL;
              CREATE TABLE IF NOT EXISTS event_queue (
@@ -25,40 +25,43 @@ impl OfflineBuffer {
                  protocol TEXT,
                  port INTEGER,
                  raw_data TEXT,
-                 payload BLOB,
                  created_at TEXT NOT NULL
              );
-             CREATE INDEX IF NOT EXISTS idx_event_queue_created ON event_queue(created_at);
-             CREATE TABLE IF NOT EXISTS meta (
-                 key TEXT PRIMARY KEY,
-                 value TEXT NOT NULL
-             );"
+             CREATE INDEX IF NOT EXISTS idx_event_queue_created ON event_queue(created_at);"
         )?;
-        Ok(Self { conn, max_bytes: max_disk_mb * 1024 * 1024, db_path })
+        Ok(Self {
+            conn: Mutex::new(conn),
+            max_bytes: max_disk_mb * 1024 * 1024,
+            db_path: db_path.to_path_buf(),
+        })
     }
 
-    pub fn push(&self, event: &OfflineEvent) -> anyhow::Result<()> {
-        if self.current_bytes()? >= self.max_bytes {
-            self.prune_oldest()?;
+    pub async fn push(&self, event: &OfflineEvent) -> anyhow::Result<()> {
+        let conn = self.conn.lock().await;
+        if self.current_bytes() >= self.max_bytes {
+            conn.execute(
+                "DELETE FROM event_queue WHERE id IN (SELECT id FROM event_queue ORDER BY id ASC LIMIT 100)",
+                [],
+            )?;
         }
-        self.conn.execute(
+        conn.execute(
             "INSERT INTO event_queue (sensor_id, event_type, severity, title, description,
-             source_ip, dest_ip, protocol, port, raw_data, payload, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+             source_ip, dest_ip, protocol, port, raw_data, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             rusqlite::params![
                 event.sensor_id, event.event_type, event.severity, event.title,
                 event.description, event.source_ip, event.dest_ip,
-                event.protocol, event.port, event.raw_data, event.payload,
-                event.created_at,
+                event.protocol, event.port, event.raw_data, event.created_at,
             ],
         )?;
         Ok(())
     }
 
-    pub fn pop_batch(&self, limit: usize) -> anyhow::Result<Vec<OfflineEvent>> {
-        let mut stmt = self.conn.prepare(
+    pub async fn pop_batch(&self, limit: usize) -> anyhow::Result<Vec<OfflineEvent>> {
+        let conn = self.conn.lock().await;
+        let mut stmt = conn.prepare(
             "SELECT id, sensor_id, event_type, severity, title, description,
-             source_ip, dest_ip, protocol, port, raw_data, payload, created_at
+             source_ip, dest_ip, protocol, port, raw_data, created_at
              FROM event_queue ORDER BY id ASC LIMIT ?1"
         )?;
         let rows = stmt.query_map(rusqlite::params![limit as i64], |row| {
@@ -74,8 +77,7 @@ impl OfflineBuffer {
                 protocol: row.get(8)?,
                 port: row.get(9)?,
                 raw_data: row.get(10)?,
-                payload: row.get(11)?,
-                created_at: row.get(12)?,
+                created_at: row.get(11)?,
             })
         })?;
 
@@ -86,16 +88,17 @@ impl OfflineBuffer {
         Ok(events)
     }
 
-    pub fn delete_batch(&self, ids: &[i64]) -> anyhow::Result<()> {
+    pub async fn delete_batch(&self, ids: &[i64]) -> anyhow::Result<()> {
         if ids.is_empty() {
             return Ok(());
         }
+        let conn = self.conn.lock().await;
         let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
         let sql = format!(
             "DELETE FROM event_queue WHERE id IN ({})",
             placeholders.join(",")
         );
-        let mut stmt = self.conn.prepare(&sql)?;
+        let mut stmt = conn.prepare(&sql)?;
         let params: Vec<rusqlite::types::Value> = ids
             .iter()
             .map(|id| rusqlite::types::Value::Integer(*id))
@@ -105,29 +108,19 @@ impl OfflineBuffer {
         Ok(())
     }
 
-    pub fn count(&self) -> anyhow::Result<i64> {
-        Ok(self.conn.query_row("SELECT COUNT(*) FROM event_queue", [], |r| r.get(0))?)
+    pub async fn count(&self) -> anyhow::Result<i64> {
+        let conn = self.conn.lock().await;
+        Ok(conn.query_row("SELECT COUNT(*) FROM event_queue", [], |r| r.get(0))?)
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.count().unwrap_or(0) == 0
+    pub async fn is_empty(&self) -> bool {
+        self.count().await.unwrap_or(0) == 0
     }
 
-    fn current_bytes(&self) -> anyhow::Result<u64> {
-        Ok(std::fs::metadata(&self.db_path)
+    fn current_bytes(&self) -> u64 {
+        std::fs::metadata(&self.db_path)
             .map(|m| m.len())
-            .unwrap_or(0))
-    }
-
-    fn prune_oldest(&self) -> anyhow::Result<()> {
-        self.conn.execute(
-            "DELETE FROM event_queue WHERE id IN (
-                SELECT id FROM event_queue ORDER BY id ASC LIMIT 100
-            )",
-            [],
-        )?;
-        self.conn.execute("VACUUM", [])?;
-        Ok(())
+            .unwrap_or(0)
     }
 }
 
@@ -145,7 +138,5 @@ pub struct OfflineEvent {
     pub protocol: Option<String>,
     pub port: Option<i32>,
     pub raw_data: Option<String>,
-    #[serde(skip)]
-    pub payload: Option<Vec<u8>>,
     pub created_at: String,
 }

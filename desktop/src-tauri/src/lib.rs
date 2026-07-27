@@ -418,6 +418,50 @@ fn protocol_count() -> usize {
     netscope_core::models::Protocol::ALL.len()
 }
 
+/// What the frontend needs to know about a protocol beyond its name.
+#[derive(serde::Serialize)]
+struct ProtocolMeta {
+    /// How it groups into flows: `tcp`, `udp`, `icmp`, `arp` or `other`.
+    transport: &'static str,
+    /// How specific it is as a label for a whole flow — the highest-ranked
+    /// packet in a flow is the one that names it.
+    rank: u8,
+}
+
+/// The whole registry, keyed by the display name the frontend already receives.
+///
+/// The frontend used to answer both questions from lists written into its own
+/// source, which covered around forty protocols out of the two and a half
+/// thousand here. Everything absent fell to "other" and rank 1, so a flow
+/// carrying NGAP or PROFINET — both rank 3, both meant to name their flow —
+/// was labelled TCP instead. The registry is the one place that knows, so it
+/// is the one place this comes from.
+#[tauri::command]
+fn protocol_table() -> std::collections::HashMap<String, ProtocolMeta> {
+    use netscope_core::models::Protocol;
+    use netscope_core::registry::TransportClass;
+    Protocol::ALL
+        .iter()
+        .filter(|p| !p.display_name().is_empty())
+        .map(|p| {
+            let transport = match p.transport_class() {
+                TransportClass::Tcp => "tcp",
+                TransportClass::Udp => "udp",
+                TransportClass::Icmp => "icmp",
+                TransportClass::Arp => "arp",
+                TransportClass::Other => "other",
+            };
+            (
+                p.display_name().to_string(),
+                ProtocolMeta {
+                    transport,
+                    rank: p.rank(),
+                },
+            )
+        })
+        .collect()
+}
+
 #[tauri::command]
 fn list_blocked() -> Vec<String> {
     netscope_core::firewall::blocked_ips()
@@ -1158,6 +1202,7 @@ pub fn run() {
             get_glossary,
             is_elevated,
             protocol_count,
+            protocol_table,
             list_blocked,
             block_ip,
             unblock_ip,
@@ -1179,7 +1224,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::replay_packet;
+    use super::{protocol_table, replay_packet};
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
@@ -1222,5 +1267,44 @@ mod tests {
         )
         .unwrap_err();
         assert!(err.contains("Unsupported protocol"));
+    }
+
+    /// The frontend groups flows and labels them from this table, so every
+    /// protocol has to be in it. It used to answer both questions from lists
+    /// written into its own source that covered about forty names — a flow
+    /// carrying PROFINET or NGAP was labelled TCP because neither was listed.
+    #[test]
+    fn the_protocol_table_covers_the_whole_registry() {
+        use netscope_core::models::Protocol;
+
+        let table = protocol_table();
+        let named = Protocol::ALL
+            .iter()
+            .filter(|p| !p.display_name().is_empty())
+            .count();
+        assert_eq!(table.len(), named, "every named protocol must be present");
+        assert!(table.len() > 2000, "got {} rows", table.len());
+
+        // The transports the frontend switches on, and nothing else.
+        for (name, meta) in &table {
+            assert!(
+                matches!(meta.transport, "tcp" | "udp" | "icmp" | "arp" | "other"),
+                "{name} has transport {:?}",
+                meta.transport
+            );
+        }
+
+        // Spot-check the two ends: a protocol the old lists knew, and one they
+        // did not. Both must outrank the bare transport they ride on.
+        let http = &table["HTTP"];
+        assert_eq!(http.transport, "tcp");
+        assert!(http.rank > table["TCP"].rank);
+
+        let profinet = &table["PROFINET"];
+        assert_eq!(profinet.transport, "other");
+        assert!(
+            profinet.rank > table["TCP"].rank,
+            "PROFINET must be able to name its own flow"
+        );
     }
 }

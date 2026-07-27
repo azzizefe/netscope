@@ -7,7 +7,6 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-readme.workspace = true
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -16,7 +15,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
 rusqlite = { version = "0.31", features = ["bundled"] }
-zstd = { version = "0.13", features = ["stream"] }
+zstd = "0.13"
 sha2 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
@@ -27,18 +26,12 @@ uuid = { version = "1", features = ["v4", "serde"] }
 anyhow = "1"
 thiserror = "2"
 futures-util = "0.3"
-tokio-util = "0.7"
 parking_lot = "0.12"
-tungstenite = "0.26"
-tokio-tungstenite = "0.26"
-netscope-core = { path = "../core", optional = true }
-
-[target.'cfg(windows)'.dependencies]
-windows-service = "0.7"
+dirs = "6"
+num_cpus = "1"
 
 [features]
 default = []
-embedded = ["dep:netscope-core"]
 
 [lints]
 workspace = true

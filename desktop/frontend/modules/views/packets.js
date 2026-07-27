@@ -8,7 +8,7 @@
 // a helper threw ReferenceError at runtime. The cycle with app.js is safe:
 // the imports are only dereferenced inside function bodies, long after both
 // modules have finished evaluating.
-import { $, beautifyPayload, colorRuleFor, decodeStreamText, els, endpointLabel, enrichGeo, esc, expertInfo, extractPayload, formatPacketTime, guessProtocol, isNoise, isPublicIp, matchesFilter, protoColor, semanticEvents, state, updateFilterFeedback } from '../../app.js';
+import { $, beautifyPayload, colorRuleFor, decodeStreamText, els, endpointLabel, enrichGeo, esc, expertInfo, extractPayload, formatPacketTime, guessProtocol, isNoise, isPublicIp, matchesFilter, protoColor, semanticEvents, state, transportOf, updateFilterFeedback } from '../../app.js';
 
 const ROW_H = 24;
 const VSCROLL_OVERSCAN = 12;
@@ -151,11 +151,22 @@ export function renderPacketList() {
 }
 window.renderPacketList = renderPacketList;
 
+/// The transport layer to show in the detail tree's protocol chain.
+///
+/// Taken from the registry via `transportOf`, not from a list kept here. The
+/// list this replaced knew twenty-eight names, so the chain for anything else
+/// — every industrial and telecom protocol in the build — silently lost its
+/// transport row.
 export function transportName(proto) {
-  if (['TCP', 'HTTP', 'TLS', 'WebSocket', 'HTTP/2', 'gRPC', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Cassandra', 'Modbus', 'DNP3', 'EtherNet/IP', 'OPC UA', 'LDAP', 'MQTT', 'BGP'].includes(proto)) return 'TCP';
-  if (['UDP', 'DNS', 'BACnet', 'RTP', 'RTCP', 'Kerberos', 'RADIUS', 'OpenVPN', 'WireGuard', 'CoAP'].includes(proto)) return 'UDP';
-  if (proto === 'ICMP' || proto === 'ARP') return proto;
-  return null;
+  switch (transportOf(proto)) {
+    case 'tcp': return 'TCP';
+    case 'udp': return 'UDP';
+    case 'icmp': return 'ICMP';
+    case 'arp': return 'ARP';
+    // Link-layer and bus captures have no IP transport to name, and inventing
+    // one would put a row in the chain that is not on the wire.
+    default: return null;
+  }
 }
 window.transportName = transportName;
 

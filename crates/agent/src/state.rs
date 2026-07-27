@@ -1,9 +1,9 @@
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
-use reqwest::tls;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::config::AgentConfig;
@@ -14,84 +14,58 @@ pub struct AgentState {
     pub config: AgentConfig,
     pub sensor_id: Arc<RwLock<Option<Uuid>>>,
     pub http_client: reqwest::Client,
-    pub offline: Arc<RwLock<OfflineBuffer>>,
+    pub offline: Arc<Mutex<OfflineBuffer>>,
     pub capture_active: Arc<AtomicBool>,
     pub shutdown: Arc<AtomicBool>,
-    local_db: Arc<RwLock<rusqlite::Connection>>,
+    data_dir: PathBuf,
 }
 
 impl AgentState {
     pub async fn new(config: AgentConfig) -> anyhow::Result<Self> {
-        let mut tls_builder = tls::TlsConnector::builder()
-            .danger_accept_invalid_certs(config.server.insecure_skip_verify);
-
-        if let Some(ca) = &config.server.tls_ca {
-            let cert = std::fs::read(ca)?;
-            tls_builder.add_root_certificate(tls::Certificate::from_pem(&cert)?);
-        }
-
         let mut client_builder = reqwest::Client::builder()
             .use_rustls_tls()
             .user_agent(concat!("netscope-agent/", env!("CARGO_PKG_VERSION")))
             .connect_timeout(std::time::Duration::from_secs(config.server.connect_timeout_secs))
             .timeout(std::time::Duration::from_secs(config.server.request_timeout_secs));
 
-        if let (Some(cert), Some(key)) = (&config.server.tls_cert, &config.server.tls_key) {
-            let identity = tls::Identity::from_pkcs8_pem(
-                &std::fs::read_to_string(cert)?,
-                &std::fs::read_to_string(key)?,
-            )?;
+        if let (Some(cert_path), Some(key_path)) = (&config.server.tls_cert, &config.server.tls_key) {
+            let cert_pem = std::fs::read(cert_path)?;
+            let key_pem = std::fs::read(key_path)?;
+            let mut combined = cert_pem;
+            combined.extend_from_slice(&key_pem);
+            let identity = reqwest::Identity::from_pem(&combined)?;
             client_builder = client_builder.identity(identity);
+        }
+
+        if config.server.insecure_skip_verify {
+            client_builder = client_builder.danger_accept_invalid_certs(true);
         }
 
         let http_client = client_builder.build()?;
 
-        let db_dir = config.offline.db_path.clone()
-            .unwrap_or_else(|| {
-                let base = dirs_data_dir();
-                base
-            });
-        std::fs::create_dir_all(&db_dir)?;
+        let data_dir = config.offline.db_path.clone()
+            .unwrap_or_else(default_data_dir);
+        std::fs::create_dir_all(&data_dir)?;
 
-        let local_db_path = db_dir.join("agent.db");
-        let local_db = rusqlite::Connection::open(&local_db_path)?;
-        local_db.execute_batch(
-            "CREATE TABLE IF NOT EXISTS meta (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS command_cache (
-                id TEXT PRIMARY KEY,
-                command TEXT NOT NULL,
-                parameters TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending'
-            );"
-        )?;
-
-        let sensor_id = load_sensor_id(&local_db)?;
-
-        let offline = OfflineBuffer::new(db_dir.join("buffer.db"), config.offline.max_disk_mb)?;
+        let sensor_id = load_sensor_id(&data_dir)?;
+        let buffer_path = data_dir.join("buffer.db");
+        let offline = OfflineBuffer::new(&buffer_path, config.offline.max_disk_mb)?;
 
         Ok(Self {
             config,
             sensor_id: Arc::new(RwLock::new(sensor_id)),
             http_client,
-            offline: Arc::new(RwLock::new(offline)),
+            offline: Arc::new(Mutex::new(offline)),
             capture_active: Arc::new(AtomicBool::new(false)),
             shutdown: Arc::new(AtomicBool::new(false)),
-            local_db: Arc::new(RwLock::new(local_db)),
+            data_dir,
         })
     }
 
     pub fn save_sensor_id(&self, id: Uuid) {
         *self.sensor_id.write() = Some(id);
-        if let Ok(db) = self.local_db.try_write() {
-            let _ = db.execute(
-                "INSERT OR REPLACE INTO meta (key, value) VALUES ('sensor_id', ?1)",
-                rusqlite::params![id.to_string()],
-            );
-        }
+        let path = self.data_dir.join("sensor_id");
+        let _ = std::fs::write(&path, id.to_string());
     }
 
     pub fn get_sensor_id(&self) -> Option<Uuid> {
@@ -106,7 +80,8 @@ impl AgentState {
         }
         let resp = req.send().await?;
         if !resp.status().is_success() {
-            anyhow::bail!("GET {}: HTTP {}", path, resp.status());
+            let text = resp.text().await.unwrap_or_default();
+            anyhow::bail!("GET {}: {}", path, text);
         }
         Ok(resp.json().await?)
     }
@@ -158,29 +133,45 @@ impl AgentState {
         }
         Ok(resp)
     }
-}
 
-fn load_sensor_id(db: &rusqlite::Connection) -> anyhow::Result<Option<Uuid>> {
-    let result: Result<String, _> = db.query_row(
-        "SELECT value FROM meta WHERE key = 'sensor_id'",
-        [],
-        |row| row.get(0),
-    );
-    match result {
-        Ok(s) => Ok(Some(Uuid::parse_str(&s)?)),
-        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(e.into()),
+    pub fn current_binary_sha256(&self) -> String {
+        use sha2::{Digest, Sha256};
+        let path = std::env::current_exe().unwrap_or_default();
+        if let Ok(data) = std::fs::read(&path) {
+            format!("{:x}", Sha256::digest(&data))
+        } else {
+            String::new()
+        }
     }
 }
 
-fn dirs_data_dir() -> PathBuf {
+fn load_sensor_id(data_dir: &PathBuf) -> anyhow::Result<Option<Uuid>> {
+    let path = data_dir.join("sensor_id");
+    if !path.exists() {
+        return Ok(None);
+    }
+    let content = std::fs::read_to_string(&path)?;
+    Ok(Some(Uuid::parse_str(content.trim())?))
+}
+
+fn default_data_dir() -> PathBuf {
     #[cfg(windows)]
     {
         dirs::data_local_dir()
             .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"))
             .join("netscope-agent")
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
+    {
+        PathBuf::from("/var/lib/netscope-agent")
+    }
+    #[cfg(target_os = "macos")]
+    {
+        dirs::data_local_dir()
+            .unwrap_or_else(|| PathBuf::from("/Library/Application Support"))
+            .join("netscope-agent")
+    }
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
     {
         PathBuf::from("/var/lib/netscope-agent")
     }

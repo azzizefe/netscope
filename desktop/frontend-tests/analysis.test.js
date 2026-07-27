@@ -181,11 +181,41 @@ describe('bytesToCode', () => {
 });
 
 describe('transport helpers', () => {
+  // Both answers come from the registry now, so the table has to be loaded
+  // first — exactly as the app does at startup, before a capture can begin.
+  // A stand-in table is used here rather than the real 2500-row one: what is
+  // under test is that the lookup is used at all, not the registry's contents.
+  beforeAll(async () => {
+    await app.loadProtocolTable(async () => ({
+      HTTP: { transport: 'tcp', rank: 4 },
+      TCP: { transport: 'tcp', rank: 1 },
+      DNS: { transport: 'udp', rank: 3 },
+      ARP: { transport: 'arp', rank: 2 },
+      // A link-layer protocol with no IP transport, and one of the industrial
+      // names the old hardcoded lists had never heard of.
+      PROFINET: { transport: 'other', rank: 3 },
+    }));
+  });
+
   it('transportOf and protoRank', () => {
     expect(app.transportOf('HTTP')).toBe('tcp');
     expect(app.transportOf('DNS')).toBe('udp');
     expect(app.transportOf('ARP')).toBe('arp');
     expect(app.protoRank('HTTP')).toBeGreaterThan(app.protoRank('TCP'));
+  });
+
+  // The bug this replaced: the lists here knew about forty names, so every
+  // industrial and telecom protocol scored rank 1 and never won its flow's
+  // label — a connection carrying PROFINET showed up as TCP.
+  it('a protocol outside the old hardcoded lists still outranks TCP', () => {
+    expect(app.transportOf('PROFINET')).toBe('other');
+    expect(app.protoRank('PROFINET')).toBeGreaterThan(app.protoRank('TCP'));
+  });
+
+  // An unknown name must never outrank a protocol the registry placed.
+  it('an unregistered name ranks below everything', () => {
+    expect(app.protoRank('NoSuchProtocol')).toBe(0);
+    expect(app.transportOf('NoSuchProtocol')).toBe('other');
   });
 });
 

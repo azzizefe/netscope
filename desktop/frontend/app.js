@@ -353,20 +353,37 @@ function onPacketBatch(event) {
 }
 
 // ---- Flow aggregation (Connections view) ----
-function transportOf(proto) {
-  if (['TCP', 'HTTP', 'TLS', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'Telnet', 'RDP', 'WebSocket', 'HTTP/2', 'gRPC', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Cassandra', 'Modbus', 'DNP3', 'EtherNet/IP', 'OPC UA', 'LDAP', 'MQTT', 'BGP'].includes(proto)) return 'tcp';
-  if (['UDP', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP', 'VXLAN', 'BACnet', 'RTP', 'RTCP', 'Kerberos', 'RADIUS', 'OpenVPN', 'WireGuard', 'CoAP'].includes(proto)) return 'udp';
-  if (proto === 'ICMP') return 'icmp';
-  if (proto === 'ARP') return 'arp';
-  return 'other';
+// How a protocol groups into flows, and how good a label it is for one, both
+// come from the registry — the same table the dissectors and the TUI use.
+//
+// These two answers used to be lists written out here, covering around forty
+// names out of the two and a half thousand the build recognises. Everything
+// missing fell to 'other' and rank 1, which is why a connection carrying NGAP
+// or PROFINET showed up as plain TCP: both are rank 3 in the registry and are
+// meant to name their flow, but this file had never heard of them.
+const PROTO_META = new Map();
+
+/** Load the registry's protocol table. Resolves before any capture can start. */
+async function loadProtocolTable(inv) {
+  try {
+    const table = await inv('protocol_table');
+    for (const [name, meta] of Object.entries(table || {})) PROTO_META.set(name, meta);
+  } catch (e) {
+    // Without the table every flow groups as 'other'. That is visible and
+    // wrong, so say so rather than failing quietly.
+    console.error('protocol table unavailable — flow grouping will be degraded', e);
+  }
+}
+
+export function transportOf(proto) {
+  const m = PROTO_META.get(proto);
+  return m ? m.transport : 'other';
 }
 function protoRank(proto) {
-  // WebSocket outranks HTTP (after the upgrade the whole flow is WebSocket);
-  // likewise gRPC outranks the HTTP/2 frames it rides on.
-  if (proto === 'WebSocket' || proto === 'gRPC') return 5;
-  if (proto === 'HTTP' || proto === 'HTTP/2') return 4;
-  if (['TLS', 'DNS', 'DHCP', 'NTP', 'mDNS', 'SNMP', 'QUIC', 'SIP', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP3', 'Telnet', 'RDP', 'VXLAN', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Cassandra', 'Modbus', 'DNP3', 'BACnet', 'EtherNet/IP', 'OPC UA', 'RTP', 'RTCP', 'Kerberos', 'LDAP', 'RADIUS', 'OpenVPN', 'WireGuard', 'ESP', 'AH', 'MQTT', 'CoAP', 'BGP', 'OSPF', 'LLDP', 'LACP', 'STP', 'MPLS'].includes(proto)) return 3;
-  return 1;
+  const m = PROTO_META.get(proto);
+  // 0, not 1: an unknown name must never outrank a protocol the registry
+  // actually placed, and `Unknown` is rank 0 in the registry too.
+  return m ? m.rank : 0;
 }
 // Cap how many packets we keep per flow for "Follow Stream" — bounds memory
 // on long-running captures without limiting the visible conversation in practice.
@@ -4820,6 +4837,9 @@ async function init() {
     // Fills in the protocol count on the empty packet list. Not awaited: the
     // number is decoration, and nothing else waits on it.
     loadProtocolCount(invoke);
+    // Awaited: flow grouping and flow labels are wrong without it, and no
+    // packet can arrive before the user starts a capture or opens a file.
+    await loadProtocolTable(invoke);
     const blocked = await invoke('list_blocked');
     if (blocked) blocked.forEach((ip) => state.blocked.add(ip));
   } catch (e) { console.error(e); }
