@@ -845,6 +845,16 @@ pub fn dissect_tls(
             h2.summary = format!("[HTTPS] {}", h2.summary);
             return h2;
         }
+        // HTTP/1.x inside the decrypted stream. The protocol check matters
+        // because an HTTP body can itself carry something else (SOAP, OCSP):
+        // that result belongs to the body dissector, not to a `[HTTPS] HTTP`
+        // label, so it is left to fall through.
+        let mut http_res =
+            super::http::dissect_http(src_ip, dst_ip, src_port, dst_port, &decrypted_payload);
+        if http_res.protocol == Protocol::Http {
+            http_res.summary = format!("[HTTPS] {}", http_res.summary);
+            return http_res;
+        }
     }
 
     let summary = if let Some(h) = client_hello {

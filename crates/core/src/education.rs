@@ -5288,12 +5288,6 @@ reason as a numeric code.",
             look_for: "CanopenFd frame.",
         },
 
-        Protocol::Controlnet => Lesson {
-            title: "Controlnet",
-            summary: "Controlnet protocol.",
-            body: "Controlnet protocol communication.",
-            look_for: "Controlnet frame.",
-        },
         Protocol::HartIpV2 => Lesson {
             title: "HartIpV2",
             summary: "HartIpV2 protocol.",

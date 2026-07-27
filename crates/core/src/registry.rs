@@ -7367,7 +7367,10 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
-        aliases:   ["mechatrolink_iii", "mechatrolink"],
+        // Not "mechatrolink": that token belongs to the general MECHATROLINK
+        // row, which covers I/II/III/IV. This one is specifically the -III
+        // EtherType.
+        aliases:   ["mechatrolink_iii"],
         blurb:     "A MECHATROLINK-III motion control command frame.",
     }
     HartWireless {
@@ -11606,15 +11609,6 @@ protocols! {
         blurb:     "A CanopenFd protocol frame.",
     }
 
-    Controlnet {
-        doc:       "Controlnet protocol extension.",
-        display:   "Controlnet",
-        color:     0x2563EB,
-        transport: Tcp,
-        rank:      3,
-        aliases:   ["controlnet"],
-        blurb:     "A Controlnet protocol frame.",
-    }
     HartIpV2 {
         doc:       "HartIpV2 protocol extension.",
         display:   "HartIpV2",
@@ -22205,7 +22199,8 @@ protocols! {
         color:     0x2E8B57,
         transport: Other,
         rank:      3,
-        aliases:   ["varan_bus", "varan"],
+        // Not "varan": that token is the VARAN EtherType row's own name.
+        aliases:   ["varan_bus"],
         blurb:     "VARAN Bus — Versatile Automation Random Access Network real-time Ethernet fieldbus for deterministic machine control with cyclic I/O, event-driven messaging, and fail-safe safety communication.",
     }
     PNet {
@@ -22533,7 +22528,9 @@ protocols! {
         color:     0x0284C7,
         transport: Udp,
         rank:      4,
-        aliases:   ["omron_fins_udp_detail", "fins_udp_detail", "omron_fins"],
+        // Not "omron_fins": that token belongs to the base Omron FINS row.
+        // This one is the extended-command decode on top of it.
+        aliases:   ["omron_fins_udp_detail", "fins_udp_detail"],
         blurb:     "Omron FINS (Factory Interface Network Service) over UDP — extended command decode for Sysmac NJ/NX series controllers with CIP routing information, expanded memory area access beyond the standard FINS specification, and automatic clock synchronization via FINS frame exchange.",
     }
     KeyenceKvEthernet {

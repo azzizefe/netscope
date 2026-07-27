@@ -56,6 +56,13 @@ use super::{
   , twincat_ads_detail, twincat_router_telemetry, twincat_scope_view, uadp, varan_bus
   , vxlangpe, wccp, wireguard, wsd , xbox_live_sdv2, xcp, xnap, yaskawa_memobus_tcp_detail
   , pqc_compliance_checker, pqc_cve_feed_integration
+ , amqp
+ , memcached
+ , ninep
+ , redis
+ , rtsp
+ , stun
+ , syslog
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -134,6 +141,8 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (464, kpasswd::dissect_kpasswd),
  (502, modbus::dissect_modbus),
  (548, afp::dissect_afp),
+ (554, rtsp::dissect_rtsp),
+ (564, ninep::dissect_9p),
  (646, ldp::dissect_ldp),
  (829, cmp::dissect_cmp),
   (1883, mqtt::dissect_mqtt),
@@ -153,8 +162,10 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (4841, studio5000_online_comm::dissect_studio5000_online_comm),
     (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
     (5007, mitsubishi_melsec_proto::dissect_mitsubishi_melsec_proto),
+ (5672, amqp::dissect_amqp),
    (6002, factorytalk_view_hmi::dissect_factorytalk_view_hmi),
 
+ (6379, redis::dissect_redis),
   (6653, openflow::dissect_openflow),
   (8001, edge_inference_onnx::dissect_edge_inference_onnx),
     (8087, twincat_scope_view::dissect_twincat_scope_view),
@@ -165,6 +176,7 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
   (9042, cassandra::dissect_cassandra),
  (11112, dicom::dissect_dicom),
   (11157, b_r_automation_pvi::dissect_br_automation_pvi),
+ (11211, memcached::dissect_memcached),
  (13400, doip::dissect_doip),
  (20001, dnp3::dissect_dnp3),
  (27017, mongodb::dissect_mongodb),
@@ -196,6 +208,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (320, ptp::dissect_ptp_udp),
  (464, kpasswd::dissect_kpasswd),
  (500, isakmp::dissect_isakmp),
+ (514, syslog::dissect_syslog),
  (520, rip::dissect_rip),
  // RIPng shares almost nothing with RIPv2 but its shape, so it gets its own
  // dissector rather than a version branch inside RIP's.
@@ -222,6 +235,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
   (3205, isns::dissect_isns),
  (3222, glbp::dissect_glbp),
  (3386, gtpprime::dissect_gtpprime),
+ (3478, stun::dissect_stun),
  (3702, wsd::dissect_wsd),
  (3784, bfd::dissect_bfd),
  (3956, gvcp::dissect_gvcp),

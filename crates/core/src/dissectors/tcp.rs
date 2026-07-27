@@ -8,9 +8,9 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    bindings, consul_rpc, drbd, fix, hl7,
-    http2, iec101, milter, modbus_ascii, modbus_rtu,
-    ntlm, openvpn, schneider_ecostruxure_edge, someip, websocket, zmtp,
+    amqp1, bindings, consul_rpc, drbd, fix, hl7,
+    http, http2, iec101, memcached_bin, milter, modbus_ascii, modbus_rtu,
+    ntlm, openvpn, redis_cluster, schneider_ecostruxure_edge, someip, websocket, zmtp,
     DissectedResult,
 };
 
@@ -251,10 +251,27 @@ fn dissect_tcp_inner(
         //    the flow. See `bindings` for the full precedence order.
         if on(80) {
             // h2c with prior knowledge sends the HTTP/2 preface straight to
-            // port 80.
+            // port 80 — check for it before assuming HTTP/1.x.
             if let Some(h2) = http2::try_dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload) {
                 return h2;
             }
+            return http::dissect_http(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(5672) && amqp1::looks_like_amqp1(tcp_payload) {
+            // AMQP 1.0 and 0-9-1 are different protocols sharing a port, and
+            // reading one as the other produces nonsense rather than nothing.
+            return amqp1::dissect_amqp1(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
+        if on(11211) && memcached_bin::looks_like_binary(tcp_payload) {
+            // The binary protocol shares 11211 with the text one, and is what
+            // client libraries actually send.
+            return memcached_bin::dissect_memcached_bin(
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                tcp_payload,
+            );
         }
         if on(102) {
             // TPKT/COTP on port 102 — dissector modules unavailable.
@@ -267,18 +284,26 @@ fn dissect_tcp_inner(
             return openvpn::dissect_openvpn(src_ip, dst_ip, src_port, dst_port, tcp_payload, true);
         }
         // 8080 is the HTTP alternate port, which the EcoStruxure gateway's own
-        // web UI also serves — so the framing decides, and ordinary HTTP on
+        // web UI also serves — so the framing decides, and ordinary traffic on
         // 8080 is not relabelled as a Schneider protocol.
-        if on(8080)
-            && schneider_ecostruxure_edge::looks_like_schneider_ecostruxure_edge(tcp_payload)
-        {
-            return schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge(
-                src_ip,
-                dst_ip,
-                src_port,
-                dst_port,
-                tcp_payload,
-            );
+        //
+        // HTTP/2 goes first because it is the stronger test: a frame chain has
+        // to validate end to end, whereas EcoStruxure has no magic and only a
+        // message-type byte to offer. An HTTP/2 DATA frame header imitates that
+        // byte exactly — END_STREAM is 0x01, which is also "Telemetry".
+        if on(8080) {
+            if let Some(h2) = http2::try_dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload) {
+                return h2;
+            }
+            if schneider_ecostruxure_edge::looks_like_schneider_ecostruxure_edge(tcp_payload) {
+                return schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge(
+                    src_ip,
+                    dst_ip,
+                    src_port,
+                    dst_port,
+                    tcp_payload,
+                );
+            }
         }
         // 8891 is Postfix and OpenDKIM's convention rather than an assignment,
         // so the framing has to agree before the flow is claimed.
@@ -338,6 +363,18 @@ fn dissect_tcp_inner(
         if drbd::looks_like_drbd(tcp_payload) {
             return drbd::dissect_drbd(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
+        // The Redis cluster bus has no port of its own — it is the data port
+        // plus ten thousand, so it moves whenever the data port does. The
+        // "RCmb" signature is what identifies it wherever it lands.
+        if redis_cluster::looks_like_cluster_bus(tcp_payload) {
+            return redis_cluster::dissect_redis_cluster(
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                tcp_payload,
+            );
+        }
         if zmtp::looks_like_zmtp(tcp_payload) {
             return zmtp::dissect_zmtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
@@ -350,21 +387,13 @@ fn dissect_tcp_inner(
         // first 2 KiB instead of UTF-8-scanning every payload (ROADMAP §4.1).
         let head = &tcp_payload[..tcp_payload.len().min(2048)];
         if let Ok(text) = std::str::from_utf8(head) {
-            if let Some(note) = websocket::upgrade_note(text) {
-                return DissectedResult {
-                    src_addr: src_ip, dst_addr: dst_ip,
-                    src_port: Some(src_port), dst_port: Some(dst_port),
-                    protocol: Protocol::WebSocket,
-                    summary: note.to_string(),
-                };
-            }
-            if http2::upgrade_note(text).is_some() {
-                return DissectedResult {
-                    src_addr: src_ip, dst_addr: dst_ip,
-                    src_port: Some(src_port), dst_port: Some(dst_port),
-                    protocol: Protocol::Http2,
-                    summary: "HTTP/2 upgrade".into(),
-                };
+            // An upgrade handshake is still an ordinary HTTP request on the
+            // wire, so it goes through the HTTP dissector and comes back
+            // labelled with what it is upgrading to. Reporting it as WebSocket
+            // or HTTP/2 outright loses the request line, which is the half of
+            // the handshake that says what was asked for.
+            if websocket::upgrade_note(text).is_some() || http2::upgrade_note(text).is_some() {
+                return http::dissect_http(src_ip, dst_ip, src_port, dst_port, tcp_payload);
             }
         }
         if let Some(ws) = websocket::try_dissect(src_ip, dst_ip, src_port, dst_port, tcp_payload) {
