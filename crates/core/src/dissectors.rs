@@ -491,6 +491,18 @@ pub mod zigbee;
 pub mod zmtp;
 pub mod zrtp;
 
+// ── Edge AI & Industrial Edge Protocols ──
+pub mod beckhoff_twincat_analytics;
+pub mod bosch_nexeed_edge;
+pub mod edge_inference_onnx;
+pub mod edge_pytorch_mobile;
+pub mod edge_tensorflow_lite;
+pub mod nxp_eiq_inference;
+pub mod rockwell_factorytalk_edge;
+pub mod schneider_ecostruxure_edge;
+pub mod siemens_industrial_edge;
+pub mod stm_stm32cube_ai;
+
 use std::net::IpAddr;
 
 use crate::models::Protocol;

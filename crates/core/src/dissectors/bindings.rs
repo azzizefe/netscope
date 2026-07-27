@@ -29,14 +29,17 @@ use std::net::IpAddr;
 
 use super::DissectedResult;
 use super::{
- aerospike, afp, amt, bacnet, bfcp, bfd, bgp, capwap, cassandra, ccp, cmp, coap, dhcp, dhcpv6
- , dicom, dmx, dnp3, doip, e1ap, enip, epic_online_eos_p2p, f1ap, finger, gelf, geneve, glbp
- , gopher, gtp, gtpprime, gvcp, h225ras, hl7, hnbap, hsrp, ipsec, isakmp, iscsi, isns, kerberos
- , kpasswd, l2tp, lcsap, ldap, ldp, m2ap, m2pa, m2ua, m3ap, matter, modbus, mongodb, mqtt
- , mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap, nintendo_npln_p2p, nsip, ntp, opcua
- , openflow, pfcp, psn_matchmaking_v3, ptp, radius, rdp, rip, ripng, rpkirtr, rtpmidi, rua
- , s1ap, sabp, sbcap, sflow, sip, snmp, steam_datagram_relay, sua, tacacs, tls, uadp, vxlangpe
- , wccp, wireguard, wsd, xbox_live_sdv2, xcp, xnap
+ aerospike, afp, amt, bacnet, beckhoff_twincat_analytics, bfcp, bfd, bgp, bosch_nexeed_edge
+ , capwap, cassandra, ccp, cmp, coap, dhcp, dhcpv6, dicom, dmx, dnp3, doip, e1ap
+ , edge_inference_onnx, edge_pytorch_mobile, edge_tensorflow_lite, enip, epic_online_eos_p2p
+ , f1ap, finger, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp, h225ras, hl7, hnbap, hsrp
+ , ipsec, isakmp, iscsi, isns, kerberos, kpasswd, l2tp, lcsap, ldap, ldp, m2ap, m2pa, m2ua, m3ap
+ , matter, modbus, mongodb, mqtt, mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap
+ , nintendo_npln_p2p, nsip, ntp, nxp_eiq_inference, opcua, openflow, pfcp, psn_matchmaking_v3
+ , ptp, radius, rdp, rip, ripng, rockwell_factorytalk_edge, rpkirtr, rtpmidi, rua, s1ap, sabp
+ , sbcap, schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_edge, sip, snmp
+ , steam_datagram_relay, stm_stm32cube_ai, sua, tacacs, tls, uadp, vxlangpe, wccp, wireguard
+ , wsd, xbox_live_sdv2, xcp, xnap
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -126,15 +129,25 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (3260, iscsi::dissect_iscsi),
  (3306, mysql::dissect_mysql),
  (3389, rdp::dissect_rdp),
- (4840, opcua::dissect_opcua),
- (6653, openflow::dissect_openflow),
- (9042, cassandra::dissect_cassandra),
+  (4840, opcua::dissect_opcua),
+  (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
+  (6653, openflow::dissect_openflow),
+  (8001, edge_inference_onnx::dissect_edge_inference_onnx),
+  (8080, schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge),
+  (8501, edge_tensorflow_lite::dissect_edge_tensorflow_lite),
+  (8910, bosch_nexeed_edge::dissect_bosch_nexeed_edge),
+  (9042, cassandra::dissect_cassandra),
  (11112, dicom::dissect_dicom),
  (13400, doip::dissect_doip),
  (20001, dnp3::dissect_dnp3),
  (27017, mongodb::dissect_mongodb),
- (44818, enip::dissect_enip),
- (64738, mumble::dissect_mumble),
+  (44818, enip::dissect_enip),
+  (44819, rockwell_factorytalk_edge::dissect_rockwell_factorytalk_edge),
+  (48400, beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics),
+  (51000, edge_pytorch_mobile::dissect_edge_pytorch_mobile),
+  (51001, nxp_eiq_inference::dissect_nxp_eiq_inference),
+  (51002, stm_stm32cube_ai::dissect_stm_stm32cube_ai),
+  (64738, mumble::dissect_mumble),
 ];
 
 /// UDP service ports, sorted by port number. See [`TCP_PORTS`].
@@ -217,8 +230,9 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (27036, steam_datagram_relay::dissect_steam_datagram_relay),
  (30211, nintendo_npln_p2p::dissect_nintendo_npln_p2p),
  (44818, enip::dissect_enip),
- (47808, bacnet::dissect_bacnet),
- (51820, wireguard::dissect_wireguard),
+  (47808, bacnet::dissect_bacnet),
+  (48898, beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics),
+  (51820, wireguard::dissect_wireguard),
 ];
 
 /// Every port either table claims. Used by the robustness sweep to fuzz each
