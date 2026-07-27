@@ -145,7 +145,14 @@ pub fn dissect_smb_direct(
     if data_length > 0 && data_offset + data_length <= payload.len() {
         if let Some(data) = payload.get(data_offset..data_offset + data_length) {
             let inner = super::smb::dissect_smb(src_ip, dst_ip, src_port, dst_port, data);
-            return inner;
+            return DissectedResult {
+                summary: format!(
+                    "SMB Direct Data (req {credits_requested}, grant {credits_granted}) · {}",
+                    inner.summary
+                ),
+                protocol: inner.protocol,
+                ..base
+            };
         }
     }
 

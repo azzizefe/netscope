@@ -1,14 +1,6 @@
 pub mod proto;
 
-use std::net::SocketAddr;
-use std::pin::Pin;
-use std::sync::Arc;
-
-use anyhow::Result;
-use futures::Stream;
 use sqlx::PgPool;
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::ReceiverStream;
 use tonic::{async_trait, Request, Response, Status, Streaming};
 use uuid::Uuid;
 
@@ -34,7 +26,9 @@ impl SensorService for SensorGrpcService {
 
         let sensor = RegisterSensor {
             hostname: req.hostname,
-            ip_address: ip,
+            // Parsed above purely to reject junk; stored in its normalised
+            // form so the same address always writes the same string.
+            ip_address: ip.to_string(),
             os: if req.os.is_empty() { None } else { Some(req.os) },
             version: req.version,
             interfaces: Vec::new(),
@@ -76,55 +70,43 @@ impl SensorService for SensorGrpcService {
         Ok(Response::new(HeartbeatResponse { acknowledged: true }))
     }
 
-    type StreamEventsStream = Pin<
-        Box<dyn Stream<Item = Result<EventSummary, Status>> + Send + 'static>,
-    >;
-
+    /// Client-streaming: the sensor pushes events until it closes the stream,
+    /// and the single reply says how many were accepted. The proto declares one
+    /// `EventSummary`, not a stream of them, so the whole stream is drained here
+    /// rather than handed to a spawned task — the caller is waiting for a count
+    /// that only exists once the last event has been written.
     async fn stream_events(
         &self,
         request: Request<Streaming<EventMessage>>,
-    ) -> Result<Response<Self::StreamEventsStream>, Status> {
+    ) -> Result<Response<EventSummary>, Status> {
         let mut stream = request.into_inner();
-        let pool = self.pool.clone();
-        let (tx, rx) = mpsc::channel(1024);
+        let mut count = 0i64;
 
-        tokio::spawn(async move {
-            let mut count = 0i64;
-            while let Some(msg) = stream.message().await.transpose() {
-                match msg {
-                    Ok(ev) => {
-                        let db_event = Event {
-                            id: Uuid::new_v4(),
-                            sensor_id: Uuid::parse_str(&ev.sensor_id).ok(),
-                            event_type: ev.event_type,
-                            severity: ev.severity,
-                            title: ev.title,
-                            description: if ev.description.is_empty() { None } else { Some(ev.description) },
-                            source_ip: if ev.source_ip.is_empty() { None } else { Some(ev.source_ip) },
-                            dest_ip: if ev.dest_ip.is_empty() { None } else { Some(ev.dest_ip) },
-                            protocol: if ev.protocol.is_empty() { None } else { Some(ev.protocol) },
-                            port: if ev.port == 0 { None } else { Some(ev.port) },
-                            raw_data: if ev.raw_data.is_empty() { None } else { Some(serde_json::Value::String(ev.raw_data)) },
-                            tags: serde_json::Value::Array(Vec::new()),
-                            timestamp: chrono::Utc::now(),
-                        };
-                        if queries::insert_event(&pool, &db_event).await.is_ok() {
-                            count += 1;
-                        }
-                    }
-                    Err(e) => {
-                        tracing::warn!("gRPC stream event error: {}", e);
-                        break;
-                    }
-                }
+        while let Some(ev) = stream.message().await? {
+            let db_event = Event {
+                id: Uuid::new_v4(),
+                sensor_id: Uuid::parse_str(&ev.sensor_id).ok(),
+                event_type: ev.event_type,
+                severity: ev.severity,
+                title: ev.title,
+                description: if ev.description.is_empty() { None } else { Some(ev.description) },
+                source_ip: if ev.source_ip.is_empty() { None } else { Some(ev.source_ip) },
+                dest_ip: if ev.dest_ip.is_empty() { None } else { Some(ev.dest_ip) },
+                protocol: if ev.protocol.is_empty() { None } else { Some(ev.protocol) },
+                port: if ev.port == 0 { None } else { Some(ev.port) },
+                raw_data: if ev.raw_data.is_empty() { None } else { Some(serde_json::Value::String(ev.raw_data)) },
+                tags: serde_json::Value::Array(Vec::new()),
+                timestamp: chrono::Utc::now(),
+            };
+            if queries::insert_event(&self.pool, &db_event).await.is_ok() {
+                count += 1;
             }
-            let _ = tx.send(Ok(EventSummary {
-                accepted: count,
-                status: "complete".into(),
-            })).await;
-        });
+        }
 
-        Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
+        Ok(Response::new(EventSummary {
+            accepted: count,
+            status: "complete".into(),
+        }))
     }
 
     async fn send_command(

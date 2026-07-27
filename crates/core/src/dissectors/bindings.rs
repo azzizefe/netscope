@@ -64,6 +64,13 @@ use super::{
  , stun
  , syslog
  , iax2
+ , rwho
+ , mssqlbrowser
+ , lisp
+ , pcp
+ , dhcp_failover
+ , q931
+ , m3ua
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -100,6 +107,7 @@ pub fn sctp_ppid(ppid: u32) -> Option<PortDissector> {
 /// SCTP payload protocol identifiers, sorted. See [`TCP_PORTS`].
 static SCTP_PPIDS: &[(u32, PortDissector)] = &[
  (2, m2ua::dissect_m2ua),
+ (3, m3ua::dissect_m3ua),
  (4, sua::dissect_sua),
  (5, m2pa::dissect_m2pa),
  (18, s1ap::dissect_s1ap),
@@ -145,7 +153,9 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (554, rtsp::dissect_rtsp),
  (564, ninep::dissect_9p),
  (646, ldp::dissect_ldp),
+ (647, dhcp_failover::dissect_dhcp_failover),
  (829, cmp::dissect_cmp),
+ (1720, q931::dissect_q931),
   (1883, mqtt::dissect_mqtt),
    (2020, sinumerik_nck_channel::dissect_sinumerik_nck_channel),
   (2575, hl7::dissect_hl7),
@@ -209,6 +219,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (320, ptp::dissect_ptp_udp),
  (464, kpasswd::dissect_kpasswd),
  (500, isakmp::dissect_isakmp),
+ (513, rwho::dissect_rwho),
  (514, syslog::dissect_syslog),
  (520, rip::dissect_rip),
  // RIPng shares almost nothing with RIPv2 but its shape, so it gets its own
@@ -216,6 +227,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (521, ripng::dissect_ripng),
  (546, dhcpv6::dissect_dhcpv6),
  (547, dhcpv6::dissect_dhcpv6),
+ (1434, mssqlbrowser::dissect_mssqlbrowser),
  (1645, radius::dissect_radius),
  (1646, radius::dissect_radius),
  (1701, l2tp::dissect_l2tp),
@@ -240,6 +252,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (3702, wsd::dissect_wsd),
  (3784, bfd::dissect_bfd),
  (3956, gvcp::dissect_gvcp),
+ (4341, lisp::dissect_lisp),
  (4500, ipsec::dissect_nat_traversal),
  (4569, iax2::dissect_iax2),
  (4739, netflow::dissect_netflow),
@@ -254,6 +267,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
  (5100, p_net::dissect_p_net),
  (5246, capwap::dissect_capwap),
  (5247, capwap::dissect_capwap),
+ (5351, pcp::dissect_pcp),
  (5500, mechatrolink::dissect_mechatrolink),
  (5540, matter::dissect_matter),
  (5554, ccp::dissect_ccp),
