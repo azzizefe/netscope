@@ -8,6 +8,7 @@ pub mod industrial_edge_ai;
 pub mod insights;
 pub mod learn;
 pub mod packets;
+pub mod pqc_wizard;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View {
@@ -19,6 +20,7 @@ pub enum View {
     Learn,
     AiTraffic,
     IndustrialEdgeAi,
+    PqcWizard,
 }
 
 impl View {
@@ -31,13 +33,14 @@ impl View {
             View::Insights => View::Learn,
             View::Learn => View::AiTraffic,
             View::AiTraffic => View::IndustrialEdgeAi,
-            View::IndustrialEdgeAi => View::Packets,
+            View::IndustrialEdgeAi => View::PqcWizard,
+            View::PqcWizard => View::Packets,
         }
     }
 
     pub fn prev(self) -> Self {
         match self {
-            View::Packets => View::IndustrialEdgeAi,
+            View::Packets => View::PqcWizard,
             View::Dashboard => View::Packets,
             View::Connections => View::Dashboard,
             View::DnsLog => View::Connections,
@@ -45,11 +48,12 @@ impl View {
             View::Learn => View::Insights,
             View::AiTraffic => View::Learn,
             View::IndustrialEdgeAi => View::AiTraffic,
+            View::PqcWizard => View::IndustrialEdgeAi,
         }
     }
 
     /// The tab titles, in `next()` order, for the tab strip.
-    pub const ORDER: [View; 8] = [
+    pub const ORDER: [View; 9] = [
         View::Packets,
         View::Dashboard,
         View::Connections,
@@ -58,6 +62,7 @@ impl View {
         View::Learn,
         View::AiTraffic,
         View::IndustrialEdgeAi,
+        View::PqcWizard,
     ];
 
     pub fn title(self) -> &'static str {
@@ -70,6 +75,7 @@ impl View {
             View::Learn => "Learn",
             View::AiTraffic => "AI Traffic",
             View::IndustrialEdgeAi => "Edge AI",
+            View::PqcWizard => "PQC Wizard",
         }
     }
 }

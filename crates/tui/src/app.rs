@@ -15,6 +15,7 @@ use netscope_core::filter::Filter;
 use netscope_core::flows::FlowTable;
 use netscope_core::models::Packet;
 use netscope_core::names::NameCache;
+use netscope_core::pqc_handshake::PqcHandshakeStore;
 use netscope_core::stats::StatsEngine;
 use ratatui::crossterm::event::{
     KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
@@ -97,6 +98,8 @@ pub struct App {
     pub show_ai_heatmap: bool,
     pub ai_detail_scroll: u16,
     pub edge_ai_scroll: u16,
+    pub pqc_store: PqcHandshakeStore,
+    pub pqc_wizard_scroll: u16,
 }
 
 impl App {
@@ -163,6 +166,8 @@ impl App {
             show_ai_heatmap: false,
             ai_detail_scroll: 0,
             edge_ai_scroll: 0,
+            pqc_store: PqcHandshakeStore::new(),
+            pqc_wizard_scroll: 0,
         })
     }
 
@@ -290,6 +295,11 @@ impl App {
         }
         if !received {
             return;
+        }
+
+        // Drain PQC handshake records captured by the TLS dissector.
+        for rec in netscope_core::dissectors::tls::drain_pqc_store() {
+            self.pqc_store.push(rec);
         }
 
         // Restore the selection: follow the previously selected packet to its
@@ -656,6 +666,8 @@ impl App {
                     self.ai_scroll = step(self.ai_scroll, down);
                 }
             }
+            View::IndustrialEdgeAi => self.edge_ai_scroll = step(self.edge_ai_scroll, down),
+            View::PqcWizard => self.pqc_wizard_scroll = step(self.pqc_wizard_scroll, down),
             _ => {}
         }
     }
@@ -808,6 +820,8 @@ mod tests {
             show_ai_heatmap: false,
             ai_detail_scroll: 0,
             edge_ai_scroll: 0,
+            pqc_store: PqcHandshakeStore::new(),
+            pqc_wizard_scroll: 0,
         };
         (app, packet_tx)
     }

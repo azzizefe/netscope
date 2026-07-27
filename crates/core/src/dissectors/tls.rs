@@ -30,10 +30,15 @@ struct TlsSessionState {
     server_iv: Option<Vec<u8>>,
     seq_num_client: u64,
     seq_num_server: u64,
+    client_hello: Option<ClientHello>,
 }
 
 thread_local! {
     static TLS_SESSIONS: RefCell<HashMap<TlsFlowKey, TlsSessionState>> = RefCell::new(HashMap::new());
+}
+
+thread_local! {
+    static PQC_HANDSHAKE_STORE: RefCell<Vec<crate::pqc_handshake::PqcHandshakeRecord>> = RefCell::new(Vec::new());
 }
 
 #[cfg(test)]
@@ -41,6 +46,27 @@ pub fn clear_tls_sessions() {
     TLS_SESSIONS.with(|sessions| {
         sessions.borrow_mut().clear();
     });
+    PQC_HANDSHAKE_STORE.with(|store| {
+        store.borrow_mut().clear();
+    });
+}
+
+/// Map a TLS supported_group codepoint to a PQC KEM algorithm, if recognised.
+fn kem_from_supported_group(group: u16) -> Option<crate::pqc_handshake::KemId> {
+    use crate::pqc_handshake::KemId;
+    match group {
+        0x0039 | 0x00CE => Some(KemId::MlKem512),
+        0x003A | 0x00CF => Some(KemId::MlKem768),
+        0x003B | 0x00D0 => Some(KemId::MlKem1024),
+        0x00FE => Some(KemId::MlKem768),
+        _ => None,
+    }
+}
+
+/// Drain all recorded PQC handshake records from the thread-local store.
+/// Called once per tick by the TUI app to feed the wizard.
+pub fn drain_pqc_store() -> Vec<crate::pqc_handshake::PqcHandshakeRecord> {
+    PQC_HANDSHAKE_STORE.with(|store| store.borrow_mut().drain(..).collect())
 }
 
 fn get_rsa_private_key() -> Option<rsa::RsaPrivateKey> {
@@ -607,6 +633,7 @@ pub fn dissect_tls(
                         server_iv: None,
                         seq_num_client: 0,
                         seq_num_server: 0,
+                        client_hello: Some(h.clone()),
                     },
                 );
             });
@@ -618,11 +645,13 @@ pub fn dissect_tls(
                 server_ip: sip,
                 server_port: src_port,
             };
+            let mut captured_ch: Option<ClientHello> = None;
             TLS_SESSIONS.with(|sessions| {
                 let mut sessions_map = sessions.borrow_mut();
                 if let Some(state) = sessions_map.get_mut(&key) {
                     state.cipher_suite = Some(s.cipher_suite);
                     state.server_random = Some(s.random);
+                    captured_ch = state.client_hello.clone();
                     if let Some(secrets) = get_secrets_for_random(&state.client_random) {
                         if let Some(client_secret) = secrets.get("CLIENT_TRAFFIC_SECRET_0") {
                             if s.cipher_suite == 0x1301 {
@@ -650,9 +679,6 @@ pub fn dissect_tls(
                                     Some(hkdf_expand_label_sha384(server_secret, "iv", &[], 12));
                             }
                         }
-                        // TLS 1.2: the key log stores the 48-byte master secret under
-                        // CLIENT_RANDOM. This is the only way to read forward-secret
-                        // (ECDHE) sessions — a server RSA key cannot recover them.
                         if let Some(master_secret) = secrets.get("CLIENT_RANDOM") {
                             if let Some(k) = derive_tls12_keys(
                                 master_secret,
@@ -669,6 +695,54 @@ pub fn dissect_tls(
                     }
                 }
             });
+            if let Some(ch) = captured_ch {
+                use crate::pair_correlation::FiveTuple;
+                use crate::pqc_handshake::{KemId, PqcHandshakeRecord, TlsVersion};
+                use chrono::Utc;
+                let tls_version = if ch.supported_versions.contains(&0x0304) {
+                    TlsVersion::TlsV1_3
+                } else if ch.version == 0x0303 {
+                    TlsVersion::TlsV1_2
+                } else {
+                    TlsVersion::from_u16(ch.version)
+                };
+                let server_name = ch.sni.clone().unwrap_or_default();
+                let kem_offers: Vec<KemId> = ch.supported_groups.iter()
+                    .filter_map(|&g| kem_from_supported_group(g))
+                    .collect();
+                let selected_kem = s.key_share_group.and_then(kem_from_supported_group);
+                let is_hybrid = s.key_share_group.map_or(false, |g| matches!(g, 0x00CE | 0x00CF | 0x00D0 | 0x00FE));
+                let classical_group = if s.key_share_group == Some(0x00FE) {
+                    Some(crate::pqc_handshake::NamedGroup::X25519)
+                } else {
+                    None
+                };
+                let five_tuple = FiveTuple {
+                    src_ip: sip,
+                    src_port,
+                    dst_ip: dip,
+                    dst_port,
+                    protocol: 6,
+                };
+                let mut record = PqcHandshakeRecord::new(
+                    five_tuple,
+                    tls_version,
+                    server_name,
+                    crate::pqc_handshake::SigAlgorithm::Unknown(0),
+                    Utc::now(),
+                );
+                record.client_kem_offers = kem_offers;
+                record.server_kem_selected = selected_kem;
+                record.is_hybrid_kem = is_hybrid;
+                record.classical_group = classical_group;
+                record.is_pqc_signature = false;
+                if !record.used_pqc() && record.tls_version != TlsVersion::TlsV1_3 {
+                    record.is_success = true;
+                }
+                PQC_HANDSHAKE_STORE.with(|store| {
+                    store.borrow_mut().push(record);
+                });
+            }
         } else {
             // Check for ClientKeyExchange (sent from client to server)
             if let Some(enc_pm) = get_client_key_exchange_encrypted_pre_master(payload) {
@@ -915,6 +989,8 @@ pub struct ServerHello {
     pub cipher_suite: u16,
     /// Extension types the server returned, in order.
     pub extensions: Vec<u16>,
+    /// Selected key-exchange group from the key_share extension (extension 0x0033).
+    pub key_share_group: Option<u16>,
 }
 
 /// RFC 8701 GREASE values are reserved placeholders a client sprinkles into
@@ -1025,6 +1101,7 @@ pub fn parse_server_hello(data: &[u8]) -> Option<ServerHello> {
         random,
         cipher_suite,
         extensions: Vec::new(),
+        key_share_group: None,
     };
 
     let ext_total = match c.u16() {
@@ -1039,7 +1116,11 @@ pub fn parse_server_hello(data: &[u8]) -> Option<ServerHello> {
         if body_start + ext_len > data.len() {
             break;
         }
+        let body = &data[body_start..body_start + ext_len];
         server.extensions.push(ext_type);
+        if ext_type == 0x0033 && ext_len >= 4 {
+            server.key_share_group = Some(u16::from_be_bytes([body[0], body[1]]));
+        }
         c.pos = body_start + ext_len;
     }
     Some(server)
@@ -1749,6 +1830,7 @@ mod tests {
                     server_iv: None,
                     seq_num_client: 0,
                     seq_num_server: 0,
+                    client_hello: None,
                 },
             );
         });
@@ -2039,6 +2121,7 @@ mod tests {
                     server_iv: None,
                     seq_num_client: 0,
                     seq_num_server: 0,
+                    client_hello: None,
                 },
             );
         });

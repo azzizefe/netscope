@@ -381,6 +381,15 @@ pub struct PqcHandshakeRecord {
     pub timestamp: Timestamp,
     pub is_success: bool,
     pub pqc_fallback_reason: Option<String>,
+
+    // ── §11.4 Enhanced Fields ──
+    pub client_hello_size: u16,
+    pub server_hello_size: u16,
+    pub cert_chain_length: u8,
+    pub root_is_pqc: bool,
+    pub cert_valid_days_left: i32,
+    pub rsa_key_size: u32,
+    pub is_0rtt: bool,
 }
 
 impl PqcHandshakeRecord {
@@ -414,6 +423,13 @@ impl PqcHandshakeRecord {
             timestamp,
             is_success: true,
             pqc_fallback_reason: None,
+            client_hello_size: 0,
+            server_hello_size: 0,
+            cert_chain_length: 0,
+            root_is_pqc: false,
+            cert_valid_days_left: 0,
+            rsa_key_size: 0,
+            is_0rtt: false,
         }
     }
 

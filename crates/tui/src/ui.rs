@@ -9,7 +9,10 @@ use ratatui::Frame;
 use crate::app::App;
 use crate::columns::Column;
 use crate::theme::Theme;
-use crate::views::{ai_traffic, connections, dashboard, dns_log, industrial_edge_ai, insights, learn, packets, View};
+use crate::views::{
+    ai_traffic, connections, dashboard, dns_log, industrial_edge_ai, insights, learn, packets,
+    pqc_wizard, View,
+};
 
 pub fn render(frame: &mut Frame, app: &mut App) {
     let theme = app.theme();
@@ -138,7 +141,7 @@ fn render_keybinding_bar(frame: &mut Frame, area: Rect, app: &App, theme: Theme)
             " ? help ",
             " q quit ",
         ]
-    } else if app.view == View::Learn || app.view == View::Insights || app.view == View::AiTraffic || app.view == View::IndustrialEdgeAi {
+    } else if app.view == View::Learn || app.view == View::Insights || app.view == View::AiTraffic || app.view == View::IndustrialEdgeAi || app.view == View::PqcWizard {
         &[
             " ↑↓/jk scroll ",
             " Tab switch ",
@@ -185,6 +188,7 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &mut App) {
         View::Learn => learn::render(frame, area, app),
         View::AiTraffic => ai_traffic::render(frame, area, app),
         View::IndustrialEdgeAi => industrial_edge_ai::render(frame, area, app),
+        View::PqcWizard => pqc_wizard::render(frame, area, app),
     }
 }
 

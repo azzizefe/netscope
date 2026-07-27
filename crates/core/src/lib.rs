@@ -36,6 +36,7 @@ pub mod pair_correlation;
 pub mod pcapng;
 pub mod pqc_analytics;
 pub mod pqc_dashboard;
+pub mod pqc_rules;
 pub mod pqc_wizard;
 pub mod pqc_handshake;
 #[cfg(not(target_arch = "wasm32"))]

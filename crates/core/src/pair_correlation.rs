@@ -319,15 +319,32 @@ fn hash_payload(payload: &[u8]) -> [u8; 32] {
 
 /// The main engine implementing all four pair-correlation strategies.
 ///
-/// Usage:
+/// A request is observed first and held as pending; the response that follows
+/// on the same flow is matched back to it. This pair carries no correlation
+/// header, so it falls through to the timing strategy — the response still
+/// reports which request it answered.
+///
 /// ```
+/// use chrono::Utc;
+/// use netscope_core::pair_correlation::{FiveTuple, PairCorrelationEngine};
+///
 /// let mut engine = PairCorrelationEngine::new();
-/// // Process a request packet
-/// engine.observe_request(&five_tuple, payload, timestamp, http2_stream_id);
-/// // Process a response packet
-/// if let Some(info) = engine.observe_response(&five_tuple, payload, timestamp, http2_stream_id) {
-///     // info contains correlation_id, method, confidence, etc.
-/// }
+/// let flow = FiveTuple {
+///     src_ip: "10.0.0.1".parse().unwrap(),
+///     src_port: 40000,
+///     dst_ip: "10.0.0.2".parse().unwrap(),
+///     dst_port: 80,
+///     protocol: 6, // TCP
+/// };
+///
+/// engine.observe_request(&flow, b"GET /v1/models HTTP/1.1\r\n\r\n", Utc::now(), None);
+/// let info = engine
+///     .observe_response(&flow, b"HTTP/1.1 200 OK\r\n\r\n", Utc::now(), None)
+///     .expect("the response is matched back to the pending request");
+///
+/// assert_eq!(info.request_method.as_deref(), Some("GET"));
+/// assert_eq!(info.request_path.as_deref(), Some("/v1/models"));
+/// assert_eq!(info.response_status, Some(200));
 /// ```
 #[derive(Debug, Clone)]
 pub struct PairCorrelationEngine {
