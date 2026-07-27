@@ -22145,6 +22145,115 @@ protocols! {
         aliases:   ["profidrive", "drive_profile", "pi_drive"],
         blurb:     "PROFIdrive — application profile for drive technology over PROFIBUS and PROFINET with standardized parameter access, cyclic setpoint/actual value exchange, and isochronous axis control.",
     }
+    // ── Siemens Ecosystem (§10.2.1) ────────────────────────────────────
+    ProfinetRtSiemens {
+        doc:       "Siemens PROFINET RT (Real-Time) extended frame.",
+        display:   "PROFINET RT (Siemens)",
+        color:     0x0D9488,
+        transport: Other,
+        rank:      4,
+        aliases:   ["profinet_rt_siemens", "pn_rt_siemens"],
+        blurb:     "Siemens PROFINET RT extended frame — real-time cyclic I/O data with Siemens-specific alarm channel, diagnosis subframes, and extended status information beyond the base PROFINET specification.",
+    }
+    ProfinetIrtSiemens {
+        doc:       "Siemens PROFINET IRT (Isochronous Real-Time) extended frame.",
+        display:   "PROFINET IRT (Siemens)",
+        color:     0x14B8A6,
+        transport: Other,
+        rank:      4,
+        aliases:   ["profinet_irt_siemens", "pn_irt_siemens"],
+        blurb:     "Siemens PROFINET IRT (Isochronous Real-Time) — deterministic isochronous communication for high-precision motion control with Siemens sync domain extensions, jitter compensation, and drive clock alignment beyond the standard IRT profile.",
+    }
+    ProfibusDpSiemens {
+        doc:       "Siemens PROFIBUS DP V2/V3 extensions.",
+        display:   "PROFIBUS DP (Siemens)",
+        color:     0x0891B2,
+        transport: Other,
+        rank:      4,
+        aliases:   ["profibus_dp_siemens", "pb_dp_siemens"],
+        blurb:     "Siemens PROFIBUS DP V2/V3 extensions — acyclic DP-V2 services for parametrization, alarm handling, and isochronous slave-to-slave communication with Siemens-specific FDL status, extended diagnostic data, and redundancy management.",
+    }
+    S7commPlusDetail {
+        doc:       "Siemens S7Comm Plus (TIA Portal v13+) detailed decode.",
+        display:   "S7Comm+ Detail",
+        color:     0x1D4ED8,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["s7comm_plus_detail", "s7commplus_detail", "tia_portal_job"],
+        blurb:     "Siemens S7Comm Plus (TIA Portal v13+) — detailed decode of the enhanced job/ack mechanism, session multiplexing, encrypted payload negotiation, and firmware-version-specific protocol extensions (v4.0+) used by modern S7-1200/1500 controllers.",
+    }
+    SinamicsDriveProfile {
+        doc:       "Siemens SINAMICS drive profile (PROFIdrive).",
+        display:   "SINAMICS Drive Profile",
+        color:     0x0E7490,
+        transport: Other,
+        rank:      4,
+        aliases:   ["sinamics_drive_profile", "sinamics_profile"],
+        blurb:     "Siemens SINAMICS drive profile — Siemens-specific PROFIdrive extensions including encoder emulation with virtual encoder mapping, safety limited speed (SLS) telegrams, dynamic drive control word extensions, and parameter access over the DPV1 acyclic channel.",
+    }
+    SimaticHmiSmartsrv {
+        doc:       "Siemens SIMATIC HMI SmartServer protocol layer.",
+        display:   "SIMATIC HMI SmartServer",
+        color:     0x7C3AED,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["simatic_hmi_smartsrv", "hmi_smartsrv"],
+        blurb:     "Siemens SIMATIC HMI SmartServer — WinCC RT Advanced tag streaming protocol with cyclic tag value publication, alarm/event forwarding, historical data retrieval, and multi-client session management for HMI visualization networks.",
+    }
+    SinumerikNckChannel {
+        doc:       "Siemens SINUMERIK NCK channel protocol.",
+        display:   "SINUMERIK NCK Channel",
+        color:     0x9333EA,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["sinumerik_nck_channel", "nck_channel"],
+        blurb:     "Siemens SINUMERIK NCK channel protocol — CNC-specific G-code streaming with block-by-block execution, tool management (tool offsets, wear, magazine assignment), axis position setpoint/actual exchange, and synchronized multi-channel coordination.",
+    }
+    ScalanceXRing {
+        doc:       "Siemens SCALANCE X industrial ring redundancy.",
+        display:   "SCALANCE X Ring",
+        color:     0xE11D48,
+        transport: Other,
+        rank:      4,
+        aliases:   ["scalance_x_ring", "scalance_hrp"],
+        blurb:     "Siemens SCALANCE X HRP (High-Speed Redundancy Protocol) — industrial Ethernet ring redundancy with sub-50ms failover, ring port status monitoring, topology change notification, and configuration synchronization for SCALANCE X managed switches.",
+    }
+    SiemensL2Telegram {
+        doc:       "Siemens Layer-2 discovery telegram (PROFINET DCP).",
+        display:   "PROFINET DCP (Siemens L2)",
+        color:     0x065F46,
+        transport: Other,
+        rank:      4,
+        aliases:   ["siemens_l2_telegram", "pn_dcp_l2"],
+        blurb:     "Siemens Layer-2 discovery telegram — PROFINET DCP (Discovery and Configuration Protocol) for NameOfStation assignment, IP parameter configuration, device identification, and factory reset operations at the Ethernet data link layer.",
+    }
+    TiaPortalOnlineDiag {
+        doc:       "TIA Portal online diagnostics frame.",
+        display:   "TIA Portal Online Diag",
+        color:     0xB45309,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["tia_portal_online_diag", "tia_online_diag"],
+        blurb:     "TIA Portal online diagnostics — module status interrogation, rack/station topology queries, firmware version inventory, diagnostic buffer readout, and firmware update trigger frames exchanged between TIA Portal engineering station and Siemens automation devices.",
+    }
+    SiemensOpcUaModel {
+        doc:       "Siemens OPC UA Companion Model (SIMATIC S7-1500).",
+        display:   "Siemens OPC UA Model",
+        color:     0x2563EB,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["siemens_opc_ua_model", "s7_opcua_companion"],
+        blurb:     "Siemens OPC UA Companion Model — Siemens-specific NodeId namespace mapping, device-specific variable type definitions, method call structures, and companion specification extensions for SIMATIC S7-1500 PLCs in the OPC UA information model.",
+    }
+    SiemensIndustrial5g {
+        doc:       "Siemens Industrial 5G private network management.",
+        display:   "Siemens Industrial 5G",
+        color:     0x7C3AED,
+        transport: Other,
+        rank:      4,
+        aliases:   ["siemens_industrial_5g", "ind_5g_siemens"],
+        blurb:     "Siemens Industrial 5G — private 5G network management protocol for industrial campuses with Siemens-specific UPF (User Plane Function) configuration, NEF (Network Exposure Function) extensions for deterministic latency, and 5G TSN integration for time-critical control.",
+    }
 }
 
 /// High-level protocol category for grouping in the UI and filter.

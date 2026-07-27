@@ -227,7 +227,9 @@ mod tests {
     #[test]
     fn builtin_defaults_compile_and_match() {
         let rules = ColorRules::defaults();
-        assert_eq!(rules.len(), 6);
+        // Every built-in compiles — counted against the table rather than a
+        // literal, so adding a default cannot silently drop one that doesn't.
+        assert_eq!(rules.len(), DEFAULT_RULES.len());
         // 'dns || mdns' rule paints DNS purple, same as the desktop default.
         let dns = pkt(Protocol::Dns, "DNS Query — example.com");
         assert_eq!(rules.color_for(&dns), Some(Color::Rgb(0xA7, 0x8B, 0xFA)));

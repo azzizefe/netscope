@@ -36,10 +36,14 @@ use super::{
  , h225ras, hl7, hnbap, hsrp, interbus, iolink, ipsec, isakmp, iscsi, isns, kerberos, kpasswd
  , l2tp, lcsap, ldap, ldp, m2ap, m2pa, m2ua, m3ap, matter, mechatrolink, modbus, mongodb, mqtt
  , mqttsn, mumble, mysql, nbap, nbds, nbns, netflow, ngap, nintendo_npln_p2p, nsip, ntp
- , nxp_eiq_inference, opcua, openflow, p_net, pfcp, profidrive, psn_matchmaking_v3, ptp, radius
+ , nxp_eiq_inference, opcua, openflow, p_net, pfcp, profidrive, profinet_rt_siemens
+ , profinet_irt_siemens, profibus_dp_siemens, psn_matchmaking_v3, ptp, radius
  , rdp, rip, ripng, rockwell_factorytalk_edge, rpkirtr, rtpmidi, rua, s1ap, sabp, sbcap
- , schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_edge, sip, snmp
- , steam_datagram_relay, stm_stm32cube_ai, sua, tacacs, tls, uadp, varan_bus, vxlangpe, wccp
+ , s7comm_plus_detail, schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_edge
+ , siemens_industrial_5g, siemens_l2_telegram, simatic_hmi_smartsrv, sinamics_drive_profile
+ , sinumerik_nck_channel, sip, snmp, scalance_x_ring
+ , steam_datagram_relay, stm_stm32cube_ai, sua, tacacs, tia_portal_online_diag, tls, uadp
+ , varan_bus, vxlangpe, wccp
  , wireguard, wsd, xbox_live_sdv2, xcp, xnap
 };
 
@@ -109,8 +113,9 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (49, tacacs::dissect_tacacs),
  (70, gopher::dissect_gopher),
  (79, finger::dissect_finger),
- (88, kerberos::dissect_kerberos),
- (104, dicom::dissect_dicom),
+  (88, kerberos::dissect_kerberos),
+   (102, s7comm_plus_detail::dissect_s7comm_plus_detail),
+  (104, dicom::dissect_dicom),
  (179, bgp::dissect_bgp),
  (323, rpkirtr::dissect_rpkirtr),
  (389, ldap::dissect_ldap),
@@ -120,8 +125,9 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (548, afp::dissect_afp),
  (646, ldp::dissect_ldp),
  (829, cmp::dissect_cmp),
- (1883, mqtt::dissect_mqtt),
- (2575, hl7::dissect_hl7),
+  (1883, mqtt::dissect_mqtt),
+   (2020, sinumerik_nck_channel::dissect_sinumerik_nck_channel),
+  (2575, hl7::dissect_hl7),
  (3000, aerospike::dissect_aerospike),
  // iSNS sits just below iSCSI's own port, and is where an initiator's
  // targets come from in the first place.
@@ -130,14 +136,16 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
  (3260, iscsi::dissect_iscsi),
  (3306, mysql::dissect_mysql),
   (3389, rdp::dissect_rdp),
-   (4121, interbus::dissect_interbus),
-   (4840, opcua::dissect_opcua),
+    (4121, interbus::dissect_interbus),
+    (4410, tia_portal_online_diag::dissect_tia_portal_online_diag),
+    (4840, opcua::dissect_opcua),
    (4860, siemens_industrial_edge::dissect_siemens_industrial_edge),
 
   (6653, openflow::dissect_openflow),
   (8001, edge_inference_onnx::dissect_edge_inference_onnx),
-  (8080, schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge),
-  (8501, edge_tensorflow_lite::dissect_edge_tensorflow_lite),
+   (8080, schneider_ecostruxure_edge::dissect_schneider_ecostruxure_edge),
+    (8090, simatic_hmi_smartsrv::dissect_simatic_hmi_smartsrv),
+   (8501, edge_tensorflow_lite::dissect_edge_tensorflow_lite),
   (8910, bosch_nexeed_edge::dissect_bosch_nexeed_edge),
   (9042, cassandra::dissect_cassandra),
  (11112, dicom::dissect_dicom),

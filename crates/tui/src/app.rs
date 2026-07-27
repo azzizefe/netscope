@@ -536,22 +536,20 @@ impl App {
                     self.detail_focus = false;
                 }
             }
-            KeyCode::Char('d') => {
-                if self.view == View::AiTraffic {
-                    self.show_ai_detail = false;
-                    self.ai_selected = None;
-                }
+            // The AI Traffic keys are guarded rather than tested inside the
+            // arm: an arm that matches and does nothing swallows the key, and
+            // these letters have to keep reaching the filter box in every
+            // other view — "dns" and "udp" are unusable if `d` is eaten.
+            KeyCode::Char('d') if self.view == View::AiTraffic => {
+                self.show_ai_detail = false;
+                self.ai_selected = None;
             }
-            KeyCode::Char('p') => {
-                if self.view == View::AiTraffic && self.show_ai_detail {
-                    self.show_ai_prompt_response = !self.show_ai_prompt_response;
-                    self.ai_detail_scroll = 0;
-                }
+            KeyCode::Char('p') if self.view == View::AiTraffic && self.show_ai_detail => {
+                self.show_ai_prompt_response = !self.show_ai_prompt_response;
+                self.ai_detail_scroll = 0;
             }
-            KeyCode::Char('H') => {
-                if self.view == View::AiTraffic {
-                    self.show_ai_heatmap = !self.show_ai_heatmap;
-                }
+            KeyCode::Char('H') if self.view == View::AiTraffic => {
+                self.show_ai_heatmap = !self.show_ai_heatmap;
             }
             KeyCode::Char('F') => {
                 // Follow Stream for the selected conversation (Packets view).

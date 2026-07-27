@@ -515,6 +515,20 @@ pub mod cip_safety;
 pub mod fsoe;
 pub mod profidrive;
 
+// ── Siemens Ecosystem (§10.2.1) ──
+pub mod profinet_rt_siemens;
+pub mod profinet_irt_siemens;
+pub mod profibus_dp_siemens;
+pub mod s7comm_plus_detail;
+pub mod sinamics_drive_profile;
+pub mod simatic_hmi_smartsrv;
+pub mod sinumerik_nck_channel;
+pub mod scalance_x_ring;
+pub mod siemens_l2_telegram;
+pub mod tia_portal_online_diag;
+pub mod siemens_opc_ua_model;
+pub mod siemens_industrial_5g;
+
 use std::net::IpAddr;
 
 use crate::models::Protocol;
