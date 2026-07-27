@@ -49,9 +49,13 @@ use super::{
  , scalance_x_ring, schneider_ecostruxure_edge, sctp, sflow, siemens_industrial_5g
  , siemens_industrial_edge, siemens_l2_telegram, simatic_hmi_smartsrv, sinamics_drive_profile
  , sinumerik_nck_channel, sip, snmp, steam_datagram_relay, stm_stm32cube_ai
- , stratix_switch_telemetry, studio5000_online_comm, sua, tacacs, tia_portal_online_diag, tls
- , twincat_ads_detail, twincat_router_telemetry, twincat_scope_view, uadp, varan_bus
- , vxlangpe, wccp, wireguard, wsd , xbox_live_sdv2, xcp, xnap, yaskawa_memobus_tcp_detail
+  , stratix_switch_telemetry, studio5000_online_comm, sua, tacacs, tia_portal_online_diag, tls
+  , tls_cert_transparency_v3, tls_downgrade_detector, tls_ech_pqc_interop
+  , tls_key_share_prediction, tls_middlebox_detector, tls_perf_benchmark_model
+  , tls_pqc_wizard_scan, tls_session_resumption_pqc
+  , twincat_ads_detail, twincat_router_telemetry, twincat_scope_view, uadp, varan_bus
+  , vxlangpe, wccp, wireguard, wsd , xbox_live_sdv2, xcp, xnap, yaskawa_memobus_tcp_detail
+  , pqc_compliance_checker, pqc_cve_feed_integration
 };
 
 /// The signature every port-dispatched dissector shares.

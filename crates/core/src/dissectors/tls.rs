@@ -51,6 +51,13 @@ pub fn clear_tls_sessions() {
     });
 }
 
+#[cfg(test)]
+pub fn push_pqc_record_for_test(record: crate::pqc_handshake::PqcHandshakeRecord) {
+    PQC_HANDSHAKE_STORE.with(|store| {
+        store.borrow_mut().push(record);
+    });
+}
+
 /// Map a TLS supported_group codepoint to a PQC KEM algorithm, if recognised.
 fn kem_from_supported_group(group: u16) -> Option<crate::pqc_handshake::KemId> {
     use crate::pqc_handshake::KemId;

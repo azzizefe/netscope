@@ -20937,6 +20937,96 @@ protocols! {
         aliases:   ["pqc_migration", "migration_signal"],
         blurb:     "TLS PQC Migration Signal — PQC migration signaling extension per RFC draft for negotiating PQC readiness, capability advertisement, and fallback mechanisms between TLS peers.",
     }
+    TlsPqcWizardScan {
+        doc:       "TLS PQC wizard bulk scanning engine dissector.",
+        display:   "TLS PQC Wizard Scan",
+        color:     0x0D47A1,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pqc_wizard_scan", "wizard_scan"],
+        blurb:     "TLS PQC Wizard Scan — bulk scanning engine that aggregates PQC handshake records, runs vulnerability rules, and generates a comprehensive PQC readiness report with CVSS-scored findings and compliance flags per NIST SP 800-131A/BSI TR-02102/ANSSI/CNSA 2.0.",
+    }
+    TlsCertTransparencyV3 {
+        doc:       "Certificate Transparency v3 PQC-aware SCT parser.",
+        display:   "TLS Cert Transparency v3",
+        color:     0x1565C0,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ct_v3", "cert_transparency_v3"],
+        blurb:     "TLS Cert Transparency v3 — Certificate Transparency v3 PQC-aware Signed Certificate Timestamp (SCT) parser for post-quantum certificate logs with ML-DSA and SLH-DSA signature verification.",
+    }
+    TlsEchPqcInterop {
+        doc:       "ECH + PQC compatibility testing protocol.",
+        display:   "TLS ECH PQC Interop",
+        color:     0x1E88E5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["ech_pqc", "ech_pqc_interop"],
+        blurb:     "TLS ECH PQC Interop — Encrypted Client Hello (ECH) + PQC compatibility testing protocol that validates KEM negotiation through ECH-encrypted extensions and detects PQC-unaware middlebox interference.",
+    }
+    TlsKeySharePrediction {
+        doc:       "Key share negotiation failure prediction and reporting.",
+        display:   "TLS Key Share Prediction",
+        color:     0x42A5F5,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["key_share_pred", "ks_prediction"],
+        blurb:     "TLS Key Share Prediction — key share negotiation failure prediction and reporting protocol analyzing KEM offer/response mismatches, hybrid stripping, and fallback patterns from PQC handshake records.",
+    }
+    TlsDowngradeDetector {
+        doc:       "TLS downgrade attack detection engine feed.",
+        display:   "TLS Downgrade Detector",
+        color:     0xE53935,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["downgrade_det", "tls_downgrade"],
+        blurb:     "TLS Downgrade Detector — TLS downgrade attack detection engine feed that identifies version rollback (TLS 1.3 → 1.2), KEM stripping, and hybrid-to-classic downgrade attacks from PQC handshake records.",
+    }
+    PqcCveFeedIntegration {
+        doc:       "NIST NCCoE PQC CVE feed integration protocol.",
+        display:   "PQC CVE Feed Integration",
+        color:     0xFF7043,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["pqc_cve", "cve_feed_pqc"],
+        blurb:     "PQC CVE Feed Integration — NIST NCCoE PQC CVE feed integration protocol that cross-references detected KEM algorithms against known post-quantum CVEs for timing side-channels, weak parameters, and constant-time violations.",
+    }
+    TlsPerfBenchmarkModel {
+        doc:       "TLS handshake performance benchmark model data.",
+        display:   "TLS Perf Benchmark Model",
+        color:     0x66BB6A,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["perf_bench", "tls_perf_model"],
+        blurb:     "TLS Perf Benchmark Model — TLS handshake performance benchmark model data dissector that measures classic vs PQC handshake latency, KEM computation time, bandwidth overhead, and throughput impact from real session data.",
+    }
+    TlsMiddleboxDetector {
+        doc:       "TLS middlebox interference detection protocol.",
+        display:   "TLS Middlebox Detector",
+        color:     0xFFA726,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["middlebox", "tls_middlebox"],
+        blurb:     "TLS Middlebox Detector — TLS middlebox interference detection protocol that identifies oversized handshake messages, protocol anomalies, hybrid KEM stripping, and PQC rejection patterns indicative of middlebox tampering.",
+    }
+    PqcComplianceChecker {
+        doc:       "Multi-standard compliance checker (NIST+BSI+ANSSI+CNSA+ETSI).",
+        display:   "PQC Compliance Checker",
+        color:     0xAB47BC,
+        transport: Tcp,
+        rank:      4,
+        aliases:   ["pqc_compliance", "compliance_checker"],
+        blurb:     "PQC Compliance Checker — multi-standard compliance checker that evaluates PQC handshake data against NIST SP 800-131A, BSI TR-02102, ANSSI PQC, NSA CNSA 2.0, and ETSI TS 119 312 frameworks for regulatory readiness.",
+    }
+    TlsSessionResumptionPqc {
+        doc:       "PQC-aware session resumption (PSK) analysis protocol.",
+        display:   "TLS Session Resumption PQC",
+        color:     0x26C6DA,
+        transport: Tcp,
+        rank:      3,
+        aliases:   ["session_resume_pqc", "pqc_psk"],
+        blurb:     "TLS Session Resumption PQC — PQC-aware session resumption (PSK) analysis protocol that examines 0-RTT data, PSK modes, and KEM bindings for post-quantum session ticket and external PSK negotiation.",
+    }
     Ikev2PqcDhGroup {
         doc:       "IKEv2 PQC DH group negotiation dissector.",
         display:   "IKEv2 PQC DH Group",

@@ -7,7 +7,7 @@ use ratatui::Frame;
 use crate::app::App;
 use netscope_core::pqc_handshake::{KemId, NamedGroup};
 use netscope_core::pqc_wizard::{
-    ComplianceFramework, Priority, RiskScore, Severity, Tls13PqcWizard,
+    ComplianceFramework, Priority, RiskScore, Severity, Tls13PqcWizard, TlsPqcWizardReport,
 };
 
 pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
@@ -26,11 +26,21 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
     lines.push(Line::from(""));
     render_vuln_scan(&mut lines, &report);
     lines.push(Line::from(""));
+    render_key_share_prediction(&mut lines, &report);
+    lines.push(Line::from(""));
+    render_downgrade_detector(&mut lines, &report);
+    lines.push(Line::from(""));
+    render_cve_feed(&mut lines, &report);
+    lines.push(Line::from(""));
+    render_middlebox_detector(&mut lines, &report);
+    lines.push(Line::from(""));
     render_performance(&mut lines, &report);
     lines.push(Line::from(""));
     render_recommendations(&mut lines, &report);
     lines.push(Line::from(""));
     render_compliance(&mut lines, &report);
+    lines.push(Line::from(""));
+    render_session_resumption(&mut lines, &report);
     lines.push(Line::from(""));
     render_buttons(&mut lines);
 
@@ -129,6 +139,15 @@ fn render_kem_panel(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::T
         lines.push(Line::from(vec![
             Span::raw(format!("  Est. KEM Time:   ~{:.1}ms", session.pqc_kem_time_us as f64 / 1000.0)),
         ]));
+
+        let ech_compatible = session.client_hello_size > 0 && session.server_hello_size > 0 && session.kem_selected.is_some();
+        lines.push(Line::from(vec![
+            Span::raw("  ECH+PQC Interop:  "),
+            Span::styled(
+                if ech_compatible { "compatible ✅" } else { "not detected" },
+                Style::new().fg(if ech_compatible { Color::Green } else { Color::DarkGray }),
+            ),
+        ]));
     } else if report.raw_records > 0 {
         lines.push(Line::from(Span::raw("  No PQC session data available.")));
     } else {
@@ -176,6 +195,11 @@ fn render_cert_chain(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::
             ]));
             lines.push(Line::from(Span::raw("     Risk: Low (trust anchor, replace edilmesi zor)")));
         }
+        let ct_status = if session.cert_chain_length > 0 { "SCT present" } else { "no SCT data" };
+        lines.push(Line::from(vec![
+            Span::raw("  CT v3 Status:     "),
+            Span::styled(ct_status, Style::new().fg(if session.cert_chain_length > 0 { Color::Green } else { Color::DarkGray })),
+        ]));
     } else {
         lines.push(Line::from(Span::raw("  No certificate data.")));
     }
@@ -281,6 +305,138 @@ fn render_compliance(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::
                 Span::raw(flag.note.clone()),
             ]));
         }
+    }
+}
+
+fn render_key_share_prediction(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
+    lines.push(Line::from(Span::styled(" Key Share Prediction", Style::new().bold())));
+
+    let total = report.session_reports.len();
+    let failures: Vec<&netscope_core::pqc_wizard::SessionPqcReport> = report.session_reports.iter().filter(|s| !s.success).collect();
+    let fail_rate = if total > 0 { failures.len() as f64 / total as f64 * 100.0 } else { 0.0 };
+
+    let kem_mismatches: Vec<String> = failures.iter().filter(|s| s.kem_selected.is_some()).map(|s| {
+        let kem = s.kem_selected.as_ref().map(kem_label).unwrap_or_default();
+        format!("{} KEM={}", s.server_name, kem)
+    }).collect();
+
+    lines.push(Line::from(vec![
+        Span::raw(format!("  Sessions: {}  |  Failures: {} ({:.1}%)", total, failures.len(), fail_rate)),
+    ]));
+    if kem_mismatches.is_empty() {
+        lines.push(Line::from(Span::styled("  ✅ No KEM negotiation failures predicted", Style::new().fg(Color::Green))));
+    } else {
+        lines.push(Line::from(vec![
+            Span::raw("  ⚠️  KEM failures: "),
+            Span::styled(kem_mismatches.join("; "), Style::new().fg(Color::Yellow)),
+        ]));
+    }
+    let risk = if fail_rate > 20.0 { "HIGH" } else if fail_rate > 5.0 { "MEDIUM" } else { "LOW" };
+    let risk_color = if fail_rate > 20.0 { Color::Red } else if fail_rate > 5.0 { Color::Yellow } else { Color::Green };
+    lines.push(Line::from(vec![
+        Span::raw("  Risk: "),
+        Span::styled(risk, Style::new().fg(risk_color).bold()),
+    ]));
+}
+
+fn render_downgrade_detector(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
+    lines.push(Line::from(Span::styled(" Downgrade Detection", Style::new().bold())));
+
+    let mut findings: Vec<String> = Vec::new();
+    for s in &report.session_reports {
+        if !s.success && s.kem_selected.is_some() {
+            findings.push(format!("{}: PQC offered but handshake failed", s.server_name));
+        }
+        if s.is_hybrid && !s.success {
+            findings.push(format!("{}: hybrid KEM stripped", s.server_name));
+        }
+    }
+
+    if findings.is_empty() {
+        lines.push(Line::from(Span::styled("  ✅ No downgrade activity detected", Style::new().fg(Color::Green))));
+    } else {
+        for f in &findings {
+            lines.push(Line::from(vec![
+                Span::styled("  ⚠️  ", Style::new().fg(Color::Yellow)),
+                Span::raw(f.clone()),
+            ]));
+        }
+    }
+}
+
+fn render_cve_feed(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
+    lines.push(Line::from(Span::styled(" PQC CVE Feed", Style::new().bold())));
+
+    let kem_counts: Vec<String> = report.algorithms.iter().map(|k| {
+        format!("{}: {}", kem_label(&k.algorithm), k.count)
+    }).collect();
+
+    if kem_counts.is_empty() {
+        lines.push(Line::from(Span::raw("  No PQC algorithms detected.")));
+    } else {
+        lines.push(Line::from(vec![
+            Span::raw("  Detected KEMs: "),
+            Span::styled(kem_counts.join(", "), Style::new().fg(Color::Cyan)),
+        ]));
+    }
+    let cve_count = report.vulnerabilities.iter().filter(|v| v.cve_ref.is_some()).count();
+    if cve_count > 0 {
+        lines.push(Line::from(vec![
+            Span::styled(format!("  ⚠️  {} CVE-related findings", cve_count), Style::new().fg(Color::Yellow)),
+        ]));
+        for v in report.vulnerabilities.iter().filter(|v| v.cve_ref.is_some()) {
+            lines.push(Line::from(vec![
+                Span::raw(format!("     {}: {}", v.cve_ref.as_ref().unwrap(), v.title)),
+            ]));
+        }
+    } else {
+        lines.push(Line::from(Span::styled("  ✅ No known CVEs match detected KEMs", Style::new().fg(Color::Green))));
+    }
+}
+
+fn render_middlebox_detector(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
+    lines.push(Line::from(Span::styled(" Middlebox Interference", Style::new().bold())));
+
+    let mut anomalies: Vec<String> = Vec::new();
+    for s in &report.session_reports {
+        if s.client_hello_size > 2048 {
+            anomalies.push(format!("{}: oversized ClientHello ({}B)", s.server_name, s.client_hello_size));
+        }
+        if s.cert_chain_length > 5 {
+            anomalies.push(format!("{}: deep cert chain ({} certs)", s.server_name, s.cert_chain_length));
+        }
+        if s.is_hybrid && !s.success {
+            anomalies.push(format!("{}: hybrid KEM rejected", s.server_name));
+        }
+    }
+
+    if anomalies.is_empty() {
+        lines.push(Line::from(Span::styled("  ✅ No middlebox interference detected", Style::new().fg(Color::Green))));
+    } else {
+        for a in &anomalies {
+            lines.push(Line::from(vec![
+                Span::styled("  ⚠️  ", Style::new().fg(Color::Yellow)),
+                Span::raw(a.clone()),
+            ]));
+        }
+    }
+}
+
+fn render_session_resumption(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
+    lines.push(Line::from(Span::styled(" Session Resumption (PSK)", Style::new().bold())));
+
+    let total = report.session_reports.len();
+    let zero_rtt: Vec<&netscope_core::pqc_wizard::SessionPqcReport> = report.session_reports.iter().filter(|s| s.is_0rtt).collect();
+    let pqc_zero_rtt: Vec<&&netscope_core::pqc_wizard::SessionPqcReport> = zero_rtt.iter().filter(|s| s.kem_selected.is_some()).collect();
+    let psk_ratio = if !zero_rtt.is_empty() { pqc_zero_rtt.len() as f64 / zero_rtt.len() as f64 * 100.0 } else { 0.0 };
+
+    lines.push(Line::from(vec![
+        Span::raw(format!("  Sessions: {}  |  0-RTT capable: {}  |  PQC+PSK: {} ({:.1}%)", total, zero_rtt.len(), pqc_zero_rtt.len(), psk_ratio)),
+    ]));
+    if pqc_zero_rtt.is_empty() {
+        lines.push(Line::from(Span::styled("  ℹ️  No PQC-aware session resumption detected", Style::new().fg(Color::DarkGray))));
+    } else {
+        lines.push(Line::from(Span::styled("  ✅ PQC-aware PSK negotiation active", Style::new().fg(Color::Green))));
     }
 }
 
