@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::{Json, Router};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::{get, patch};
 use serde::Deserialize;
@@ -10,14 +11,22 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::api::ApiState;
-use crate::auth::Claims;
+use crate::auth::{require, Claims};
 use crate::db::models::{AlertFilter, UpdateAlertStatus};
 use crate::db::queries;
 
+/// Changing an alert's status is triage, not viewing — a `viewer` must not be
+/// able to close an alert it is only meant to see.
 pub fn routes(state: Arc<ApiState>) -> Router {
     Router::new()
-        .route("/", get(list_alerts))
-        .route("/{id}/status", patch(update_alert_status))
+        .route(
+            "/",
+            get(list_alerts).route_layer(from_fn(require("alerts:read"))),
+        )
+        .route(
+            "/{id}/status",
+            patch(update_alert_status).route_layer(from_fn(require("alerts:write"))),
+        )
         .with_state(state)
 }
 

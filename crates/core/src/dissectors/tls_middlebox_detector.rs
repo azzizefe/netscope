@@ -121,7 +121,7 @@ fn detect_abnormal_sizes(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -
                 r.server_name, r.client_hello_size,
             ));
         }
-        if r.server_hello_size > 2048 && r.server_hello_size > 0 {
+        if r.server_hello_size > 2048 {
             findings.push(format!(
                 "{}: oversized ServerHello ({}B)",
                 r.server_name, r.server_hello_size,

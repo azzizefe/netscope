@@ -85,9 +85,9 @@ mod tests {
         buf[..2].copy_from_slice(&1u16.to_le_bytes());
         buf[2..4].copy_from_slice(&2u16.to_be_bytes());
         buf[4] = 0x02;
-        buf[6..10].copy_from_slice(&3.14f32.to_le_bytes());
+        buf[6..10].copy_from_slice(&2.75f32.to_le_bytes());
         let r = dissect_valorant_net_var(None, None, 0, 0, &buf);
         assert_eq!(r.protocol, Protocol::ValorantNetVar);
-        assert!(r.summary.contains("val=3.14"));
+        assert!(r.summary.contains("val=2.75"));
     }
 }

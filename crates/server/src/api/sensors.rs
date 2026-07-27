@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::{Json, Router};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
+use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::{get, post, put};
 use chrono::Utc;
@@ -11,6 +12,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::api::ApiState;
+use crate::auth::require;
 use crate::db::models::{RegisterSensor, SensorHeartbeat};
 use crate::db::queries;
 
@@ -65,15 +67,38 @@ impl CommandStore {
     }
 }
 
+/// Permissions are attached per method, not per route group.
+///
+/// `GET /` and `POST /` share a path but not a privilege level, so a single
+/// group-wide layer has to pick one of them — and picking the read permission
+/// is what let a `viewer` token register sensors and command the fleet.
 pub fn routes(state: Arc<ApiState>) -> Router {
+    let read = || from_fn(require("sensors:read"));
+    let write = || from_fn(require("sensors:write"));
+
     Router::new()
-        .route("/", get(list_sensors).post(register_sensor))
-        .route("/register", post(register_sensor))
-        .route("/{id}", get(get_sensor))
-        .route("/{id}/heartbeat", put(sensor_heartbeat))
-        .route("/{id}/command", post(sensor_command))
-        .route("/{id}/commands", get(poll_commands))
-        .route("/{id}/commands/{cmd_id}/result", put(command_result))
+        .route(
+            "/",
+            get(list_sensors)
+                .route_layer(read())
+                .merge(post(register_sensor).route_layer(write())),
+        )
+        .route("/register", post(register_sensor).route_layer(write()))
+        .route("/{id}", get(get_sensor).route_layer(read()))
+        .route("/{id}/heartbeat", put(sensor_heartbeat).route_layer(write()))
+        // Issuing a command is its own privilege: it makes a remote sensor act,
+        // which is not the same authority as editing its record.
+        .route(
+            "/{id}/command",
+            post(sensor_command).route_layer(from_fn(require("sensors:command"))),
+        )
+        // The agent side of the command loop — draining its own queue and
+        // reporting the outcome.
+        .route("/{id}/commands", get(poll_commands).route_layer(read()))
+        .route(
+            "/{id}/commands/{cmd_id}/result",
+            put(command_result).route_layer(write()),
+        )
         .with_state(state)
 }
 

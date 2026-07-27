@@ -4,6 +4,7 @@ use std::sync::Arc;
 use axum::{Json, Router};
 use axum::extract::{Query, State};
 use axum::http::{StatusCode, HeaderMap};
+use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use chrono::Utc;
@@ -12,13 +13,26 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::api::ApiState;
+use crate::auth::require;
 use crate::db::models::{Event, EventFilter};
 use crate::db::queries;
+use crate::ws::WsState;
 
+/// Reading the event store and writing to it are separate privileges.
+///
+/// `/batch` is how a sensor injects events into the SOC timeline. Gating it at
+/// `events:read` — which every role holds — meant any valid token could
+/// fabricate security events.
 pub fn routes(state: Arc<ApiState>) -> Router {
     Router::new()
-        .route("/", get(list_events))
-        .route("/batch", post(ingest_events_batch))
+        .route(
+            "/",
+            get(list_events).route_layer(from_fn(require("events:read"))),
+        )
+        .route(
+            "/batch",
+            post(ingest_events_batch).route_layer(from_fn(require("events:write"))),
+        )
         .with_state(state)
 }
 
@@ -70,6 +84,7 @@ struct BatchEvent {
 
 async fn ingest_events_batch(
     State(state): State<Arc<ApiState>>,
+    axum::extract::Extension(ws): axum::extract::Extension<Arc<WsState>>,
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> impl IntoResponse {
@@ -118,7 +133,14 @@ async fn ingest_events_batch(
         };
 
         match queries::insert_event(&state.pool, &db_event).await {
-            Ok(_) => accepted += 1,
+            Ok(_) => {
+                accepted += 1;
+                // The whole point of the WebSocket: a dashboard sees the event
+                // as it lands, not on its next poll. Nothing pushed into it
+                // before this, so `/ws/events` accepted connections and then
+                // stayed silent forever.
+                ws.broadcast(&db_event);
+            }
             Err(e) => tracing::warn!("Failed to insert event: {}", e),
         }
     }

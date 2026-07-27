@@ -20,9 +20,14 @@ impl WsState {
         }
     }
 
-    pub fn broadcast_event(event: &Event, state: &WsState) {
+    /// Push an event to every connected dashboard.
+    ///
+    /// Send errors are dropped on purpose: `broadcast::Sender::send` fails only
+    /// when nobody is subscribed, which is the normal state of a server with no
+    /// dashboard open. It is not a failure of the ingest that produced it.
+    pub fn broadcast(&self, event: &Event) {
         if let Ok(json) = serde_json::to_string(event) {
-            let _ = state.tx.send(json);
+            let _ = self.tx.send(json);
         }
     }
 
@@ -60,4 +65,70 @@ pub async fn handle_socket(mut socket: WebSocket, state: Arc<WsState>) {
     }
 
     *state.session_count.write() -= 1;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+    use uuid::Uuid;
+
+    fn event(title: &str) -> Event {
+        Event {
+            id: Uuid::new_v4(),
+            sensor_id: None,
+            event_type: "test".into(),
+            severity: "high".into(),
+            title: title.into(),
+            description: None,
+            source_ip: None,
+            dest_ip: None,
+            protocol: None,
+            port: None,
+            raw_data: None,
+            tags: serde_json::json!([]),
+            timestamp: Utc::now(),
+        }
+    }
+
+    /// The reason the endpoint exists: a dashboard sees an event as it lands.
+    /// Nothing called this before it was wired into ingest, so `/ws/events`
+    /// accepted connections and then stayed silent.
+    #[tokio::test]
+    async fn a_broadcast_reaches_every_subscriber() {
+        let state = WsState::new();
+        let mut a = state.tx.subscribe();
+        let mut b = state.tx.subscribe();
+
+        state.broadcast(&event("port scan"));
+
+        for rx in [&mut a, &mut b] {
+            let got = rx.recv().await.expect("subscriber receives the event");
+            assert!(got.contains("port scan"), "{got}");
+            assert!(got.contains("\"severity\":\"high\""), "{got}");
+        }
+    }
+
+    /// A server with no dashboard open is the normal case, and ingest must not
+    /// treat it as a failure.
+    #[test]
+    fn broadcasting_with_nobody_listening_is_not_an_error() {
+        let state = WsState::new();
+        state.broadcast(&event("nobody home"));
+    }
+
+    /// Only events that serialise are sent, and a late subscriber does not
+    /// receive what was published before it joined.
+    #[tokio::test]
+    async fn a_subscriber_only_receives_what_follows_it() {
+        let state = WsState::new();
+        state.broadcast(&event("before"));
+
+        let mut late = state.tx.subscribe();
+        state.broadcast(&event("after"));
+
+        let got = late.recv().await.unwrap();
+        assert!(got.contains("after"), "{got}");
+        assert!(!got.contains("before"), "{got}");
+    }
 }

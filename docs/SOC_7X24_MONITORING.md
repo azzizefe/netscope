@@ -7,43 +7,72 @@
 
 ---
 
+## ✅ Durum — 2026-07-27 denetimi
+
+**23 / 267 kutu işaretli.** Tamamı Faz 0 (Mimari Temel) içinde.
+
+Bir kutu ancak şu iki şart sağlanınca işaretlendi: ilgili kod var **ve** iddia
+ettiği davranışı gerçekten yapıyor. "Dosya mevcut" yeterli sayılmadı — denetim
+sırasında yazılmış ama hiçbir yere bağlanmamış üç şey çıktı:
+
+| Bulgu | Durum |
+|---|---|
+| RBAC hiç çalışmıyordu — `require_permission` axum'ın `from_fn`'ine sığmayan bir imzaya sahipti, bu yüzden hiçbir router'a takılamamıştı. API kimlik doğruluyor ama **yetki denetlemiyordu**: geçerli herhangi bir token her endpoint'e ulaşıyordu, bir `viewer` alert kurallarını silebiliyordu. | Düzeltildi, test edildi |
+| WebSocket `/ws/events` bağlantı kabul ediyor ama **hiç event basmıyordu** — `broadcast_event` hiçbir yerden çağrılmıyordu. | Event ingest'e bağlandı, test edildi |
+| `JwtState::create_token`, negatif/uçuk `expiry_hours` değerinde **panikliyordu** (`(hours * 3600) as usize` taşması). Bozuk bir config sunucuyu düşürürdü. | i64 + saturating aritmetiğe çevrildi |
+
+İşaretlenmeyen ama kısmen yazılmış olanlar:
+
+- **0.1.5 Redis** — `CacheLayer` kuruluyor ve `ApiState`'e konuyor, ama tek bir
+  metodu bile çağrılmıyor. Heartbeat cache, rate-limit ve alert dedup'ın hiçbiri
+  çalışmıyor. Kod var, işlev yok.
+- **0.3 Merkezi Config** — sunucu tarafında sensör başına config store/push/
+  versioning/validation yok; ajan yalnızca yerel dosyadan okuyor.
+- **Faz 1 SIEM** — `siem.rs` 175 satırlık temel bir exporter (NDJSON + ES/Splunk
+  URL). Kutuların istediği CEF/LEEF/OCSF, bulk indexing, ILM, retry, enrichment
+  ve 10 connector'ın hiçbiri yok. Kutular zaten "mevcut kodu iyileştir" diyor.
+
+Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
+
+---
+
 ## 📐 Faz 0 — Mimari Temel (Foundation)
 
 > Bu faz olmadan diğer hiçbir şey çalışmaz.
 
 ### 0.1 — Merkezi Yönetim Sunucusu (Central Management Server)
 
-- [ ] **0.1.1** `netscope-server` binary'si oluştur (`crates/server/`) — capture engine'dan bağımsız, sadece yönetim & telemetri toplama
-- [ ] **0.1.2** REST API (axum/actix-web) — tüm endpoint'ler JWT auth + RBAC ile korunmuş
-  - [ ] `POST /api/v1/sensors/register` — sensör kaydı (hostname, IP, OS, netscope versiyonu, desteklenen interface'ler)
-  - [ ] `GET /api/v1/sensors` — tüm sensörlerin listesi + heartbeat durumu
-  - [ ] `GET /api/v1/sensors/:id` — tek sensör detayı (CPU, RAM, capture throughput, uptime, son görülme)
-  - [ ] `POST /api/v1/sensors/:id/command` — sensöre uzaktan komut (capture başlat/durdur, filter değiştir, pcap kaydet)
-  - [ ] `GET /api/v1/events?severity=&timerange=&sensor=` — merkezi event akışı (sayfalı, filtrelenebilir)
-  - [ ] `GET /api/v1/alerts?status=&severity=&timerange=` — alert geçmişi (sayfalı)
-  - [ ] `POST /api/v1/rules` / `PUT /api/v1/rules/:id` / `DELETE /api/v1/rules/:id` — kural CRUD
-  - [ ] `GET /api/v1/dashboard/summary` — SOC dashboard özet verisi (aktif alert, event/sn, top talker, top threat)
-  - [ ] `GET /api/v1/health` — health check (DB bağlantısı, Redis, disk)
-- [ ] **0.1.3** WebSocket endpoint'i `ws://server/ws/events` — sensörlerden real-time event push
-- [ ] **0.1.4** PostgreSQL schema — migration dosyaları (`sqlx` veya `refinery` ile)
+- [x] **0.1.1** `netscope-server` binary'si oluştur (`crates/server/`) — capture engine'dan bağımsız, sadece yönetim & telemetri toplama
+- [x] **0.1.2** REST API (axum/actix-web) — tüm endpoint'ler JWT auth + RBAC ile korunmuş
+  - [x] `POST /api/v1/sensors/register` — sensör kaydı (hostname, IP, OS, netscope versiyonu, desteklenen interface'ler)
+  - [x] `GET /api/v1/sensors` — tüm sensörlerin listesi + heartbeat durumu
+  - [x] `GET /api/v1/sensors/:id` — tek sensör detayı (CPU, RAM, capture throughput, uptime, son görülme)
+  - [x] `POST /api/v1/sensors/:id/command` — sensöre uzaktan komut (capture başlat/durdur, filter değiştir, pcap kaydet)
+  - [x] `GET /api/v1/events?severity=&timerange=&sensor=` — merkezi event akışı (sayfalı, filtrelenebilir)
+  - [x] `GET /api/v1/alerts?status=&severity=&timerange=` — alert geçmişi (sayfalı)
+  - [x] `POST /api/v1/rules` / `PUT /api/v1/rules/:id` / `DELETE /api/v1/rules/:id` — kural CRUD
+  - [x] `GET /api/v1/dashboard/summary` — SOC dashboard özet verisi (aktif alert, event/sn, top talker, top threat)
+  - [x] `GET /api/v1/health` — health check (DB bağlantısı, Redis, disk)
+- [x] **0.1.3** WebSocket endpoint'i `ws://server/ws/events` — sensörlerden real-time event push
+- [x] **0.1.4** PostgreSQL schema — migration dosyaları (`sqlx` veya `refinery` ile)
   ```sql
   sensors, sensor_heartbeats, events, alerts, alert_rules,
   threat_indicators, audit_log, users, roles, api_keys
   ```
 - [ ] **0.1.5** Redis cache katmanı — sensor heartbeat'leri, rate-limit, alert dedup için
-- [ ] **0.1.6** TLS 1.3 (mTLS) — sensör ↔ server arası tüm trafik şifreli, client certificate ile mutual auth
-- [ ] **0.1.7** gRPC streaming — yüksek throughput'lu sensör → server telemetri kanalı (REST + WS alternatifi)
+- [x] **0.1.6** TLS 1.3 (mTLS) — sensör ↔ server arası tüm trafik şifreli, client certificate ile mutual auth
+- [x] **0.1.7** gRPC streaming — yüksek throughput'lu sensör → server telemetri kanalı (REST + WS alternatifi)
 
 ### 0.2 — Sensör Ajanı (Sensor Agent)
 
-- [ ] **0.2.1** `netscope-agent` binary'si — capture engine'ın yanında çalışan yan süreç / embedded mod
-- [ ] **0.2.2** Server'a register olma — ilk başlatmada `POST /sensors/register`, server'dan `sensor_id` + mTLS cert al
-- [ ] **0.2.3** Heartbeat — her 15 saniyede `PUT /sensors/:id/heartbeat` (CPU %, RAM MB, capture pkt/s, disk MB free, uptime)
-- [ ] **0.2.4** Komut poll / WebSocket — server'dan gelen komutları al (capture başlat/durdur, filter değiştir), sonucu raporla
-- [ ] **0.2.5** Event batch push — her 500 ms veya 100 event'te bir, sıkıştırılmış (zstd) batch olarak server'a gönder
-- [ ] **0.2.6** Offline buffer — server'a ulaşılamazsa event'leri SQLite'da biriktir, bağlantı dönünce flush et (max 4 GB disk)
-- [ ] **0.2.7** Auto-upgrade — server'dan yeni binary çekip kendini güncelleme (checksum doğrulamalı, rollback'li)
-- [ ] **0.2.8** Windows Service / Linux systemd unit — agent'ı servis olarak çalıştırma, auto-restart
+- [x] **0.2.1** `netscope-agent` binary'si — capture engine'ın yanında çalışan yan süreç / embedded mod
+- [x] **0.2.2** Server'a register olma — ilk başlatmada `POST /sensors/register`, server'dan `sensor_id` + mTLS cert al
+- [x] **0.2.3** Heartbeat — her 15 saniyede `PUT /sensors/:id/heartbeat` (CPU %, RAM MB, capture pkt/s, disk MB free, uptime)
+- [x] **0.2.4** Komut poll / WebSocket — server'dan gelen komutları al (capture başlat/durdur, filter değiştir), sonucu raporla
+- [x] **0.2.5** Event batch push — her 500 ms veya 100 event'te bir, sıkıştırılmış (zstd) batch olarak server'a gönder
+- [x] **0.2.6** Offline buffer — server'a ulaşılamazsa event'leri SQLite'da biriktir, bağlantı dönünce flush et (max 4 GB disk)
+- [x] **0.2.7** Auto-upgrade — server'dan yeni binary çekip kendini güncelleme (checksum doğrulamalı, rollback'li)
+- [x] **0.2.8** Windows Service / Linux systemd unit — agent'ı servis olarak çalıştırma, auto-restart
 
 ### 0.3 — Merkezi Yapılandırma (Central Config)
 

@@ -3,20 +3,36 @@ use std::sync::Arc;
 use axum::{Json, Router};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
+use axum::middleware::from_fn;
 use axum::response::IntoResponse;
-use axum::routing::{get, put};
+use axum::routing::{get, post, put};
 use serde_json::json;
 use uuid::Uuid;
 
 use crate::api::ApiState;
-use crate::auth::Claims;
+use crate::auth::{require, Claims};
 use crate::db::models::CreateRule;
 use crate::db::queries;
 
+/// Listing rules needs `rules:read`; authoring them needs `rules:write`.
+///
+/// Gating the whole group at `rules:write` was the other half of the same
+/// mistake: it locked an `operator` — who holds `rules:read` — out of even
+/// listing the rules.
 pub fn routes(state: Arc<ApiState>) -> Router {
+    let write = || from_fn(require("rules:write"));
+
     Router::new()
-        .route("/", get(list_rules).post(create_rule))
-        .route("/{id}", put(update_rule).delete(delete_rule))
+        .route(
+            "/",
+            get(list_rules)
+                .route_layer(from_fn(require("rules:read")))
+                .merge(post(create_rule).route_layer(write())),
+        )
+        .route(
+            "/{id}",
+            put(update_rule).delete(delete_rule).route_layer(write()),
+        )
         .with_state(state)
 }
 

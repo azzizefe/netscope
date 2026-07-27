@@ -3,16 +3,21 @@ use std::sync::Arc;
 use axum::{Json, Router};
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use serde_json::json;
 
 use crate::api::ApiState;
+use crate::auth::require;
 use crate::db::queries;
 
 pub fn routes(state: Arc<ApiState>) -> Router {
     Router::new()
-        .route("/summary", get(dashboard_summary))
+        .route(
+            "/summary",
+            get(dashboard_summary).route_layer(from_fn(require("dashboard:read"))),
+        )
         .with_state(state)
 }
 

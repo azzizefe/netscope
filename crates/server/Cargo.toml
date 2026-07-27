@@ -78,6 +78,11 @@ zstd = "0.13"
 # Crypto (used in tests and salt generation)
 rand = "0.8"
 
+[dev-dependencies]
+# `oneshot` — drives the router in-process so the route/permission wiring can be
+# tested without a listener or a database.
+tower = { version = "0.5", features = ["util"] }
+
 [build-dependencies]
 tonic-prost-build = "0.14"
 
