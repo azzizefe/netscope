@@ -67,7 +67,7 @@ mod tests {
             dst_addr: None,
             src_port: None,
             dst_port: None,
-            protocol: Protocol::Unknown(0),
+            protocol: Protocol::Unknown("test".into()),
             length: 0,
             summary: summary.into(),
             data: Bytes::new(),
