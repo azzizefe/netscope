@@ -679,6 +679,21 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .diff-section { margin-bottom: 22px; }
 .diff-section h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 8px; }
 .diff-table { width: 100%; max-width: 720px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* Packet-header comparison. Only the differing rows are marked — the point of
+   the view is that the eye lands on them without reading the identical ones. */
+.diff-table tr.diff-sec td {
+  padding-top: 10px;
+  font-weight: 600;
+  opacity: 0.75;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.diff-table tr.diff-changed { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.diff-table tr.diff-changed .diff-key { font-weight: 600; }
+.diff-table .diff-key { opacity: 0.85; }
+.diff-table .diff-absent { opacity: 0.4; font-style: italic; }
 .diff-table th { text-align: left; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; padding: 4px 10px; border-bottom: 1px solid var(--border); }
 .diff-table td { padding: 5px 10px; border-bottom: 1px solid rgba(42,53,71,.4); }
 .diff-up { color: var(--ok); font-weight: 600; }

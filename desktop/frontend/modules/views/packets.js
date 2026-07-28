@@ -350,9 +350,13 @@ export function packetHeaderFields(pkt) {
   if (pkt.src_host) add('Network', 'Source host', pkt.src_host);
   if (pkt.dst_host) add('Network', 'Destination host', pkt.dst_host);
 
-  const transport = transportName(pkt.protocol);
-  if (transport && (pkt.src_port != null || pkt.dst_port != null)) {
-    add('Transport', 'Protocol', transport);
+  // Ports are reported whenever the packet has them. `transportName` answers
+  // from the protocol table the backend fills in at startup, so gating the
+  // whole section on it would drop the ports whenever that table is not loaded
+  // yet — the name is the optional part here, not the numbers.
+  if (pkt.src_port != null || pkt.dst_port != null) {
+    const transport = transportName(pkt.protocol);
+    if (transport) add('Transport', 'Protocol', transport);
     if (pkt.src_port != null) add('Transport', 'Source port', String(pkt.src_port));
     if (pkt.dst_port != null) add('Transport', 'Destination port', String(pkt.dst_port));
   }

@@ -186,7 +186,10 @@ export const state = {
   // I/O graph samples — packed typed arrays (time, size, error flag) so a
   // whole capture can stream straight into a WebGL buffer (ROADMAP §4.3).
   io: { base: null, t: null, len: null, err: null, n: 0, tMax: 0, lenMax: 0, lastDraw: 0, uploaded: 0 },
-  diff: { a: null, b: null },
+  // a/b are capture snapshots; pktA/pktB are two individual packets whose
+  // headers are lined up field by field. Independent — you can use either
+  // comparison without the other.
+  diff: { a: null, b: null, pktA: null, pktB: null },
   alerts: [], alertsSeen: 0,          // Smart Alerts feed
   triggers: loadJSON('netscope.triggers', []), // Event triggers (IFTTT)
   coloring: loadJSON('netscope.coloring', null) || DEFAULT_COLOR_RULES.map((r) => ({ ...r })),
@@ -2979,8 +2982,7 @@ function deltaCell(a, b, fmt = (x) => x) {
  * decoded headers up side by side is much faster than reading two detail trees
  * and holding them both in your head.
  */
-function renderPacketDiff() {
-  const { pktA, pktB } = state.diff;
+function renderPacketDiff(pktA, pktB) {
   if (!pktA || !pktB) {
     return `<div class="diff-empty">Select a packet and press <b>🅰 Packet A</b>, then select another and press
       <b>🅱 Packet B</b>. Their headers are lined up here field by field, with the differences marked.</div>`;
@@ -3025,7 +3027,7 @@ function renderPacketDiff() {
   return `<div class="diff-section">
     <h3>Packet headers — ${differences === 0
       ? 'identical across every field'
-      : `${differences} field${differences === 1 ? '' : 's'} differ`}</h3>
+      : differences === 1 ? '1 field differs' : `${differences} fields differ`}</h3>
     <table class="diff-table">
       <tr><th>Field</th><th>A · ${esc(label(pktA))}</th><th>B · ${esc(label(pktB))}</th></tr>
       ${rows.join('')}
@@ -3033,9 +3035,10 @@ function renderPacketDiff() {
 }
 
 function setDiffPacket(slot) {
+  const button = slot === 'a' ? els.diffPktA : els.diffPktB;
   const pkt = state.selectedPacket;
   if (!pkt) {
-    toast('Select a packet in the Packets tab first.');
+    flashButton(button, 'Select a packet first');
     return;
   }
   // Snapshot the packet, not a live reference: the capture keeps running and
@@ -3049,7 +3052,7 @@ function setDiffPacket(slot) {
 }
 
 function renderDiff() {
-  const packetPart = renderPacketDiff();
+  const packetPart = renderPacketDiff(state.diff.pktA, state.diff.pktB);
   const { a, b } = state.diff;
   if (!a || !b) {
     els.diffBody.innerHTML = packetPart +
