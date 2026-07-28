@@ -12,6 +12,7 @@
 // `remote` and `discover` were left ungated while depending on `capture`,
 // `db`, `pipeline` and `pcap`, which are correctly gated.
 pub mod ai_traffic;
+pub mod alerting;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
