@@ -176,20 +176,20 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 2.2 — Smart Alert Triggers (Mevcut kodun iyileştirilmesi)
 
-- [ ] **2.2.1** **Traffic spike alert** — baseline'dan 3σ sapma (mevcut "smart alerts" kodunu kural motoruna taşı)
-- [ ] **2.2.2** **Error burst alert** — 1 dakikada 4xx/5xx sayısı normalin 5 katına çıkarsa
-- [ ] **2.2.3** **New host alert** — daha önce hiç görülmemiş bir IP ağda belirirse
-- [ ] **2.2.4** **New protocol alert** — daha önce bu network'te görülmemiş bir protokol tespit edilirse
-- [ ] **2.2.5** **Beaconing alert** — düzenli aralıklarla C2 benzeri check-in (mevcut heuristics iyileştir)
-- [ ] **2.2.6** **Data exfiltration alert** — outbound traffic > baseline + 100 MB (mevcut DLP iyileştir)
-- [ ] **2.2.7** **Privilege escalation alert** — düşük porttan yüksek porta SMB/RDP/SSH bağlantısı
-- [ ] **2.2.8** **Lateral movement alert** — bir host'un kısa sürede çok sayıda internal host'a bağlanması
-- [ ] **2.2.9** **DNS tunneling alert** — anormal uzunlukta/frekansda DNS sorguları
-- [ ] **2.2.10** **DGA domain alert** — entropy tabanlı domain generation algorithm tespiti (mevcut "suspicious domains" iyileştir)
-- [ ] **2.2.11** **Encrypted traffic anomaly** — normalde plaintext olması beklenen portta TLS (veya tersi)
-- [ ] **2.2.12** **Expired certificate alert** — TLS sertifikası expire olmuş bağlantı
-- [ ] **2.2.13** **Weak cipher alert** — TLS 1.0/1.1, RC4, 3DES, MD5 kullanan bağlantı
-- [ ] **2.2.14** **PQC migration gap alert** — PQC'ye geçmemiş kritik servis (mevcut `pqc_analytics` kullanarak)
+- [x] **2.2.1** **Traffic spike alert** — baseline'dan 3σ sapma (mevcut "smart alerts" kodunu kural motoruna taşı)
+- [x] **2.2.2** **Error burst alert** — 1 dakikada 4xx/5xx sayısı normalin 5 katına çıkarsa
+- [x] **2.2.3** **New host alert** — daha önce hiç görülmemiş bir IP ağda belirirse
+- [x] **2.2.4** **New protocol alert** — daha önce bu network'te görülmemiş bir protokol tespit edilirse
+- [x] **2.2.5** **Beaconing alert** — düzenli aralıklarla C2 benzeri check-in (mevcut heuristics iyileştir)
+- [x] **2.2.6** **Data exfiltration alert** — outbound traffic > baseline + 100 MB (mevcut DLP iyileştir)
+- [x] **2.2.7** **Privilege escalation alert** — düşük porttan yüksek porta SMB/RDP/SSH bağlantısı
+- [x] **2.2.8** **Lateral movement alert** — bir host'un kısa sürede çok sayıda internal host'a bağlanması
+- [x] **2.2.9** **DNS tunneling alert** — anormal uzunlukta/frekansda DNS sorguları
+- [x] **2.2.10** **DGA domain alert** — entropy tabanlı domain generation algorithm tespiti (mevcut "suspicious domains" iyileştir)
+- [x] **2.2.11** **Encrypted traffic anomaly** — normalde plaintext olması beklenen portta TLS (veya tersi)
+- [x] **2.2.12** **Expired certificate alert** — TLS sertifikası expire olmuş bağlantı
+- [x] **2.2.13** **Weak cipher alert** — TLS 1.0/1.1, RC4, 3DES, MD5 kullanan bağlantı
+- [x] **2.2.14** **PQC migration gap alert** — PQC'ye geçmemiş kritik servis (mevcut `pqc_analytics` kullanarak)
 
 ### 2.3 — Alert Eskalasyon (Escalation)
 
