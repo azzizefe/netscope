@@ -151,6 +151,7 @@ async fn main() -> Result<()> {
     // State type is `()` at the top level; sub-routers handle their own
     // state via `with_state()` inside their `routes()` constructors.
     let app = Router::new()
+        .route("/", get(dashboard_handler))
         .route("/ws/events", get(ws_handler))
         .route("/health", get(health))
         .merge(api::build_router(
@@ -296,4 +297,34 @@ async fn ws_handler(
     axum::extract::Extension(ws_state): axum::extract::Extension<Arc<WsState>>,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| ws::handle_socket(socket, ws_state))
+}
+
+async fn dashboard_handler() -> impl IntoResponse {
+    axum::response::Html(include_str!("static/dashboard.html"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_dashboard_handler_returns_html() {
+        let app = Router::new().route("/", get(dashboard_handler));
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        
+        let body_bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
+        let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
+        assert!(body_str.contains("Netscope SOC Dashboard"));
+        assert!(body_str.contains("dracula"));
+    }
 }

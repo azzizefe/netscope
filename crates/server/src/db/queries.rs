@@ -1,6 +1,7 @@
 use anyhow::Result;
 use sqlx::PgPool;
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
 use super::models::*;
 
@@ -439,6 +440,103 @@ pub async fn dashboard_summary(pool: &PgPool) -> Result<DashboardSummary> {
     .fetch_all(pool)
     .await?;
 
+    // Extended metrics queries
+    let total_events_24h: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM events WHERE timestamp > now() - interval '24 hours'",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let open_alerts_l1: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM alerts WHERE status NOT IN ('resolved','dismissed') AND severity IN ('low','info')",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let open_alerts_l2: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM alerts WHERE status NOT IN ('resolved','dismissed') AND severity = 'medium'",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let open_alerts_l3: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM alerts WHERE status NOT IN ('resolved','dismissed') AND severity IN ('high','critical')",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let alert_times: Vec<(DateTime<Utc>,)> = sqlx::query_as(
+        "SELECT created_at FROM alerts WHERE created_at > now() - interval '1 hour'",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let mut alert_trend_1h = vec![0i64; 12];
+    let now_utc = Utc::now();
+    for (t,) in alert_times {
+        let diff = now_utc.signed_duration_since(t).num_minutes();
+        if diff >= 0 && diff < 60 {
+            let bin = (diff / 5) as usize;
+            if bin < 12 {
+                alert_trend_1h[11 - bin] += 1;
+            }
+        }
+    }
+
+    let top_attackers_5: Vec<IpCount> = sqlx::query_as(
+        "SELECT source_ip::text as ip, COUNT(*)::bigint as count \
+         FROM events WHERE source_ip IS NOT NULL AND timestamp > now() - interval '24 hours' \
+         GROUP BY source_ip ORDER BY count DESC LIMIT 5",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let top_targets_5: Vec<IpCount> = sqlx::query_as(
+        "SELECT dest_ip::text as ip, COUNT(*)::bigint as count \
+         FROM events WHERE dest_ip IS NOT NULL AND timestamp > now() - interval '24 hours' \
+         GROUP BY dest_ip ORDER BY count DESC LIMIT 5",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let protocol_distribution: Vec<ProtocolCount> = sqlx::query_as(
+        "SELECT COALESCE(protocol, 'unknown') as protocol, COUNT(*)::bigint as count \
+         FROM events WHERE timestamp > now() - interval '24 hours' \
+         GROUP BY protocol ORDER BY count DESC",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let aggregate_throughput_bps: (Option<i64>,) = sqlx::query_as(
+        "SELECT SUM(capture_throughput_bps)::bigint \
+         FROM ( \
+             SELECT DISTINCT ON (sensor_id) capture_throughput_bps \
+             FROM sensor_heartbeats \
+             ORDER BY sensor_id, received_at DESC \
+         ) last_heartbeats",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let mttr_seconds_7d: (Option<f64>,) = sqlx::query_as(
+        "SELECT AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)))::float8 \
+         FROM alerts \
+         WHERE status = 'resolved' AND resolved_at > now() - interval '7 days'",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let false_positive_rate_7d: (Option<f64>,) = sqlx::query_as(
+        "SELECT \
+            CASE WHEN COUNT(*) > 0 \
+                 THEN (COUNT(*) FILTER (WHERE status = 'dismissed'))::float8 / COUNT(*)::float8 \
+                 ELSE 0.0 END \
+         FROM alerts \
+         WHERE created_at > now() - interval '7 days'",
+    )
+    .fetch_one(pool)
+    .await?;
+
     Ok(DashboardSummary {
         active_alerts: active_alerts.0,
         events_per_second: events_per_second.0.unwrap_or(0.0),
@@ -447,6 +545,17 @@ pub async fn dashboard_summary(pool: &PgPool) -> Result<DashboardSummary> {
         top_talkers: Vec::new(),
         top_threats,
         alerts_by_severity,
+        total_events_24h: total_events_24h.0,
+        open_alerts_l1: open_alerts_l1.0,
+        open_alerts_l2: open_alerts_l2.0,
+        open_alerts_l3: open_alerts_l3.0,
+        alert_trend_1h,
+        top_attackers_5,
+        top_targets_5,
+        protocol_distribution,
+        aggregate_throughput_bps: aggregate_throughput_bps.0.unwrap_or(0),
+        mttr_seconds_7d: mttr_seconds_7d.0.unwrap_or(0.0),
+        false_positive_rate_7d: false_positive_rate_7d.0.unwrap_or(0.0),
     })
 }
 

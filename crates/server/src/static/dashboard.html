@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netscope SOC Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Base Themes */
+        :root {
+            /* Default: Midnight Theme */
+            --bg-color: #0b0f19;
+            --panel-bg: #161b26;
+            --border-color: #232d3f;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-primary: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.15);
+            
+            --critical-color: #ef4444;
+            --high-color: #f97316;
+            --medium-color: #eab308;
+            --low-color: #10b981;
+            --info-color: #3b82f6;
+            
+            --critical-glow: rgba(239, 68, 68, 0.2);
+            --high-glow: rgba(249, 115, 22, 0.2);
+            --medium-glow: rgba(234, 179, 8, 0.2);
+            --low-glow: rgba(16, 185, 129, 0.2);
+        }
+
+        [data-theme="dracula"] {
+            --bg-color: #282a36;
+            --panel-bg: #44475a;
+            --border-color: #6272a4;
+            --text-primary: #f8f8f2;
+            --text-secondary: #ff79c6;
+            --accent-primary: #bd93f9;
+            --accent-glow: rgba(189, 147, 249, 0.2);
+
+            --critical-color: #ff5555;
+            --high-color: #ffb86c;
+            --medium-color: #f1fa8c;
+            --low-color: #50fa7b;
+            --info-color: #8be9fd;
+            
+            --critical-glow: rgba(255, 85, 85, 0.25);
+            --high-glow: rgba(255, 184, 108, 0.25);
+            --medium-glow: rgba(241, 250, 140, 0.25);
+            --low-glow: rgba(80, 250, 123, 0.25);
+        }
+
+        [data-theme="nord"] {
+            --bg-color: #2e3440;
+            --panel-bg: #3b4252;
+            --border-color: #4c566a;
+            --text-primary: #d8dee9;
+            --text-secondary: #88c0d0;
+            --accent-primary: #81a1c1;
+            --accent-glow: rgba(129, 161, 193, 0.2);
+
+            --critical-color: #bf616a;
+            --high-color: #d08770;
+            --medium-color: #ebcb8b;
+            --low-color: #a3be8c;
+            --info-color: #88c0d0;
+            
+            --critical-glow: rgba(191, 97, 106, 0.25);
+            --high-glow: rgba(208, 135, 112, 0.25);
+            --medium-glow: rgba(235, 203, 139, 0.25);
+            --low-glow: rgba(163, 190, 140, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.2rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .logo-section h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #ff79c6 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        select, button {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        select:hover, button:hover {
+            border-color: var(--accent-primary);
+        }
+
+        /* Dashboard Grid Layout (Fluid & Responsive) */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            padding: 1.5rem 2rem;
+            flex-grow: 1;
+        }
+
+        /* Ultrawide and fluid constraints */
+        @media (max-width: 1400px) {
+            .dashboard-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Info Panels */
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .panel-title {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .panel-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .panel-footer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Large Panels for Charting */
+        .span-2 {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 768px) {
+            .span-2 {
+                grid-column: span 1;
+            }
+        }
+
+        .chart-panel {
+            min-height: 300px;
+        }
+
+        /* Tables & Lists */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            margin-top: 0.5rem;
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .data-table th {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Alert Feed Styles */
+        .alert-feed {
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            padding-right: 0.5rem;
+        }
+
+        .alert-item {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .alert-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-critical { background-color: var(--critical-glow); color: var(--critical-color); border: 1px solid var(--critical-color); }
+        .badge-high { background-color: var(--high-glow); color: var(--high-color); border: 1px solid var(--high-color); }
+        .badge-medium { background-color: var(--medium-glow); color: var(--medium-color); border: 1px solid var(--medium-color); }
+        .badge-low { background-color: var(--low-glow); color: var(--low-color); border: 1px solid var(--low-color); }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-online { background-color: rgba(16, 185, 129, 0.1); color: var(--low-color); }
+        .status-offline { background-color: rgba(239, 68, 68, 0.1); color: var(--critical-color); }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            display: inline-block;
+        }
+
+        /* Sparkline container */
+        .sparkline-container {
+            width: 120px;
+            height: 40px;
+        }
+
+        /* Login Screen Overlay */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-box {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 2.5rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .login-box h2 {
+            font-weight: 700;
+            font-size: 1.6rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .login-btn {
+            background-color: var(--accent-primary);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+
+        .login-btn:hover {
+            opacity: 0.9;
+        }
+
+        .error-msg {
+            color: var(--critical-color);
+            font-size: 0.85rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Authentication Overlay -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2>Netscope Login</h2>
+            <div class="error-msg" id="login-error"></div>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="admin">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+            <button class="login-btn" onclick="attemptLogin()">Access SOC Panel</button>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header>
+        <div class="logo-section">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h1>NETSCOPE // SOC</h1>
+        </div>
+        <div class="header-controls">
+            <select id="theme-selector" onchange="changeTheme(this.value)">
+                <option value="midnight">Theme: Midnight</option>
+                <option value="dracula">Theme: Dracula</option>
+                <option value="nord">Theme: Nord</option>
+            </select>
+            <button onclick="logout()">Log Out</button>
+        </div>
+    </header>
+
+    <!-- Dashboard Main Grid -->
+    <div class="dashboard-container">
+        
+        <!-- Panel 1: Online Sensors -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Sensors Status</div>
+                <span class="status-badge status-online">
+                    <span class="status-dot"></span> Active
+                </span>
+            </div>
+            <div class="panel-value" id="val-sensors">0 / 0</div>
+            <div class="panel-footer">Sensors online / total registered</div>
+        </div>
+
+        <!-- Panel 2: Total Events (24h) -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Events (24h)</div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="panel-value" id="val-events-24h">0</div>
+            <div class="panel-footer" id="val-eps">0.00 events / sec</div>
+        </div>
+
+        <!-- Panel 3: Open Alerts Break Down -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Unresolved Alerts</div>
+                <div class="sparkline-container">
+                    <canvas id="alert-trend-sparkline"></canvas>
+                </div>
+            </div>
+            <div class="panel-value" id="val-alerts-total">0</div>
+            <div class="panel-footer" style="display: flex; gap: 0.6rem;">
+                <span style="color: var(--critical-color)">● L3: <span id="val-alerts-l3">0</span></span>
+                <span style="color: var(--medium-color)">● L2: <span id="val-alerts-l2">0</span></span>
+                <span style="color: var(--low-color)">● L1: <span id="val-alerts-l1">0</span></span>
+            </div>
+        </div>
+
+        <!-- Panel 4: System Telemetries -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">SOC Performance</div>
+            </div>
+            <div class="panel-value" id="val-mttr">0s</div>
+            <div class="panel-footer" style="display: flex; justify-content: space-between;">
+                <span>MTTR last 7d</span>
+                <span id="val-fp-rate">FP: 0.0%</span>
+            </div>
+        </div>
+
+        <!-- Chart Panel: Aggregate Throughput -->
+        <div class="panel span-2 chart-panel">
+            <div class="panel-header">
+                <div class="panel-title">Throughput & Bandwidth</div>
+                <span class="status-badge" style="background-color: var(--accent-glow); color: var(--accent-primary);" id="val-throughput">
+                    0 Kbps
+                </span>
+            </div>
+            <div style="flex-grow: 1; position: relative;">
+                <canvas id="throughput-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart Panel: Protocol Distribution -->
+        <div class="panel chart-panel">
+            <div class="panel-header">
+                <div class="panel-title">Protocol Distribution</div>
+            </div>
+            <div style="flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center;">
+                <canvas id="protocol-chart" style="max-height: 200px; max-width: 200px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Threats / Attack Indicators -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Threat Indicators</div>
+            </div>
+            <div style="max-height: 240px; overflow-y: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Conf</th>
+                        </tr>
+                    </thead>
+                    <tbody id="threats-list">
+                        <!-- Filled by API -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Top Attackers -->
+        <div class="panel span-2">
+            <div class="panel-header">
+                <div class="panel-title">Top 5 Attacker source IPs</div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Source IP</th>
+                        <th>Alerts & Events Count</th>
+                        <th>Risk Rank</th>
+                    </tr>
+                </thead>
+                <tbody id="attackers-list">
+                    <!-- Filled by API -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Top Targets -->
+        <div class="panel span-2">
+            <div class="panel-header">
+                <div class="panel-title">Top 5 Targeted destination IPs</div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Target IP</th>
+                        <th>Targeted Events Count</th>
+                        <th>Risk Rank</th>
+                    </tr>
+                </thead>
+                <tbody id="targets-list">
+                    <!-- Filled by API -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Live Alert Activity Feed -->
+        <div class="panel span-2" style="grid-column: span 4;">
+            <div class="panel-header">
+                <div class="panel-title">Live SOC Alert Stream (Real-Time WebSocket)</div>
+            </div>
+            <div class="alert-feed" id="live-alerts-container">
+                <!-- Live alerts appended here -->
+                <div class="alert-item" style="color: var(--text-secondary); text-align: center; padding: 2rem;">
+                    Awaiting live security event signals from WebSocket...
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // State management
+        let jwtToken = localStorage.getItem('netscope_jwt');
+        let throughputHistory = Array(15).fill(0);
+        let throughputLabels = Array(15).fill('');
+        
+        let charts = {};
+
+        // On Load Check
+        window.addEventListener('DOMContentLoaded', () => {
+            if (jwtToken) {
+                document.getElementById('login-overlay').style.display = 'none';
+                initializeDashboard();
+            }
+        });
+
+        // Login Logic
+        async function attemptLogin() {
+            const user = document.getElementById('username').value || 'admin';
+            const pass = document.getElementById('password').value || 'admin123';
+            const errorDiv = document.getElementById('login-error');
+
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    jwtToken = data.token;
+                    localStorage.setItem('netscope_jwt', jwtToken);
+                    document.getElementById('login-overlay').style.display = 'none';
+                    initializeDashboard();
+                } else {
+                    errorDiv.innerText = 'Invalid username or password';
+                }
+            } catch (err) {
+                errorDiv.innerText = 'Server unavailable. Check connection.';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('netscope_jwt');
+            location.reload();
+        }
+
+        // Theme switching
+        function changeTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            // Refresh chart colors based on theme if charts exist
+            if (charts.protocol) {
+                charts.protocol.update();
+            }
+        }
+
+        // Fetch metrics
+        async function fetchMetrics() {
+            if (!jwtToken) return;
+
+            try {
+                const response = await fetch('/api/v1/dashboard/summary', {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                if (response.ok) {
+                    const data = await response.json();
+                    updateUI(data);
+                }
+            } catch (err) {
+                console.error('Error fetching dashboard summary:', err);
+            }
+        }
+
+        // Update indicators
+        function updateUI(data) {
+            document.getElementById('val-sensors').innerText = `${data.online_sensors} / ${data.total_sensors}`;
+            document.getElementById('val-events-24h').innerText = data.total_events_24h.toLocaleString();
+            document.getElementById('val-eps').innerText = `${data.events_per_second.toFixed(2)} events / sec`;
+            document.getElementById('val-alerts-total').innerText = data.active_alerts;
+            
+            document.getElementById('val-alerts-l1').innerText = data.open_alerts_l1;
+            document.getElementById('val-alerts-l2').innerText = data.open_alerts_l2;
+            document.getElementById('val-alerts-l3').innerText = data.open_alerts_l3;
+
+            // MTTR & FP Rate
+            const mttrMin = (data.mttr_seconds_7d / 60).toFixed(1);
+            document.getElementById('val-mttr').innerText = `${mttrMin}m`;
+            document.getElementById('val-fp-rate').innerText = `FP: ${(data.false_positive_rate_7d * 100).toFixed(1)}%`;
+
+            // Throughput Bps to Kbps/Mbps conversion
+            const kbps = (data.aggregate_throughput_bps / 1024);
+            const throughputDisplay = kbps > 1024 
+                ? `${(kbps / 1024).toFixed(2)} Mbps` 
+                : `${kbps.toFixed(0)} Kbps`;
+            document.getElementById('val-throughput').innerText = throughputDisplay;
+
+            // Append throughput metrics for rolling chart
+            throughputHistory.push(kbps);
+            throughputHistory.shift();
+            throughputLabels.push(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+            throughputLabels.shift();
+            charts.throughput.update();
+
+            // Attacker IPs Table
+            const attackerBody = document.getElementById('attackers-list');
+            attackerBody.innerHTML = '';
+            data.top_attackers_5.forEach((item, index) => {
+                attackerBody.innerHTML += `
+                    <tr>
+                        <td style="font-family: 'JetBrains Mono', monospace;">${item.ip}</td>
+                        <td>${item.count.toLocaleString()}</td>
+                        <td><span class="badge ${index === 0 ? 'badge-critical' : 'badge-high'}">Rank #${index + 1}</span></td>
+                    </tr>
+                `;
+            });
+            if (data.top_attackers_5.length === 0) {
+                attackerBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">No attacker events registered</td></tr>';
+            }
+
+            // Target IPs Table
+            const targetBody = document.getElementById('targets-list');
+            targetBody.innerHTML = '';
+            data.top_targets_5.forEach((item, index) => {
+                targetBody.innerHTML += `
+                    <tr>
+                        <td style="font-family: 'JetBrains Mono', monospace;">${item.ip}</td>
+                        <td>${item.count.toLocaleString()}</td>
+                        <td><span class="badge ${index === 0 ? 'badge-critical' : 'badge-high'}">Rank #${index + 1}</span></td>
+                    </tr>
+                `;
+            });
+            if (data.top_targets_5.length === 0) {
+                targetBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">No target events registered</td></tr>';
+            }
+
+            // Threat Indicators
+            const threatBody = document.getElementById('threats-list');
+            threatBody.innerHTML = '';
+            data.top_threats.forEach(t => {
+                threatBody.innerHTML += `
+                    <tr>
+                        <td><span class="badge badge-low">${t.indicator_type}</span></td>
+                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">${t.value}</td>
+                        <td><span class="badge ${t.confidence === 'high' ? 'badge-critical' : 'badge-medium'}">${t.confidence}</span></td>
+                    </tr>
+                `;
+            });
+            if (data.top_threats.length === 0) {
+                threatBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">No indicators found</td></tr>';
+            }
+
+            // Update Protocol Chart
+            const protocols = data.protocol_distribution.map(p => p.protocol);
+            const counts = data.protocol_distribution.map(p => p.count);
+            charts.protocol.data.labels = protocols;
+            charts.protocol.data.datasets[0].data = counts;
+            charts.protocol.update();
+
+            // Update Sparkline
+            charts.sparkline.data.datasets[0].data = data.alert_trend_1h;
+            charts.sparkline.update();
+        }
+
+        // Websocket connection
+        function connectWebSocket() {
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            const wsUrl = `${proto}://${location.host}/ws/events`;
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connection to Netscope server established.');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const alert = JSON.parse(event.data);
+                    appendLiveAlert(alert);
+                } catch (e) {
+                    console.error('Error parsing live WS event:', e);
+                }
+            };
+
+            ws.onclose = () => {
+                console.warn('WS disconnected. Reconnecting in 3s...');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        function appendLiveAlert(alert) {
+            const container = document.getElementById('live-alerts-container');
+            
+            // Remove waiting placeholder
+            if (container.innerHTML.includes('Awaiting live security event')) {
+                container.innerHTML = '';
+            }
+
+            const alertTime = new Date().toLocaleTimeString();
+            const severity = alert.severity || 'medium';
+            const badgeClass = `badge-${severity.toLowerCase()}`;
+
+            const item = document.createElement('div');
+            item.className = 'alert-item';
+            item.innerHTML = `
+                <div class="alert-meta">
+                    <span class="badge ${badgeClass}">${severity}</span>
+                    <span style="color: var(--text-secondary); font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">${alertTime}</span>
+                </div>
+                <div style="font-weight: 500; font-size: 0.95rem;">${alert.title || alert.rule_name}</div>
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                    Source: ${alert.source_ip || 'N/A'} → Destination: ${alert.dest_ip || 'N/A'}
+                </div>
+            `;
+
+            container.insertBefore(item, container.firstChild);
+
+            // Limit feed to 30 alerts
+            if (container.children.length > 30) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        // Initialize Charts
+        function initializeDashboard() {
+            // Protocol Chart
+            const ctxProto = document.getElementById('protocol-chart').getContext('2d');
+            charts.protocol = new Chart(ctxProto, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: ['#bd93f9', '#ff79c6', '#8be9fd', '#50fa7b', '#ffb86c', '#ff5555', '#f1fa8c'],
+                        borderWidth: 1,
+                        borderColor: '#232d3f'
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Sparkline Chart
+            const ctxSpark = document.getElementById('alert-trend-sparkline').getContext('2d');
+            charts.sparkline = new Chart(ctxSpark, {
+                type: 'line',
+                data: {
+                    labels: Array(12).fill(''),
+                    datasets: [{
+                        data: Array(12).fill(0),
+                        borderColor: '#ef4444',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    },
+                    plugins: { legend: { display: false } },
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Throughput Chart
+            const ctxThroughput = document.getElementById('throughput-chart').getContext('2d');
+            charts.throughput = new Chart(ctxThroughput, {
+                type: 'line',
+                data: {
+                    labels: throughputLabels,
+                    datasets: [{
+                        label: 'Throughput (Kbps)',
+                        data: throughputHistory,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.2,
+                        fill: true,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(35, 45, 63, 0.5)' },
+                            ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(35, 45, 63, 0.5)' },
+                            ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
+                        }
+                    },
+                    plugins: { legend: { display: false } },
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            fetchMetrics();
+            connectWebSocket();
+
+            // Poll metrics every 5 seconds
+            setInterval(fetchMetrics, 5000);
+        }
+    </script>
+</body>
+</html>

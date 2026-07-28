@@ -79,7 +79,6 @@ pub struct AlertEngine {
     last_second: Instant,
     current_second_pkts: usize,
 
-    http_error_rates: VecDeque<usize>,
     last_minute: Instant,
     current_minute_errors: usize,
     prev_minute_errors: usize,
@@ -171,7 +170,6 @@ impl AlertEngine {
             pkt_rates: VecDeque::new(),
             last_second: Instant::now(),
             current_second_pkts: 0,
-            http_error_rates: VecDeque::new(),
             last_minute: Instant::now(),
             current_minute_errors: 0,
             prev_minute_errors: 0,

@@ -208,7 +208,7 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 - [x] **2.4.5** **Telegram** — bot API
 - [x] **2.4.11** **Syslog alert** — alert'leri de syslog olarak SIEM'e geri besleme (kapalı döngü)
 - [x] **2.4.12** **Windows Event Log** — alert'leri yerel Event Viewer'a yaz (Windows sensörler için)
-- [x] **2.4.13** işletim sisteminde sekme açıp bilgilendirme
+- [x] **2.4.13** **işletim sisteminde sekme açıp bilgilendirme**
 
 ---
 

@@ -206,6 +206,31 @@ pub struct DashboardSummary {
     pub top_talkers: Vec<TopTalker>,
     pub top_threats: Vec<TopThreat>,
     pub alerts_by_severity: Vec<CountBySeverity>,
+    
+    // New Metrics
+    pub total_events_24h: i64,
+    pub open_alerts_l1: i64,
+    pub open_alerts_l2: i64,
+    pub open_alerts_l3: i64,
+    pub alert_trend_1h: Vec<i64>,
+    pub top_attackers_5: Vec<IpCount>,
+    pub top_targets_5: Vec<IpCount>,
+    pub protocol_distribution: Vec<ProtocolCount>,
+    pub aggregate_throughput_bps: i64,
+    pub mttr_seconds_7d: f64,
+    pub false_positive_rate_7d: f64,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow, Clone)]
+pub struct IpCount {
+    pub ip: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow, Clone)]
+pub struct ProtocolCount {
+    pub protocol: String,
+    pub count: i64,
 }
 
 #[derive(Debug, Serialize)]
