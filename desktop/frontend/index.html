@@ -506,6 +506,11 @@
           <span id="diff-b-label" class="diff-label">B: —</span>
           <span class="spacer"></span>
           <button id="diff-run" class="btn btn-small btn-primary" data-i18n="diff.compare">🔀 Compare A → B</button>
+          <span class="separator">|</span>
+          <button id="diff-pkt-a" class="btn btn-small" title="Use the selected packet as the left side">🅰 Packet A</button>
+          <span id="diff-pkt-a-label" class="diff-label">—</span>
+          <button id="diff-pkt-b" class="btn btn-small" title="Use the selected packet as the right side">🅱 Packet B</button>
+          <span id="diff-pkt-b-label" class="diff-label">—</span>
         </div>
         <div id="diff-body">
           <div class="diff-empty" data-i18n-html="diff.empty">Take <b>Snapshot A</b> (a baseline), let traffic change, then take <b>Snapshot B</b> and Compare. netscope highlights what appeared, grew, or vanished between the two — the delta.</div>

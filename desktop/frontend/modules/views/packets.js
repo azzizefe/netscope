@@ -317,6 +317,50 @@ export function buildDetailTree(pkt, index) {
 }
 window.buildDetailTree = buildDetailTree;
 
+/**
+ * The decoded header fields of one packet, flattened and ordered.
+ *
+ * `buildDetailTree` renders straight to HTML, so it cannot be compared against
+ * anything. This is the same decode expressed as data: a stable, ordered list
+ * that two packets can be lined up against field by field. Ordered rather than
+ * keyed because the Compare view shows the layers in the order they sit on the
+ * wire, and a missing layer has to keep its place.
+ */
+export function packetHeaderFields(pkt) {
+  const raw = pkt.raw || [];
+  const R = fieldRanges(raw);
+  const out = [];
+  const add = (section, key, value) => out.push({ section, key, value });
+
+  add('Frame', 'Length on wire', `${pkt.length} bytes`);
+  add('Frame', 'Captured', `${raw.length} bytes`);
+  add('Frame', 'Protocol', pkt.protocol);
+  add('Frame', 'Summary', pkt.summary || '');
+
+  if (R.ethDst && raw.length >= 14) {
+    add('Ethernet', 'Destination', macStr(raw.slice(R.ethDst[0], R.ethDst[1])));
+    add('Ethernet', 'Source', macStr(raw.slice(R.ethSrc[0], R.ethSrc[1])));
+    add('Ethernet', 'EtherType', `0x${u16be(raw, R.ethType[0]).toString(16).padStart(4, '0')}`);
+  }
+
+  const ipVer = pkt.src_addr ? (pkt.src_addr.includes(':') ? 'IPv6' : 'IPv4') : null;
+  if (ipVer) add('Network', 'Version', ipVer);
+  if (pkt.src_addr) add('Network', 'Source address', pkt.src_addr);
+  if (pkt.dst_addr) add('Network', 'Destination address', pkt.dst_addr);
+  if (pkt.src_host) add('Network', 'Source host', pkt.src_host);
+  if (pkt.dst_host) add('Network', 'Destination host', pkt.dst_host);
+
+  const transport = transportName(pkt.protocol);
+  if (transport && (pkt.src_port != null || pkt.dst_port != null)) {
+    add('Transport', 'Protocol', transport);
+    if (pkt.src_port != null) add('Transport', 'Source port', String(pkt.src_port));
+    if (pkt.dst_port != null) add('Transport', 'Destination port', String(pkt.dst_port));
+  }
+
+  return out;
+}
+window.packetHeaderFields = packetHeaderFields;
+
 export function showDetail(index) {
   const pkt = state.filteredPackets[index];
   if (!pkt) return;

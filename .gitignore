@@ -36,7 +36,6 @@ dist/
 # ============================================================
 .env
 .env.*
-!.env.example
 *.local.toml
 secrets.toml
 credentials.json

@@ -4,7 +4,7 @@
 // Talks to the Rust backend over Tauri IPC (window.__TAURI__).
 
 import { invoke, listen, loadInterfaces, startCapture, stopCapture, onCaptureStopped, openCaptureOptions, openRemoteCapture, startRemoteCapture, doBlock, doUnblock } from './modules/api.js';
-import { packetRowHtml, renderPacketRows, renderPacketList, transportName, fieldRanges, treeNode, buildDetailTree, showDetail, hideDetail, hexDump, highlightBytes, loadProtocolCount } from './modules/views/packets.js';
+import { packetRowHtml, renderPacketRows, renderPacketList, transportName, fieldRanges, treeNode, buildDetailTree, packetHeaderFields, showDetail, hideDetail, hexDump, highlightBytes, loadProtocolCount } from './modules/views/packets.js';
 import { closeVoipModal, switchVoipTab, renderVoipFlow, playVoipAudio, stopVoipAudio, renderVoipPlayer, showVoip } from './modules/views/voip.js';
 import initWasm from './wasm/netscope_wasm.js';
 import { observeDevice, renderWifi, initWifi } from './modules/wifi.js';
@@ -2970,12 +2970,98 @@ function deltaCell(a, b, fmt = (x) => x) {
   const sign = d > 0 ? '+' : '';
   return `<span class="${cls}">${sign}${fmt(d)}</span>`;
 }
-function renderDiff() {
-  const { a, b } = state.diff;
-  if (!a || !b) {
-    els.diffBody.innerHTML = '<div class="diff-empty">Take <b>Snapshot A</b> (a baseline), let traffic change, then take <b>Snapshot B</b> and Compare. netscope highlights what appeared, grew, or vanished between the two — the delta.</div>';
+/**
+ * Field-by-field comparison of two individual packets.
+ *
+ * The snapshot diff below answers "what changed across the capture". This
+ * answers the other question people bring to a compare view: two packets look
+ * alike in the list, so what is actually different about them? Lining the
+ * decoded headers up side by side is much faster than reading two detail trees
+ * and holding them both in your head.
+ */
+function renderPacketDiff() {
+  const { pktA, pktB } = state.diff;
+  if (!pktA || !pktB) {
+    return `<div class="diff-empty">Select a packet and press <b>🅰 Packet A</b>, then select another and press
+      <b>🅱 Packet B</b>. Their headers are lined up here field by field, with the differences marked.</div>`;
+  }
+
+  const fa = packetHeaderFields(pktA);
+  const fb = packetHeaderFields(pktB);
+
+  // Union of both field lists, keeping wire order. A field only one packet has
+  // still gets a row — its absence is usually the interesting part.
+  const seen = new Set();
+  const keys = [];
+  for (const f of [...fa, ...fb]) {
+    const id = `${f.section} ${f.key}`;
+    if (!seen.has(id)) { seen.add(id); keys.push({ section: f.section, key: f.key, id }); }
+  }
+
+  const valueOf = (fields, id) => {
+    const hit = fields.find((f) => `${f.section} ${f.key}` === id);
+    return hit ? hit.value : null;
+  };
+
+  let differences = 0;
+  let section = null;
+  const rows = [];
+  for (const k of keys) {
+    const va = valueOf(fa, k.id);
+    const vb = valueOf(fb, k.id);
+    const same = va === vb;
+    if (!same) differences += 1;
+    if (k.section !== section) {
+      section = k.section;
+      rows.push(`<tr class="diff-sec"><td colspan="3">${esc(section)}</td></tr>`);
+    }
+    const cell = (v) => (v === null ? '<span class="diff-absent">—</span>' : esc(v));
+    rows.push(`<tr class="${same ? '' : 'diff-changed'}">` +
+      `<td class="diff-key">${esc(k.key)}</td>` +
+      `<td>${cell(va)}</td><td>${cell(vb)}</td></tr>`);
+  }
+
+  const label = (p) => `#${p.__diffIndex ?? '?'} ${p.protocol}`;
+  return `<div class="diff-section">
+    <h3>Packet headers — ${differences === 0
+      ? 'identical across every field'
+      : `${differences} field${differences === 1 ? '' : 's'} differ`}</h3>
+    <table class="diff-table">
+      <tr><th>Field</th><th>A · ${esc(label(pktA))}</th><th>B · ${esc(label(pktB))}</th></tr>
+      ${rows.join('')}
+    </table></div>`;
+}
+
+function setDiffPacket(slot) {
+  const pkt = state.selectedPacket;
+  if (!pkt) {
+    toast('Select a packet in the Packets tab first.');
     return;
   }
+  // Snapshot the packet, not a live reference: the capture keeps running and
+  // the packet list evicts, so a reference would go stale or change under the
+  // comparison.
+  const copy = { ...pkt, __diffIndex: state.selectedIndex + 1 };
+  state.diff[slot === 'a' ? 'pktA' : 'pktB'] = copy;
+  const el = slot === 'a' ? els.diffPktALabel : els.diffPktBLabel;
+  if (el) el.textContent = `#${copy.__diffIndex} ${copy.protocol}`;
+  renderDiff();
+}
+
+function renderDiff() {
+  const packetPart = renderPacketDiff();
+  const { a, b } = state.diff;
+  if (!a || !b) {
+    els.diffBody.innerHTML = packetPart +
+      '<div class="diff-empty">Take <b>Snapshot A</b> (a baseline), let traffic change, then take ' +
+      '<b>Snapshot B</b> and Compare. netscope highlights what appeared, grew, or vanished between the two — the delta.</div>';
+    return;
+  }
+  renderSnapshotDiff(packetPart);
+}
+
+function renderSnapshotDiff(packetPart) {
+  const { a, b } = state.diff;
   const rows = [];
   rows.push(`<div class="diff-section"><h3>Totals</h3><table class="diff-table"><tr><th>Metric</th><th>A</th><th>B</th><th>Δ</th></tr>` +
     `<tr><td>Packets</td><td>${a.packets.toLocaleString()}</td><td>${b.packets.toLocaleString()}</td><td>${deltaCell(a.packets, b.packets, (x) => x.toLocaleString())}</td></tr>` +
@@ -3000,7 +3086,7 @@ function renderDiff() {
   }).join('');
   rows.push(`<div class="diff-section"><h3>Hosts — biggest movers</h3><table class="diff-table"><tr><th>Host</th><th>A</th><th>B</th><th>Δ bytes</th></tr>${hostRows}</table></div>`);
 
-  els.diffBody.innerHTML = rows.join('');
+  els.diffBody.innerHTML = packetPart + rows.join('');
 }
 
 // ---- Signature engine (YARA-lite) — match payloads against known-bad indicators ----
@@ -4731,6 +4817,8 @@ async function init() {
     statBandwidth: $('#stat-bandwidth'), statBlocked: $('#stat-blocked'), protoBars: $('#proto-bars'),
     talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
     lessonSearch: $('#lesson-search'), lessonCount: $('#lesson-count'),
+    diffPktA: $('#diff-pkt-a'), diffPktB: $('#diff-pkt-b'),
+    diffPktALabel: $('#diff-pkt-a-label'), diffPktBLabel: $('#diff-pkt-b-label'),
     glossaryList: $('#glossary-list'), featureCards: $('#feature-cards'),
     scriptEditor: $('#script-editor'), scriptRun: $('#script-run'), scriptClear: $('#script-clear'),
     scriptExamples: $('#script-examples'), scriptOutput: $('#script-output'),
@@ -4904,6 +4992,8 @@ async function init() {
   els.filterInput.addEventListener('input', () => { state.filterText = els.filterInput.value; renderPacketList(); refreshSuggestions(); });
   els.filterInput.addEventListener('keydown', filterKeydown);
   els.lessonSearch?.addEventListener('input', renderLessons);
+  els.diffPktA?.addEventListener('click', () => setDiffPacket('a'));
+  els.diffPktB?.addEventListener('click', () => setDiffPacket('b'));
   els.filterInput.addEventListener('blur', () => setTimeout(hideSuggestions, 120));
   // Click a suggestion to accept it (mousedown so it fires before blur hides).
   $('#filter-suggest').addEventListener('mousedown', (e) => {
