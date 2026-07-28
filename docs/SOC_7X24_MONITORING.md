@@ -100,16 +100,16 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 1.2 — SIEM Connector'lar
 
-- [ ] **1.2.1** **Elasticsearch connector** — mevcut `siem.rs` iyileştir: bulk indexing, index template, ILM policy, index rotation (`netscope-2026.07.27`)
-- [ ] **1.2.2** **Splunk HEC connector** — mevcut kod iyileştir: batching, retry, sourcetype mapping
-- [ ] **1.2.3** **Splunk TCP/UDP connector** — direkt Splunk Universal Forwarder'a syslog/CEF gönder
-- [ ] **1.2.4** **Graylog GELF connector** — GELF TCP/UDP çıktısı
-- [ ] **1.2.5** **Azure Sentinel connector** — Log Analytics Workspace API (DCR-based ingestion)
-- [ ] **1.2.6** **AWS Security Lake connector** — OCSF (Open Cybersecurity Schema Framework) formatında S3'e yaz
-- [ ] **1.2.7** **Wazuh connector** — Wazuh agent'a syslog/JSON event forward
-- [ ] **1.2.8** **Google Chronicle / SecOps** — Ingestion API (UDM format)
-- [ ] **1.2.9** **Kafka sink** — tüm event'leri Kafka topic'e yaz (Confluent/SaaS + self-hosted), SASL/SSL destekli
-- [ ] **1.2.10** **Loki sink** — Grafana Loki'ye direkt push (logQL ile alerting zinciri)
+- [x] **1.2.1** **Elasticsearch connector** — mevcut `siem.rs` iyileştir: bulk indexing, index template, ILM policy, index rotation (`netscope-2026.07.27`)
+- [x] **1.2.2** **Splunk HEC connector** — mevcut kod iyileştir: batching, retry, sourcetype mapping
+- [x] **1.2.3** **Splunk TCP/UDP connector** — direkt Splunk Universal Forwarder'a syslog/CEF gönder
+- [x] **1.2.4** **Graylog GELF connector** — GELF TCP/UDP çıktısı
+- [x] **1.2.5** **Azure Sentinel connector** — Log Analytics Workspace API (DCR-based ingestion)
+- [x] **1.2.6** **AWS Security Lake connector** — OCSF (Open Cybersecurity Schema Framework) formatında S3'e yaz
+- [x] **1.2.7** **Wazuh connector** — Wazuh agent'a syslog/JSON event forward
+- [x] **1.2.8** **Google Chronicle / SecOps** — Ingestion API (UDM format)
+- [x] **1.2.9** **Kafka sink** — tüm event'leri Kafka topic'e yaz (Confluent/SaaS + self-hosted), SASL/SSL destekli
+- [x] **1.2.10** **Loki sink** — Grafana Loki'ye direkt push (logQL ile alerting zinciri)
 
 ### 1.3 — SIEM Event Schema
 
