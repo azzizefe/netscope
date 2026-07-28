@@ -680,6 +680,55 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .diff-section h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 8px; }
 .diff-table { width: 100%; max-width: 720px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 
+/* Service call chain under the topology map. */
+.call-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.call-table th {
+  text-align: left;
+  padding: 6px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  border-bottom: 1px solid var(--border);
+}
+.call-table td { padding: 6px 8px; border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
+.call-table .call-num { text-align: right; white-space: nowrap; }
+.call-table .call-arrow { opacity: 0.5; margin: 0 4px; }
+.call-table .call-to { font-weight: 600; }
+.call-table .call-proto { opacity: 0.75; }
+/* Network RTT is the reference the service time is read against, so it is
+   present but deliberately quieter than the number being judged. */
+.call-table .call-net { opacity: 0.6; }
+.call-bar { height: 3px; background: color-mix(in srgb, var(--border) 50%, transparent); border-radius: 2px; margin-top: 3px; }
+.call-bar span { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+
+/* Trace waterfall. Each bar is positioned against its own trace's span, so a
+   row reads as "when in this request, and for how long" — an absolute scale
+   across traces would make a fast trace an invisible sliver. */
+.trace {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--bg-elev);
+}
+.trace-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.trace-id { font-size: 12px; opacity: 0.9; }
+.trace-meta { font-size: 11px; opacity: 0.6; }
+.trace-span { display: grid; grid-template-columns: 190px 1fr 72px; gap: 10px; align-items: center; margin-top: 3px; }
+.trace-label { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-track { position: relative; height: 14px; background: color-mix(in srgb, var(--border) 35%, transparent); border-radius: 3px; }
+.trace-bar { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 3px; min-width: 2px; }
+/* An unanswered request has no end, so it is hatched rather than given a
+   length the capture never observed. */
+.trace-open {
+  background: repeating-linear-gradient(45deg,
+    var(--accent), var(--accent) 3px, transparent 3px, transparent 6px);
+  right: 0;
+  width: auto !important;
+}
+.trace-dur { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; opacity: 0.8; }
+
 /* Security-risk node in the packet detail. Only appears for protocols that
    have a documented weakness, so it is allowed to be loud when it does. */
 .tnode-risk .risk-headline { font-weight: 600; margin-bottom: 6px; }
@@ -721,10 +770,27 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
   text-transform: uppercase;
   font-size: 11px;
 }
-.diff-table tr.diff-changed { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .diff-table tr.diff-changed .diff-key { font-weight: 600; }
 .diff-table .diff-key { opacity: 0.85; }
 .diff-table .diff-absent { opacity: 0.4; font-style: italic; }
+
+/* Cell-level colouring rather than a row tint: red is the value that is gone,
+   green the one that replaced it. Both carry a left border as well as a fill,
+   so the distinction survives for a red-green colour-blind reader — the fill
+   alone would not (ROADMAP §6.3). */
+.diff-table .diff-cell { padding: 3px 8px; }
+.diff-table .diff-old {
+  background: color-mix(in srgb, #dc2626 16%, transparent);
+  border-left: 3px solid #dc2626;
+}
+.diff-table .diff-new {
+  background: color-mix(in srgb, #16a34a 16%, transparent);
+  border-left: 3px solid #16a34a;
+}
+.diff-table .diff-missing { background: repeating-linear-gradient(
+  45deg, transparent, transparent 4px,
+  color-mix(in srgb, var(--border) 45%, transparent) 4px,
+  color-mix(in srgb, var(--border) 45%, transparent) 8px); }
 .diff-table th { text-align: left; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; padding: 4px 10px; border-bottom: 1px solid var(--border); }
 .diff-table td { padding: 5px 10px; border-bottom: 1px solid rgba(42,53,71,.4); }
 .diff-up { color: var(--ok); font-weight: 600; }

@@ -147,6 +147,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
 
       - name: Install system deps (Linux)
@@ -169,6 +171,32 @@ jobs:
           Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip" -UseBasicParsing
           Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk" -Force
           echo "LIBPCAP_LIBDIR=$env:TEMP\npcap-sdk\Lib\x64" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # `desktop/frontend/wasm/` is generated, not committed — and app.js opens
+      # with `import initWasm from './wasm/netscope_wasm.js'`. Without this step
+      # the bundler packaged a frontend whose first import 404s, so the shipped
+      # installers came up to a blank window. It only worked on a developer
+      # machine because the directory was left over from a local build.
+      #
+      # Built before the Tauri CLI is installed so a compile failure surfaces
+      # before the slower step, the same ordering as ci.yml's frontend job.
+      - name: Build WASM filter module
+        run: cargo build -p netscope-wasm --release --target wasm32-unknown-unknown
+
+      # Pinned to the `wasm-bindgen` crate version in Cargo.lock — the CLI
+      # refuses to run against a module built by a different one. Same install
+      # method and same version as ci.yml, so the two cannot drift apart
+      # silently.
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.126
+
+      - name: Generate WASM bindings
+        shell: bash
+        run: |
+          wasm-bindgen \
+            --target web \
+            --out-dir desktop/frontend/wasm \
+            target/wasm32-unknown-unknown/release/netscope_wasm.wasm
 
       - name: Install Tauri CLI
         uses: taiki-e/install-action@v2

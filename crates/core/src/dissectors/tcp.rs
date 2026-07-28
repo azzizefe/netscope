@@ -577,13 +577,9 @@ mod tests {
     fn an_ephemeral_source_port_is_not_a_protocol() {
         for port in [51000u16, 51001, 51002] {
             let protocol = dissect_on_port(port, &[0u8; 64]).protocol;
-            assert!(
-                !matches!(
-                    protocol,
-                    Protocol::EdgePytorchMobile
-                        | Protocol::NxpEiqInference
-                        | Protocol::StmStm32cubeAi
-                ),
+            assert_eq!(
+                protocol,
+                Protocol::Tcp,
                 "port {port} claimed 64 zero bytes as {protocol:?}",
             );
         }

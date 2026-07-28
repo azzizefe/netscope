@@ -34,7 +34,22 @@ rustls-pemfile = "2"
 tokio-rustls = "0.26"
 
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "uuid", "migrate"] }
+# `default-features = false` drops sqlx's `any` driver, and with it the
+# `sqlx-sqlite` → `libsqlite3-sys` chain. That matters because `netscope-agent`
+# links `libsqlite3-sys` through `rusqlite`, and only one version of a `-sys`
+# crate may exist in a build — with the defaults on, no sqlx past 0.8.0 could
+# be resolved workspace-wide. `macros` and `json` are re-added explicitly
+# because they are defaults this crate actually uses (`FromRow` derives).
+sqlx = { version = "0.8.6", default-features = false, features = [
+    "runtime-tokio",
+    "tls-rustls",
+    "postgres",
+    "chrono",
+    "uuid",
+    "migrate",
+    "macros",
+    "json",
+] }
 
 # Cache
 redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }

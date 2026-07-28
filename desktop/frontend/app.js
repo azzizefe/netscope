@@ -335,7 +335,7 @@ function refreshAfterIngest() {
   if (state.view === 'packets') renderPacketList();
   else if (state.view === 'connections') renderConnections();
   else if (state.view === 'dashboard') renderStats();
-  else if (state.view === 'topology') renderTopology();
+  else if (state.view === 'topology') { renderTopology(); renderServiceCalls(); renderTraces(); }
   else if (state.view === 'script') updateScriptCount();
   else if (state.view === 'wifi') renderWifi();
 }
@@ -1477,9 +1477,20 @@ function renderHeatmap() {
 function renderFlowGraph() {
   const svg = $('#flowgraph-svg'), hint = $('#flowgraph-hint');
   if (!svg) return;
+  // Follow the selection when there is one. Picking the busiest flow is a
+  // reasonable opening view, but it made the ladder unsteerable: the one
+  // conversation you had just clicked on in the packet list was the one thing
+  // it would not show you.
   let best = null;
-  for (const f of state.flows.values()) {
-    if ((transportOf(f.proto) === 'tcp' || transportOf(f.proto) === 'udp') && f.pkts.length && (!best || f.bytes > best.bytes)) best = f;
+  const selectedKey = state.selectedPacket ? flowKeyOf(state.selectedPacket) : null;
+  if (selectedKey) {
+    const f = state.flows.get(selectedKey);
+    if (f && f.pkts.length) best = f;
+  }
+  if (!best) {
+    for (const f of state.flows.values()) {
+      if ((transportOf(f.proto) === 'tcp' || transportOf(f.proto) === 'udp') && f.pkts.length && (!best || f.bytes > best.bytes)) best = f;
+    }
   }
   if (!best) { svg.innerHTML = ''; if (hint) hint.textContent = 'No TCP/UDP conversation yet.'; return; }
   // Sample down to at most 40 packets so the ladder stays readable.
@@ -1497,7 +1508,12 @@ function renderFlowGraph() {
   pkts.forEach((p, i) => {
     const y = top + i * rowH;
     const h = tcpHeader(p.raw);
-    const label = h ? tcpFlagLabel(h.flags) : `${p.len}B`;
+    // What the packet *is* beats what its flags say. A TLS negotiation
+    // labelled by flags is eight identical "PSH ACK" rows; labelled by record
+    // type it is the handshake, in order, which is the reason to open this
+    // view at all.
+    const tls = tlsRecordLabel(p.raw);
+    const label = tls || (h ? tcpFlagLabel(h.flags) : `${p.len}B`);
     const dt = p.epoch != null && t0 != null ? `+${((p.epoch - t0)).toFixed(0)}ms` : '';
     const x1 = p.fromClient ? xC : xS, x2 = p.fromClient ? xS : xC;
     const color = p.fromClient ? 'var(--accent)' : 'var(--http)';
@@ -1509,6 +1525,370 @@ function renderFlowGraph() {
   const client = endpointLabel(best.clientAddr, null, best.clientPort);
   const server = endpointLabel(best.serverAddr, best.serverHost, best.serverPort);
   if (hint) hint.textContent = `${client} ⇄ ${server} · ${best.pkts.length} pkt shown${best.pkts.length > 40 ? ' (sampled)' : ''}`;
+}
+
+// ---- Service call chain — who calls whom, and how long it takes ----
+
+/** Median and 95th percentile of a sample list, or null when empty. */
+function latencyStats(samples) {
+  if (!samples.length) return null;
+  const s = [...samples].sort((a, b) => a - b);
+  const at = (q) => s[Math.min(s.length - 1, Math.floor(q * s.length))];
+  return { count: s.length, median: at(0.5), p95: at(0.95), max: s[s.length - 1] };
+}
+
+/**
+ * Service-to-service calls derived from the observed flows.
+ *
+ * Two latencies, kept apart on purpose, because they answer different
+ * questions and mixing them makes both useless:
+ *
+ * - **network** — the SYN → SYN-ACK gap. Pure round-trip time; the callee has
+ *   done no work yet.
+ * - **service** — a request that carries a payload, to the next response that
+ *   carries one. This is time the callee spent thinking.
+ *
+ * A bare ACK is deliberately not a response. Pairing on any packet at all
+ * measures the TCP acknowledgement delay, which is network RTT wearing a
+ * service-time label — and that is precisely the distinction someone opens
+ * this view to make.
+ *
+ * Requests are paired one at a time: after a request is outstanding, further
+ * client payloads do not start a new measurement until a response arrives.
+ * On a pipelined connection that under-counts calls rather than reporting
+ * inflated latencies for them.
+ */
+function analyzeServiceCalls(flows) {
+  const edges = new Map();
+
+  for (const f of flows) {
+    if (!f.pkts || f.pkts.length < 2) continue;
+    // TCP is read off the frame rather than looked up by protocol name: the
+    // name table is filled in from the backend at startup, and a view that
+    // silently showed nothing until it arrived would look broken. `tcpHeader`
+    // returns null for anything that is not TCP over IP.
+    if (!f.pkts.some((p) => tcpHeader(p.raw))) continue;
+
+    const callee = `${f.serverHost || f.serverAddr}:${f.serverPort ?? '?'}`;
+    const caller = f.clientAddr;
+    const id = `${caller} ${callee}`;
+    let e = edges.get(id);
+    if (!e) {
+      e = { caller, callee, proto: f.proto, bytes: 0, flows: 0, service: [], network: [] };
+      edges.set(id, e);
+    }
+    e.bytes += f.bytes;
+    e.flows += 1;
+    if (protoRank(f.proto) > protoRank(e.proto)) e.proto = f.proto;
+
+    let synAt = null;
+    let awaiting = null;
+    for (const p of f.pkts) {
+      if (p.epoch == null) continue;
+      const h = tcpHeader(p.raw);
+      const isSyn = h && (h.flags & 0x02) !== 0;
+      const isAck = h && (h.flags & 0x10) !== 0;
+
+      if (isSyn && p.fromClient && !isAck) { synAt = p.epoch; continue; }
+      if (isSyn && !p.fromClient && isAck && synAt != null) {
+        e.network.push(p.epoch - synAt);
+        synAt = null;
+        continue;
+      }
+
+      const payload = extractPayload(p.raw);
+      if (!payload || !payload.length) continue;
+
+      if (p.fromClient) {
+        if (awaiting == null) awaiting = p.epoch;
+      } else if (awaiting != null) {
+        e.service.push(p.epoch - awaiting);
+        awaiting = null;
+      }
+    }
+  }
+
+  return [...edges.values()]
+    .map((e) => ({
+      caller: e.caller,
+      callee: e.callee,
+      proto: e.proto,
+      bytes: e.bytes,
+      flows: e.flows,
+      service: latencyStats(e.service),
+      network: latencyStats(e.network),
+    }))
+    // Slowest first: the reason to open this view is to find what is holding
+    // the chain up, not to read an inventory of everything that is fine.
+    .sort((a, b) => (b.service?.median ?? -1) - (a.service?.median ?? -1));
+}
+
+// ---- Distributed trace correlation (W3C Trace Context / B3) ----
+
+const HEX32 = /^[0-9a-f]{32}$/;
+const HEX16 = /^[0-9a-f]{16}$/;
+
+/**
+ * Trace identifiers from an HTTP header block, or null if there are none.
+ *
+ * A note on `spanId`, because the two formats do not mean the same thing by
+ * it. B3 sends the sender's own span id and its parent separately, so both are
+ * known. W3C's `traceparent` field is officially *parent-id*: on a request
+ * from A to B it holds A's span, and B's own span never appears on the wire.
+ * Grouping by `traceId` is unaffected — that is the same value in both — but
+ * it is why only B3 spans can be nested below.
+ *
+ * Only readable on unencrypted HTTP: inside TLS these headers are ciphertext
+ * like everything else, and no amount of parsing recovers them.
+ *
+ * Both formats in common use are accepted — W3C `traceparent` (RFC-track, what
+ * OpenTelemetry emits by default) and Zipkin's B3, single-header and
+ * multi-header. The all-zero id is rejected in both: the W3C spec makes it
+ * explicitly invalid, and it is what a library emits when it is misconfigured,
+ * so accepting it would collapse every unrelated request into one trace.
+ */
+function parseTraceHeaders(text) {
+  if (!text) return null;
+  const header = (name) => {
+    const m = text.match(new RegExp(`^${name}:[ \\t]*(.+)$`, 'im'));
+    return m ? m[1].trim() : null;
+  };
+  const nonZero = (id) => id && !/^0+$/.test(id);
+
+  const traceparent = header('traceparent');
+  if (traceparent) {
+    // version-traceid-parentid-flags; a future version may append more fields,
+    // which the spec says to tolerate rather than reject.
+    const parts = traceparent.toLowerCase().split('-');
+    if (parts.length >= 4 && parts[0] !== 'ff' && /^[0-9a-f]{2}$/.test(parts[0])) {
+      const [, traceId, spanId] = parts;
+      if (HEX32.test(traceId) && HEX16.test(spanId) && nonZero(traceId) && nonZero(spanId)) {
+        return { traceId, spanId, parentId: null, format: 'w3c' };
+      }
+    }
+  }
+
+  const b3 = header('b3');
+  if (b3) {
+    // traceid-spanid[-sampled[-parentspanid]]
+    const parts = b3.toLowerCase().split('-');
+    const [traceId, spanId, , parentId] = parts;
+    if (HEX32.test(traceId || '') && HEX16.test(spanId || '') && nonZero(traceId) && nonZero(spanId)) {
+      return {
+        traceId,
+        spanId,
+        parentId: HEX16.test(parentId || '') && nonZero(parentId) ? parentId : null,
+        format: 'b3',
+      };
+    }
+  }
+
+  const traceId = (header('x-b3-traceid') || '').toLowerCase();
+  const spanId = (header('x-b3-spanid') || '').toLowerCase();
+  if (HEX32.test(traceId) && HEX16.test(spanId) && nonZero(traceId) && nonZero(spanId)) {
+    const parentId = (header('x-b3-parentspanid') || '').toLowerCase();
+    return {
+      traceId,
+      spanId,
+      parentId: HEX16.test(parentId) && nonZero(parentId) ? parentId : null,
+      format: 'b3-multi',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Group the captured spans into traces, each ordered as a waterfall.
+ *
+ * A span is one request that carried a trace header, timed to its response.
+ * Parentage comes from the headers when B3 supplied it; W3C `traceparent`
+ * carries the *caller's* span id, which without the callee's own outgoing
+ * header cannot be resolved from one side of the wire — so those spans are
+ * laid out by start time rather than nested under a guess.
+ */
+function analyzeTraces(flows) {
+  const spans = [];
+
+  for (const f of flows) {
+    // One packet is enough here, unlike `analyzeServiceCalls`: a request that
+    // never got a reply still proves the call was made, and an unanswered call
+    // is usually the one being investigated.
+    if (!f.pkts || !f.pkts.length) continue;
+    if (!f.pkts.some((p) => tcpHeader(p.raw))) continue;
+
+    const callee = `${f.serverHost || f.serverAddr}:${f.serverPort ?? '?'}`;
+    let pending = null;
+    for (const p of f.pkts) {
+      if (p.epoch == null) continue;
+      const payload = extractPayload(p.raw);
+      if (!payload || !payload.length) continue;
+
+      if (p.fromClient) {
+        if (pending) continue; // one outstanding request at a time, as in analyzeServiceCalls
+        const ids = parseTraceHeaders(decodeStreamText(payload));
+        if (ids) pending = { ...ids, caller: f.clientAddr, callee, start: p.epoch };
+      } else if (pending) {
+        spans.push({ ...pending, duration: p.epoch - pending.start });
+        pending = null;
+      }
+    }
+    // A request whose reply never arrived is still evidence the call was made.
+    if (pending) spans.push({ ...pending, duration: null });
+  }
+
+  const traces = new Map();
+  for (const s of spans) {
+    if (!traces.has(s.traceId)) traces.set(s.traceId, []);
+    traces.get(s.traceId).push(s);
+  }
+
+  return [...traces.entries()]
+    .map(([traceId, list]) => {
+      const ordered = [...list].sort((a, b) => a.start - b.start);
+      const t0 = ordered[0].start;
+      const end = Math.max(...ordered.map((s) => s.start + (s.duration ?? 0)));
+      return {
+        traceId,
+        format: ordered[0].format,
+        total: end - t0,
+        spans: ordered.map((s) => ({
+          ...s,
+          offset: s.start - t0,
+          // Depth from reported parentage where there is any; a span whose
+          // parent is not in the capture stays at the root rather than being
+          // hidden under one that is missing.
+          depth: s.parentId && list.some((o) => o.spanId === s.parentId) ? 1 : 0,
+        })),
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+}
+
+/** Render the service call chain under the topology map. */
+function renderServiceCalls() {
+  const host = els.serviceCalls;
+  if (!host) return;
+
+  const edges = analyzeServiceCalls([...state.flows.values()]);
+  if (!edges.length) {
+    host.innerHTML = '<div class="insights-empty">No TCP conversations yet — service timings appear once a request and its reply have both been seen.</div>';
+    return;
+  }
+
+  const ms = (v) => (v == null ? '—' : v < 1 ? '<1 ms' : `${Math.round(v)} ms`);
+  const rows = edges.slice(0, 40).map((e) => {
+    // The bar is scaled against the slowest edge, so it reads as "how much of
+    // the worst case is this" rather than an absolute that means nothing
+    // without a reference.
+    const worst = edges[0].service?.median || 1;
+    const share = e.service ? Math.max(2, Math.round((e.service.median / worst) * 100)) : 0;
+    return `<tr>
+      <td class="call-edge"><span class="call-from">${esc(e.caller)}</span>
+        <span class="call-arrow">→</span>
+        <span class="call-to">${esc(e.callee)}</span></td>
+      <td class="call-proto">${esc(e.proto)}</td>
+      <td class="call-num">${e.service ? e.service.count : 0}</td>
+      <td class="call-num">${e.service ? ms(e.service.median) : '—'}
+        <div class="call-bar"><span style="width:${share}%"></span></div></td>
+      <td class="call-num">${e.service ? ms(e.service.p95) : '—'}</td>
+      <td class="call-num call-net">${e.network ? ms(e.network.median) : '—'}</td>
+      <td class="call-num">${formatBytes(e.bytes)}</td>
+    </tr>`;
+  }).join('');
+
+  host.innerHTML = `<table class="call-table">
+    <tr><th>Caller → service</th><th>Proto</th><th>Calls</th>
+      <th title="Request payload to response payload — time the callee spent working">Service (median)</th>
+      <th>p95</th>
+      <th title="SYN to SYN-ACK — round-trip only, before the callee does anything">Network</th>
+      <th>Bytes</th></tr>
+    ${rows}</table>`;
+}
+
+/** Render correlated traces as a waterfall under the service call table. */
+function renderTraces() {
+  const host = els.traceList;
+  if (!host) return;
+
+  const traces = analyzeTraces([...state.flows.values()]);
+  if (!traces.length) {
+    host.innerHTML = '<div class="insights-empty">No trace headers seen. ' +
+      'netscope reads <code>traceparent</code> and B3 headers, but only on unencrypted HTTP — ' +
+      'inside TLS they are ciphertext like the rest of the request.</div>';
+    return;
+  }
+
+  const ms = (v) => (v == null ? '—' : v < 1 ? '<1 ms' : `${Math.round(v)} ms`);
+  host.innerHTML = traces.slice(0, 12).map((tr) => {
+    // Every bar is positioned against the trace's own span, so the row reads
+    // as "when in this request did this happen, and for how long".
+    const scale = tr.total || 1;
+    const spans = tr.spans.map((s) => {
+      const left = (s.offset / scale) * 100;
+      const width = s.duration == null ? 1 : Math.max(1, (s.duration / scale) * 100);
+      return `<div class="trace-span" style="padding-left:${s.depth * 16}px">
+        <div class="trace-label" title="${esc(s.caller)} → ${esc(s.callee)}">${esc(s.callee)}</div>
+        <div class="trace-track">
+          <span class="trace-bar${s.duration == null ? ' trace-open' : ''}"
+            style="left:${left}%;width:${width}%"></span>
+        </div>
+        <div class="trace-dur">${s.duration == null ? 'no reply' : ms(s.duration)}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="trace">
+      <div class="trace-head">
+        <code class="trace-id" title="${esc(tr.traceId)}">${esc(tr.traceId.slice(0, 16))}…</code>
+        <span class="trace-meta">${tr.spans.length} span${tr.spans.length === 1 ? '' : 's'}
+          · ${ms(tr.total)} · ${esc(tr.format)}</span>
+      </div>${spans}</div>`;
+  }).join('');
+}
+
+// TLS record content types and handshake message types (RFC 8446 §5, §4).
+const TLS_CONTENT = { 20: 'ChangeCipherSpec', 21: 'Alert', 23: 'AppData' };
+const TLS_HANDSHAKE = {
+  1: 'ClientHello', 2: 'ServerHello', 4: 'NewSessionTicket', 8: 'EncryptedExtensions',
+  11: 'Certificate', 12: 'ServerKeyExchange', 13: 'CertificateRequest',
+  14: 'ServerHelloDone', 15: 'CertificateVerify', 16: 'ClientKeyExchange', 20: 'Finished',
+};
+
+/**
+ * Name the TLS record a packet carries, or null if it does not carry one.
+ *
+ * The ladder used to label every row with its TCP flags, so a TLS negotiation
+ * read as eight rows of "PSH ACK" — the shape of the handshake, which is the
+ * thing worth seeing, was invisible. This reads the record header instead:
+ * content type, version, length, and for a handshake record the message type
+ * in the first payload byte.
+ *
+ * Validated rather than assumed: a record claiming a length that does not fit
+ * the segment, or a version outside the TLS range, is not reported as TLS.
+ * Encrypted handshake records (TLS 1.3 wraps everything after ServerHello)
+ * come back as "AppData", which is the honest answer — the message type is
+ * inside the encryption.
+ */
+function tlsRecordLabel(raw) {
+  const p = extractPayload(raw);
+  if (!p || p.length < 5) return null;
+
+  const type = p[0];
+  const major = p[1];
+  const minor = p[2];
+  // 0x0301-0x0304 (TLS 1.0-1.3) and 0x0300 (SSLv3) are the record versions
+  // seen on the wire; TLS 1.3 still writes 0x0303 for compatibility.
+  if (major !== 0x03 || minor > 0x04) return null;
+  const len = (p[3] << 8) | p[4];
+  if (len === 0 || len > 16640) return null; // RFC 8446 §5.1 caps a record at 2^14 + overhead
+
+  if (type === 22) {
+    // A handshake record whose declared length is not yet complete is a
+    // fragment; the message type is still in the first byte.
+    const msg = p.length > 5 ? TLS_HANDSHAKE[p[5]] : null;
+    return msg || 'Handshake';
+  }
+  return TLS_CONTENT[type] || null;
 }
 
 function tcpFlagLabel(flags) {
@@ -3017,10 +3397,17 @@ function renderPacketDiff(pktA, pktB) {
       section = k.section;
       rows.push(`<tr class="diff-sec"><td colspan="3">${esc(section)}</td></tr>`);
     }
-    const cell = (v) => (v === null ? '<span class="diff-absent">—</span>' : esc(v));
+    // Excel-style: the two cells are coloured, not the row. Red on the left is
+    // the value that is gone, green on the right the one that replaced it —
+    // and a field only one side carries gets exactly one coloured cell, so
+    // "changed" and "appeared" are told apart at a glance rather than both
+    // showing up as a highlighted row.
+    const cell = (v, klass) => (v === null
+      ? '<td class="diff-cell diff-missing"><span class="diff-absent">—</span></td>'
+      : `<td class="diff-cell${same ? '' : ` ${klass}`}">${esc(v)}</td>`);
     rows.push(`<tr class="${same ? '' : 'diff-changed'}">` +
       `<td class="diff-key">${esc(k.key)}</td>` +
-      `<td>${cell(va)}</td><td>${cell(vb)}</td></tr>`);
+      cell(va, 'diff-old') + cell(vb, 'diff-new') + '</tr>');
   }
 
   const label = (p) => `#${p.__diffIndex ?? '?'} ${p.protocol}`;
@@ -4820,6 +5207,7 @@ async function init() {
     statBandwidth: $('#stat-bandwidth'), statBlocked: $('#stat-blocked'), protoBars: $('#proto-bars'),
     talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
     lessonSearch: $('#lesson-search'), lessonCount: $('#lesson-count'),
+    serviceCalls: $('#service-calls'), traceList: $('#trace-list'),
     diffPktA: $('#diff-pkt-a'), diffPktB: $('#diff-pkt-b'),
     diffPktALabel: $('#diff-pkt-a-label'), diffPktBLabel: $('#diff-pkt-b-label'),
     glossaryList: $('#glossary-list'), featureCards: $('#feature-cards'),

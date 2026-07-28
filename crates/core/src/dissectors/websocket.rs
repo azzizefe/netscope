@@ -87,6 +87,20 @@ fn parse_frame(b: &[u8]) -> Option<Frame> {
         return None;
     }
 
+    // A continuation frame that is empty and not final says "more of this
+    // message follows" while carrying none of it, and ends nothing. No sender
+    // emits one.
+    //
+    // This is what an all-zero buffer decodes to: `00 00` is RSV-clear,
+    // opcode 0, length 0, so a run of zero bytes parsed as a chain of these
+    // and the whole segment was reported as WebSocket. Sixty-four zero bytes
+    // on an arbitrary port came back labelled "WebSocket Continuation — 0
+    // bytes (+31 more frames)", which is exactly the mislabelling a sniff
+    // that claims traffic by framing alone has to avoid.
+    if opcode == OP_CONTINUATION && declared_len == 0 && !fin {
+        return None;
+    }
+
     let mask_key = if masked {
         let k = b.get(off..off + 4)?;
         off += 4;
@@ -340,6 +354,37 @@ mod tests {
         assert!(summary_of(&f).is_none());
         // Non-minimal extended length is rejected.
         assert!(summary_of(&[0x81, 126, 0x00, 0x05, b'h', b'e', b'l', b'l', b'o']).is_none());
+    }
+
+    /// A buffer of zero bytes is not WebSocket.
+    ///
+    /// `00 00` satisfies every structural rule — RSV clear, opcode 0
+    /// (continuation), length 0 — so a run of zeros parsed as a chain of empty
+    /// continuation frames and the segment was reported as WebSocket. This
+    /// dissector is reached by framing alone on any port, so that mislabelled
+    /// every all-zero payload in a capture.
+    #[test]
+    fn a_run_of_zero_bytes_is_not_a_frame_chain() {
+        for len in [2usize, 4, 16, 64, 512] {
+            assert!(
+                summary_of(&vec![0u8; len]).is_none(),
+                "{len} zero bytes were accepted as WebSocket",
+            );
+        }
+    }
+
+    /// The rule is narrow on purpose: an empty continuation that *is* final
+    /// legitimately ends a fragmented message, and must still parse.
+    #[test]
+    fn an_empty_final_continuation_still_parses() {
+        assert!(summary_of(&[0x80, 0x00]).is_some());
+    }
+
+    /// A continuation frame carrying actual data is ordinary mid-message
+    /// traffic — the fix must not reject fragmentation itself.
+    #[test]
+    fn a_continuation_frame_with_a_payload_still_parses() {
+        assert!(summary_of(&frame(false, OP_CONTINUATION, None, b"more")).is_some());
     }
 
     #[test]

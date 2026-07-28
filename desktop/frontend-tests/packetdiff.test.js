@@ -105,4 +105,35 @@ describe('renderPacketDiff', () => {
     expect(html).toContain('diff-absent');
     expect(html).toContain('Source port');
   });
+
+  /// Excel-style: the old value is marked red and the new one green, on the
+  /// cells rather than the row, so "changed" reads differently from "appeared".
+  it('marks the old value red and the new value green', () => {
+    const html = withPackets(packet(), packet({ dst_port: 8080 }));
+    const row = html.split('<tr').find((r) => r.includes('diff-changed'));
+
+    expect(row).toContain('diff-old');
+    expect(row).toContain('diff-new');
+    // The colours have to land on the right side of the row.
+    expect(row.indexOf('diff-old')).toBeLessThan(row.indexOf('diff-new'));
+    expect(row.indexOf('51000')).toBeLessThan(row.indexOf('8080'));
+  });
+
+  /// A field only one packet has gets exactly one coloured cell — the other
+  /// side is marked missing, not marked as a value that changed.
+  it('colours one side only when a field is absent from the other', () => {
+    const html = withPackets(packet(), packet({ src_port: null, dst_port: null }));
+    const row = html.split('<tr').find((r) => r.includes('Source port'));
+
+    expect(row).toContain('diff-missing');
+    expect(row).not.toContain('diff-new');
+  });
+
+  /// Identical rows carry no colour at all. If every row were tinted the view
+  /// would be a wall again and the differences would stop standing out.
+  it('leaves identical fields uncoloured', () => {
+    const html = withPackets(packet(), packet());
+    expect(html).not.toContain('diff-old');
+    expect(html).not.toContain('diff-new');
+  });
 });

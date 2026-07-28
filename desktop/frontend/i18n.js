@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 // netscope — UI internationalisation.
 // A small data-i18n driven translator for the static interface chrome.
@@ -53,6 +53,8 @@ const I18N = (() => {
       'card.protodist': 'Protocol Distribution', 'card.talkers': 'Top 10 Talkers (bytes sent)',
       'card.domains': 'Top Domains', 'card.busiest': 'Busiest Period',
       'topo.empty': 'No traffic yet — start a capture to see the map draw itself.',
+      'topo.calls': 'Service calls — slowest first', 'learn.search': 'Filter protocols…',
+      'topo.traces': 'Traces — correlated by request header',
       'topo.freeze': 'Freeze layout', 'topo.fit': '⤢ Fit', 'privacy.scan': '🔎 Scan sites',
       'diff.snapa': '📸 Snapshot A', 'diff.vs': 'vs', 'diff.snapb': '📸 Snapshot B', 'diff.compare': '🔀 Compare A → B',
       'diff.empty': 'Take <b>Snapshot A</b> (a baseline), let traffic change, then take <b>Snapshot B</b> and Compare. netscope highlights what appeared, grew, or vanished between the two — the delta.',
@@ -117,6 +119,8 @@ const I18N = (() => {
       'card.protodist': 'Protokollverteilung', 'card.talkers': 'Top 10 Sender (gesendete Bytes)',
       'card.domains': 'Top-Domains', 'card.busiest': 'Aktivster Zeitraum',
       'topo.empty': 'Noch kein Verkehr — starten Sie eine Aufzeichnung, damit sich die Karte zeichnet.',
+      'topo.calls': 'Dienstaufrufe — langsamste zuerst', 'learn.search': 'Protokolle filtern…',
+      'topo.traces': 'Traces — nach Anfrage-Header korreliert',
       'topo.freeze': 'Layout einfrieren', 'topo.fit': '⤢ Anpassen', 'privacy.scan': '🔎 Seiten scannen',
       'diff.snapa': '📸 Schnappschuss A', 'diff.vs': 'vs', 'diff.snapb': '📸 Schnappschuss B', 'diff.compare': '🔀 A → B vergleichen',
       'diff.empty': 'Nehmen Sie <b>Schnappschuss A</b> (eine Basislinie) auf, lassen Sie den Verkehr sich ändern, nehmen Sie dann <b>Schnappschuss B</b> auf und vergleichen Sie. netscope hebt hervor, was zwischen beiden auftauchte, wuchs oder verschwand — das Delta.',
@@ -181,6 +185,8 @@ const I18N = (() => {
       'card.protodist': 'Répartition des protocoles', 'card.talkers': 'Top 10 émetteurs (octets envoyés)',
       'card.domains': 'Domaines les plus visités', 'card.busiest': 'Période la plus active',
       'topo.empty': 'Aucun trafic — démarrez une capture pour voir la carte se dessiner.',
+      'topo.calls': 'Appels de service — les plus lents d\'abord', 'learn.search': 'Filtrer les protocoles…',
+      'topo.traces': 'Traces — corrélées par en-tête de requête',
       'topo.freeze': 'Figer la disposition', 'topo.fit': '⤢ Ajuster', 'privacy.scan': '🔎 Analyser les sites',
       'diff.snapa': '📸 Instantané A', 'diff.vs': 'vs', 'diff.snapb': '📸 Instantané B', 'diff.compare': '🔀 Comparer A → B',
       'diff.empty': 'Prenez l’<b>Instantané A</b> (une référence), laissez le trafic évoluer, puis prenez l’<b>Instantané B</b> et comparez. netscope met en évidence ce qui est apparu, a grandi ou a disparu entre les deux — le delta.',
@@ -245,6 +251,8 @@ const I18N = (() => {
       'card.protodist': 'Distribuzione protocolli', 'card.talkers': 'Top 10 mittenti (byte inviati)',
       'card.domains': 'Domini principali', 'card.busiest': 'Periodo più intenso',
       'topo.empty': 'Ancora nessun traffico — avvia un’acquisizione per vedere la mappa disegnarsi.',
+      'topo.calls': 'Chiamate ai servizi — prima le più lente', 'learn.search': 'Filtra i protocolli…',
+      'topo.traces': 'Tracce — correlate dall\'intestazione',
       'topo.freeze': 'Blocca layout', 'topo.fit': '⤢ Adatta', 'privacy.scan': '🔎 Analizza siti',
       'diff.snapa': '📸 Istantanea A', 'diff.vs': 'vs', 'diff.snapb': '📸 Istantanea B', 'diff.compare': '🔀 Confronta A → B',
       'diff.empty': 'Scatta l’<b>Istantanea A</b> (una base), lascia cambiare il traffico, poi scatta l’<b>Istantanea B</b> e confronta. netscope evidenzia cosa è comparso, cresciuto o scomparso tra le due — il delta.',
@@ -309,6 +317,8 @@ const I18N = (() => {
       'card.protodist': 'Distribuição de protocolos', 'card.talkers': 'Top 10 emissores (bytes enviados)',
       'card.domains': 'Principais domínios', 'card.busiest': 'Período mais movimentado',
       'topo.empty': 'Sem tráfego ainda — inicie uma captura para ver o mapa se desenhar.',
+      'topo.calls': 'Chamadas de serviço — mais lentas primeiro', 'learn.search': 'Filtrar protocolos…',
+      'topo.traces': 'Rastreios — correlacionados pelo cabeçalho',
       'topo.freeze': 'Congelar layout', 'topo.fit': '⤢ Ajustar', 'privacy.scan': '🔎 Analisar sites',
       'diff.snapa': '📸 Instantâneo A', 'diff.vs': 'vs', 'diff.snapb': '📸 Instantâneo B', 'diff.compare': '🔀 Comparar A → B',
       'diff.empty': 'Tire o <b>Instantâneo A</b> (uma linha de base), deixe o tráfego mudar, depois tire o <b>Instantâneo B</b> e compare. O netscope destaca o que apareceu, cresceu ou desapareceu entre os dois — o delta.',
@@ -373,6 +383,8 @@ const I18N = (() => {
       'card.protodist': 'توزيع البروتوكولات', 'card.talkers': 'أعلى 10 مرسلين (بايتات مُرسلة)',
       'card.domains': 'أهم النطاقات', 'card.busiest': 'أكثر فترة ازدحاماً',
       'topo.empty': 'لا حركة مرور بعد — ابدأ الالتقاط لترى الخريطة ترسم نفسها.',
+      'topo.calls': 'استدعاءات الخدمات — الأبطأ أولاً', 'learn.search': 'تصفية البروتوكولات…',
+      'topo.traces': 'التتبعات — مرتبطة برأس الطلب',
       'topo.freeze': 'تجميد التخطيط', 'topo.fit': '⤢ ملاءمة', 'privacy.scan': '🔎 فحص المواقع',
       'diff.snapa': '📸 لقطة أ', 'diff.vs': 'مقابل', 'diff.snapb': '📸 لقطة ب', 'diff.compare': '🔀 قارن أ ← ب',
       'diff.empty': 'التقط <b>اللقطة أ</b> (خط أساس)، اترك حركة المرور تتغير، ثم التقط <b>اللقطة ب</b> وقارن. يبرز netscope ما ظهر أو نما أو اختفى بين الاثنتين — الفرق.',
@@ -437,6 +449,8 @@ const I18N = (() => {
       'card.protodist': 'Protokol Dağılımı', 'card.talkers': 'İlk 10 Gönderen (gönderilen bayt)',
       'card.domains': 'En Çok Alan Adı', 'card.busiest': 'En Yoğun Dönem',
       'topo.empty': 'Henüz trafik yok — haritanın kendini çizmesi için bir yakalama başlatın.',
+      'topo.calls': 'Servis çağrıları — en yavaş önce', 'learn.search': 'Protokolleri süz…',
+      'topo.traces': 'İzler — istek başlığıyla ilişkilendirildi',
       'topo.freeze': 'Düzeni dondur', 'topo.fit': '⤢ Sığdır', 'privacy.scan': '🔎 Siteleri tara',
       'diff.snapa': '📸 Anlık Görüntü A', 'diff.vs': 'karşı', 'diff.snapb': '📸 Anlık Görüntü B', 'diff.compare': '🔀 A → B karşılaştır',
       'diff.empty': '<b>Anlık Görüntü A</b> alın (temel), trafiğin değişmesine izin verin, sonra <b>Anlık Görüntü B</b> alıp karşılaştırın. netscope ikisi arasında ortaya çıkanı, büyüyeni veya kaybolanı vurgular — farkı.',
