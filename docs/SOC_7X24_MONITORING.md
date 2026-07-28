@@ -113,15 +113,15 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 1.3 — SIEM Event Schema
 
-- [ ] **1.3.1** **OCSF uyumlu event modeli** — `SiemEvent` struct'ını OCSF 1.3.0 `security_finding` + `network_activity` class'larına uygun hale getir
-- [ ] **1.3.2** Event zenginleştirme (enrichment):
-  - [ ] GeoIP (MaxMind GeoLite2 — zaten mevcut)
-  - [ ] ASN / ISP bilgisi (MaxMind GeoLite2 ASN)
-  - [ ] Threat intel lookup (VirusTotal, AbuseIPDB — zaten mevcut)
-  - [ ] JA3/JA4 fingerprint (zaten mevcut)
-  - [ ] MAC vendor (OUI lookup — zaten mevcut)
-  - [ ] DNS passive resolution (zaten mevcut)
-- [ ] **1.3.3** Severity mapping standardizasyonu:
+- [x] **1.3.1** **OCSF uyumlu event modeli** — `SiemEvent` struct'ını OCSF 1.3.0 `security_finding` + `network_activity` class'larına uygun hale getir
+- [x] **1.3.2** Event zenginleştirme (enrichment):
+  - [x] GeoIP (MaxMind GeoLite2 — zaten mevcut)
+  - [x] ASN / ISP bilgisi (MaxMind GeoLite2 ASN)
+  - [x] Threat intel lookup (VirusTotal, AbuseIPDB — zaten mevcut)
+  - [x] JA3/JA4 fingerprint (zaten mevcut)
+  - [x] MAC vendor (OUI lookup — zaten mevcut)
+  - [x] DNS passive resolution (zaten mevcut)
+- [x] **1.3.3** Severity mapping standardizasyonu:
   ```
   netscope ExpertSeverity → SIEM severity (0-10)
     Chat    → 0 (Informational)
@@ -129,8 +129,8 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
     Warning → 5-6 (Medium)
     Error   → 8-9 (High)
   ```
-- [ ] **1.3.4** MITRE ATT&CK taktik/teknik mapping'i her event tipi için
-- [ ] **1.3.5** Cyber Kill Chain faz mapping'i her event tipi için
+- [x] **1.3.4** MITRE ATT&CK taktik/teknik mapping'i her event tipi için
+- [x] **1.3.5** Cyber Kill Chain faz mapping'i her event tipi için
 
 ---
 
