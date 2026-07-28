@@ -32,7 +32,7 @@ pub struct AlertRule {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Alert {
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: String,
     pub rule_name: String,
     pub severity: String,
     pub msg: String,
@@ -146,8 +146,10 @@ impl AlertEngine {
         let now = Instant::now();
         let now_utc = Utc::now();
 
+        let rules = self.rules.clone();
+
         // Check each rule
-        for rule in &self.rules {
+        for rule in &rules {
             let src_str = pkt.src_addr.map(|a| a.to_string()).unwrap_or_default();
             let dst_str = pkt.dst_addr.map(|a| a.to_string()).unwrap_or_default();
 
@@ -179,30 +181,40 @@ impl AlertEngine {
                             let current_time_str = pkt.timestamp.format("%H:%M").to_string();
                             let start = rule.trigger.start_time.as_deref().unwrap_or("18:00");
                             let end = rule.trigger.end_time.as_deref().unwrap_or("08:00");
-                            // Off-hours threshold is lower (more sensitive)
                             if is_time_in_range(&current_time_str, start, end) {
                                 limit = (limit / 2).max(1);
                             }
                         }
 
                         let key = (src_str.clone(), dst_str.clone());
-                        let rule_hist = self.threshold_history.entry(rule.name.clone()).or_default();
-                        let queue = rule_hist.entry(key).or_default();
-                        
-                        queue.push_back(now);
-                        while let Some(&first) = queue.front() {
-                            if now.duration_since(first) > window_dur {
-                                queue.pop_front();
-                            } else {
-                                break;
+                        let limit_reached = {
+                            let rule_hist = self.threshold_history.entry(rule.name.clone()).or_default();
+                            let queue = rule_hist.entry(key.clone()).or_default();
+                            
+                            queue.push_back(now);
+                            while let Some(&first) = queue.front() {
+                                if now.duration_since(first) > window_dur {
+                                    queue.pop_front();
+                                } else {
+                                    break;
+                                }
                             }
-                        }
+                            queue.len() >= limit
+                        };
 
-                        if queue.len() >= limit {
+                        if limit_reached {
                             if self.should_trigger_alert(&rule.name, &src_str, &dst_str, now) {
-                                let alert = self.create_alert(rule, pkt, format!("Threshold exceeded: {} events", queue.len()));
+                                let queue_len = self.threshold_history.get(&rule.name)
+                                    .and_then(|h| h.get(&key))
+                                    .map(|q| q.len())
+                                    .unwrap_or(0);
+                                let alert = self.create_alert(rule, pkt, format!("Threshold exceeded: {} events", queue_len));
                                 alerts.push(alert);
-                                queue.clear(); // Reset queue after triggering
+                                if let Some(rule_hist) = self.threshold_history.get_mut(&rule.name) {
+                                    if let Some(queue) = rule_hist.get_mut(&key) {
+                                        queue.clear();
+                                    }
+                                }
                             }
                         }
                     }
@@ -216,25 +228,33 @@ impl AlertEngine {
                     }
                 }
                 "correlation" => {
-                    // Sequence correlation tracking (e.g. tracking seen sub_rules triggered for a src_ip)
                     if matches {
                         if let Some(ref sub_rules) = rule.trigger.sub_rules {
-                            let src_states = self.correlation_state.entry(rule.name.clone()).or_default();
-                            let seen = src_states.entry(src_str.clone()).or_default();
-                            
-                            // If this packet matches a particular sub_rule, record it
-                            for sub in sub_rules {
-                                if pkt.summary.contains(sub) && !seen.contains(sub) {
-                                    seen.push(sub.clone());
+                            let seq_matched = {
+                                let src_states = self.correlation_state.entry(rule.name.clone()).or_default();
+                                let seen = src_states.entry(src_str.clone()).or_default();
+                                
+                                for sub in sub_rules {
+                                    if pkt.summary.contains(sub) && !seen.contains(sub) {
+                                        seen.push(sub.clone());
+                                    }
                                 }
-                            }
+                                seen.len() == sub_rules.len()
+                            };
 
-                            // If all sub_rules matched in sequence, trigger correlation alert
-                            if seen.len() == sub_rules.len() {
+                            if seq_matched {
                                 if self.should_trigger_alert(&rule.name, &src_str, &dst_str, now) {
-                                    let alert = self.create_alert(rule, pkt, format!("Correlated sequence detected: {:?}", seen));
+                                    let seen_list = self.correlation_state.get(&rule.name)
+                                        .and_then(|h| h.get(&src_str))
+                                        .cloned()
+                                        .unwrap_or_default();
+                                    let alert = self.create_alert(rule, pkt, format!("Correlated sequence detected: {:?}", seen_list));
                                     alerts.push(alert);
-                                    seen.clear();
+                                    if let Some(src_states) = self.correlation_state.get_mut(&rule.name) {
+                                        if let Some(seen) = src_states.get_mut(&src_str) {
+                                            seen.clear();
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -244,53 +264,55 @@ impl AlertEngine {
             }
 
             // Multi-sensor correlation engine (2.1.6)
-            if matches && sensor_id.is_some() && !dst_str.is_empty() {
+            let is_distributed_scanning = if matches && sensor_id.is_some() && !dst_str.is_empty() {
                 let s_id = sensor_id.unwrap().to_string();
                 let sensors = self.sensor_scans.entry(dst_str.clone()).or_default();
                 sensors.insert(s_id);
+                sensors.len() >= 3
+            } else {
+                false
+            };
 
-                if sensors.len() >= 3 {
-                    // Correlate scanning from >= 3 sensors
-                    if self.should_trigger_alert(&"Distributed Scanning".to_string(), &src_str, &dst_str, now) {
-                        let correlated_rule = AlertRule {
-                            name: "Distributed Scanning".to_string(),
-                            severity: "high".to_string(),
-                            mitre_attack: Some("T1595".to_string()),
-                            kill_chain: Some("Recon".to_string()),
-                            trigger: rule.trigger.clone(),
-                            actions: vec!["alert".into(), "block_src".into()],
-                        };
-                        let alert = self.create_alert(&correlated_rule, pkt, format!("Distributed scanning target IP from sensors: {:?}", sensors));
-                        alerts.push(alert);
-                        sensors.clear();
-                    }
+            if is_distributed_scanning {
+                if self.should_trigger_alert(&"Distributed Scanning".to_string(), &src_str, &dst_str, now) {
+                    let sensors = self.sensor_scans.get(&dst_str).cloned().unwrap_or_default();
+                    let correlated_rule = AlertRule {
+                        name: "Distributed Scanning".to_string(),
+                        severity: "high".to_string(),
+                        mitre_attack: Some("T1595".to_string()),
+                        kill_chain: Some("Recon".to_string()),
+                        trigger: rule.trigger.clone(),
+                        actions: vec!["alert".into(), "block_src".into()],
+                    };
+                    let alert = self.create_alert(&correlated_rule, pkt, format!("Distributed scanning target IP from sensors: {:?}", sensors));
+                    alerts.push(alert);
+                    self.sensor_scans.remove(&dst_str);
                 }
             }
         }
 
         // Check absence rules (2.1.2)
-        for rule in &self.rules {
-            if rule.trigger.trigger_type == "absence" {
-                let window_dur = parse_duration(rule.trigger.window.as_deref().unwrap_or("30s"));
-                let last_seen = self.absence_history.entry(rule.name.clone()).or_insert(now);
-                if now.duration_since(*last_seen) > window_dur {
-                    if self.should_trigger_alert(&rule.name, &"".to_string(), &"".to_string(), now) {
-                        let dummy_pkt = Packet {
-                            timestamp: now_utc,
-                            src_addr: None,
-                            dst_addr: None,
-                            src_port: None,
-                            dst_port: None,
-                            protocol: crate::registry::Protocol::Unknown,
-                            length: 0,
-                            summary: "Absence event triggered".to_string(),
-                            data: bytes::Bytes::new(),
-                            llm: None,
-                        };
-                        let alert = self.create_alert(rule, &dummy_pkt, format!("Absence triggered: no matching traffic seen for {:?}", window_dur));
-                        alerts.push(alert);
-                        self.absence_history.insert(rule.name.clone(), now); // Reset timer
-                    }
+        let absence_rules: Vec<AlertRule> = rules.iter().filter(|r| r.trigger.trigger_type == "absence").cloned().collect();
+        for rule in &absence_rules {
+            let window_dur = parse_duration(rule.trigger.window.as_deref().unwrap_or("30s"));
+            let last_seen = self.absence_history.entry(rule.name.clone()).or_insert(now);
+            if now.duration_since(*last_seen) > window_dur {
+                if self.should_trigger_alert(&rule.name, &"".to_string(), &"".to_string(), now) {
+                    let dummy_pkt = Packet {
+                        timestamp: now_utc,
+                        src_addr: None,
+                        dst_addr: None,
+                        src_port: None,
+                        dst_port: None,
+                        protocol: crate::registry::Protocol::Unknown("".to_string()),
+                        length: 0,
+                        summary: "Absence event triggered".to_string(),
+                        data: bytes::Bytes::new(),
+                        llm: None,
+                    };
+                    let alert = self.create_alert(rule, &dummy_pkt, format!("Absence triggered: no matching traffic seen for {:?}", window_dur));
+                    alerts.push(alert);
+                    self.absence_history.insert(rule.name.clone(), now); // Reset timer
                 }
             }
         }
@@ -357,7 +379,7 @@ impl AlertEngine {
         }).unwrap_or(0);
 
         Alert {
-            timestamp: now_utc,
+            timestamp: now_utc.to_rfc3339(),
             rule_name: rule.name.clone(),
             severity: rule.severity.clone(),
             msg,

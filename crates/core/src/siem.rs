@@ -15,7 +15,7 @@ use maxminddb::Reader;
 
 static ES_SETUP_DONE: AtomicBool = AtomicBool::new(false);
 
-fn global_name_cache() -> &'static Mutex<NameCache> {
+pub(crate) fn global_name_cache() -> &'static Mutex<NameCache> {
     static CACHE: OnceLock<Mutex<NameCache>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(NameCache::new()))
 }

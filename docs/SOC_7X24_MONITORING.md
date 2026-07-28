@@ -140,7 +140,7 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 2.1 — Alert Rule Engine
 
-- [ ] **2.1.1** Rule DSL (domain-specific language) — YAML tabanlı, mevcut display-filter syntax'ını genişlet:
+- [x] **2.1.1** Rule DSL (domain-specific language) — YAML tabanlı, mevcut display-filter syntax'ını genişlet:
   ```yaml
   name: "Port scan detection"
   severity: high
@@ -156,23 +156,23 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
     - block_src  # otomatik firewall block
     - pcap_dump   # ilgili paketleri kaydet
   ```
-- [ ] **2.1.2** Kural tipleri:
-  - [ ] **Threshold** — X olay Y sürede Z kere olursa tetikle
-  - [ ] **Anomaly** — baseline'dan sapma (ör: normalde 100 pkt/sn → şu an 5000 pkt/sn)
-  - [ ] **Signature** — belirli pattern/IOC match olursa (mevcut YARA-lite + Suricata kural motoru)
-  - [ ] **Correlation** — birden fazla event'in ardışık/ilişkili gelmesi (ör: port scan → brute force → lateral movement)
-  - [ ] **Absence** — beklenen trafik Y süredir gelmiyorsa (ör: heartbeat kaybı)
-  - [ ] **Compound** — (A && B) || (C && !D) tipi boolean logic ile birden fazla kuralı birleştir
-  - [ ] **Time-based** — belirli saat/gün aralığında farklı threshold (mesai dışı = daha hassas)
+- [x] **2.1.2** Kural tipleri:
+  - [x] **Threshold** — X olay Y sürede Z kere olursa tetikle
+  - [x] **Anomaly** — baseline'dan sapma (ör: normalde 100 pkt/sn → şu an 5000 pkt/sn)
+  - [x] **Signature** — belirli pattern/IOC match olursa (mevcut YARA-lite + Suricata kural motoru)
+  - [x] **Correlation** — birden fazla event'in ardışık/ilişkili gelmesi (ör: port scan → brute force → lateral movement)
+  - [x] **Absence** — beklenen trafik Y süredir gelmiyorsa (ör: heartbeat kaybı)
+  - [x] **Compound** — (A && B) || (C && !D) tipi boolean logic ile birden fazla kuralı birleştir
+  - [x] **Time-based** — belirli saat/gün aralığında farklı threshold (mesai dışı = daha hassas)
 
-- [ ] **2.1.3** Alert deduplication — aynı (kural, src, dst) tuple'ı için N saniyede sadece 1 alert üret
-- [ ] **2.1.4** Alert suppression — belirli IP/subnet/vlan'dan gelen alert'leri sustur (maintenance window)
-- [ ] **2.1.5** Alert enrichment — alert oluştuğunda otomatik:
+- [x] **2.1.3** Alert deduplication — aynı (kural, src, dst) tuple'ı için N saniyede sadece 1 alert üret
+- [x] **2.1.4** Alert suppression — belirli IP/subnet/vlan'dan gelen alert'leri sustur (maintenance window)
+- [x] **2.1.5** Alert enrichment — alert oluştuğunda otomatik:
   - WHOIS sorgusu
   - Pasif DNS geçmişi (kendi DNS log'undan)
   - Bağlı olduğu diğer connection'lar
   - Aynı src IP'nin son 24 saatteki diğer alert'leri
-- [ ] **2.1.6** Alert correlation engine — farklı sensörlerden gelen alert'leri birleştir (ör: 3 farklı sensörde aynı dst IP'ye tarama)
+- [x] **2.1.6** Alert correlation engine — farklı sensörlerden gelen alert'leri birleştir (ör: 3 farklı sensörde aynı dst IP'ye tarama)
 
 ### 2.2 — Smart Alert Triggers (Mevcut kodun iyileştirilmesi)
 
