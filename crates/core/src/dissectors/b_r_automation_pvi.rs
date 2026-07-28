@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_br_automation_pvi(
     _src_ip: Option<IpAddr>,
@@ -12,7 +12,10 @@ pub fn dissect_br_automation_pvi(
     let summary = if payload.len() >= 6 {
         let pvi_cmd = u16::from_be_bytes([payload[0], payload[1]]);
         let session = u16::from_be_bytes([payload[2], payload[3]]);
-        let status = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let status = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let cmd_name = match pvi_cmd {
             0x0001 => "PVRead",
@@ -27,7 +30,10 @@ pub fn dissect_br_automation_pvi(
             _ => "PVI cmd",
         };
 
-        format!("B&R Automation PVI — {cmd_name} session:{session} status:{status} ({len} bytes)", len = payload.len())
+        format!(
+            "B&R Automation PVI — {cmd_name} session:{session} status:{status} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("B&R Automation PVI — {len} bytes", len = payload.len())
     };

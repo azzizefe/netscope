@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_siemens_l2_telegram(
     _src_ip: Option<IpAddr>,
@@ -33,9 +33,15 @@ pub fn dissect_siemens_l2_telegram(
             _ => "Block",
         };
 
-        format!("PROFINET DCP (Siemens L2) — {service_name} {block_name} ({len} bytes)", len = payload.len())
+        format!(
+            "PROFINET DCP (Siemens L2) — {service_name} {block_name} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
-        format!("PROFINET DCP (Siemens L2) — {len} bytes", len = payload.len())
+        format!(
+            "PROFINET DCP (Siemens L2) — {len} bytes",
+            len = payload.len()
+        )
     };
 
     DissectedResult {

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_nvidia_gfn_ctrl(
     src_ip: Option<IpAddr>,
@@ -41,9 +41,13 @@ pub fn dissect_nvidia_gfn_ctrl(
         };
         format!(
             "GFN Ctrl op={}(0x{:04x}) seq={}{}{} magic=0x{:08x} len={}",
-            op_name, opcode, seq,
+            op_name,
+            opcode,
+            seq,
             if is_down { " DOWN" } else { "" },
-            coord_str, magic, payload.len(),
+            coord_str,
+            magic,
+            payload.len(),
         )
     };
     DissectedResult {

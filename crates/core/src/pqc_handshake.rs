@@ -1,5 +1,5 @@
-use chrono::{DateTime, Utc};
 use crate::pair_correlation::FiveTuple;
+use chrono::{DateTime, Utc};
 
 /// Re-export of chrono timestamp for handshake records.
 pub type Timestamp = DateTime<Utc>;
@@ -313,11 +313,15 @@ impl SigAlgorithm {
     }
 
     pub fn is_pqc(&self) -> bool {
-        matches!(self,
-            SigAlgorithm::MlDsa44 | SigAlgorithm::MlDsa65
-            | SigAlgorithm::MlDsa87 | SigAlgorithm::SlhDsaSha2128s
-            | SigAlgorithm::SlhDsaShake128s | SigAlgorithm::Falcon512
-            | SigAlgorithm::Falcon1024
+        matches!(
+            self,
+            SigAlgorithm::MlDsa44
+                | SigAlgorithm::MlDsa65
+                | SigAlgorithm::MlDsa87
+                | SigAlgorithm::SlhDsaSha2128s
+                | SigAlgorithm::SlhDsaShake128s
+                | SigAlgorithm::Falcon512
+                | SigAlgorithm::Falcon1024
         )
     }
 }
@@ -451,7 +455,9 @@ pub struct PqcHandshakeStore {
 
 impl PqcHandshakeStore {
     pub fn new() -> Self {
-        PqcHandshakeStore { records: Vec::new() }
+        PqcHandshakeStore {
+            records: Vec::new(),
+        }
     }
 
     pub fn push(&mut self, record: PqcHandshakeRecord) {
@@ -472,7 +478,9 @@ impl PqcHandshakeStore {
 }
 
 impl Default for PqcHandshakeStore {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
@@ -521,7 +529,9 @@ mod tests {
 
     #[test]
     fn sig_algorithm_roundtrip() {
-        let algs = [0x0401, 0x0403, 0x0804, 0x0807, 0x0700, 0x0701, 0x0706, 0x0703];
+        let algs = [
+            0x0401, 0x0403, 0x0804, 0x0807, 0x0700, 0x0701, 0x0706, 0x0703,
+        ];
         for &a in &algs {
             let sa = SigAlgorithm::from_u16(a);
             assert_eq!(sa.as_u16(), a);
@@ -583,14 +593,20 @@ mod tests {
         let ft = test_five_tuple();
 
         let pqc = PqcHandshakeRecord::new(
-            ft.clone(), TlsVersion::TlsV1_3, "pqc.example".into(),
-            SigAlgorithm::MlDsa87, Utc::now(),
+            ft.clone(),
+            TlsVersion::TlsV1_3,
+            "pqc.example".into(),
+            SigAlgorithm::MlDsa87,
+            Utc::now(),
         );
         store.push(pqc);
 
         let classic = PqcHandshakeRecord::new(
-            ft, TlsVersion::TlsV1_2, "classic.example".into(),
-            SigAlgorithm::RsaPkcs1Sha256, Utc::now(),
+            ft,
+            TlsVersion::TlsV1_2,
+            "classic.example".into(),
+            SigAlgorithm::RsaPkcs1Sha256,
+            Utc::now(),
         );
         store.push(classic);
 
@@ -603,7 +619,10 @@ mod tests {
     fn kem_id_display() {
         assert_eq!(KemId::MlKem768.to_string(), "ML-KEM-768");
         assert_eq!(KemId::FrodoKem1344Aes.to_string(), "FrodoKEM-1344-AES");
-        assert_eq!(KemId::ClassicMcEliece348864.to_string(), "Classic McEliece-348864");
+        assert_eq!(
+            KemId::ClassicMcEliece348864.to_string(),
+            "Classic McEliece-348864"
+        );
         assert_eq!(KemId::Unknown(0x9999).to_string(), "KEM(0x9999)");
     }
 }

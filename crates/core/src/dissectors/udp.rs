@@ -173,7 +173,10 @@ pub fn dissect_udp(
         src_port: Some(src_port),
         dst_port: Some(dst_port),
         protocol: Protocol::Udp,
-        summary: format!("UDP — {} of payload", super::bytes(udp_payload.len() as u64)),
+        summary: format!(
+            "UDP — {} of payload",
+            super::bytes(udp_payload.len() as u64)
+        ),
     }
 }
 

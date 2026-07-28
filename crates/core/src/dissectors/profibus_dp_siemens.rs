@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 const SD1_FIXED_WITHOUT_FC: u8 = 0x05;
 const SD2_VARIABLE_LENGTH: u8 = 0x68;
@@ -34,7 +34,10 @@ pub fn dissect_profibus_dp_siemens(
             _ => "",
         };
 
-        format!("PROFIBUS DP (Siemens) — {sd_name} fc:0x{fc:02x} {version_info} ({len} bytes)", len = payload.len())
+        format!(
+            "PROFIBUS DP (Siemens) — {sd_name} fc:0x{fc:02x} {version_info} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("PROFIBUS DP (Siemens) — {len} bytes", len = payload.len())
     };

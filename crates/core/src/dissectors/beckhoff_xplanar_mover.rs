@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_beckhoff_xplanar_mover(
     _src_ip: Option<IpAddr>,
@@ -12,8 +12,14 @@ pub fn dissect_beckhoff_xplanar_mover(
     let summary = if payload.len() >= 12 {
         let mover_id = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
         let cmd = payload.get(4).copied().unwrap_or(0);
-        let pos_x = i16::from_be_bytes([payload.get(5).copied().unwrap_or(0), payload.get(6).copied().unwrap_or(0)]);
-        let pos_y = i16::from_be_bytes([payload.get(7).copied().unwrap_or(0), payload.get(8).copied().unwrap_or(0)]);
+        let pos_x = i16::from_be_bytes([
+            payload.get(5).copied().unwrap_or(0),
+            payload.get(6).copied().unwrap_or(0),
+        ]);
+        let pos_y = i16::from_be_bytes([
+            payload.get(7).copied().unwrap_or(0),
+            payload.get(8).copied().unwrap_or(0),
+        ]);
         let tilt_a = payload.get(9).copied().unwrap_or(0) as i8;
         let collision_domain = payload.get(10).copied().unwrap_or(0);
 

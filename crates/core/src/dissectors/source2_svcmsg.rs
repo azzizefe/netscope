@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_source2_svcmsg(
     src_ip: Option<IpAddr>,
@@ -30,7 +30,10 @@ pub fn dissect_source2_svcmsg(
             11 => "SVC_UserMessage",
             _ => "SVC_Other",
         };
-        format!("Source 2 {} ({} bytes, flags 0x{:02x})", svc_name, data_len, flags)
+        format!(
+            "Source 2 {} ({} bytes, flags 0x{:02x})",
+            svc_name, data_len, flags
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -48,14 +51,26 @@ mod tests {
 
     #[test]
     fn test_source2_svcmsg_server_info() {
-        let r = dissect_source2_svcmsg(None, None, 27015, 27015, b"\x00\x00\x14\x00\x48\x65\x6c\x6c\x6f");
+        let r = dissect_source2_svcmsg(
+            None,
+            None,
+            27015,
+            27015,
+            b"\x00\x00\x14\x00\x48\x65\x6c\x6c\x6f",
+        );
         assert_eq!(r.protocol, Protocol::Source2Svcmsg);
         assert!(r.summary.contains("SVC_ServerInfo"));
     }
 
     #[test]
     fn test_source2_svcmsg_packet_entities() {
-        let r = dissect_source2_svcmsg(None, None, 27015, 27015, b"\x07\x00\x20\x01\xde\xad\xbe\xef");
+        let r = dissect_source2_svcmsg(
+            None,
+            None,
+            27015,
+            27015,
+            b"\x07\x00\x20\x01\xde\xad\xbe\xef",
+        );
         assert_eq!(r.protocol, Protocol::Source2Svcmsg);
         assert!(r.summary.contains("SVC_PacketEntities"));
     }

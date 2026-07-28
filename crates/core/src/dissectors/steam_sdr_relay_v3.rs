@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_steam_sdr_relay_v3(
     src_ip: Option<IpAddr>,
@@ -26,7 +26,10 @@ pub fn dissect_steam_sdr_relay_v3(
             5 => "Pong",
             _ => "Unknown",
         };
-        format!("Steam SDRv3 {} session={} seq={} flags=0x{:04x}", type_name, session, seq, flags)
+        format!(
+            "Steam SDRv3 {} session={} seq={} flags=0x{:04x}",
+            type_name, session, seq, flags
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -44,7 +47,13 @@ mod tests {
 
     #[test]
     fn test_steam_sdr_v3_data() {
-        let r = dissect_steam_sdr_relay_v3(None, None, 27036, 27036, b"\x01\x00\x00\x00\x00\x01\x00\x00\x00\x05\x00\x00");
+        let r = dissect_steam_sdr_relay_v3(
+            None,
+            None,
+            27036,
+            27036,
+            b"\x01\x00\x00\x00\x00\x01\x00\x00\x00\x05\x00\x00",
+        );
         assert_eq!(r.protocol, Protocol::SteamSdrRelayV3);
         assert!(r.summary.contains("Data"));
         assert!(r.summary.contains("seq=5"));

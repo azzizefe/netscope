@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_bosch_nexeed_edge(
     src_ip: Option<IpAddr>,
@@ -19,10 +19,19 @@ pub fn dissect_bosch_nexeed_edge(
             _ => "Custom",
         };
         let timestamp = u64::from_le_bytes([
-            payload[8], payload[9], payload[10], payload[11],
-            payload[12], payload[13], payload[14], payload[15],
+            payload[8],
+            payload[9],
+            payload[10],
+            payload[11],
+            payload[12],
+            payload[13],
+            payload[14],
+            payload[15],
         ]);
-        format!("Bosch Nexeed — stream:{stream_id:x} type:{data_type} ts:{timestamp} ({})", super::bytes(payload.len() as u64))
+        format!(
+            "Bosch Nexeed — stream:{stream_id:x} type:{data_type} ts:{timestamp} ({})",
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("Bosch Nexeed — {}", super::bytes(payload.len() as u64))
     };

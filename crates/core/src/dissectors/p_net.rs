@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_p_net(
     src_ip: Option<IpAddr>,
@@ -20,7 +20,13 @@ pub fn dissect_p_net(
             _ => "Service",
         };
         let node = payload[1];
-        format!("P-NET — {} node:{} seg:{} ({})", svc, node, payload[3], super::bytes(payload.len() as u64))
+        format!(
+            "P-NET — {} node:{} seg:{} ({})",
+            svc,
+            node,
+            payload[3],
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("P-NET — {}", super::bytes(payload.len() as u64))
     };

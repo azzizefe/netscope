@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_siemens_industrial_5g(
     _src_ip: Option<IpAddr>,
@@ -12,7 +12,12 @@ pub fn dissect_siemens_industrial_5g(
     let summary = if payload.len() >= 6 {
         let msg_type = payload[0];
         let nf_type = payload.get(1).copied().unwrap_or(0);
-        let session = u32::from_be_bytes([payload.get(2).copied().unwrap_or(0), payload.get(3).copied().unwrap_or(0), payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let session = u32::from_be_bytes([
+            payload.get(2).copied().unwrap_or(0),
+            payload.get(3).copied().unwrap_or(0),
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let type_name = match msg_type {
             0x01 => "UPF config",
@@ -32,7 +37,10 @@ pub fn dissect_siemens_industrial_5g(
             _ => "NF",
         };
 
-        format!("Siemens Industrial 5G — {type_name} ({nf_name}) session:0x{session:08x} ({len} bytes)", len = payload.len())
+        format!(
+            "Siemens Industrial 5G — {type_name} ({nf_name}) session:0x{session:08x} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("Siemens Industrial 5G — {len} bytes", len = payload.len())
     };

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_unreal_iris(
     src_ip: Option<IpAddr>,
@@ -13,7 +13,10 @@ pub fn dissect_unreal_iris(
         "Unreal Iris (malformed)".into()
     } else {
         let info = parse_iris_header(payload);
-        format!("Unreal Iris replication {} objects, {} bits", info.object_count, info.total_bits)
+        format!(
+            "Unreal Iris replication {} objects, {} bits",
+            info.object_count, info.total_bits
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -32,11 +35,17 @@ struct IrisInfo {
 
 fn parse_iris_header(data: &[u8]) -> IrisInfo {
     if data.len() < 4 {
-        return IrisInfo { object_count: 0, total_bits: 0 };
+        return IrisInfo {
+            object_count: 0,
+            total_bits: 0,
+        };
     }
     let object_count = u16::from_be_bytes([data[0], data[1]]);
     let total_bits = u32::from_be_bytes([0, data[2], data[3], 0]);
-    IrisInfo { object_count, total_bits }
+    IrisInfo {
+        object_count,
+        total_bits,
+    }
 }
 
 #[cfg(test)]

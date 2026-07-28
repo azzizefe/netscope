@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_darkrift2_netcode(
     src_ip: Option<IpAddr>,
@@ -22,10 +22,7 @@ pub fn dissect_darkrift2_netcode(
             0x0003 => "Data",
             _ => "Unknown",
         };
-        format!(
-            "DarkRift 2 tag={} type={} len={}",
-            tag, type_name, msg_len
-        )
+        format!("DarkRift 2 tag={} type={} len={}", tag, type_name, msg_len)
     };
     DissectedResult {
         src_addr: src_ip,

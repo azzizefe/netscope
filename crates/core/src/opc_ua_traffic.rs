@@ -34,11 +34,19 @@ impl SecurityPolicy {
     pub fn as_uri(&self) -> &str {
         match self {
             SecurityPolicy::None => "http://opcfoundation.org/UA/security/policy/None",
-            SecurityPolicy::Basic128Rsa15 => "http://opcfoundation.org/UA/security/policy/Basic128Rsa15",
+            SecurityPolicy::Basic128Rsa15 => {
+                "http://opcfoundation.org/UA/security/policy/Basic128Rsa15"
+            }
             SecurityPolicy::Basic256 => "http://opcfoundation.org/UA/security/policy/Basic256",
-            SecurityPolicy::Basic256Sha256 => "http://opcfoundation.org/UA/security/policy/Basic256Sha256",
-            SecurityPolicy::Aes128Sha256RsaOaep => "http://opcfoundation.org/UA/security/policy/Aes128_Sha256_RsaOaep",
-            SecurityPolicy::Aes256Sha256RsaPss => "http://opcfoundation.org/UA/security/policy/Aes256_Sha256_RsaPss",
+            SecurityPolicy::Basic256Sha256 => {
+                "http://opcfoundation.org/UA/security/policy/Basic256Sha256"
+            }
+            SecurityPolicy::Aes128Sha256RsaOaep => {
+                "http://opcfoundation.org/UA/security/policy/Aes128_Sha256_RsaOaep"
+            }
+            SecurityPolicy::Aes256Sha256RsaPss => {
+                "http://opcfoundation.org/UA/security/policy/Aes256_Sha256_RsaPss"
+            }
             SecurityPolicy::Other(s) => s,
         }
     }
@@ -378,7 +386,9 @@ impl fmt::Display for ServiceType {
             ServiceType::DeleteReferences => write!(f, "DeleteReferences"),
             ServiceType::Browse => write!(f, "Browse"),
             ServiceType::BrowseNext => write!(f, "BrowseNext"),
-            ServiceType::TranslateBrowsePathsToNodeIds => write!(f, "TranslateBrowsePathsToNodeIds"),
+            ServiceType::TranslateBrowsePathsToNodeIds => {
+                write!(f, "TranslateBrowsePathsToNodeIds")
+            }
             ServiceType::RegisterNodes => write!(f, "RegisterNodes"),
             ServiceType::UnregisterNodes => write!(f, "UnregisterNodes"),
             ServiceType::QueryFirst => write!(f, "QueryFirst"),
@@ -565,14 +575,30 @@ mod tests {
 
     #[test]
     fn test_security_policy_from_uri() {
-        assert_eq!(SecurityPolicy::from_uri("http://opcfoundation.org/UA/security/policy/None"), SecurityPolicy::None);
-        assert_eq!(SecurityPolicy::from_uri("http://opcfoundation.org/UA/security/policy/Basic256Sha256"), SecurityPolicy::Basic256Sha256);
-        assert_eq!(SecurityPolicy::from_uri("http://opcfoundation.org/UA/security/policy/Aes256_Sha256_RsaPss"), SecurityPolicy::Aes256Sha256RsaPss);
+        assert_eq!(
+            SecurityPolicy::from_uri("http://opcfoundation.org/UA/security/policy/None"),
+            SecurityPolicy::None
+        );
+        assert_eq!(
+            SecurityPolicy::from_uri("http://opcfoundation.org/UA/security/policy/Basic256Sha256"),
+            SecurityPolicy::Basic256Sha256
+        );
+        assert_eq!(
+            SecurityPolicy::from_uri(
+                "http://opcfoundation.org/UA/security/policy/Aes256_Sha256_RsaPss"
+            ),
+            SecurityPolicy::Aes256Sha256RsaPss
+        );
     }
 
     #[test]
     fn test_security_mode_roundtrip() {
-        for mode in &[SecurityMode::Invalid, SecurityMode::None, SecurityMode::Sign, SecurityMode::SignAndEncrypt] {
+        for mode in &[
+            SecurityMode::Invalid,
+            SecurityMode::None,
+            SecurityMode::Sign,
+            SecurityMode::SignAndEncrypt,
+        ] {
             assert_eq!(SecurityMode::from_u32(mode.as_u32()), *mode);
         }
     }
@@ -652,7 +678,9 @@ mod tests {
     #[test]
     fn test_security_policy_as_uri() {
         assert!(SecurityPolicy::None.as_uri().contains("None"));
-        assert!(SecurityPolicy::Basic256Sha256.as_uri().contains("Basic256Sha256"));
+        assert!(SecurityPolicy::Basic256Sha256
+            .as_uri()
+            .contains("Basic256Sha256"));
     }
 
     #[test]

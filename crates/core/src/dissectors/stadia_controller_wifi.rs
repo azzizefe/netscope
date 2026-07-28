@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_stadia_controller_wifi(
     src_ip: Option<IpAddr>,
@@ -41,7 +41,12 @@ pub fn dissect_stadia_controller_wifi(
         };
         format!(
             "Stadia Ctrl msg={}(0x{:02x}) seq={} magic=0x{:08x}{} len={}",
-            type_name, msg_type, seq, magic, detail, payload.len(),
+            type_name,
+            msg_type,
+            seq,
+            magic,
+            detail,
+            payload.len(),
         )
     };
     DissectedResult {

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_twincat_router_telemetry(
     _src_ip: Option<IpAddr>,
@@ -13,8 +13,18 @@ pub fn dissect_twincat_router_telemetry(
         let msg_type = payload[0];
         let task_id = payload.get(1).copied().unwrap_or(0);
         let cpu_load = payload.get(2).copied().unwrap_or(0);
-        let cycle_time_us = u32::from_be_bytes([0, payload.get(3).copied().unwrap_or(0), payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
-        let jitter_ns = u32::from_be_bytes([payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0), payload.get(8).copied().unwrap_or(0), payload.get(9).copied().unwrap_or(0)]);
+        let cycle_time_us = u32::from_be_bytes([
+            0,
+            payload.get(3).copied().unwrap_or(0),
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
+        let jitter_ns = u32::from_be_bytes([
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+            payload.get(8).copied().unwrap_or(0),
+            payload.get(9).copied().unwrap_or(0),
+        ]);
 
         let type_name = match msg_type {
             0x01 => "TaskJitter",
@@ -33,7 +43,10 @@ pub fn dissect_twincat_router_telemetry(
 
         format!("TwinCAT Router Telemetry — {type_name} task:{task_id}{cycle_note} jitter:{jitter_ns}ns cpu:{cpu_load}% ({len} bytes)", len = payload.len())
     } else {
-        format!("TwinCAT Router Telemetry — {len} bytes", len = payload.len())
+        format!(
+            "TwinCAT Router Telemetry — {len} bytes",
+            len = payload.len()
+        )
     };
 
     DissectedResult {

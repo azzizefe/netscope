@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_overwatch2_state_sync(
     src_ip: Option<IpAddr>,
@@ -30,7 +30,11 @@ pub fn dissect_overwatch2_state_sync(
         };
         format!(
             "OW2 StateSync op={}({}) seq={} tick={} len={}",
-            op_name, opcode, seq, tick, payload.len(),
+            op_name,
+            opcode,
+            seq,
+            tick,
+            payload.len(),
         )
     };
     DissectedResult {

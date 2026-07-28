@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use axum::{Json, Router};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
+use axum::{Json, Router};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -30,19 +30,30 @@ async fn upgrade_check(
     let current = env!("CARGO_PKG_VERSION");
     let channel = params.channel.as_deref().unwrap_or("stable");
 
-    (StatusCode::OK, Json(json!({
-        "version": current,
-        "url": format!("/api/v1/upgrade/download/{}", current),
-        "sha256": "placeholder-sha256-for-current-version",
-        "channel": channel,
-        "upgrade_available": false,
-    })))
+    // `upgrade_available` stays false even for a sensor that reports an older
+    // version, because `sha256` below is a placeholder and the agent verifies
+    // the digest before swapping its binary. Advertising the upgrade today
+    // would only make every sensor download an artifact it must then refuse.
+    // Turn it on in the same change that serves a real checksum.
+    (
+        StatusCode::OK,
+        Json(json!({
+            "version": current,
+            "sensor_version": params.version,
+            "outdated": params.version != current,
+            "url": format!("/api/v1/upgrade/download/{}", current),
+            "sha256": "placeholder-sha256-for-current-version",
+            "channel": channel,
+            "upgrade_available": false,
+        })),
+    )
 }
 
-async fn download_binary(
-    Path(version): Path<String>,
-) -> impl IntoResponse {
-    (StatusCode::NOT_FOUND, Json(json!({
-        "error": format!("Binary for version '{}' not available on this server", version),
-    })))
+async fn download_binary(Path(version): Path<String>) -> impl IntoResponse {
+    (
+        StatusCode::NOT_FOUND,
+        Json(json!({
+            "error": format!("Binary for version '{}' not available on this server", version),
+        })),
+    )
 }

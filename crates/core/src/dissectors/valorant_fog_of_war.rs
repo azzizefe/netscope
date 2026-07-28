@@ -1,7 +1,7 @@
+use super::DissectedResult;
+use crate::models::Protocol;
 use std::fmt::Write;
 use std::net::IpAddr;
-use crate::models::Protocol;
-use super::DissectedResult;
 
 pub fn dissect_valorant_fog_of_war(
     src_ip: Option<IpAddr>,
@@ -22,7 +22,9 @@ pub fn dissect_valorant_fog_of_war(
             let max_visible = visibility_count.min(16) as usize;
             for i in 0..max_visible {
                 if i * 4 + 12 <= payload.len() {
-                    let eid = u32::from_le_bytes(payload[8 + i * 4..12 + i * 4].try_into().unwrap_or([0; 4]));
+                    let eid = u32::from_le_bytes(
+                        payload[8 + i * 4..12 + i * 4].try_into().unwrap_or([0; 4]),
+                    );
                     if !visible_entities.is_empty() {
                         visible_entities.push(',');
                     }
@@ -33,9 +35,15 @@ pub fn dissect_valorant_fog_of_war(
         let is_visible = (flags & 0x01) != 0;
         format!(
             "Valorant FoW seq={} visible={} flags=0x{:02x}{}{}",
-            seq, visibility_count, flags,
+            seq,
+            visibility_count,
+            flags,
             if is_visible { " TEAM_VISIBLE" } else { "" },
-            if !visible_entities.is_empty() { format!(" entities=[{}]", visible_entities) } else { String::new() },
+            if !visible_entities.is_empty() {
+                format!(" entities=[{}]", visible_entities)
+            } else {
+                String::new()
+            },
         )
     };
     DissectedResult {

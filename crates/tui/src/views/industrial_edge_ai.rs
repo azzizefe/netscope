@@ -24,8 +24,8 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
     let snap = app.stats.snapshot();
     let elapsed = (Utc::now() - app.start_time).num_seconds().max(1) as f64;
 
-    render_header(frame, layout[0], &snap, elapsed as f64, border);
-    render_edge_monitor_row(frame, layout[1], &snap, elapsed as f64, border);
+    render_header(frame, layout[0], &snap, elapsed, border);
+    render_edge_monitor_row(frame, layout[1], &snap, elapsed, border);
     render_edge_ai_table(frame, layout[2], &snap, border);
     render_edge_health_kpis(frame, layout[3], &snap, border);
 }
@@ -61,27 +61,34 @@ fn render_header(
         0.0
     };
 
-    let header = vec![
-        Line::from(vec![
-            Span::styled(" Industrial Edge AI Monitor ", Style::new().bold().underlined()),
-            Span::raw("  "),
-            Span::styled(format!("Uptime: {}s", elapsed_secs as u64), Style::new().fg(Color::Cyan)),
-            Span::raw("  │  "),
-            Span::styled(format!("Edge Pkts: {}", total_edge), Style::new().fg(Color::Magenta)),
-            Span::raw("  │  "),
-            Span::styled(
-                format!("Edge BW: {:.1} KB/s", bw / 1024.0),
-                Style::new().fg(Color::Yellow),
-            ),
-            Span::raw("  │  "),
-            Span::styled(format!("Ops/s: {:.1}", ops), Style::new().fg(Color::Green)),
-            Span::raw("  │  "),
-            Span::styled(
-                format!("Total: {} pkts", snap.total_packets),
-                Style::new().fg(Color::Gray),
-            ),
-        ]),
-    ];
+    let header = vec![Line::from(vec![
+        Span::styled(
+            " Industrial Edge AI Monitor ",
+            Style::new().bold().underlined(),
+        ),
+        Span::raw("  "),
+        Span::styled(
+            format!("Uptime: {}s", elapsed_secs as u64),
+            Style::new().fg(Color::Cyan),
+        ),
+        Span::raw("  │  "),
+        Span::styled(
+            format!("Edge Pkts: {}", total_edge),
+            Style::new().fg(Color::Magenta),
+        ),
+        Span::raw("  │  "),
+        Span::styled(
+            format!("Edge BW: {:.1} KB/s", bw / 1024.0),
+            Style::new().fg(Color::Yellow),
+        ),
+        Span::raw("  │  "),
+        Span::styled(format!("Ops/s: {:.1}", ops), Style::new().fg(Color::Green)),
+        Span::raw("  │  "),
+        Span::styled(
+            format!("Total: {} pkts", snap.total_packets),
+            Style::new().fg(Color::Gray),
+        ),
+    ])];
 
     let block = Block::default()
         .borders(Borders::ALL)
@@ -91,31 +98,67 @@ fn render_header(
 
 const EDGE_PROTOCOLS: &[(netscope_core::models::Protocol, &str)] = &[
     (netscope_core::models::Protocol::EdgeInferenceOnnx, "ONNX"),
-    (netscope_core::models::Protocol::EdgeTensorflowLite, "TFLite"),
-    (netscope_core::models::Protocol::EdgePytorchMobile, "PyTorch"),
+    (
+        netscope_core::models::Protocol::EdgeTensorflowLite,
+        "TFLite",
+    ),
+    (
+        netscope_core::models::Protocol::EdgePytorchMobile,
+        "PyTorch",
+    ),
     (netscope_core::models::Protocol::NxpEiqInference, "NXP eIQ"),
     (netscope_core::models::Protocol::StmStm32cubeAi, "STM32Cube"),
-    (netscope_core::models::Protocol::SiemensIndustrialEdge, "Siemens"),
+    (
+        netscope_core::models::Protocol::SiemensIndustrialEdge,
+        "Siemens",
+    ),
     (netscope_core::models::Protocol::BoschNexeedEdge, "Bosch"),
-    (netscope_core::models::Protocol::BeckhoffTwincatAnalytics, "Beckhoff"),
-    (netscope_core::models::Protocol::RockwellFactorytalkEdge, "Rockwell"),
-    (netscope_core::models::Protocol::SchneiderEcostruxureEdge, "Schneider"),
+    (
+        netscope_core::models::Protocol::BeckhoffTwincatAnalytics,
+        "Beckhoff",
+    ),
+    (
+        netscope_core::models::Protocol::RockwellFactorytalkEdge,
+        "Rockwell",
+    ),
+    (
+        netscope_core::models::Protocol::SchneiderEcostruxureEdge,
+        "Schneider",
+    ),
 ];
 
 const AI_PLATFORMS: &[(netscope_core::models::Protocol, &str)] = &[
     (netscope_core::models::Protocol::EdgeInferenceOnnx, "ONNX"),
-    (netscope_core::models::Protocol::EdgeTensorflowLite, "TFLite"),
-    (netscope_core::models::Protocol::EdgePytorchMobile, "PyTorch"),
+    (
+        netscope_core::models::Protocol::EdgeTensorflowLite,
+        "TFLite",
+    ),
+    (
+        netscope_core::models::Protocol::EdgePytorchMobile,
+        "PyTorch",
+    ),
     (netscope_core::models::Protocol::NxpEiqInference, "NXP eIQ"),
     (netscope_core::models::Protocol::StmStm32cubeAi, "STM32Cube"),
 ];
 
 const VENDOR_PROTOCOLS: &[(netscope_core::models::Protocol, &str)] = &[
-    (netscope_core::models::Protocol::SiemensIndustrialEdge, "Siemens"),
+    (
+        netscope_core::models::Protocol::SiemensIndustrialEdge,
+        "Siemens",
+    ),
     (netscope_core::models::Protocol::BoschNexeedEdge, "Bosch"),
-    (netscope_core::models::Protocol::BeckhoffTwincatAnalytics, "Beckhoff"),
-    (netscope_core::models::Protocol::RockwellFactorytalkEdge, "Rockwell"),
-    (netscope_core::models::Protocol::SchneiderEcostruxureEdge, "Schneider"),
+    (
+        netscope_core::models::Protocol::BeckhoffTwincatAnalytics,
+        "Beckhoff",
+    ),
+    (
+        netscope_core::models::Protocol::RockwellFactorytalkEdge,
+        "Rockwell",
+    ),
+    (
+        netscope_core::models::Protocol::SchneiderEcostruxureEdge,
+        "Schneider",
+    ),
 ];
 
 fn render_edge_monitor_row(
@@ -172,7 +215,11 @@ fn render_opcua_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, borde
         .get(&netscope_core::models::Protocol::OpcUaPubSub)
         .map(|s| s.total_packets)
         .unwrap_or(0);
-    let node_count = if reads + writes + browse + subs > 0 { reads + writes + browse } else { 0 };
+    let node_count = if reads + writes + browse + subs > 0 {
+        reads + writes + browse
+    } else {
+        0
+    };
 
     let lines = vec![
         Line::from(vec![
@@ -277,34 +324,52 @@ fn render_ai_inference_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot
             Span::styled(" ONNX: ", Style::new().bold()),
             Span::styled(
                 format!("{}ms  ({} inf)", onnx_lat, onnx_pkts),
-                Style::new().fg(if onnx_lat < 15 { Color::Green } else { Color::Yellow }),
+                Style::new().fg(if onnx_lat < 15 {
+                    Color::Green
+                } else {
+                    Color::Yellow
+                }),
             ),
         ]),
         Line::from(vec![
             Span::styled(" TFLite: ", Style::new().bold()),
             Span::styled(
                 format!("{}ms  ({} inf)", tfl_lat, tfl_pkts),
-                Style::new().fg(if tfl_lat < 10 { Color::Green } else { Color::Yellow }),
+                Style::new().fg(if tfl_lat < 10 {
+                    Color::Green
+                } else {
+                    Color::Yellow
+                }),
             ),
         ]),
         Line::from(vec![
             Span::styled(" PTorch: ", Style::new().bold()),
             Span::styled(
                 format!("{}ms  ({} inf)", pt_lat, pt_pkts),
-                Style::new().fg(if pt_lat < 20 { Color::Green } else { Color::Yellow }),
+                Style::new().fg(if pt_lat < 20 {
+                    Color::Green
+                } else {
+                    Color::Yellow
+                }),
             ),
         ]),
         Line::from(vec![
             Span::styled(" NXP eIQ: ", Style::new().bold()),
             Span::styled(
-                format!("{}ms", avg_latency_ms(snap, &netscope_core::models::Protocol::NxpEiqInference)),
+                format!(
+                    "{}ms",
+                    avg_latency_ms(snap, &netscope_core::models::Protocol::NxpEiqInference)
+                ),
                 Style::new().fg(Color::Cyan),
             ),
         ]),
         Line::from(vec![
             Span::styled(" STM32Cube: ", Style::new().bold()),
             Span::styled(
-                format!("{}ms", avg_latency_ms(snap, &netscope_core::models::Protocol::StmStm32cubeAi)),
+                format!(
+                    "{}ms",
+                    avg_latency_ms(snap, &netscope_core::models::Protocol::StmStm32cubeAi)
+                ),
                 Style::new().fg(Color::Cyan),
             ),
         ]),
@@ -328,14 +393,18 @@ fn render_security_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, bo
         .get(&netscope_core::models::Protocol::Tls)
         .map(|s| if s.total_bytes > 0 { 0u64 } else { 1u64 })
         .unwrap_or(0);
-    let cert_ok = if tls_pkts > 0 { tls_pkts - bad_auth * 5 } else { 0 };
+    let cert_ok = if tls_pkts > 0 {
+        tls_pkts - bad_auth * 5
+    } else {
+        0
+    };
     let opcua_sec = snap
         .per_protocol
         .get(&netscope_core::models::Protocol::OpcUa)
         .map(|s| {
             let total = s.total_packets;
-            let secure = (total as f64 * 0.85) as u64;
-            secure
+
+            (total as f64 * 0.85) as u64
         })
         .unwrap_or(0);
 
@@ -344,11 +413,28 @@ fn render_security_panel(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, bo
             Span::styled(" CertOK: ", Style::new().bold()),
             Span::styled(format!("{}", cert_ok), Style::new().fg(Color::Green)),
             Span::raw("  "),
-            Span::styled(format!("({:.0}%)", if tls_pkts > 0 { cert_ok as f64 / tls_pkts as f64 * 100.0 } else { 0.0 }), Style::new().fg(Color::Gray)),
+            Span::styled(
+                format!(
+                    "({:.0}%)",
+                    if tls_pkts > 0 {
+                        cert_ok as f64 / tls_pkts as f64 * 100.0
+                    } else {
+                        0.0
+                    }
+                ),
+                Style::new().fg(Color::Gray),
+            ),
         ]),
         Line::from(vec![
             Span::styled(" BadAuth: ", Style::new().bold()),
-            Span::styled(format!("{}", bad_auth), Style::new().fg(if bad_auth > 0 { Color::Red } else { Color::Green })),
+            Span::styled(
+                format!("{}", bad_auth),
+                Style::new().fg(if bad_auth > 0 {
+                    Color::Red
+                } else {
+                    Color::Green
+                }),
+            ),
         ]),
         Line::from(vec![
             Span::styled(" EncViol: ", Style::new().bold()),
@@ -395,13 +481,47 @@ fn render_kpi_panel(
         0.0
     };
 
-    let oee = if active_protos >= 3 { 87.3f64 } else if active_protos > 0 { 52.1f64 } else { 0.0 };
-    let downtime = if active_protos >= 3 { 0u64 } else if active_protos > 0 { 12u64 } else { 60u64 };
-    let cycle_time = if active_protos >= 3 { 2.3f64 } else if active_protos > 0 { 5.7f64 } else { 0.0 };
-    let inf_rate = if elapsed_secs > 0.0 { total_edge as f64 / elapsed_secs } else { 0.0 };
+    let oee = if active_protos >= 3 {
+        87.3f64
+    } else if active_protos > 0 {
+        52.1f64
+    } else {
+        0.0
+    };
+    let downtime = if active_protos >= 3 {
+        0u64
+    } else if active_protos > 0 {
+        12u64
+    } else {
+        60u64
+    };
+    let cycle_time = if active_protos >= 3 {
+        2.3f64
+    } else if active_protos > 0 {
+        5.7f64
+    } else {
+        0.0
+    };
+    let inf_rate = if elapsed_secs > 0.0 {
+        total_edge as f64 / elapsed_secs
+    } else {
+        0.0
+    };
 
-    let oee_color = if oee >= 80.0 { Color::Green } else if oee >= 50.0 { Color::Yellow } else { Color::Red };
-    let dt_color = if downtime == 0 { Color::Green } else if downtime < 30 { Color::Yellow } else { Color::Red };
+    let oee_color = if oee >= 80.0 {
+        Color::Green
+    } else if oee >= 50.0 {
+        Color::Yellow
+    } else {
+        Color::Red
+    };
+    let dt_color = if downtime == 0 {
+        Color::Green
+    } else if downtime < 30 {
+        Color::Yellow
+    } else {
+        Color::Red
+    };
 
     let lines = vec![
         Line::from(vec![
@@ -422,7 +542,10 @@ fn render_kpi_panel(
         ]),
         Line::from(vec![
             Span::styled(" Edge BW: ", Style::new().bold()),
-            Span::styled(format!("{:.1} KB/s", edge_throughput), Style::new().fg(Color::Yellow)),
+            Span::styled(
+                format!("{:.1} KB/s", edge_throughput),
+                Style::new().fg(Color::Yellow),
+            ),
         ]),
     ];
     render_panel(frame, area, " Production KPIs ", border, lines);
@@ -441,12 +564,24 @@ fn render_edge_ai_table(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, bor
             match ps {
                 Some(s) => {
                     let lat = avg_latency_ms(snap, proto);
-                    let color = if lat < 10 { Color::Green } else if lat < 25 { Color::Yellow } else { Color::Red };
+                    let color = if lat < 10 {
+                        Color::Green
+                    } else if lat < 25 {
+                        Color::Yellow
+                    } else {
+                        Color::Red
+                    };
                     Line::from(vec![
                         Span::styled(format!(" {:<12}", name), Style::new().bold()),
-                        Span::styled(format!(" {:>6} pkts", s.total_packets), Style::new().fg(Color::Cyan)),
+                        Span::styled(
+                            format!(" {:>6} pkts", s.total_packets),
+                            Style::new().fg(Color::Cyan),
+                        ),
                         Span::raw("  "),
-                        Span::styled(format!("{:>8} B", s.total_bytes), Style::new().fg(Color::Yellow)),
+                        Span::styled(
+                            format!("{:>8} B", s.total_bytes),
+                            Style::new().fg(Color::Yellow),
+                        ),
                         Span::raw("  "),
                         Span::styled(format!("{:>3}ms", lat), Style::new().fg(color)),
                     ])
@@ -471,9 +606,15 @@ fn render_edge_ai_table(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, bor
                     let healthy = s.total_packets > 0 && s.total_bytes > 0;
                     Line::from(vec![
                         Span::styled(format!(" {:<12}", name), Style::new().bold()),
-                        Span::styled(format!(" {:>6} pkts", s.total_packets), Style::new().fg(Color::Cyan)),
+                        Span::styled(
+                            format!(" {:>6} pkts", s.total_packets),
+                            Style::new().fg(Color::Cyan),
+                        ),
                         Span::raw("  "),
-                        Span::styled(format!("{:>8} B", s.total_bytes), Style::new().fg(Color::Yellow)),
+                        Span::styled(
+                            format!("{:>8} B", s.total_bytes),
+                            Style::new().fg(Color::Yellow),
+                        ),
                         Span::raw("  "),
                         Span::styled(
                             if healthy { " ✓ active" } else { " ⚠ idle" },
@@ -538,7 +679,11 @@ fn render_edge_health_kpis(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, 
             Span::styled(" Platforms: ", Style::new().bold()),
             Span::styled(
                 format!("{}/{}", active_platforms.len(), AI_PLATFORMS.len()),
-                Style::new().fg(if active_platforms.len() >= 3 { Color::Green } else { Color::Yellow }),
+                Style::new().fg(if active_platforms.len() >= 3 {
+                    Color::Green
+                } else {
+                    Color::Yellow
+                }),
             ),
             Span::raw("  "),
             Span::styled(active_platforms.join(", "), Style::new().fg(Color::Gray)),
@@ -547,7 +692,11 @@ fn render_edge_health_kpis(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, 
             Span::styled(" Vendors: ", Style::new().bold()),
             Span::styled(
                 format!("{}/{}", active_vendors.len(), VENDOR_PROTOCOLS.len()),
-                Style::new().fg(if active_vendors.len() >= 3 { Color::Green } else { Color::Yellow }),
+                Style::new().fg(if active_vendors.len() >= 3 {
+                    Color::Green
+                } else {
+                    Color::Yellow
+                }),
             ),
             Span::raw("  "),
             Span::styled(active_vendors.join(", "), Style::new().fg(Color::Gray)),

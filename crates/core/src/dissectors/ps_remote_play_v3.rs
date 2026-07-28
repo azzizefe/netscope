@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_ps_remote_play_v3(
     src_ip: Option<IpAddr>,
@@ -45,9 +45,14 @@ pub fn dissect_ps_remote_play_v3(
         };
         format!(
             "PS RemotePlay ch={} cmd={}(0x{:04x}) seq={}{}{} magic=0x{:08x} len={}",
-            channel, cmd_name, cmd, seq, ack_info,
+            channel,
+            cmd_name,
+            cmd,
+            seq,
+            ack_info,
             if is_key { " KEY" } else { "" },
-            magic, payload.len(),
+            magic,
+            payload.len(),
         )
     };
     DissectedResult {

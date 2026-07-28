@@ -94,9 +94,7 @@ pub(crate) fn owns(id: u32, extended: bool, payload: &[u8]) -> bool {
     match service_of(id) {
         // Command specifier plus the node it addresses. The specifiers are the
         // five CiA 301 defines; anything else is not a node-control frame.
-        Some(Service::Nmt) => {
-            payload.len() == 2 && matches!(payload[0], 1 | 2 | 128 | 129 | 130)
-        }
+        Some(Service::Nmt) => payload.len() == 2 && matches!(payload[0], 1 | 2 | 128 | 129 | 130),
         // SYNC is empty, or carries a single counter byte.
         Some(Service::Sync) => payload.len() <= 1,
         // TIME is a six-byte TIME_OF_DAY.

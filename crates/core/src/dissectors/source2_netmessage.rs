@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_source2_netmessage(
     src_ip: Option<IpAddr>,
@@ -33,7 +33,13 @@ mod tests {
 
     #[test]
     fn test_source2_netmessage() {
-        let r = dissect_source2_netmessage(None, None, 27015, 27015, b"\x0a\x00\x00\x00\x10\xbe\xef\xca\xfe");
+        let r = dissect_source2_netmessage(
+            None,
+            None,
+            27015,
+            27015,
+            b"\x0a\x00\x00\x00\x10\xbe\xef\xca\xfe",
+        );
         assert_eq!(r.protocol, Protocol::Source2Netmessage);
         assert!(r.summary.contains("id10"));
     }

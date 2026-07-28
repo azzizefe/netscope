@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 /// Dissect NVGRE
-pub fn dissect_nvgre(src_ip: Option<IpAddr>, dst_ip: Option<IpAddr>, _payload: &[u8]) -> DissectedResult {
+pub fn dissect_nvgre(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    _payload: &[u8],
+) -> DissectedResult {
     DissectedResult {
         src_addr: src_ip,
         dst_addr: dst_ip,

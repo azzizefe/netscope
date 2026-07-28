@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
-use crate::models::Protocol;
 use crate::dissectors::DissectedResult;
+use crate::models::Protocol;
 
 pub fn dissect_cxl_io_protocol(
     _src_ip: Option<IpAddr>,
@@ -10,21 +10,25 @@ pub fn dissect_cxl_io_protocol(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary;
-    if payload.len() >= 16 {
+    let summary = if payload.len() >= 16 {
         let _version = payload[0];
         let opcode = payload[1];
         let tag = u16::from_be_bytes([payload[2], payload[3]]);
         let _req_id = u32::from_be_bytes([payload[8], payload[9], payload[10], payload[11]]);
         let _addr = u64::from_be_bytes([
-            payload[12], payload[13], payload[14], payload[15],
-            0, 0, 0, 0,
+            payload[12],
+            payload[13],
+            payload[14],
+            payload[15],
+            0,
+            0,
+            0,
+            0,
         ]);
-        summary = format!("CXL.io op={} tag={}",
-            opcode, tag);
+        format!("CXL.io op={} tag={}", opcode, tag)
     } else {
-        summary = "CXL.io (short frame)".into();
-    }
+        "CXL.io (short frame)".into()
+    };
     DissectedResult {
         src_addr: _src_ip,
         dst_addr: _dst_ip,
@@ -50,7 +54,10 @@ mod tests {
         let r = dissect_cxl_io_protocol(
             Some("10.0.0.1".parse::<IpAddr>().unwrap()),
             Some("10.0.0.2".parse::<IpAddr>().unwrap()),
-            8500, 8500, &buf);
+            8500,
+            8500,
+            &buf,
+        );
         assert_eq!(r.protocol, Protocol::CxlIoProtocol);
         assert!(r.summary.contains("op=4"));
         assert!(r.summary.contains("tag=26"));

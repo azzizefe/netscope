@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_edge_inference_onnx(
     src_ip: Option<IpAddr>,
@@ -10,7 +10,8 @@ pub fn dissect_edge_inference_onnx(
     payload: &[u8],
 ) -> DissectedResult {
     let summary = if payload.len() >= 16 {
-        let model_len = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]) as usize;
+        let model_len =
+            u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]) as usize;
         let op = match payload[0] {
             0x01 => "SessionCreate",
             0x02 => "RunInference",
@@ -26,7 +27,10 @@ pub fn dissect_edge_inference_onnx(
         if model.is_empty() {
             format!("ONNX Edge — {op} ({})", super::bytes(payload.len() as u64))
         } else {
-            format!("ONNX Edge — {op} model:{model} ({})", super::bytes(payload.len() as u64))
+            format!(
+                "ONNX Edge — {op} model:{model} ({})",
+                super::bytes(payload.len() as u64)
+            )
         }
     } else {
         format!("ONNX Edge — {}", super::bytes(payload.len() as u64))

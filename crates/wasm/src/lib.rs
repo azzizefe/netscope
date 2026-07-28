@@ -134,10 +134,12 @@ fn parse_protocol(s: &str) -> Protocol {
         "AMQP" => Protocol::Amqp,
         "KAFKA" => Protocol::Kafka,
         other => netscope_core::registry::Protocol::from_filter_token(&other.to_lowercase())
-            .unwrap_or_else(|| Protocol::Plugin(netscope_core::models::PluginProto {
-                name: other.to_string(),
-                transport: netscope_core::models::PluginTransport::Tcp,
-            })),
+            .unwrap_or_else(|| {
+                Protocol::Plugin(netscope_core::models::PluginProto {
+                    name: other.to_string(),
+                    transport: netscope_core::models::PluginTransport::Tcp,
+                })
+            }),
     }
 }
 

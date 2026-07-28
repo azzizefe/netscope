@@ -26,28 +26,12 @@ pub struct CreateUser {
     pub role: String,
 }
 
-#[derive(Debug, Serialize)]
-pub struct UserResponse {
-    pub id: Uuid,
-    pub username: String,
-    pub email: String,
-    pub role: String,
-    pub is_active: bool,
-    pub created_at: DateTime<Utc>,
-}
-
-impl From<User> for UserResponse {
-    fn from(u: User) -> Self {
-        UserResponse {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            role: u.role,
-            is_active: u.is_active,
-            created_at: u.created_at,
-        }
-    }
-}
+// A `UserResponse` (the `User` row minus `password_hash`) and its `From<User>`
+// used to sit here, together with `get_user_by_id` in queries.rs. Nothing
+// constructed either: they are the parts of a `GET /api/v1/auth/me` that was
+// never written. Bring them back with that endpoint — a serialisable user
+// projection has no other purpose, and leaving it here only made it look as
+// though the route existed.
 
 // ── Sensors ──
 
@@ -109,6 +93,7 @@ pub struct SensorHeartbeat {
     pub ram_used_mb: Option<i32>,
     pub capture_throughput_bps: Option<i64>,
     pub uptime_secs: Option<i64>,
+    pub disk_free_mb: Option<i64>,
     pub interface_stats: Option<serde_json::Value>,
     pub received_at: DateTime<Utc>,
 }
@@ -245,12 +230,9 @@ pub struct CountBySeverity {
 }
 
 // ── Roles / Permissions ──
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct Role {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub permissions: serde_json::Value,
-    pub created_at: DateTime<Utc>,
-}
+//
+// There is no `Role` row model here on purpose. Permissions live in
+// `RbacState::new()` as a compiled-in table, not in the database, so a model
+// for the `roles` table described something nothing reads or writes. If roles
+// ever become editable at runtime, the model comes back with the queries that
+// use it.

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 /// Whether this is an EcoStruxure Edge frame rather than something else on 8080.
 ///
@@ -34,7 +34,10 @@ pub fn dissect_schneider_ecostruxure_edge(
         };
         let seq = u32::from_le_bytes([payload[8], payload[9], payload[10], payload[11]]);
         let ts = u32::from_le_bytes([payload[12], payload[13], payload[14], payload[15]]);
-        format!("EcoStruxure Edge — asset:{asset_id:x} {msg_type} seq:{seq} ts:{ts} ({})", super::bytes(payload.len() as u64))
+        format!(
+            "EcoStruxure Edge — asset:{asset_id:x} {msg_type} seq:{seq} ts:{ts} ({})",
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("EcoStruxure Edge — {}", super::bytes(payload.len() as u64))
     };

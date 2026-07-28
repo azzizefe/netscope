@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_varan_bus(
     src_ip: Option<IpAddr>,
@@ -20,7 +20,12 @@ pub fn dissect_varan_bus(
             _ => "Data",
         };
         let len = u16::from_be_bytes([payload[4], payload[5]]);
-        format!("VARAN Bus — {} len:{} ({})", fc, len, super::bytes(payload.len() as u64))
+        format!(
+            "VARAN Bus — {} len:{} ({})",
+            fc,
+            len,
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("VARAN Bus — {}", super::bytes(payload.len() as u64))
     };

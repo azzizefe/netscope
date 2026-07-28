@@ -16,16 +16,6 @@ pub async fn get_user_by_username(pool: &PgPool, username: &str) -> Result<Optio
     .await?)
 }
 
-pub async fn get_user_by_id(pool: &PgPool, id: Uuid) -> Result<Option<User>> {
-    Ok(sqlx::query_as::<_, User>(
-        "SELECT id, username, email, password_hash, role, is_active, created_at, updated_at
-         FROM users WHERE id = $1",
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?)
-}
-
 pub async fn create_user(pool: &PgPool, user: &CreateUser, hash: &str) -> Result<User> {
     Ok(sqlx::query_as::<_, User>(
         "INSERT INTO users (username, email, password_hash, role)
@@ -89,23 +79,26 @@ pub async fn get_sensor(pool: &PgPool, id: Uuid) -> Result<Option<Sensor>> {
     .await?)
 }
 
-pub async fn update_sensor_heartbeat(pool: &PgPool, sensor_id: Uuid, hb: &SensorHeartbeat) -> Result<()> {
-    sqlx::query(
-        "UPDATE sensors SET status = 'online', last_heartbeat = now() WHERE id = $1",
-    )
-    .bind(sensor_id)
-    .execute(pool)
-    .await?;
+pub async fn update_sensor_heartbeat(
+    pool: &PgPool,
+    sensor_id: Uuid,
+    hb: &SensorHeartbeat,
+) -> Result<()> {
+    sqlx::query("UPDATE sensors SET status = 'online', last_heartbeat = now() WHERE id = $1")
+        .bind(sensor_id)
+        .execute(pool)
+        .await?;
 
     sqlx::query(
-        "INSERT INTO sensor_heartbeats (sensor_id, cpu_load_pct, ram_used_mb, capture_throughput_bps, uptime_secs, interface_stats)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb)",
+        "INSERT INTO sensor_heartbeats (sensor_id, cpu_load_pct, ram_used_mb, capture_throughput_bps, uptime_secs, disk_free_mb, interface_stats)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)",
     )
     .bind(sensor_id)
     .bind(hb.cpu_load_pct)
     .bind(hb.ram_used_mb)
     .bind(hb.capture_throughput_bps)
     .bind(hb.uptime_secs)
+    .bind(hb.disk_free_mb)
     .bind(&hb.interface_stats)
     .execute(pool)
     .await?;
@@ -116,9 +109,12 @@ pub async fn update_sensor_heartbeat(pool: &PgPool, sensor_id: Uuid, hb: &Sensor
 
 pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event> {
     Ok(sqlx::query_as::<_, Event>(
+        // `timestamp` is bound rather than left to the column default: the
+        // default is `now()`, which is the ingest time, and a batch replayed
+        // from a sensor's offline buffer is not from now.
         "INSERT INTO events (sensor_id, event_type, severity, title, description,
-                source_ip, dest_ip, protocol, port, raw_data, tags)
-         VALUES ($1, $2, $3, $4, $5, $6::inet, $7::inet, $8, $9, $10::jsonb, $11::jsonb)
+                source_ip, dest_ip, protocol, port, raw_data, tags, timestamp)
+         VALUES ($1, $2, $3, $4, $5, $6::inet, $7::inet, $8, $9, $10::jsonb, $11::jsonb, $12)
          RETURNING id, sensor_id, event_type, severity, title, description,
                    source_ip::inet, dest_ip::inet, protocol, port, raw_data, tags, timestamp",
     )
@@ -133,6 +129,7 @@ pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event> {
     .bind(event.port)
     .bind(&event.raw_data)
     .bind(&event.tags)
+    .bind(event.timestamp)
     .fetch_one(pool)
     .await?)
 }
@@ -235,17 +232,32 @@ pub async fn list_alerts(pool: &PgPool, filter: &AlertFilter) -> Result<Vec<Aler
     sql.push_str(&format!(" LIMIT ${idx} OFFSET ${}", idx + 1));
 
     let mut q = sqlx::query_as::<_, Alert>(&sql);
-    if let Some(ref s) = filter.status { q = q.bind(s); }
-    if let Some(ref sev) = filter.severity { q = q.bind(sev); }
-    if let Some(sid) = filter.sensor_id { q = q.bind(sid); }
-    if let Some(ts) = filter.timerange_start { q = q.bind(ts); }
-    if let Some(te) = filter.timerange_end { q = q.bind(te); }
+    if let Some(ref s) = filter.status {
+        q = q.bind(s);
+    }
+    if let Some(ref sev) = filter.severity {
+        q = q.bind(sev);
+    }
+    if let Some(sid) = filter.sensor_id {
+        q = q.bind(sid);
+    }
+    if let Some(ts) = filter.timerange_start {
+        q = q.bind(ts);
+    }
+    if let Some(te) = filter.timerange_end {
+        q = q.bind(te);
+    }
     q = q.bind(per_page).bind(offset);
 
     Ok(q.fetch_all(pool).await?)
 }
 
-pub async fn update_alert_status(pool: &PgPool, id: Uuid, status: &str, user_id: Option<Uuid>) -> Result<Option<Alert>> {
+pub async fn update_alert_status(
+    pool: &PgPool,
+    id: Uuid,
+    status: &str,
+    user_id: Option<Uuid>,
+) -> Result<Option<Alert>> {
     match status {
         "acknowledged" | "investigating" => {
             if let Some(uid) = user_id {
@@ -307,26 +319,28 @@ pub async fn update_alert_status(pool: &PgPool, id: Uuid, status: &str, user_id:
                 .await?)
             }
         }
-        _ => {
-            Ok(sqlx::query_as::<_, Alert>(
-                "UPDATE alerts SET status = $1, updated_at = now()
+        _ => Ok(sqlx::query_as::<_, Alert>(
+            "UPDATE alerts SET status = $1, updated_at = now()
                  WHERE id = $2
                  RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
                            source_ip::inet, dest_ip::inet, raw_data,
                            acknowledged_by, acknowledged_at, resolved_by, resolved_at,
                            created_at, updated_at",
-            )
-            .bind(status)
-            .bind(id)
-            .fetch_optional(pool)
-            .await?)
-        }
+        )
+        .bind(status)
+        .bind(id)
+        .fetch_optional(pool)
+        .await?),
     }
 }
 
 // ── Rules ──
 
-pub async fn create_rule(pool: &PgPool, rule: &CreateRule, user_id: Option<Uuid>) -> Result<AlertRule> {
+pub async fn create_rule(
+    pool: &PgPool,
+    rule: &CreateRule,
+    user_id: Option<Uuid>,
+) -> Result<AlertRule> {
     Ok(sqlx::query_as::<_, AlertRule>(
         "INSERT INTO alert_rules (name, description, enabled, severity, condition, actions, cooldown_secs, created_by)
          VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8)
@@ -392,16 +406,14 @@ pub async fn dashboard_summary(pool: &PgPool) -> Result<DashboardSummary> {
     .fetch_one(pool)
     .await?;
 
-    let total_sensors: (i64,) =
-        sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors")
+    let total_sensors: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors")
+        .fetch_one(pool)
+        .await?;
+
+    let online_sensors: (i64,) =
+        sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors WHERE status = 'online'")
             .fetch_one(pool)
             .await?;
-
-    let online_sensors: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::bigint FROM sensors WHERE status = 'online'",
-    )
-    .fetch_one(pool)
-    .await?;
 
     let events_per_second: (Option<f64>,) = sqlx::query_as(
         "SELECT CASE WHEN COUNT(*) > 0 AND EXTRACT(EPOCH FROM max(timestamp) - min(timestamp)) > 0

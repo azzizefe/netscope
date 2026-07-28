@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_battleye_packet_filter(
     src_ip: Option<IpAddr>,
@@ -21,10 +21,7 @@ pub fn dissect_battleye_packet_filter(
             0x03 => "Kick",
             _ => "Unknown",
         };
-        format!(
-            "BattlEye Packet Filter type={} seq={}",
-            type_name, seq
-        )
+        format!("BattlEye Packet Filter type={} seq={}", type_name, seq)
     };
     DissectedResult {
         src_addr: src_ip,

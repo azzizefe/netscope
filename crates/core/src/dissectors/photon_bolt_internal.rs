@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_photon_bolt_internal(
     src_ip: Option<IpAddr>,
@@ -36,11 +36,7 @@ mod tests {
 
     #[test]
     fn test_photon_bolt_internal_basic() {
-        let buf = vec![
-            0x00, 0x00, 0x00, 0x01,
-            0x00, 0x00, 0x00, 0x0A,
-            0x00, 0x02,
-        ];
+        let buf = vec![0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x02];
         let r = dissect_photon_bolt_internal(None, None, 0, 0, &buf);
         assert_eq!(r.protocol, Protocol::PhotonBoltInternal);
     }

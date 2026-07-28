@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_godot_websocket_mp(
     src_ip: Option<IpAddr>,
@@ -40,7 +40,8 @@ mod tests {
 
     #[test]
     fn test_godot_websocket_mp_data() {
-        let r = dissect_godot_websocket_mp(None, None, 9877, 9877, b"\x02\x00\x01\x48\x65\x6c\x6c\x6f");
+        let r =
+            dissect_godot_websocket_mp(None, None, 9877, 9877, b"\x02\x00\x01\x48\x65\x6c\x6c\x6f");
         assert_eq!(r.protocol, Protocol::GodotWebsocketMp);
         assert!(r.summary.contains("Data"));
     }

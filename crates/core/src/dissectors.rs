@@ -53,67 +53,11 @@ pub mod gsm_um;
 pub mod gsmtap;
 pub mod gsmtap_log;
 
-pub mod iax2;
-pub mod isup;
-pub mod lisp;
-pub mod m3ua;
-pub mod modbus_ascii;
-pub mod e1ap;
-pub mod f1ap;
-pub mod mssqlbrowser;
-pub mod nvgre;
-pub mod evpn;
-pub mod pcp;
-pub mod profisafe;
-pub mod q931;
-pub mod redis;
-pub mod redis_cluster;
-pub mod rpc;
-pub mod rtsp;
-pub mod rwho;
-pub mod smb;
-pub mod srv6;
-pub mod nsh;
 pub mod bssap;
 pub mod bssgp;
+pub mod camel;
 pub mod can;
 pub mod capwap;
-pub mod camel;
-#[cfg(feature = "ot")]
-#[cfg(not(feature = "ot"))]
-pub mod cclink_ie_field_basic {
-    use std::net::IpAddr;
-    pub fn dissect_cclink_ie_field_basic(
-        _src_ip: Option<IpAddr>,
-        _dst_ip: Option<IpAddr>,
-        _src_port: u16,
-        _dst_port: u16,
-        _payload: &[u8],
-    ) -> super::DissectedResult {
-        super::DissectedResult {
-            src_addr: None,
-            dst_addr: None,
-            src_port: None,
-            dst_port: None,
-            protocol: crate::models::Protocol::CcLinkIeFieldBasic,
-            summary: String::new(),
-        }
-    }
-}
-#[cfg(feature = "ot")]
-#[cfg(not(feature = "ot"))]
-pub mod cclink_ie {
-    pub fn dissect_cclink_ie(_payload: &[u8]) -> super::DissectedResult {
-        super::DissectedResult {
-            src_addr: None,
-            dst_addr: None,
-            src_port: None,
-            dst_port: None,
-            protocol: crate::models::Protocol::CcLinkIeControl,
-            summary: String::new(),
-        }
-    }
-}
 pub mod cassandra;
 pub mod ccp;
 pub mod cdp;
@@ -125,6 +69,27 @@ pub mod consul_rpc;
 pub mod dccp;
 pub mod decnet;
 pub mod der;
+pub mod e1ap;
+pub mod evpn;
+pub mod f1ap;
+pub mod iax2;
+pub mod isup;
+pub mod lisp;
+pub mod m3ua;
+pub mod modbus_ascii;
+pub mod mssqlbrowser;
+pub mod nsh;
+pub mod nvgre;
+pub mod pcp;
+pub mod profisafe;
+pub mod q931;
+pub mod redis;
+pub mod redis_cluster;
+pub mod rpc;
+pub mod rtsp;
+pub mod rwho;
+pub mod smb;
+pub mod srv6;
 pub mod devicenet {
     pub(crate) fn looks_like_devicenet(_id: u32) -> bool {
         false
@@ -147,8 +112,8 @@ pub mod dicom;
 pub mod dmx;
 pub mod dnp3;
 pub mod dns;
-pub mod doip;
 pub mod docan;
+pub mod doip;
 pub mod drbd;
 pub mod dtls;
 pub mod dtp;
@@ -173,10 +138,10 @@ pub mod glbp;
 pub mod goose;
 pub mod gopher;
 pub mod gre;
+pub mod grpc;
 pub mod gtp;
 pub mod gtpprime;
 pub mod gtpv2;
-pub mod grpc;
 pub mod gvcp;
 pub mod h225ras;
 pub mod hip;
@@ -187,13 +152,13 @@ pub mod hsrp;
 pub mod http;
 pub mod http2;
 pub mod http_body;
-pub mod ikev2;
 pub mod icmp;
 pub mod iec101;
 pub mod iec_asdu;
 pub mod igmp;
-pub mod inap;
 pub mod igrp;
+pub mod ikev2;
+pub mod inap;
 pub mod ip;
 pub mod ipsec;
 pub mod ipx;
@@ -246,28 +211,10 @@ pub mod milter;
 pub mod mip6;
 pub mod mka;
 pub mod modbus;
-#[cfg(feature = "ot")]
-#[cfg(not(feature = "ot"))]
-pub mod modbus_ascii {
-    use std::net::IpAddr;
-    pub(crate) fn looks_like_modbus_ascii(_payload: &[u8]) -> bool { false }
-    pub fn dissect_modbus_ascii(
-        _src_ip: Option<IpAddr>,
-        _dst_ip: Option<IpAddr>,
-        _src_port: u16,
-        _dst_port: u16,
-        _payload: &[u8],
-    ) -> super::DissectedResult {
-        super::DissectedResult {
-            src_addr: None,
-            dst_addr: None,
-            src_port: None,
-            dst_port: None,
-            protocol: crate::models::Protocol::ModbusAscii,
-            summary: String::new(),
-        }
-    }
-}
+// `modbus_ascii` is declared unconditionally further up — unlike `modbus_rtu`
+// it is not behind the `ot` feature. The `not(ot)` stub that used to sit here
+// carried both `cfg(feature = "ot")` and `cfg(not(feature = "ot"))`, which are
+// ANDed, so it compiled under no configuration at all.
 #[cfg(feature = "ot")]
 pub mod modbus_rtu;
 #[cfg(not(feature = "ot"))]
@@ -306,13 +253,13 @@ pub mod nbds;
 pub mod nbns;
 pub mod netflow;
 pub mod nflog;
-pub mod ninep;
 pub mod nfs;
 pub mod nfs_callback;
-pub mod nhrp;
-pub mod ngap_common;
 #[cfg(feature = "telecom")]
 pub mod ngap;
+pub mod ngap_common;
+pub mod nhrp;
+pub mod ninep;
 #[cfg(not(feature = "telecom"))]
 pub mod ngap {
     use std::net::IpAddr;
@@ -358,20 +305,6 @@ pub mod powerlink;
 pub mod ppp;
 pub mod pppoe;
 pub mod profinet;
-#[cfg(feature = "ot")]
-#[cfg(not(feature = "ot"))]
-pub mod profisafe {
-    pub fn dissect_profisafe(_payload: &[u8]) -> super::DissectedResult {
-        super::DissectedResult {
-            src_addr: None,
-            dst_addr: None,
-            src_port: None,
-            dst_port: None,
-            protocol: crate::models::Protocol::Profisafe,
-            summary: String::new(),
-        }
-    }
-}
 pub mod prp;
 pub mod ptp;
 pub mod qpack;
@@ -385,37 +318,16 @@ pub mod ripng;
 pub mod rlc;
 pub mod rnsap;
 pub mod roce;
-pub mod rrc_lte;
-pub mod rrc_nr;
 pub mod rpkirtr;
 pub mod rpl;
+pub mod rrc_lte;
+pub mod rrc_nr;
 pub mod rsvp;
 pub mod rtp;
 pub mod rtpmidi;
 pub mod rtps;
 pub mod rua;
 pub mod s1ap;
-#[cfg(feature = "ot")]
-#[cfg(not(feature = "ot"))]
-pub mod s7comm_plus {
-    use std::net::IpAddr;
-    pub fn dissect_s7comm_plus(
-        _src_ip: Option<IpAddr>,
-        _dst_ip: Option<IpAddr>,
-        _src_port: u16,
-        _dst_port: u16,
-        _payload: &[u8],
-    ) -> super::DissectedResult {
-        super::DissectedResult {
-            src_addr: None,
-            dst_addr: None,
-            src_port: None,
-            dst_port: None,
-            protocol: crate::models::Protocol::S7commPlus,
-            summary: String::new(),
-        }
-    }
-}
 pub mod sabp;
 pub mod sasl;
 pub mod sbcap;
@@ -531,64 +443,64 @@ pub mod siemens_industrial_edge;
 pub mod stm_stm32cube_ai;
 
 // ── Proprietary Fieldbus Protocols (§10) ──
-pub mod iolink;
 pub mod as_interface;
-pub mod interbus;
-pub mod controlnet;
-pub mod mechatrolink;
-pub mod varan_bus;
-pub mod p_net;
 pub mod cip_safety;
+pub mod controlnet;
 pub mod fsoe;
+pub mod interbus;
+pub mod iolink;
+pub mod mechatrolink;
+pub mod p_net;
 pub mod profidrive;
+pub mod varan_bus;
 
 // ── Siemens Ecosystem (§10.2.1) ──
-pub mod profinet_rt_siemens;
-pub mod profinet_irt_siemens;
 pub mod profibus_dp_siemens;
+pub mod profinet_irt_siemens;
+pub mod profinet_rt_siemens;
 pub mod s7comm_plus_detail;
-pub mod sinamics_drive_profile;
-pub mod simatic_hmi_smartsrv;
-pub mod sinumerik_nck_channel;
 pub mod scalance_x_ring;
-pub mod siemens_l2_telegram;
-pub mod tia_portal_online_diag;
-pub mod siemens_opc_ua_model;
 pub mod siemens_industrial_5g;
+pub mod siemens_l2_telegram;
+pub mod siemens_opc_ua_model;
+pub mod simatic_hmi_smartsrv;
+pub mod sinamics_drive_profile;
+pub mod sinumerik_nck_channel;
+pub mod tia_portal_online_diag;
 
 // ── Rockwell / Allen-Bradley Ecosystem (§10.2.2) ──
-pub mod ether_net_ip_rockwell;
 pub mod cip_safety_rockwell;
-pub mod pccc_extended;
-pub mod df1_full_duplex_ext;
-pub mod studio5000_online_comm;
-pub mod factorytalk_view_hmi;
-pub mod stratix_switch_telemetry;
-pub mod powerflex_drive_cip;
 pub mod control_logix_backplane;
+pub mod df1_full_duplex_ext;
+pub mod ether_net_ip_rockwell;
+pub mod factorytalk_view_hmi;
 pub mod guard_i_o_safety;
+pub mod pccc_extended;
+pub mod powerflex_drive_cip;
+pub mod stratix_switch_telemetry;
+pub mod studio5000_online_comm;
 
 // ── Beckhoff / EtherCAT Ecosystem (§10.2.3) ──
+pub mod beckhoff_xplanar_mover;
 pub mod ethercat_beckhoff_mdp;
+pub mod ethercat_distributed_clocks;
+pub mod ethercat_foe_detail;
 pub mod ethercat_safety_beckhoff;
 pub mod twincat_ads_detail;
 pub mod twincat_router_telemetry;
 pub mod twincat_scope_view;
-pub mod ethercat_foe_detail;
-pub mod ethercat_distributed_clocks;
-pub mod beckhoff_xplanar_mover;
 
 // ── Other Vendor Fieldbuses (§10.2.4) ──
-pub mod mitsubishi_melsec_proto;
-pub mod mitsubishi_cc_link_ie_field;
-pub mod omron_fins_udp_detail;
-pub mod keyence_kv_ethernet;
-pub mod b_r_automation_pvi;
 pub mod abb_robot_web_service;
-pub mod kuka_robot_sensor_interface;
-pub mod fanuc_focas2;
-pub mod yaskawa_memobus_tcp_detail;
+pub mod b_r_automation_pvi;
 pub mod bosch_rexroth_open_core;
+pub mod fanuc_focas2;
+pub mod keyence_kv_ethernet;
+pub mod kuka_robot_sensor_interface;
+pub mod mitsubishi_cc_link_ie_field;
+pub mod mitsubishi_melsec_proto;
+pub mod omron_fins_udp_detail;
+pub mod yaskawa_memobus_tcp_detail;
 
 use std::net::IpAddr;
 
@@ -762,11 +674,32 @@ fn dissect_linktype_inner(data: &[u8], linktype: i32) -> DissectedResult {
         DLT_USB_LINUX | DLT_USB_LINUX_MMAPPED => usb::dissect_usb_linux(data),
         DLT_USBPCAP => usb::dissect_usbpcap(data),
         DLT_CAN_SOCKETCAN => can::dissect_can(data),
-        DLT_MTP3 => DissectedResult { src_addr: None, dst_addr: None, src_port: None, dst_port: None, protocol: Protocol::Mtp3, summary: "MTP3 frame".into() },
+        DLT_MTP3 => DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Mtp3,
+            summary: "MTP3 frame".into(),
+        },
         DLT_LIN => lin::dissect_lin(data),
         DLT_FLEXRAY => flexray::dissect_flexray(data),
-        DLT_MOST => DissectedResult { src_addr: None, dst_addr: None, src_port: None, dst_port: None, protocol: Protocol::Most, summary: "MOST frame".into() },
-        DLT_NMEA2000 => DissectedResult { src_addr: None, dst_addr: None, src_port: None, dst_port: None, protocol: Protocol::Nmea2000, summary: "NMEA 2000 frame".into() },
+        DLT_MOST => DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Most,
+            summary: "MOST frame".into(),
+        },
+        DLT_NMEA2000 => DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Nmea2000,
+            summary: "NMEA 2000 frame".into(),
+        },
         DLT_DOCAN => docan::dissect_docan(None, None, 0, 0, data),
         DLT_AVDECC => avdecc::dissect_avdecc(data),
         DLT_SNDCP => sndcp::dissect_sndcp(None, None, 0, 0, data),
@@ -929,7 +862,6 @@ mod unwired {
     pub const ETHERTYPE_COBRANET: u16 = 0x8819; // CobraNet audio-over-Ethernet
 }
 
-
 /// Dispatch on the L3 EtherType. Recurses through VLAN (802.1Q / QinQ) tags,
 /// unwrapping each 4-byte tag and re-dispatching on the inner EtherType so a
 /// tagged frame still reaches its IP/ARP dissector. `vlan_depth` caps the
@@ -985,11 +917,9 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         // the leading byte says whether a frame is cyclic I/O or a transient
         // message — the difference between the live control loop and someone
         // reading a register out of band.
-        ETHERTYPE_CCLINK_IE => {
-            mitsubishi_cc_link_ie_field::dissect_mitsubishi_cc_link_ie_field(
-                None, None, 0, 0, payload,
-            )
-        }
+        ETHERTYPE_CCLINK_IE => mitsubishi_cc_link_ie_field::dissect_mitsubishi_cc_link_ie_field(
+            None, None, 0, 0, payload,
+        ),
         // VARAN rides the local-experimental EtherType, and its function code
         // separates the cyclic control loop from mailbox, safety and
         // diagnostics traffic sharing the same wire.
@@ -1011,8 +941,24 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_IPX => ipx::dissect_ipx(payload),
         ETHERTYPE_ATALK => atalk::dissect_atalk(payload),
         ETHERTYPE_AARP => aarp::dissect_aarp(payload),
-        et if et <= ETHERTYPE_MAX_LENGTH && payload.first() == Some(&0xF0) => DissectedResult { src_addr: None, dst_addr: None, src_port: None, dst_port: None, protocol: Protocol::Unknown("netbeui".into()), summary: "NetBEUI frame".into() },
-        et if et <= ETHERTYPE_MAX_LENGTH && matches!(payload.first(), Some(0x04 | 0x08 | 0x0C)) => DissectedResult { src_addr: None, dst_addr: None, src_port: None, dst_port: None, protocol: Protocol::Unknown("sna".into()), summary: "SNA frame".into() },
+        et if et <= ETHERTYPE_MAX_LENGTH && payload.first() == Some(&0xF0) => DissectedResult {
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Unknown("netbeui".into()),
+            summary: "NetBEUI frame".into(),
+        },
+        et if et <= ETHERTYPE_MAX_LENGTH && matches!(payload.first(), Some(0x04 | 0x08 | 0x0C)) => {
+            DissectedResult {
+                src_addr: None,
+                dst_addr: None,
+                src_port: None,
+                dst_port: None,
+                protocol: Protocol::Unknown("sna".into()),
+                summary: "SNA frame".into(),
+            }
+        }
         et if et <= ETHERTYPE_MAX_LENGTH && stp::is_stp(payload) => stp::dissect_stp(payload),
         // IS-IS also arrives as an LLC frame, on its own service access
         // point, and is confirmed by its protocol discriminator.
@@ -3804,16 +3750,106 @@ mod robustness {
         "tcp_analysis",
         "usp",
         "varan",
-        "modbus_ascii", "profibus_dp", "profibus_pa", "profinet_cba", "cc_link_ie_control", "canopen_fd", "devicenet", "controlnet", "hart_ip_v2", "foundation_fieldbus_h1",
-        "bacnet_mstp", "bacnet_sc", "lonworks_ip", "dnp3_tcp", "iec60870_5_103", "iec61850_9_2", "iec61850_8_1", "ethercat_coe", "ethercat_soe", "ethercat_foe",
-        "fiveg_n1", "fiveg_n3", "fiveg_n7", "fiveg_n8", "fiveg_n10", "fiveg_n12", "fiveg_n13", "fiveg_n15", "fiveg_n22", "e1ap",
-        "f1ap", "x2ap_ext", "xnap_ext", "gtpv2c", "diameter_cx", "diameter_sh", "diameter_gx", "diameter_gy", "map_gsm", "cap_gsm",
-        "geneve_ext", "vxlan_gpe_nsh", "nvgre", "stt_ext", "evpn", "sr_mpls", "srv6", "nsh", "openflow_v15", "ovsdb_json",
-        "ceph_msgr2", "gluster_rpc", "lustre_lnet", "gpfs_nsd", "beegfs_rdma", "iscsi_login", "nvme_tcp", "fcoe_initialization", "roce_v2", "iwarp",
-        "matter_ip", "thread_mesh", "zigbee_zcl", "zigbee_nwk", "zwave_command", "ble_att", "ble_gatt", "ble_smp", "lorawan_mac", "sigfox_uplink",
-        "nb_iot_nas", "homeplug_av", "homeplug_green_phy", "g3_plc", "prime_plc", "m_bus_wireless", "wmbus_s_mode", "wmbus_t_mode", "wmbus_c_mode", "dsrc_v2x",
-        "rtsp_interleaved", "rtp_midi_ext", "srt_control", "rist_main_profile", "ndi_video", "dante_audio", "q_sys_control", "crestron_cip", "amx_icsp", "extron_sis",
-        "openvpn_tcp", "wireguard_handshake", "ipsec_ikev1", "ipsec_ikev2", "sstp_vpn", "softether_vpn", "zerotier_control", "tailscale_derp", "fastd_vpn", "yggdrasil_mesh",
+        "modbus_ascii",
+        "profibus_dp",
+        "profibus_pa",
+        "profinet_cba",
+        "cc_link_ie_control",
+        "canopen_fd",
+        "devicenet",
+        "controlnet",
+        "hart_ip_v2",
+        "foundation_fieldbus_h1",
+        "bacnet_mstp",
+        "bacnet_sc",
+        "lonworks_ip",
+        "dnp3_tcp",
+        "iec60870_5_103",
+        "iec61850_9_2",
+        "iec61850_8_1",
+        "ethercat_coe",
+        "ethercat_soe",
+        "ethercat_foe",
+        "fiveg_n1",
+        "fiveg_n3",
+        "fiveg_n7",
+        "fiveg_n8",
+        "fiveg_n10",
+        "fiveg_n12",
+        "fiveg_n13",
+        "fiveg_n15",
+        "fiveg_n22",
+        "e1ap",
+        "f1ap",
+        "x2ap_ext",
+        "xnap_ext",
+        "gtpv2c",
+        "diameter_cx",
+        "diameter_sh",
+        "diameter_gx",
+        "diameter_gy",
+        "map_gsm",
+        "cap_gsm",
+        "geneve_ext",
+        "vxlan_gpe_nsh",
+        "nvgre",
+        "stt_ext",
+        "evpn",
+        "sr_mpls",
+        "srv6",
+        "nsh",
+        "openflow_v15",
+        "ovsdb_json",
+        "ceph_msgr2",
+        "gluster_rpc",
+        "lustre_lnet",
+        "gpfs_nsd",
+        "beegfs_rdma",
+        "iscsi_login",
+        "nvme_tcp",
+        "fcoe_initialization",
+        "roce_v2",
+        "iwarp",
+        "matter_ip",
+        "thread_mesh",
+        "zigbee_zcl",
+        "zigbee_nwk",
+        "zwave_command",
+        "ble_att",
+        "ble_gatt",
+        "ble_smp",
+        "lorawan_mac",
+        "sigfox_uplink",
+        "nb_iot_nas",
+        "homeplug_av",
+        "homeplug_green_phy",
+        "g3_plc",
+        "prime_plc",
+        "m_bus_wireless",
+        "wmbus_s_mode",
+        "wmbus_t_mode",
+        "wmbus_c_mode",
+        "dsrc_v2x",
+        "rtsp_interleaved",
+        "rtp_midi_ext",
+        "srt_control",
+        "rist_main_profile",
+        "ndi_video",
+        "dante_audio",
+        "q_sys_control",
+        "crestron_cip",
+        "amx_icsp",
+        "extron_sis",
+        "openvpn_tcp",
+        "wireguard_handshake",
+        "ipsec_ikev1",
+        "ipsec_ikev2",
+        "sstp_vpn",
+        "softether_vpn",
+        "zerotier_control",
+        "tailscale_derp",
+        "fastd_vpn",
+        "yggdrasil_mesh",
         "webdav",
         "wibree",
         "profibus_dp",
@@ -3916,7 +3952,6 @@ mod robustness {
         "e1ap_ext",
         "nsh_ext",
         "evpn_ext",
-
         "wisun",
         "wpad",
         "zigbee_gp",
@@ -4020,7 +4055,6 @@ mod robustness {
         "h450_ros",
         "h460",
         "h501",
-    
         "dcerpc_atsvc",
         "dcerpc_bossvr",
         "dcerpc_browser",
@@ -4914,128 +4948,57 @@ mod robustness {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-pub mod unreal_iris;
-pub mod unreal_iris_fast_array;
-pub mod unreal_replication_graph;
-pub mod unreal_net_driver_v2;
-pub mod unity_transport;
-pub mod unity_ngo;
-pub mod unity_entities_netcode;
-pub mod unity_relay;
-pub mod godot_enet;
-pub mod godot_websocket_mp;
-pub mod godot_rpc_mp;
-pub mod o3de_aznetworking;
-pub mod cryengine_net_channel;
-pub mod source2_netmessage;
-pub mod source2_svcmsg;
-pub mod steam_datagram_relay;
-pub mod steam_sdr_relay_v3;
-pub mod steam_game_networking_s2;
-pub mod epic_online_eos_p2p;
-pub mod epic_online_voice;
-pub mod epic_dtls_p2p;
-pub mod xbox_live_sdv2;
-pub mod xbox_live_mpsd;
-pub mod xbox_reliable_udp;
-pub mod psn_matchmaking_v3;
-pub mod psn_rtc_signaling;
-pub mod nintendo_npln_p2p;
-pub mod fortnite_replay_stream;
-pub mod pubg_net_field_array;
-pub mod warzone_netcode_rigid;
-pub mod valorant_fog_of_war;
-pub mod valorant_net_var;
-pub mod apex_legends_netprop;
-pub mod overwatch2_state_sync;
-pub mod rainbow6_siege_netvoice;
-pub mod nvidia_gfn_stream;
-pub mod nvidia_gfn_ctrl;
-pub mod xcloud_fragment;
-pub mod xcloud_input_pipe;
-pub mod stadia_controller_wifi;
-pub mod luna_stream_proto;
-pub mod ps_remote_play_v3;
-pub mod steam_remote_play_together;
-pub mod steam_link_transport;
-pub mod vrchat_udon_net;
-pub mod vrchat_ik_sync;
-pub mod roblox_physics_replicator;
-pub mod roblox_voice_internal;
-pub mod recroom_room_server;
-pub mod horizon_worlds_sync;
-pub mod spatial_io_webxr_sync;
-pub mod secondlife_lludp;
-pub mod playfab_party;
-pub mod playfab_multiplayer_v2;
-pub mod phaser_heroiclabs;
-pub mod darkrift2_netcode;
-pub mod photon_realtime_v5;
-pub mod photon_bolt_internal;
-pub mod fishnet_teleport;
-pub mod mirror_transport_fallback;
-pub mod faceit_server_plugin;
-pub mod esea_client_anti_cheat;
-pub mod esl_wire_proto;
-pub mod riot_vanguard_net;
-pub mod battleye_packet_filter;
-pub mod easy_anti_cheat_stream;
-pub mod denuvo_anti_tamper_net;
-pub mod openai_realtime;
-pub mod openai_batch_api;
-pub mod openai_streaming_sse;
 pub mod anthropic_messages_stream;
 pub mod anthropic_tool_use_bridge;
-pub mod google_gemini_stream;
+pub mod apex_legends_netprop;
+pub mod battleye_packet_filter;
+pub mod cryengine_net_channel;
+pub mod cxl_cache_protocol;
+pub mod cxl_io_protocol;
+pub mod cxl_memory_protocol;
+pub mod darkrift2_netcode;
+pub mod deepspark_glootcp;
+pub mod denuvo_anti_tamper_net;
+pub mod easy_anti_cheat_stream;
+pub mod epic_dtls_p2p;
+pub mod epic_online_eos_p2p;
+pub mod epic_online_voice;
+pub mod esea_client_anti_cheat;
+pub mod esl_wire_proto;
+pub mod faceit_server_plugin;
+pub mod fishnet_teleport;
+pub mod fortnite_replay_stream;
+pub mod fsdp_shard_state;
+pub mod godot_enet;
+pub mod godot_rpc_mp;
+pub mod godot_websocket_mp;
 pub mod google_aistudio_ws;
-pub mod vllm_async_engine;
-pub mod tgi_messages;
-pub mod triton_inference_grpc;
-pub mod triton_model_repo_stream;
-pub mod sglang_radix_cache;
-pub mod liteserve_grpc;
-pub mod nvlink_fabric;
-pub mod nvswitch_telemetry;
-pub mod nvlink_c2c;
-pub mod infiniband_rdmacm_v2;
-pub mod infiniband_ipoib_enhanced;
-pub mod nvme_over_fabrics_tcp;
+pub mod google_gemini_stream;
 pub mod gpu_direct_rdma;
 pub mod gpu_direct_storage;
-pub mod cxl_io_protocol;
-pub mod cxl_cache_protocol;
-pub mod cxl_memory_protocol;
-pub mod ucx_transport;
-pub mod nccl_allreduce;
-pub mod nccl_allgather;
-pub mod nccl_broadcast;
-pub mod fsdp_shard_state;
-pub mod deepspark_glootcp;
+pub mod horizon_worlds_sync;
 pub mod horovod_elastic;
-pub mod megatron_tp_overlap;
-pub mod megatron_pipeline_flush;
-pub mod pytorch_rpc_framework;
+pub mod infiniband_ipoib_enhanced;
+pub mod infiniband_rdmacm_v2;
 pub mod jax_pjit_sharding;
-pub mod pinecone_grpc_index;
-pub mod pinecone_collection_stream;
-pub mod weaviate_graphql_grpc;
-pub mod weaviate_hnsw_replication;
-pub mod qdrant_raft_log;
-pub mod qdrant_quantization_sync;
+pub mod liteserve_grpc;
+pub mod luna_stream_proto;
+pub mod megatron_pipeline_flush;
+pub mod megatron_tp_overlap;
 pub mod milvus_proxy_grpc;
 pub mod milvus_sealed_seg_stream;
+pub mod mirror_transport_fallback;
+pub mod nccl_allgather;
+pub mod nccl_allreduce;
+pub mod nccl_broadcast;
+pub mod nintendo_npln_p2p;
+pub mod nvidia_gfn_ctrl;
+pub mod nvidia_gfn_stream;
+pub mod nvlink_c2c;
+pub mod nvlink_fabric;
+pub mod nvme_over_fabrics_tcp;
+pub mod nvswitch_telemetry;
+pub mod o3de_aznetworking;
 pub mod opc_ua_alarm_shell;
 pub mod opc_ua_dpi;
 pub mod opc_ua_history_read_detail;
@@ -5044,6 +5007,65 @@ pub mod opc_ua_pubsub_json_detail;
 pub mod opc_ua_pubsub_uadp_detail;
 pub mod opc_ua_reverse_connect;
 pub mod opc_ua_secure_conversation;
+pub mod openai_batch_api;
+pub mod openai_realtime;
+pub mod openai_streaming_sse;
+pub mod overwatch2_state_sync;
+pub mod phaser_heroiclabs;
+pub mod photon_bolt_internal;
+pub mod photon_realtime_v5;
+pub mod pinecone_collection_stream;
+pub mod pinecone_grpc_index;
+pub mod playfab_multiplayer_v2;
+pub mod playfab_party;
+pub mod ps_remote_play_v3;
+pub mod psn_matchmaking_v3;
+pub mod psn_rtc_signaling;
+pub mod pubg_net_field_array;
+pub mod pytorch_rpc_framework;
+pub mod qdrant_quantization_sync;
+pub mod qdrant_raft_log;
+pub mod rainbow6_siege_netvoice;
+pub mod recroom_room_server;
+pub mod riot_vanguard_net;
+pub mod roblox_physics_replicator;
+pub mod roblox_voice_internal;
+pub mod secondlife_lludp;
+pub mod sglang_radix_cache;
+pub mod source2_netmessage;
+pub mod source2_svcmsg;
+pub mod spatial_io_webxr_sync;
+pub mod stadia_controller_wifi;
+pub mod steam_datagram_relay;
+pub mod steam_game_networking_s2;
+pub mod steam_link_transport;
+pub mod steam_remote_play_together;
+pub mod steam_sdr_relay_v3;
+pub mod tgi_messages;
+pub mod triton_inference_grpc;
+pub mod triton_model_repo_stream;
+pub mod ucx_transport;
+pub mod unity_entities_netcode;
+pub mod unity_ngo;
+pub mod unity_relay;
+pub mod unity_transport;
+pub mod unreal_iris;
+pub mod unreal_iris_fast_array;
+pub mod unreal_net_driver_v2;
+pub mod unreal_replication_graph;
+pub mod valorant_fog_of_war;
+pub mod valorant_net_var;
+pub mod vllm_async_engine;
+pub mod vrchat_ik_sync;
+pub mod vrchat_udon_net;
+pub mod warzone_netcode_rigid;
+pub mod weaviate_graphql_grpc;
+pub mod weaviate_hnsw_replication;
+pub mod xbox_live_mpsd;
+pub mod xbox_live_sdv2;
+pub mod xbox_reliable_udp;
+pub mod xcloud_fragment;
+pub mod xcloud_input_pipe;
 // ── CANopen (§9) ────────────────────────────────────────────────────
 pub mod canopen;
 pub mod canopen_nmt;
@@ -5051,16 +5073,16 @@ pub mod canopen_pdo;
 pub mod canopen_sdo;
 // ── PQC Monitoring Tools (§8.1.1) ────────────────────────────────────
 pub mod azure_aoai_stream;
-pub mod mistral_chat_stream;
-pub mod groq_lpcu_stream;
 pub mod deepseek_stream;
-pub mod tls_pqc_wizard_scan;
+pub mod groq_lpcu_stream;
+pub mod mistral_chat_stream;
+pub mod pqc_compliance_checker;
+pub mod pqc_cve_feed_integration;
 pub mod tls_cert_transparency_v3;
+pub mod tls_downgrade_detector;
 pub mod tls_ech_pqc_interop;
 pub mod tls_key_share_prediction;
-pub mod tls_downgrade_detector;
-pub mod pqc_cve_feed_integration;
-pub mod tls_perf_benchmark_model;
 pub mod tls_middlebox_detector;
-pub mod pqc_compliance_checker;
+pub mod tls_perf_benchmark_model;
+pub mod tls_pqc_wizard_scan;
 pub mod tls_session_resumption_pqc;

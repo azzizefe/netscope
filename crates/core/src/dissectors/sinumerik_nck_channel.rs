@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_sinumerik_nck_channel(
     _src_ip: Option<IpAddr>,
@@ -12,8 +12,14 @@ pub fn dissect_sinumerik_nck_channel(
     let summary = if payload.len() >= 6 {
         let channel = payload[0];
         let block_type = payload.get(1).copied().unwrap_or(0);
-        let seq_no = u16::from_be_bytes([payload.get(2).copied().unwrap_or(0), payload.get(3).copied().unwrap_or(0)]);
-        let axis_bits = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let seq_no = u16::from_be_bytes([
+            payload.get(2).copied().unwrap_or(0),
+            payload.get(3).copied().unwrap_or(0),
+        ]);
+        let axis_bits = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let block_name = match block_type {
             0x01 => "G-Code block",

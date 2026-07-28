@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_rainbow6_siege_netvoice(
     src_ip: Option<IpAddr>,
@@ -30,7 +30,9 @@ pub fn dissect_rainbow6_siege_netvoice(
         let is_muted = (flags & 0x04) != 0;
         format!(
             "R6 NetVoice magic=0x{:08x} seq={} codec={}{}{}{}{} data={}B",
-            magic, voice_seq, codec_name,
+            magic,
+            voice_seq,
+            codec_name,
             if is_encrypted { " ENCRYPTED" } else { "" },
             if is_talk { " TALK" } else { "" },
             if is_team { " TEAM" } else { "" },

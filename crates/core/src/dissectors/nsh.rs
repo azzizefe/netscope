@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
 
 /// Dissect NSH
 pub fn dissect_nsh(_payload: &[u8]) -> DissectedResult {

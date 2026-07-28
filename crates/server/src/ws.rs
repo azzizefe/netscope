@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use axum::extract::ws::{Message, WebSocket};
 use crate::db::models::Event;
+use axum::extract::ws::{Message, WebSocket};
 use parking_lot::RwLock;
 use tokio::sync::broadcast;
 

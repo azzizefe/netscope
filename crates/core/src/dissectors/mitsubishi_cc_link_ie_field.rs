@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_mitsubishi_cc_link_ie_field(
     _src_ip: Option<IpAddr>,
@@ -13,7 +13,10 @@ pub fn dissect_mitsubishi_cc_link_ie_field(
         let data_type = payload[0];
         let station = payload.get(1).copied().unwrap_or(0);
         let cpu_slot = payload.get(2).copied().unwrap_or(0);
-        let seq = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let seq = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let type_name = match data_type {
             0x01 => "Cyclic data",

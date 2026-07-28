@@ -64,7 +64,7 @@ mod tests {
     fn test_ikev2_sa_init() {
         let mut payload = vec![0u8; 28];
         payload[17] = 0x20; // Version 2.0
-        payload[18] = 34;   // IKE_SA_INIT
+        payload[18] = 34; // IKE_SA_INIT
         let res = dissect_ikev2(None, None, 500, 500, &payload);
         assert_eq!(res.protocol, Protocol::Ikev2);
         assert!(res.summary.contains("IKE_SA_INIT"));

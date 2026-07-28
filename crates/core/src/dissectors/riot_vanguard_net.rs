@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_riot_vanguard_net(
     src_ip: Option<IpAddr>,
@@ -22,10 +22,7 @@ pub fn dissect_riot_vanguard_net(
             0x0004 => "Response",
             _ => "Unknown",
         };
-        format!(
-            "Riot Vanguard Net v={} op={} seq={}",
-            version, op_name, seq
-        )
+        format!("Riot Vanguard Net v={} op={} seq={}", version, op_name, seq)
     };
     DissectedResult {
         src_addr: src_ip,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
 
 /// Heuristically check if a cyclic PROFINET payload looks like PROFIsafe.
 pub(crate) fn looks_like_profisafe(payload: &[u8]) -> bool {
@@ -30,10 +30,7 @@ pub fn dissect_profisafe(payload: &[u8]) -> DissectedResult {
 
     if payload.len() < 5 {
         return DissectedResult {
-            summary: format!(
-                "PROFIsafe ({})",
-                super::bytes(payload.len() as u64)
-            ),
+            summary: format!("PROFIsafe ({})", super::bytes(payload.len() as u64)),
             ..base
         };
     }

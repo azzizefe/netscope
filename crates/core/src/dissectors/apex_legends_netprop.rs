@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_apex_legends_netprop(
     src_ip: Option<IpAddr>,
@@ -23,7 +23,9 @@ pub fn dissect_apex_legends_netprop(
             seq,
             if is_delta { " DELTA" } else { "" },
             if is_reliable { " RELIABLE" } else { "" },
-            num_props, tick, payload.len(),
+            num_props,
+            tick,
+            payload.len(),
         )
     };
     DissectedResult {

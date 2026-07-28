@@ -243,7 +243,7 @@ struct ActiveSession {
     accumulated_tool_call_tokens: u32,
     accumulated_total_tokens: u32,
     accumulated_cost: f64,
-    finish_reason: Option<String>,  // completed when set
+    finish_reason: Option<String>, // completed when set
     error_type: Option<String>,
 
     packet_timestamps: Vec<DateTime<Utc>>,
@@ -263,7 +263,7 @@ struct ActiveSession {
 
 impl ActiveSession {
     fn new(
-    session_id: SessionId,
+        session_id: SessionId,
         meta: &LlmMetadata,
         payload: &[u8],
         timestamp: DateTime<Utc>,
@@ -305,8 +305,12 @@ impl ActiveSession {
             retry_count: 0,
             geo_region: None,
             correlation_id: correlation.and_then(|c| c.correlation_id.clone()),
-            correlation_method: Some(correlation.map(|c| c.method.to_string()).unwrap_or_default())
-                .filter(|s| !s.is_empty()),
+            correlation_method: Some(
+                correlation
+                    .map(|c| c.method.to_string())
+                    .unwrap_or_default(),
+            )
+            .filter(|s| !s.is_empty()),
 
             timestamp_start: timestamp,
             prompt_text_snippet: extract_text_snippet(payload, 500),
@@ -353,15 +357,17 @@ impl ActiveSession {
 
     fn into_record(self) -> AiTrafficRecord {
         let total_stream = match (self.first_chunk_time, self.last_chunk_time) {
-            (Some(first), Some(last)) => {
-                (last - first).to_std().map(|d| d.as_millis() as u32).unwrap_or(0)
-            }
+            (Some(first), Some(last)) => (last - first)
+                .to_std()
+                .map(|d| d.as_millis() as u32)
+                .unwrap_or(0),
             _ => 0,
         };
         let ttft = match (self.timestamp_start, self.first_chunk_time) {
-            (start, Some(first)) => {
-                (first - start).to_std().map(|d| d.as_millis() as u32).unwrap_or(0)
-            }
+            (start, Some(first)) => (first - start)
+                .to_std()
+                .map(|d| d.as_millis() as u32)
+                .unwrap_or(0),
             _ => 0,
         };
         let _token_count = self.packet_timestamps.len().saturating_sub(1).max(1) as f32;
@@ -373,7 +379,12 @@ impl ActiveSession {
         let inter_token_delays: Vec<f64> = self
             .packet_timestamps
             .windows(2)
-            .filter_map(|w| (w[1] - w[0]).to_std().ok().map(|d| d.as_secs_f64() * 1000.0))
+            .filter_map(|w| {
+                (w[1] - w[0])
+                    .to_std()
+                    .ok()
+                    .map(|d| d.as_secs_f64() * 1000.0)
+            })
             .collect();
         let (avg, p50, p95, p99) = compute_latency_percentiles(&inter_token_delays);
 
@@ -492,6 +503,11 @@ impl AiTrafficTracker {
         }
     }
 
+    // Eight and nine arguments, but every one is a distinct value the caller
+    // already has in hand: the four that make the flow key, the metadata, the
+    // payload, the timestamp. Folding the flow into a struct would only move
+    // the same four values one line up at each of the ~35 call sites.
+    #[allow(clippy::too_many_arguments)]
     pub fn record_packet(
         &mut self,
         meta: &LlmMetadata,
@@ -502,9 +518,12 @@ impl AiTrafficTracker {
         payload: &[u8],
         timestamp: DateTime<Utc>,
     ) -> Vec<AiTrafficRecord> {
-        self.record_packet_with_correlation(meta, src_ip, src_port, dst_ip, dst_port, payload, timestamp, None)
+        self.record_packet_with_correlation(
+            meta, src_ip, src_port, dst_ip, dst_port, payload, timestamp, None,
+        )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn record_packet_with_correlation(
         &mut self,
         meta: &LlmMetadata,
@@ -535,9 +554,7 @@ impl AiTrafficTracker {
                 }
             }
             None => {
-                if meta.request_type == "moderation"
-                    || meta.request_type == "observability"
-                {
+                if meta.request_type == "moderation" || meta.request_type == "observability" {
                     return new_records;
                 }
                 let session = ActiveSession::new(
@@ -591,7 +608,13 @@ impl AiTrafficTracker {
 mod tests {
     use super::*;
 
-    fn sample_meta(model: &str, provider: &str, finish: Option<&str>, ct: Option<u64>, tt: Option<u64>) -> LlmMetadata {
+    fn sample_meta(
+        model: &str,
+        provider: &str,
+        finish: Option<&str>,
+        ct: Option<u64>,
+        tt: Option<u64>,
+    ) -> LlmMetadata {
         LlmMetadata {
             provider: provider.into(),
             model: model.into(),
@@ -613,7 +636,10 @@ mod tests {
     fn test_ai_provider_from_str() {
         assert_eq!(AiProvider::from("openai"), AiProvider::Openai);
         assert_eq!(AiProvider::from("anthropic"), AiProvider::Anthropic);
-        assert_eq!(AiProvider::from("unknown"), AiProvider::Other("unknown".into()));
+        assert_eq!(
+            AiProvider::from("unknown"),
+            AiProvider::Other("unknown".into())
+        );
     }
 
     #[test]
@@ -647,8 +673,13 @@ mod tests {
 
         let meta2 = sample_meta("gpt-4", "openai", Some("stop"), Some(50), Some(100));
         tracker.record_packet(
-            &meta2, ip1, 50000, ip2, 443,
-            b"response data", now + Duration::from_millis(200),
+            &meta2,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"response data",
+            now + Duration::from_millis(200),
         );
         assert_eq!(tracker.active_session_count(), 0);
         assert_eq!(tracker.total_completed(), 1);
@@ -666,7 +697,15 @@ mod tests {
         assert_eq!(tracker.total_completed(), 1);
 
         let meta2 = sample_meta("gemini-pro", "google", Some("stop"), Some(20), Some(70));
-        tracker.record_packet(&meta2, ip1, 50002, ip2, 443, b"req2", now + Duration::from_millis(10));
+        tracker.record_packet(
+            &meta2,
+            ip1,
+            50002,
+            ip2,
+            443,
+            b"req2",
+            now + Duration::from_millis(10),
+        );
         assert_eq!(tracker.total_completed(), 2);
     }
 
@@ -713,7 +752,12 @@ mod tests {
 
         let meta2 = sample_meta("gpt-4", "openai", Some("stop"), Some(50), Some(100));
         tracker.record_packet(
-            &meta2, ip1, 50000, ip2, 443, b"chunk",
+            &meta2,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"chunk",
             now + Duration::from_millis(350),
         );
         let record = &tracker.completed_records()[0];
@@ -750,13 +794,37 @@ mod tests {
         tracker.record_packet(&meta1, ip1, 50000, ip2, 443, b"req", now);
 
         let meta2 = sample_meta("gpt-4", "openai", None, None, None);
-        tracker.record_packet(&meta2, ip1, 50000, ip2, 443, b"chunk1", now + Duration::from_millis(100));
+        tracker.record_packet(
+            &meta2,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"chunk1",
+            now + Duration::from_millis(100),
+        );
 
         let meta3 = sample_meta("gpt-4", "openai", None, None, None);
-        tracker.record_packet(&meta3, ip1, 50000, ip2, 443, b"chunk2", now + Duration::from_millis(200));
+        tracker.record_packet(
+            &meta3,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"chunk2",
+            now + Duration::from_millis(200),
+        );
 
         let meta4 = sample_meta("gpt-4", "openai", Some("stop"), Some(30), Some(80));
-        tracker.record_packet(&meta4, ip1, 50000, ip2, 443, b"final", now + Duration::from_millis(500));
+        tracker.record_packet(
+            &meta4,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"final",
+            now + Duration::from_millis(500),
+        );
 
         let record = &tracker.completed_records()[0];
         assert_eq!(record.ttft_ms(), 100);
@@ -882,13 +950,37 @@ mod tests {
         tracker.record_packet(&meta1, ip1, 50000, ip2, 443, b"req", now);
 
         let chunk1 = sample_meta("gpt-4", "openai", None, Some(10), Some(10));
-        tracker.record_packet(&chunk1, ip1, 50000, ip2, 443, b"chunk1", now + Duration::from_millis(100));
+        tracker.record_packet(
+            &chunk1,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"chunk1",
+            now + Duration::from_millis(100),
+        );
 
         let chunk2 = sample_meta("gpt-4", "openai", None, Some(15), Some(15));
-        tracker.record_packet(&chunk2, ip1, 50000, ip2, 443, b"chunk2", now + Duration::from_millis(200));
+        tracker.record_packet(
+            &chunk2,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"chunk2",
+            now + Duration::from_millis(200),
+        );
 
         let final_meta = sample_meta("gpt-4", "openai", Some("stop"), Some(25), Some(75));
-        tracker.record_packet(&final_meta, ip1, 50000, ip2, 443, b"final", now + Duration::from_millis(500));
+        tracker.record_packet(
+            &final_meta,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"final",
+            now + Duration::from_millis(500),
+        );
 
         let record = &tracker.completed_records()[0];
         assert_eq!(record.completion_tokens, 50);
@@ -909,7 +1001,15 @@ mod tests {
         tracker.record_packet(&req, ip1, 50000, ip2, 443, b"req", now);
 
         let resp = sample_meta("gpt-4", "openai", Some("stop"), Some(10), Some(60));
-        tracker.record_packet(&resp, ip1, 50000, ip2, 443, b"resp", now + Duration::from_millis(200));
+        tracker.record_packet(
+            &resp,
+            ip1,
+            50000,
+            ip2,
+            443,
+            b"resp",
+            now + Duration::from_millis(200),
+        );
 
         let record = &tracker.completed_records()[0];
         assert_eq!(record.retry_count, 2);

@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
-use crate::models::Protocol;
 use crate::dissectors::DissectedResult;
+use crate::models::Protocol;
 
 pub fn dissect_milvus_sealed_seg_stream(
     _src_ip: Option<IpAddr>,
@@ -10,21 +10,58 @@ pub fn dissect_milvus_sealed_seg_stream(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary;
-    if payload.len() >= 44 {
+    let summary = if payload.len() >= 44 {
         let _version = payload[0];
         let msg_type = payload[1];
-        let segment_id = u64::from_be_bytes([payload[4], payload[5], payload[6], payload[7], payload[8], payload[9], payload[10], payload[11]]);
-        let partition_id = u64::from_be_bytes([payload[12], payload[13], payload[14], payload[15], payload[16], payload[17], payload[18], payload[19]]);
-        let collection_id = u64::from_be_bytes([payload[20], payload[21], payload[22], payload[23], payload[24], payload[25], payload[26], payload[27]]);
+        let segment_id = u64::from_be_bytes([
+            payload[4],
+            payload[5],
+            payload[6],
+            payload[7],
+            payload[8],
+            payload[9],
+            payload[10],
+            payload[11],
+        ]);
+        let partition_id = u64::from_be_bytes([
+            payload[12],
+            payload[13],
+            payload[14],
+            payload[15],
+            payload[16],
+            payload[17],
+            payload[18],
+            payload[19],
+        ]);
+        let collection_id = u64::from_be_bytes([
+            payload[20],
+            payload[21],
+            payload[22],
+            payload[23],
+            payload[24],
+            payload[25],
+            payload[26],
+            payload[27],
+        ]);
         let chunk_idx = u32::from_be_bytes([payload[28], payload[29], payload[30], payload[31]]);
         let total_chunks = u32::from_be_bytes([payload[32], payload[33], payload[34], payload[35]]);
-        let seq = u64::from_be_bytes([payload[36], payload[37], payload[38], payload[39], payload[40], payload[41], payload[42], payload[43]]);
-        summary = format!("Milvus sealed seg type={} segment={} partition={} collection={} chunk={}/{} seq={}",
-            msg_type, segment_id, partition_id, collection_id, chunk_idx, total_chunks, seq);
+        let seq = u64::from_be_bytes([
+            payload[36],
+            payload[37],
+            payload[38],
+            payload[39],
+            payload[40],
+            payload[41],
+            payload[42],
+            payload[43],
+        ]);
+        format!(
+            "Milvus sealed seg type={} segment={} partition={} collection={} chunk={}/{} seq={}",
+            msg_type, segment_id, partition_id, collection_id, chunk_idx, total_chunks, seq
+        )
     } else {
-        summary = "Milvus sealed seg (short frame)".into();
-    }
+        "Milvus sealed seg (short frame)".into()
+    };
     DissectedResult {
         src_addr: _src_ip,
         dst_addr: _dst_ip,
@@ -54,7 +91,10 @@ mod tests {
         let r = dissect_milvus_sealed_seg_stream(
             Some("10.0.0.1".parse::<IpAddr>().unwrap()),
             Some("10.0.0.2".parse::<IpAddr>().unwrap()),
-            19531, 19531, &buf);
+            19531,
+            19531,
+            &buf,
+        );
         assert_eq!(r.protocol, Protocol::MilvusSealedSegStream);
         assert!(r.summary.contains("type=0"));
         assert!(r.summary.contains("segment=42"));

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_ethercat_distributed_clocks(
     _src_ip: Option<IpAddr>,
@@ -11,9 +11,17 @@ pub fn dissect_ethercat_distributed_clocks(
 ) -> DissectedResult {
     let summary = if payload.len() >= 8 {
         let dc_mode = payload[0];
-        let cycle_us = u32::from_be_bytes([payload.get(1).copied().unwrap_or(0), payload.get(2).copied().unwrap_or(0), payload.get(3).copied().unwrap_or(0), payload.get(4).copied().unwrap_or(0)]);
+        let cycle_us = u32::from_be_bytes([
+            payload.get(1).copied().unwrap_or(0),
+            payload.get(2).copied().unwrap_or(0),
+            payload.get(3).copied().unwrap_or(0),
+            payload.get(4).copied().unwrap_or(0),
+        ]);
         let shift_us = payload.get(5).copied().unwrap_or(0);
-        let drift_ns = i16::from_be_bytes([payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0)]);
+        let drift_ns = i16::from_be_bytes([
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+        ]);
 
         let mode_name = match dc_mode {
             0x00 => "Free-run",

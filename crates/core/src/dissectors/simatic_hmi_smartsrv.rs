@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_simatic_hmi_smartsrv(
     _src_ip: Option<IpAddr>,
@@ -12,7 +12,10 @@ pub fn dissect_simatic_hmi_smartsrv(
     let summary = if payload.len() >= 6 {
         let session_id = u16::from_be_bytes([payload[0], payload[1]]);
         let msg_type = payload.get(2).copied().unwrap_or(0);
-        let tag_count = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let tag_count = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let type_name = match msg_type {
             0x01 => "TagSubscribe",

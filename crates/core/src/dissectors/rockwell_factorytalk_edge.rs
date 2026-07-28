@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_rockwell_factorytalk_edge(
     src_ip: Option<IpAddr>,
@@ -21,7 +21,10 @@ pub fn dissect_rockwell_factorytalk_edge(
             _ => "Data",
         };
         let tag_count = u16::from_le_bytes([payload[8], payload[9]]);
-        format!("FactoryTalk Edge — session:{session:x} {op} tags:{tag_count} ({})", super::bytes(payload.len() as u64))
+        format!(
+            "FactoryTalk Edge — session:{session:x} {op} tags:{tag_count} ({})",
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("FactoryTalk Edge — {}", super::bytes(payload.len() as u64))
     };

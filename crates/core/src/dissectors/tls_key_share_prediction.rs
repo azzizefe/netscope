@@ -9,7 +9,7 @@ use super::DissectedResult;
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, TlsVersion, SigAlgorithm, KemId, PqcKem};
+    use crate::pqc_handshake::{KemId, PqcHandshakeRecord, PqcKem, SigAlgorithm, TlsVersion};
     use chrono::Utc;
 
     fn test_ft() -> FiveTuple {
@@ -22,15 +22,27 @@ mod tests {
         }
     }
 
-    fn make_record(success: bool, kem: Option<KemId>, fallback: Option<&str>) -> PqcHandshakeRecord {
+    fn make_record(
+        success: bool,
+        kem: Option<KemId>,
+        fallback: Option<&str>,
+    ) -> PqcHandshakeRecord {
         let mut r = PqcHandshakeRecord::new(
-            test_ft(), TlsVersion::TlsV1_3, "example.com".into(),
-            SigAlgorithm::MlDsa65, Utc::now(),
+            test_ft(),
+            TlsVersion::TlsV1_3,
+            "example.com".into(),
+            SigAlgorithm::MlDsa65,
+            Utc::now(),
         );
         r.is_success = success;
         r.pqc_fallback_reason = fallback.map(String::from);
         if let Some(k) = kem {
-            r.pqc_kem = Some(PqcKem { algorithm: k, public_key: None, ciphertext: None, shared_secret: None });
+            r.pqc_kem = Some(PqcKem {
+                algorithm: k,
+                public_key: None,
+                ciphertext: None,
+                shared_secret: None,
+            });
             r.server_kem_selected = Some(k);
         }
         r
@@ -95,8 +107,11 @@ mod tests {
         crate::dissectors::tls::clear_tls_sessions();
         let ft = test_ft();
         let r = PqcHandshakeRecord::new(
-            ft, TlsVersion::TlsV1_3, "example.com".into(),
-            SigAlgorithm::RsaPkcs1Sha256, Utc::now(),
+            ft,
+            TlsVersion::TlsV1_3,
+            "example.com".into(),
+            SigAlgorithm::RsaPkcs1Sha256,
+            Utc::now(),
         );
         crate::dissectors::tls::push_pqc_record_for_test(r);
         let result = dissect_tls_key_share_prediction(None, None, 443, 54321, &[]);
@@ -115,7 +130,9 @@ fn predict_failure_rate(store: &PqcHandshakeStore) -> (usize, f64) {
 }
 
 fn find_mismatches(store: &PqcHandshakeStore) -> Vec<String> {
-    store.records.iter()
+    store
+        .records
+        .iter()
         .filter_map(|r| {
             if r.pqc_kem.is_some() && !r.is_success {
                 let kem = r
@@ -123,7 +140,10 @@ fn find_mismatches(store: &PqcHandshakeStore) -> Vec<String> {
                     .as_ref()
                     .map(|k| format!("{:?}", k.algorithm))
                     .unwrap_or_else(|| "unknown".into());
-                Some(format!("KEM {} failed (fallback: {:?})", kem, r.pqc_fallback_reason))
+                Some(format!(
+                    "KEM {} failed (fallback: {:?})",
+                    kem, r.pqc_fallback_reason
+                ))
             } else {
                 None
             }
@@ -151,7 +171,11 @@ pub fn dissect_tls_key_share_prediction(
     let predictions = if mismatches.is_empty() {
         "no failures predicted".into()
     } else {
-        format!("{} predicted failures: {}", mismatches.len(), mismatches.join("; "))
+        format!(
+            "{} predicted failures: {}",
+            mismatches.len(),
+            mismatches.join("; ")
+        )
     };
 
     let summary = format!(

@@ -43,7 +43,11 @@ fn known_protos() -> &'static [String] {
     static TOKENS: OnceLock<Vec<String>> = OnceLock::new();
     TOKENS.get_or_init(|| {
         let mut tokens = crate::registry::filter_tokens();
-        tokens.extend(["ip", "ipv4", "ipv6", "ai_traffic"].iter().map(|s| s.to_string()));
+        tokens.extend(
+            ["ip", "ipv4", "ipv6", "ai_traffic"]
+                .iter()
+                .map(|s| s.to_string()),
+        );
         tokens.sort();
         tokens.dedup();
         tokens

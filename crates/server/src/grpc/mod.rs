@@ -21,7 +21,9 @@ impl SensorService for SensorGrpcService {
         request: Request<RegisterRequest>,
     ) -> Result<Response<RegisterResponse>, Status> {
         let req = request.into_inner();
-        let ip: std::net::IpAddr = req.ip_address.parse()
+        let ip: std::net::IpAddr = req
+            .ip_address
+            .parse()
             .map_err(|_| Status::invalid_argument("invalid ip_address"))?;
 
         let sensor = RegisterSensor {
@@ -29,14 +31,19 @@ impl SensorService for SensorGrpcService {
             // Parsed above purely to reject junk; stored in its normalised
             // form so the same address always writes the same string.
             ip_address: ip.to_string(),
-            os: if req.os.is_empty() { None } else { Some(req.os) },
+            os: if req.os.is_empty() {
+                None
+            } else {
+                Some(req.os)
+            },
             version: req.version,
             interfaces: Vec::new(),
             cpu_cores: None,
             ram_mb: None,
         };
 
-        let sensor = queries::register_sensor(&self.pool, &sensor).await
+        let sensor = queries::register_sensor(&self.pool, &sensor)
+            .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(RegisterResponse {
@@ -60,11 +67,13 @@ impl SensorService for SensorGrpcService {
             ram_used_mb: Some(req.ram_used_mb),
             capture_throughput_bps: Some(req.capture_throughput_bps),
             uptime_secs: Some(req.uptime_secs),
+            disk_free_mb: Some(req.disk_free_mb),
             interface_stats: None,
             received_at: chrono::Utc::now(),
         };
 
-        queries::update_sensor_heartbeat(&self.pool, sensor_id, &hb).await
+        queries::update_sensor_heartbeat(&self.pool, sensor_id, &hb)
+            .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(HeartbeatResponse { acknowledged: true }))
@@ -89,12 +98,32 @@ impl SensorService for SensorGrpcService {
                 event_type: ev.event_type,
                 severity: ev.severity,
                 title: ev.title,
-                description: if ev.description.is_empty() { None } else { Some(ev.description) },
-                source_ip: if ev.source_ip.is_empty() { None } else { Some(ev.source_ip) },
-                dest_ip: if ev.dest_ip.is_empty() { None } else { Some(ev.dest_ip) },
-                protocol: if ev.protocol.is_empty() { None } else { Some(ev.protocol) },
+                description: if ev.description.is_empty() {
+                    None
+                } else {
+                    Some(ev.description)
+                },
+                source_ip: if ev.source_ip.is_empty() {
+                    None
+                } else {
+                    Some(ev.source_ip)
+                },
+                dest_ip: if ev.dest_ip.is_empty() {
+                    None
+                } else {
+                    Some(ev.dest_ip)
+                },
+                protocol: if ev.protocol.is_empty() {
+                    None
+                } else {
+                    Some(ev.protocol)
+                },
                 port: if ev.port == 0 { None } else { Some(ev.port) },
-                raw_data: if ev.raw_data.is_empty() { None } else { Some(serde_json::Value::String(ev.raw_data)) },
+                raw_data: if ev.raw_data.is_empty() {
+                    None
+                } else {
+                    Some(serde_json::Value::String(ev.raw_data))
+                },
                 tags: serde_json::Value::Array(Vec::new()),
                 timestamp: chrono::Utc::now(),
             };

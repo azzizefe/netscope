@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_pccc_extended(
     _src_ip: Option<IpAddr>,
@@ -32,7 +32,7 @@ pub fn dissect_pccc_extended(
             _ => "PCCC cmd",
         };
 
-        let file_type = if cmd >= 0x0A && cmd <= 0x0D && payload.len() > 4 {
+        let file_type = if (0x0A..=0x0D).contains(&cmd) && payload.len() > 4 {
             Some(match payload[4] {
                 0x00 => " (N-file)",
                 0x01 => " (F-file)",
@@ -44,9 +44,18 @@ pub fn dissect_pccc_extended(
             None
         };
 
-        let sts = if status != 0 { format!(" sts:0x{status:02x}") } else { String::new() };
+        let sts = if status != 0 {
+            format!(" sts:0x{status:02x}")
+        } else {
+            String::new()
+        };
 
-        format!("PCCC (Extended) — {cmd_name}{src} dst:{dst_addr} src:{src_addr}{sts} ({len} bytes)", cmd_name = cmd_name, src = file_type.unwrap_or(""), len = payload.len())
+        format!(
+            "PCCC (Extended) — {cmd_name}{src} dst:{dst_addr} src:{src_addr}{sts} ({len} bytes)",
+            cmd_name = cmd_name,
+            src = file_type.unwrap_or(""),
+            len = payload.len()
+        )
     } else {
         format!("PCCC (Extended) — {len} bytes", len = payload.len())
     };

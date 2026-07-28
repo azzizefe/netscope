@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_tia_portal_online_diag(
     _src_ip: Option<IpAddr>,
@@ -13,7 +13,10 @@ pub fn dissect_tia_portal_online_diag(
         let msg_type = payload[0];
         let slot = payload.get(1).copied().unwrap_or(0);
         let rack = payload.get(2).copied().unwrap_or(0);
-        let sequence = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let sequence = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let type_name = match msg_type {
             0x01 => "ModuleStatus",
@@ -26,7 +29,10 @@ pub fn dissect_tia_portal_online_diag(
             _ => "Diag",
         };
 
-        format!("TIA Portal Diag — {type_name} rack:{rack} slot:{slot} seq:{sequence} ({len} bytes)", len = payload.len())
+        format!(
+            "TIA Portal Diag — {type_name} rack:{rack} slot:{slot} seq:{sequence} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("TIA Portal Online Diag — {len} bytes", len = payload.len())
     };

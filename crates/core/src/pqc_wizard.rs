@@ -244,7 +244,15 @@ impl Tls13PqcWizard {
         let mut vulnerabilities = find_vulnerabilities(store, &pqc, &failed, total);
         vulnerabilities.extend(rule_findings);
         let recommendations = build_recommendations(&overview, &vulnerabilities, &algorithms);
-        let stages = run_pipeline_stages(store, &pqc, &successful, &failed, &hybrid, &algorithms, &vulnerabilities);
+        let stages = run_pipeline_stages(
+            store,
+            &pqc,
+            &successful,
+            &failed,
+            &hybrid,
+            &algorithms,
+            &vulnerabilities,
+        );
 
         let session_reports: Vec<SessionPqcReport> = records
             .iter()
@@ -324,7 +332,11 @@ fn run_pipeline_stages(
     servers.dedup();
 
     let avg_cert_depth = if !records.is_empty() {
-        records.iter().map(|r| r.cert_chain_pqc_count as f64).sum::<f64>() / records.len() as f64
+        records
+            .iter()
+            .map(|r| r.cert_chain_pqc_count as f64)
+            .sum::<f64>()
+            / records.len() as f64
     } else {
         0.0
     };
@@ -350,10 +362,13 @@ fn run_pipeline_stages(
         }
     }
     let mut kems_offered: Vec<_> = kem_offers_map.into_iter().collect();
-    kems_offered.sort_by(|a, b| b.1.cmp(&a.1));
+    kems_offered.sort_by_key(|e| std::cmp::Reverse(e.1));
 
     let selected_map = build_kem_details(pqc);
-    let kems_selected: Vec<(KemId, usize)> = selected_map.iter().map(|d| (d.algorithm, d.count)).collect();
+    let kems_selected: Vec<(KemId, usize)> = selected_map
+        .iter()
+        .map(|d| (d.algorithm, d.count))
+        .collect();
 
     let success_rate = if !pqc.is_empty() {
         successful.len() as f64 / pqc.len() as f64 * 100.0
@@ -363,7 +378,7 @@ fn run_pipeline_stages(
 
     let avg_shared_secret = avg_or_zero(successful, |r| r.shared_secret_size as f64);
     let avg_entropy = avg_shared_secret * 8.0 * 0.95;
-    let estimated_kem_time = estimate_kem_time(&pqc);
+    let estimated_kem_time = estimate_kem_time(pqc);
 
     let stage2 = Stage2KemAnalysis {
         kems_offered,
@@ -375,14 +390,30 @@ fn run_pipeline_stages(
         estimated_avg_kem_time_us: estimated_kem_time,
     };
 
-    let weak_hash = records.iter().filter(|r| !r.is_pqc_signature && matches!(r.cert_sig_algorithm, SigAlgorithm::RsaPkcs1Sha256)).count();
-    let tls12 = records.iter().filter(|r| r.tls_version == TlsVersion::TlsV1_2).count();
+    let weak_hash = records
+        .iter()
+        .filter(|r| {
+            !r.is_pqc_signature && matches!(r.cert_sig_algorithm, SigAlgorithm::RsaPkcs1Sha256)
+        })
+        .count();
+    let tls12 = records
+        .iter()
+        .filter(|r| r.tls_version == TlsVersion::TlsV1_2)
+        .count();
     let zero_rtt = 0;
-    let downgrade = records.iter().filter(|r| !r.used_pqc() && pqc.iter().any(|p| p.server_name == r.server_name)).count();
+    let downgrade = records
+        .iter()
+        .filter(|r| !r.used_pqc() && pqc.iter().any(|p| p.server_name == r.server_name))
+        .count();
 
     let mut weak_params: Vec<String> = Vec::new();
-    if pqc.iter().any(|r| r.server_kem_selected.is_some_and(|k| matches!(k, KemId::BikeL1 | KemId::Hqc128 | KemId::Sntrup761))) {
-        weak_params.push("BIKE-L1 / HQC-128 / sntrup761 — non-standard KEMs with limited cryptanalysis".into());
+    if pqc.iter().any(|r| {
+        r.server_kem_selected
+            .is_some_and(|k| matches!(k, KemId::BikeL1 | KemId::Hqc128 | KemId::Sntrup761))
+    }) {
+        weak_params.push(
+            "BIKE-L1 / HQC-128 / sntrup761 — non-standard KEMs with limited cryptanalysis".into(),
+        );
     }
 
     for rec in pqc {
@@ -393,11 +424,15 @@ fn run_pipeline_stages(
         }
     }
 
-    let cve_matches = find_cve_matches(&pqc);
+    let cve_matches = find_cve_matches(pqc);
 
     let total_checks: usize = 8;
-    let failed_checks = (weak_hash > 0) as usize + (tls12 > 0) as usize + (downgrade > 0) as usize
-        + (pqc.is_empty()) as usize + (zero_rtt > 0) as usize + weak_params.len().min(2);
+    let failed_checks = (weak_hash > 0) as usize
+        + (tls12 > 0) as usize
+        + (downgrade > 0) as usize
+        + (pqc.is_empty()) as usize
+        + (zero_rtt > 0) as usize
+        + weak_params.len().min(2);
 
     let stage3 = Stage3VulnerabilityScan {
         weak_hash_certs: weak_hash,
@@ -411,7 +446,10 @@ fn run_pipeline_stages(
     };
 
     let pqc_time = avg_or_zero(successful, |r| r.pqc_kem_time_us as f64);
-    let classic_time = avg_or_zero(&records.iter().filter(|r| !r.used_pqc()).collect::<Vec<_>>(), |r| r.total_handshake_ms as f64 * 1000.0);
+    let classic_time = avg_or_zero(
+        &records.iter().filter(|r| !r.used_pqc()).collect::<Vec<_>>(),
+        |r| r.total_handshake_ms as f64 * 1000.0,
+    );
     let overhead = pqc_time - classic_time;
     let clienthello_extra = avg_or_zero(successful, |r| r.pqc_packet_size_extra as f64);
     let cert_extra = avg_or_zero(successful, |r| (r.cert_chain_pqc_count as u16 * 800) as f64);
@@ -423,7 +461,7 @@ fn run_pipeline_stages(
         5.0
     };
 
-    let throughput_loss = avg_bandwidth(&pqc) / 1024.0 * 0.1;
+    let throughput_loss = avg_bandwidth(pqc) / 1024.0 * 0.1;
 
     let stage4 = Stage4PerformanceReport {
         pqc_handshake_time_us: pqc_time,
@@ -456,7 +494,11 @@ where
 }
 
 fn pct(total: usize, part: usize) -> f64 {
-    if total > 0 { part as f64 / total as f64 * 100.0 } else { 0.0 }
+    if total > 0 {
+        part as f64 / total as f64 * 100.0
+    } else {
+        0.0
+    }
 }
 
 fn avg_bandwidth(records: &[&PqcHandshakeRecord]) -> f64 {
@@ -464,13 +506,34 @@ fn avg_bandwidth(records: &[&PqcHandshakeRecord]) -> f64 {
 }
 
 fn estimate_kem_time(records: &[&PqcHandshakeRecord]) -> f64 {
-    let has_frodo = records.iter().any(|r| r.server_kem_selected.is_some_and(|k| matches!(k, KemId::FrodoKem640Aes | KemId::FrodoKem976Aes | KemId::FrodoKem1344Aes)));
-    let has_mc = records.iter().any(|r| r.server_kem_selected.is_some_and(|k| matches!(k, KemId::ClassicMcEliece348864 | KemId::ClassicMcEliece460896 | KemId::ClassicMcEliece6688128)));
+    let has_frodo = records.iter().any(|r| {
+        r.server_kem_selected.is_some_and(|k| {
+            matches!(
+                k,
+                KemId::FrodoKem640Aes | KemId::FrodoKem976Aes | KemId::FrodoKem1344Aes
+            )
+        })
+    });
+    let has_mc = records.iter().any(|r| {
+        r.server_kem_selected.is_some_and(|k| {
+            matches!(
+                k,
+                KemId::ClassicMcEliece348864
+                    | KemId::ClassicMcEliece460896
+                    | KemId::ClassicMcEliece6688128
+            )
+        })
+    });
     let base = avg_or_zero(records, |r| r.pqc_kem_time_us as f64);
-    if base > 0.0 { base }
-    else if has_mc { 50000.0 }
-    else if has_frodo { 15000.0 }
-    else { 5000.0 }
+    if base > 0.0 {
+        base
+    } else if has_mc {
+        50000.0
+    } else if has_frodo {
+        15000.0
+    } else {
+        5000.0
+    }
 }
 
 fn find_cve_matches(pqc: &[&PqcHandshakeRecord]) -> Vec<String> {
@@ -493,7 +556,11 @@ fn find_cve_matches(pqc: &[&PqcHandshakeRecord]) -> Vec<String> {
     cves
 }
 
-fn evaluate_risk(adoption_rate: f64, failed: &[&PqcHandshakeRecord], _successful: &[&PqcHandshakeRecord]) -> RiskScore {
+fn evaluate_risk(
+    adoption_rate: f64,
+    failed: &[&PqcHandshakeRecord],
+    _successful: &[&PqcHandshakeRecord],
+) -> RiskScore {
     if adoption_rate == 0.0 {
         return RiskScore::Critical;
     }
@@ -501,13 +568,22 @@ fn evaluate_risk(adoption_rate: f64, failed: &[&PqcHandshakeRecord], _successful
         return RiskScore::High;
     }
     if !failed.is_empty() {
-        let fail_ratio = failed.len() as f64 / (failed.len() + _successful.len()).max(1) as f64 * 100.0;
-        if fail_ratio > 20.0 { return RiskScore::High; }
-        if fail_ratio > 5.0 { return RiskScore::Medium; }
+        let fail_ratio =
+            failed.len() as f64 / (failed.len() + _successful.len()).max(1) as f64 * 100.0;
+        if fail_ratio > 20.0 {
+            return RiskScore::High;
+        }
+        if fail_ratio > 5.0 {
+            return RiskScore::Medium;
+        }
     }
-    if adoption_rate > 80.0 { RiskScore::Safe }
-    else if adoption_rate > 50.0 { RiskScore::Low }
-    else { RiskScore::Medium }
+    if adoption_rate > 80.0 {
+        RiskScore::Safe
+    } else if adoption_rate > 50.0 {
+        RiskScore::Low
+    } else {
+        RiskScore::Medium
+    }
 }
 
 fn build_kem_details(pqc_records: &[&PqcHandshakeRecord]) -> Vec<KemDetail> {
@@ -522,7 +598,8 @@ fn build_kem_details(pqc_records: &[&PqcHandshakeRecord]) -> Vec<KemDetail> {
         .map(|(kem, group)| {
             let count = group.len();
             let failures = group.iter().filter(|r| !r.is_success).count();
-            let successful: Vec<&&PqcHandshakeRecord> = group.iter().filter(|r| r.is_success).collect();
+            let successful: Vec<&&PqcHandshakeRecord> =
+                group.iter().filter(|r| r.is_success).collect();
             let avg_lat = avg_or_zero(&successful, |r| r.pqc_kem_time_us as f64);
             let avg_bw = avg_or_zero(&successful, |r| r.pqc_packet_size_extra as f64);
             let hybrid_used = group.iter().any(|r| r.is_hybrid_kem);
@@ -540,7 +617,7 @@ fn build_kem_details(pqc_records: &[&PqcHandshakeRecord]) -> Vec<KemDetail> {
             }
         })
         .collect();
-    details.sort_by(|a, b| b.count.cmp(&a.count));
+    details.sort_by_key(|e| std::cmp::Reverse(e.count));
     details
 }
 
@@ -568,9 +645,22 @@ fn entropy_for_kem(kem: &KemId) -> u32 {
 
 fn kem_security_level(kem: &KemId) -> SecurityLevelTag {
     match kem {
-        KemId::MlKem512 | KemId::MlKem768 | KemId::FrodoKem640Aes | KemId::BikeL1 | KemId::Hqc128 | KemId::Sntrup761 => SecurityLevelTag::Level1,
-        KemId::MlKem1024 | KemId::FrodoKem976Aes | KemId::FrodoKem1344Aes | KemId::ClassicMcEliece460896 | KemId::BikeL3 | KemId::Hqc192 => SecurityLevelTag::Level3,
-        KemId::ClassicMcEliece348864 | KemId::ClassicMcEliece6688128 | KemId::BikeL5 | KemId::Hqc256 => SecurityLevelTag::Level5,
+        KemId::MlKem512
+        | KemId::MlKem768
+        | KemId::FrodoKem640Aes
+        | KemId::BikeL1
+        | KemId::Hqc128
+        | KemId::Sntrup761 => SecurityLevelTag::Level1,
+        KemId::MlKem1024
+        | KemId::FrodoKem976Aes
+        | KemId::FrodoKem1344Aes
+        | KemId::ClassicMcEliece460896
+        | KemId::BikeL3
+        | KemId::Hqc192 => SecurityLevelTag::Level3,
+        KemId::ClassicMcEliece348864
+        | KemId::ClassicMcEliece6688128
+        | KemId::BikeL5
+        | KemId::Hqc256 => SecurityLevelTag::Level5,
         _ => SecurityLevelTag::Unknown,
     }
 }
@@ -611,7 +701,9 @@ fn find_vulnerabilities(
         });
     }
 
-    let fallback = pqc_records.iter().filter(|r| r.pqc_fallback_reason.is_some());
+    let fallback = pqc_records
+        .iter()
+        .filter(|r| r.pqc_fallback_reason.is_some());
     for rec in fallback {
         if let Some(reason) = &rec.pqc_fallback_reason {
             vulns.push(VulnerabilityFinding {
@@ -627,7 +719,9 @@ fn find_vulnerabilities(
         }
     }
 
-    let weak_sig = pqc_records.iter().filter(|r| !r.is_pqc_signature && r.cert_sig_algorithm != SigAlgorithm::Unknown(0));
+    let weak_sig = pqc_records
+        .iter()
+        .filter(|r| !r.is_pqc_signature && r.cert_sig_algorithm != SigAlgorithm::Unknown(0));
     let weak_count = weak_sig.count();
     if weak_count > 0 {
         vulns.push(VulnerabilityFinding {
@@ -643,7 +737,14 @@ fn find_vulnerabilities(
     }
 
     if !pqc_records.is_empty() {
-        let has_l1 = pqc_records.iter().any(|r| r.server_kem_selected.is_some_and(|k| matches!(k, KemId::MlKem512 | KemId::FrodoKem640Aes | KemId::BikeL1 | KemId::Hqc128)));
+        let has_l1 = pqc_records.iter().any(|r| {
+            r.server_kem_selected.is_some_and(|k| {
+                matches!(
+                    k,
+                    KemId::MlKem512 | KemId::FrodoKem640Aes | KemId::BikeL1 | KemId::Hqc128
+                )
+            })
+        });
         if has_l1 {
             vulns.push(VulnerabilityFinding {
                 severity: Severity::Low,
@@ -658,7 +759,10 @@ fn find_vulnerabilities(
         }
     }
 
-    let weak_hash_count = records.iter().filter(|r| matches!(r.cert_sig_algorithm, SigAlgorithm::RsaPkcs1Sha256)).count();
+    let weak_hash_count = records
+        .iter()
+        .filter(|r| matches!(r.cert_sig_algorithm, SigAlgorithm::RsaPkcs1Sha256))
+        .count();
     if weak_hash_count > 0 {
         vulns.push(VulnerabilityFinding {
             severity: Severity::High,
@@ -672,7 +776,10 @@ fn find_vulnerabilities(
         });
     }
 
-    let tls12_count = records.iter().filter(|r| r.tls_version == TlsVersion::TlsV1_2).count();
+    let tls12_count = records
+        .iter()
+        .filter(|r| r.tls_version == TlsVersion::TlsV1_2)
+        .count();
     if tls12_count > 0 {
         vulns.push(VulnerabilityFinding {
             severity: Severity::Medium,
@@ -742,21 +849,34 @@ fn build_recommendations(
         recs.push(Recommendation {
             priority: Priority::Low,
             action: "Optimize KEM selection for latency".into(),
-            rationale: format!("Average PQC latency {:.0} µs — consider ML-KEM (Kyber) for lower overhead", overview.avg_latency_us),
+            rationale: format!(
+                "Average PQC latency {:.0} µs — consider ML-KEM (Kyber) for lower overhead",
+                overview.avg_latency_us
+            ),
             affected_endpoints: overview.pqc_handshakes,
         });
     }
 
-    if let Some(_) = vulnerabilities.iter().find(|v| v.title.contains("SHA-1")) {
+    if vulnerabilities
+        .iter()
+        .find(|v| v.title.contains("SHA-1"))
+        .is_some()
+    {
         recs.push(Recommendation {
             priority: Priority::Immediate,
             action: "Replace SHA-1 certificates immediately".into(),
-            rationale: "SHA-1 is cryptographically broken — migrate to SHA-256/SHA-384 with PQC signatures".into(),
+            rationale:
+                "SHA-1 is cryptographically broken — migrate to SHA-256/SHA-384 with PQC signatures"
+                    .into(),
             affected_endpoints: 1,
         });
     }
 
-    if let Some(_) = vulnerabilities.iter().find(|v| v.title.contains("fallback")) {
+    if vulnerabilities
+        .iter()
+        .find(|v| v.title.contains("fallback"))
+        .is_some()
+    {
         recs.push(Recommendation {
             priority: Priority::Immediate,
             action: "Investigate PQC fallback triggers".into(),
@@ -765,11 +885,17 @@ fn build_recommendations(
         });
     }
 
-    if let Some(_) = vulnerabilities.iter().find(|v| v.title.contains("TLS 1.2")) {
+    if vulnerabilities
+        .iter()
+        .find(|v| v.title.contains("TLS 1.2"))
+        .is_some()
+    {
         recs.push(Recommendation {
             priority: Priority::High,
             action: "Upgrade TLS 1.2 endpoints to TLS 1.3".into(),
-            rationale: "TLS 1.2 does not support PQC — upgrade to 1.3 for hybrid and pure PQC key exchange".into(),
+            rationale:
+                "TLS 1.2 does not support PQC — upgrade to 1.3 for hybrid and pure PQC key exchange"
+                    .into(),
             affected_endpoints: 1,
         });
     }
@@ -777,7 +903,10 @@ fn build_recommendations(
     recs
 }
 
-fn assess_compliance(overview: &WizardOverview, vulnerabilities: &[VulnerabilityFinding]) -> Vec<ComplianceFlag> {
+fn assess_compliance(
+    overview: &WizardOverview,
+    vulnerabilities: &[VulnerabilityFinding],
+) -> Vec<ComplianceFlag> {
     let has_any_pqc = overview.pqc_handshakes > 0;
     let has_hybrid = overview.hybrid_handshakes > 0;
     let has_weak_hash = vulnerabilities.iter().any(|v| v.title.contains("SHA-1"));
@@ -788,50 +917,91 @@ fn assess_compliance(overview: &WizardOverview, vulnerabilities: &[Vulnerability
         ComplianceFlag {
             framework: ComplianceFramework::NistSp800131a,
             compliant: has_any_pqc && !has_weak_hash && !has_tls12,
-            note: if has_any_pqc { "PQC key exchange present".into() } else { "No PQC key exchange detected — non-compliant".into() },
+            note: if has_any_pqc {
+                "PQC key exchange present".into()
+            } else {
+                "No PQC key exchange detected — non-compliant".into()
+            },
         },
         ComplianceFlag {
             framework: ComplianceFramework::BsiTr02102,
             compliant: has_any_pqc && has_hybrid,
-            note: if has_any_pqc && has_hybrid { "Hybrid PQC + classical meets BSI TR-02102-1".into() } else { "Missing hybrid PQC key exchange".into() },
+            note: if has_any_pqc && has_hybrid {
+                "Hybrid PQC + classical meets BSI TR-02102-1".into()
+            } else {
+                "Missing hybrid PQC key exchange".into()
+            },
         },
         ComplianceFlag {
             framework: ComplianceFramework::AnssiPqc,
             compliant: has_any_pqc && has_pqc_sig,
-            note: if has_any_pqc && has_pqc_sig { "PQC signatures and KEM active — ANSSI PQC migration plan on track".into() } else { "PQC signatures required per ANSSI recommendation".into() },
+            note: if has_any_pqc && has_pqc_sig {
+                "PQC signatures and KEM active — ANSSI PQC migration plan on track".into()
+            } else {
+                "PQC signatures required per ANSSI recommendation".into()
+            },
         },
         ComplianceFlag {
             framework: ComplianceFramework::Cnsa2,
-            compliant: has_any_pqc && !has_weak_hash && overview.pqc_handshakes > 0 && overview.pure_pqc_handshakes > 0,
-            note: if overview.pure_pqc_handshakes > 0 { "Pure PQC sessions found — CNSA 2.0 compliance in progress".into() } else { "Pure PQC required for CNSA 2.0 (no hybrid)".into() },
+            compliant: has_any_pqc
+                && !has_weak_hash
+                && overview.pqc_handshakes > 0
+                && overview.pure_pqc_handshakes > 0,
+            note: if overview.pure_pqc_handshakes > 0 {
+                "Pure PQC sessions found — CNSA 2.0 compliance in progress".into()
+            } else {
+                "Pure PQC required for CNSA 2.0 (no hybrid)".into()
+            },
         },
         ComplianceFlag {
             framework: ComplianceFramework::EtsiTs119312,
             compliant: has_any_pqc && has_hybrid && !has_tls12,
-            note: if has_any_pqc && has_hybrid { "Hybrid PQC with TLS 1.3 meets ETSI TS 119 312".into() } else { "TLS 1.3 + hybrid PQC required per ETSI".into() },
+            note: if has_any_pqc && has_hybrid {
+                "Hybrid PQC with TLS 1.3 meets ETSI TS 119 312".into()
+            } else {
+                "TLS 1.3 + hybrid PQC required per ETSI".into()
+            },
         },
     ]
 }
 
 impl TlsPqcWizardReport {
-    pub fn is_empty(&self) -> bool { self.raw_records == 0 }
+    pub fn is_empty(&self) -> bool {
+        self.raw_records == 0
+    }
 }
 
 impl RiskScore {
     pub fn label(&self) -> &'static str {
-        match self { RiskScore::Safe => "SAFE", RiskScore::Low => "LOW", RiskScore::Medium => "MEDIUM", RiskScore::High => "HIGH", RiskScore::Critical => "CRITICAL" }
+        match self {
+            RiskScore::Safe => "SAFE",
+            RiskScore::Low => "LOW",
+            RiskScore::Medium => "MEDIUM",
+            RiskScore::High => "HIGH",
+            RiskScore::Critical => "CRITICAL",
+        }
     }
 }
 
 impl Severity {
     pub fn label(&self) -> &'static str {
-        match self { Severity::Low => "LOW", Severity::Medium => "MEDIUM", Severity::High => "HIGH", Severity::Critical => "CRITICAL" }
+        match self {
+            Severity::Low => "LOW",
+            Severity::Medium => "MEDIUM",
+            Severity::High => "HIGH",
+            Severity::Critical => "CRITICAL",
+        }
     }
 }
 
 impl Priority {
     pub fn label(&self) -> &'static str {
-        match self { Priority::Immediate => "IMMEDIATE", Priority::High => "HIGH", Priority::Medium => "MEDIUM", Priority::Low => "LOW" }
+        match self {
+            Priority::Immediate => "IMMEDIATE",
+            Priority::High => "HIGH",
+            Priority::Medium => "MEDIUM",
+            Priority::Low => "LOW",
+        }
     }
 }
 
@@ -840,9 +1010,18 @@ impl Stage1HandshakeMapping {
         vec![
             ("Total sessions", self.total_sessions.to_string()),
             ("Servers", self.unique_servers.len().to_string()),
-            ("PQC sessions", format!("{}/{}", self.pqc_sessions, self.total_sessions)),
-            ("Avg cert chain depth", format!("{:.1}", self.avg_cert_chain_depth)),
-            ("Composite certs", self.sessions_with_composite_cert.to_string()),
+            (
+                "PQC sessions",
+                format!("{}/{}", self.pqc_sessions, self.total_sessions),
+            ),
+            (
+                "Avg cert chain depth",
+                format!("{:.1}", self.avg_cert_chain_depth),
+            ),
+            (
+                "Composite certs",
+                self.sessions_with_composite_cert.to_string(),
+            ),
         ]
     }
 }
@@ -850,11 +1029,23 @@ impl Stage1HandshakeMapping {
 impl Stage2KemAnalysis {
     pub fn summary(&self) -> Vec<(&'static str, String)> {
         vec![
-            ("KEM negotiation rate", format!("{:.1}%", self.kem_negotiation_success_rate)),
+            (
+                "KEM negotiation rate",
+                format!("{:.1}%", self.kem_negotiation_success_rate),
+            ),
             ("Hybrid exchanges", self.total_hybrid_exchanges.to_string()),
-            ("Avg shared secret", format!("{:.1} bytes", self.avg_shared_secret_bytes)),
-            ("Estimated entropy", format!("{:.0} bits", self.avg_entropy_bits)),
-            ("Est. KEM time", format!("{:.0} µs", self.estimated_avg_kem_time_us)),
+            (
+                "Avg shared secret",
+                format!("{:.1} bytes", self.avg_shared_secret_bytes),
+            ),
+            (
+                "Estimated entropy",
+                format!("{:.0} bits", self.avg_entropy_bits),
+            ),
+            (
+                "Est. KEM time",
+                format!("{:.0} µs", self.estimated_avg_kem_time_us),
+            ),
         ]
     }
 }
@@ -864,9 +1055,19 @@ impl Stage3VulnerabilityScan {
         vec![
             ("Weak hash certs", self.weak_hash_certs.to_string()),
             ("TLS 1.2 fallbacks", self.tls12_fallbacks.to_string()),
-            ("Downgrade to classical", self.downgrade_to_classical.to_string()),
+            (
+                "Downgrade to classical",
+                self.downgrade_to_classical.to_string(),
+            ),
             ("CVE matches", self.cve_matches.len().to_string()),
-            ("Checks passed/failed", format!("{}/{}", self.total_checks_passed, self.total_checks_passed + self.total_checks_failed)),
+            (
+                "Checks passed/failed",
+                format!(
+                    "{}/{}",
+                    self.total_checks_passed,
+                    self.total_checks_passed + self.total_checks_failed
+                ),
+            ),
         ]
     }
 }
@@ -874,12 +1075,27 @@ impl Stage3VulnerabilityScan {
 impl Stage4PerformanceReport {
     pub fn summary(&self) -> Vec<(&'static str, String)> {
         vec![
-            ("PQC handshake", format!("{:.0} µs", self.pqc_handshake_time_us)),
-            ("Classic handshake", format!("{:.0} µs", self.classic_handshake_time_us)),
+            (
+                "PQC handshake",
+                format!("{:.0} µs", self.pqc_handshake_time_us),
+            ),
+            (
+                "Classic handshake",
+                format!("{:.0} µs", self.classic_handshake_time_us),
+            ),
             ("PQC overhead", format!("{:.0} µs", self.pqc_overhead_us)),
-            ("ClientHello extra", format!("{:.0} B", self.pqc_clienthello_extra_bytes)),
-            ("Cert chain extra", format!("{:.0} B", self.pqc_cert_chain_extra_bytes)),
-            ("IoT throughput hit", format!("{:.1}%", self.estimated_iot_throughput_hit_pct)),
+            (
+                "ClientHello extra",
+                format!("{:.0} B", self.pqc_clienthello_extra_bytes),
+            ),
+            (
+                "Cert chain extra",
+                format!("{:.0} B", self.pqc_cert_chain_extra_bytes),
+            ),
+            (
+                "IoT throughput hit",
+                format!("{:.1}%", self.estimated_iot_throughput_hit_pct),
+            ),
         ]
     }
 }
@@ -890,11 +1106,20 @@ mod tests {
     use crate::pqc_handshake::{PqcKem, TlsVersion};
     use chrono::Utc;
 
-    fn make_record(kem: Option<KemId>, hybrid: bool, success: bool, sig: SigAlgorithm, tls: TlsVersion) -> PqcHandshakeRecord {
+    fn make_record(
+        kem: Option<KemId>,
+        hybrid: bool,
+        success: bool,
+        sig: SigAlgorithm,
+        tls: TlsVersion,
+    ) -> PqcHandshakeRecord {
         PqcHandshakeRecord {
             connection_5tuple: crate::pair_correlation::FiveTuple {
-                src_ip: "10.0.0.1".parse().unwrap(), src_port: 443,
-                dst_ip: "10.0.0.2".parse().unwrap(), dst_port: 12345, protocol: 6,
+                src_ip: "10.0.0.1".parse().unwrap(),
+                src_port: 443,
+                dst_ip: "10.0.0.2".parse().unwrap(),
+                dst_port: 12345,
+                protocol: 6,
             },
             tls_version: tls,
             server_name: "example.com".into(),
@@ -902,7 +1127,12 @@ mod tests {
             server_kem_selected: kem,
             is_hybrid_kem: hybrid,
             classical_group: None,
-            pqc_kem: kem.map(|k| PqcKem { algorithm: k, public_key: None, ciphertext: None, shared_secret: None }),
+            pqc_kem: kem.map(|k| PqcKem {
+                algorithm: k,
+                public_key: None,
+                ciphertext: None,
+                shared_secret: None,
+            }),
             shared_secret_size: if kem.is_some() { 32 } else { 0 },
             cert_sig_algorithm: sig,
             is_pqc_signature: sig.is_pqc(),
@@ -915,7 +1145,11 @@ mod tests {
             pqc_packet_size_extra: if success && kem.is_some() { 1200 } else { 0 },
             timestamp: Utc::now(),
             is_success: success,
-            pqc_fallback_reason: if success { None } else { Some("Unsupported KEM".into()) },
+            pqc_fallback_reason: if success {
+                None
+            } else {
+                Some("Unsupported KEM".into())
+            },
             client_hello_size: 512,
             server_hello_size: 256,
             cert_chain_length: if sig.is_pqc() { 2 } else { 1 },
@@ -926,7 +1160,12 @@ mod tests {
         }
     }
 
-    fn make_record_simple(kem: Option<KemId>, hybrid: bool, success: bool, sig: SigAlgorithm) -> PqcHandshakeRecord {
+    fn make_record_simple(
+        kem: Option<KemId>,
+        hybrid: bool,
+        success: bool,
+        sig: SigAlgorithm,
+    ) -> PqcHandshakeRecord {
         make_record(kem, hybrid, success, sig, TlsVersion::TlsV1_3)
     }
 
@@ -941,7 +1180,12 @@ mod tests {
     #[test]
     fn full_pqc_handshake_analyzed() {
         let mut store = PqcHandshakeStore::new();
-        store.push(make_record_simple(Some(KemId::MlKem768), false, true, SigAlgorithm::MlDsa65));
+        store.push(make_record_simple(
+            Some(KemId::MlKem768),
+            false,
+            true,
+            SigAlgorithm::MlDsa65,
+        ));
         let report = Tls13PqcWizard::analyze(&store);
         assert_eq!(report.overview.pqc_handshakes, 1);
         assert_eq!(report.overview.adoption_rate, 100.0);
@@ -953,7 +1197,12 @@ mod tests {
     #[test]
     fn hybrid_handshake_detected() {
         let mut store = PqcHandshakeStore::new();
-        store.push(make_record_simple(Some(KemId::MlKem768), true, true, SigAlgorithm::MlDsa65));
+        store.push(make_record_simple(
+            Some(KemId::MlKem768),
+            true,
+            true,
+            SigAlgorithm::MlDsa65,
+        ));
         let report = Tls13PqcWizard::analyze(&store);
         assert_eq!(report.overview.hybrid_handshakes, 1);
         assert!(report.overview.hybrid_ratio > 0.0);
@@ -963,12 +1212,25 @@ mod tests {
     fn failed_handshake_triggers_vulnerability() {
         let mut store = PqcHandshakeStore::new();
         for _ in 0..9 {
-            store.push(make_record_simple(Some(KemId::MlKem768), false, true, SigAlgorithm::MlDsa65));
+            store.push(make_record_simple(
+                Some(KemId::MlKem768),
+                false,
+                true,
+                SigAlgorithm::MlDsa65,
+            ));
         }
-        store.push(make_record_simple(Some(KemId::MlKem768), false, false, SigAlgorithm::MlDsa65));
+        store.push(make_record_simple(
+            Some(KemId::MlKem768),
+            false,
+            false,
+            SigAlgorithm::MlDsa65,
+        ));
         let report = Tls13PqcWizard::analyze(&store);
         assert!(report.overview.failed_handshakes > 0);
-        assert!(report.vulnerabilities.iter().any(|v| v.title.contains("failure")));
+        assert!(report
+            .vulnerabilities
+            .iter()
+            .any(|v| v.title.contains("failure")));
     }
 
     #[test]
@@ -976,8 +1238,11 @@ mod tests {
         let mut store = PqcHandshakeStore::new();
         store.push(PqcHandshakeRecord {
             connection_5tuple: crate::pair_correlation::FiveTuple {
-                src_ip: "10.0.0.1".parse().unwrap(), src_port: 443,
-                dst_ip: "10.0.0.2".parse().unwrap(), dst_port: 12345, protocol: 6,
+                src_ip: "10.0.0.1".parse().unwrap(),
+                src_port: 443,
+                dst_ip: "10.0.0.2".parse().unwrap(),
+                dst_port: 12345,
+                protocol: 6,
             },
             tls_version: TlsVersion::TlsV1_3,
             server_name: "example.com".into(),
@@ -1018,8 +1283,11 @@ mod tests {
         let mut store = PqcHandshakeStore::new();
         store.push(PqcHandshakeRecord {
             connection_5tuple: crate::pair_correlation::FiveTuple {
-                src_ip: "10.0.0.1".parse().unwrap(), src_port: 443,
-                dst_ip: "10.0.0.2".parse().unwrap(), dst_port: 12345, protocol: 6,
+                src_ip: "10.0.0.1".parse().unwrap(),
+                src_port: 443,
+                dst_ip: "10.0.0.2".parse().unwrap(),
+                dst_port: 12345,
+                protocol: 6,
             },
             tls_version: TlsVersion::TlsV1_3,
             server_name: "legacy.example.com".into(),
@@ -1051,29 +1319,54 @@ mod tests {
         });
         let report = Tls13PqcWizard::analyze(&store);
         assert!(!report.recommendations.is_empty());
-        assert!(report.recommendations.iter().any(|r| r.action.contains("Enable PQC")));
+        assert!(report
+            .recommendations
+            .iter()
+            .any(|r| r.action.contains("Enable PQC")));
     }
 
     #[test]
     fn sha1_cert_triggers_vulnerability() {
         let mut store = PqcHandshakeStore::new();
-        store.push(make_record_simple(Some(KemId::MlKem768), false, true, SigAlgorithm::RsaPkcs1Sha256));
+        store.push(make_record_simple(
+            Some(KemId::MlKem768),
+            false,
+            true,
+            SigAlgorithm::RsaPkcs1Sha256,
+        ));
         let report = Tls13PqcWizard::analyze(&store);
-        assert!(report.vulnerabilities.iter().any(|v| v.title.contains("SHA-1")));
+        assert!(report
+            .vulnerabilities
+            .iter()
+            .any(|v| v.title.contains("SHA-1")));
     }
 
     #[test]
     fn tls12_fallback_detected() {
         let mut store = PqcHandshakeStore::new();
-        store.push(make_record(Some(KemId::MlKem768), false, true, SigAlgorithm::MlDsa65, TlsVersion::TlsV1_2));
+        store.push(make_record(
+            Some(KemId::MlKem768),
+            false,
+            true,
+            SigAlgorithm::MlDsa65,
+            TlsVersion::TlsV1_2,
+        ));
         let report = Tls13PqcWizard::analyze(&store);
-        assert!(report.vulnerabilities.iter().any(|v| v.title.contains("TLS 1.2")));
+        assert!(report
+            .vulnerabilities
+            .iter()
+            .any(|v| v.title.contains("TLS 1.2")));
     }
 
     #[test]
     fn four_stages_present() {
         let mut store = PqcHandshakeStore::new();
-        store.push(make_record_simple(Some(KemId::MlKem768), false, true, SigAlgorithm::MlDsa65));
+        store.push(make_record_simple(
+            Some(KemId::MlKem768),
+            false,
+            true,
+            SigAlgorithm::MlDsa65,
+        ));
         let report = Tls13PqcWizard::analyze(&store);
         assert_eq!(report.stages.handshake_mapping.total_sessions, 1);
         assert!(report.stages.kem_analysis.kem_negotiation_success_rate > 0.0);
@@ -1084,7 +1377,12 @@ mod tests {
     #[test]
     fn kem_entropy_estimates() {
         let mut store = PqcHandshakeStore::new();
-        store.push(make_record_simple(Some(KemId::MlKem768), false, true, SigAlgorithm::MlDsa65));
+        store.push(make_record_simple(
+            Some(KemId::MlKem768),
+            false,
+            true,
+            SigAlgorithm::MlDsa65,
+        ));
         let report = Tls13PqcWizard::analyze(&store);
         assert_eq!(report.algorithms[0].entropy_estimate_bits, 384);
     }

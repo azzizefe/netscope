@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use clap::Parser;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "netscope-server", about = "Netscope Central Management Server")]
@@ -13,11 +13,17 @@ pub struct CliArgs {
     #[arg(long)]
     pub redis_url: Option<String>,
 
-    #[arg(short = 'l', long, default_value = "0.0.0.0")]
-    pub listen: String,
+    // No clap defaults on the three below: a default is indistinguishable from
+    // an explicit flag, so main.rs could never tell "the operator asked for
+    // 9443" from "the operator said nothing", and the config file's `[server]`
+    // block lost every time. `Option` plus the fallback chain in main.rs makes
+    // the precedence flag > config file > built-in default, which is how
+    // `--db-url` and `--jwt-secret` already behave.
+    #[arg(short = 'l', long)]
+    pub listen: Option<String>,
 
-    #[arg(short = 'p', long, default_value_t = 9443)]
-    pub port: u16,
+    #[arg(short = 'p', long)]
+    pub port: Option<u16>,
 
     #[arg(long)]
     pub tls_cert: Option<PathBuf>,
@@ -31,11 +37,19 @@ pub struct CliArgs {
     #[arg(long)]
     pub jwt_secret: Option<String>,
 
+    /// Sign tokens with a per-process secret when none is configured.
+    ///
+    /// Local development only: sessions do not survive a restart and a second
+    /// instance will not accept the first one's tokens. Without this the server
+    /// refuses to start unconfigured rather than doing it silently.
+    #[arg(long, default_value_t = false)]
+    pub dev_insecure_jwt: bool,
+
     #[arg(long, default_value_t = false)]
     pub grpc_enabled: bool,
 
-    #[arg(long, default_value_t = 9444)]
-    pub grpc_port: u16,
+    #[arg(long)]
+    pub grpc_port: Option<u16>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

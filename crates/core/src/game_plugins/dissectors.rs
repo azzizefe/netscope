@@ -170,7 +170,7 @@ pub struct DiagnosticMetadata {
 }
 
 /// Statistics for replication traffic within a connection.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ReplicationStats {
     pub actors_replicated: u64,
     pub property_updates: u64,
@@ -178,19 +178,6 @@ pub struct ReplicationStats {
     pub header_bytes: u64,
     pub payload_bytes: u64,
     pub subobject_replications: u64,
-}
-
-impl Default for ReplicationStats {
-    fn default() -> Self {
-        Self {
-            actors_replicated: 0,
-            property_updates: 0,
-            rpcs_invoked: 0,
-            header_bytes: 0,
-            payload_bytes: 0,
-            subobject_replications: 0,
-        }
-    }
 }
 
 /// Aggregated game traffic analytics for a single connection/session.

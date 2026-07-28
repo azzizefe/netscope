@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
-use crate::models::Protocol;
 use crate::dissectors::DissectedResult;
+use crate::models::Protocol;
 
 pub fn dissect_infiniband_ipoib_enhanced(
     _src_ip: Option<IpAddr>,
@@ -10,18 +10,16 @@ pub fn dissect_infiniband_ipoib_enhanced(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary;
-    if payload.len() >= 12 {
+    let summary = if payload.len() >= 12 {
         let _version = payload[0];
         let _flags = payload[1];
         let pkey = u16::from_be_bytes([payload[2], payload[3]]);
         let qpn = u32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]);
         let _len = u16::from_be_bytes([payload[10], payload[11]]);
-        summary = format!("IPoIB enhanced pkey=0x{:04x} qpn={}",
-            pkey, qpn);
+        format!("IPoIB enhanced pkey=0x{:04x} qpn={}", pkey, qpn)
     } else {
-        summary = "IPoIB enhanced (short frame)".into();
-    }
+        "IPoIB enhanced (short frame)".into()
+    };
     DissectedResult {
         src_addr: _src_ip,
         dst_addr: _dst_ip,
@@ -48,7 +46,10 @@ mod tests {
         let r = dissect_infiniband_ipoib_enhanced(
             Some("10.0.0.1".parse::<IpAddr>().unwrap()),
             Some("10.0.0.2".parse::<IpAddr>().unwrap()),
-            0, 0, &buf);
+            0,
+            0,
+            &buf,
+        );
         assert_eq!(r.protocol, Protocol::InfinibandIpoibEnhanced);
         assert!(r.summary.contains("pkey=0xffff"));
         assert!(r.summary.contains("qpn=42"));

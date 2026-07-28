@@ -43,6 +43,13 @@ jobs:
       - name: Install libpcap-dev
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
+      # `netscope-server` generates its gRPC stubs in build.rs, so protoc has to
+      # be on PATH before anything touches that crate — clippy included, since
+      # `--workspace` builds it.
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Clippy (all workspace crates except desktop)
         run: cargo clippy --workspace --exclude netscope-desktop -- -D warnings
 
@@ -85,13 +92,24 @@ jobs:
           echo "LIB=$libDir;$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "LIBPCAP_LIBDIR=$libDir"| Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # Build & test the core + TUI crates. The desktop crate is built and
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build & test core, TUI, server and agent. The desktop crate is built and
       # tested separately below rather than added here — see that step.
+      #
+      # `netscope-server` and `netscope-agent` were absent from this list until
+      # 2026-07-28, so the whole fleet-management tier — auth, RBAC, the API
+      # router, the gRPC service, the sensor agent — was merged without ever
+      # being compiled or tested on any platform. Nothing here needs a database:
+      # the server's router tests hold a lazy pool that never dials, because the
+      # permission check they exercise runs before the handler.
       - name: Build
-        run: cargo build -p netscope-core -p netscope-tui
+        run: cargo build -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
 
       - name: Test
-        run: cargo test -p netscope-core -p netscope-tui
+        run: cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
 
       # The desktop crate's tests exercise `replay_packet`, which puts real
       # packets on the wire, so they are worth running. Linux is skipped

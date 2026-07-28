@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_iolink(
     src_ip: Option<IpAddr>,
@@ -25,7 +25,13 @@ pub fn dissect_iolink(
             3 => "Error",
             _ => "Unknown",
         };
-        format!("IO-Link — {} status:{} seq:{} ({})", pdu_type, status, payload[3] & 0x0F, super::bytes(payload.len() as u64))
+        format!(
+            "IO-Link — {} status:{} seq:{} ({})",
+            pdu_type,
+            status,
+            payload[3] & 0x0F,
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("IO-Link — {}", super::bytes(payload.len() as u64))
     };

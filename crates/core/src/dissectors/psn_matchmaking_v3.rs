@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_psn_matchmaking_v3(
     src_ip: Option<IpAddr>,
@@ -43,7 +43,8 @@ mod tests {
 
     #[test]
     fn test_psn_mm_find() {
-        let r = dissect_psn_matchmaking_v3(None, None, 9302, 9302, b"\x00\x00\x00\x01\x01\x01\x00\x01");
+        let r =
+            dissect_psn_matchmaking_v3(None, None, 9302, 9302, b"\x00\x00\x00\x01\x01\x01\x00\x01");
         assert_eq!(r.protocol, Protocol::PsnMatchmakingV3);
         assert!(r.summary.contains("FindSession"));
     }

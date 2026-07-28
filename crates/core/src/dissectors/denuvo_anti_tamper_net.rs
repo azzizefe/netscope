@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_denuvo_anti_tamper_net(
     src_ip: Option<IpAddr>,
@@ -44,8 +44,7 @@ mod tests {
     #[test]
     fn test_denuvo_anti_tamper_net_verify() {
         let buf = vec![
-            0x01, 0x02, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
         ];
         let r = dissect_denuvo_anti_tamper_net(None, None, 0, 0, &buf);
         assert_eq!(r.protocol, Protocol::DenuvoAntiTamperNet);

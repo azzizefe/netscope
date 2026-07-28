@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
-use crate::models::Protocol;
 use crate::dissectors::DissectedResult;
+use crate::models::Protocol;
 
 pub fn dissect_nccl_broadcast(
     _src_ip: Option<IpAddr>,
@@ -10,19 +10,38 @@ pub fn dissect_nccl_broadcast(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary;
-    if payload.len() >= 25 {
+    let summary = if payload.len() >= 25 {
         let _version = payload[0];
         let algo = payload[1];
         let root = u32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]);
-        let count = u64::from_be_bytes([payload[8], payload[9], payload[10], payload[11], payload[12], payload[13], payload[14], payload[15]]);
+        let count = u64::from_be_bytes([
+            payload[8],
+            payload[9],
+            payload[10],
+            payload[11],
+            payload[12],
+            payload[13],
+            payload[14],
+            payload[15],
+        ]);
         let _dtype = payload[16];
-        let tag = u64::from_be_bytes([payload[17], payload[18], payload[19], payload[20], payload[21], payload[22], payload[23], payload[24]]);
-        summary = format!("NCCL broadcast algo={} root={} count={} tag={}",
-            algo, root, count, tag);
+        let tag = u64::from_be_bytes([
+            payload[17],
+            payload[18],
+            payload[19],
+            payload[20],
+            payload[21],
+            payload[22],
+            payload[23],
+            payload[24],
+        ]);
+        format!(
+            "NCCL broadcast algo={} root={} count={} tag={}",
+            algo, root, count, tag
+        )
     } else {
-        summary = "NCCL broadcast (short frame)".into();
-    }
+        "NCCL broadcast (short frame)".into()
+    };
     DissectedResult {
         src_addr: _src_ip,
         dst_addr: _dst_ip,
@@ -50,7 +69,10 @@ mod tests {
         let r = dissect_nccl_broadcast(
             Some("10.0.0.1".parse::<IpAddr>().unwrap()),
             Some("10.0.0.2".parse::<IpAddr>().unwrap()),
-            5002, 5002, &buf);
+            5002,
+            5002,
+            &buf,
+        );
         assert_eq!(r.protocol, Protocol::NcclBroadcast);
         assert!(r.summary.contains("algo=0"));
         assert!(r.summary.contains("root=0"));

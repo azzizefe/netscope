@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_psn_rtc_signaling(
     src_ip: Option<IpAddr>,
@@ -27,7 +27,9 @@ pub fn dissect_psn_rtc_signaling(
         let is_rtc = magic == 0x5254;
         format!(
             "PSN RTC {} seq={} flags=0x{:02x}{}",
-            type_name, seq, flags,
+            type_name,
+            seq,
+            flags,
             if is_rtc { "" } else { " (raw)" },
         )
     };
@@ -47,7 +49,13 @@ mod tests {
 
     #[test]
     fn test_psn_rtc_offer() {
-        let r = dissect_psn_rtc_signaling(None, None, 9303, 9303, b"\x52\x54\x01\x00\x00\x00\x01\x00\xde\xad");
+        let r = dissect_psn_rtc_signaling(
+            None,
+            None,
+            9303,
+            9303,
+            b"\x52\x54\x01\x00\x00\x00\x01\x00\xde\xad",
+        );
         assert_eq!(r.protocol, Protocol::PsnRtcSignaling);
         assert!(r.summary.contains("Offer"));
         assert!(r.summary.contains("seq=1"));

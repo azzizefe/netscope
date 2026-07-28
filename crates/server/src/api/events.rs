@@ -1,13 +1,13 @@
 use std::io::Read;
 use std::sync::Arc;
 
-use axum::{Json, Router};
 use axum::extract::{Query, State};
-use axum::http::{StatusCode, HeaderMap};
+use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use chrono::Utc;
+use axum::{Json, Router};
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
@@ -52,7 +52,11 @@ async fn list_events(
 
     match queries::list_events(&state.pool, &filter).await {
         Ok(events) => (StatusCode::OK, Json(json!(events))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -96,7 +100,12 @@ async fn ingest_events_batch(
     let decompressed = if content_type == "application/zstd" {
         match decompress_zstd(&body) {
             Ok(data) => data,
-            Err(e) => return (StatusCode::BAD_REQUEST, Json(json!({"error": format!("Decompress error: {}", e)}))),
+            Err(e) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({"error": format!("Decompress error: {}", e)})),
+                )
+            }
         }
     } else {
         body.to_vec()
@@ -105,7 +114,10 @@ async fn ingest_events_batch(
     let events: Vec<BatchEvent> = match serde_json::from_slice(&decompressed) {
         Ok(events) => events,
         Err(e) => {
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": format!("Invalid JSON: {}", e)})));
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("Invalid JSON: {}", e)})),
+            );
         }
     };
 
@@ -129,7 +141,16 @@ async fn ingest_events_batch(
             port: ev.port,
             raw_data: ev.raw_data.as_ref().map(|s| json!(s)),
             tags: json!([]),
-            timestamp: Utc::now(),
+            // When the sensor saw it, not when we received it. The agent
+            // buffers events while the server is unreachable, so a batch can
+            // arrive long after the traffic that produced it — stamping the
+            // ingest time here collapsed an entire outage onto the moment the
+            // link came back, and the SOC timeline lost the ordering it is
+            // read for. An unparseable stamp still falls back to now rather
+            // than dropping the event.
+            timestamp: DateTime::parse_from_rfc3339(&ev.timestamp)
+                .map(|t| t.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now()),
         };
 
         match queries::insert_event(&state.pool, &db_event).await {
@@ -145,10 +166,13 @@ async fn ingest_events_batch(
         }
     }
 
-    (StatusCode::OK, Json(json!({
-        "accepted": accepted,
-        "total": events.len(),
-    })))
+    (
+        StatusCode::OK,
+        Json(json!({
+            "accepted": accepted,
+            "total": events.len(),
+        })),
+    )
 }
 
 fn decompress_zstd(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {

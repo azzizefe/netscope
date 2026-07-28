@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_anthropic_tool_use_bridge(
     src_ip: Option<IpAddr>,
@@ -36,7 +36,8 @@ mod tests {
 
     #[test]
     fn test_anthropic_tool_use_bridge_call() {
-        let buf = b"{\"type\":\"tool_use\",\"name\":\"get_weather\",\"input\":{\"city\":\"London\"}}";
+        let buf =
+            b"{\"type\":\"tool_use\",\"name\":\"get_weather\",\"input\":{\"city\":\"London\"}}";
         let r = dissect_anthropic_tool_use_bridge(None, None, 0, 0, buf);
         assert_eq!(r.protocol, Protocol::AnthropicToolUseBridge);
         assert!(r.summary.contains("tool_use"));

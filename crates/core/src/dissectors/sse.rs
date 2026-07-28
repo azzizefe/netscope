@@ -114,10 +114,7 @@ mod tests {
             r#"data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hi"}}"#,
             "",
         ]);
-        let openai = sse(&[
-            r#"data: {"choices":[{"delta":{"content":"Hi"}}]}"#,
-            "",
-        ]);
+        let openai = sse(&[r#"data: {"choices":[{"delta":{"content":"Hi"}}]}"#, ""]);
         assert!(provider_is_known(&anthropic));
         assert!(provider_is_known(&openai));
 

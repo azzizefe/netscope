@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_fanuc_focas2(
     _src_ip: Option<IpAddr>,
@@ -12,8 +12,14 @@ pub fn dissect_fanuc_focas2(
     let summary = if payload.len() >= 6 {
         let func = payload[0];
         let sub_func = payload.get(1).copied().unwrap_or(0);
-        let data_type = u16::from_be_bytes([payload.get(2).copied().unwrap_or(0), payload.get(3).copied().unwrap_or(0)]);
-        let length = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let data_type = u16::from_be_bytes([
+            payload.get(2).copied().unwrap_or(0),
+            payload.get(3).copied().unwrap_or(0),
+        ]);
+        let length = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let func_name = match (func, sub_func) {
             (0x01, _) => "CNCStatus",

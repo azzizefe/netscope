@@ -6,13 +6,27 @@ use super::DissectedResult;
 
 fn reverse_connect_phase(payload: &[u8]) -> &'static str {
     let raw = String::from_utf8_lossy(payload);
-    if raw.contains("ReverseHello") || raw.contains("RHE") { return "ReverseHello"; }
-    if raw.contains("SessionActivate") { return "SessionActivate"; }
-    if raw.contains("CreateSession") { return "CreateSession"; }
-    if raw.contains("CloseSession") { return "CloseSession"; }
-    if raw.contains("Discover") || raw.contains("FindServers") { return "Discovery"; }
-    if raw.contains("register") || raw.contains("RegisterServer") { return "Registration"; }
-    if raw.contains("token") || raw.contains("Token") { return "TokenExchange"; }
+    if raw.contains("ReverseHello") || raw.contains("RHE") {
+        return "ReverseHello";
+    }
+    if raw.contains("SessionActivate") {
+        return "SessionActivate";
+    }
+    if raw.contains("CreateSession") {
+        return "CreateSession";
+    }
+    if raw.contains("CloseSession") {
+        return "CloseSession";
+    }
+    if raw.contains("Discover") || raw.contains("FindServers") {
+        return "Discovery";
+    }
+    if raw.contains("register") || raw.contains("RegisterServer") {
+        return "Registration";
+    }
+    if raw.contains("token") || raw.contains("Token") {
+        return "TokenExchange";
+    }
     "Active"
 }
 
@@ -21,14 +35,19 @@ fn reverse_parse_rhe(payload: &[u8]) -> Option<String> {
         return None;
     }
     if &payload[0..3] == b"RHE" {
-        let mut size = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]) as usize;
-        if size > payload.len() { size = payload.len(); }
+        let mut size =
+            u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]) as usize;
+        if size > payload.len() {
+            size = payload.len();
+        }
         let body = &payload[8..size];
         if body.len() >= 20 {
             let proto_ver = u32::from_le_bytes([body[0], body[1], body[2], body[3]]);
             let mut off = 20;
             if off + 4 <= body.len() {
-                let len = u32::from_le_bytes([body[off], body[off+1], body[off+2], body[off+3]]) as usize;
+                let len =
+                    u32::from_le_bytes([body[off], body[off + 1], body[off + 2], body[off + 3]])
+                        as usize;
                 off += 4;
                 if off + len <= body.len() && len > 0 && len < 512 {
                     let url = String::from_utf8_lossy(&body[off..off + len]);
@@ -46,7 +65,9 @@ fn endpoint_uri(payload: &[u8]) -> Option<String> {
     if let Some(pos) = raw.find("opc.tcp://") {
         let start = pos;
         let remaining = &raw[start..];
-        let relative_end = remaining.find(|c: char| c.is_whitespace() || c == ',' || c == '}').unwrap_or(remaining.len());
+        let relative_end = remaining
+            .find(|c: char| c.is_whitespace() || c == ',' || c == '}')
+            .unwrap_or(remaining.len());
         let actual_end = relative_end.min(remaining.len());
         return Some(raw[start..start + actual_end].to_string());
     }
@@ -61,9 +82,12 @@ pub fn dissect_opc_ua_reverse_connect(
     payload: &[u8],
 ) -> DissectedResult {
     let fallback = |s: String| DissectedResult {
-        src_addr: src_ip, dst_addr: dst_ip,
-        src_port: Some(src_port), dst_port: Some(dst_port),
-        protocol: Protocol::OpcUaReverseConnect, summary: s,
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::OpcUaReverseConnect,
+        summary: s,
     };
     if payload.len() < 4 {
         return fallback("OPC UA Reverse Connect (partial)".into());

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_studio5000_online_comm(
     _src_ip: Option<IpAddr>,
@@ -13,7 +13,10 @@ pub fn dissect_studio5000_online_comm(
         let session = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
         let msg_type = payload.get(4).copied().unwrap_or(0);
         let sub_type = payload.get(5).copied().unwrap_or(0);
-        let seq_no = u16::from_be_bytes([payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0)]);
+        let seq_no = u16::from_be_bytes([
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+        ]);
 
         let type_name = match msg_type {
             0x01 => "TagBrowser",

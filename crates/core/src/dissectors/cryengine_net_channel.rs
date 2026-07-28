@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_cryengine_net_channel(
     src_ip: Option<IpAddr>,
@@ -23,7 +23,10 @@ pub fn dissect_cryengine_net_channel(
             4 => "Update",
             _ => "Other",
         };
-        format!("CryEngine NetChannel {} ch{} flags 0x{:02x}", type_name, channel_id, flags)
+        format!(
+            "CryEngine NetChannel {} ch{} flags 0x{:02x}",
+            type_name, channel_id, flags
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -41,14 +44,21 @@ mod tests {
 
     #[test]
     fn test_cryengine_net_channel_data() {
-        let r = dissect_cryengine_net_channel(None, None, 64087, 64087, b"\x00\x00\x00\x01\x02\x00\xde\xad");
+        let r = dissect_cryengine_net_channel(
+            None,
+            None,
+            64087,
+            64087,
+            b"\x00\x00\x00\x01\x02\x00\xde\xad",
+        );
         assert_eq!(r.protocol, Protocol::CryengineNetChannel);
         assert!(r.summary.contains("Data"));
     }
 
     #[test]
     fn test_cryengine_net_channel_connect() {
-        let r = dissect_cryengine_net_channel(None, None, 64087, 64087, b"\x00\x00\x00\x00\x00\x01");
+        let r =
+            dissect_cryengine_net_channel(None, None, 64087, 64087, b"\x00\x00\x00\x00\x00\x01");
         assert_eq!(r.protocol, Protocol::CryengineNetChannel);
         assert!(r.summary.contains("Connect"));
     }

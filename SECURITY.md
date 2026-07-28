@@ -43,3 +43,56 @@ traffic that an attacker may fully control. The following are in scope:
 Out of scope: vulnerabilities in third-party capture drivers (e.g. Npcap),
 the operating system, or the elevated privileges required for live capture.
 Running a live capture requires administrative/root privileges by design.
+
+## Fleet deployment (`netscope-server`, `netscope-agent`)
+
+Two things fail closed rather than degrading quietly. Both will stop a
+deployment that has not been configured, which is deliberate.
+
+### The server will not start without a JWT secret
+
+Set `[server.jwt] secret` in the config file, or pass `--jwt-secret`. There is
+no default. A generated secret would appear to work and then not: sessions end
+at every restart, and two instances behind a load balancer reject each other's
+tokens, which surfaces to users as intermittent "invalid or expired token" with
+nothing in the logs to explain it.
+
+`--dev-insecure-jwt` generates a throwaway secret for local development. It logs
+a warning on every start and must not be used anywhere else.
+
+### The agent will not install an unsigned binary
+
+The agent can replace its own executable and restart into it, which is code
+execution as whatever account runs the sensor. The SHA-256 in the upgrade
+response does not protect that: it arrives in the same response as the download
+URL, so anything that can serve the binary can serve a matching digest. Only the
+signature decides.
+
+The public key is compiled in, not read from disk — a key in a config file is
+swappable by anyone who can write that file, which on an already-compromised
+host is the attacker, and it would then verify their own signature.
+
+Generate a key pair once and keep the secret half offline or in the release
+pipeline's secret store:
+
+```bash
+minisign -G -p netscope-agent.pub -s netscope-agent.key
+```
+
+Build agents with the public half:
+
+```bash
+NETSCOPE_AGENT_UPDATE_PUBKEY="$(tail -n1 netscope-agent.pub)" cargo build -p netscope-agent --release
+```
+
+Sign each released binary and serve the signature as the `signature` field of
+`/api/v1/upgrade/check`:
+
+```bash
+minisign -S -s netscope-agent.key -m netscope-agent
+```
+
+An agent built without `NETSCOPE_AGENT_UPDATE_PUBKEY` logs that automatic
+upgrades are off and never checks again; upgrade those sensors out of band.
+Rotating the key means rebuilding and redeploying the agents — that is the cost
+of the key not being swappable at runtime.

@@ -31,11 +31,18 @@ fn handle_windows_service(action: &str) -> anyhow::Result<()> {
         "install" => {
             let binary_path = std::env::current_exe()?;
             let status = std::process::Command::new("sc")
-                .args(["create", service_name,
-                    "binPath=", &binary_path.to_string_lossy(),
-                    "start=", "auto",
-                    "DisplayName=", "Netscope Sensor Agent",
-                    "description=", "Netscope remote capture sensor agent"])
+                .args([
+                    "create",
+                    service_name,
+                    "binPath=",
+                    &binary_path.to_string_lossy(),
+                    "start=",
+                    "auto",
+                    "DisplayName=",
+                    "Netscope Sensor Agent",
+                    "description=",
+                    "Netscope remote capture sensor agent",
+                ])
                 .status()?;
             if status.success() {
                 println!("Service '{}' installed", service_name);
@@ -78,10 +85,12 @@ fn handle_windows_service(action: &str) -> anyhow::Result<()> {
             rt.block_on(service::run_agent(CliArgs::parse()))?;
         }
         _ => {
-            eprintln!("Usage: netscope-agent --service [install|uninstall|start|stop|run]\n\
+            eprintln!(
+                "Usage: netscope-agent --service [install|uninstall|start|stop|run]\n\
                        For first install, run as Administrator:\n  \
                        netscope-agent --service install\n  \
-                       netscope-agent --service start");
+                       netscope-agent --service start"
+            );
         }
     }
 

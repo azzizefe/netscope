@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_unreal_replication_graph(
     src_ip: Option<IpAddr>,
@@ -15,7 +15,10 @@ pub fn dissect_unreal_replication_graph(
         let node_count = u16::from_be_bytes([payload[0], payload[1]]);
         let cell_x = u16::from_be_bytes([payload[2], payload[3]]);
         let cell_y = u16::from_be_bytes([payload[4], payload[5]]);
-        format!("ReplicationGraph {} nodes, cell ({}, {})", node_count, cell_x, cell_y)
+        format!(
+            "ReplicationGraph {} nodes, cell ({}, {})",
+            node_count, cell_x, cell_y
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -33,7 +36,8 @@ mod tests {
 
     #[test]
     fn test_unreal_replication_graph() {
-        let r = dissect_unreal_replication_graph(None, None, 7777, 7777, b"\x00\x0f\x00\x10\x00\x20");
+        let r =
+            dissect_unreal_replication_graph(None, None, 7777, 7777, b"\x00\x0f\x00\x10\x00\x20");
         assert_eq!(r.protocol, Protocol::UnrealReplicationGraph);
         assert!(r.summary.contains("15 nodes"));
     }

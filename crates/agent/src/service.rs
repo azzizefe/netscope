@@ -14,8 +14,10 @@ pub async fn run_agent(args: CliArgs) -> anyhow::Result<()> {
     let config = AgentConfig::load(&args)?;
 
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("info,netscope_agent=debug")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,netscope_agent=debug")),
+        )
         .init();
 
     tracing::info!("Starting netscope-agent v{}", env!("CARGO_PKG_VERSION"));
@@ -49,25 +51,24 @@ pub async fn run_agent(args: CliArgs) -> anyhow::Result<()> {
             started_at,
         )));
         handles.push(tokio::spawn(command::command_loop(state.clone())));
-        handles.push(tokio::spawn(events::event_loop(
-            state.clone(),
-            event_rx,
-        )));
+        handles.push(tokio::spawn(events::event_loop(state.clone(), event_rx)));
         handles.push(tokio::spawn(upgrade::upgrade_loop(state.clone())));
     }
 
     if state.get_sensor_id().is_some() {
-        let _ = event_tx.send(events::RawEvent {
-            event_type: "agent.startup".into(),
-            severity: "info".into(),
-            title: "Agent started".into(),
-            description: Some(format!("Version {}", env!("CARGO_PKG_VERSION"))),
-            source_ip: None,
-            dest_ip: None,
-            protocol: None,
-            port: None,
-            raw_data: None,
-        }).await;
+        let _ = event_tx
+            .send(events::RawEvent {
+                event_type: "agent.startup".into(),
+                severity: "info".into(),
+                title: "Agent started".into(),
+                description: Some(format!("Version {}", env!("CARGO_PKG_VERSION"))),
+                source_ip: None,
+                dest_ip: None,
+                protocol: None,
+                port: None,
+                raw_data: None,
+            })
+            .await;
     }
 
     let flush_state = state.clone();
@@ -76,7 +77,10 @@ pub async fn run_agent(args: CliArgs) -> anyhow::Result<()> {
             tokio::time::sleep(std::time::Duration::from_secs(30)).await;
             events::flush_offline_buffer(&flush_state).await;
 
-            if flush_state.shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+            if flush_state
+                .shutdown
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
                 break;
             }
         }
@@ -85,7 +89,9 @@ pub async fn run_agent(args: CliArgs) -> anyhow::Result<()> {
     wait_for_shutdown().await;
 
     tracing::info!("Shutting down...");
-    state.shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
+    state
+        .shutdown
+        .store(true, std::sync::atomic::Ordering::Relaxed);
 
     for handle in handles {
         let _ = tokio::time::timeout(std::time::Duration::from_secs(5), handle).await;

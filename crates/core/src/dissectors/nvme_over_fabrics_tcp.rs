@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
-use crate::models::Protocol;
 use crate::dissectors::DissectedResult;
+use crate::models::Protocol;
 
 pub fn dissect_nvme_over_fabrics_tcp(
     _src_ip: Option<IpAddr>,
@@ -10,18 +10,16 @@ pub fn dissect_nvme_over_fabrics_tcp(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary;
-    if payload.len() >= 16 {
+    let summary = if payload.len() >= 16 {
         let pdu_type = payload[0];
         let _flags = payload[1];
         let _hlen = u16::from_be_bytes([payload[2], payload[3]]);
         let plen = u32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]);
         let cid = u16::from_be_bytes([payload[8], payload[9]]);
-        summary = format!("NVMe/TCP pdu=0x{:02x} cid={} plen={}",
-            pdu_type, cid, plen);
+        format!("NVMe/TCP pdu=0x{:02x} cid={} plen={}", pdu_type, cid, plen)
     } else {
-        summary = "NVMe/TCP (short frame)".into();
-    }
+        "NVMe/TCP (short frame)".into()
+    };
     DissectedResult {
         src_addr: _src_ip,
         dst_addr: _dst_ip,
@@ -46,7 +44,10 @@ mod tests {
         let r = dissect_nvme_over_fabrics_tcp(
             Some("10.0.0.1".parse::<IpAddr>().unwrap()),
             Some("10.0.0.2".parse::<IpAddr>().unwrap()),
-            4420, 4420, &buf);
+            4420,
+            4420,
+            &buf,
+        );
         assert_eq!(r.protocol, Protocol::NvmeOverFabricsTcp);
         assert!(r.summary.contains("pdu=0x01"));
         assert!(r.summary.contains("cid=5"));

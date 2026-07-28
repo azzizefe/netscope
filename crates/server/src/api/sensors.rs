@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use axum::{Json, Router};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::{get, post, put};
+use axum::{Json, Router};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -37,10 +37,17 @@ pub struct CommandStore {
 
 impl CommandStore {
     pub fn new() -> Arc<Self> {
-        Arc::new(Self { queues: dashmap::DashMap::new() })
+        Arc::new(Self {
+            queues: dashmap::DashMap::new(),
+        })
     }
 
-    pub fn push(&self, sensor_id: Uuid, command: String, parameters: serde_json::Value) -> PendingCommand {
+    pub fn push(
+        &self,
+        sensor_id: Uuid,
+        command: String,
+        parameters: serde_json::Value,
+    ) -> PendingCommand {
         let cmd = PendingCommand {
             id: Uuid::new_v4(),
             command,
@@ -52,7 +59,10 @@ impl CommandStore {
     }
 
     pub fn drain(&self, sensor_id: Uuid) -> Vec<PendingCommand> {
-        self.queues.remove(&sensor_id).map(|(_, v)| v).unwrap_or_default()
+        self.queues
+            .remove(&sensor_id)
+            .map(|(_, v)| v)
+            .unwrap_or_default()
     }
 
     #[allow(dead_code)]
@@ -85,7 +95,10 @@ pub fn routes(state: Arc<ApiState>) -> Router {
         )
         .route("/register", post(register_sensor).route_layer(write()))
         .route("/{id}", get(get_sensor).route_layer(read()))
-        .route("/{id}/heartbeat", put(sensor_heartbeat).route_layer(write()))
+        .route(
+            "/{id}/heartbeat",
+            put(sensor_heartbeat).route_layer(write()),
+        )
         // Issuing a command is its own privilege: it makes a remote sensor act,
         // which is not the same authority as editing its record.
         .route(
@@ -102,12 +115,14 @@ pub fn routes(state: Arc<ApiState>) -> Router {
         .with_state(state)
 }
 
-async fn list_sensors(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn list_sensors(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     match queries::list_sensors(&state.pool).await {
         Ok(sensors) => (StatusCode::OK, Json(json!(sensors))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -119,21 +134,34 @@ async fn register_sensor(
         Ok(s) => (StatusCode::CREATED, Json(json!(s))).into_response(),
         Err(e) => {
             if e.to_string().contains("unique") {
-                return (StatusCode::CONFLICT, Json(json!({"error": "sensor already registered"}))).into_response();
+                return (
+                    StatusCode::CONFLICT,
+                    Json(json!({"error": "sensor already registered"})),
+                )
+                    .into_response();
             }
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
     }
 }
 
-async fn get_sensor(
-    State(state): State<Arc<ApiState>>,
-    Path(id): Path<Uuid>,
-) -> impl IntoResponse {
+async fn get_sensor(State(state): State<Arc<ApiState>>, Path(id): Path<Uuid>) -> impl IntoResponse {
     match queries::get_sensor(&state.pool, id).await {
         Ok(Some(s)) => (StatusCode::OK, Json(json!(s))).into_response(),
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "sensor not found"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "sensor not found"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -144,8 +172,20 @@ async fn sensor_heartbeat(
 ) -> impl IntoResponse {
     let sensor = match queries::get_sensor(&state.pool, id).await {
         Ok(Some(s)) => s,
-        Ok(None) => return (StatusCode::NOT_FOUND, Json(json!({"error": "sensor not found"}))).into_response(),
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "sensor not found"})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     let db_hb = SensorHeartbeat {
@@ -155,13 +195,22 @@ async fn sensor_heartbeat(
         ram_used_mb: Some(hb.ram_used_mb),
         capture_throughput_bps: Some(hb.capture_throughput_bps),
         uptime_secs: Some(hb.uptime_secs),
+        disk_free_mb: Some(hb.disk_free_mb),
         interface_stats: None,
         received_at: Utc::now(),
     };
 
     match queries::update_sensor_heartbeat(&state.pool, id, &db_hb).await {
-        Ok(_) => (StatusCode::OK, Json(json!({"status": "ok", "sensor_id": id, "hostname": sensor.hostname}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({"status": "ok", "sensor_id": id, "hostname": sensor.hostname})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -181,23 +230,50 @@ async fn sensor_command(
 ) -> impl IntoResponse {
     let sensor = match queries::get_sensor(&state.pool, id).await {
         Ok(Some(s)) => s,
-        Ok(None) => return (StatusCode::NOT_FOUND, Json(json!({"error": "sensor not found"}))).into_response(),
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "sensor not found"})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
-    let command_name = cmd.get("command").and_then(|v| v.as_str()).unwrap_or("unknown");
+    let command_name = cmd
+        .get("command")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
     let parameters = cmd.get("parameters").cloned().unwrap_or(json!({}));
 
-    let pc = state.commands.push(id, command_name.to_string(), parameters);
+    let pc = state
+        .commands
+        .push(id, command_name.to_string(), parameters);
 
-    tracing::info!("Command queued for sensor {} ({}): {} [{}]", sensor.hostname, id, command_name, pc.id);
+    tracing::info!(
+        "Command queued for sensor {} ({}): {} [{}]",
+        sensor.hostname,
+        id,
+        command_name,
+        pc.id
+    );
 
-    (StatusCode::ACCEPTED, Json(json!({
-        "status": "queued",
-        "command_id": pc.id,
-        "sensor_id": id,
-        "command": command_name,
-    }))).into_response()
+    (
+        StatusCode::ACCEPTED,
+        Json(json!({
+            "status": "queued",
+            "command_id": pc.id,
+            "sensor_id": id,
+            "command": command_name,
+        })),
+    )
+        .into_response()
 }
 
 async fn poll_commands(
@@ -206,8 +282,20 @@ async fn poll_commands(
 ) -> impl IntoResponse {
     let _sensor = match queries::get_sensor(&state.pool, id).await {
         Ok(Some(s)) => s,
-        Ok(None) => return (StatusCode::NOT_FOUND, Json(json!({"error": "sensor not found"}))).into_response(),
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "sensor not found"})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     let commands = state.commands.drain(id);
@@ -222,11 +310,17 @@ async fn command_result(
 ) -> impl IntoResponse {
     tracing::info!(
         "Command result for sensor {} cmd {}: {}",
-        id, cmd_id, result.status
+        id,
+        cmd_id,
+        result.status
     );
 
-    (StatusCode::OK, Json(json!({
-        "status": "acknowledged",
-        "command_id": cmd_id,
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "acknowledged",
+            "command_id": cmd_id,
+        })),
+    )
+        .into_response()
 }

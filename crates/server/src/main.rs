@@ -33,8 +33,10 @@ use crate::ws::WsState;
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("info,netscope_server=debug")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,netscope_server=debug")),
+        )
         .init();
 
     let args = CliArgs::parse();
@@ -43,15 +45,21 @@ async fn main() -> Result<()> {
         toml::from_str(&std::fs::read_to_string(&args.config)?)
             .context("Failed to parse config file")?
     } else {
-        AppConfig { server: None, database: None, redis: None }
+        AppConfig {
+            server: None,
+            database: None,
+            redis: None,
+        }
     };
 
     // Database
-    let db_url = args.db_url
+    let db_url = args
+        .db_url
         .or_else(|| config.database.as_ref().map(|d| d.url.clone()))
         .unwrap_or_else(|| "postgres://netscope:netscope@localhost:5432/netscope".into());
 
-    let max_connections = config.database
+    let max_connections = config
+        .database
         .as_ref()
         .and_then(|d| d.max_connections)
         .unwrap_or(20);
@@ -61,7 +69,8 @@ async fn main() -> Result<()> {
     tracing::info!("Database connected and migrated");
 
     // Redis cache
-    let redis_url = args.redis_url
+    let redis_url = args
+        .redis_url
         .or_else(|| config.redis.as_ref().map(|r| r.url.clone()));
 
     let cache = if let Some(url) = redis_url {
@@ -80,19 +89,48 @@ async fn main() -> Result<()> {
     };
 
     // Auth
-    let jwt_secret = args.jwt_secret
-        .or_else(|| config.server.as_ref().and_then(|s| s.jwt.as_ref().map(|j| j.secret.clone())))
+    let jwt_secret = args
+        .jwt_secret
+        .or_else(|| {
+            config
+                .server
+                .as_ref()
+                .and_then(|s| s.jwt.as_ref().map(|j| j.secret.clone()))
+        })
+        .map(Ok)
         .unwrap_or_else(|| {
-            let secret = uuid::Uuid::new_v4().to_string();
-            tracing::warn!("No JWT secret configured, using auto-generated (sessions invalidate on restart)");
-            secret
-        });
+            // Refuse to start rather than invent one. A generated secret looks
+            // like it works — tokens sign and validate — right up to the point
+            // where it does not: every session dies on restart, and two
+            // instances behind a load balancer reject each other's tokens, so
+            // a fleet's logins fail intermittently with nothing in the logs but
+            // "invalid or expired token". It was a single warning line among
+            // the startup noise, which is not where an operator finds it.
+            if args.dev_insecure_jwt {
+                tracing::warn!(
+                    "--dev-insecure-jwt: signing with a per-process secret. \
+                     Sessions end at restart and will not survive more than one \
+                     instance. Never use this outside local development."
+                );
+                Ok(uuid::Uuid::new_v4().to_string())
+            } else {
+                Err(anyhow::anyhow!(
+                    "No JWT secret configured. Set `[server.jwt] secret` in the \
+                     config file or pass --jwt-secret. For local development \
+                     only, --dev-insecure-jwt generates a throwaway one."
+                ))
+            }
+        })?;
 
-    let jwt_issuer = config.server.as_ref()
+    let jwt_issuer = config
+        .server
+        .as_ref()
         .and_then(|s| s.jwt.as_ref())
         .and_then(|j| j.issuer.clone());
 
-    let jwt_expiry = config.server.as_ref()
+    let jwt_expiry = config
+        .server
+        .as_ref()
         .and_then(|s| s.jwt.as_ref())
         .and_then(|j| j.expiry_hours);
 
@@ -114,37 +152,81 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/ws/events", get(ws_handler))
         .route("/health", get(health))
-        .merge(api::build_router(pool.clone(), jwt.clone(), rbac.clone(), cache.clone()))
+        .merge(api::build_router(
+            pool.clone(),
+            jwt.clone(),
+            rbac.clone(),
+            cache.clone(),
+        ))
         .layer(axum::extract::Extension(api_state))
         .layer(axum::extract::Extension(ws_state))
         .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::new()
-            .allow_origin(Any)
-            .allow_methods(Any)
-            .allow_headers(Any));
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        );
 
     // ── Start servers concurrently ──
-    let listen_addr: SocketAddr = format!(
-        "{}:{}",
-        args.listen,
-        args.port,
-    ).parse().context("Invalid listen address")?;
+    // Flag beats config file beats built-in default — see the comment on
+    // `CliArgs`. Until this chain existed the `[server]` block was parsed and
+    // then ignored, so a `port` set in server.toml did nothing at all.
+    let listen = args
+        .listen
+        .or_else(|| config.server.as_ref().map(|s| s.listen.clone()))
+        .unwrap_or_else(|| "0.0.0.0".into());
 
-    let grpc_listen_addr: SocketAddr = format!(
-        "{}:{}",
-        args.listen,
-        args.grpc_port,
-    ).parse().context("Invalid gRPC listen address")?;
+    let port = args
+        .port
+        .or_else(|| config.server.as_ref().map(|s| s.port))
+        .unwrap_or(9443);
 
-    let tls_cert = args.tls_cert
-        .or_else(|| config.server.as_ref().and_then(|s| s.tls.as_ref().map(|t| t.cert.clone())));
-    let tls_key = args.tls_key
-        .or_else(|| config.server.as_ref().and_then(|s| s.tls.as_ref().map(|t| t.key.clone())));
-    let tls_ca = args.tls_ca
-        .or_else(|| config.server.as_ref().and_then(|s| s.tls.as_ref().and_then(|t| t.ca.clone())));
+    let grpc_port = args
+        .grpc_port
+        .or_else(|| {
+            config
+                .server
+                .as_ref()
+                .and_then(|s| s.grpc.as_ref())
+                .map(|g| g.port)
+        })
+        .unwrap_or(9444);
+
+    let listen_addr: SocketAddr = format!("{listen}:{port}")
+        .parse()
+        .context("Invalid listen address")?;
+
+    let grpc_listen_addr: SocketAddr = format!("{listen}:{grpc_port}")
+        .parse()
+        .context("Invalid gRPC listen address")?;
+
+    let tls_cert = args.tls_cert.or_else(|| {
+        config
+            .server
+            .as_ref()
+            .and_then(|s| s.tls.as_ref().map(|t| t.cert.clone()))
+    });
+    let tls_key = args.tls_key.or_else(|| {
+        config
+            .server
+            .as_ref()
+            .and_then(|s| s.tls.as_ref().map(|t| t.key.clone()))
+    });
+    let tls_ca = args.tls_ca.or_else(|| {
+        config
+            .server
+            .as_ref()
+            .and_then(|s| s.tls.as_ref().and_then(|t| t.ca.clone()))
+    });
 
     let grpc_enabled = args.grpc_enabled
-        || config.server.as_ref().and_then(|s| s.grpc.as_ref()).map(|g| g.enabled).unwrap_or(false);
+        || config
+            .server
+            .as_ref()
+            .and_then(|s| s.grpc.as_ref())
+            .map(|g| g.enabled)
+            .unwrap_or(false);
 
     // ── gRPC server (separate port) ──
     let grpc_svc = grpc::grpc_service(pool.clone());
@@ -168,9 +250,8 @@ async fn main() -> Result<()> {
     let http_handle = if let (Some(cert), Some(key)) = (tls_cert.as_ref(), tls_key.as_ref()) {
         let tls = tls_ca.is_some();
         tracing::info!("TLS 1.3 enabled on {} (mTLS: {})", listen_addr, tls);
-        let listener = tls_listener::TlsListener::new(
-            &listen_addr, cert, key, tls_ca.as_deref(),
-        ).await?;
+        let listener =
+            tls_listener::TlsListener::new(&listen_addr, cert, key, tls_ca.as_deref()).await?;
         tokio::spawn(async move {
             if let Err(e) = axum::serve(listener, app.into_make_service()).await {
                 tracing::error!("HTTP server error: {}", e);

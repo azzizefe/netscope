@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_df1_full_duplex_ext(
     _src_ip: Option<IpAddr>,
@@ -14,7 +14,10 @@ pub fn dissect_df1_full_duplex_ext(
         let src_addr = payload[1];
         let cmd = payload[2];
         let mode = payload.get(3).copied().unwrap_or(0);
-        let seq = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let seq = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let cmd_name = match cmd {
             0x00 => "Data",
@@ -35,7 +38,10 @@ pub fn dissect_df1_full_duplex_ext(
 
         format!("DF1 Full-Duplex (Extended) — {cmd_name} dst:{dst_addr} src:{src_addr} mode:{ext_mode} seq:{seq} ({len} bytes)", len = payload.len())
     } else {
-        format!("DF1 Full-Duplex (Extended) — {len} bytes", len = payload.len())
+        format!(
+            "DF1 Full-Duplex (Extended) — {len} bytes",
+            len = payload.len()
+        )
     };
 
     DissectedResult {

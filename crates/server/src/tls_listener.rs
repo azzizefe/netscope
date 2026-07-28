@@ -23,7 +23,10 @@ impl TlsListener {
     ) -> Result<Self> {
         let acceptor = tls::build_tls_acceptor(cert_path, key_path, ca_path)?;
         let inner = TcpListener::bind(addr).await?;
-        Ok(Self { inner, acceptor: Arc::new(acceptor) })
+        Ok(Self {
+            inner,
+            acceptor: Arc::new(acceptor),
+        })
     }
 }
 

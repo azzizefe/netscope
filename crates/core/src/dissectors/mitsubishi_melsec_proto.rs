@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_mitsubishi_melsec_proto(
     _src_ip: Option<IpAddr>,
@@ -12,7 +12,10 @@ pub fn dissect_mitsubishi_melsec_proto(
     let summary = if payload.len() >= 6 {
         let subheader = u16::from_be_bytes([payload[0], payload[1]]);
         let req_type = payload.get(2).copied().unwrap_or(0);
-        let cmd = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let cmd = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let is_binary = subheader == 0x5000;
         let fmt = if is_binary { "Binary" } else { "ASCII" };
@@ -35,9 +38,16 @@ pub fn dissect_mitsubishi_melsec_proto(
             _ => "MC cmd",
         };
 
-        let frame = if req_type == 0x00 { "Request" } else { "Response" };
+        let frame = if req_type == 0x00 {
+            "Request"
+        } else {
+            "Response"
+        };
 
-        format!("MELSEC MC Protocol ({fmt}) — {cmd_name} {frame} ({len} bytes)", len = payload.len())
+        format!(
+            "MELSEC MC Protocol ({fmt}) — {cmd_name} {frame} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("MELSEC MC Protocol — {len} bytes", len = payload.len())
     };

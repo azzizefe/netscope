@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_s7comm_plus_detail(
     _src_ip: Option<IpAddr>,
@@ -12,8 +12,14 @@ pub fn dissect_s7comm_plus_detail(
     let summary = if payload.len() >= 8 {
         let protocol_id = payload[0];
         let opcode = payload.get(1).copied().unwrap_or(0);
-        let session = u16::from_be_bytes([payload.get(2).copied().unwrap_or(0), payload.get(3).copied().unwrap_or(0)]);
-        let job_id = u16::from_be_bytes([payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0)]);
+        let session = u16::from_be_bytes([
+            payload.get(2).copied().unwrap_or(0),
+            payload.get(3).copied().unwrap_or(0),
+        ]);
+        let job_id = u16::from_be_bytes([
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+        ]);
 
         let op_name = match opcode {
             0x01 => "Job",
@@ -32,7 +38,10 @@ pub fn dissect_s7comm_plus_detail(
             "S7Comm+"
         };
 
-        format!("{proto_info} — {op_name} session:{session} jobId:{job_id} ({len} bytes)", len = payload.len())
+        format!(
+            "{proto_info} — {op_name} session:{session} jobId:{job_id} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("S7Comm+ Detail — {len} bytes", len = payload.len())
     };

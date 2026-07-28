@@ -69,7 +69,25 @@ async fn send_heartbeat(
 
     let path = format!("/api/v1/sensors/{}/heartbeat", sensor_id);
     let _resp: serde_json::Value = state.http_put(&path, &hb).await?;
-    tracing::debug!("Heartbeat sent: CPU={}% RAM={}MB Disk={}MB",
-        hb.cpu_load_pct, hb.ram_used_mb, hb.disk_free_mb);
+
+    // A backlog is the symptom of an outage that has already ended — this
+    // heartbeat got through, so the link is back, and anything still queued is
+    // waiting on the flush rather than on the network. Worth saying out loud,
+    // because a queue that never drains means the sensor is losing events at
+    // the far end of its retention.
+    let queued = state.offline.lock().await.count().await.unwrap_or(0);
+    if queued > 0 {
+        tracing::warn!(
+            "Heartbeat sent with {} event(s) still queued offline",
+            queued
+        );
+    }
+    tracing::debug!(
+        "Heartbeat sent: CPU={}% RAM={}MB Disk={}MB queued={}",
+        hb.cpu_load_pct,
+        hb.ram_used_mb,
+        hb.disk_free_mb,
+        queued
+    );
     Ok(())
 }

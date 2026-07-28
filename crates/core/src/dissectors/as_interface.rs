@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_as_interface(
     src_ip: Option<IpAddr>,
@@ -20,7 +20,13 @@ pub fn dissect_as_interface(
             _ => "Command",
         };
         let slave = payload[1] & 0x1F;
-        format!("AS-Interface — {} slave:{} data:{:02x} ({})", cmd, slave, payload[4], super::bytes(payload.len() as u64))
+        format!(
+            "AS-Interface — {} slave:{} data:{:02x} ({})",
+            cmd,
+            slave,
+            payload[4],
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("AS-Interface — {}", super::bytes(payload.len() as u64))
     };

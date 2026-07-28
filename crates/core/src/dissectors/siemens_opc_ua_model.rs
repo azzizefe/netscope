@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_siemens_opc_ua_model(
     _src_ip: Option<IpAddr>,
@@ -12,7 +12,12 @@ pub fn dissect_siemens_opc_ua_model(
     let summary = if payload.len() >= 8 {
         let namespace = u16::from_be_bytes([payload[0], payload[1]]);
         let node_id_type = payload.get(2).copied().unwrap_or(0);
-        let node_id = u32::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0), payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0)]);
+        let node_id = u32::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+        ]);
 
         let type_name = match node_id_type {
             0x01 => "Variable",
@@ -30,7 +35,10 @@ pub fn dissect_siemens_opc_ua_model(
             _ => "base",
         };
 
-        format!("Siemens OPC UA — {type_name} ns:{namespace} ({ns_map}) id:{node_id} ({len} bytes)", len = payload.len())
+        format!(
+            "Siemens OPC UA — {type_name} ns:{namespace} ({ns_map}) id:{node_id} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("Siemens OPC UA Model — {len} bytes", len = payload.len())
     };

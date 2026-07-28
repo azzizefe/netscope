@@ -8,10 +8,9 @@ use std::time::{Duration, Instant};
 use crate::models::Protocol;
 
 use super::{
-    amqp1, bindings, consul_rpc, drbd, fix, hl7,
-    http, http2, iec101, memcached_bin, milter, modbus_ascii, modbus_rtu,
-    ntlm, openvpn, redis_cluster, schneider_ecostruxure_edge, someip, syslog, websocket, zmtp,
-    DissectedResult,
+    amqp1, bindings, consul_rpc, drbd, fix, hl7, http, http2, iec101, memcached_bin, milter,
+    modbus_ascii, modbus_rtu, ntlm, openvpn, redis_cluster, schneider_ecostruxure_edge, someip,
+    syslog, websocket, zmtp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -323,7 +322,13 @@ fn dissect_tcp_inner(
             return modbus_rtu::dissect_modbus_rtu(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
         if on(502) && modbus_ascii::looks_like_modbus_ascii(tcp_payload) {
-            return modbus_ascii::dissect_modbus_ascii(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+            return modbus_ascii::dissect_modbus_ascii(
+                src_ip,
+                dst_ip,
+                src_port,
+                dst_port,
+                tcp_payload,
+            );
         }
         // 8300 is Consul's convention rather than an assignment, and the type
         // byte only leads the first segment of a connection — so a mid-stream

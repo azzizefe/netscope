@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 /// CANopen NMT command bytes.
 fn nmt_command_name(cs: u8) -> &'static str {
@@ -11,7 +11,7 @@ fn nmt_command_name(cs: u8) -> &'static str {
         0x81 => "Reset Node",
         0x82 => "Reset Communication",
         0x00 => "Boot-up",
-        _    => "Unknown",
+        _ => "Unknown",
     }
 }
 

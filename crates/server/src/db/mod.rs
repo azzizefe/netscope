@@ -1,9 +1,9 @@
 pub mod models;
 pub mod queries;
 
+use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
-use anyhow::Result;
 
 pub async fn create_pool(url: &str, max_connections: u32) -> Result<PgPool> {
     let pool = PgPoolOptions::new()

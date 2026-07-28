@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_guard_i_o_safety(
     _src_ip: Option<IpAddr>,
@@ -11,8 +11,14 @@ pub fn dissect_guard_i_o_safety(
 ) -> DissectedResult {
     let summary = if payload.len() >= 6 {
         let module_status = payload[0];
-        let channel_bits = u16::from_be_bytes([payload.get(1).copied().unwrap_or(0), payload.get(2).copied().unwrap_or(0)]);
-        let discrepancy = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let channel_bits = u16::from_be_bytes([
+            payload.get(1).copied().unwrap_or(0),
+            payload.get(2).copied().unwrap_or(0),
+        ]);
+        let discrepancy = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let status_name = match module_status & 0x0F {
             0x00 => "Safe state",

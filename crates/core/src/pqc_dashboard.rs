@@ -15,8 +15,12 @@ impl OverheadStats {
     fn from_values(mut values: Vec<f64>) -> Self {
         if values.is_empty() {
             return OverheadStats {
-                min: 0.0, max: 0.0, avg: 0.0,
-                median: 0.0, p95: 0.0, sample_count: 0,
+                min: 0.0,
+                max: 0.0,
+                avg: 0.0,
+                median: 0.0,
+                p95: 0.0,
+                sample_count: 0,
             };
         }
         values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
@@ -26,7 +30,11 @@ impl OverheadStats {
             min: values[0],
             max: values[n - 1],
             avg: sum / n as f64,
-            median: if n % 2 == 0 { (values[n / 2 - 1] + values[n / 2]) / 2.0 } else { values[n / 2] },
+            median: if n.is_multiple_of(2) {
+                (values[n / 2 - 1] + values[n / 2]) / 2.0
+            } else {
+                values[n / 2]
+            },
             p95: values[((n as f64 * 0.95).ceil() as usize).min(n - 1)],
             sample_count: n,
         }
@@ -59,7 +67,12 @@ impl PqcDashboard {
         if pqc_total == 0 {
             return 0.0;
         }
-        let hybrid = self.store.records.iter().filter(|r| r.used_pqc() && r.is_hybrid_kem).count();
+        let hybrid = self
+            .store
+            .records
+            .iter()
+            .filter(|r| r.used_pqc() && r.is_hybrid_kem)
+            .count();
         hybrid as f64 / pqc_total as f64
     }
 
@@ -75,13 +88,16 @@ impl PqcDashboard {
             }
         }
         let mut result: Vec<_> = counts.into_iter().collect();
-        result.sort_by(|a, b| b.1.cmp(&a.1));
+        result.sort_by_key(|e| std::cmp::Reverse(e.1));
         result
     }
 
     /// 4. PQC latency overhead statistics (ms).
     pub fn latency_stats(&self) -> OverheadStats {
-        let values: Vec<f64> = self.store.records.iter()
+        let values: Vec<f64> = self
+            .store
+            .records
+            .iter()
             .filter(|r| r.used_pqc())
             .map(|r| r.pqc_overhead_ms as f64)
             .collect();
@@ -90,7 +106,10 @@ impl PqcDashboard {
 
     /// 5. PQC bandwidth overhead statistics (KB).
     pub fn bandwidth_stats(&self) -> OverheadStats {
-        let values: Vec<f64> = self.store.records.iter()
+        let values: Vec<f64> = self
+            .store
+            .records
+            .iter()
             .filter(|r| r.used_pqc())
             .map(|r| r.pqc_packet_size_extra as f64 / 1024.0)
             .collect();
@@ -103,7 +122,12 @@ impl PqcDashboard {
         if total == 0 {
             return 0.0;
         }
-        let failed = self.store.records.iter().filter(|r| r.used_pqc() && !r.is_success).count();
+        let failed = self
+            .store
+            .records
+            .iter()
+            .filter(|r| r.used_pqc() && !r.is_success)
+            .count();
         failed as f64 / total as f64
     }
 
@@ -113,7 +137,12 @@ impl PqcDashboard {
         if total == 0 {
             return 0.0;
         }
-        let pqc_cert = self.store.records.iter().filter(|r| r.is_pqc_signature || r.is_composite_cert).count();
+        let pqc_cert = self
+            .store
+            .records
+            .iter()
+            .filter(|r| r.is_pqc_signature || r.is_composite_cert)
+            .count();
         pqc_cert as f64 / total as f64
     }
 
@@ -126,7 +155,7 @@ impl PqcDashboard {
             }
         }
         let mut result: Vec<_> = counts.into_iter().collect();
-        result.sort_by(|a, b| b.1.cmp(&a.1));
+        result.sort_by_key(|e| std::cmp::Reverse(e.1));
         result.truncate(n);
         result
     }
@@ -150,18 +179,30 @@ impl PqcDashboard {
         let mut report = String::new();
         report.push_str("═══ PQC Migration Dashboard ═══\n\n");
 
-        report.push_str(&format!("1. PQC Adoption Rate:      {adoption:>6.1}%  (trend: ↑)\n"));
-        report.push_str(&format!("2. Hybrid vs Pure PQC:    {hybrid:>6.1}%  (target > 90%) {target_hybrid}\n"));
-        report.push_str(&format!("3. Failure Rate:           {fail:>6.1}%  (target < 1%)  {target_fail}\n"));
-        report.push_str(&format!("4. PQC Certificate %:      {cert_pct:>6.1}%  (trend: ↑)\n\n"));
+        report.push_str(&format!(
+            "1. PQC Adoption Rate:      {adoption:>6.1}%  (trend: ↑)\n"
+        ));
+        report.push_str(&format!(
+            "2. Hybrid vs Pure PQC:    {hybrid:>6.1}%  (target > 90%) {target_hybrid}\n"
+        ));
+        report.push_str(&format!(
+            "3. Failure Rate:           {fail:>6.1}%  (target < 1%)  {target_fail}\n"
+        ));
+        report.push_str(&format!(
+            "4. PQC Certificate %:      {cert_pct:>6.1}%  (trend: ↑)\n\n"
+        ));
 
         report.push_str("── Latency Overhead (ms) ──\n");
-        report.push_str(&format!("   avg={:.1}  p95={:.1}  max={:.1}  samples={}  (target < 50ms) {target_latency}\n",
-            latency.avg, latency.p95, latency.max, latency.sample_count));
+        report.push_str(&format!(
+            "   avg={:.1}  p95={:.1}  max={:.1}  samples={}  (target < 50ms) {target_latency}\n",
+            latency.avg, latency.p95, latency.max, latency.sample_count
+        ));
 
         report.push_str("── Bandwidth Overhead (KB) ──\n");
-        report.push_str(&format!("   avg={:.1}  p95={:.1}  max={:.1}  samples={}  (target < 10KB) {target_bw}\n",
-            bw.avg, bw.p95, bw.max, bw.sample_count));
+        report.push_str(&format!(
+            "   avg={:.1}  p95={:.1}  max={:.1}  samples={}  (target < 10KB) {target_bw}\n",
+            bw.avg, bw.p95, bw.max, bw.sample_count
+        ));
 
         report.push_str("\n── KEM Algorithm Distribution ──\n");
         let total_kem: usize = kem_dist.iter().map(|(_, c)| c).sum();
@@ -187,7 +228,7 @@ impl PqcDashboard {
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, SigAlgorithm, TlsVersion, KemId};
+    use crate::pqc_handshake::{KemId, PqcHandshakeRecord, SigAlgorithm, TlsVersion};
     use chrono::Utc;
     use std::net::IpAddr;
 
@@ -201,10 +242,19 @@ mod tests {
         }
     }
 
-    fn make_pqc_record(overhead_ms: i32, extra_bytes: u16, hybrid: bool, success: bool, fallback: Option<&str>) -> PqcHandshakeRecord {
+    fn make_pqc_record(
+        overhead_ms: i32,
+        extra_bytes: u16,
+        hybrid: bool,
+        success: bool,
+        fallback: Option<&str>,
+    ) -> PqcHandshakeRecord {
         let mut rec = PqcHandshakeRecord::new(
-            test_ft(), TlsVersion::TlsV1_3, "pqc.example".into(),
-            SigAlgorithm::MlDsa65, Utc::now(),
+            test_ft(),
+            TlsVersion::TlsV1_3,
+            "pqc.example".into(),
+            SigAlgorithm::MlDsa65,
+            Utc::now(),
         );
         rec.is_hybrid_kem = hybrid;
         rec.pqc_overhead_ms = overhead_ms;
@@ -216,8 +266,11 @@ mod tests {
 
     fn make_classic_record() -> PqcHandshakeRecord {
         PqcHandshakeRecord::new(
-            test_ft(), TlsVersion::TlsV1_2, "classic.example".into(),
-            SigAlgorithm::RsaPkcs1Sha256, Utc::now(),
+            test_ft(),
+            TlsVersion::TlsV1_2,
+            "classic.example".into(),
+            SigAlgorithm::RsaPkcs1Sha256,
+            Utc::now(),
         )
     }
 
@@ -295,7 +348,13 @@ mod tests {
         let mut store = PqcHandshakeStore::new();
         store.push(make_pqc_record(10, 500, true, true, None));
         store.push(make_pqc_record(20, 1000, true, false, Some("timeout")));
-        store.push(make_pqc_record(30, 1500, true, false, Some("no_matching_kem")));
+        store.push(make_pqc_record(
+            30,
+            1500,
+            true,
+            false,
+            Some("no_matching_kem"),
+        ));
         let dash = PqcDashboard::new(store);
         assert!((dash.failure_rate() - 2.0 / 3.0).abs() < 1e-10);
     }
@@ -315,7 +374,13 @@ mod tests {
         let mut store = PqcHandshakeStore::new();
         store.push(make_pqc_record(10, 500, true, false, Some("timeout")));
         store.push(make_pqc_record(20, 1000, true, false, Some("timeout")));
-        store.push(make_pqc_record(30, 1500, true, false, Some("no_matching_kem")));
+        store.push(make_pqc_record(
+            30,
+            1500,
+            true,
+            false,
+            Some("no_matching_kem"),
+        ));
         let dash = PqcDashboard::new(store);
         let top = dash.top_fallback_reasons(5);
         assert_eq!(top.len(), 2);

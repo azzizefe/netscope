@@ -46,7 +46,10 @@ fn render_summary(frame: &mut Frame, area: Rect, app: &App, border: Color) {
         Line::from(vec![
             Span::raw(format!(" Prompt Tokens: {}", llm.total_prompt_tokens)),
             Span::raw("  |  "),
-            Span::raw(format!("Completion Tokens: {}", llm.total_completion_tokens)),
+            Span::raw(format!(
+                "Completion Tokens: {}",
+                llm.total_completion_tokens
+            )),
             Span::raw("  |  "),
             Span::raw(format!("Total Tokens: {}", llm.total_tokens)),
         ]),
@@ -103,7 +106,16 @@ fn render_per_model_metrics(frame: &mut Frame, area: Rect, app: &App, border: Co
     } else {
         let header = format!(
             " {:<14} {:>6} {:>8} {:>6} {:>6} {:>6} {:>8} {:>6} {:>6} {:>7}",
-            "Model", "Req", "TTFTms", "TPOTms", "Tok/s", "Hata%", "RLimit%", "Kesinti%", "TopTok", "Maliyet"
+            "Model",
+            "Req",
+            "TTFTms",
+            "TPOTms",
+            "Tok/s",
+            "Hata%",
+            "RLimit%",
+            "Kesinti%",
+            "TopTok",
+            "Maliyet"
         );
         lines.push(Line::from(Span::styled(
             header,
@@ -114,14 +126,42 @@ fn render_per_model_metrics(frame: &mut Frame, area: Rect, app: &App, border: Co
         models.sort_by_key(|(_, ms)| std::cmp::Reverse(ms.requests));
 
         for (model, ms) in models.iter().take(10) {
-            let avg_ttft = if ms.ttft_count > 0 { ms.ttft_sum_ms as f64 / ms.ttft_count as f64 } else { 0.0 };
-            let avg_tpot = if ms.tpot_count > 0 { ms.tpot_sum_us as f64 / ms.tpot_count as f64 / 1000.0 } else { 0.0 };
-            let avg_tps = if ms.tokens_per_second_count > 0 { ms.tokens_per_second_sum / ms.tokens_per_second_count as f64 } else { 0.0 };
-            let error_rate = if ms.requests > 0 { (ms.error_4xx + ms.error_5xx) as f64 / ms.requests as f64 * 100.0 } else { 0.0 };
-            let rl_rate = if ms.requests > 0 { ms.rate_limited as f64 / ms.requests as f64 * 100.0 } else { 0.0 };
-            let kesinti_rate = if ms.total_streams > 0 { ms.incomplete_streams as f64 / ms.total_streams as f64 * 100.0 } else { 0.0 };
+            let avg_ttft = if ms.ttft_count > 0 {
+                ms.ttft_sum_ms as f64 / ms.ttft_count as f64
+            } else {
+                0.0
+            };
+            let avg_tpot = if ms.tpot_count > 0 {
+                ms.tpot_sum_us as f64 / ms.tpot_count as f64 / 1000.0
+            } else {
+                0.0
+            };
+            let avg_tps = if ms.tokens_per_second_count > 0 {
+                ms.tokens_per_second_sum / ms.tokens_per_second_count as f64
+            } else {
+                0.0
+            };
+            let error_rate = if ms.requests > 0 {
+                (ms.error_4xx + ms.error_5xx) as f64 / ms.requests as f64 * 100.0
+            } else {
+                0.0
+            };
+            let rl_rate = if ms.requests > 0 {
+                ms.rate_limited as f64 / ms.requests as f64 * 100.0
+            } else {
+                0.0
+            };
+            let kesinti_rate = if ms.total_streams > 0 {
+                ms.incomplete_streams as f64 / ms.total_streams as f64 * 100.0
+            } else {
+                0.0
+            };
 
-            let model_short = if model.len() > 13 { format!("{}…", &model[..12]) } else { model.to_string() };
+            let model_short = if model.len() > 13 {
+                format!("{}…", &model[..12])
+            } else {
+                model.to_string()
+            };
 
             let warn_ttft = avg_ttft > 500.0;
             let warn_tpot = avg_tpot > 80.0;
@@ -134,28 +174,66 @@ fn render_per_model_metrics(frame: &mut Frame, area: Rect, app: &App, border: Co
                 Span::raw(format!(" {:<14}", model_short)),
                 Span::raw(format!(" {:>6}", ms.requests)),
                 Span::styled(
-                    format!(" {:>5}ms", if avg_ttft > 0.0 { format!("{:.0}", avg_ttft) } else { "-".into() }),
-                    if warn_ttft { Style::new().fg(Color::Red).bold() } else { Style::new().fg(Color::Green) },
+                    format!(
+                        " {:>5}ms",
+                        if avg_ttft > 0.0 {
+                            format!("{:.0}", avg_ttft)
+                        } else {
+                            "-".into()
+                        }
+                    ),
+                    if warn_ttft {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
                 ),
                 Span::styled(
-                    format!(" {:>5}ms", if avg_tpot > 0.0 { format!("{:.0}", avg_tpot) } else { "-".into() }),
-                    if warn_tpot { Style::new().fg(Color::Red).bold() } else { Style::new().fg(Color::Green) },
+                    format!(
+                        " {:>5}ms",
+                        if avg_tpot > 0.0 {
+                            format!("{:.0}", avg_tpot)
+                        } else {
+                            "-".into()
+                        }
+                    ),
+                    if warn_tpot {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
                 ),
                 Span::styled(
                     format!(" {:>5.0}", avg_tps),
-                    if warn_tps { Style::new().fg(Color::Red).bold() } else { Style::new().fg(Color::Green) },
+                    if warn_tps {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
                 ),
                 Span::styled(
                     format!(" {:>5.1}%", error_rate),
-                    if warn_hata { Style::new().fg(Color::Red).bold() } else { Style::new().fg(Color::Green) },
+                    if warn_hata {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
                 ),
                 Span::styled(
                     format!(" {:>5.1}%", rl_rate),
-                    if warn_rl { Style::new().fg(Color::Red).bold() } else { Style::new().fg(Color::Green) },
+                    if warn_rl {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
                 ),
                 Span::styled(
                     format!(" {:>5.1}%", kesinti_rate),
-                    if warn_kesinti { Style::new().fg(Color::Red).bold() } else { Style::new().fg(Color::Green) },
+                    if warn_kesinti {
+                        Style::new().fg(Color::Red).bold()
+                    } else {
+                        Style::new().fg(Color::Green)
+                    },
                 ),
                 Span::raw(format!(" {:>6}", ms.total_tokens)),
                 Span::raw(format!(" ${:.4}", ms.cost)),
@@ -194,11 +272,7 @@ fn render_records_table(frame: &mut Frame, area: Rect, app: &mut App, border: Co
             Style::new().bold().white().underlined(),
         )));
 
-        let visible: Vec<_> = records
-            .iter()
-            .skip(scroll)
-            .take(max_visible)
-            .collect();
+        let visible: Vec<_> = records.iter().skip(scroll).take(max_visible).collect();
         for rec in &visible {
             let provider_str = format!("{:?}", rec.provider);
             let model_short = if rec.model_name.len() > 17 {
@@ -213,9 +287,7 @@ fn render_records_table(frame: &mut Frame, area: Rect, app: &mut App, border: Co
             };
             let status_color = if rec.finish_reason == "stop" {
                 Color::Green
-            } else if rec.finish_reason == "error"
-                || rec.error_type.is_some()
-            {
+            } else if rec.finish_reason == "error" || rec.error_type.is_some() {
                 Color::Red
             } else {
                 Color::Yellow
@@ -228,7 +300,10 @@ fn render_records_table(frame: &mut Frame, area: Rect, app: &mut App, border: Co
 
             lines.push(Line::from(vec![
                 Span::raw(format!(" {:<5}", rec.session_id)),
-                Span::raw(format!(" {:<12}", &provider_str[..provider_str.len().min(12)])),
+                Span::raw(format!(
+                    " {:<12}",
+                    &provider_str[..provider_str.len().min(12)]
+                )),
                 Span::raw(format!(" {:<18}", model_short)),
                 Span::raw(format!(" {:<8}", rec.prompt_token_count)),
                 Span::raw(format!(" {:<8}", rec.completion_tokens)),
@@ -289,10 +364,7 @@ fn render_heatmap(frame: &mut Frame, area: Rect, app: &App, border: Color) {
             std::collections::HashMap::new();
 
         for (_, model, ttft) in heatmap.iter().rev().take(50) {
-            model_map
-                .entry(model.clone())
-                .or_default()
-                .push(*ttft);
+            model_map.entry(model.clone()).or_default().push(*ttft);
         }
 
         for (model, vals) in &model_map {
@@ -314,10 +386,7 @@ fn render_heatmap(frame: &mut Frame, area: Rect, app: &App, border: Color) {
             };
             lines.push(Line::from(vec![
                 Span::raw(format!(" {:<12} ", model_short)),
-                Span::styled(
-                    format!(" {:>5.0}ms ", avg),
-                    Style::new().fg(color).bold(),
-                ),
+                Span::styled(format!(" {:>5.0}ms ", avg), Style::new().fg(color).bold()),
                 Span::styled(bar, Style::new().fg(color)),
             ]));
         }
@@ -373,7 +442,12 @@ fn render_detail_view(frame: &mut Frame, area: Rect, app: &mut App, border: Colo
     frame.render_widget(Paragraph::new(help).block(block), layout[2]);
 }
 
-fn render_detail_info(frame: &mut Frame, area: Rect, rec: &netscope_core::ai_traffic::AiTrafficRecord, border: Color) {
+fn render_detail_info(
+    frame: &mut Frame,
+    area: Rect,
+    rec: &netscope_core::ai_traffic::AiTrafficRecord,
+    border: Color,
+) {
     let lines = vec![
         Line::from(vec![
             Span::raw(format!(" Session: {}  |  ", rec.session_id)),
@@ -394,10 +468,9 @@ fn render_detail_info(frame: &mut Frame, area: Rect, rec: &netscope_core::ai_tra
             Span::raw(format!(" Cost: ${:.6}  |  ", rec.total_cost_usd)),
             Span::raw(format!("Status: {}  |  ", rec.finish_reason)),
             Span::styled(
-                if rec.error_type.is_some() {
-                    format!("Error: {}", rec.error_type.as_ref().unwrap())
-                } else {
-                    "No Error".into()
+                match rec.error_type.as_ref() {
+                    Some(e) => format!("Error: {e}"),
+                    None => "No Error".into(),
                 },
                 if rec.error_type.is_some() {
                     Style::new().fg(Color::Red).bold()
@@ -408,7 +481,14 @@ fn render_detail_info(frame: &mut Frame, area: Rect, rec: &netscope_core::ai_tra
         ]),
         Line::from(vec![
             Span::raw(format!(" HTTP Status: {}  |  ", rec.http_status)),
-            Span::raw(format!("Streaming: {}  |  ", if rec.total_stream_duration_ms > 0 { "Yes" } else { "No" })),
+            Span::raw(format!(
+                "Streaming: {}  |  ",
+                if rec.total_stream_duration_ms > 0 {
+                    "Yes"
+                } else {
+                    "No"
+                }
+            )),
             Span::raw(format!("Duration: {}ms", rec.total_stream_duration_ms)),
         ]),
     ];
@@ -420,7 +500,13 @@ fn render_detail_info(frame: &mut Frame, area: Rect, rec: &netscope_core::ai_tra
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn render_token_stream(frame: &mut Frame, area: Rect, rec: &netscope_core::ai_traffic::AiTrafficRecord, scroll: usize, border: Color) {
+fn render_token_stream(
+    frame: &mut Frame,
+    area: Rect,
+    rec: &netscope_core::ai_traffic::AiTrafficRecord,
+    scroll: usize,
+    border: Color,
+) {
     let text = if rec.response_text_snippet.is_empty() {
         " (No response text captured)".to_string()
     } else {
@@ -431,9 +517,7 @@ fn render_token_stream(frame: &mut Frame, area: Rect, rec: &netscope_core::ai_tr
         .lines()
         .skip(scroll)
         .take(area.height.saturating_sub(2) as usize)
-        .map(|l| {
-            Line::from(Span::styled(l.to_string(), Style::new().fg(Color::Cyan)))
-        })
+        .map(|l| Line::from(Span::styled(l.to_string(), Style::new().fg(Color::Cyan))))
         .collect();
 
     let lines = if lines.is_empty() {
@@ -457,12 +541,20 @@ fn render_token_stream(frame: &mut Frame, area: Rect, rec: &netscope_core::ai_tr
         .borders(Borders::ALL)
         .border_style(Style::new().fg(border));
     frame.render_widget(
-        Paragraph::new(lines).block(block).wrap(Wrap { trim: false }),
+        Paragraph::new(lines)
+            .block(block)
+            .wrap(Wrap { trim: false }),
         area,
     );
 }
 
-fn render_prompt_response(frame: &mut Frame, area: Rect, rec: &netscope_core::ai_traffic::AiTrafficRecord, scroll: usize, border: Color) {
+fn render_prompt_response(
+    frame: &mut Frame,
+    area: Rect,
+    rec: &netscope_core::ai_traffic::AiTrafficRecord,
+    scroll: usize,
+    border: Color,
+) {
     let layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -486,7 +578,10 @@ fn render_prompt_response(frame: &mut Frame, area: Rect, rec: &netscope_core::ai
         .map(|l| Line::from(Span::styled(l.to_string(), Style::new().fg(Color::Yellow))))
         .collect();
     let prompt_lines = if prompt_lines.is_empty() {
-        vec![Line::from(Span::styled(" (empty)", Style::new().dim().italic()))]
+        vec![Line::from(Span::styled(
+            " (empty)",
+            Style::new().dim().italic(),
+        ))]
     } else {
         prompt_lines
     };
@@ -498,7 +593,10 @@ fn render_prompt_response(frame: &mut Frame, area: Rect, rec: &netscope_core::ai
         .map(|l| Line::from(Span::styled(l.to_string(), Style::new().fg(Color::Cyan))))
         .collect();
     let response_lines = if response_lines.is_empty() {
-        vec![Line::from(Span::styled(" (empty)", Style::new().dim().italic()))]
+        vec![Line::from(Span::styled(
+            " (empty)",
+            Style::new().dim().italic(),
+        ))]
     } else {
         response_lines
     };
@@ -507,11 +605,21 @@ fn render_prompt_response(frame: &mut Frame, area: Rect, rec: &netscope_core::ai
         .title(" Prompt ")
         .borders(Borders::ALL)
         .border_style(Style::new().fg(border));
-    frame.render_widget(Paragraph::new(prompt_lines).block(prompt_block).wrap(Wrap { trim: false }), layout[0]);
+    frame.render_widget(
+        Paragraph::new(prompt_lines)
+            .block(prompt_block)
+            .wrap(Wrap { trim: false }),
+        layout[0],
+    );
 
     let response_block = Block::default()
         .title(" Response ")
         .borders(Borders::ALL)
         .border_style(Style::new().fg(border));
-    frame.render_widget(Paragraph::new(response_lines).block(response_block).wrap(Wrap { trim: false }), layout[1]);
+    frame.render_widget(
+        Paragraph::new(response_lines)
+            .block(response_block)
+            .wrap(Wrap { trim: false }),
+        layout[1],
+    );
 }

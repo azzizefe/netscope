@@ -8,7 +8,7 @@ use super::DissectedResult;
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, TlsVersion, SigAlgorithm, KemId, PqcKem};
+    use crate::pqc_handshake::{KemId, PqcHandshakeRecord, PqcKem, SigAlgorithm, TlsVersion};
     use chrono::Utc;
 
     fn test_ft() -> FiveTuple {
@@ -21,10 +21,22 @@ mod tests {
         }
     }
 
-    fn make_record(pqc: bool, hs_ms: u32, kem_us: u64, overhead_ms: i32, extra: u16) -> PqcHandshakeRecord {
+    fn make_record(
+        pqc: bool,
+        hs_ms: u32,
+        kem_us: u64,
+        overhead_ms: i32,
+        extra: u16,
+    ) -> PqcHandshakeRecord {
         let mut r = PqcHandshakeRecord::new(
-            test_ft(), TlsVersion::TlsV1_3, "example.com".into(),
-            if pqc { SigAlgorithm::MlDsa65 } else { SigAlgorithm::RsaPkcs1Sha256 },
+            test_ft(),
+            TlsVersion::TlsV1_3,
+            "example.com".into(),
+            if pqc {
+                SigAlgorithm::MlDsa65
+            } else {
+                SigAlgorithm::RsaPkcs1Sha256
+            },
             Utc::now(),
         );
         r.total_handshake_ms = hs_ms;
@@ -32,7 +44,12 @@ mod tests {
         r.pqc_overhead_ms = overhead_ms;
         r.pqc_packet_size_extra = extra;
         if pqc {
-            r.pqc_kem = Some(PqcKem { algorithm: KemId::MlKem768, public_key: None, ciphertext: None, shared_secret: None });
+            r.pqc_kem = Some(PqcKem {
+                algorithm: KemId::MlKem768,
+                public_key: None,
+                ciphertext: None,
+                shared_secret: None,
+            });
             r.server_kem_selected = Some(KemId::MlKem768);
         }
         r
@@ -47,7 +64,8 @@ mod tests {
     #[test]
     fn compute_perf_stats_one_pqc() {
         let records = vec![make_record(true, 100, 500, 10, 200)];
-        let (pqc_count, avg_hs, avg_pqc_hs, overhead, avg_kem, extra_bytes) = compute_perf_stats(&records);
+        let (pqc_count, avg_hs, avg_pqc_hs, overhead, avg_kem, extra_bytes) =
+            compute_perf_stats(&records);
         assert_eq!(pqc_count, 1);
         assert!((avg_hs - 100.0).abs() < 0.01);
         assert!((avg_pqc_hs - 100.0).abs() < 0.01);
@@ -62,7 +80,8 @@ mod tests {
             make_record(true, 200, 1000, 20, 500),
             make_record(false, 50, 0, 0, 0),
         ];
-        let (pqc_count, avg_hs, avg_pqc_hs, _overhead, avg_kem, _extra) = compute_perf_stats(&records);
+        let (pqc_count, avg_hs, avg_pqc_hs, _overhead, avg_kem, _extra) =
+            compute_perf_stats(&records);
         assert_eq!(pqc_count, 1);
         assert!((avg_hs - 125.0).abs() < 0.01);
         assert!((avg_pqc_hs - 200.0).abs() < 0.01);
@@ -88,7 +107,9 @@ mod tests {
     }
 }
 
-fn compute_perf_stats(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> (usize, f64, f64, f64, f64, f64) {
+fn compute_perf_stats(
+    records: &[crate::pqc_handshake::PqcHandshakeRecord],
+) -> (usize, f64, f64, f64, f64, f64) {
     let total = records.len();
     if total == 0 {
         return (0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -122,8 +143,16 @@ fn compute_perf_stats(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> (
         kem_times.iter().sum::<f64>() / kem_times.len() as f64
     };
 
-    let overhead = records.iter().map(|r| r.pqc_overhead_ms as f64).sum::<f64>() / total as f64;
-    let extra_bytes: f64 = records.iter().map(|r| r.pqc_packet_size_extra as f64).sum::<f64>() / total as f64;
+    let overhead = records
+        .iter()
+        .map(|r| r.pqc_overhead_ms as f64)
+        .sum::<f64>()
+        / total as f64;
+    let extra_bytes: f64 = records
+        .iter()
+        .map(|r| r.pqc_packet_size_extra as f64)
+        .sum::<f64>()
+        / total as f64;
 
     (pqc_count, avg_hs, avg_pqc, overhead, avg_kem, extra_bytes)
 }
@@ -137,7 +166,8 @@ pub fn dissect_tls_perf_benchmark_model(
 ) -> DissectedResult {
     let records = crate::dissectors::tls::drain_pqc_store();
 
-    let (pqc_count, avg_hs, avg_pqc_hs, overhead, avg_kem, extra_bytes) = compute_perf_stats(&records);
+    let (pqc_count, avg_hs, avg_pqc_hs, overhead, avg_kem, extra_bytes) =
+        compute_perf_stats(&records);
 
     let summary = format!(
         "TLS Perf Benchmark: {} sessions ({} PQC) — avg handshake {:.1}ms, PQC avg {:.1}ms, KEM {:.1}ms, overhead {:.1}ms, extra {:.0}B",

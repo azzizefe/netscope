@@ -157,10 +157,21 @@ impl PqcAdoptionTracker {
     }
 
     /// Record a PQC observation, updating both connection and global metrics.
-    pub fn record(&mut self, obs: &PqcObservation, protocol: &Protocol, src: &str, dst: &str, src_port: u16, dst_port: u16) {
+    pub fn record(
+        &mut self,
+        obs: &PqcObservation,
+        protocol: &Protocol,
+        src: &str,
+        dst: &str,
+        src_port: u16,
+        dst_port: u16,
+    ) {
         self.total_pqc_packets += 1;
         *self.algorithm_counts.entry(obs.algorithm).or_insert(0) += 1;
-        *self.protocol_counts.entry(format!("{protocol}")).or_insert(0) += 1;
+        *self
+            .protocol_counts
+            .entry(format!("{protocol}"))
+            .or_insert(0) += 1;
 
         let key = format!("{src}:{src_port}->{dst}:{dst_port}");
         let now = Utc::now();
@@ -219,16 +230,24 @@ impl PqcAdoptionTracker {
 
     /// Top N algorithms by frequency.
     pub fn top_algorithms(&self, n: usize) -> Vec<(PqcAlgorithm, u64)> {
-        let mut counts: Vec<_> = self.algorithm_counts.iter().map(|(a, c)| (*a, *c)).collect();
-        counts.sort_by(|a, b| b.1.cmp(&a.1));
+        let mut counts: Vec<_> = self
+            .algorithm_counts
+            .iter()
+            .map(|(a, c)| (*a, *c))
+            .collect();
+        counts.sort_by_key(|e| std::cmp::Reverse(e.1));
         counts.truncate(n);
         counts
     }
 
     /// Top N protocols by frequency.
     pub fn top_protocols(&self, n: usize) -> Vec<(String, u64)> {
-        let mut counts: Vec<_> = self.protocol_counts.iter().map(|(p, c)| (p.clone(), *c)).collect();
-        counts.sort_by(|a, b| b.1.cmp(&a.1));
+        let mut counts: Vec<_> = self
+            .protocol_counts
+            .iter()
+            .map(|(p, c)| (p.clone(), *c))
+            .collect();
+        counts.sort_by_key(|e| std::cmp::Reverse(e.1));
         counts.truncate(n);
         counts
     }
@@ -251,16 +270,30 @@ impl PqcAdoptionTracker {
         (l1, l3, l5, unk)
     }
 
-    pub fn total_pqc_packets(&self) -> u64 { self.total_pqc_packets }
-    pub fn total_connections(&self) -> u64 { self.total_connections }
-    pub fn unique_connections(&self) -> usize { self.connections.len() }
-    pub fn connections(&self) -> &HashMap<String, PqcConnectionMetrics> { &self.connections }
-    pub fn algorithm_counts(&self) -> &HashMap<PqcAlgorithm, u64> { &self.algorithm_counts }
+    pub fn total_pqc_packets(&self) -> u64 {
+        self.total_pqc_packets
+    }
+    pub fn total_connections(&self) -> u64 {
+        self.total_connections
+    }
+    pub fn unique_connections(&self) -> usize {
+        self.connections.len()
+    }
+    pub fn connections(&self) -> &HashMap<String, PqcConnectionMetrics> {
+        &self.connections
+    }
+    pub fn algorithm_counts(&self) -> &HashMap<PqcAlgorithm, u64> {
+        &self.algorithm_counts
+    }
 
     /// Generate a summary report string.
     pub fn report(&self) -> String {
         let (l1, l3, l5, unk) = self.security_level_distribution();
-        let top_algs: Vec<String> = self.top_algorithms(5).iter().map(|(a, c)| format!("  {a}: {c}")).collect();
+        let top_algs: Vec<String> = self
+            .top_algorithms(5)
+            .iter()
+            .map(|(a, c)| format!("  {a}: {c}"))
+            .collect();
         format!(
             "PQC Adoption Report\n\
              ──────────────────\n\
@@ -280,50 +313,274 @@ impl PqcAdoptionTracker {
 }
 
 impl Default for PqcAdoptionTracker {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Map a Protocol variant to its PQC algorithm metadata.
 pub fn classify_pqc(protocol: &Protocol) -> Option<PqcObservation> {
     let (algorithm, category, security_level, is_hybrid, tls_version) = match protocol {
-        Protocol::TlsKyber1024 => (PqcAlgorithm::Kyber1024, PqcCategory::Kem, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::TlsDilithium5 => (PqcAlgorithm::Dilithium5, PqcCategory::Signature, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::TlsSphincsPlus => (PqcAlgorithm::SphincsPlus, PqcCategory::Signature, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::TlsFrodoKem => (PqcAlgorithm::FrodoKem, PqcCategory::Kem, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::TlsClassicMcEliece => (PqcAlgorithm::ClassicMcEliece, PqcCategory::Kem, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::TlsBikeL5 => (PqcAlgorithm::BikeL5, PqcCategory::Kem, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::TlsHqc => (PqcAlgorithm::Hqc, PqcCategory::Kem, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::TlsHybridKem => (PqcAlgorithm::HybridKem, PqcCategory::HybridKem, PqcSecurityLevel::Level5, true, Some("1.3".into())),
-        Protocol::WireguardPqHybrid => (PqcAlgorithm::WireguardPqHybrid, PqcCategory::KeyExchange, PqcSecurityLevel::Level5, true, None),
-        Protocol::WireguardKyberPoly => (PqcAlgorithm::WireguardKyberPoly, PqcCategory::KeyExchange, PqcSecurityLevel::Level5, false, None),
-        Protocol::IpsecIkev2Pq => (PqcAlgorithm::IpsecIkev2Pq, PqcCategory::KeyExchange, PqcSecurityLevel::Level3, true, None),
-        Protocol::IpsecIkev2Frodo => (PqcAlgorithm::IpsecIkev2Frodo, PqcCategory::KeyExchange, PqcSecurityLevel::Level5, false, None),
-        Protocol::OpenvpnPqCipher => (PqcAlgorithm::OpenvpnPqCipher, PqcCategory::KeyExchange, PqcSecurityLevel::Level3, true, None),
-        Protocol::TailscalePqNoise => (PqcAlgorithm::TailscalePqNoise, PqcCategory::KeyExchange, PqcSecurityLevel::Level5, false, None),
-        Protocol::NebulaPqHandshake => (PqcAlgorithm::NebulaPqHandshake, PqcCategory::Authentication, PqcSecurityLevel::Level3, false, None),
-        Protocol::X509CompositeCerts => (PqcAlgorithm::X509Composite, PqcCategory::Certificate, PqcSecurityLevel::Level5, true, None),
-        Protocol::AcmePqChallenge => (PqcAlgorithm::AcmePq, PqcCategory::Authentication, PqcSecurityLevel::Level3, false, None),
+        Protocol::TlsKyber1024 => (
+            PqcAlgorithm::Kyber1024,
+            PqcCategory::Kem,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsDilithium5 => (
+            PqcAlgorithm::Dilithium5,
+            PqcCategory::Signature,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsSphincsPlus => (
+            PqcAlgorithm::SphincsPlus,
+            PqcCategory::Signature,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsFrodoKem => (
+            PqcAlgorithm::FrodoKem,
+            PqcCategory::Kem,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsClassicMcEliece => (
+            PqcAlgorithm::ClassicMcEliece,
+            PqcCategory::Kem,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsBikeL5 => (
+            PqcAlgorithm::BikeL5,
+            PqcCategory::Kem,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsHqc => (
+            PqcAlgorithm::Hqc,
+            PqcCategory::Kem,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsHybridKem => (
+            PqcAlgorithm::HybridKem,
+            PqcCategory::HybridKem,
+            PqcSecurityLevel::Level5,
+            true,
+            Some("1.3".into()),
+        ),
+        Protocol::WireguardPqHybrid => (
+            PqcAlgorithm::WireguardPqHybrid,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level5,
+            true,
+            None,
+        ),
+        Protocol::WireguardKyberPoly => (
+            PqcAlgorithm::WireguardKyberPoly,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level5,
+            false,
+            None,
+        ),
+        Protocol::IpsecIkev2Pq => (
+            PqcAlgorithm::IpsecIkev2Pq,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level3,
+            true,
+            None,
+        ),
+        Protocol::IpsecIkev2Frodo => (
+            PqcAlgorithm::IpsecIkev2Frodo,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level5,
+            false,
+            None,
+        ),
+        Protocol::OpenvpnPqCipher => (
+            PqcAlgorithm::OpenvpnPqCipher,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level3,
+            true,
+            None,
+        ),
+        Protocol::TailscalePqNoise => (
+            PqcAlgorithm::TailscalePqNoise,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level5,
+            false,
+            None,
+        ),
+        Protocol::NebulaPqHandshake => (
+            PqcAlgorithm::NebulaPqHandshake,
+            PqcCategory::Authentication,
+            PqcSecurityLevel::Level3,
+            false,
+            None,
+        ),
+        Protocol::X509CompositeCerts => (
+            PqcAlgorithm::X509Composite,
+            PqcCategory::Certificate,
+            PqcSecurityLevel::Level5,
+            true,
+            None,
+        ),
+        Protocol::AcmePqChallenge => (
+            PqcAlgorithm::AcmePq,
+            PqcCategory::Authentication,
+            PqcSecurityLevel::Level3,
+            false,
+            None,
+        ),
         // §8.1.1 — PQC Monitoring Tools
-        Protocol::TlsPqcHandshakeExt => (PqcAlgorithm::HybridKem, PqcCategory::HybridKem, PqcSecurityLevel::Level5, true, Some("1.3".into())),
-        Protocol::TlsPqcCertChain => (PqcAlgorithm::X509Composite, PqcCategory::Certificate, PqcSecurityLevel::Level5, true, None),
-        Protocol::TlsPqcMigrationSignal => (PqcAlgorithm::MigrationSignal, PqcCategory::Authentication, PqcSecurityLevel::Level3, false, Some("1.3".into())),
-        Protocol::TlsPqcWizardScan => (PqcAlgorithm::HybridKem, PqcCategory::HybridKem, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::TlsCertTransparencyV3 => (PqcAlgorithm::PqcCertTransparency, PqcCategory::Certificate, PqcSecurityLevel::Level5, true, None),
-        Protocol::TlsEchPqcInterop => (PqcAlgorithm::HybridKem, PqcCategory::HybridKem, PqcSecurityLevel::Level5, true, Some("1.3".into())),
-        Protocol::TlsKeySharePrediction => (PqcAlgorithm::HybridKem, PqcCategory::Kem, PqcSecurityLevel::Level5, true, Some("1.3".into())),
-        Protocol::TlsDowngradeDetector => (PqcAlgorithm::MigrationSignal, PqcCategory::Authentication, PqcSecurityLevel::Level3, false, Some("1.3".into())),
-        Protocol::PqcCveFeedIntegration => (PqcAlgorithm::OqsProviderTelemetry, PqcCategory::Authentication, PqcSecurityLevel::Level3, false, None),
-        Protocol::TlsPerfBenchmarkModel => (PqcAlgorithm::HybridKem, PqcCategory::HybridKem, PqcSecurityLevel::Level5, true, Some("1.3".into())),
-        Protocol::TlsMiddleboxDetector => (PqcAlgorithm::MigrationSignal, PqcCategory::Authentication, PqcSecurityLevel::Level3, false, None),
-        Protocol::PqcComplianceChecker => (PqcAlgorithm::X509Composite, PqcCategory::Certificate, PqcSecurityLevel::Level5, false, None),
-        Protocol::TlsSessionResumptionPqc => (PqcAlgorithm::HybridKem, PqcCategory::Kem, PqcSecurityLevel::Level5, false, Some("1.3".into())),
-        Protocol::Ikev2PqcDhGroup => (PqcAlgorithm::IpsecIkev2Pq, PqcCategory::KeyExchange, PqcSecurityLevel::Level3, true, None),
-        Protocol::WireguardPqcHandshake => (PqcAlgorithm::WireguardPqHybrid, PqcCategory::KeyExchange, PqcSecurityLevel::Level5, true, None),
-        Protocol::SshPqcKex => (PqcAlgorithm::SshPqcKex, PqcCategory::KeyExchange, PqcSecurityLevel::Level5, true, None),
-        Protocol::DnssecPqcSigning => (PqcAlgorithm::DnssecPqcSigning, PqcCategory::Signature, PqcSecurityLevel::Level3, false, None),
-        Protocol::PqcCertTransparency => (PqcAlgorithm::PqcCertTransparency, PqcCategory::Certificate, PqcSecurityLevel::Level5, true, None),
-        Protocol::OqsProviderTelemetry => (PqcAlgorithm::OqsProviderTelemetry, PqcCategory::Authentication, PqcSecurityLevel::Level3, false, None),
-        Protocol::PqcHsmBridge => (PqcAlgorithm::PqcHsmBridge, PqcCategory::KeyExchange, PqcSecurityLevel::Level5, false, None),
+        Protocol::TlsPqcHandshakeExt => (
+            PqcAlgorithm::HybridKem,
+            PqcCategory::HybridKem,
+            PqcSecurityLevel::Level5,
+            true,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsPqcCertChain => (
+            PqcAlgorithm::X509Composite,
+            PqcCategory::Certificate,
+            PqcSecurityLevel::Level5,
+            true,
+            None,
+        ),
+        Protocol::TlsPqcMigrationSignal => (
+            PqcAlgorithm::MigrationSignal,
+            PqcCategory::Authentication,
+            PqcSecurityLevel::Level3,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsPqcWizardScan => (
+            PqcAlgorithm::HybridKem,
+            PqcCategory::HybridKem,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsCertTransparencyV3 => (
+            PqcAlgorithm::PqcCertTransparency,
+            PqcCategory::Certificate,
+            PqcSecurityLevel::Level5,
+            true,
+            None,
+        ),
+        Protocol::TlsEchPqcInterop => (
+            PqcAlgorithm::HybridKem,
+            PqcCategory::HybridKem,
+            PqcSecurityLevel::Level5,
+            true,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsKeySharePrediction => (
+            PqcAlgorithm::HybridKem,
+            PqcCategory::Kem,
+            PqcSecurityLevel::Level5,
+            true,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsDowngradeDetector => (
+            PqcAlgorithm::MigrationSignal,
+            PqcCategory::Authentication,
+            PqcSecurityLevel::Level3,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::PqcCveFeedIntegration => (
+            PqcAlgorithm::OqsProviderTelemetry,
+            PqcCategory::Authentication,
+            PqcSecurityLevel::Level3,
+            false,
+            None,
+        ),
+        Protocol::TlsPerfBenchmarkModel => (
+            PqcAlgorithm::HybridKem,
+            PqcCategory::HybridKem,
+            PqcSecurityLevel::Level5,
+            true,
+            Some("1.3".into()),
+        ),
+        Protocol::TlsMiddleboxDetector => (
+            PqcAlgorithm::MigrationSignal,
+            PqcCategory::Authentication,
+            PqcSecurityLevel::Level3,
+            false,
+            None,
+        ),
+        Protocol::PqcComplianceChecker => (
+            PqcAlgorithm::X509Composite,
+            PqcCategory::Certificate,
+            PqcSecurityLevel::Level5,
+            false,
+            None,
+        ),
+        Protocol::TlsSessionResumptionPqc => (
+            PqcAlgorithm::HybridKem,
+            PqcCategory::Kem,
+            PqcSecurityLevel::Level5,
+            false,
+            Some("1.3".into()),
+        ),
+        Protocol::Ikev2PqcDhGroup => (
+            PqcAlgorithm::IpsecIkev2Pq,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level3,
+            true,
+            None,
+        ),
+        Protocol::WireguardPqcHandshake => (
+            PqcAlgorithm::WireguardPqHybrid,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level5,
+            true,
+            None,
+        ),
+        Protocol::SshPqcKex => (
+            PqcAlgorithm::SshPqcKex,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level5,
+            true,
+            None,
+        ),
+        Protocol::DnssecPqcSigning => (
+            PqcAlgorithm::DnssecPqcSigning,
+            PqcCategory::Signature,
+            PqcSecurityLevel::Level3,
+            false,
+            None,
+        ),
+        Protocol::PqcCertTransparency => (
+            PqcAlgorithm::PqcCertTransparency,
+            PqcCategory::Certificate,
+            PqcSecurityLevel::Level5,
+            true,
+            None,
+        ),
+        Protocol::OqsProviderTelemetry => (
+            PqcAlgorithm::OqsProviderTelemetry,
+            PqcCategory::Authentication,
+            PqcSecurityLevel::Level3,
+            false,
+            None,
+        ),
+        Protocol::PqcHsmBridge => (
+            PqcAlgorithm::PqcHsmBridge,
+            PqcCategory::KeyExchange,
+            PqcSecurityLevel::Level5,
+            false,
+            None,
+        ),
         _ => return None,
     };
 
@@ -333,8 +590,16 @@ pub fn classify_pqc(protocol: &Protocol) -> Option<PqcObservation> {
         security_level,
         is_hybrid,
         tls_version,
-        kem_name: if matches!(category, PqcCategory::Kem | PqcCategory::HybridKem) { Some(algorithm.to_string()) } else { None },
-        signature_name: if matches!(category, PqcCategory::Signature) { Some(algorithm.to_string()) } else { None },
+        kem_name: if matches!(category, PqcCategory::Kem | PqcCategory::HybridKem) {
+            Some(algorithm.to_string())
+        } else {
+            None
+        },
+        signature_name: if matches!(category, PqcCategory::Signature) {
+            Some(algorithm.to_string())
+        } else {
+            None
+        },
         snippet: String::new(),
     })
 }
@@ -343,17 +608,28 @@ impl PqcAlgorithm {
     pub fn security_level(&self) -> PqcSecurityLevel {
         use PqcSecurityLevel::*;
         match self {
-            PqcAlgorithm::Kyber1024 | PqcAlgorithm::Dilithium5
-            | PqcAlgorithm::SphincsPlus | PqcAlgorithm::FrodoKem
-            | PqcAlgorithm::ClassicMcEliece | PqcAlgorithm::BikeL5
-            | PqcAlgorithm::Hqc | PqcAlgorithm::HybridKem
-            | PqcAlgorithm::WireguardPqHybrid | PqcAlgorithm::WireguardKyberPoly
-            | PqcAlgorithm::IpsecIkev2Frodo | PqcAlgorithm::TailscalePqNoise
-            | PqcAlgorithm::X509Composite | PqcAlgorithm::PqcCertTransparency
-            | PqcAlgorithm::PqcHsmBridge | PqcAlgorithm::SshPqcKex => Level5,
-            PqcAlgorithm::IpsecIkev2Pq | PqcAlgorithm::OpenvpnPqCipher
-            | PqcAlgorithm::NebulaPqHandshake | PqcAlgorithm::AcmePq
-            | PqcAlgorithm::MigrationSignal | PqcAlgorithm::DnssecPqcSigning
+            PqcAlgorithm::Kyber1024
+            | PqcAlgorithm::Dilithium5
+            | PqcAlgorithm::SphincsPlus
+            | PqcAlgorithm::FrodoKem
+            | PqcAlgorithm::ClassicMcEliece
+            | PqcAlgorithm::BikeL5
+            | PqcAlgorithm::Hqc
+            | PqcAlgorithm::HybridKem
+            | PqcAlgorithm::WireguardPqHybrid
+            | PqcAlgorithm::WireguardKyberPoly
+            | PqcAlgorithm::IpsecIkev2Frodo
+            | PqcAlgorithm::TailscalePqNoise
+            | PqcAlgorithm::X509Composite
+            | PqcAlgorithm::PqcCertTransparency
+            | PqcAlgorithm::PqcHsmBridge
+            | PqcAlgorithm::SshPqcKex => Level5,
+            PqcAlgorithm::IpsecIkev2Pq
+            | PqcAlgorithm::OpenvpnPqCipher
+            | PqcAlgorithm::NebulaPqHandshake
+            | PqcAlgorithm::AcmePq
+            | PqcAlgorithm::MigrationSignal
+            | PqcAlgorithm::DnssecPqcSigning
             | PqcAlgorithm::OqsProviderTelemetry => Level3,
             PqcAlgorithm::Unknown => Unknown,
         }
@@ -427,7 +703,14 @@ mod tests {
     fn tracker_records_observation() {
         let mut tracker = PqcAdoptionTracker::new();
         let obs = classify_pqc(&Protocol::TlsKyber1024).unwrap();
-        tracker.record(&obs, &Protocol::TlsKyber1024, "10.0.0.1", "10.0.0.2", 443, 443);
+        tracker.record(
+            &obs,
+            &Protocol::TlsKyber1024,
+            "10.0.0.1",
+            "10.0.0.2",
+            443,
+            443,
+        );
         assert_eq!(tracker.total_pqc_packets(), 1);
         assert_eq!(tracker.total_connections(), 1);
         assert_eq!(tracker.unique_connections(), 1);
@@ -438,7 +721,14 @@ mod tests {
         let mut tracker = PqcAdoptionTracker::new();
         assert_eq!(tracker.adoption_rate(), 0.0);
         let obs = classify_pqc(&Protocol::TlsKyber1024).unwrap();
-        tracker.record(&obs, &Protocol::TlsKyber1024, "10.0.0.1", "10.0.0.2", 443, 443);
+        tracker.record(
+            &obs,
+            &Protocol::TlsKyber1024,
+            "10.0.0.1",
+            "10.0.0.2",
+            443,
+            443,
+        );
         assert_eq!(tracker.unique_connections(), 1);
     }
 
@@ -484,8 +774,17 @@ mod tests {
 
     #[test]
     fn security_level_method() {
-        assert_eq!(PqcAlgorithm::Kyber1024.security_level(), PqcSecurityLevel::Level5);
-        assert_eq!(PqcAlgorithm::IpsecIkev2Pq.security_level(), PqcSecurityLevel::Level3);
-        assert_eq!(PqcAlgorithm::Unknown.security_level(), PqcSecurityLevel::Unknown);
+        assert_eq!(
+            PqcAlgorithm::Kyber1024.security_level(),
+            PqcSecurityLevel::Level5
+        );
+        assert_eq!(
+            PqcAlgorithm::IpsecIkev2Pq.security_level(),
+            PqcSecurityLevel::Level3
+        );
+        assert_eq!(
+            PqcAlgorithm::Unknown.security_level(),
+            PqcSecurityLevel::Unknown
+        );
     }
 }

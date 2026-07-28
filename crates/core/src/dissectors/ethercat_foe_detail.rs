@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_ethercat_foe_detail(
     _src_ip: Option<IpAddr>,
@@ -11,8 +11,16 @@ pub fn dissect_ethercat_foe_detail(
 ) -> DissectedResult {
     let summary = if payload.len() >= 6 {
         let opcode = payload[0];
-        let packet_no = u16::from_be_bytes([payload.get(1).copied().unwrap_or(0), payload.get(2).copied().unwrap_or(0)]);
-        let password = u32::from_be_bytes([payload.get(3).copied().unwrap_or(0), payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0), payload.get(6).copied().unwrap_or(0)]);
+        let packet_no = u16::from_be_bytes([
+            payload.get(1).copied().unwrap_or(0),
+            payload.get(2).copied().unwrap_or(0),
+        ]);
+        let password = u32::from_be_bytes([
+            payload.get(3).copied().unwrap_or(0),
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+            payload.get(6).copied().unwrap_or(0),
+        ]);
 
         let op_name = match opcode {
             0x01 => "Read (request)",
@@ -26,9 +34,16 @@ pub fn dissect_ethercat_foe_detail(
             _ => "FoE op",
         };
 
-        let pw = if password > 0 { format!(" pw:0x{password:08x}") } else { String::new() };
+        let pw = if password > 0 {
+            format!(" pw:0x{password:08x}")
+        } else {
+            String::new()
+        };
 
-        format!("EtherCAT FoE (Detail) — {op_name} packet:{packet_no}{pw} ({len} bytes)", len = payload.len())
+        format!(
+            "EtherCAT FoE (Detail) — {op_name} packet:{packet_no}{pw} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("EtherCAT FoE (Detail) — {len} bytes", len = payload.len())
     };

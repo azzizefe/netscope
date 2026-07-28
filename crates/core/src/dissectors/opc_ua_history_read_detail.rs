@@ -6,34 +6,60 @@ use super::DissectedResult;
 
 fn history_read_type(payload: &[u8]) -> &'static str {
     let raw = String::from_utf8_lossy(payload);
-    if raw.contains("ReadRaw") || raw.contains("read_raw") { return "ReadRaw"; }
-    if raw.contains("ReadProcessed") || raw.contains("read_processed") { return "ReadProcessed"; }
-    if raw.contains("ReadAtTime") || raw.contains("read_at_time") { return "ReadAtTime"; }
-    if raw.contains("HistoryRead") && raw.contains("Raw") { return "ReadRawModified"; }
-    if raw.contains("HistoryRead") && raw.contains("Processed") { return "ReadProcessed"; }
-    if raw.contains("HistoryRead") { return "HistoryRead"; }
+    if raw.contains("ReadRaw") || raw.contains("read_raw") {
+        return "ReadRaw";
+    }
+    if raw.contains("ReadProcessed") || raw.contains("read_processed") {
+        return "ReadProcessed";
+    }
+    if raw.contains("ReadAtTime") || raw.contains("read_at_time") {
+        return "ReadAtTime";
+    }
+    if raw.contains("HistoryRead") && raw.contains("Raw") {
+        return "ReadRawModified";
+    }
+    if raw.contains("HistoryRead") && raw.contains("Processed") {
+        return "ReadProcessed";
+    }
+    if raw.contains("HistoryRead") {
+        return "HistoryRead";
+    }
     "Unknown"
 }
 
 fn aggregate_fn(payload: &[u8]) -> Option<&'static str> {
     let raw = String::from_utf8_lossy(payload);
-    if raw.contains("Interpolative") { Some("Interpolative") }
-    else if raw.contains("Average") || raw.contains("Avg") { Some("Average") }
-    else if raw.contains("TimeAverage") { Some("TimeAverage") }
-    else if raw.contains("Count") { Some("Count") }
-    else if raw.contains("Minimum") || raw.contains("Min") { Some("Minimum") }
-    else if raw.contains("Maximum") || raw.contains("Max") { Some("Maximum") }
-    else if raw.contains("StdDev") || raw.contains("StandardDeviation") { Some("StdDev") }
-    else if raw.contains("DurationInState") { Some("DurationInState") }
-    else if raw.contains("Annotation") { Some("Annotation") }
-    else { None }
+    if raw.contains("Interpolative") {
+        Some("Interpolative")
+    } else if raw.contains("Average") || raw.contains("Avg") {
+        Some("Average")
+    } else if raw.contains("TimeAverage") {
+        Some("TimeAverage")
+    } else if raw.contains("Count") {
+        Some("Count")
+    } else if raw.contains("Minimum") || raw.contains("Min") {
+        Some("Minimum")
+    } else if raw.contains("Maximum") || raw.contains("Max") {
+        Some("Maximum")
+    } else if raw.contains("StdDev") || raw.contains("StandardDeviation") {
+        Some("StdDev")
+    } else if raw.contains("DurationInState") {
+        Some("DurationInState")
+    } else if raw.contains("Annotation") {
+        Some("Annotation")
+    } else {
+        None
+    }
 }
 
 fn continuation_hint(payload: &[u8]) -> Option<String> {
     let raw = String::from_utf8_lossy(payload);
     if let Some(pos) = raw.find("ContinuationPoint") {
         let after = &raw[pos + 16..];
-        let v = after.chars().take_while(|c| !c.is_whitespace() && *c != ',' && *c != '}').collect::<String>();
+        let v = after
+            .chars()
+            .take_while(|c| !c.is_whitespace() && *c != ',' && *c != '}')
+            .collect::<String>();
         let len = v.len().min(12);
         return Some(format!("cont={}..", &v[..len]));
     }
@@ -44,12 +70,26 @@ fn time_range(payload: &[u8]) -> Option<String> {
     let raw = String::from_utf8_lossy(payload);
     let start = if let Some(p) = raw.find("StartTime") {
         let after = &raw[p + 9..];
-        Some(after.chars().take_while(|c| !c.is_whitespace() && *c != ',' && *c != '}').collect::<String>())
-    } else { None };
+        Some(
+            after
+                .chars()
+                .take_while(|c| !c.is_whitespace() && *c != ',' && *c != '}')
+                .collect::<String>(),
+        )
+    } else {
+        None
+    };
     let end = if let Some(p) = raw.find("EndTime") {
         let after = &raw[p + 7..];
-        Some(after.chars().take_while(|c| !c.is_whitespace() && *c != ',' && *c != '}').collect::<String>())
-    } else { None };
+        Some(
+            after
+                .chars()
+                .take_while(|c| !c.is_whitespace() && *c != ',' && *c != '}')
+                .collect::<String>(),
+        )
+    } else {
+        None
+    };
     match (start, end) {
         (Some(s), Some(e)) => Some(format!("range=[{s}..{e}]")),
         (Some(s), None) => Some(format!("start={s}")),
@@ -66,9 +106,12 @@ pub fn dissect_opc_ua_history_read_detail(
     payload: &[u8],
 ) -> DissectedResult {
     let fallback = |s: String| DissectedResult {
-        src_addr: src_ip, dst_addr: dst_ip,
-        src_port: Some(src_port), dst_port: Some(dst_port),
-        protocol: Protocol::OpcUaHistoryReadDetail, summary: s,
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::OpcUaHistoryReadDetail,
+        summary: s,
     };
     if payload.len() < 4 {
         return fallback("OPC UA History Read Detail (partial)".into());
@@ -88,7 +131,11 @@ pub fn dissect_opc_ua_history_read_detail(
     if raw.contains("numValues") || raw.contains("Values") || raw.contains("data") {
         if let Some(pos) = raw.find("numValues") {
             let after = &raw[pos + 9..];
-            let n: String = after.trim_start_matches('=').chars().take_while(|c| c.is_ascii_digit()).collect();
+            let n: String = after
+                .trim_start_matches('=')
+                .chars()
+                .take_while(|c| c.is_ascii_digit())
+                .collect();
             if !n.is_empty() {
                 parts.push(format!("values={n}"));
             }

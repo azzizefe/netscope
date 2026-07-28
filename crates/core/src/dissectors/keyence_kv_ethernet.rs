@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_keyence_kv_ethernet(
     _src_ip: Option<IpAddr>,
@@ -13,7 +13,10 @@ pub fn dissect_keyence_kv_ethernet(
         let cmd = payload[0];
         let unit = payload.get(1).copied().unwrap_or(0);
         let data_type = payload.get(2).copied().unwrap_or(0);
-        let size = u16::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let size = u16::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let cmd_name = match cmd {
             0x01 => "DeviceRead",

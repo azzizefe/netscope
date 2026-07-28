@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_yaskawa_memobus_tcp_detail(
     _src_ip: Option<IpAddr>,
@@ -13,7 +13,10 @@ pub fn dissect_yaskawa_memobus_tcp_detail(
         let trans_id = u16::from_be_bytes([payload[0], payload[1]]);
         let unit_id = payload.get(6).copied().unwrap_or(0);
         let func = payload.get(7).copied().unwrap_or(0);
-        let reg_addr = u16::from_be_bytes([payload.get(8).copied().unwrap_or(0), payload.get(9).copied().unwrap_or(0)]);
+        let reg_addr = u16::from_be_bytes([
+            payload.get(8).copied().unwrap_or(0),
+            payload.get(9).copied().unwrap_or(0),
+        ]);
 
         let func_name = match func {
             0x03 => "ReadHoldingRegisters",

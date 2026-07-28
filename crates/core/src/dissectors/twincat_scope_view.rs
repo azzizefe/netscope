@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_twincat_scope_view(
     _src_ip: Option<IpAddr>,
@@ -13,7 +13,12 @@ pub fn dissect_twincat_scope_view(
         let session = u16::from_be_bytes([payload[0], payload[1]]);
         let channel_count = payload.get(2).copied().unwrap_or(0);
         let acquisition_mode = payload.get(3).copied().unwrap_or(0);
-        let sample_rate = u32::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0), payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0)]);
+        let sample_rate = u32::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+        ]);
 
         let mode_name = match acquisition_mode {
             0x01 => "Continuous",

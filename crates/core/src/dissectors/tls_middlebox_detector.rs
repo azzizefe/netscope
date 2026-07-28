@@ -8,7 +8,7 @@ use super::DissectedResult;
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, TlsVersion, SigAlgorithm, KemId, PqcKem};
+    use crate::pqc_handshake::{KemId, PqcHandshakeRecord, PqcKem, SigAlgorithm, TlsVersion};
     use chrono::Utc;
 
     fn test_ft() -> FiveTuple {
@@ -22,12 +22,20 @@ mod tests {
     }
 
     fn make_record(
-        name: &str, ch_size: u16, sh_size: u16, cert_len: u8,
-        success: bool, hybrid: bool, kem: Option<KemId>,
+        name: &str,
+        ch_size: u16,
+        sh_size: u16,
+        cert_len: u8,
+        success: bool,
+        hybrid: bool,
+        kem: Option<KemId>,
     ) -> PqcHandshakeRecord {
         let mut r = PqcHandshakeRecord::new(
-            test_ft(), TlsVersion::TlsV1_3, name.into(),
-            SigAlgorithm::RsaPkcs1Sha256, Utc::now(),
+            test_ft(),
+            TlsVersion::TlsV1_3,
+            name.into(),
+            SigAlgorithm::RsaPkcs1Sha256,
+            Utc::now(),
         );
         r.client_hello_size = ch_size;
         r.server_hello_size = sh_size;
@@ -35,7 +43,12 @@ mod tests {
         r.is_success = success;
         r.is_hybrid_kem = hybrid;
         if let Some(k) = kem {
-            r.pqc_kem = Some(PqcKem { algorithm: k, public_key: None, ciphertext: None, shared_secret: None });
+            r.pqc_kem = Some(PqcKem {
+                algorithm: k,
+                public_key: None,
+                ciphertext: None,
+                shared_secret: None,
+            });
         }
         r
     }
@@ -73,14 +86,30 @@ mod tests {
 
     #[test]
     fn detect_protocol_anomalies_clean() {
-        let r = make_record("example.com", 500, 500, 3, true, false, Some(KemId::MlKem768));
+        let r = make_record(
+            "example.com",
+            500,
+            500,
+            3,
+            true,
+            false,
+            Some(KemId::MlKem768),
+        );
         let findings = detect_protocol_anomalies(&[r]);
         assert!(findings.is_empty());
     }
 
     #[test]
     fn detect_protocol_anomalies_rejected_pqc() {
-        let r = make_record("example.com", 500, 500, 3, false, false, Some(KemId::MlKem768));
+        let r = make_record(
+            "example.com",
+            500,
+            500,
+            3,
+            false,
+            false,
+            Some(KemId::MlKem768),
+        );
         let findings = detect_protocol_anomalies(&[r]);
         assert_eq!(findings.len(), 1);
         assert!(findings[0].contains("possible middlebox"));
@@ -88,7 +117,15 @@ mod tests {
 
     #[test]
     fn detect_protocol_anomalies_stripped_hybrid() {
-        let r = make_record("example.com", 500, 500, 3, false, true, Some(KemId::MlKem768));
+        let r = make_record(
+            "example.com",
+            500,
+            500,
+            3,
+            false,
+            true,
+            Some(KemId::MlKem768),
+        );
         let findings = detect_protocol_anomalies(&[r]);
         assert_eq!(findings.len(), 2);
     }
@@ -104,7 +141,15 @@ mod tests {
     #[test]
     fn dissect_with_anomalies() {
         crate::dissectors::tls::clear_tls_sessions();
-        let r = make_record("bad.example", 3000, 500, 3, false, true, Some(KemId::MlKem768));
+        let r = make_record(
+            "bad.example",
+            3000,
+            500,
+            3,
+            false,
+            true,
+            Some(KemId::MlKem768),
+        );
         crate::dissectors::tls::push_pqc_record_for_test(r);
         let result = dissect_tls_middlebox_detector(None, None, 443, 54321, &[]);
         assert!(result.summary.contains("anomalies"));

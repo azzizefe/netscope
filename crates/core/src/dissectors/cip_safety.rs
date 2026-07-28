@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_cip_safety(
     src_ip: Option<IpAddr>,
@@ -20,7 +20,12 @@ pub fn dissect_cip_safety(
             _ => "SafetyMsg",
         };
         let conn_id = u32::from_le_bytes([payload[2], payload[3], payload[4], payload[5]]);
-        format!("CIP Safety — {} conn:0x{:08x} ({})", msg_type, conn_id, super::bytes(payload.len() as u64))
+        format!(
+            "CIP Safety — {} conn:0x{:08x} ({})",
+            msg_type,
+            conn_id,
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("CIP Safety — {}", super::bytes(payload.len() as u64))
     };

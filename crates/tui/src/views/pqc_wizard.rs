@@ -50,7 +50,11 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
     let scroll = app.pqc_wizard_scroll.min(max_scroll);
 
     let hint = if max_scroll > 0 {
-        format!(" PQC Wizard Report  ·  j/k scroll  ({}/{}) ", scroll + 1, max_scroll + 1)
+        format!(
+            " PQC Wizard Report  ·  j/k scroll  ({}/{}) ",
+            scroll + 1,
+            max_scroll + 1
+        )
     } else {
         " PQC Wizard Report ".to_string()
     };
@@ -68,27 +72,43 @@ pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
 }
 
 fn render_header(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::TlsPqcWizardReport) {
-    let target = report.session_reports.first().map(|s| {
-        format!("{} ({})", s.server_name, s.server_ip)
-    }).unwrap_or_else(|| "N/A".into());
+    let target = report
+        .session_reports
+        .first()
+        .map(|s| format!("{} ({})", s.server_name, s.server_ip))
+        .unwrap_or_else(|| "N/A".into());
 
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
 
-    lines.push(Line::from(vec![
-        Span::styled(" TLS 1.3 PQC Smart Wizard — Report ", Style::new().bold().underlined()),
-    ]));
-    lines.push(Line::from(vec![
-        Span::raw(format!(" Target: {}    Date: {}", target, now)),
-    ]));
+    lines.push(Line::from(vec![Span::styled(
+        " TLS 1.3 PQC Smart Wizard — Report ",
+        Style::new().bold().underlined(),
+    )]));
+    lines.push(Line::from(vec![Span::raw(format!(
+        " Target: {}    Date: {}",
+        target, now
+    ))]));
 }
 
-fn render_security_score(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Security Score", Style::new().bold())));
+fn render_security_score(
+    lines: &mut Vec<Line>,
+    report: &netscope_core::pqc_wizard::TlsPqcWizardReport,
+) {
+    lines.push(Line::from(Span::styled(
+        " Security Score",
+        Style::new().bold(),
+    )));
 
     let score = compute_score(report);
     let risk = report.overview.risk_score;
     let risk_color = risk_color(risk);
-    let score_color = if score >= 70 { Color::Green } else if score >= 50 { Color::Yellow } else { Color::Red };
+    let score_color = if score >= 70 {
+        Color::Green
+    } else if score >= 50 {
+        Color::Yellow
+    } else {
+        Color::Red
+    };
     let label = risk.label();
 
     let bar_len = 40usize;
@@ -98,9 +118,15 @@ fn render_security_score(lines: &mut Vec<Line>, report: &netscope_core::pqc_wiza
 
     lines.push(Line::from(vec![
         Span::raw("  "),
-        Span::styled(format!("{} / 100", score), Style::new().fg(score_color).bold()),
+        Span::styled(
+            format!("{} / 100", score),
+            Style::new().fg(score_color).bold(),
+        ),
         Span::raw(format!("  —  {} ", label)),
-        Span::styled(format!("({} uyarı)", report.vulnerabilities.len()), Style::new().fg(risk_color)),
+        Span::styled(
+            format!("({} uyarı)", report.vulnerabilities.len()),
+            Style::new().fg(risk_color),
+        ),
     ]));
     lines.push(Line::from(vec![
         Span::raw("  "),
@@ -109,15 +135,30 @@ fn render_security_score(lines: &mut Vec<Line>, report: &netscope_core::pqc_wiza
 }
 
 fn render_kem_panel(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" KEM / Key Exchange", Style::new().bold())));
+    lines.push(Line::from(Span::styled(
+        " KEM / Key Exchange",
+        Style::new().bold(),
+    )));
 
     if let Some(session) = report.session_reports.first() {
         let offered: Vec<String> = session.kem_offered.iter().map(kem_label).collect();
-        let offered_str = if offered.is_empty() { "ECDH only".into() } else { offered.join(", ") };
+        let offered_str = if offered.is_empty() {
+            "ECDH only".into()
+        } else {
+            offered.join(", ")
+        };
 
-        let selected = session.kem_selected.as_ref().map(kem_label).unwrap_or_else(|| "None".into());
+        let selected = session
+            .kem_selected
+            .as_ref()
+            .map(kem_label)
+            .unwrap_or_else(|| "None".into());
         let hybrid_tag = if session.is_hybrid {
-            let classic = session.classical_group.as_ref().map(named_group_label).unwrap_or("ECDH");
+            let classic = session
+                .classical_group
+                .as_ref()
+                .map(named_group_label)
+                .unwrap_or("ECDH");
             format!("{} + {} (Hybrid)", selected, classic)
         } else {
             selected
@@ -133,19 +174,31 @@ fn render_kem_panel(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::T
             Span::styled(hybrid_tag, Style::new().fg(Color::Green).bold()),
             Span::raw(format!(" {} ", success_icon)),
         ]));
-        lines.push(Line::from(vec![
-            Span::raw(format!("  Shared Secret:   {:.0}-bit entropy", session.shared_secret_entropy_bits)),
-        ]));
-        lines.push(Line::from(vec![
-            Span::raw(format!("  Est. KEM Time:   ~{:.1}ms", session.pqc_kem_time_us as f64 / 1000.0)),
-        ]));
+        lines.push(Line::from(vec![Span::raw(format!(
+            "  Shared Secret:   {:.0}-bit entropy",
+            session.shared_secret_entropy_bits
+        ))]));
+        lines.push(Line::from(vec![Span::raw(format!(
+            "  Est. KEM Time:   ~{:.1}ms",
+            session.pqc_kem_time_us as f64 / 1000.0
+        ))]));
 
-        let ech_compatible = session.client_hello_size > 0 && session.server_hello_size > 0 && session.kem_selected.is_some();
+        let ech_compatible = session.client_hello_size > 0
+            && session.server_hello_size > 0
+            && session.kem_selected.is_some();
         lines.push(Line::from(vec![
             Span::raw("  ECH+PQC Interop:  "),
             Span::styled(
-                if ech_compatible { "compatible ✅" } else { "not detected" },
-                Style::new().fg(if ech_compatible { Color::Green } else { Color::DarkGray }),
+                if ech_compatible {
+                    "compatible ✅"
+                } else {
+                    "not detected"
+                },
+                Style::new().fg(if ech_compatible {
+                    Color::Green
+                } else {
+                    Color::DarkGray
+                }),
             ),
         ]));
     } else if report.raw_records > 0 {
@@ -155,27 +208,49 @@ fn render_kem_panel(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::T
     }
 }
 
-fn render_cert_chain(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Certificate Chain", Style::new().bold())));
+fn render_cert_chain(
+    lines: &mut Vec<Line>,
+    report: &netscope_core::pqc_wizard::TlsPqcWizardReport,
+) {
+    lines.push(Line::from(Span::styled(
+        " Certificate Chain",
+        Style::new().bold(),
+    )));
 
     if let Some(session) = report.session_reports.first() {
-        let sig_type = if session.is_pqc_signature { "PQC" } else { "Classic" };
+        let sig_type = if session.is_pqc_signature {
+            "PQC"
+        } else {
+            "Classic"
+        };
+        lines.push(Line::from(vec![Span::raw(format!(
+            "  Leaf:   CN={}  — {} signature",
+            session.server_name, sig_type
+        ))]));
+        lines.push(Line::from(vec![Span::raw(format!(
+            "  Chain depth: {}",
+            session.cert_chain_length
+        ))]));
         lines.push(Line::from(vec![
-            Span::raw(format!("  Leaf:   CN={}  — {} signature", session.server_name, sig_type)),
-        ]));
-        lines.push(Line::from(vec![
-            Span::raw(format!("  Chain depth: {}", session.cert_chain_length)),
-        ]));
-        lines.push(Line::from(vec![
-            Span::raw(format!("  Root is PQC: {}  ", if session.root_is_pqc { "Yes" } else { "No" })),
+            Span::raw(format!(
+                "  Root is PQC: {}  ",
+                if session.root_is_pqc { "Yes" } else { "No" }
+            )),
             Span::styled(
                 if session.root_is_pqc { "✅" } else { "⚠️" },
-                Style::new().fg(if session.root_is_pqc { Color::Green } else { Color::Yellow }),
+                Style::new().fg(if session.root_is_pqc {
+                    Color::Green
+                } else {
+                    Color::Yellow
+                }),
             ),
         ]));
         if session.cert_valid_days_left > 0 {
             lines.push(Line::from(vec![
-                Span::raw(format!("  Cert valid: {} days remaining  ", session.cert_valid_days_left)),
+                Span::raw(format!(
+                    "  Cert valid: {} days remaining  ",
+                    session.cert_valid_days_left
+                )),
                 Span::styled("✅", Style::new().fg(Color::Green)),
             ]));
         } else {
@@ -185,20 +260,35 @@ fn render_cert_chain(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::
             ]));
         }
         if session.rsa_key_size > 0 {
-            lines.push(Line::from(vec![
-                Span::raw(format!("  RSA key size: {} bits", session.rsa_key_size)),
-            ]));
+            lines.push(Line::from(vec![Span::raw(format!(
+                "  RSA key size: {} bits",
+                session.rsa_key_size
+            ))]));
         }
         if !session.root_is_pqc {
-            lines.push(Line::from(vec![
-                Span::styled("  ⚠️  Root certificate not PQC-signed", Style::new().fg(Color::Yellow)),
-            ]));
-            lines.push(Line::from(Span::raw("     Risk: Low (trust anchor, replace edilmesi zor)")));
+            lines.push(Line::from(vec![Span::styled(
+                "  ⚠️  Root certificate not PQC-signed",
+                Style::new().fg(Color::Yellow),
+            )]));
+            lines.push(Line::from(Span::raw(
+                "     Risk: Low (trust anchor, replace edilmesi zor)",
+            )));
         }
-        let ct_status = if session.cert_chain_length > 0 { "SCT present" } else { "no SCT data" };
+        let ct_status = if session.cert_chain_length > 0 {
+            "SCT present"
+        } else {
+            "no SCT data"
+        };
         lines.push(Line::from(vec![
             Span::raw("  CT v3 Status:     "),
-            Span::styled(ct_status, Style::new().fg(if session.cert_chain_length > 0 { Color::Green } else { Color::DarkGray })),
+            Span::styled(
+                ct_status,
+                Style::new().fg(if session.cert_chain_length > 0 {
+                    Color::Green
+                } else {
+                    Color::DarkGray
+                }),
+            ),
         ]));
     } else {
         lines.push(Line::from(Span::raw("  No certificate data.")));
@@ -206,19 +296,30 @@ fn render_cert_chain(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::
 }
 
 fn render_vuln_scan(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Vulnerability Scan", Style::new().bold())));
+    lines.push(Line::from(Span::styled(
+        " Vulnerability Scan",
+        Style::new().bold(),
+    )));
 
     if report.vulnerabilities.is_empty() {
-        lines.push(Line::from(vec![
-            Span::styled("  ✅ All checks passed — no vulnerabilities detected", Style::new().fg(Color::Green)),
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            "  ✅ All checks passed — no vulnerabilities detected",
+            Style::new().fg(Color::Green),
+        )]));
     } else {
         for v in &report.vulnerabilities {
             let sev_color = severity_color(v.severity);
-            let pass_fail = if matches!(v.severity, Severity::Low) { "ℹ️" } else { "⚠️" };
+            let pass_fail = if matches!(v.severity, Severity::Low) {
+                "ℹ️"
+            } else {
+                "⚠️"
+            };
             lines.push(Line::from(vec![
                 Span::raw(format!("  {} ", pass_fail)),
-                Span::styled(format!("{:8}", v.severity.label()), Style::new().fg(sev_color).bold()),
+                Span::styled(
+                    format!("{:8}", v.severity.label()),
+                    Style::new().fg(sev_color).bold(),
+                ),
                 Span::raw("  "),
                 Span::styled(v.title.clone(), Style::new().bold()),
             ]));
@@ -244,29 +345,46 @@ fn render_vuln_scan(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::T
     }
 }
 
-fn render_performance(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Performance Impact", Style::new().bold())));
+fn render_performance(
+    lines: &mut Vec<Line>,
+    report: &netscope_core::pqc_wizard::TlsPqcWizardReport,
+) {
+    lines.push(Line::from(Span::styled(
+        " Performance Impact",
+        Style::new().bold(),
+    )));
 
     let perf = &report.stages.performance_report;
-    lines.push(Line::from(vec![
-        Span::raw(format!("  Classic TLS 1.3:              ~{:.0}ms handshake", perf.classic_handshake_time_us / 1000.0)),
-    ]));
-    lines.push(Line::from(vec![
-        Span::raw(format!("  Hybrid TLS 1.3 (PQC + x25519): ~{:.0}ms handshake", perf.pqc_handshake_time_us / 1000.0)),
-    ]));
-    lines.push(Line::from(vec![
-        Span::raw(format!("  PQC Overhead:                  +{:.0}ms (+{:.0}%)", perf.pqc_overhead_us / 1000.0, perf.pqc_overhead_us / perf.classic_handshake_time_us.max(1.0) * 100.0)),
-    ]));
-    lines.push(Line::from(vec![
-        Span::raw(format!("  Bandwidth Overhead:             +{:.0}B (KEM + cert)", perf.pqc_clienthello_extra_bytes)),
-    ]));
-    lines.push(Line::from(vec![
-        Span::raw(format!("  Estimated Throughput Loss:      < %1 (ihmal edilebilir)")),
-    ]));
+    lines.push(Line::from(vec![Span::raw(format!(
+        "  Classic TLS 1.3:              ~{:.0}ms handshake",
+        perf.classic_handshake_time_us / 1000.0
+    ))]));
+    lines.push(Line::from(vec![Span::raw(format!(
+        "  Hybrid TLS 1.3 (PQC + x25519): ~{:.0}ms handshake",
+        perf.pqc_handshake_time_us / 1000.0
+    ))]));
+    lines.push(Line::from(vec![Span::raw(format!(
+        "  PQC Overhead:                  +{:.0}ms (+{:.0}%)",
+        perf.pqc_overhead_us / 1000.0,
+        perf.pqc_overhead_us / perf.classic_handshake_time_us.max(1.0) * 100.0
+    ))]));
+    lines.push(Line::from(vec![Span::raw(format!(
+        "  Bandwidth Overhead:             +{:.0}B (KEM + cert)",
+        perf.pqc_clienthello_extra_bytes
+    ))]));
+    lines.push(Line::from(vec![Span::raw(
+        "  Estimated Throughput Loss:      < %1 (ihmal edilebilir)".to_string(),
+    )]));
 }
 
-fn render_recommendations(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Recommendations", Style::new().bold())));
+fn render_recommendations(
+    lines: &mut Vec<Line>,
+    report: &netscope_core::pqc_wizard::TlsPqcWizardReport,
+) {
+    lines.push(Line::from(Span::styled(
+        " Recommendations",
+        Style::new().bold(),
+    )));
 
     if report.recommendations.is_empty() {
         lines.push(Line::from(Span::raw("  No recommendations.")));
@@ -275,7 +393,10 @@ fn render_recommendations(lines: &mut Vec<Line>, report: &netscope_core::pqc_wiz
             let pri_color = priority_color(r.priority);
             lines.push(Line::from(vec![
                 Span::styled(format!("  {}. ", i + 1), Style::new().fg(pri_color).bold()),
-                Span::styled(format!("[{}] ", r.priority.label()), Style::new().fg(pri_color).bold()),
+                Span::styled(
+                    format!("[{}] ", r.priority.label()),
+                    Style::new().fg(pri_color).bold(),
+                ),
                 Span::styled(r.action.clone(), Style::new().bold()),
             ]));
             lines.push(Line::from(vec![
@@ -286,8 +407,14 @@ fn render_recommendations(lines: &mut Vec<Line>, report: &netscope_core::pqc_wiz
     }
 }
 
-fn render_compliance(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Compliance Status", Style::new().bold())));
+fn render_compliance(
+    lines: &mut Vec<Line>,
+    report: &netscope_core::pqc_wizard::TlsPqcWizardReport,
+) {
+    lines.push(Line::from(Span::styled(
+        " Compliance Status",
+        Style::new().bold(),
+    )));
 
     if report.compliance.is_empty() {
         lines.push(Line::from(Span::raw("  No compliance data.")));
@@ -295,8 +422,20 @@ fn render_compliance(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::
         let mut combined = Line::from(Span::raw("  "));
         for flag in &report.compliance {
             let (emoji, name) = compliance_display(flag);
-            let color = if flag.compliant { Color::Green } else { Color::Yellow };
-            combined.push_span(Span::styled(format!("{} {} {}  ", emoji, name, if flag.compliant { "✅" } else { "⚠️" }), Style::new().fg(color)));
+            let color = if flag.compliant {
+                Color::Green
+            } else {
+                Color::Yellow
+            };
+            combined.push_span(Span::styled(
+                format!(
+                    "{} {} {}  ",
+                    emoji,
+                    name,
+                    if flag.compliant { "✅" } else { "⚠️" }
+                ),
+                Style::new().fg(color),
+            ));
         }
         lines.push(combined);
         for flag in &report.compliance {
@@ -309,30 +448,63 @@ fn render_compliance(lines: &mut Vec<Line>, report: &netscope_core::pqc_wizard::
 }
 
 fn render_key_share_prediction(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Key Share Prediction", Style::new().bold())));
+    lines.push(Line::from(Span::styled(
+        " Key Share Prediction",
+        Style::new().bold(),
+    )));
 
     let total = report.session_reports.len();
-    let failures: Vec<&netscope_core::pqc_wizard::SessionPqcReport> = report.session_reports.iter().filter(|s| !s.success).collect();
-    let fail_rate = if total > 0 { failures.len() as f64 / total as f64 * 100.0 } else { 0.0 };
+    let failures: Vec<&netscope_core::pqc_wizard::SessionPqcReport> = report
+        .session_reports
+        .iter()
+        .filter(|s| !s.success)
+        .collect();
+    let fail_rate = if total > 0 {
+        failures.len() as f64 / total as f64 * 100.0
+    } else {
+        0.0
+    };
 
-    let kem_mismatches: Vec<String> = failures.iter().filter(|s| s.kem_selected.is_some()).map(|s| {
-        let kem = s.kem_selected.as_ref().map(kem_label).unwrap_or_default();
-        format!("{} KEM={}", s.server_name, kem)
-    }).collect();
+    let kem_mismatches: Vec<String> = failures
+        .iter()
+        .filter(|s| s.kem_selected.is_some())
+        .map(|s| {
+            let kem = s.kem_selected.as_ref().map(kem_label).unwrap_or_default();
+            format!("{} KEM={}", s.server_name, kem)
+        })
+        .collect();
 
-    lines.push(Line::from(vec![
-        Span::raw(format!("  Sessions: {}  |  Failures: {} ({:.1}%)", total, failures.len(), fail_rate)),
-    ]));
+    lines.push(Line::from(vec![Span::raw(format!(
+        "  Sessions: {}  |  Failures: {} ({:.1}%)",
+        total,
+        failures.len(),
+        fail_rate
+    ))]));
     if kem_mismatches.is_empty() {
-        lines.push(Line::from(Span::styled("  ✅ No KEM negotiation failures predicted", Style::new().fg(Color::Green))));
+        lines.push(Line::from(Span::styled(
+            "  ✅ No KEM negotiation failures predicted",
+            Style::new().fg(Color::Green),
+        )));
     } else {
         lines.push(Line::from(vec![
             Span::raw("  ⚠️  KEM failures: "),
             Span::styled(kem_mismatches.join("; "), Style::new().fg(Color::Yellow)),
         ]));
     }
-    let risk = if fail_rate > 20.0 { "HIGH" } else if fail_rate > 5.0 { "MEDIUM" } else { "LOW" };
-    let risk_color = if fail_rate > 20.0 { Color::Red } else if fail_rate > 5.0 { Color::Yellow } else { Color::Green };
+    let risk = if fail_rate > 20.0 {
+        "HIGH"
+    } else if fail_rate > 5.0 {
+        "MEDIUM"
+    } else {
+        "LOW"
+    };
+    let risk_color = if fail_rate > 20.0 {
+        Color::Red
+    } else if fail_rate > 5.0 {
+        Color::Yellow
+    } else {
+        Color::Green
+    };
     lines.push(Line::from(vec![
         Span::raw("  Risk: "),
         Span::styled(risk, Style::new().fg(risk_color).bold()),
@@ -340,12 +512,18 @@ fn render_key_share_prediction(lines: &mut Vec<Line>, report: &TlsPqcWizardRepor
 }
 
 fn render_downgrade_detector(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Downgrade Detection", Style::new().bold())));
+    lines.push(Line::from(Span::styled(
+        " Downgrade Detection",
+        Style::new().bold(),
+    )));
 
     let mut findings: Vec<String> = Vec::new();
     for s in &report.session_reports {
         if !s.success && s.kem_selected.is_some() {
-            findings.push(format!("{}: PQC offered but handshake failed", s.server_name));
+            findings.push(format!(
+                "{}: PQC offered but handshake failed",
+                s.server_name
+            ));
         }
         if s.is_hybrid && !s.success {
             findings.push(format!("{}: hybrid KEM stripped", s.server_name));
@@ -353,7 +531,10 @@ fn render_downgrade_detector(lines: &mut Vec<Line>, report: &TlsPqcWizardReport)
     }
 
     if findings.is_empty() {
-        lines.push(Line::from(Span::styled("  ✅ No downgrade activity detected", Style::new().fg(Color::Green))));
+        lines.push(Line::from(Span::styled(
+            "  ✅ No downgrade activity detected",
+            Style::new().fg(Color::Green),
+        )));
     } else {
         for f in &findings {
             lines.push(Line::from(vec![
@@ -365,11 +546,16 @@ fn render_downgrade_detector(lines: &mut Vec<Line>, report: &TlsPqcWizardReport)
 }
 
 fn render_cve_feed(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" PQC CVE Feed", Style::new().bold())));
+    lines.push(Line::from(Span::styled(
+        " PQC CVE Feed",
+        Style::new().bold(),
+    )));
 
-    let kem_counts: Vec<String> = report.algorithms.iter().map(|k| {
-        format!("{}: {}", kem_label(&k.algorithm), k.count)
-    }).collect();
+    let kem_counts: Vec<String> = report
+        .algorithms
+        .iter()
+        .map(|k| format!("{}: {}", kem_label(&k.algorithm), k.count))
+        .collect();
 
     if kem_counts.is_empty() {
         lines.push(Line::from(Span::raw("  No PQC algorithms detected.")));
@@ -379,31 +565,54 @@ fn render_cve_feed(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
             Span::styled(kem_counts.join(", "), Style::new().fg(Color::Cyan)),
         ]));
     }
-    let cve_count = report.vulnerabilities.iter().filter(|v| v.cve_ref.is_some()).count();
+    let cve_count = report
+        .vulnerabilities
+        .iter()
+        .filter(|v| v.cve_ref.is_some())
+        .count();
     if cve_count > 0 {
-        lines.push(Line::from(vec![
-            Span::styled(format!("  ⚠️  {} CVE-related findings", cve_count), Style::new().fg(Color::Yellow)),
-        ]));
-        for v in report.vulnerabilities.iter().filter(|v| v.cve_ref.is_some()) {
-            lines.push(Line::from(vec![
-                Span::raw(format!("     {}: {}", v.cve_ref.as_ref().unwrap(), v.title)),
-            ]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("  ⚠️  {} CVE-related findings", cve_count),
+            Style::new().fg(Color::Yellow),
+        )]));
+        for v in report
+            .vulnerabilities
+            .iter()
+            .filter(|v| v.cve_ref.is_some())
+        {
+            lines.push(Line::from(vec![Span::raw(format!(
+                "     {}: {}",
+                v.cve_ref.as_ref().unwrap(),
+                v.title
+            ))]));
         }
     } else {
-        lines.push(Line::from(Span::styled("  ✅ No known CVEs match detected KEMs", Style::new().fg(Color::Green))));
+        lines.push(Line::from(Span::styled(
+            "  ✅ No known CVEs match detected KEMs",
+            Style::new().fg(Color::Green),
+        )));
     }
 }
 
 fn render_middlebox_detector(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Middlebox Interference", Style::new().bold())));
+    lines.push(Line::from(Span::styled(
+        " Middlebox Interference",
+        Style::new().bold(),
+    )));
 
     let mut anomalies: Vec<String> = Vec::new();
     for s in &report.session_reports {
         if s.client_hello_size > 2048 {
-            anomalies.push(format!("{}: oversized ClientHello ({}B)", s.server_name, s.client_hello_size));
+            anomalies.push(format!(
+                "{}: oversized ClientHello ({}B)",
+                s.server_name, s.client_hello_size
+            ));
         }
         if s.cert_chain_length > 5 {
-            anomalies.push(format!("{}: deep cert chain ({} certs)", s.server_name, s.cert_chain_length));
+            anomalies.push(format!(
+                "{}: deep cert chain ({} certs)",
+                s.server_name, s.cert_chain_length
+            ));
         }
         if s.is_hybrid && !s.success {
             anomalies.push(format!("{}: hybrid KEM rejected", s.server_name));
@@ -411,7 +620,10 @@ fn render_middlebox_detector(lines: &mut Vec<Line>, report: &TlsPqcWizardReport)
     }
 
     if anomalies.is_empty() {
-        lines.push(Line::from(Span::styled("  ✅ No middlebox interference detected", Style::new().fg(Color::Green))));
+        lines.push(Line::from(Span::styled(
+            "  ✅ No middlebox interference detected",
+            Style::new().fg(Color::Green),
+        )));
     } else {
         for a in &anomalies {
             lines.push(Line::from(vec![
@@ -423,20 +635,44 @@ fn render_middlebox_detector(lines: &mut Vec<Line>, report: &TlsPqcWizardReport)
 }
 
 fn render_session_resumption(lines: &mut Vec<Line>, report: &TlsPqcWizardReport) {
-    lines.push(Line::from(Span::styled(" Session Resumption (PSK)", Style::new().bold())));
+    lines.push(Line::from(Span::styled(
+        " Session Resumption (PSK)",
+        Style::new().bold(),
+    )));
 
     let total = report.session_reports.len();
-    let zero_rtt: Vec<&netscope_core::pqc_wizard::SessionPqcReport> = report.session_reports.iter().filter(|s| s.is_0rtt).collect();
-    let pqc_zero_rtt: Vec<&&netscope_core::pqc_wizard::SessionPqcReport> = zero_rtt.iter().filter(|s| s.kem_selected.is_some()).collect();
-    let psk_ratio = if !zero_rtt.is_empty() { pqc_zero_rtt.len() as f64 / zero_rtt.len() as f64 * 100.0 } else { 0.0 };
-
-    lines.push(Line::from(vec![
-        Span::raw(format!("  Sessions: {}  |  0-RTT capable: {}  |  PQC+PSK: {} ({:.1}%)", total, zero_rtt.len(), pqc_zero_rtt.len(), psk_ratio)),
-    ]));
-    if pqc_zero_rtt.is_empty() {
-        lines.push(Line::from(Span::styled("  ℹ️  No PQC-aware session resumption detected", Style::new().fg(Color::DarkGray))));
+    let zero_rtt: Vec<&netscope_core::pqc_wizard::SessionPqcReport> = report
+        .session_reports
+        .iter()
+        .filter(|s| s.is_0rtt)
+        .collect();
+    let pqc_zero_rtt: Vec<&&netscope_core::pqc_wizard::SessionPqcReport> = zero_rtt
+        .iter()
+        .filter(|s| s.kem_selected.is_some())
+        .collect();
+    let psk_ratio = if !zero_rtt.is_empty() {
+        pqc_zero_rtt.len() as f64 / zero_rtt.len() as f64 * 100.0
     } else {
-        lines.push(Line::from(Span::styled("  ✅ PQC-aware PSK negotiation active", Style::new().fg(Color::Green))));
+        0.0
+    };
+
+    lines.push(Line::from(vec![Span::raw(format!(
+        "  Sessions: {}  |  0-RTT capable: {}  |  PQC+PSK: {} ({:.1}%)",
+        total,
+        zero_rtt.len(),
+        pqc_zero_rtt.len(),
+        psk_ratio
+    ))]));
+    if pqc_zero_rtt.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "  ℹ️  No PQC-aware session resumption detected",
+            Style::new().fg(Color::DarkGray),
+        )));
+    } else {
+        lines.push(Line::from(Span::styled(
+            "  ✅ PQC-aware PSK negotiation active",
+            Style::new().fg(Color::Green),
+        )));
     }
 }
 
@@ -450,12 +686,22 @@ fn render_buttons(lines: &mut Vec<Line>) {
 fn compute_score(report: &netscope_core::pqc_wizard::TlsPqcWizardReport) -> u8 {
     let mut score: i32 = 50;
     let o = &report.overview;
-    if o.adoption_rate > 80.0 { score += 20; }
-    else if o.adoption_rate > 50.0 { score += 10; }
-    else if o.adoption_rate > 20.0 { score += 5; }
-    if o.failed_handshakes == 0 { score += 10; }
-    if o.pqc_signature_ratio > 0.0 { score += 5; }
-    if o.composite_cert_ratio > 0.0 { score += 5; }
+    if o.adoption_rate > 80.0 {
+        score += 20;
+    } else if o.adoption_rate > 50.0 {
+        score += 10;
+    } else if o.adoption_rate > 20.0 {
+        score += 5;
+    }
+    if o.failed_handshakes == 0 {
+        score += 10;
+    }
+    if o.pqc_signature_ratio > 0.0 {
+        score += 5;
+    }
+    if o.composite_cert_ratio > 0.0 {
+        score += 5;
+    }
 
     for v in &report.vulnerabilities {
         score -= match v.severity {
@@ -506,7 +752,9 @@ fn named_group_label(g: &NamedGroup) -> &'static str {
     }
 }
 
-fn compliance_display(flag: &netscope_core::pqc_wizard::ComplianceFlag) -> (&'static str, &'static str) {
+fn compliance_display(
+    flag: &netscope_core::pqc_wizard::ComplianceFlag,
+) -> (&'static str, &'static str) {
     match flag.framework {
         ComplianceFramework::NistSp800131a => ("🇺🇸", "NIST SP 800-131A"),
         ComplianceFramework::BsiTr02102 => ("🇩🇪", "BSI TR-02102"),

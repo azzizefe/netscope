@@ -39,8 +39,7 @@ impl PqcRuleSet {
 
     /// Return the built-in default rule set.
     pub fn default_set() -> Self {
-        PqcRuleSet::from_yaml(DEFAULT_RULES_YAML)
-            .expect("built-in PQC rules are valid YAML")
+        PqcRuleSet::from_yaml(DEFAULT_RULES_YAML).expect("built-in PQC rules are valid YAML")
     }
 }
 
@@ -171,8 +170,16 @@ impl PqcRule {
             affected_count: 1,
             cve_ref: None,
             cvss_vector: self.cvss_vector.clone(),
-            impact: if self.impact.is_empty() { self.suggestion.clone().unwrap_or_default() } else { self.impact.clone() },
-            fix: self.fix.clone().or_else(|| self.suggestion.clone()).unwrap_or_default(),
+            impact: if self.impact.is_empty() {
+                self.suggestion.clone().unwrap_or_default()
+            } else {
+                self.impact.clone()
+            },
+            fix: self
+                .fix
+                .clone()
+                .or_else(|| self.suggestion.clone())
+                .unwrap_or_default(),
         })
     }
 }
@@ -220,11 +227,26 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
         match chars[i] {
-            '(' => { tokens.push(Token::LParen); i += 1; }
-            ')' => { tokens.push(Token::RParen); i += 1; }
-            '[' => { tokens.push(Token::LBracket); i += 1; }
-            ']' => { tokens.push(Token::RBracket); i += 1; }
-            ',' => { tokens.push(Token::Comma); i += 1; }
+            '(' => {
+                tokens.push(Token::LParen);
+                i += 1;
+            }
+            ')' => {
+                tokens.push(Token::RParen);
+                i += 1;
+            }
+            '[' => {
+                tokens.push(Token::LBracket);
+                i += 1;
+            }
+            ']' => {
+                tokens.push(Token::RBracket);
+                i += 1;
+            }
+            ',' => {
+                tokens.push(Token::Comma);
+                i += 1;
+            }
             '\'' => {
                 let mut s = String::new();
                 i += 1;
@@ -232,7 +254,9 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                     s.push(chars[i]);
                     i += 1;
                 }
-                if i >= chars.len() { return Err("Unterminated string".into()); }
+                if i >= chars.len() {
+                    return Err("Unterminated string".into());
+                }
                 i += 1;
                 tokens.push(Token::String(s));
             }
@@ -252,9 +276,17 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                     return Err(format!("Unexpected '!' at position {}", i));
                 }
             }
-            '>' => { tokens.push(Token::Gt); i += 1; }
-            '<' => { tokens.push(Token::Lt); i += 1; }
-            c if c.is_ascii_digit() || (c == '-' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit()) => {
+            '>' => {
+                tokens.push(Token::Gt);
+                i += 1;
+            }
+            '<' => {
+                tokens.push(Token::Lt);
+                i += 1;
+            }
+            c if c.is_ascii_digit()
+                || (c == '-' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit()) =>
+            {
                 let mut num = String::new();
                 num.push(c);
                 i += 1;
@@ -262,7 +294,10 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                     num.push(chars[i]);
                     i += 1;
                 }
-                tokens.push(Token::Number(num.parse().map_err(|_| format!("Invalid number: {}", num))?));
+                tokens.push(Token::Number(
+                    num.parse()
+                        .map_err(|_| format!("Invalid number: {}", num))?,
+                ));
             }
             c if c.is_ascii_alphabetic() || c == '_' => {
                 let mut ident = String::new();
@@ -282,7 +317,12 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }
-            _ => return Err(format!("Unexpected character '{}' at position {}", chars[i], i)),
+            _ => {
+                return Err(format!(
+                    "Unexpected character '{}' at position {}",
+                    chars[i], i
+                ))
+            }
         }
     }
     Ok(tokens)
@@ -402,7 +442,10 @@ fn parse_comparison(tokens: &[Token], pos: &mut usize) -> Result<Expr, String> {
                     *pos += 1;
                     Ok(Expr::In(field, values))
                 }
-                t => Err(format!("Unexpected operator {:?} after field '{}'", t, field)),
+                t => Err(format!(
+                    "Unexpected operator {:?} after field '{}'",
+                    t, field
+                )),
             }
         }
         t => Err(format!("Expected identifier, got {:?}", t)),
@@ -414,10 +457,25 @@ fn parse_value(tokens: &[Token], pos: &mut usize) -> Result<Value, String> {
         return Err("Unexpected end of expression".into());
     }
     match &tokens[*pos] {
-        Token::String(s) => { let v = Value::Str(s.clone()); *pos += 1; Ok(v) }
-        Token::Number(n) => { let v = Value::Num(*n); *pos += 1; Ok(v) }
-        Token::Bool(b) => { let v = Value::Bool(*b); *pos += 1; Ok(v) }
-        Token::None => { *pos += 1; Ok(Value::None) }
+        Token::String(s) => {
+            let v = Value::Str(s.clone());
+            *pos += 1;
+            Ok(v)
+        }
+        Token::Number(n) => {
+            let v = Value::Num(*n);
+            *pos += 1;
+            Ok(v)
+        }
+        Token::Bool(b) => {
+            let v = Value::Bool(*b);
+            *pos += 1;
+            Ok(v)
+        }
+        Token::None => {
+            *pos += 1;
+            Ok(Value::None)
+        }
         t => Err(format!("Expected value, got {:?}", t)),
     }
 }
@@ -425,13 +483,23 @@ fn parse_value(tokens: &[Token], pos: &mut usize) -> Result<Value, String> {
 /// Evaluate a compiled expression against the rule context.
 fn eval_expr(expr: &Expr, ctx: &RuleContext) -> bool {
     match expr {
-        Expr::Eq(field, val) => resolve_field(field, ctx).map(|v| values_equal(&v, val)).unwrap_or(false),
-        Expr::Ne(field, val) => resolve_field(field, ctx).map(|v| !values_equal(&v, val)).unwrap_or(true),
-        Expr::Gt(field, n) => resolve_field(field, ctx).and_then(|v| value_as_i64(&v)).map(|v| v > *n).unwrap_or(false),
-        Expr::Lt(field, n) => resolve_field(field, ctx).and_then(|v| value_as_i64(&v)).map(|v| v < *n).unwrap_or(false),
-        Expr::In(field, list) => {
-            resolve_field(field, ctx).map(|v| list.iter().any(|item| values_equal(&v, item))).unwrap_or(false)
-        }
+        Expr::Eq(field, val) => resolve_field(field, ctx)
+            .map(|v| values_equal(&v, val))
+            .unwrap_or(false),
+        Expr::Ne(field, val) => resolve_field(field, ctx)
+            .map(|v| !values_equal(&v, val))
+            .unwrap_or(true),
+        Expr::Gt(field, n) => resolve_field(field, ctx)
+            .and_then(|v| value_as_i64(&v))
+            .map(|v| v > *n)
+            .unwrap_or(false),
+        Expr::Lt(field, n) => resolve_field(field, ctx)
+            .and_then(|v| value_as_i64(&v))
+            .map(|v| v < *n)
+            .unwrap_or(false),
+        Expr::In(field, list) => resolve_field(field, ctx)
+            .map(|v| list.iter().any(|item| values_equal(&v, item)))
+            .unwrap_or(false),
         Expr::And(a, b) => eval_expr(a, ctx) && eval_expr(b, ctx),
         Expr::Or(a, b) => eval_expr(a, ctx) || eval_expr(b, ctx),
     }
@@ -458,7 +526,11 @@ fn value_as_i64(v: &Value) -> Option<i64> {
 fn resolve_field(field: &str, ctx: &RuleContext) -> Option<Value> {
     let r = ctx.record;
     match field {
-        "pqc_kem" => Some(r.server_kem_selected.map(|k| Value::Str(kem_name(&k))).unwrap_or(Value::None)),
+        "pqc_kem" => Some(
+            r.server_kem_selected
+                .map(|k| Value::Str(kem_name(&k)))
+                .unwrap_or(Value::None),
+        ),
         "tls_version" => Some(Value::Str(tls_version_str(r.tls_version))),
         "is_composite_cert" => Some(Value::Bool(r.is_composite_cert)),
         "is_pqc_signature" => Some(Value::Bool(r.is_pqc_signature)),
@@ -558,8 +630,11 @@ mod tests {
     fn test_record() -> PqcHandshakeRecord {
         PqcHandshakeRecord {
             connection_5tuple: FiveTuple {
-                src_ip: "10.0.0.1".parse().unwrap(), src_port: 443,
-                dst_ip: "10.0.0.2".parse().unwrap(), dst_port: 12345, protocol: 6,
+                src_ip: "10.0.0.1".parse().unwrap(),
+                src_port: 443,
+                dst_ip: "10.0.0.2".parse().unwrap(),
+                dst_port: 12345,
+                protocol: 6,
             },
             tls_version: TlsVersion::TlsV1_3,
             server_name: "example.com".into(),
@@ -567,7 +642,12 @@ mod tests {
             server_kem_selected: Some(KemId::MlKem768),
             is_hybrid_kem: false,
             classical_group: None,
-            pqc_kem: Some(PqcKem { algorithm: KemId::MlKem768, public_key: None, ciphertext: None, shared_secret: None }),
+            pqc_kem: Some(PqcKem {
+                algorithm: KemId::MlKem768,
+                public_key: None,
+                ciphertext: None,
+                shared_secret: None,
+            }),
             shared_secret_size: 32,
             cert_sig_algorithm: SigAlgorithm::MlDsa65,
             is_pqc_signature: true,
@@ -611,7 +691,10 @@ mod tests {
     fn parse_simple_eq() {
         let expr = parse_condition("pqc_kem == 'Kyber-768'").unwrap();
         let record = test_record();
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(eval_expr(&expr, &ctx));
     }
 
@@ -619,7 +702,10 @@ mod tests {
     fn parse_not_eq() {
         let expr = parse_condition("pqc_kem != 'Kyber-512'").unwrap();
         let record = test_record();
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(eval_expr(&expr, &ctx));
     }
 
@@ -627,7 +713,10 @@ mod tests {
     fn parse_in_list() {
         let expr = parse_condition("pqc_kem IN ['Kyber-512', 'Kyber-768', 'Kyber-1024']").unwrap();
         let record = test_record();
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(eval_expr(&expr, &ctx));
     }
 
@@ -635,7 +724,10 @@ mod tests {
     fn parse_and_combined() {
         let expr = parse_condition("tls_version == '1.3' AND pqc_kem == 'Kyber-768'").unwrap();
         let record = test_record();
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(eval_expr(&expr, &ctx));
     }
 
@@ -643,15 +735,24 @@ mod tests {
     fn parse_or_combined() {
         let expr = parse_condition("tls_version == '1.2' OR pqc_kem == 'Kyber-768'").unwrap();
         let record = test_record();
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(eval_expr(&expr, &ctx));
     }
 
     #[test]
     fn parse_parenthesized() {
-        let expr = parse_condition("is_composite_cert == true AND (cert_sig_hash == 'SHA-1' OR rsa_key_size < 2048)").unwrap();
+        let expr = parse_condition(
+            "is_composite_cert == true AND (cert_sig_hash == 'SHA-1' OR rsa_key_size < 2048)",
+        )
+        .unwrap();
         let record = test_record();
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(!eval_expr(&expr, &ctx));
     }
 
@@ -660,7 +761,10 @@ mod tests {
         let expr = parse_condition("pqc_kem == None").unwrap();
         let mut record = test_record();
         record.server_kem_selected = None;
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(eval_expr(&expr, &ctx));
     }
 
@@ -671,7 +775,10 @@ mod tests {
         let mut record = test_record();
         record.server_kem_selected = None;
         record.client_kem_offers = Vec::new();
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         let finding = rule.evaluate(&ctx);
         assert!(finding.is_some());
         assert_eq!(finding.unwrap().severity, Severity::Medium);
@@ -683,7 +790,10 @@ mod tests {
         let rule = rule_set.rules.iter().find(|r| r.id == "PQC-005").unwrap();
         let mut record = test_record();
         record.cert_chain_length = 1;
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         let finding = rule.evaluate(&ctx);
         assert!(finding.is_some());
         assert_eq!(finding.unwrap().severity, Severity::Low);
@@ -710,20 +820,30 @@ mod tests {
         let expr = parse_condition("client_hello_size > 10240").unwrap();
         let mut record = test_record();
         record.client_hello_size = 500;
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(!eval_expr(&expr, &ctx));
 
         record.client_hello_size = 20000;
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         assert!(eval_expr(&expr, &ctx));
     }
 
     #[test]
     fn parse_prev_connection_context() {
-        let expr = parse_condition("tls_version == '1.2' AND prev_connection_had_pqc == true").unwrap();
+        let expr =
+            parse_condition("tls_version == '1.2' AND prev_connection_had_pqc == true").unwrap();
         let mut record = test_record();
         record.tls_version = TlsVersion::TlsV1_2;
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: true };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: true,
+        };
         assert!(eval_expr(&expr, &ctx));
     }
 
@@ -733,7 +853,10 @@ mod tests {
         let rule = rule_set.rules.iter().find(|r| r.id == "PQC-001").unwrap();
         let mut record = test_record();
         record.server_kem_selected = Some(KemId::MlKem512);
-        let ctx = RuleContext { record: &record, prev_connection_had_pqc: false };
+        let ctx = RuleContext {
+            record: &record,
+            prev_connection_had_pqc: false,
+        };
         let finding = rule.evaluate(&ctx);
         assert!(finding.is_some());
         let f = finding.unwrap();

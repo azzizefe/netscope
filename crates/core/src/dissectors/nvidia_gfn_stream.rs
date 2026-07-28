@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_nvidia_gfn_stream(
     src_ip: Option<IpAddr>,
@@ -29,7 +29,11 @@ pub fn dissect_nvidia_gfn_stream(
         let is_repair = (frame_type & 0x40) != 0;
         format!(
             "GFN Stream ch={} seq={} {} ts={}ms magic=0x{:04x}{}{} len={}",
-            channel, frame_seq, type_name, ts, magic,
+            channel,
+            frame_seq,
+            type_name,
+            ts,
+            magic,
             if is_key { " KEY" } else { "" },
             if is_repair { " REPAIR" } else { "" },
             payload.len(),

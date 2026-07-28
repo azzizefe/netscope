@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_steam_game_networking_s2(
     src_ip: Option<IpAddr>,
@@ -25,7 +25,10 @@ pub fn dissect_steam_game_networking_s2(
             5 => "Ping",
             _ => "Unknown",
         };
-        format!("SteamNetS2 chan={} {} seq={} conn={}", channel, type_name, seq, conn)
+        format!(
+            "SteamNetS2 chan={} {} seq={} conn={}",
+            channel, type_name, seq, conn
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -43,7 +46,13 @@ mod tests {
 
     #[test]
     fn test_steam_net_s2_reliable() {
-        let r = dissect_steam_game_networking_s2(None, None, 27015, 27015, b"\x00\x01\x00\x05\x00\x00\x00\x01");
+        let r = dissect_steam_game_networking_s2(
+            None,
+            None,
+            27015,
+            27015,
+            b"\x00\x01\x00\x05\x00\x00\x00\x01",
+        );
         assert_eq!(r.protocol, Protocol::SteamGameNetworkingS2);
         assert!(r.summary.contains("Reliable"));
         assert!(r.summary.contains("seq=5"));

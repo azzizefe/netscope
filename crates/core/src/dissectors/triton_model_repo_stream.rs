@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_triton_model_repo_stream(
     src_ip: Option<IpAddr>,
@@ -28,7 +28,10 @@ pub fn dissect_triton_model_repo_stream(
         } else {
             String::new()
         };
-        format!("Triton Model Repo Stream op={} seq={}{}", op_name, chunk_seq, extra)
+        format!(
+            "Triton Model Repo Stream op={} seq={}{}",
+            op_name, chunk_seq, extra
+        )
     };
     DissectedResult {
         src_addr: src_ip,

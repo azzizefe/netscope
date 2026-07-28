@@ -10,13 +10,25 @@ fn json_msg_type(payload: &[u8]) -> Option<&'static str> {
         return Some("DataSetMessage");
     }
     if raw.contains("\"MessageType\"") {
-        if raw.contains("\"ua-data\"" ) || raw.contains("ua-data") { return Some("KeyValueDataSet"); }
-        if raw.contains("\"ua-metadata\"") || raw.contains("ua-metadata") { return Some("MetaData"); }
-        if raw.contains("\"ua-keepalive\"") { return Some("KeepAlive"); }
-        if raw.contains("\"ua-event\"") { return Some("Event"); }
+        if raw.contains("\"ua-data\"") || raw.contains("ua-data") {
+            return Some("KeyValueDataSet");
+        }
+        if raw.contains("\"ua-metadata\"") || raw.contains("ua-metadata") {
+            return Some("MetaData");
+        }
+        if raw.contains("\"ua-keepalive\"") {
+            return Some("KeepAlive");
+        }
+        if raw.contains("\"ua-event\"") {
+            return Some("Event");
+        }
     }
-    if raw.contains("\"DataSetWriterId\"") { return Some("DataSetWriterData"); }
-    if raw.contains("\"WriterGroupId\"") { return Some("WriterGroup"); }
+    if raw.contains("\"DataSetWriterId\"") {
+        return Some("DataSetWriterData");
+    }
+    if raw.contains("\"WriterGroupId\"") {
+        return Some("WriterGroup");
+    }
     None
 }
 
@@ -27,7 +39,7 @@ fn json_extract_field(payload: &[u8], field: &str) -> Option<String> {
         let after = &raw[pos + search.len()..];
         if let Some(colon) = after.find(':') {
             let val = after[colon + 1..].trim();
-            let end = val.find(|c: char| c == ',' || c == '}' || c == ']').unwrap_or(val.len().min(40));
+            let end = val.find([',', '}', ']']).unwrap_or(val.len().min(40));
             let v = val[..end].trim().trim_matches('"').to_string();
             return Some(v);
         }
@@ -43,9 +55,12 @@ pub fn dissect_opc_ua_pubsub_json_detail(
     payload: &[u8],
 ) -> DissectedResult {
     let fallback = |s: String| DissectedResult {
-        src_addr: src_ip, dst_addr: dst_ip,
-        src_port: Some(src_port), dst_port: Some(dst_port),
-        protocol: Protocol::OpcUaPubsubJsonDetail, summary: s,
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::OpcUaPubsubJsonDetail,
+        summary: s,
     };
     if payload.len() < 4 {
         return fallback("OPC UA PubSub JSON Detail (partial)".into());

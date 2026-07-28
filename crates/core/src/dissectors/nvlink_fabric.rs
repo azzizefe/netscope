@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
-use crate::models::Protocol;
 use crate::dissectors::DissectedResult;
+use crate::models::Protocol;
 
 pub fn dissect_nvlink_fabric(
     _src_ip: Option<IpAddr>,
@@ -10,16 +10,17 @@ pub fn dissect_nvlink_fabric(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary;
-    if payload.len() >= 8 {
+    let summary = if payload.len() >= 8 {
         let version = payload[0];
         let cmd_type = payload[1];
         let txn_id = u32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]);
-        summary = format!("NVLink fabric ver={} cmd=0x{:02x} tx=#{}",
-            version, cmd_type, txn_id);
+        format!(
+            "NVLink fabric ver={} cmd=0x{:02x} tx=#{}",
+            version, cmd_type, txn_id
+        )
     } else {
-        summary = "NVLink fabric (short frame)".into();
-    }
+        "NVLink fabric (short frame)".into()
+    };
     DissectedResult {
         src_addr: _src_ip,
         dst_addr: _dst_ip,
@@ -44,7 +45,10 @@ mod tests {
         let r = dissect_nvlink_fabric(
             Some("10.0.0.1".parse::<IpAddr>().unwrap()),
             Some("10.0.0.2".parse::<IpAddr>().unwrap()),
-            5000, 5000, &buf);
+            5000,
+            5000,
+            &buf,
+        );
         assert_eq!(r.protocol, Protocol::NvlinkFabric);
         assert!(r.summary.contains("ver=2"));
         assert!(r.summary.contains("cmd=0x10"));

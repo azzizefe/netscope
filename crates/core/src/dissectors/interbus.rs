@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_interbus(
     src_ip: Option<IpAddr>,
@@ -20,7 +20,12 @@ pub fn dissect_interbus(
             _ => "Data",
         };
         let len = u16::from_be_bytes([payload[2], payload[3]]);
-        format!("INTERBUS — {} len:{} ({})", fc, len, super::bytes(payload.len() as u64))
+        format!(
+            "INTERBUS — {} len:{} ({})",
+            fc,
+            len,
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("INTERBUS — {}", super::bytes(payload.len() as u64))
     };

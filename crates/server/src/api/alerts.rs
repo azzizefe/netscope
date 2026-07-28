@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use axum::{Json, Router};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::{get, patch};
+use axum::{Json, Router};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
@@ -46,7 +46,11 @@ async fn list_alerts(
 
     match queries::list_alerts(&state.pool, &filter).await {
         Ok(alerts) => (StatusCode::OK, Json(json!(alerts))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -56,11 +60,19 @@ async fn update_alert_status(
     claims: Option<axum::extract::Extension<Claims>>,
     Json(body): Json<UpdateAlertStatus>,
 ) -> impl IntoResponse {
-    let user_id = claims.and_then(|c| Some(c.0.sub));
+    let user_id = claims.map(|c| c.0.sub);
     match queries::update_alert_status(&state.pool, id, &body.status, user_id).await {
         Ok(Some(alert)) => (StatusCode::OK, Json(json!(alert))).into_response(),
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "alert not found"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "alert not found"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 

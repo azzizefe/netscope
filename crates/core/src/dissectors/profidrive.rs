@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_profidrive(
     src_ip: Option<IpAddr>,
@@ -21,7 +21,12 @@ pub fn dissect_profidrive(
             _ => "Service",
         };
         let drive = payload[1];
-        format!("PROFIdrive — {} drive:{} ({})", svc, drive, super::bytes(payload.len() as u64))
+        format!(
+            "PROFIdrive — {} drive:{} ({})",
+            svc,
+            drive,
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("PROFIdrive — {}", super::bytes(payload.len() as u64))
     };

@@ -714,11 +714,15 @@ pub fn dissect_tls(
                     TlsVersion::from_u16(ch.version)
                 };
                 let server_name = ch.sni.clone().unwrap_or_default();
-                let kem_offers: Vec<KemId> = ch.supported_groups.iter()
+                let kem_offers: Vec<KemId> = ch
+                    .supported_groups
+                    .iter()
                     .filter_map(|&g| kem_from_supported_group(g))
                     .collect();
                 let selected_kem = s.key_share_group.and_then(kem_from_supported_group);
-                let is_hybrid = s.key_share_group.map_or(false, |g| matches!(g, 0x00CE | 0x00CF | 0x00D0 | 0x00FE));
+                let is_hybrid = s
+                    .key_share_group
+                    .is_some_and(|g| matches!(g, 0x00CE | 0x00CF | 0x00D0 | 0x00FE));
                 let classical_group = if s.key_share_group == Some(0x00FE) {
                     Some(crate::pqc_handshake::NamedGroup::X25519)
                 } else {

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_steam_remote_play_together(
     src_ip: Option<IpAddr>,
@@ -39,7 +39,10 @@ pub fn dissect_steam_remote_play_together(
         };
         format!(
             "Steam RPT client={} msg={} seq={}{}{} len={}",
-            client_id, type_name, seq, sub,
+            client_id,
+            type_name,
+            seq,
+            sub,
             if is_rpt_magic { "" } else { " (raw)" },
             payload.len(),
         )

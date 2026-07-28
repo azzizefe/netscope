@@ -27,6 +27,10 @@ message HeartbeatRequest {
   int32 ram_used_mb = 3;
   int64 capture_throughput_bps = 4;
   int64 uptime_secs = 5;
+  // Kept in step with the REST heartbeat payload, which has carried this
+  // since the agent's first version — a sensor that fills its capture disk
+  // stops recording, and that has to be visible over either transport.
+  int64 disk_free_mb = 6;
 }
 
 message HeartbeatResponse {

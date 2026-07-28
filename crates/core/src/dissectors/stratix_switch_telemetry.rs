@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_stratix_switch_telemetry(
     _src_ip: Option<IpAddr>,
@@ -12,7 +12,12 @@ pub fn dissect_stratix_switch_telemetry(
     let summary = if payload.len() >= 6 {
         let msg_type = payload[0];
         let slot = payload.get(1).copied().unwrap_or(0);
-        let port_bits = u32::from_be_bytes([payload.get(2).copied().unwrap_or(0), payload.get(3).copied().unwrap_or(0), payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0)]);
+        let port_bits = u32::from_be_bytes([
+            payload.get(2).copied().unwrap_or(0),
+            payload.get(3).copied().unwrap_or(0),
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+        ]);
 
         let type_name = match msg_type {
             0x01 => "PortMirrorConfig",
@@ -26,9 +31,15 @@ pub fn dissect_stratix_switch_telemetry(
 
         let port_count = port_bits.count_ones();
 
-        format!("Stratix Switch Telemetry — {type_name} slot:{slot} ports:{port_count} ({len} bytes)", len = payload.len())
+        format!(
+            "Stratix Switch Telemetry — {type_name} slot:{slot} ports:{port_count} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
-        format!("Stratix Switch Telemetry — {len} bytes", len = payload.len())
+        format!(
+            "Stratix Switch Telemetry — {len} bytes",
+            len = payload.len()
+        )
     };
 
     DissectedResult {

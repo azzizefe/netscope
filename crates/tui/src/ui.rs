@@ -141,7 +141,12 @@ fn render_keybinding_bar(frame: &mut Frame, area: Rect, app: &App, theme: Theme)
             " ? help ",
             " q quit ",
         ]
-    } else if app.view == View::Learn || app.view == View::Insights || app.view == View::AiTraffic || app.view == View::IndustrialEdgeAi || app.view == View::PqcWizard {
+    } else if app.view == View::Learn
+        || app.view == View::Insights
+        || app.view == View::AiTraffic
+        || app.view == View::IndustrialEdgeAi
+        || app.view == View::PqcWizard
+    {
         &[
             " ↑↓/jk scroll ",
             " Tab switch ",

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_powerflex_drive_cip(
     _src_ip: Option<IpAddr>,
@@ -13,7 +13,12 @@ pub fn dissect_powerflex_drive_cip(
         let class_id = u16::from_be_bytes([payload[0], payload[1]]);
         let instance = u16::from_be_bytes([payload[2], payload[3]]);
         let attribute = u16::from_be_bytes([payload[4], payload[5]]);
-        let energy_val = u32::from_be_bytes([payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0), payload.get(8).copied().unwrap_or(0), payload.get(9).copied().unwrap_or(0)]);
+        let energy_val = u32::from_be_bytes([
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+            payload.get(8).copied().unwrap_or(0),
+            payload.get(9).copied().unwrap_or(0),
+        ]);
 
         let class_name = match class_id {
             0x4E => "Energy (0x4E)",

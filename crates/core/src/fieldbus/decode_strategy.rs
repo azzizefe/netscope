@@ -116,13 +116,11 @@ fn decode_l1(data: &[u8]) -> FieldbusDecodeRecord {
         needs_plugin_update: false,
     };
 
-    if ethertype == ETHERTYPE_VLAN || ethertype == ETHERTYPE_QINQ {
-        if data.len() >= 18 {
-            let tci = u16::from_be_bytes([data[14], data[15]]);
-            rec.vlan_id = Some(tci & 0x0FFF);
-            rec.vlan_priority = Some((tci >> 13) as u8);
-            rec.ethertype = u16::from_be_bytes([data[16], data[17]]);
-        }
+    if (ethertype == ETHERTYPE_VLAN || ethertype == ETHERTYPE_QINQ) && data.len() >= 18 {
+        let tci = u16::from_be_bytes([data[14], data[15]]);
+        rec.vlan_id = Some(tci & 0x0FFF);
+        rec.vlan_priority = Some((tci >> 13) as u8);
+        rec.ethertype = u16::from_be_bytes([data[16], data[17]]);
     }
 
     if ethertype == ETHERTYPE_PROFINET {
@@ -195,7 +193,7 @@ fn decode_l2_ethercat(rec: &mut FieldbusDecodeRecord, payload: &[u8]) {
     let length_11_4 = header_len_raw & 0x0FFF;
     let typ = (header_len_raw >> 12) & 0x0F;
 
-    rec.io_data_length = length_11_4 as u16;
+    rec.io_data_length = length_11_4;
     rec.io_module_count = typ as u8;
 
     if payload.len() >= 4 {
@@ -212,7 +210,7 @@ fn decode_l2_ethercat(rec: &mut FieldbusDecodeRecord, payload: &[u8]) {
             }
             ETHERCAT_CMD_LRW => {
                 rec.transfer_status = TransferStatus::Ok;
-                rec.io_data_length = length_11_4 as u16;
+                rec.io_data_length = length_11_4;
             }
             ETHERCAT_CMD_BRD => {
                 rec.transfer_status = TransferStatus::Ok;
@@ -366,7 +364,8 @@ mod tests {
     #[test]
     fn decode_l2_profinet_frame_id() {
         let mut p = vec![0u8; 20];
-        p[0] = 0x00; p[1] = 0x20;
+        p[0] = 0x00;
+        p[1] = 0x20;
         let data = make_eth_frame(ETHERTYPE_PROFINET, &p);
         let rec = decode_frame(&data, DLT_EN10MB).unwrap();
         assert_eq!(rec.frame_id, 0x0020); // PTCP
@@ -375,10 +374,16 @@ mod tests {
     #[test]
     fn decode_l2_ethercat_command() {
         let payload = &[
-            0x00, 0x08, // length=8, type=0
-            ETHERCAT_CMD_APRD, 0x01, // cmd, idx
-            0x00, 0x00, 0x00, 0x00, // addr
-            0x00, 0x00, // len
+            0x00,
+            0x08, // length=8, type=0
+            ETHERCAT_CMD_APRD,
+            0x01, // cmd, idx
+            0x00,
+            0x00,
+            0x00,
+            0x00, // addr
+            0x00,
+            0x00, // len
         ];
         let data = make_eth_frame(0x88A4, payload);
         let rec = decode_frame(&data, DLT_EN10MB).unwrap();

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_edge_pytorch_mobile(
     src_ip: Option<IpAddr>,
@@ -19,7 +19,10 @@ pub fn dissect_edge_pytorch_mobile(
             _ => "Unknown",
         };
         let tensor_count = u16::from_le_bytes([payload[4], payload[5]]);
-        format!("PyTorch Mobile — v{version} {method} tensors:{tensor_count} ({})", super::bytes(payload.len() as u64))
+        format!(
+            "PyTorch Mobile — v{version} {method} tensors:{tensor_count} ({})",
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("PyTorch Mobile — {}", super::bytes(payload.len() as u64))
     };

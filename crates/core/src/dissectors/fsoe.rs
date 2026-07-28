@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_fsoe(
     src_ip: Option<IpAddr>,
@@ -20,7 +20,12 @@ pub fn dissect_fsoe(
             _ => "Command",
         };
         let crc = u16::from_le_bytes([payload[4], payload[5]]);
-        format!("FSoE — {} crc:0x{:04x} ({})", cmd, crc, super::bytes(payload.len() as u64))
+        format!(
+            "FSoE — {} crc:0x{:04x} ({})",
+            cmd,
+            crc,
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("FSoE — {}", super::bytes(payload.len() as u64))
     };

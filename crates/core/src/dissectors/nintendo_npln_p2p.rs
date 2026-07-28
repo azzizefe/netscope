@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_nintendo_npln_p2p(
     src_ip: Option<IpAddr>,
@@ -30,7 +30,10 @@ pub fn dissect_nintendo_npln_p2p(
         let is_npln = magic == 0x4e504c4e;
         format!(
             "Nintendo NPLN {} seq={} session={} flags=0x{:02x}{}",
-            type_name, seq, session, flags,
+            type_name,
+            seq,
+            session,
+            flags,
             if is_npln { "" } else { " (raw)" },
         )
     };
@@ -50,7 +53,13 @@ mod tests {
 
     #[test]
     fn test_nintendo_npln_matchmake() {
-        let r = dissect_nintendo_npln_p2p(None, None, 30211, 30211, b"\x4e\x50\x4c\x4e\x03\x00\x00\x00\x00\x01\x00\x01\xde\xad");
+        let r = dissect_nintendo_npln_p2p(
+            None,
+            None,
+            30211,
+            30211,
+            b"\x4e\x50\x4c\x4e\x03\x00\x00\x00\x00\x01\x00\x01\xde\xad",
+        );
         assert_eq!(r.protocol, Protocol::NintendoNplnP2p);
         assert!(r.summary.contains("Matchmake"));
         assert!(r.summary.contains("seq=1"));

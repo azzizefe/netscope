@@ -19,14 +19,13 @@ pub fn build_tls_acceptor(
         let ca_certs = load_certs(ca)?;
         let mut root_store = rustls::RootCertStore::empty();
         for cert in ca_certs {
-            root_store.add(cert)
+            root_store
+                .add(cert)
                 .context("Failed to add CA certificate")?;
         }
-        let verifier = rustls::server::WebPkiClientVerifier::builder(
-            Arc::new(root_store),
-        )
-        .build()
-        .context("Failed to build mTLS client verifier")?;
+        let verifier = rustls::server::WebPkiClientVerifier::builder(Arc::new(root_store))
+            .build()
+            .context("Failed to build mTLS client verifier")?;
 
         ServerConfig::builder()
             .with_client_cert_verifier(verifier)

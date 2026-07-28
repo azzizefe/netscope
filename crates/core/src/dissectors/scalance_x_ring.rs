@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_scalance_x_ring(
     _src_ip: Option<IpAddr>,
@@ -14,7 +14,12 @@ pub fn dissect_scalance_x_ring(
         let ring_state = payload.get(1).copied().unwrap_or(0);
         let port1_state = payload.get(2).copied().unwrap_or(0);
         let port2_state = payload.get(3).copied().unwrap_or(0);
-        let ring_id = u32::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0), payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0)]);
+        let ring_id = u32::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+        ]);
 
         let state_name = match ring_state {
             0x00 => "Open (redundancy)",

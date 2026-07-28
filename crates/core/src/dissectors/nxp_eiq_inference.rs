@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_nxp_eiq_inference(
     src_ip: Option<IpAddr>,
@@ -25,7 +25,10 @@ pub fn dissect_nxp_eiq_inference(
             _ => "Unknown",
         };
         let inference_id = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]);
-        format!("NXP eIQ — backend:{backend} status:{status} id:{inference_id} ({})", super::bytes(payload.len() as u64))
+        format!(
+            "NXP eIQ — backend:{backend} status:{status} id:{inference_id} ({})",
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("NXP eIQ — {}", super::bytes(payload.len() as u64))
     };

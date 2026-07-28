@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_controlnet(
     src_ip: Option<IpAddr>,
@@ -19,7 +19,12 @@ pub fn dissect_controlnet(
             _ => "Data",
         };
         let slot = payload[1];
-        format!("ControlNet — {} slot:{} ({})", pkt_type, slot, super::bytes(payload.len() as u64))
+        format!(
+            "ControlNet — {} slot:{} ({})",
+            pkt_type,
+            slot,
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("ControlNet — {}", super::bytes(payload.len() as u64))
     };

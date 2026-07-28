@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 const FRAME_ID_ALARM_HIGH: u16 = 0xFC01;
 const FRAME_ID_ALARM_LOW: u16 = 0xFE01;

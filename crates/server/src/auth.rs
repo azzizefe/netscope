@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::extract::Request;
 use axum::http::StatusCode;
 use axum::middleware::Next;
@@ -37,11 +37,7 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct ClaimsFromRequest(pub Claims);
-
 pub struct JwtState {
-    secret: String,
     issuer: String,
     expiry_hours: i64,
     encoding_key: EncodingKey,
@@ -49,18 +45,23 @@ pub struct JwtState {
 }
 
 impl JwtState {
+    /// The raw secret is consumed here and not retained: both keys are derived
+    /// from it up front, and nothing else ever needs the bytes back.
     pub fn new(secret: String, issuer: Option<String>, expiry_hours: Option<i64>) -> Self {
-        let secret_key = secret.clone();
         JwtState {
-            secret,
             issuer: issuer.unwrap_or_else(|| "netscope-server".into()),
             expiry_hours: expiry_hours.unwrap_or(24),
-            encoding_key: EncodingKey::from_secret(secret_key.as_bytes()),
-            decoding_key: DecodingKey::from_secret(secret_key.as_bytes()),
+            encoding_key: EncodingKey::from_secret(secret.as_bytes()),
+            decoding_key: DecodingKey::from_secret(secret.as_bytes()),
         }
     }
 
-    pub fn create_token(&self, user_id: Uuid, username: &str, role: &str) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn create_token(
+        &self,
+        user_id: Uuid,
+        username: &str,
+        role: &str,
+    ) -> Result<String, jsonwebtoken::errors::Error> {
         let now = chrono::Utc::now().timestamp();
         // Computed in i64 and clamped, not cast. `(hours * 3600) as usize` on a
         // negative or oversized `expiry_hours` wraps to an enormous number and
@@ -97,7 +98,9 @@ pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Er
 
 pub fn verify_password(password: &str, hash: &str) -> Result<bool, argon2::password_hash::Error> {
     let parsed = PasswordHash::new(hash)?;
-    Ok(Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok())
+    Ok(Argon2::default()
+        .verify_password(password.as_bytes(), &parsed)
+        .is_ok())
 }
 
 #[derive(Debug, Clone)]
@@ -113,36 +116,63 @@ struct Permissions {
 impl RbacState {
     pub fn new() -> Self {
         let mut map = HashMap::new();
-        map.insert("admin".into(), vec![
-            "sensors:read".into(), "sensors:write".into(), "sensors:command".into(),
-            "events:read".into(), "events:write".into(),
-            "alerts:read".into(), "alerts:write".into(),
-            "rules:read".into(), "rules:write".into(),
-            "users:read".into(), "users:write".into(),
-            "dashboard:read".into(),
-        ]);
+        map.insert(
+            "admin".into(),
+            vec![
+                "sensors:read".into(),
+                "sensors:write".into(),
+                "sensors:command".into(),
+                "events:read".into(),
+                "events:write".into(),
+                "alerts:read".into(),
+                "alerts:write".into(),
+                "rules:read".into(),
+                "rules:write".into(),
+                "users:read".into(),
+                "users:write".into(),
+                "dashboard:read".into(),
+            ],
+        );
         // operator is the fleet role, and a fleet's job is producing events, so
         // it holds `events:write` — that is the permission `POST /events/batch`
         // is gated on. Without it a sensor could not report in at all.
-        map.insert("operator".into(), vec![
-            "sensors:read".into(), "sensors:write".into(), "sensors:command".into(),
-            "events:read".into(), "events:write".into(),
-            "alerts:read".into(), "alerts:write".into(),
-            "rules:read".into(),
-            "dashboard:read".into(),
-        ]);
-        map.insert("analyst".into(), vec![
-            "events:read".into(),
-            "alerts:read".into(), "alerts:write".into(),
-            "dashboard:read".into(),
-        ]);
-        map.insert("viewer".into(), vec![
-            "sensors:read".into(),
-            "events:read".into(),
-            "alerts:read".into(),
-            "dashboard:read".into(),
-        ]);
-        RbacState { inner: Arc::new(RwLock::new(Permissions { role_permissions: map })) }
+        map.insert(
+            "operator".into(),
+            vec![
+                "sensors:read".into(),
+                "sensors:write".into(),
+                "sensors:command".into(),
+                "events:read".into(),
+                "events:write".into(),
+                "alerts:read".into(),
+                "alerts:write".into(),
+                "rules:read".into(),
+                "dashboard:read".into(),
+            ],
+        );
+        map.insert(
+            "analyst".into(),
+            vec![
+                "events:read".into(),
+                "alerts:read".into(),
+                "alerts:write".into(),
+                "dashboard:read".into(),
+            ],
+        );
+        map.insert(
+            "viewer".into(),
+            vec![
+                "sensors:read".into(),
+                "events:read".into(),
+                "alerts:read".into(),
+                "dashboard:read".into(),
+            ],
+        );
+        RbacState {
+            inner: Arc::new(RwLock::new(Permissions {
+                role_permissions: map,
+            })),
+        }
     }
 
     /// Whether `role` may do `perm`.
@@ -171,14 +201,17 @@ impl Default for RbacState {
     }
 }
 
-pub async fn auth_middleware(
-    mut req: Request,
-    next: Next,
-) -> Response {
+pub async fn auth_middleware(mut req: Request, next: Next) -> Response {
     let state = req.extensions().get::<Arc<JwtState>>().cloned();
     let state = match state {
         Some(s) => s,
-        None => return (StatusCode::INTERNAL_SERVER_ERROR, "JWT state not configured").into_response(),
+        None => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "JWT state not configured",
+            )
+                .into_response()
+        }
     };
 
     let auth_header = req
@@ -189,7 +222,13 @@ pub async fn auth_middleware(
 
     let token = match auth_header {
         Some(t) => t,
-        None => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "missing authorization header"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "missing authorization header"})),
+            )
+                .into_response()
+        }
     };
 
     match state.validate_token(token) {
@@ -197,7 +236,11 @@ pub async fn auth_middleware(
             req.extensions_mut().insert(claims.clone());
             next.run(req).await
         }
-        Err(_) => (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "invalid or expired token"}))).into_response(),
+        Err(_) => (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({"error": "invalid or expired token"})),
+        )
+            .into_response(),
     }
 }
 
@@ -212,20 +255,25 @@ pub async fn auth_middleware(
 /// This closes that over the permission so the check can actually be layered on.
 pub fn require(
     perm: &'static str,
-) -> impl Fn(Request, Next) -> futures::future::BoxFuture<'static, Response> + Clone + Send + Sync + 'static
-{
+) -> impl Fn(Request, Next) -> futures::future::BoxFuture<'static, Response>
+       + Clone
+       + Send
+       + Sync
+       + 'static {
     move |req, next| Box::pin(require_permission(req, next, perm))
 }
 
-pub async fn require_permission(
-    req: Request,
-    next: Next,
-    perm: &'static str,
-) -> Response {
+pub async fn require_permission(req: Request, next: Next, perm: &'static str) -> Response {
     let claims = req.extensions().get::<Claims>().cloned();
     let claims = match claims {
         Some(c) => c,
-        None => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "not authenticated"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "not authenticated"})),
+            )
+                .into_response()
+        }
     };
 
     let rbac = req.extensions().get::<Arc<RbacState>>().cloned();
@@ -337,9 +385,7 @@ mod tests {
     #[test]
     fn an_expired_token_is_refused() {
         let jwt = JwtState::new("s3cret".into(), None, Some(-1));
-        let token = jwt
-            .create_token(Uuid::new_v4(), "efe", "viewer")
-            .unwrap();
+        let token = jwt.create_token(Uuid::new_v4(), "efe", "viewer").unwrap();
         assert!(jwt.validate_token(&token).is_err());
     }
 

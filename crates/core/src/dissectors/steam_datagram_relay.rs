@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_steam_datagram_relay(
     src_ip: Option<IpAddr>,
@@ -32,7 +32,13 @@ mod tests {
 
     #[test]
     fn test_steam_sdr_relay() {
-        let r = dissect_steam_datagram_relay(None, None, 27036, 27036, b"\xde\xad\xbe\xef\x00\x00\x00\x01\xca\xfe");
+        let r = dissect_steam_datagram_relay(
+            None,
+            None,
+            27036,
+            27036,
+            b"\xde\xad\xbe\xef\x00\x00\x00\x01\xca\xfe",
+        );
         assert_eq!(r.protocol, Protocol::SteamDatagramRelay);
         assert!(r.summary.contains("seq=1"));
     }

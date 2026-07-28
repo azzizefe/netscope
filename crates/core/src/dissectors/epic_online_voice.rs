@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_epic_online_voice(
     src_ip: Option<IpAddr>,
@@ -49,7 +49,13 @@ mod tests {
 
     #[test]
     fn test_eos_voice_data() {
-        let r = dissect_epic_online_voice(None, None, 27018, 27018, b"\x01\x02\x00\x20\xde\xad\xbe\xef");
+        let r = dissect_epic_online_voice(
+            None,
+            None,
+            27018,
+            27018,
+            b"\x01\x02\x00\x20\xde\xad\xbe\xef",
+        );
         assert_eq!(r.protocol, Protocol::EpicOnlineVoice);
         assert!(r.summary.contains("VoiceData"));
     }

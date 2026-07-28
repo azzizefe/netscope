@@ -24,7 +24,11 @@ pub fn dissect_sndcp(
         } else {
             "SN-DATA PDU"
         };
-        let seg_str = if first_seg { "First Segment" } else { "Segment" };
+        let seg_str = if first_seg {
+            "First Segment"
+        } else {
+            "Segment"
+        };
 
         format!("SNDCP {pdu_type} — NSAPI {nsapi} ({seg_str})")
     };

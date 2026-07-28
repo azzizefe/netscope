@@ -8,7 +8,7 @@ use super::DissectedResult;
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, TlsVersion, SigAlgorithm, KemId, PqcKem};
+    use crate::pqc_handshake::{KemId, PqcHandshakeRecord, PqcKem, SigAlgorithm, TlsVersion};
     use chrono::Utc;
 
     fn test_ft() -> FiveTuple {
@@ -23,13 +23,24 @@ mod tests {
 
     fn make_record(is_0rtt: bool, pqc: bool) -> PqcHandshakeRecord {
         let mut r = PqcHandshakeRecord::new(
-            test_ft(), TlsVersion::TlsV1_3, "example.com".into(),
-            if pqc { SigAlgorithm::MlDsa65 } else { SigAlgorithm::RsaPkcs1Sha256 },
+            test_ft(),
+            TlsVersion::TlsV1_3,
+            "example.com".into(),
+            if pqc {
+                SigAlgorithm::MlDsa65
+            } else {
+                SigAlgorithm::RsaPkcs1Sha256
+            },
             Utc::now(),
         );
         r.is_0rtt = is_0rtt;
         if pqc {
-            r.pqc_kem = Some(PqcKem { algorithm: KemId::MlKem768, public_key: None, ciphertext: None, shared_secret: None });
+            r.pqc_kem = Some(PqcKem {
+                algorithm: KemId::MlKem768,
+                public_key: None,
+                ciphertext: None,
+                shared_secret: None,
+            });
             r.server_kem_selected = Some(KemId::MlKem768);
         }
         r
@@ -117,12 +128,9 @@ fn analyze_resumption(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> (
     }
 
     let psk_possible = records.iter().filter(|r| r.is_0rtt).count();
-    let pqc_with_psk = records
-        .iter()
-        .filter(|r| r.used_pqc() && r.is_0rtt)
-        .count();
+    let pqc_with_psk = records.iter().filter(|r| r.used_pqc() && r.is_0rtt).count();
 
-    let psk_ratio =     if psk_possible > 0 {
+    let psk_ratio = if psk_possible > 0 {
         pqc_with_psk as f64 / psk_possible as f64 * 100.0
     } else {
         0.0

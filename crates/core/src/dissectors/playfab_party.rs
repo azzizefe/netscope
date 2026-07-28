@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_playfab_party(
     src_ip: Option<IpAddr>,
@@ -15,10 +15,7 @@ pub fn dissect_playfab_party(
         let version = payload[0];
         let msg_type = payload[1];
         let seq = u32::from_be_bytes(payload[4..8].try_into().unwrap());
-        format!(
-            "PlayFab Party v={} type={} seq={}",
-            version, msg_type, seq
-        )
+        format!("PlayFab Party v={} type={} seq={}", version, msg_type, seq)
     };
     DissectedResult {
         src_addr: src_ip,

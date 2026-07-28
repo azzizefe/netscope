@@ -6139,7 +6139,7 @@ reason as a numeric code.",
         },
 
 
-        
+
         Protocol::DcerpcAtsvc => Lesson {
             title: "DcerpcAtsvc",
             summary: "DCERPC-ATSVC Protocol.",
@@ -6723,7 +6723,7 @@ reason as a numeric code.",
             look_for: "DCOM-TYPEINFO header or payload.",
         },
 
-        
+
         Protocol::Btamp => Lesson {
             title: "Btamp",
             summary: "BTAMP Protocol.",
@@ -6953,7 +6953,7 @@ reason as a numeric code.",
             look_for: "HCI-USB header or payload.",
         },
 
-        
+
         Protocol::Ieee1609dot2 => Lesson {
             title: "Ieee1609dot2",
             summary: "IEEE1609DOT2 Protocol.",
@@ -7051,7 +7051,7 @@ reason as a numeric code.",
             look_for: "IEEE802A header or payload.",
         },
 
-        
+
         Protocol::Acse => Lesson {
             title: "Acse",
             summary: "ACSE Protocol.",
@@ -7221,7 +7221,7 @@ reason as a numeric code.",
             look_for: "X509SAT header or payload.",
         },
 
-        
+
         Protocol::Scsi => Lesson {
             title: "Scsi",
             summary: "SCSI Protocol.",
@@ -7259,7 +7259,7 @@ reason as a numeric code.",
             look_for: "SCSI-SSC header or payload.",
         },
 
-        
+
         Protocol::Fc => Lesson {
             title: "Fc",
             summary: "FC Protocol.",
@@ -7339,7 +7339,7 @@ reason as a numeric code.",
             look_for: "IFCP header or payload.",
         },
 
-        
+
         Protocol::UsbAudio => Lesson {
             title: "UsbAudio",
             summary: "USB-AUDIO Protocol.",
@@ -7431,7 +7431,7 @@ reason as a numeric code.",
             look_for: "USBMS-UASP header or payload.",
         },
 
-        
+
         Protocol::MplsEcho => Lesson {
             title: "MplsEcho",
             summary: "MPLS-ECHO Protocol.",
@@ -7469,7 +7469,7 @@ reason as a numeric code.",
             look_for: "MPLSTP-OAM header or payload.",
         },
 
-        
+
         Protocol::Rf4ceNwk => Lesson {
             title: "Rf4ceNwk",
             summary: "RF4CE-NWK Protocol.",
@@ -7621,7 +7621,7 @@ reason as a numeric code.",
             look_for: "ZBNCP header or payload.",
         },
 
-        
+
         Protocol::Netlink => Lesson {
             title: "Netlink",
             summary: "NETLINK Protocol.",
@@ -7713,7 +7713,7 @@ reason as a numeric code.",
             look_for: "NETLINK-SOCK-DIAG header or payload.",
         },
 
-        
+
         Protocol::Sapdiag => Lesson {
             title: "Sapdiag",
             summary: "SAPDIAG Protocol.",
@@ -7769,7 +7769,7 @@ reason as a numeric code.",
             look_for: "SAPSNC header or payload.",
         },
 
-        
+
         Protocol::Ipmi => Lesson {
             title: "Ipmi",
             summary: "IPMI Protocol.",
@@ -7849,7 +7849,7 @@ reason as a numeric code.",
             look_for: "IPMI-VITA header or payload.",
         },
 
-        
+
         Protocol::Bootparams => Lesson {
             title: "Bootparams",
             summary: "BOOTPARAMS Protocol.",
@@ -7989,7 +7989,7 @@ reason as a numeric code.",
             look_for: "YPXFR header or payload.",
         },
 
-        
+
         Protocol::Mcpe => Lesson {
             title: "Mcpe",
             summary: "MCPE Protocol.",

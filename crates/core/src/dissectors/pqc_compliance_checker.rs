@@ -10,7 +10,7 @@ use super::DissectedResult;
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, TlsVersion, SigAlgorithm};
+    use crate::pqc_handshake::{PqcHandshakeRecord, SigAlgorithm, TlsVersion};
     use chrono::Utc;
 
     fn test_ft() -> FiveTuple {
@@ -25,7 +25,10 @@ mod tests {
 
     #[test]
     fn compliance_framework_label_nist() {
-        assert_eq!(ComplianceFramework::NistSp800131a.label(), "NIST SP 800-131A");
+        assert_eq!(
+            ComplianceFramework::NistSp800131a.label(),
+            "NIST SP 800-131A"
+        );
     }
 
     #[test]
@@ -61,8 +64,11 @@ mod tests {
         crate::dissectors::tls::clear_tls_sessions();
         let ft = test_ft();
         let r = PqcHandshakeRecord::new(
-            ft, TlsVersion::TlsV1_3, "example.com".into(),
-            SigAlgorithm::MlDsa65, Utc::now(),
+            ft,
+            TlsVersion::TlsV1_3,
+            "example.com".into(),
+            SigAlgorithm::MlDsa65,
+            Utc::now(),
         );
         crate::dissectors::tls::push_pqc_record_for_test(r);
         let result = dissect_pqc_compliance_checker(None, None, 443, 54321, &[]);

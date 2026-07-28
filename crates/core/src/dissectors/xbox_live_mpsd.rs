@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_xbox_live_mpsd(
     src_ip: Option<IpAddr>,
@@ -26,7 +26,10 @@ pub fn dissect_xbox_live_mpsd(
             0x0203 => "MemberLeave",
             _ => "Unknown",
         };
-        format!("Xbox MPSD {} session={} flags=0x{:04x}", type_name, session_id, flags)
+        format!(
+            "Xbox MPSD {} session={} flags=0x{:04x}",
+            type_name, session_id, flags
+        )
     };
     DissectedResult {
         src_addr: src_ip,

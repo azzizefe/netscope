@@ -88,10 +88,18 @@ impl std::fmt::Display for IndustrialAnomaly {
         match self {
             IndustrialAnomaly::UnauthorizedWrite => write!(f, "Unauthorized Write"),
             IndustrialAnomaly::UnauthorizedPlcStop => write!(f, "Unauthorized PLC Stop"),
-            IndustrialAnomaly::UnauthorizedFirmwareWrite => write!(f, "Unauthorized Firmware Write"),
-            IndustrialAnomaly::UnauthorizedProgramDownload => write!(f, "Unauthorized Program Download"),
-            IndustrialAnomaly::UnauthorizedPlcModeChange => write!(f, "Unauthorized PLC Mode Change"),
-            IndustrialAnomaly::UnauthorizedParameterChange => write!(f, "Unauthorized Parameter Change"),
+            IndustrialAnomaly::UnauthorizedFirmwareWrite => {
+                write!(f, "Unauthorized Firmware Write")
+            }
+            IndustrialAnomaly::UnauthorizedProgramDownload => {
+                write!(f, "Unauthorized Program Download")
+            }
+            IndustrialAnomaly::UnauthorizedPlcModeChange => {
+                write!(f, "Unauthorized PLC Mode Change")
+            }
+            IndustrialAnomaly::UnauthorizedParameterChange => {
+                write!(f, "Unauthorized Parameter Change")
+            }
             IndustrialAnomaly::UnauthorizedConfigChange => write!(f, "Unauthorized Config Change"),
             IndustrialAnomaly::ExcessiveReadRate => write!(f, "Excessive Read Rate"),
             IndustrialAnomaly::BruteForceAttempt => write!(f, "Brute Force Attempt"),
@@ -170,7 +178,10 @@ impl IndustrialSecurityAnalyzer {
 
     /// Add a source address to the whitelist for a given protocol.
     pub fn add_whitelist(&mut self, protocol: impl Into<String>, addr: impl Into<String>) {
-        self.whitelist.entry(protocol.into()).or_default().push(addr.into());
+        self.whitelist
+            .entry(protocol.into())
+            .or_default()
+            .push(addr.into());
     }
 
     /// Record an industrial operation, running anomaly detection.
@@ -180,7 +191,10 @@ impl IndustrialSecurityAnalyzer {
             *self.anomaly_counter.entry(a.clone()).or_insert(0) += 1;
         }
         let now = op.timestamp;
-        self.source_timestamps.entry(op.src_addr.clone()).or_default().push(now);
+        self.source_timestamps
+            .entry(op.src_addr.clone())
+            .or_default()
+            .push(now);
         *self.protocol_counts.entry(op.protocol.clone()).or_insert(0) += 1;
         *self.category_counts.entry(op.category).or_insert(0) += 1;
         self.operations.push(op);
@@ -188,9 +202,15 @@ impl IndustrialSecurityAnalyzer {
 
     /// Run all anomaly detection rules, returning the first match.
     fn detect_anomalies(&self, op: &IndustrialOperation) -> Option<IndustrialAnomaly> {
-        if let Some(a) = self.check_whitelist(op) { return Some(a); }
-        if let Some(a) = self.check_excessive_rate(op) { return Some(a); }
-        if let Some(a) = self.check_write_frequency(op) { return Some(a); }
+        if let Some(a) = self.check_whitelist(op) {
+            return Some(a);
+        }
+        if let Some(a) = self.check_excessive_rate(op) {
+            return Some(a);
+        }
+        if let Some(a) = self.check_write_frequency(op) {
+            return Some(a);
+        }
         self.check_plc_control(op)
     }
 
@@ -213,7 +233,8 @@ impl IndustrialSecurityAnalyzer {
     /// Rule 2: More than 100 operations/second from the same source.
     fn check_excessive_rate(&self, op: &IndustrialOperation) -> Option<IndustrialAnomaly> {
         if let Some(timestamps) = self.source_timestamps.get(&op.src_addr) {
-            let recent = timestamps.iter()
+            let recent = timestamps
+                .iter()
                 .filter(|t| (op.timestamp - **t).num_milliseconds().abs() < 100)
                 .count();
             if recent >= 100 {
@@ -229,7 +250,8 @@ impl IndustrialSecurityAnalyzer {
             return None;
         }
         if let Some(timestamps) = self.source_timestamps.get(&op.src_addr) {
-            let recent = timestamps.iter()
+            let recent = timestamps
+                .iter()
                 .filter(|t| (op.timestamp - **t).num_seconds().abs() < 1)
                 .count();
             if recent >= 50 {
@@ -251,29 +273,41 @@ impl IndustrialSecurityAnalyzer {
     }
 
     /// Total operations recorded.
-    pub fn total_operations(&self) -> usize { self.operations.len() }
+    pub fn total_operations(&self) -> usize {
+        self.operations.len()
+    }
 
     /// Total anomalies detected.
-    pub fn anomaly_count(&self) -> u64 { self.anomaly_counter.values().sum() }
+    pub fn anomaly_count(&self) -> u64 {
+        self.anomaly_counter.values().sum()
+    }
 
     /// Breakdown of anomalies by type.
     pub fn anomaly_breakdown(&self) -> Vec<(IndustrialAnomaly, u64)> {
-        let mut result: Vec<_> = self.anomaly_counter.iter().map(|(a, c)| (a.clone(), *c)).collect();
-        result.sort_by(|a, b| b.1.cmp(&a.1));
+        let mut result: Vec<_> = self
+            .anomaly_counter
+            .iter()
+            .map(|(a, c)| (a.clone(), *c))
+            .collect();
+        result.sort_by_key(|e| std::cmp::Reverse(e.1));
         result
     }
 
     /// Protocol usage counts, sorted by frequency.
     pub fn protocol_usage(&self) -> Vec<(String, u64)> {
-        let mut result: Vec<_> = self.protocol_counts.iter().map(|(p, c)| (p.clone(), *c)).collect();
-        result.sort_by(|a, b| b.1.cmp(&a.1));
+        let mut result: Vec<_> = self
+            .protocol_counts
+            .iter()
+            .map(|(p, c)| (p.clone(), *c))
+            .collect();
+        result.sort_by_key(|e| std::cmp::Reverse(e.1));
         result
     }
 
     /// Category usage counts, sorted by frequency.
     pub fn category_usage(&self) -> Vec<(IndustrialCategory, u64)> {
         let mut result: Vec<_> = self.category_counts.iter().map(|(c, n)| (*c, *n)).collect();
-        result.sort_by(|a, b| b.1.cmp(&a.1));
+        result.sort_by_key(|e| std::cmp::Reverse(e.1));
         result
     }
 
@@ -284,7 +318,7 @@ impl IndustrialSecurityAnalyzer {
             *counts.entry(op.operation_type.clone()).or_insert(0) += 1;
         }
         let mut result: Vec<_> = counts.into_iter().collect();
-        result.sort_by(|a, b| b.1.cmp(&a.1));
+        result.sort_by_key(|e| std::cmp::Reverse(e.1));
         result
     }
 
@@ -292,7 +326,11 @@ impl IndustrialSecurityAnalyzer {
     pub fn generate_report(&self) -> String {
         let total = self.total_operations();
         let anomalies = self.anomaly_count();
-        let anomaly_rate = if total == 0 { 0.0 } else { anomalies as f64 / total as f64 * 100.0 };
+        let anomaly_rate = if total == 0 {
+            0.0
+        } else {
+            anomalies as f64 / total as f64 * 100.0
+        };
 
         let mut report = String::new();
         report.push_str("═══ Industrial Edge Security Dashboard ═══\n\n");
@@ -308,7 +346,8 @@ impl IndustrialSecurityAnalyzer {
         } else {
             for (anomaly, count) in &ab {
                 let severity = match anomaly {
-                    IndustrialAnomaly::UnauthorizedWrite | IndustrialAnomaly::UnauthorizedPlcStop
+                    IndustrialAnomaly::UnauthorizedWrite
+                    | IndustrialAnomaly::UnauthorizedPlcStop
                     | IndustrialAnomaly::UnauthorizedFirmwareWrite
                     | IndustrialAnomaly::UnauthorizedProgramDownload
                     | IndustrialAnomaly::UnauthorizedPlcModeChange => "CRIT",
@@ -345,15 +384,25 @@ impl IndustrialSecurityAnalyzer {
         if anomaly_rate > 5.0 {
             report.push_str("   ⚠  Anomaly rate exceeds 5% — immediate review recommended\n");
         }
-        let write_ops = self.operation_type_distribution().iter()
-            .find(|(t, _)| t == "write").map(|(_, c)| *c).unwrap_or(0);
+        let write_ops = self
+            .operation_type_distribution()
+            .iter()
+            .find(|(t, _)| t == "write")
+            .map(|(_, c)| *c)
+            .unwrap_or(0);
         if write_ops > 100 {
             report.push_str("   ⚠  High write operation volume — verify write whitelist\n");
         }
-        if self.anomaly_counter.contains_key(&IndustrialAnomaly::PotentialScanning) {
+        if self
+            .anomaly_counter
+            .contains_key(&IndustrialAnomaly::PotentialScanning)
+        {
             report.push_str("   ⚠  Network scanning detected — consider network segmentation\n");
         }
-        if self.anomaly_counter.contains_key(&IndustrialAnomaly::ProtocolFuzzing) {
+        if self
+            .anomaly_counter
+            .contains_key(&IndustrialAnomaly::ProtocolFuzzing)
+        {
             report.push_str("   ⚠  Protocol fuzzing detected — possible exploit attempt\n");
         }
 
@@ -363,7 +412,9 @@ impl IndustrialSecurityAnalyzer {
 }
 
 impl Default for IndustrialSecurityAnalyzer {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
@@ -381,8 +432,12 @@ mod tests {
     fn records_normal_operation() {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Read Holding Registers", "read", "10.0.0.1", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Read Holding Registers",
+            "read",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         assert_eq!(a.total_operations(), 1);
         assert_eq!(a.anomaly_count(), 0);
@@ -393,8 +448,12 @@ mod tests {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.add_whitelist("Modbus", "10.0.0.1");
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Write Single Coil", "write", "10.0.0.99", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Write Single Coil",
+            "write",
+            "10.0.0.99",
+            "10.0.0.2",
         ));
         assert_eq!(a.anomaly_count(), 1);
     }
@@ -404,8 +463,12 @@ mod tests {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.add_whitelist("S7comm", "10.0.0.1");
         a.record_operation(IndustrialOperation::new(
-            "S7comm", IndustrialCategory::PlcCpu,
-            "DB Read", "read", "10.0.0.1", "192.168.1.1",
+            "S7comm",
+            IndustrialCategory::PlcCpu,
+            "DB Read",
+            "read",
+            "10.0.0.1",
+            "192.168.1.1",
         ));
         assert_eq!(a.anomaly_count(), 0);
     }
@@ -414,8 +477,12 @@ mod tests {
     fn plc_stop_triggers_anomaly() {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.record_operation(IndustrialOperation::new(
-            "S7comm", IndustrialCategory::PlcCpu,
-            "PLC Stop", "control", "10.0.0.99", "192.168.1.1",
+            "S7comm",
+            IndustrialCategory::PlcCpu,
+            "PLC Stop",
+            "control",
+            "10.0.0.99",
+            "192.168.1.1",
         ));
         assert!(a.anomaly_count() > 0);
     }
@@ -424,8 +491,12 @@ mod tests {
     fn firmware_write_triggers_anomaly() {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.record_operation(IndustrialOperation::new(
-            "CIP", IndustrialCategory::IoControl,
-            "Firmware Write", "write", "10.0.0.99", "10.0.0.2",
+            "CIP",
+            IndustrialCategory::IoControl,
+            "Firmware Write",
+            "write",
+            "10.0.0.99",
+            "10.0.0.2",
         ));
         assert!(a.anomaly_count() > 0);
     }
@@ -434,16 +505,28 @@ mod tests {
     fn anomaly_breakdown_ordered_by_count() {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "PLC Stop", "control", "10.0.0.99", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "PLC Stop",
+            "control",
+            "10.0.0.99",
+            "10.0.0.2",
         ));
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "PLC Stop", "control", "10.0.0.99", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "PLC Stop",
+            "control",
+            "10.0.0.99",
+            "10.0.0.2",
         ));
         a.record_operation(IndustrialOperation::new(
-            "CIP", IndustrialCategory::IoControl,
-            "Firmware Write", "write", "10.0.0.99", "10.0.0.2",
+            "CIP",
+            IndustrialCategory::IoControl,
+            "Firmware Write",
+            "write",
+            "10.0.0.99",
+            "10.0.0.2",
         ));
         let ab = a.anomaly_breakdown();
         assert!(!ab.is_empty());
@@ -454,16 +537,28 @@ mod tests {
     fn protocol_usage_counts() {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Read", "read", "10.0.0.1", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Read",
+            "read",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Read", "read", "10.0.0.1", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Read",
+            "read",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         a.record_operation(IndustrialOperation::new(
-            "S7comm", IndustrialCategory::PlcCpu,
-            "Read", "read", "10.0.0.1", "10.0.0.3",
+            "S7comm",
+            IndustrialCategory::PlcCpu,
+            "Read",
+            "read",
+            "10.0.0.1",
+            "10.0.0.3",
         ));
         let usage = a.protocol_usage();
         assert_eq!(usage[0].0, "Modbus");
@@ -474,16 +569,28 @@ mod tests {
     fn category_usage_counts() {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Read", "read", "10.0.0.1", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Read",
+            "read",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         a.record_operation(IndustrialOperation::new(
-            "BACnet", IndustrialCategory::Building,
-            "Who-Is", "read", "10.0.0.1", "10.0.0.2",
+            "BACnet",
+            IndustrialCategory::Building,
+            "Who-Is",
+            "read",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         a.record_operation(IndustrialOperation::new(
-            "KNX", IndustrialCategory::Building,
-            "Write", "write", "10.0.0.1", "10.0.0.2",
+            "KNX",
+            IndustrialCategory::Building,
+            "Write",
+            "write",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         let cu = a.category_usage();
         assert_eq!(cu[0].0, IndustrialCategory::Building);
@@ -494,8 +601,12 @@ mod tests {
     fn generate_report_includes_all_sections() {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Read Coils", "read", "10.0.0.1", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Read Coils",
+            "read",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         let report = a.generate_report();
         assert!(report.contains("Industrial Edge Security Dashboard"));
@@ -512,8 +623,12 @@ mod tests {
         let mut a = IndustrialSecurityAnalyzer::new();
         for _ in 0..120 {
             let mut op = IndustrialOperation::new(
-                "Modbus", IndustrialCategory::IoControl,
-                "Read Holding Registers", "read", "10.0.0.99", "10.0.0.2",
+                "Modbus",
+                IndustrialCategory::IoControl,
+                "Read Holding Registers",
+                "read",
+                "10.0.0.99",
+                "10.0.0.2",
             );
             op.timestamp = Utc::now();
             a.record_operation(op);
@@ -525,16 +640,28 @@ mod tests {
     fn record_operation_type_distribution() {
         let mut a = IndustrialSecurityAnalyzer::new();
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Read", "read", "10.0.0.1", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Read",
+            "read",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Read", "read", "10.0.0.1", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Read",
+            "read",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         a.record_operation(IndustrialOperation::new(
-            "Modbus", IndustrialCategory::IoControl,
-            "Write", "write", "10.0.0.1", "10.0.0.2",
+            "Modbus",
+            IndustrialCategory::IoControl,
+            "Write",
+            "write",
+            "10.0.0.1",
+            "10.0.0.2",
         ));
         let dist = a.operation_type_distribution();
         assert_eq!(dist[0].0, "read");

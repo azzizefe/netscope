@@ -33,11 +33,18 @@ pub struct RegisterResponse {
 pub async fn register(state: &AgentState) -> anyhow::Result<Uuid> {
     let info = system_info(state);
 
-    let resp: RegisterResponse = state
-        .http_post("/api/v1/sensors/register", &info)
-        .await?;
+    let resp: RegisterResponse = state.http_post("/api/v1/sensors/register", &info).await?;
 
-    tracing::info!("Registered with server as sensor {}", resp.id);
+    // Echo back what the server actually recorded, not what we sent. A
+    // hostname the server resolved differently, or a sensor it admitted as
+    // `disabled`, is the difference between "registered" and "registered and
+    // will never be given work".
+    tracing::info!(
+        "Registered with server as sensor {} (hostname={}, status={})",
+        resp.id,
+        resp.hostname,
+        resp.status,
+    );
     Ok(resp.id)
 }
 
@@ -84,14 +91,17 @@ fn get_ifaces() -> Vec<InterfaceInfo> {
     let mut result = Vec::new();
 
     for (name, data) in networks.iter() {
-        let ips: Vec<String> = data.ip_networks()
+        let ips: Vec<String> = data
+            .ip_networks()
             .iter()
             .map(|n| n.addr.to_string())
             .collect();
         let mac_str = {
             let m = data.mac_address();
-            format!("{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-                m.0[0], m.0[1], m.0[2], m.0[3], m.0[4], m.0[5])
+            format!(
+                "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+                m.0[0], m.0[1], m.0[2], m.0[3], m.0[4], m.0[5]
+            )
         };
         result.push(InterfaceInfo {
             name: name.clone(),

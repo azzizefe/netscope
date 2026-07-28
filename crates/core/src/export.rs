@@ -161,7 +161,7 @@ pub fn export_llm_prometheus(snapshot: &StatsSnapshot) -> String {
     lines.push(format!("llm_daily_cost {}", llm.daily_cost));
 
     for (model, ms) in &llm.per_model {
-        let _safe = model.replace('"', "_").replace('-', "_");
+        let _safe = model.replace(['"', '-'], "_");
         let avg_ttft = if ms.ttft_count > 0 {
             ms.ttft_sum_ms as f64 / ms.ttft_count as f64
         } else {
@@ -180,19 +180,34 @@ pub fn export_llm_prometheus(snapshot: &StatsSnapshot) -> String {
 
         let labels = format!("model=\"{}\"", model);
         lines.push(format!("llm_requests{{{}}} {}", labels, ms.requests));
-        lines.push(format!("llm_tokens_total{{{}}} {}", labels, ms.total_tokens));
+        lines.push(format!(
+            "llm_tokens_total{{{}}} {}",
+            labels, ms.total_tokens
+        ));
         lines.push(format!("llm_cost_total{{{}}} {}", labels, ms.cost));
         lines.push(format!("llm_avg_ttft_ms{{{}}} {:.1}", labels, avg_ttft));
         lines.push(format!("llm_avg_tpot_ms{{{}}} {:.1}", labels, avg_tpot));
-        lines.push(format!("llm_avg_tokens_per_second{{{}}} {:.1}", labels, avg_tps));
+        lines.push(format!(
+            "llm_avg_tokens_per_second{{{}}} {:.1}",
+            labels, avg_tps
+        ));
         lines.push(format!("llm_errors{{{}}} {}", labels, ms.errors));
         lines.push(format!("llm_error_4xx{{{}}} {}", labels, ms.error_4xx));
         lines.push(format!("llm_error_5xx{{{}}} {}", labels, ms.error_5xx));
-        lines.push(format!("llm_rate_limited{{{}}} {}", labels, ms.rate_limited));
-        lines.push(format!("llm_incomplete_streams{{{}}} {}", labels, ms.incomplete_streams));
-        lines.push(format!("llm_total_streams{{{}}} {}", labels, ms.total_streams));
+        lines.push(format!(
+            "llm_rate_limited{{{}}} {}",
+            labels, ms.rate_limited
+        ));
+        lines.push(format!(
+            "llm_incomplete_streams{{{}}} {}",
+            labels, ms.incomplete_streams
+        ));
+        lines.push(format!(
+            "llm_total_streams{{{}}} {}",
+            labels, ms.total_streams
+        ));
     }
 
-    lines.push(format!("# EOF"));
+    lines.push("# EOF".to_string());
     lines.join("\n")
 }

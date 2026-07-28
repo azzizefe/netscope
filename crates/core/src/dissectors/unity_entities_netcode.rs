@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_unity_entities_netcode(
     src_ip: Option<IpAddr>,
@@ -15,7 +15,10 @@ pub fn dissect_unity_entities_netcode(
         let snapshot_id = u16::from_be_bytes([payload[0], payload[1]]);
         let component_count = u16::from_be_bytes([payload[2], payload[3]]);
         let data_size = u16::from_be_bytes([payload[4], payload[5]]);
-        format!("Unity Entities Netcode snapshot {} ({} components, {} bytes)", snapshot_id, component_count, data_size)
+        format!(
+            "Unity Entities Netcode snapshot {} ({} components, {} bytes)",
+            snapshot_id, component_count, data_size
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -33,7 +36,13 @@ mod tests {
 
     #[test]
     fn test_unity_entities_netcode() {
-        let r = dissect_unity_entities_netcode(None, None, 9002, 9002, b"\x00\x01\x00\x05\x01\x00\xde\xad\xbe\xef");
+        let r = dissect_unity_entities_netcode(
+            None,
+            None,
+            9002,
+            9002,
+            b"\x00\x01\x00\x05\x01\x00\xde\xad\xbe\xef",
+        );
         assert_eq!(r.protocol, Protocol::UnityEntitiesNetcode);
         assert!(r.summary.contains("snapshot 1"));
     }

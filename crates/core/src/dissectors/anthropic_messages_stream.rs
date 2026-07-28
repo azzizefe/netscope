@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 fn extract_delta(payload: &[u8]) -> Option<String> {
     let raw = String::from_utf8_lossy(payload);
@@ -16,7 +16,11 @@ fn extract_delta(payload: &[u8]) -> Option<String> {
         return None;
     }
     let token = val.get("delta")?.get("text")?.as_str()?;
-    if token.is_empty() { None } else { Some(token.to_string()) }
+    if token.is_empty() {
+        None
+    } else {
+        Some(token.to_string())
+    }
 }
 
 fn is_stop(payload: &[u8]) -> bool {

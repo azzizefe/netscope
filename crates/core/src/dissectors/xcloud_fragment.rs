@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_xcloud_fragment(
     src_ip: Option<IpAddr>,
@@ -31,7 +31,11 @@ pub fn dissect_xcloud_fragment(
         let is_retransmit = (flags & 0x02) != 0;
         format!(
             "xCloud Frag stream={} {} frag={}/{} seq=0x{:08x}{}{} len={}",
-            stream_id, type_name, frag_index, total_fragments, fragment_id,
+            stream_id,
+            type_name,
+            frag_index,
+            total_fragments,
+            fragment_id,
             if is_last { " LAST" } else { "" },
             if is_retransmit { " RETX" } else { "" },
             payload.len(),

@@ -14,16 +14,20 @@ pub fn dissect_ipx(payload: &[u8]) -> DissectedResult {
         let src_sock = u16::from_be_bytes([payload[28], payload[29]]);
         if pkt_type == 5 {
             return DissectedResult {
-                src_addr: None, dst_addr: None,
-                src_port: Some(src_sock), dst_port: Some(dst_sock),
+                src_addr: None,
+                dst_addr: None,
+                src_port: Some(src_sock),
+                dst_port: Some(dst_sock),
                 protocol: Protocol::Spx,
                 summary: "IPX · SPX segment".into(),
             };
         }
         if pkt_type == 17 || dst_sock == 0x0451 || src_sock == 0x0451 {
             return DissectedResult {
-                src_addr: None, dst_addr: None,
-                src_port: Some(src_sock), dst_port: Some(dst_sock),
+                src_addr: None,
+                dst_addr: None,
+                src_port: Some(src_sock),
+                dst_port: Some(dst_sock),
                 protocol: Protocol::Ncp,
                 summary: "IPX · NCP request".into(),
             };

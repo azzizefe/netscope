@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_godot_rpc_mp(
     src_ip: Option<IpAddr>,
@@ -15,7 +15,10 @@ pub fn dissect_godot_rpc_mp(
         let rpc_id = payload[0];
         let node_path_len = u16::from_be_bytes([payload[1], payload[2]]);
         let method_len = u16::from_be_bytes([payload[3], payload[4]]);
-        format!("Godot RPC MP rpcId {} nodePath {} method {}", rpc_id, node_path_len, method_len)
+        format!(
+            "Godot RPC MP rpcId {} nodePath {} method {}",
+            rpc_id, node_path_len, method_len
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -33,7 +36,13 @@ mod tests {
 
     #[test]
     fn test_godot_rpc_mp() {
-        let r = dissect_godot_rpc_mp(None, None, 9876, 9876, b"\x01\x00\x05\x00\x04\x2f\x6e\x6f\x64\x65\x74\x65\x73\x74");
+        let r = dissect_godot_rpc_mp(
+            None,
+            None,
+            9876,
+            9876,
+            b"\x01\x00\x05\x00\x04\x2f\x6e\x6f\x64\x65\x74\x65\x73\x74",
+        );
         assert_eq!(r.protocol, Protocol::GodotRpcMp);
         assert!(r.summary.contains("rpcId 1"));
     }

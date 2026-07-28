@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 const COE_OBJECT_COUNTER: u16 = 0x6000;
 const COE_OBJECT_MODULE_ID: u16 = 0x6020;
@@ -16,7 +16,12 @@ pub fn dissect_ethercat_beckhoff_mdp(
         let mdp_idx = u16::from_be_bytes([payload[0], payload[1]]);
         let sub_idx = payload.get(2).copied().unwrap_or(0);
         let slot = payload.get(3).copied().unwrap_or(0);
-        let value = u32::from_be_bytes([payload.get(4).copied().unwrap_or(0), payload.get(5).copied().unwrap_or(0), payload.get(6).copied().unwrap_or(0), payload.get(7).copied().unwrap_or(0)]);
+        let value = u32::from_be_bytes([
+            payload.get(4).copied().unwrap_or(0),
+            payload.get(5).copied().unwrap_or(0),
+            payload.get(6).copied().unwrap_or(0),
+            payload.get(7).copied().unwrap_or(0),
+        ]);
 
         let obj_name = match mdp_idx {
             COE_OBJECT_COUNTER => "ModuleCounter",

@@ -234,10 +234,7 @@ fn detect_correlation_header(payload: &[u8]) -> Option<(CorrelationHeaderSource,
     }
     // x-goog-request-params has a base64 value — just record the header presence.
     if let Some(val) = extract_header(payload, "x-goog-request-params") {
-        return Some((
-            CorrelationHeaderSource::XGoogRequestParams,
-            val,
-        ));
+        return Some((CorrelationHeaderSource::XGoogRequestParams, val));
     }
     None
 }
@@ -448,8 +445,7 @@ impl PairCorrelationEngine {
             http2_stream_id,
         };
         self.pending.entry(key).or_default().push(pending);
-        self.last_request_time
-            .insert(five_tuple.clone(), timestamp);
+        self.last_request_time.insert(five_tuple.clone(), timestamp);
 
         CorrelationInfo {
             correlation_id,
@@ -484,9 +480,7 @@ impl PairCorrelationEngine {
         // Try each strategy in order.
         let result = self
             .try_header_match(&key, &header_correlation, timestamp, response_status)
-            .or_else(|| {
-                self.try_sse_match(payload, timestamp, five_tuple, response_status)
-            })
+            .or_else(|| self.try_sse_match(payload, timestamp, five_tuple, response_status))
             .or_else(|| {
                 self.try_timing_match(five_tuple, timestamp, http2_stream_id, response_status)
             })
@@ -556,9 +550,9 @@ impl PairCorrelationEngine {
 
         // Find a pending request with the same correlation ID.
         let pending_list = self.pending.get_mut(key)?;
-        let pos = pending_list.iter().position(|p| {
-            p.correlation_id.as_deref() == Some(id.as_str())
-        })?;
+        let pos = pending_list
+            .iter()
+            .position(|p| p.correlation_id.as_deref() == Some(id.as_str()))?;
         let pending = pending_list.remove(pos);
         if pending_list.is_empty() {
             self.pending.remove(key);
@@ -647,7 +641,10 @@ impl PairCorrelationEngine {
             },
         );
 
-        let cid = pending.correlation_id.clone().unwrap_or_else(|| sse_id.clone());
+        let cid = pending
+            .correlation_id
+            .clone()
+            .unwrap_or_else(|| sse_id.clone());
         let req_method = pending.request_method.clone();
         let req_path = pending.request_path.clone();
         self.completed.push(CorrelatedPair {
@@ -707,7 +704,10 @@ impl PairCorrelationEngine {
         }
 
         let cid = pending.correlation_id.clone().unwrap_or_else(|| {
-            format!("timing:{}-{}-{}-{}", five_tuple.src_ip, five_tuple.src_port, five_tuple.dst_ip, five_tuple.dst_port)
+            format!(
+                "timing:{}-{}-{}-{}",
+                five_tuple.src_ip, five_tuple.src_port, five_tuple.dst_ip, five_tuple.dst_port
+            )
         });
         let req_method = pending.request_method.clone();
         let req_path = pending.request_path.clone();
@@ -746,12 +746,7 @@ mod tests {
     use super::*;
     use std::net::{Ipv4Addr, Ipv6Addr};
 
-    fn tcp_tuple(
-        src_ip: IpAddr,
-        src_port: u16,
-        dst_ip: IpAddr,
-        dst_port: u16,
-    ) -> FiveTuple {
+    fn tcp_tuple(src_ip: IpAddr, src_port: u16, dst_ip: IpAddr, dst_port: u16) -> FiveTuple {
         FiveTuple {
             src_ip,
             src_port,
@@ -775,7 +770,12 @@ mod tests {
         let t0 = Utc::now();
 
         // Request
-        let req_info = engine.observe_request(&ft, b"POST /v1/chat HTTP/1.1\r\nHost: api.openai.com\r\n\r\n", t0, None);
+        let req_info = engine.observe_request(
+            &ft,
+            b"POST /v1/chat HTTP/1.1\r\nHost: api.openai.com\r\n\r\n",
+            t0,
+            None,
+        );
         assert_eq!(req_info.method, CorrelationMethod::TcpConnection);
         assert!((req_info.confidence - 0.7).abs() < 0.01);
         assert_eq!(req_info.request_method.as_deref(), Some("POST"));
@@ -849,7 +849,12 @@ mod tests {
         engine.observe_request(&ft, req_payload, t0, None);
 
         let resp_payload = b"HTTP/1.1 200 OK\r\napim-request-id: azure_id_001\r\n\r\n{}";
-        let info = engine.observe_response(&ft, resp_payload, t0 + chrono::Duration::milliseconds(150), None);
+        let info = engine.observe_response(
+            &ft,
+            resp_payload,
+            t0 + chrono::Duration::milliseconds(150),
+            None,
+        );
         assert!(info.is_some());
         assert_eq!(
             info.unwrap().correlation_id.as_deref(),
@@ -872,7 +877,12 @@ mod tests {
         engine.observe_request(&ft, req_payload, t0, None);
 
         let resp_payload = b"HTTP/1.1 200 OK\r\nrequest-id: ant_req_456\r\n\r\n{}";
-        let info = engine.observe_response(&ft, resp_payload, t0 + chrono::Duration::milliseconds(100), None);
+        let info = engine.observe_response(
+            &ft,
+            resp_payload,
+            t0 + chrono::Duration::milliseconds(100),
+            None,
+        );
         assert!(info.is_some());
         assert_eq!(info.unwrap().correlation_id.as_deref(), Some("ant_req_456"));
     }
@@ -894,7 +904,12 @@ mod tests {
         // Response with different x-request-id — should not match via header,
         // fall back to timing.
         let resp_payload = b"HTTP/1.1 200 OK\r\nx-request-id: req_002\r\n\r\n";
-        let info = engine.observe_response(&ft, resp_payload, t0 + chrono::Duration::milliseconds(50), None);
+        let info = engine.observe_response(
+            &ft,
+            resp_payload,
+            t0 + chrono::Duration::milliseconds(50),
+            None,
+        );
         assert!(info.is_some());
         // The header ID is different, so header match fails; should fall to timing.
         assert_eq!(info.unwrap().method, CorrelationMethod::TimingFallback);
@@ -923,10 +938,18 @@ mod tests {
 
         // SSE response with stream_id
         let sse_payload = b"data: {\"type\":\"response.created\",\"stream_id\":\"str_789\"}\n\n";
-        let info = engine.observe_response(&ft, sse_payload, t0 + chrono::Duration::milliseconds(100), None);
+        let info = engine.observe_response(
+            &ft,
+            sse_payload,
+            t0 + chrono::Duration::milliseconds(100),
+            None,
+        );
         assert!(info.is_some());
         let info = info.unwrap();
-        assert_eq!(info.stream_session_id.as_deref(), Some("openai_stream:str_789"));
+        assert_eq!(
+            info.stream_session_id.as_deref(),
+            Some("openai_stream:str_789")
+        );
         assert_eq!(info.method, CorrelationMethod::SseStreamId);
         assert_eq!(engine.active_sse_sessions(), 1);
     }
@@ -951,7 +974,12 @@ mod tests {
 
         // Anthropic message_start event
         let sse_payload = b"data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_0123\",\"content\":[]}}\n\n";
-        let info = engine.observe_response(&ft, sse_payload, t0 + chrono::Duration::milliseconds(50), None);
+        let info = engine.observe_response(
+            &ft,
+            sse_payload,
+            t0 + chrono::Duration::milliseconds(50),
+            None,
+        );
         assert!(info.is_some());
         assert_eq!(
             info.unwrap().stream_session_id.as_deref(),
@@ -972,12 +1000,7 @@ mod tests {
         );
         let t0 = Utc::now();
 
-        engine.observe_request(
-            &ft,
-            b"POST /v1/chat HTTP/1.1\r\n\r\n",
-            t0,
-            None,
-        );
+        engine.observe_request(&ft, b"POST /v1/chat HTTP/1.1\r\n\r\n", t0, None);
 
         let info = engine.observe_response(
             &ft,
@@ -1002,12 +1025,7 @@ mod tests {
         );
         let t0 = Utc::now();
 
-        engine.observe_request(
-            &ft,
-            b"POST /v1/chat HTTP/1.1\r\n\r\n",
-            t0,
-            None,
-        );
+        engine.observe_request(&ft, b"POST /v1/chat HTTP/1.1\r\n\r\n", t0, None);
 
         // Response arrives after timing window — no match.
         let info = engine.observe_response(
@@ -1034,14 +1052,29 @@ mod tests {
 
         // Two requests on different HTTP/2 streams
         engine.observe_request(&ft, b"stream 1 request", t0, Some(1));
-        engine.observe_request(&ft, b"stream 2 request", t0 + chrono::Duration::milliseconds(10), Some(3));
+        engine.observe_request(
+            &ft,
+            b"stream 2 request",
+            t0 + chrono::Duration::milliseconds(10),
+            Some(3),
+        );
 
         // Responses on correct streams
-        let r1 = engine.observe_response(&ft, b"stream 1 response", t0 + chrono::Duration::milliseconds(50), Some(1));
+        let r1 = engine.observe_response(
+            &ft,
+            b"stream 1 response",
+            t0 + chrono::Duration::milliseconds(50),
+            Some(1),
+        );
         assert!(r1.is_some());
         assert_eq!(r1.unwrap().http2_stream_id, Some(1));
 
-        let r2 = engine.observe_response(&ft, b"stream 2 response", t0 + chrono::Duration::milliseconds(60), Some(3));
+        let r2 = engine.observe_response(
+            &ft,
+            b"stream 2 response",
+            t0 + chrono::Duration::milliseconds(60),
+            Some(3),
+        );
         assert!(r2.is_some());
         assert_eq!(r2.unwrap().http2_stream_id, Some(3));
 
@@ -1129,7 +1162,12 @@ mod tests {
         let t0 = Utc::now();
 
         engine.observe_request(&ft, b"GET / HTTP/1.1\r\n\r\n", t0, None);
-        engine.observe_response(&ft, b"HTTP/1.1 200 OK\r\n\r\n", t0 + chrono::Duration::milliseconds(50), None);
+        engine.observe_response(
+            &ft,
+            b"HTTP/1.1 200 OK\r\n\r\n",
+            t0 + chrono::Duration::milliseconds(50),
+            None,
+        );
 
         assert_eq!(engine.drain_completed().len(), 1);
         assert_eq!(engine.completed_pairs().len(), 0);
@@ -1204,7 +1242,12 @@ mod tests {
         );
         let t0 = Utc::now();
 
-        engine.observe_request(&ft, b"GET / HTTP/1.1\r\nx-request-id: ipv6_test\r\n\r\n", t0, None);
+        engine.observe_request(
+            &ft,
+            b"GET / HTTP/1.1\r\nx-request-id: ipv6_test\r\n\r\n",
+            t0,
+            None,
+        );
         let info = engine.observe_response(
             &ft,
             b"HTTP/1.1 200 OK\r\nx-request-id: ipv6_test\r\n\r\n",
@@ -1248,14 +1291,34 @@ mod tests {
         );
         let t0 = Utc::now();
 
-        engine.observe_request(&ft1, b"GET /1 HTTP/1.1\r\nx-request-id: a\r\n\r\n", t0, None);
-        engine.observe_request(&ft2, b"GET /2 HTTP/1.1\r\nx-request-id: b\r\n\r\n", t0, None);
+        engine.observe_request(
+            &ft1,
+            b"GET /1 HTTP/1.1\r\nx-request-id: a\r\n\r\n",
+            t0,
+            None,
+        );
+        engine.observe_request(
+            &ft2,
+            b"GET /2 HTTP/1.1\r\nx-request-id: b\r\n\r\n",
+            t0,
+            None,
+        );
 
-        let r2 = engine.observe_response(&ft2, b"HTTP/1.1 200 OK\r\nx-request-id: b\r\n\r\n", t0 + chrono::Duration::milliseconds(10), None);
+        let r2 = engine.observe_response(
+            &ft2,
+            b"HTTP/1.1 200 OK\r\nx-request-id: b\r\n\r\n",
+            t0 + chrono::Duration::milliseconds(10),
+            None,
+        );
         assert!(r2.is_some());
         assert_eq!(r2.unwrap().correlation_id.as_deref(), Some("b"));
 
-        let r1 = engine.observe_response(&ft1, b"HTTP/1.1 200 OK\r\nx-request-id: a\r\n\r\n", t0 + chrono::Duration::milliseconds(20), None);
+        let r1 = engine.observe_response(
+            &ft1,
+            b"HTTP/1.1 200 OK\r\nx-request-id: a\r\n\r\n",
+            t0 + chrono::Duration::milliseconds(20),
+            None,
+        );
         assert!(r1.is_some());
         assert_eq!(r1.unwrap().correlation_id.as_deref(), Some("a"));
 
@@ -1280,12 +1343,18 @@ mod tests {
 
     #[test]
     fn test_correlation_method_display() {
-        assert_eq!(CorrelationMethod::TcpConnection.to_string(), "tcp_connection");
+        assert_eq!(
+            CorrelationMethod::TcpConnection.to_string(),
+            "tcp_connection"
+        );
         assert_eq!(
             CorrelationMethod::HttpHeader(CorrelationHeaderSource::XRequestId).to_string(),
             "http_header(x-request-id)"
         );
         assert_eq!(CorrelationMethod::SseStreamId.to_string(), "sse_stream_id");
-        assert_eq!(CorrelationMethod::TimingFallback.to_string(), "timing_fallback");
+        assert_eq!(
+            CorrelationMethod::TimingFallback.to_string(),
+            "timing_fallback"
+        );
     }
 }

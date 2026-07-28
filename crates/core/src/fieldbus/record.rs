@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FieldbusFamily {
     Profinet,
@@ -128,18 +127,12 @@ pub(crate) const MAC_OUI_SIEMENS: &[[u8; 3]] = &[
 ];
 
 #[allow(dead_code)]
-pub(crate) const MAC_OUI_ROCKWELL: &[[u8; 3]] = &[
-    [0x00, 0x00, 0xBC],
-    [0x00, 0x1D, 0x9C],
-    [0x00, 0x04, 0x4C],
-];
+pub(crate) const MAC_OUI_ROCKWELL: &[[u8; 3]] =
+    &[[0x00, 0x00, 0xBC], [0x00, 0x1D, 0x9C], [0x00, 0x04, 0x4C]];
 
 #[allow(dead_code)]
-pub(crate) const MAC_OUI_BECKHOFF: &[[u8; 3]] = &[
-    [0x00, 0x01, 0x05],
-    [0x00, 0x07, 0x63],
-    [0x70, 0xB3, 0xD5],
-];
+pub(crate) const MAC_OUI_BECKHOFF: &[[u8; 3]] =
+    &[[0x00, 0x01, 0x05], [0x00, 0x07, 0x63], [0x70, 0xB3, 0xD5]];
 
 impl VendorId {
     pub fn from_oui(oui: [u8; 3]) -> Option<VendorId> {
@@ -208,7 +201,9 @@ impl FieldbusDecodeRecord {
             (VendorId::Siemens, id) if (0x0200..=0x02FF).contains(&id) => Some("SIMATIC S7-1500"),
             (VendorId::Siemens, id) if (0x0300..=0x03FF).contains(&id) => Some("SIMATIC ET 200SP"),
             (VendorId::Siemens, id) if (0x0400..=0x04FF).contains(&id) => Some("SINAMICS S120"),
-            (VendorId::Siemens, id) if (0x0500..=0x05FF).contains(&id) => Some("SINUMERIK 828D/840D"),
+            (VendorId::Siemens, id) if (0x0500..=0x05FF).contains(&id) => {
+                Some("SINUMERIK 828D/840D")
+            }
             _ => None,
         }
     }
@@ -220,16 +215,31 @@ mod tests {
 
     #[test]
     fn vendor_id_from_oui() {
-        assert_eq!(VendorId::from_oui([0x00, 0x1B, 0x1B]), Some(VendorId::Siemens));
-        assert_eq!(VendorId::from_oui([0x00, 0x00, 0xBC]), Some(VendorId::Rockwell));
-        assert_eq!(VendorId::from_oui([0x00, 0x01, 0x05]), Some(VendorId::Beckhoff));
+        assert_eq!(
+            VendorId::from_oui([0x00, 0x1B, 0x1B]),
+            Some(VendorId::Siemens)
+        );
+        assert_eq!(
+            VendorId::from_oui([0x00, 0x00, 0xBC]),
+            Some(VendorId::Rockwell)
+        );
+        assert_eq!(
+            VendorId::from_oui([0x00, 0x01, 0x05]),
+            Some(VendorId::Beckhoff)
+        );
         assert_eq!(VendorId::from_oui([0xDE, 0xAD, 0xBE]), None);
     }
 
     #[test]
     fn ethertype_to_family() {
-        assert_eq!(FieldbusFamily::from_ethertype(0x8892), Some(FieldbusFamily::Profinet));
-        assert_eq!(FieldbusFamily::from_ethertype(0x88A4), Some(FieldbusFamily::EtherCat));
+        assert_eq!(
+            FieldbusFamily::from_ethertype(0x8892),
+            Some(FieldbusFamily::Profinet)
+        );
+        assert_eq!(
+            FieldbusFamily::from_ethertype(0x88A4),
+            Some(FieldbusFamily::EtherCat)
+        );
         assert_eq!(FieldbusFamily::from_ethertype(0x0800), None);
     }
 

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_xcloud_input_pipe(
     src_ip: Option<IpAddr>,
@@ -34,9 +34,12 @@ pub fn dissect_xcloud_input_pipe(
         };
         format!(
             "xCloud Pipe ch={} msg={} seq={}{} data={}B len={}",
-            channel_id, type_name, seq,
+            channel_id,
+            type_name,
+            seq,
             if is_reliable { " RELIABLE" } else { "" },
-            payload_len, payload.len(),
+            payload_len,
+            payload.len(),
         )
     };
     DissectedResult {

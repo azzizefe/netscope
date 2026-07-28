@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
-use crate::models::Protocol;
 use crate::dissectors::DissectedResult;
+use crate::models::Protocol;
 
 pub fn dissect_ucx_transport(
     _src_ip: Option<IpAddr>,
@@ -10,22 +10,26 @@ pub fn dissect_ucx_transport(
     _dst_port: u16,
     payload: &[u8],
 ) -> DissectedResult {
-    let summary;
-    if payload.len() >= 20 {
+    let summary = if payload.len() >= 20 {
         let _version = payload[0];
         let _flags = payload[1];
         let ep_id = u32::from_be_bytes([payload[2], payload[3], payload[4], payload[5]]);
         let conn_id = u32::from_be_bytes([payload[6], payload[7], payload[8], payload[9]]);
         let seq = u64::from_be_bytes([
-            payload[10], payload[11], payload[12], payload[13],
-            payload[14], payload[15], payload[16], payload[17],
+            payload[10],
+            payload[11],
+            payload[12],
+            payload[13],
+            payload[14],
+            payload[15],
+            payload[16],
+            payload[17],
         ]);
         let _data_len = u32::from_be_bytes([payload[18], payload[19], payload[20], payload[21]]);
-        summary = format!("UCX transport ep={} conn={} seq={}",
-            ep_id, conn_id, seq);
+        format!("UCX transport ep={} conn={} seq={}", ep_id, conn_id, seq)
     } else {
-        summary = "UCX transport (short frame)".into();
-    }
+        "UCX transport (short frame)".into()
+    };
     DissectedResult {
         src_addr: _src_ip,
         dst_addr: _dst_ip,
@@ -53,7 +57,10 @@ mod tests {
         let r = dissect_ucx_transport(
             Some("10.0.0.1".parse::<IpAddr>().unwrap()),
             Some("10.0.0.2".parse::<IpAddr>().unwrap()),
-            9000, 9000, &buf);
+            9000,
+            9000,
+            &buf,
+        );
         assert_eq!(r.protocol, Protocol::UcxTransport);
         assert!(r.summary.contains("ep=10"));
         assert!(r.summary.contains("conn=1"));

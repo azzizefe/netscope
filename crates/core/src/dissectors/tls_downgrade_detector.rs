@@ -8,7 +8,7 @@ use super::DissectedResult;
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, TlsVersion, SigAlgorithm, KemId, PqcKem};
+    use crate::pqc_handshake::{KemId, PqcHandshakeRecord, PqcKem, SigAlgorithm, TlsVersion};
     use chrono::Utc;
 
     fn test_ft() -> FiveTuple {
@@ -22,17 +22,29 @@ mod tests {
     }
 
     fn make_record(
-        success: bool, kem: Option<KemId>, hybrid: bool, fallback: Option<&str>, name: &str,
+        success: bool,
+        kem: Option<KemId>,
+        hybrid: bool,
+        fallback: Option<&str>,
+        name: &str,
     ) -> PqcHandshakeRecord {
         let mut r = PqcHandshakeRecord::new(
-            test_ft(), TlsVersion::TlsV1_3, name.into(),
-            SigAlgorithm::RsaPkcs1Sha256, Utc::now(),
+            test_ft(),
+            TlsVersion::TlsV1_3,
+            name.into(),
+            SigAlgorithm::RsaPkcs1Sha256,
+            Utc::now(),
         );
         r.is_success = success;
         r.is_hybrid_kem = hybrid;
         r.pqc_fallback_reason = fallback.map(String::from);
         if let Some(k) = kem {
-            r.pqc_kem = Some(PqcKem { algorithm: k, public_key: None, ciphertext: None, shared_secret: None });
+            r.pqc_kem = Some(PqcKem {
+                algorithm: k,
+                public_key: None,
+                ciphertext: None,
+                shared_secret: None,
+            });
         }
         r
     }
@@ -46,7 +58,13 @@ mod tests {
 
     #[test]
     fn detect_version_downgrade_fallback_reason() {
-        let r = make_record(true, Some(KemId::MlKem768), false, Some("TLS 1.2 fallback"), "example.com");
+        let r = make_record(
+            true,
+            Some(KemId::MlKem768),
+            false,
+            Some("TLS 1.2 fallback"),
+            "example.com",
+        );
         let findings = detect_version_downgrade(&[r]);
         assert_eq!(findings.len(), 1);
         assert!(findings[0].contains("example.com"));
@@ -87,7 +105,13 @@ mod tests {
     #[test]
     fn dissect_with_findings() {
         crate::dissectors::tls::clear_tls_sessions();
-        let r = make_record(false, Some(KemId::MlKem768), true, Some("downgrade to 1.2"), "bad.example");
+        let r = make_record(
+            false,
+            Some(KemId::MlKem768),
+            true,
+            Some("downgrade to 1.2"),
+            "bad.example",
+        );
         crate::dissectors::tls::push_pqc_record_for_test(r);
         let result = dissect_tls_downgrade_detector(None, None, 443, 54321, &[]);
         assert!(result.summary.contains("alerts"));
@@ -99,11 +123,9 @@ fn detect_version_downgrade(records: &[crate::pqc_handshake::PqcHandshakeRecord]
     let mut findings = Vec::new();
     for r in records {
         if let Some(ref reason) = r.pqc_fallback_reason {
-            if reason.contains("downgrade") || reason.contains("fallback") || reason.contains("1.2") {
-                findings.push(format!(
-                    "{}: {}",
-                    r.server_name, reason,
-                ));
+            if reason.contains("downgrade") || reason.contains("fallback") || reason.contains("1.2")
+            {
+                findings.push(format!("{}: {}", r.server_name, reason,));
             }
         }
         if !r.is_success && r.pqc_kem.is_some() {
@@ -119,11 +141,7 @@ fn detect_version_downgrade(records: &[crate::pqc_handshake::PqcHandshakeRecord]
 fn detect_hybrid_stripping(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
     records
         .iter()
-        .filter(|r| {
-            r.pqc_kem.is_some()
-                && !r.is_success
-                && r.is_hybrid_kem
-        })
+        .filter(|r| r.pqc_kem.is_some() && !r.is_success && r.is_hybrid_kem)
         .map(|r| {
             format!(
                 "{}: hybrid KEM advertised but negotiation failed",

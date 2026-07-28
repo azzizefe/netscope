@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_unity_relay(
     src_ip: Option<IpAddr>,
@@ -23,7 +23,10 @@ pub fn dissect_unity_relay(
             4 => "Disconnect",
             _ => "Unknown",
         };
-        format!("Unity Relay {} relayId {} flags 0x{:02x}", type_name, relay_id, flags)
+        format!(
+            "Unity Relay {} relayId {} flags 0x{:02x}",
+            type_name, relay_id, flags
+        )
     };
     DissectedResult {
         src_addr: src_ip,

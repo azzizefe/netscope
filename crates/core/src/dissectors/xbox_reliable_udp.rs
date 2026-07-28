@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_xbox_reliable_udp(
     src_ip: Option<IpAddr>,
@@ -15,7 +15,12 @@ pub fn dissect_xbox_reliable_udp(
         let seq = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
         let ack = u32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]);
         let ack_mask = if payload.len() >= 12 {
-            Some(u32::from_be_bytes([payload[8], payload[9], payload[10], payload[11]]))
+            Some(u32::from_be_bytes([
+                payload[8],
+                payload[9],
+                payload[10],
+                payload[11],
+            ]))
         } else {
             None
         };
@@ -41,7 +46,13 @@ mod tests {
 
     #[test]
     fn test_xbox_reliable_udp() {
-        let r = dissect_xbox_reliable_udp(None, None, 3074, 3074, b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\xff");
+        let r = dissect_xbox_reliable_udp(
+            None,
+            None,
+            3074,
+            3074,
+            b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\xff",
+        );
         assert_eq!(r.protocol, Protocol::XboxReliableUdp);
         assert!(r.summary.contains("seq=1"));
         assert!(r.summary.contains("ack=2"));

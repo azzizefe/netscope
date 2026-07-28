@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_unity_transport(
     src_ip: Option<IpAddr>,
@@ -23,7 +23,10 @@ pub fn dissect_unity_transport(
             3 => "Disconnect",
             _ => "Unknown",
         };
-        format!("Unity Transport UTP {} v{} ch{} seq {}", type_name, version, channel, sequence)
+        format!(
+            "Unity Transport UTP {} v{} ch{} seq {}",
+            type_name, version, channel, sequence
+        )
     };
     DissectedResult {
         src_addr: src_ip,

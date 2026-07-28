@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_horizon_worlds_sync(
     src_ip: Option<IpAddr>,
@@ -41,10 +41,7 @@ mod tests {
 
     #[test]
     fn test_horizon_worlds_sync_basic() {
-        let buf = vec![
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-            0x01, 0x00,
-        ];
+        let buf = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00];
         let r = dissect_horizon_worlds_sync(None, None, 0, 0, &buf);
         assert_eq!(r.protocol, Protocol::HorizonWorldsSync);
         assert!(r.summary.contains("T"));
@@ -60,8 +57,7 @@ mod tests {
     #[test]
     fn test_horizon_worlds_sync_all_flags() {
         let buf = vec![
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-            0x07, 0x00, 0x01, 0x02,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x07, 0x00, 0x01, 0x02,
         ];
         let r = dissect_horizon_worlds_sync(None, None, 0, 0, &buf);
         assert!(r.summary.contains("T") && r.summary.contains("A") && r.summary.contains("S"));

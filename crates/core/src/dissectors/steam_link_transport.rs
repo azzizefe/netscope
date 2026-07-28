@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_steam_link_transport(
     src_ip: Option<IpAddr>,
@@ -38,11 +38,15 @@ pub fn dissect_steam_link_transport(
         };
         format!(
             "Steam Link ch={}({}) seq={}{}{}{}{} magic=0x{:08x} len={}",
-            ch_name, channel, seq,
+            ch_name,
+            channel,
+            seq,
             if is_key { " KEY" } else { "" },
             if is_sps { " SPS" } else { "" },
             if is_lossless { " LOSSLESS" } else { "" },
-            pts_str, magic, payload.len(),
+            pts_str,
+            magic,
+            payload.len(),
         )
     };
     DissectedResult {

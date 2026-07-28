@@ -9,7 +9,7 @@ use super::DissectedResult;
 mod tests {
     use super::*;
     use crate::pair_correlation::FiveTuple;
-    use crate::pqc_handshake::{PqcHandshakeRecord, TlsVersion, SigAlgorithm, PqcKem};
+    use crate::pqc_handshake::{PqcHandshakeRecord, PqcKem, SigAlgorithm, TlsVersion};
     use chrono::Utc;
 
     fn test_ft() -> FiveTuple {
@@ -24,10 +24,18 @@ mod tests {
 
     fn make_record(kem_id: KemId) -> PqcHandshakeRecord {
         let mut r = PqcHandshakeRecord::new(
-            test_ft(), TlsVersion::TlsV1_3, "example.com".into(),
-            SigAlgorithm::MlDsa65, Utc::now(),
+            test_ft(),
+            TlsVersion::TlsV1_3,
+            "example.com".into(),
+            SigAlgorithm::MlDsa65,
+            Utc::now(),
         );
-        r.pqc_kem = Some(PqcKem { algorithm: kem_id, public_key: None, ciphertext: None, shared_secret: None });
+        r.pqc_kem = Some(PqcKem {
+            algorithm: kem_id,
+            public_key: None,
+            ciphertext: None,
+            shared_secret: None,
+        });
         r.is_success = true;
         r
     }
@@ -120,9 +128,17 @@ mod tests {
 }
 
 const PQC_CVE_DB: &[(&str, &str, &[KemId])] = &[
-    ("CVE-2024-1234", "BIKE-L1 timing side-channel", &[KemId::BikeL1]),
+    (
+        "CVE-2024-1234",
+        "BIKE-L1 timing side-channel",
+        &[KemId::BikeL1],
+    ),
     ("CVE-2024-5678", "HQC-128 weak parameter", &[KemId::Hqc128]),
-    ("CVE-2025-0001", "FrodoKEM-640 constant-time issue", &[KemId::FrodoKem640Aes]),
+    (
+        "CVE-2025-0001",
+        "FrodoKEM-640 constant-time issue",
+        &[KemId::FrodoKem640Aes],
+    ),
 ];
 
 fn check_cve_matches(store: &PqcHandshakeStore) -> Vec<(&'static str, &'static str)> {

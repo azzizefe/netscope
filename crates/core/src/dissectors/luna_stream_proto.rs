@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_luna_stream_proto(
     src_ip: Option<IpAddr>,
@@ -34,7 +34,11 @@ pub fn dissect_luna_stream_proto(
         };
         format!(
             "Luna Stream id={} {} seq={} ts={}us br={}kbps{}{}{} len={}",
-            stream_id, type_name, frame_seq, ts_us, br_hint,
+            stream_id,
+            type_name,
+            frame_seq,
+            ts_us,
+            br_hint,
             if is_key { " KEY" } else { "" },
             if is_eos { " EOS" } else { "" },
             if is_recovered { " RECOVERED" } else { "" },

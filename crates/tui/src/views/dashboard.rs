@@ -278,7 +278,14 @@ fn render_llm_model_stats(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, b
                 Span::raw(format!(" {:<12}", model_short)),
                 Span::raw(format!(" {:>5}", ms.requests)),
                 Span::styled(
-                    format!(" {:>4}ms", if avg_ttft > 0.0 { format!("{:.0}", avg_ttft) } else { "-".into() }),
+                    format!(
+                        " {:>4}ms",
+                        if avg_ttft > 0.0 {
+                            format!("{:.0}", avg_ttft)
+                        } else {
+                            "-".into()
+                        }
+                    ),
                     if avg_ttft > 500.0 {
                         Style::new().fg(Color::Red).bold()
                     } else if avg_ttft > 200.0 {
@@ -288,7 +295,14 @@ fn render_llm_model_stats(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, b
                     },
                 ),
                 Span::styled(
-                    format!(" {:>4}ms", if avg_tpot > 0.0 { format!("{:.0}", avg_tpot) } else { "-".into() }),
+                    format!(
+                        " {:>4}ms",
+                        if avg_tpot > 0.0 {
+                            format!("{:.0}", avg_tpot)
+                        } else {
+                            "-".into()
+                        }
+                    ),
                     if avg_tpot > 80.0 {
                         Style::new().fg(Color::Red).bold()
                     } else {
@@ -401,9 +415,7 @@ fn render_anomaly_alerts(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, bo
     let active_alerts = llm
         .anomalies
         .iter()
-        .filter(|a| {
-            (chrono::Utc::now() - a.timestamp).num_seconds() < 30
-        })
+        .filter(|a| (chrono::Utc::now() - a.timestamp).num_seconds() < 30)
         .count();
     let title = if active_alerts > 0 {
         format!(" Anomali Uyarilari ({} aktif) ", active_alerts)
@@ -414,6 +426,10 @@ fn render_anomaly_alerts(frame: &mut Frame, area: Rect, snap: &StatsSnapshot, bo
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(if active_alerts > 0 { Color::Red } else { border }));
+        .border_style(Style::new().fg(if active_alerts > 0 {
+            Color::Red
+        } else {
+            border
+        }));
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }

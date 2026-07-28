@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_o3de_aznetworking(
     src_ip: Option<IpAddr>,
@@ -23,7 +23,10 @@ pub fn dissect_o3de_aznetworking(
             3 => "Disconnect",
             _ => "Unknown",
         };
-        format!("O3DE AzNetworking {} seq{} magic 0x{:04x} v{}", type_name, sequence, magic, version)
+        format!(
+            "O3DE AzNetworking {} seq{} magic 0x{:04x} v{}",
+            type_name, sequence, magic, version
+        )
     };
     DissectedResult {
         src_addr: src_ip,
@@ -41,7 +44,13 @@ mod tests {
 
     #[test]
     fn test_o3de_aznetworking() {
-        let r = dissect_o3de_aznetworking(None, None, 51726, 51726, b"\x41\x5a\x01\x00\x00\x00\x00\x01\xbe\xef");
+        let r = dissect_o3de_aznetworking(
+            None,
+            None,
+            51726,
+            51726,
+            b"\x41\x5a\x01\x00\x00\x00\x00\x01\xbe\xef",
+        );
         assert_eq!(r.protocol, Protocol::O3deAznetworking);
         assert!(r.summary.contains("Unreliable"));
     }

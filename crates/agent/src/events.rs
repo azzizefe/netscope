@@ -38,10 +38,7 @@ pub struct RawEvent {
     pub raw_data: Option<String>,
 }
 
-pub async fn event_loop(
-    state: AgentState,
-    mut rx: mpsc::Receiver<RawEvent>,
-) {
+pub async fn event_loop(state: AgentState, mut rx: mpsc::Receiver<RawEvent>) {
     let batch_interval = std::time::Duration::from_millis(state.config.events.batch_interval_ms);
     let max_batch = state.config.events.batch_max_events;
     let use_compression = state.config.events.compression;
@@ -101,11 +98,10 @@ async fn flush_batch(state: &AgentState, batch: &mut Vec<BatchEvent>, compress: 
 
     if compress {
         let compressed = zstd_compress(&json);
-        match state.http_post_raw(
-            "/api/v1/events/batch",
-            compressed,
-            "application/zstd",
-        ).await {
+        match state
+            .http_post_raw("/api/v1/events/batch", compressed, "application/zstd")
+            .await
+        {
             Ok(_) => {
                 tracing::debug!("Pushed {} compressed events", batch.len());
                 batch.clear();
@@ -117,11 +113,10 @@ async fn flush_batch(state: &AgentState, batch: &mut Vec<BatchEvent>, compress: 
         }
     }
 
-    match state.http_post_raw(
-        "/api/v1/events/batch",
-        json,
-        "application/json",
-    ).await {
+    match state
+        .http_post_raw("/api/v1/events/batch", json, "application/json")
+        .await
+    {
         Ok(_) => {
             tracing::debug!("Pushed {} events", batch.len());
             batch.clear();
@@ -170,22 +165,28 @@ pub async fn flush_offline_buffer(state: &AgentState) {
             break;
         }
 
-        let events: Vec<BatchEvent> = batch.iter().map(|oe| BatchEvent {
-            sensor_id: oe.sensor_id.clone(),
-            event_type: oe.event_type.clone(),
-            severity: oe.severity.clone(),
-            title: oe.title.clone(),
-            description: oe.description.clone(),
-            source_ip: oe.source_ip.clone(),
-            dest_ip: oe.dest_ip.clone(),
-            protocol: oe.protocol.clone(),
-            port: oe.port,
-            raw_data: oe.raw_data.clone(),
-            timestamp: oe.created_at.clone(),
-        }).collect();
+        let events: Vec<BatchEvent> = batch
+            .iter()
+            .map(|oe| BatchEvent {
+                sensor_id: oe.sensor_id.clone(),
+                event_type: oe.event_type.clone(),
+                severity: oe.severity.clone(),
+                title: oe.title.clone(),
+                description: oe.description.clone(),
+                source_ip: oe.source_ip.clone(),
+                dest_ip: oe.dest_ip.clone(),
+                protocol: oe.protocol.clone(),
+                port: oe.port,
+                raw_data: oe.raw_data.clone(),
+                timestamp: oe.created_at.clone(),
+            })
+            .collect();
 
         let payload = serde_json::to_vec(&events).unwrap_or_default();
-        match state.http_post_raw("/api/v1/events/batch", payload, "application/json").await {
+        match state
+            .http_post_raw("/api/v1/events/batch", payload, "application/json")
+            .await
+        {
             Ok(_) => {
                 let ids: Vec<i64> = batch.iter().filter_map(|e| e.id).collect();
                 let offline = state.offline.lock().await;

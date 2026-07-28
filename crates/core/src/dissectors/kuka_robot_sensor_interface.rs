@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_kuka_robot_sensor_interface(
     _src_ip: Option<IpAddr>,
@@ -11,8 +11,16 @@ pub fn dissect_kuka_robot_sensor_interface(
 ) -> DissectedResult {
     let summary = if payload.len() >= 8 {
         let frame_type = payload[0];
-        let seq = u32::from_be_bytes([payload.get(1).copied().unwrap_or(0), payload.get(2).copied().unwrap_or(0), payload.get(3).copied().unwrap_or(0), payload.get(4).copied().unwrap_or(0)]);
-        let correction = i16::from_be_bytes([payload.get(5).copied().unwrap_or(0), payload.get(6).copied().unwrap_or(0)]);
+        let seq = u32::from_be_bytes([
+            payload.get(1).copied().unwrap_or(0),
+            payload.get(2).copied().unwrap_or(0),
+            payload.get(3).copied().unwrap_or(0),
+            payload.get(4).copied().unwrap_or(0),
+        ]);
+        let correction = i16::from_be_bytes([
+            payload.get(5).copied().unwrap_or(0),
+            payload.get(6).copied().unwrap_or(0),
+        ]);
         let sensor_id = payload.get(7).copied().unwrap_or(0);
 
         let type_name = match frame_type {
@@ -25,9 +33,16 @@ pub fn dissect_kuka_robot_sensor_interface(
             _ => "RSI frame",
         };
 
-        let corr_str = if frame_type == 0x01 { format!(" corr:{correction}") } else { String::new() };
+        let corr_str = if frame_type == 0x01 {
+            format!(" corr:{correction}")
+        } else {
+            String::new()
+        };
 
-        format!("KUKA RSI — {type_name} seq:{seq}{corr_str} sensor:{sensor_id} ({len} bytes)", len = payload.len())
+        format!(
+            "KUKA RSI — {type_name} seq:{seq}{corr_str} sensor:{sensor_id} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("KUKA RSI — {len} bytes", len = payload.len())
     };

@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_mechatrolink(
     src_ip: Option<IpAddr>,
@@ -23,7 +23,13 @@ pub fn dissect_mechatrolink(
             _ => "Command",
         };
         let axis = payload[1];
-        format!("MECHATROLINK — {} axis:{} seq:{} ({})", cmd, axis, payload[2], super::bytes(payload.len() as u64))
+        format!(
+            "MECHATROLINK — {} axis:{} seq:{} ({})",
+            cmd,
+            axis,
+            payload[2],
+            super::bytes(payload.len() as u64)
+        )
     } else {
         format!("MECHATROLINK — {}", super::bytes(payload.len() as u64))
     };

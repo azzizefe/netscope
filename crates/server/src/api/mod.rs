@@ -1,19 +1,19 @@
-pub mod auth_routes;
-pub mod sensors;
-pub mod events;
 pub mod alerts;
-pub mod rules;
+pub mod auth_routes;
 pub mod dashboard;
+pub mod events;
 pub mod health;
+pub mod rules;
+pub mod sensors;
 pub mod upgrade;
 
 use axum::Router;
-use std::sync::Arc;
 use sqlx::PgPool;
+use std::sync::Arc;
 
+use crate::api::sensors::CommandStore;
 use crate::auth::{JwtState, RbacState};
 use crate::cache::CacheLayer;
-use crate::api::sensors::CommandStore;
 
 pub fn build_router(
     pool: PgPool,
@@ -29,7 +29,10 @@ pub fn build_router(
     });
 
     let public = Router::new()
-        .nest("/api/v1", auth_routes::routes(api_state.clone(), jwt.clone()))
+        .nest(
+            "/api/v1",
+            auth_routes::routes(api_state.clone(), jwt.clone()),
+        )
         .nest("/api/v1", upgrade::routes(api_state.clone()));
 
     // `auth_middleware` establishes *who* the caller is; the permission each
@@ -82,8 +85,9 @@ mod tests {
             .connect_lazy("postgres://netscope:netscope@127.0.0.1:1/netscope")
             .expect("a lazy pool does not connect");
         let jwt = Arc::new(JwtState::new("test-secret".into(), None, Some(1)));
-        let router = build_router(pool, jwt.clone(), Arc::new(RbacState::new()), None)
-            .layer(axum::extract::Extension(Arc::new(crate::ws::WsState::new())));
+        let router = build_router(pool, jwt.clone(), Arc::new(RbacState::new()), None).layer(
+            axum::extract::Extension(Arc::new(crate::ws::WsState::new())),
+        );
         (router, jwt)
     }
 
@@ -111,7 +115,10 @@ mod tests {
             ("POST", "/api/v1/sensors"),
             ("POST", "/api/v1/sensors/register"),
             ("POST", "/api/v1/events/batch"),
-            ("PATCH", "/api/v1/alerts/00000000-0000-0000-0000-000000000000/status"),
+            (
+                "PATCH",
+                "/api/v1/alerts/00000000-0000-0000-0000-000000000000/status",
+            ),
             ("POST", "/api/v1/rules"),
         ] {
             assert_eq!(

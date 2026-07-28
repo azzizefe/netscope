@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_ether_net_ip_rockwell(
     _src_ip: Option<IpAddr>,
@@ -35,7 +35,10 @@ pub fn dissect_ether_net_ip_rockwell(
             _ => "ENIP cmd",
         };
 
-        format!("EtherNet/IP (Rockwell) — {cmd_name} {service_name} path:{path_len} ({len} bytes)", len = payload.len())
+        format!(
+            "EtherNet/IP (Rockwell) — {cmd_name} {service_name} path:{path_len} ({len} bytes)",
+            len = payload.len()
+        )
     } else {
         format!("EtherNet/IP (Rockwell) — {len} bytes", len = payload.len())
     };

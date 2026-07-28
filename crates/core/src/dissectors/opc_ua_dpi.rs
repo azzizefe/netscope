@@ -19,7 +19,10 @@ fn msg_type_name(msg_type: &[u8]) -> Option<&'static str> {
         return None;
     }
     let t: &[u8; 3] = &[msg_type[0], msg_type[1], msg_type[2]];
-    OPCUA_MSG_TYPES.iter().find(|(k, _)| *k == t).map(|(_, n)| *n)
+    OPCUA_MSG_TYPES
+        .iter()
+        .find(|(k, _)| *k == t)
+        .map(|(_, n)| *n)
 }
 
 fn chunk_name(chunk: u8) -> &'static str {
@@ -45,7 +48,12 @@ fn security_policy_uri(payload: &[u8], offset: &mut usize) -> String {
     if *offset + 4 > payload.len() {
         return "?".into();
     }
-    let len = u32::from_le_bytes([payload[*offset], payload[*offset + 1], payload[*offset + 2], payload[*offset + 3]]) as usize;
+    let len = u32::from_le_bytes([
+        payload[*offset],
+        payload[*offset + 1],
+        payload[*offset + 2],
+        payload[*offset + 3],
+    ]) as usize;
     *offset += 4;
     if len == 0 || len == 0xFFFFFFFF {
         return "None".into();
@@ -70,7 +78,12 @@ fn ua_string(payload: &[u8], offset: &mut usize) -> String {
     if *offset + 4 > payload.len() {
         return "?".into();
     }
-    let len = u32::from_le_bytes([payload[*offset], payload[*offset + 1], payload[*offset + 2], payload[*offset + 3]]) as usize;
+    let len = u32::from_le_bytes([
+        payload[*offset],
+        payload[*offset + 1],
+        payload[*offset + 2],
+        payload[*offset + 3],
+    ]) as usize;
     *offset += 4;
     if len == 0 || len == 0xFFFFFFFF {
         return String::new();
@@ -87,7 +100,12 @@ fn byte_string(payload: &[u8], offset: &mut usize) -> String {
     if *offset + 4 > payload.len() {
         return "?".into();
     }
-    let len = u32::from_le_bytes([payload[*offset], payload[*offset + 1], payload[*offset + 2], payload[*offset + 3]]) as usize;
+    let len = u32::from_le_bytes([
+        payload[*offset],
+        payload[*offset + 1],
+        payload[*offset + 2],
+        payload[*offset + 3],
+    ]) as usize;
     *offset += 4;
     if len == 0 || len == 0xFFFFFFFF {
         return "(empty)".into();
@@ -96,7 +114,11 @@ fn byte_string(payload: &[u8], offset: &mut usize) -> String {
         return "?".into();
     }
     let hex_len = len.min(32);
-    let hex: String = payload[*offset..*offset + hex_len].iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ");
+    let hex: String = payload[*offset..*offset + hex_len]
+        .iter()
+        .map(|b| format!("{b:02X}"))
+        .collect::<Vec<_>>()
+        .join(" ");
     *offset += len;
     if len > 32 {
         format!("({}, start: {hex}...)", super::bytes(len as u64))
@@ -292,7 +314,9 @@ fn dissect_hello(payload: &[u8], msg_name: &str) -> String {
     if endpoint.is_empty() || endpoint == "?" {
         format!("OPC UA {msg_name} v{proto_ver} buffers={send_buf}/{recv_buf} max_msg={max_msg} max_chunks={max_chunk}")
     } else {
-        format!("OPC UA {msg_name} v{proto_ver} endpoint=\"{endpoint}\" buffers={send_buf}/{recv_buf}")
+        format!(
+            "OPC UA {msg_name} v{proto_ver} endpoint=\"{endpoint}\" buffers={send_buf}/{recv_buf}"
+        )
     }
 }
 
@@ -359,19 +383,31 @@ fn dissect_open_secure_channel(payload: &[u8], msg_name: &str) -> String {
             return format!("OPC UA {msg_name} channel=0 token={token_id} policy={policy}");
         }
         let req_type = u32::from_le_bytes([body[off], body[off + 1], body[off + 2], body[off + 3]]);
-        let req_name = match req_type { 0 => "Issue", 1 => "Renew", _ => "?" };
+        let req_name = match req_type {
+            0 => "Issue",
+            1 => "Renew",
+            _ => "?",
+        };
         off += 4;
         if off + 4 > body.len() {
-            return format!("OPC UA {msg_name} channel=0 token={token_id} policy={policy} {req_name}");
+            return format!(
+                "OPC UA {msg_name} channel=0 token={token_id} policy={policy} {req_name}"
+            );
         }
         let sec_mode = u32::from_le_bytes([body[off], body[off + 1], body[off + 2], body[off + 3]]);
         off += 4;
         let _nonce = byte_string(body, &mut off);
         if off + 4 > body.len() {
-            return format!("OPC UA {msg_name} {req_name} mode={} policy={policy}", security_mode(sec_mode));
+            return format!(
+                "OPC UA {msg_name} {req_name} mode={} policy={policy}",
+                security_mode(sec_mode)
+            );
         }
         let lifetime = u32::from_le_bytes([body[off], body[off + 1], body[off + 2], body[off + 3]]);
-        format!("OPC UA {msg_name} {req_name} mode={} policy={policy} lifetime={lifetime}ms", security_mode(sec_mode))
+        format!(
+            "OPC UA {msg_name} {req_name} mode={} policy={policy} lifetime={lifetime}ms",
+            security_mode(sec_mode)
+        )
     } else {
         format!("OPC UA {msg_name} channel={channel_id} token={token_id}")
     }
@@ -414,7 +450,9 @@ fn dissect_message(payload: &[u8], msg_name: &str) -> String {
     }
     let type_id_bytes = &body[16..body.len().min(body.len())];
     if type_id_bytes.is_empty() {
-        return format!("OPC UA {msg_name} channel={channel_id} token={token_id} request={request_id}");
+        return format!(
+            "OPC UA {msg_name} channel={channel_id} token={token_id} request={request_id}"
+        );
     }
     let enc_mask = type_id_bytes[0];
     let service_hint = match enc_mask {
@@ -423,8 +461,15 @@ fn dissect_message(payload: &[u8], msg_name: &str) -> String {
         _ => "?",
     };
     let sid = if type_id_bytes.len() >= 4 {
-        u32::from_le_bytes([type_id_bytes[1], type_id_bytes[2], type_id_bytes[3], type_id_bytes.get(4).copied().unwrap_or(0)]) % 1000
-    } else { 0 };
+        u32::from_le_bytes([
+            type_id_bytes[1],
+            type_id_bytes[2],
+            type_id_bytes[3],
+            type_id_bytes.get(4).copied().unwrap_or(0),
+        ]) % 1000
+    } else {
+        0
+    };
     let service_name = service_id_name(sid);
     format!("OPC UA {msg_name} channel={channel_id} token={token_id} request={request_id} service={service_name}({service_hint})")
 }
@@ -437,9 +482,12 @@ pub fn dissect_opc_ua_dpi(
     payload: &[u8],
 ) -> DissectedResult {
     let fallback = |s: String| DissectedResult {
-        src_addr: src_ip, dst_addr: dst_ip,
-        src_port: Some(src_port), dst_port: Some(dst_port),
-        protocol: Protocol::OpcUaDpi, summary: s,
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::OpcUaDpi,
+        summary: s,
     };
 
     if payload.len() < 8 {
@@ -464,9 +512,12 @@ pub fn dissect_opc_ua_dpi(
     };
 
     DissectedResult {
-        src_addr: src_ip, dst_addr: dst_ip,
-        src_port: Some(src_port), dst_port: Some(dst_port),
-        protocol: Protocol::OpcUaDpi, summary,
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::OpcUaDpi,
+        summary,
     }
 }
 
@@ -478,9 +529,12 @@ pub fn dissect_opc_ua_secure_conv(
     payload: &[u8],
 ) -> DissectedResult {
     let fallback = |s: String| DissectedResult {
-        src_addr: src_ip, dst_addr: dst_ip,
-        src_port: Some(src_port), dst_port: Some(dst_port),
-        protocol: Protocol::OpcUaSecureConv, summary: s,
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::OpcUaSecureConv,
+        summary: s,
     };
 
     if payload.len() < 8 {
@@ -489,21 +543,25 @@ pub fn dissect_opc_ua_secure_conv(
 
     if let Some((msg_name, _ck, size, _full)) = parse_opcua_header(payload) {
         let body = &payload[8..payload.len().min(size as usize)];
-        if msg_name == "OpenSecureChannel" || msg_name == "Message" || msg_name == "CloseSecureChannel" {
-            if body.len() >= 8 {
-                let channel_id = u32::from_le_bytes([body[0], body[1], body[2], body[3]]);
-                let token_id = u32::from_le_bytes([body[4], body[5], body[6], body[7]]);
-                let seq_info = if body.len() >= 16 {
-                    let seq_num = u32::from_le_bytes([body[8], body[9], body[10], body[11]]);
-                    let req_id = u32::from_le_bytes([body[12], body[13], body[14], body[15]]);
-                    format!(" seq={seq_num} req={req_id}")
-                } else {
-                    String::new()
-                };
-                return fallback(format!("OPC UA SecureConversation {msg_name} channel={channel_id} token={token_id}{seq_info} ({size} bytes)"));
-            }
+        if (msg_name == "OpenSecureChannel"
+            || msg_name == "Message"
+            || msg_name == "CloseSecureChannel")
+            && body.len() >= 8
+        {
+            let channel_id = u32::from_le_bytes([body[0], body[1], body[2], body[3]]);
+            let token_id = u32::from_le_bytes([body[4], body[5], body[6], body[7]]);
+            let seq_info = if body.len() >= 16 {
+                let seq_num = u32::from_le_bytes([body[8], body[9], body[10], body[11]]);
+                let req_id = u32::from_le_bytes([body[12], body[13], body[14], body[15]]);
+                format!(" seq={seq_num} req={req_id}")
+            } else {
+                String::new()
+            };
+            return fallback(format!("OPC UA SecureConversation {msg_name} channel={channel_id} token={token_id}{seq_info} ({size} bytes)"));
         }
-        return fallback(format!("OPC UA SecureConversation {msg_name} ({size} bytes)"));
+        return fallback(format!(
+            "OPC UA SecureConversation {msg_name} ({size} bytes)"
+        ));
     }
     fallback("OPC UA SecureConversation (unrecognized)".into())
 }
@@ -520,7 +578,10 @@ pub fn looks_like_opcua_dpi(payload: &[u8]) -> bool {
     if size < 8 || size > payload.len() + 65536 {
         return false;
     }
-    matches!(&payload[0..3], b"HEL" | b"ACK" | b"ERR" | b"RHE" | b"OPN" | b"CLO" | b"MSG")
+    matches!(
+        &payload[0..3],
+        b"HEL" | b"ACK" | b"ERR" | b"RHE" | b"OPN" | b"CLO" | b"MSG"
+    )
 }
 
 #[cfg(test)]
@@ -591,7 +652,13 @@ mod tests {
         make_msg(b"CLO", b'F', &body)
     }
 
-    fn make_msg_frame(channel_id: u32, token_id: u32, seq_num: u32, req_id: u32, service_hint: u8) -> Vec<u8> {
+    fn make_msg_frame(
+        channel_id: u32,
+        token_id: u32,
+        seq_num: u32,
+        req_id: u32,
+        service_hint: u8,
+    ) -> Vec<u8> {
         let mut body = Vec::new();
         body.extend_from_slice(&channel_id.to_le_bytes());
         body.extend_from_slice(&token_id.to_le_bytes());
@@ -631,7 +698,11 @@ mod tests {
 
     #[test]
     fn test_dpi_open_secure_channel() {
-        let p = make_opn_isuee("http://opcfoundation.org/UA/security/policy/None", 1, 3600000);
+        let p = make_opn_isuee(
+            "http://opcfoundation.org/UA/security/policy/None",
+            1,
+            3600000,
+        );
         let r = dissect_opc_ua_dpi(None, None, 50000, 4840, &p);
         assert!(r.summary.contains("OpenSecureChannel"));
         assert!(r.summary.contains("Issue"));
@@ -642,7 +713,10 @@ mod tests {
         let mut body = Vec::new();
         body.extend_from_slice(&0u32.to_le_bytes());
         body.extend_from_slice(&2u32.to_le_bytes());
-        body.extend_from_slice(&(b"http://opcfoundation.org/UA/security/policy/Basic256Sha256".len() as u32).to_le_bytes());
+        body.extend_from_slice(
+            &(b"http://opcfoundation.org/UA/security/policy/Basic256Sha256".len() as u32)
+                .to_le_bytes(),
+        );
         body.extend_from_slice(b"http://opcfoundation.org/UA/security/policy/Basic256Sha256");
         body.extend_from_slice(&0xFFFFFFFFu32.to_le_bytes());
         body.extend_from_slice(&0xFFFFFFFFu32.to_le_bytes());
@@ -744,7 +818,13 @@ mod tests {
 
     #[test]
     fn test_dpi_secure_conv_unrecognized() {
-        let r = dissect_opc_ua_secure_conv(None, None, 50000, 4840, b"\x00\x01\x02\x03\x04\x05\x06\x07");
+        let r = dissect_opc_ua_secure_conv(
+            None,
+            None,
+            50000,
+            4840,
+            b"\x00\x01\x02\x03\x04\x05\x06\x07",
+        );
         assert!(r.summary.contains("unrecognized"));
     }
 
@@ -799,10 +879,7 @@ mod tests {
 
     #[test]
     fn test_dpi_secure_conv_close() {
-        let body: Vec<u8> = [3u32, 4u32]
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
+        let body: Vec<u8> = [3u32, 4u32].iter().flat_map(|v| v.to_le_bytes()).collect();
         let p = make_msg(b"CLO", b'F', &body);
         let r = dissect_opc_ua_secure_conv(None, None, 50000, 4840, &p);
         assert!(r.summary.contains("channel=3"));

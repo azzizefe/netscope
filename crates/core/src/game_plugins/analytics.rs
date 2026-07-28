@@ -411,7 +411,10 @@ fn desync_rule() -> DiagRule {
                              or implement client-side rollback/prediction reconciliation."
                     .into(),
                 rule_id: "desync",
-                metrics: vec![("desync_flags_count".into(), tracker.desync_flags.len() as f64)],
+                metrics: vec![(
+                    "desync_flags_count".into(),
+                    tracker.desync_flags.len() as f64,
+                )],
             })
         },
     }
@@ -437,10 +440,7 @@ fn jitter_spike_rule() -> DiagRule {
                                  by Wi-Fi interference or bufferbloat."
                         .into(),
                     rule_id: "jitter-spike",
-                    metrics: vec![
-                        ("jitter_ms".into(), jitter),
-                        ("rtt_ms".into(), rtt),
-                    ],
+                    metrics: vec![("jitter_ms".into(), jitter), ("rtt_ms".into(), rtt)],
                 })
             } else {
                 None
@@ -505,7 +505,7 @@ fn platform_connectivity_rule() -> DiagRule {
             if tracker.total_packets < 10 {
                 return None;
             }
-            if tracker.current_rtt_ms.map_or(false, |r| r > 200.0) && tracker.packet_loss_pct > 2.0 {
+            if tracker.current_rtt_ms.is_some_and(|r| r > 200.0) && tracker.packet_loss_pct > 2.0 {
                 Some(DiagFinding {
                     severity: DiagSeverity::Warning,
                     title: "Platform Relay Degradation".into(),
@@ -516,7 +516,8 @@ fn platform_connectivity_rule() -> DiagRule {
                         tracker.packet_loss_pct
                     ),
                     suggestion: "Check platform relay status. EOS/Xbox/PSN relay servers \
-                                 may be experiencing regional degradation.".into(),
+                                 may be experiencing regional degradation."
+                        .into(),
                     rule_id: "platform-connectivity",
                     metrics: vec![
                         ("rtt_ms".into(), tracker.current_rtt_ms.unwrap_or(0.0)),
@@ -546,7 +547,8 @@ fn bandwidth_throttle_rule() -> DiagRule {
                         tracker.packet_loss_pct, tracker.total_packets
                     ),
                     suggestion: "Try using a VPN to rule out ISP throttling. \
-                                 Check for background downloads or streaming.".into(),
+                                 Check for background downloads or streaming."
+                        .into(),
                     rule_id: "bandwidth-throttle",
                     metrics: vec![
                         ("packet_loss_pct".into(), tracker.packet_loss_pct),
@@ -733,7 +735,9 @@ mod tests {
         t.total_packets = 20;
         let analyzer = LagAnalyzer::new();
         let findings = analyzer.analyze(&t);
-        assert!(findings.iter().any(|f| f.rule_id == "platform-connectivity"));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "platform-connectivity"));
     }
 
     #[test]

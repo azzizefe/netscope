@@ -6,16 +6,24 @@ use super::DissectedResult;
 
 fn mqtt_json_network_message(payload: &[u8]) -> &'static str {
     let raw = String::from_utf8_lossy(payload);
-    if raw.contains("\"MessageType\":\"ua-data\"") || raw.contains("MessageType") && raw.contains("ua-data") {
+    if raw.contains("\"MessageType\":\"ua-data\"")
+        || raw.contains("MessageType") && raw.contains("ua-data")
+    {
         return "DataSetMessage";
     }
-    if raw.contains("\"MessageType\":\"ua-metadata\"") || raw.contains("MessageType") && raw.contains("ua-metadata") {
+    if raw.contains("\"MessageType\":\"ua-metadata\"")
+        || raw.contains("MessageType") && raw.contains("ua-metadata")
+    {
         return "MetaData";
     }
-    if raw.contains("\"MessageType\":\"ua-keepalive\"") || raw.contains("MessageType") && raw.contains("ua-keepalive") {
+    if raw.contains("\"MessageType\":\"ua-keepalive\"")
+        || raw.contains("MessageType") && raw.contains("ua-keepalive")
+    {
         return "KeepAlive";
     }
-    if raw.contains("\"MessageType\":\"ua-event\"") || raw.contains("MessageType") && raw.contains("ua-event") {
+    if raw.contains("\"MessageType\":\"ua-event\"")
+        || raw.contains("MessageType") && raw.contains("ua-event")
+    {
         return "Event";
     }
     if raw.contains("PublishedDataSets") {
@@ -41,26 +49,45 @@ fn mqtt_json_network_message(payload: &[u8]) -> &'static str {
 
 fn mqtt_topic_hint(payload: &[u8]) -> Option<String> {
     let raw = String::from_utf8_lossy(payload);
-    let topics = ["/ua-data", "/ua-metadata", "/ua-keepalive", "/ua-event", "/status"];
+    let topics = [
+        "/ua-data",
+        "/ua-metadata",
+        "/ua-keepalive",
+        "/ua-event",
+        "/status",
+    ];
     for topic in &topics {
         if raw.contains(topic) {
             return Some(topic.trim_start_matches('/').to_string());
         }
     }
     if raw.contains("DataSetMessage") {
-        if raw.contains("Temperature") { return Some("sensor/Temperature".into()); }
-        if raw.contains("Pressure") { return Some("sensor/Pressure".into()); }
+        if raw.contains("Temperature") {
+            return Some("sensor/Temperature".into());
+        }
+        if raw.contains("Pressure") {
+            return Some("sensor/Pressure".into());
+        }
     }
     None
 }
 
 fn mqtt_payload_format(payload: &[u8]) -> &'static str {
     let raw = String::from_utf8_lossy(payload);
-    if raw.contains("\"Payload\":") && raw.contains("\"Value\":") { return "KeyValuePair"; }
-    if raw.contains("\"Payload\":[") { return "RawData"; }
-    if raw.contains("Values") && !raw.contains("KeyValue") { return "DataSetArray"; }
-    if raw.contains("{") && raw.contains("}") { return "JSON";
-    } else { return "Raw"; }
+    if raw.contains("\"Payload\":") && raw.contains("\"Value\":") {
+        return "KeyValuePair";
+    }
+    if raw.contains("\"Payload\":[") {
+        return "RawData";
+    }
+    if raw.contains("Values") && !raw.contains("KeyValue") {
+        return "DataSetArray";
+    }
+    if raw.contains("{") && raw.contains("}") {
+        "JSON"
+    } else {
+        "Raw"
+    }
 }
 
 fn extract_mqtt_field(payload: &[u8], field: &str) -> Option<String> {
@@ -70,7 +97,7 @@ fn extract_mqtt_field(payload: &[u8], field: &str) -> Option<String> {
         let after = &raw[pos + search.len()..];
         if let Some(colon) = after.find(':') {
             let val = after[colon + 1..].trim();
-            let end = val.find(|c: char| c == ',' || c == '}' || c == ']').unwrap_or(val.len().min(40));
+            let end = val.find([',', '}', ']']).unwrap_or(val.len().min(40));
             let v = val[..end].trim().trim_matches('"').to_string();
             if v.len() < 40 {
                 return Some(v);
@@ -88,9 +115,12 @@ pub fn dissect_opc_ua_mqtt_json_network(
     payload: &[u8],
 ) -> DissectedResult {
     let fallback = |s: String| DissectedResult {
-        src_addr: src_ip, dst_addr: dst_ip,
-        src_port: Some(src_port), dst_port: Some(dst_port),
-        protocol: Protocol::OpcUaMqttJsonNetwork, summary: s,
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::OpcUaMqttJsonNetwork,
+        summary: s,
     };
     if payload.len() < 4 {
         return fallback("OPC UA MQTT JSON Network (partial)".into());

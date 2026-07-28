@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_epic_online_eos_p2p(
     src_ip: Option<IpAddr>,
@@ -19,8 +19,13 @@ pub fn dissect_epic_online_eos_p2p(
         let is_reliable = (flags & 0x01) != 0;
         format!(
             "EOS P2P chan={} seq={} {} ack={}",
-            channel, seq,
-            if is_reliable { "reliable" } else { "unreliable" },
+            channel,
+            seq,
+            if is_reliable {
+                "reliable"
+            } else {
+                "unreliable"
+            },
             ack_count,
         )
     };
@@ -40,7 +45,13 @@ mod tests {
 
     #[test]
     fn test_eos_p2p_reliable() {
-        let r = dissect_epic_online_eos_p2p(None, None, 27018, 27018, b"\x01\x00\x00\x00\x0a\x01\x02\x00\xde\xad");
+        let r = dissect_epic_online_eos_p2p(
+            None,
+            None,
+            27018,
+            27018,
+            b"\x01\x00\x00\x00\x0a\x01\x02\x00\xde\xad",
+        );
         assert_eq!(r.protocol, Protocol::EpicOnlineEosP2p);
         assert!(r.summary.contains("reliable"));
         assert!(r.summary.contains("seq=10"));

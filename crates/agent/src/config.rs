@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use clap::Parser;
 use serde::Deserialize;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "netscope-agent", about = "Netscope Sensor Agent")]
@@ -26,6 +26,7 @@ pub struct CliArgs {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
+#[derive(Default)]
 pub struct AgentConfig {
     pub server: ServerConfig,
     pub identity: IdentityConfig,
@@ -34,20 +35,6 @@ pub struct AgentConfig {
     pub offline: OfflineConfig,
     pub upgrade: UpgradeConfig,
     pub capture: CaptureConfig,
-}
-
-impl Default for AgentConfig {
-    fn default() -> Self {
-        Self {
-            server: ServerConfig::default(),
-            identity: IdentityConfig::default(),
-            heartbeat: HeartbeatConfig::default(),
-            events: EventConfig::default(),
-            offline: OfflineConfig::default(),
-            upgrade: UpgradeConfig::default(),
-            capture: CaptureConfig::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -166,20 +153,11 @@ impl Default for UpgradeConfig {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
+#[derive(Default)]
 pub struct CaptureConfig {
     pub default_interface: Option<String>,
     pub bpf_filter: Option<String>,
     pub enabled_on_start: bool,
-}
-
-impl Default for CaptureConfig {
-    fn default() -> Self {
-        Self {
-            default_interface: None,
-            bpf_filter: None,
-            enabled_on_start: false,
-        }
-    }
 }
 
 impl AgentConfig {
@@ -199,5 +177,92 @@ impl AgentConfig {
         }
 
         Ok(config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every section carries `#[serde(default)]`, so a config file naming one
+    /// setting must keep the defaults for everything it does not mention. A
+    /// missing default turns an unrelated omission into a zero — a heartbeat
+    /// interval of 0 seconds would hammer the server.
+    #[test]
+    fn a_partial_config_keeps_the_defaults_around_it() {
+        let config: AgentConfig = toml::from_str(
+            r#"
+            [heartbeat]
+            interval_secs = 60
+            "#,
+        )
+        .expect("parse");
+
+        assert_eq!(config.heartbeat.interval_secs, 60);
+        assert_eq!(config.server.url, "https://127.0.0.1:9443");
+        assert_eq!(config.server.connect_timeout_secs, 10);
+        assert_eq!(config.events.batch_max_events, 100);
+        assert!(config.events.compression);
+        assert_eq!(config.offline.max_disk_mb, 4096);
+        assert_eq!(config.upgrade.channel, "stable");
+    }
+
+    /// An empty file is a valid config: it means "all defaults".
+    #[test]
+    fn an_empty_config_is_all_defaults() {
+        let from_file: AgentConfig = toml::from_str("").expect("parse");
+        let built_in = AgentConfig::default();
+
+        assert_eq!(from_file.server.url, built_in.server.url);
+        assert_eq!(
+            from_file.heartbeat.interval_secs,
+            built_in.heartbeat.interval_secs,
+        );
+        assert_eq!(from_file.upgrade.enabled, built_in.upgrade.enabled);
+    }
+
+    /// TLS paths are optional and stay unset unless the file names them —
+    /// `insecure_skip_verify` in particular must never default to true.
+    #[test]
+    fn tls_is_verified_unless_the_file_says_otherwise() {
+        let config = AgentConfig::default();
+        assert!(!config.server.insecure_skip_verify);
+        assert!(config.server.tls_cert.is_none());
+        assert!(config.server.tls_key.is_none());
+    }
+
+    /// The flag wins over the file, which is the whole point of having both:
+    /// pointing one agent at a different server must not need an edit to a
+    /// config file shared by the fleet.
+    #[test]
+    fn a_cli_flag_overrides_the_config_file() {
+        let mut config: AgentConfig = toml::from_str(
+            r#"
+            [server]
+            url = "https://from-the-file:9443"
+            auth_token = "file-token"
+            "#,
+        )
+        .expect("parse");
+
+        // The same two assignments `load` makes once the file has been read.
+        let args = CliArgs {
+            config: PathBuf::from("unused"),
+            server_url: Some("https://from-the-flag:9443".into()),
+            auth_token: None,
+            sensor_id: None,
+            register: false,
+            service: None,
+        };
+        if let Some(url) = &args.server_url {
+            config.server.url = url.clone();
+        }
+        if let Some(token) = &args.auth_token {
+            config.server.auth_token = token.clone();
+        }
+
+        assert_eq!(config.server.url, "https://from-the-flag:9443");
+        // Not overridden, so the file's value stands rather than being blanked.
+        assert_eq!(config.server.auth_token, "file-token");
     }
 }

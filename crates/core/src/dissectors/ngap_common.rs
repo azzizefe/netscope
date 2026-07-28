@@ -165,7 +165,10 @@ mod tests {
         let fail = ap_pdu(MessageKind::UnsuccessfulOutcome, 21);
         assert_eq!(summarize("NGAP", &init, procedure), "NGAP NGSetup");
         assert_eq!(summarize("NGAP", &ok, procedure), "NGAP NGSetup (success)");
-        assert_eq!(summarize("NGAP", &fail, procedure), "NGAP NGSetup (failure)");
+        assert_eq!(
+            summarize("NGAP", &fail, procedure),
+            "NGAP NGSetup (failure)"
+        );
     }
 
     /// A procedure from a later release than this table knows still reports
@@ -191,7 +194,10 @@ mod tests {
     fn a_truncated_pdu_reports_its_size() {
         assert_eq!(summarize("NGAP", &[], procedure), "NGAP (0 bytes)");
         assert_eq!(summarize("NGAP", &[0x00], procedure), "NGAP (1 byte)");
-        assert_eq!(summarize("NGAP", &[0x00, 0x15], procedure), "NGAP (2 bytes)");
+        assert_eq!(
+            summarize("NGAP", &[0x00, 0x15], procedure),
+            "NGAP (2 bytes)"
+        );
     }
 
     /// An index past the three defined alternatives is not an AP PDU. Reading

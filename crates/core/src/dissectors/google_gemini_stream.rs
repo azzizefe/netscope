@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 fn extract_delta(payload: &[u8]) -> Option<String> {
     if payload.len() < 5 || payload[0] != 0x00 {
@@ -24,7 +24,11 @@ fn extract_delta(payload: &[u8]) -> Option<String> {
         .first()?
         .get("text")?
         .as_str()?;
-    if text.is_empty() { None } else { Some(text.to_string()) }
+    if text.is_empty() {
+        None
+    } else {
+        Some(text.to_string())
+    }
 }
 
 fn extract_finish_reason(payload: &[u8]) -> Option<String> {
@@ -45,7 +49,11 @@ fn extract_finish_reason(payload: &[u8]) -> Option<String> {
         .first()?
         .get("finish_reason")?
         .as_str()?;
-    if reason == "FINISH_REASON_UNSPECIFIED" { None } else { Some(reason.to_string()) }
+    if reason == "FINISH_REASON_UNSPECIFIED" {
+        None
+    } else {
+        Some(reason.to_string())
+    }
 }
 
 pub fn dissect_google_gemini_stream(

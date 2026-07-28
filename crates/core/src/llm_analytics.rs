@@ -30,15 +30,15 @@ pub fn extract_llm_metadata(payload: &[u8], protocol: &Protocol) -> Option<LlmMe
     let cow = String::from_utf8_lossy(payload);
     let raw = strip_sse_prefix(&cow);
     let provider = provider_from_protocol(protocol);
-    let model = extract_model(&raw, &provider);
+    let model = extract_model(raw, &provider);
     let model_family = classify_model_family(&model);
-    let prompt_tokens = extract_prompt_tokens(&raw, &provider);
-    let completion_tokens = extract_completion_tokens(&raw, &provider);
-    let total_tokens = extract_total_tokens(&raw, &provider);
-    let finish_reason = extract_finish_reason(&raw, &provider);
+    let prompt_tokens = extract_prompt_tokens(raw, &provider);
+    let completion_tokens = extract_completion_tokens(raw, &provider);
+    let total_tokens = extract_total_tokens(raw, &provider);
+    let finish_reason = extract_finish_reason(raw, &provider);
     let request_type = request_type_from_protocol(protocol);
     let streaming = is_streaming_protocol(protocol);
-    let error_type = extract_error(&raw, &provider);
+    let error_type = extract_error(raw, &provider);
     let tool_calls = raw.contains("\"tool_calls\"") || raw.contains("tool_call_id");
     let cost_usd = estimate_cost(&provider, &model, prompt_tokens, completion_tokens);
     let latency_ms = None;
@@ -327,7 +327,8 @@ pub fn classify_model_family(model: &str) -> String {
         "grok".into()
     } else if m.contains("dbrx") || m.contains("dbrix") {
         "dbrx".into()
-    } else if m.contains("phi-3") || m.contains("phi3") || m.contains("phi-4") || m.contains("phi4") {
+    } else if m.contains("phi-3") || m.contains("phi3") || m.contains("phi-4") || m.contains("phi4")
+    {
         "phi".into()
     } else if m.contains("qwen") {
         "qwen".into()
@@ -483,8 +484,14 @@ fn extract_json_field(raw: &str, key: &str) -> Option<String> {
 
 fn extract_nested_json_field(raw: &str, key: &str) -> Option<String> {
     let pat = format!("\"{}\"", key);
-    if let Some(_) = raw.find(&pat) {
-        for nested in ["usage", "response", "message", "choices[0]", "candidates[0]"] {
+    if raw.find(&pat).is_some() {
+        for nested in [
+            "usage",
+            "response",
+            "message",
+            "choices[0]",
+            "candidates[0]",
+        ] {
             let nested_pat = format!("\"{}\":", nested);
             if let Some(n_start) = raw.find(&nested_pat) {
                 let rest = &raw[n_start + nested_pat.len()..];
@@ -516,8 +523,14 @@ fn extract_json_number(raw: &str, key: &str) -> Option<u64> {
 
 fn extract_nested_json_number(raw: &str, key: &str) -> Option<u64> {
     let pat = format!("\"{}\"", key);
-    if let Some(_) = raw.find(&pat) {
-        for nested in ["usage", "response", "message", "choices[0]", "candidates[0]"] {
+    if raw.find(&pat).is_some() {
+        for nested in [
+            "usage",
+            "response",
+            "message",
+            "choices[0]",
+            "candidates[0]",
+        ] {
             let nested_pat = format!("\"{}\":", nested);
             if let Some(n_start) = raw.find(&nested_pat) {
                 let rest = &raw[n_start + nested_pat.len()..];
@@ -609,7 +622,7 @@ pub struct LlmModelStats {
     pub rate_limited: u64,
     pub incomplete_streams: u64,
     pub total_streams: u64,
-} 
+}
 
 #[derive(Debug, Clone)]
 pub struct LlmProviderStats {
@@ -719,9 +732,7 @@ impl LlmAnalytics {
             }
         }
 
-        let model = self.per_model.entry(meta.model.clone()).or_insert_with(|| {
-            LlmModelStats::default()
-        });
+        let model = self.per_model.entry(meta.model.clone()).or_default();
         model.requests += 1;
         if meta.error_type.is_some() {
             model.errors += 1;
@@ -782,10 +793,7 @@ impl LlmAnalytics {
     }
 
     pub fn record_session_metrics(&mut self, sm: &LlmSessionMetrics) {
-        let model = self
-            .per_model
-            .entry(sm.model.clone())
-            .or_insert_with(LlmModelStats::default);
+        let model = self.per_model.entry(sm.model.clone()).or_default();
         model.requests += 1;
         model.prompt_tokens += sm.prompt_tokens;
         model.completion_tokens += sm.completion_tokens;
@@ -801,7 +809,7 @@ impl LlmAnalytics {
         }
 
         if sm.stream_duration_ms > 0 && sm.completion_tokens > 0 {
-            let tpot_us = (sm.stream_duration_ms as u64 * 1000) / sm.completion_tokens;
+            let tpot_us = (sm.stream_duration_ms * 1000) / sm.completion_tokens;
             model.tpot_sum_us += tpot_us;
             model.tpot_count += 1;
         }
@@ -862,7 +870,8 @@ impl LlmAnalytics {
         let now = Utc::now();
 
         if sm.ttft_ms > 0 {
-            self.latency_heatmap.push_back((now, sm.model.clone(), sm.ttft_ms));
+            self.latency_heatmap
+                .push_back((now, sm.model.clone(), sm.ttft_ms));
             if self.latency_heatmap.len() > self.max_heatmap_points {
                 self.latency_heatmap.pop_front();
             }
@@ -910,12 +919,27 @@ impl LlmAnalytics {
             check(tps < 20.0, "Tok/s", format!("{:.1}", tps), "20".into());
         }
         if sm.cost > 0.0 {
-            check(sm.cost > 0.10, "Maliyet", format!("${:.4}", sm.cost), "$0.10".into());
+            check(
+                sm.cost > 0.10,
+                "Maliyet",
+                format!("${:.4}", sm.cost),
+                "$0.10".into(),
+            );
         }
         match sm.http_status {
             429 => check(true, "Rate Limit", "429".into(), "429".into()),
-            400..=499 => check(true, "4xx Hata", format!("{}", sm.http_status), "4xx".into()),
-            500..=599 => check(true, "5xx Hata", format!("{}", sm.http_status), "5xx".into()),
+            400..=499 => check(
+                true,
+                "4xx Hata",
+                format!("{}", sm.http_status),
+                "4xx".into(),
+            ),
+            500..=599 => check(
+                true,
+                "5xx Hata",
+                format!("{}", sm.http_status),
+                "5xx".into(),
+            ),
             _ => {}
         }
         if sm.streaming && sm.finish_reason != "stop" {
@@ -984,27 +1008,37 @@ impl LlmFlowTracker {
         }
     }
 
-    pub fn record(&mut self, meta: &LlmMetadata, src_ip: &str, src_port: u16, dst_ip: &str, dst_port: u16) {
+    pub fn record(
+        &mut self,
+        meta: &LlmMetadata,
+        src_ip: &str,
+        src_port: u16,
+        dst_ip: &str,
+        dst_port: u16,
+    ) {
         let key = (src_ip.to_string(), src_port, dst_ip.to_string(), dst_port);
-        let entry = self.active.entry(key.clone()).or_insert_with(|| LlmFlowEntry {
-            src_addr: src_ip.to_string(),
-            src_port,
-            dst_addr: dst_ip.to_string(),
-            dst_port,
-            provider: meta.provider.clone(),
-            model: meta.model.clone(),
-            request_type: meta.request_type.clone(),
-            prompt_tokens: None,
-            completion_tokens: None,
-            total_tokens: None,
-            finish_reason: None,
-            streaming: meta.streaming,
-            error_type: None,
-            tool_calls: false,
-            cost_usd: None,
-            request_count: 0,
-            last_seen: 0,
-        });
+        let entry = self
+            .active
+            .entry(key.clone())
+            .or_insert_with(|| LlmFlowEntry {
+                src_addr: src_ip.to_string(),
+                src_port,
+                dst_addr: dst_ip.to_string(),
+                dst_port,
+                provider: meta.provider.clone(),
+                model: meta.model.clone(),
+                request_type: meta.request_type.clone(),
+                prompt_tokens: None,
+                completion_tokens: None,
+                total_tokens: None,
+                finish_reason: None,
+                streaming: meta.streaming,
+                error_type: None,
+                tool_calls: false,
+                cost_usd: None,
+                request_count: 0,
+                last_seen: 0,
+            });
         entry.request_count += 1;
         entry.provider = meta.provider.clone();
         if !meta.model.is_empty() {
@@ -1090,14 +1124,16 @@ mod tests {
     fn test_extract_nested_json_field() {
         let raw = r#"{"usage":{"prompt_tokens":5,"completion_tokens":10}}"#;
         assert_eq!(extract_nested_json_number(raw, "prompt_tokens"), Some(5));
-        assert_eq!(extract_nested_json_number(raw, "completion_tokens"), Some(10));
+        assert_eq!(
+            extract_nested_json_number(raw, "completion_tokens"),
+            Some(10)
+        );
     }
 
     #[test]
     fn test_extract_llm_metadata_openai() {
         let raw = br#"data: {"choices":[{"delta":{"content":"hello"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}"#;
-        let meta =
-            extract_llm_metadata(raw, &Protocol::OpenaiChatStream).expect("should extract");
+        let meta = extract_llm_metadata(raw, &Protocol::OpenaiChatStream).expect("should extract");
         assert_eq!(meta.provider, "openai");
         assert_eq!(meta.streaming, true);
         assert_eq!(meta.request_type, "chat");
@@ -1158,7 +1194,10 @@ mod tests {
     #[test]
     fn test_strip_sse_prefix() {
         assert_eq!(strip_sse_prefix("data: hello"), "hello");
-        assert_eq!(strip_sse_prefix("data: {\"key\":\"val\"}"), "{\"key\":\"val\"}");
+        assert_eq!(
+            strip_sse_prefix("data: {\"key\":\"val\"}"),
+            "{\"key\":\"val\"}"
+        );
         assert_eq!(strip_sse_prefix("plain text"), "plain text");
     }
 
@@ -1220,8 +1259,7 @@ mod tests {
     #[test]
     fn test_llm_analytics_nested_tokens() {
         let raw = br#"data: {"choices":[{"message":{"content":"hi"}}],"usage":{"prompt_tokens":5,"completion_tokens":8,"total_tokens":13}}"#;
-        let meta =
-            extract_llm_metadata(raw, &Protocol::OpenaiChatStream).expect("should extract");
+        let meta = extract_llm_metadata(raw, &Protocol::OpenaiChatStream).expect("should extract");
         assert_eq!(meta.prompt_tokens, Some(5));
         assert_eq!(meta.completion_tokens, Some(8));
         assert_eq!(meta.total_tokens, Some(13));
@@ -1253,7 +1291,10 @@ mod tests {
 
     #[test]
     fn test_provider_openai() {
-        assert_eq!(provider_from_protocol(&Protocol::OpenaiChatStream), "openai");
+        assert_eq!(
+            provider_from_protocol(&Protocol::OpenaiChatStream),
+            "openai"
+        );
         assert_eq!(
             provider_from_protocol(&Protocol::OpenaiResponsesApi),
             "openai"

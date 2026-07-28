@@ -40,9 +40,11 @@ impl DecodeQualityReport {
 
         let mut warnings: Vec<QualityWarning> = Vec::new();
 
-        if coverage_pct < 50 {
-            warnings.push(QualityWarning::LowCoverage(coverage_pct));
-        } else if coverage_pct < 80 {
+        // One threshold, because the warning carries the percentage and grades
+        // itself from it. This used to be two branches — `< 50` and `< 80` —
+        // that pushed the identical warning, so the severity the author was
+        // reaching for never reached the reader.
+        if coverage_pct < 80 {
             warnings.push(QualityWarning::LowCoverage(coverage_pct));
         }
 
@@ -82,11 +84,7 @@ impl DecodeQualityReport {
         if self.coverage_pct < 30 {
             return RiskLevel::Critical;
         }
-        if self.coverage_pct < 50
-            || self
-                .warnings
-                .contains(&QualityWarning::NeedsPluginUpdate)
-        {
+        if self.coverage_pct < 50 || self.warnings.contains(&QualityWarning::NeedsPluginUpdate) {
             return RiskLevel::High;
         }
         if self.warnings.len() > 2 {
@@ -108,18 +106,41 @@ impl DecodeQualityReport {
         };
         format!(
             "{} %{} decoded — {} layer(s), {} warning(s)",
-            icon, self.coverage_pct, layer_count(self.decode_layer), self.warnings.len()
+            icon,
+            self.coverage_pct,
+            layer_count(self.decode_layer),
+            self.warnings.len()
         )
     }
 
     pub fn layer_breakdown(&self) -> Vec<(&'static str, u16, &'static str)> {
         let mut layers = Vec::with_capacity(3);
-        layers.push(("L1 Ethernet", self.l1_bytes_decoded, if self.l1_bytes_decoded > 0 { "OK" } else { "FAIL" }));
+        layers.push((
+            "L1 Ethernet",
+            self.l1_bytes_decoded,
+            if self.l1_bytes_decoded > 0 {
+                "OK"
+            } else {
+                "FAIL"
+            },
+        ));
         if self.decode_layer >= DecodeLayer::L2BaseFamily {
-            layers.push(("L2 Protocol", self.l2_bytes_decoded, if self.l2_bytes_decoded > 0 { "OK" } else { "FAIL" }));
+            layers.push((
+                "L2 Protocol",
+                self.l2_bytes_decoded,
+                if self.l2_bytes_decoded > 0 {
+                    "OK"
+                } else {
+                    "FAIL"
+                },
+            ));
         }
         if self.decode_layer >= DecodeLayer::L3VendorFull {
-            layers.push(("L3 Vendor", self.l3_bytes_decoded, if self.l3_bytes_decoded > 0 { "OK" } else { "?" }));
+            layers.push((
+                "L3 Vendor",
+                self.l3_bytes_decoded,
+                if self.l3_bytes_decoded > 0 { "OK" } else { "?" },
+            ));
         }
         layers
     }
@@ -127,7 +148,9 @@ impl DecodeQualityReport {
 
 fn compute_layer_coverage(rec: &FieldbusDecodeRecord) -> (u16, u16, u16) {
     let l1: u16 = 14;
-    let l2: u16 = rec.io_data_length.min(rec.io_data_length.saturating_sub(rec.unknown_bytes));
+    let l2: u16 = rec
+        .io_data_length
+        .min(rec.io_data_length.saturating_sub(rec.unknown_bytes));
     let l3: u16 = if rec.decode_layer >= DecodeLayer::L3VendorFull {
         rec.io_data_length.saturating_sub(rec.unknown_bytes)
     } else {
@@ -147,13 +170,28 @@ fn layer_count(layer: DecodeLayer) -> u8 {
 impl QualityWarning {
     pub fn message(&self) -> &'static str {
         match self {
-            QualityWarning::LowCoverage(_) => "Low decode coverage — some fields were not parsed",
-            QualityWarning::UnknownTrailer(_) => "Unknown trailer bytes detected — plugin update may be required",
+            // Below half decoded, the frame is barely understood at all; above
+            // it, the base protocol came through and it is the vendor-specific
+            // tail that is missing. Those call for different responses, so they
+            // do not get to share a sentence.
+            QualityWarning::LowCoverage(pct) if *pct < 50 => {
+                "Very low decode coverage — most of the frame was not parsed"
+            }
+            QualityWarning::LowCoverage(_) => {
+                "Partial decode coverage — some fields were not parsed"
+            }
+            QualityWarning::UnknownTrailer(_) => {
+                "Unknown trailer bytes detected — plugin update may be required"
+            }
             QualityWarning::NeedsPluginUpdate => "Plugin update recommended for complete decode",
-            QualityWarning::MissingVendorExtension => "Vendor extension not available — OUI not recognized",
+            QualityWarning::MissingVendorExtension => {
+                "Vendor extension not available — OUI not recognized"
+            }
             QualityWarning::TruncatedPayload => "Payload is truncated or malformed",
             QualityWarning::SafetyLayerNotDecoded => "Safety layer present but not decoded",
-            QualityWarning::UnexpectedFrameId(_) => "Unexpected frame ID — possibly new firmware variant",
+            QualityWarning::UnexpectedFrameId(_) => {
+                "Unexpected frame ID — possibly new firmware variant"
+            }
         }
     }
 
@@ -161,7 +199,9 @@ impl QualityWarning {
         match *self {
             QualityWarning::LowCoverage(pct) => format!("Only {}% of bytes decoded", pct),
             QualityWarning::UnknownTrailer(n) => format!("{} unknown trailer bytes", n),
-            QualityWarning::UnexpectedFrameId(id) => format!("Frame ID 0x{:04X} not in known range", id),
+            QualityWarning::UnexpectedFrameId(id) => {
+                format!("Frame ID 0x{:04X} not in known range", id)
+            }
             _ => String::new(),
         }
     }
@@ -185,10 +225,7 @@ pub fn format_layers(rec: &FieldbusDecodeRecord) -> Vec<String> {
     }
 
     if report.unknown_bytes > 0 {
-        lines.push(format!(
-            "✗ Unknown trailer: {} bytes",
-            report.unknown_bytes
-        ));
+        lines.push(format!("✗ Unknown trailer: {} bytes", report.unknown_bytes));
     }
 
     if report.decode_layer < DecodeLayer::L2BaseFamily {
@@ -201,11 +238,7 @@ pub fn format_layers(rec: &FieldbusDecodeRecord) -> Vec<String> {
 fn coverage_bar(pct: u8) -> String {
     let filled = (pct as usize / 5).min(20);
     let empty = 20 - filled;
-    format!(
-        "[{}{}]",
-        "█".repeat(filled),
-        "░".repeat(empty)
-    )
+    format!("[{}{}]", "█".repeat(filled), "░".repeat(empty))
 }
 
 fn status_indicator(status: &str) -> &'static str {
@@ -220,7 +253,9 @@ fn status_indicator(status: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fieldbus::record::{DataStatus, FieldbusFamily, ProcessDataQuality, TransferStatus, VendorId};
+    use crate::fieldbus::record::{
+        DataStatus, FieldbusFamily, ProcessDataQuality, TransferStatus, VendorId,
+    };
 
     #[test]
     fn full_decode_no_warnings() {
@@ -234,9 +269,10 @@ mod tests {
     fn low_coverage_warning() {
         let rec = make_good_record(45, 0);
         let report = DecodeQualityReport::generate(&rec);
-        assert!(
-            report.warnings.iter().any(|w| matches!(w, QualityWarning::LowCoverage(_)))
-        );
+        assert!(report
+            .warnings
+            .iter()
+            .any(|w| matches!(w, QualityWarning::LowCoverage(_))));
         assert_eq!(report.risk_level(), RiskLevel::High);
     }
 
@@ -247,16 +283,50 @@ mod tests {
         assert_eq!(report.risk_level(), RiskLevel::Critical);
     }
 
+    /// The two coverage bands have to read differently, or the warning tells a
+    /// reader nothing they could not see from the percentage alone.
+    #[test]
+    fn the_coverage_warning_grades_itself() {
+        let barely = QualityWarning::LowCoverage(20);
+        let mostly = QualityWarning::LowCoverage(75);
+        assert_ne!(barely.message(), mostly.message());
+        assert!(barely.message().contains("Very low"));
+        assert!(mostly.message().contains("Partial"));
+
+        // 49 and 50 straddle the boundary — the band is the whole point.
+        assert_eq!(QualityWarning::LowCoverage(49).message(), barely.message(),);
+        assert_eq!(QualityWarning::LowCoverage(50).message(), mostly.message(),);
+    }
+
+    /// Above the threshold there is nothing to warn about, and below it there
+    /// is exactly one warning — not two for the same frame.
+    #[test]
+    fn coverage_warns_once_or_not_at_all() {
+        for pct in [20u8, 49, 50, 79] {
+            let report = DecodeQualityReport::generate(&make_good_record(pct, 0));
+            let coverage: Vec<_> = report
+                .warnings
+                .iter()
+                .filter(|w| matches!(w, QualityWarning::LowCoverage(_)))
+                .collect();
+            assert_eq!(coverage.len(), 1, "{pct}% produced {coverage:?}");
+        }
+
+        let fine = DecodeQualityReport::generate(&make_good_record(80, 0));
+        assert!(!fine
+            .warnings
+            .iter()
+            .any(|w| matches!(w, QualityWarning::LowCoverage(_))));
+    }
+
     #[test]
     fn unknown_trailer_warning() {
         let rec = make_good_record(90, 24);
         let report = DecodeQualityReport::generate(&rec);
-        assert!(
-            report
-                .warnings
-                .iter()
-                .any(|w| matches!(w, QualityWarning::UnknownTrailer(24)))
-        );
+        assert!(report
+            .warnings
+            .iter()
+            .any(|w| matches!(w, QualityWarning::UnknownTrailer(24))));
     }
 
     #[test]
@@ -276,12 +346,10 @@ mod tests {
             ..make_good_record(90, 0)
         };
         let report = DecodeQualityReport::generate(&rec);
-        assert!(
-            report
-                .warnings
-                .iter()
-                .any(|w| matches!(w, QualityWarning::MissingVendorExtension))
-        );
+        assert!(report
+            .warnings
+            .iter()
+            .any(|w| matches!(w, QualityWarning::MissingVendorExtension)));
     }
 
     #[test]
@@ -290,12 +358,10 @@ mod tests {
         rec.has_safety_layer = false;
         rec.protocol_family = FieldbusFamily::Profinet;
         let report = DecodeQualityReport::generate(&rec);
-        assert!(
-            report
-                .warnings
-                .iter()
-                .any(|w| matches!(w, QualityWarning::SafetyLayerNotDecoded))
-        );
+        assert!(report
+            .warnings
+            .iter()
+            .any(|w| matches!(w, QualityWarning::SafetyLayerNotDecoded)));
     }
 
     #[test]

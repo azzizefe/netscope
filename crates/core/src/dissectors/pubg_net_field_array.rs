@@ -1,6 +1,6 @@
-use std::net::IpAddr;
-use crate::models::Protocol;
 use super::DissectedResult;
+use crate::models::Protocol;
+use std::net::IpAddr;
 
 pub fn dissect_pubg_net_field_array(
     src_ip: Option<IpAddr>,
@@ -17,7 +17,10 @@ pub fn dissect_pubg_net_field_array(
         let base_offset = u16::from_be_bytes([payload[4], payload[5]]);
         format!(
             "PUBG NetFieldArray elements={} changed=0x{:04x} base_offset={} len={}",
-            element_count, changed_bits, base_offset, payload.len()
+            element_count,
+            changed_bits,
+            base_offset,
+            payload.len()
         )
     };
     DissectedResult {
@@ -36,7 +39,13 @@ mod tests {
 
     #[test]
     fn test_pubg_net_field() {
-        let r = dissect_pubg_net_field_array(None, None, 0, 0, b"\x00\x0a\x00\x03\x00\x01\xde\xad\xbe\xef");
+        let r = dissect_pubg_net_field_array(
+            None,
+            None,
+            0,
+            0,
+            b"\x00\x0a\x00\x03\x00\x01\xde\xad\xbe\xef",
+        );
         assert_eq!(r.protocol, Protocol::PubgNetFieldArray);
         assert!(r.summary.contains("elements=10"));
     }

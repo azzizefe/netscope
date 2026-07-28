@@ -112,14 +112,25 @@ impl VendorPluginManifest {
         }
         let invalid: &[char] = &['/', '\\', ':', ' ', '\t', '\n'];
         if self.plugin.name.contains(invalid) {
-            errors.push(format!("plugin.name contains invalid characters: '{}'", self.plugin.name));
+            errors.push(format!(
+                "plugin.name contains invalid characters: '{}'",
+                self.plugin.name
+            ));
         }
-        if !self.compatibility.base_protocols.is_empty() && self.compatibility.min_netscope_version.is_empty() {
-            errors.push("compatibility.min_netscope_version is required when base_protocols are specified".into());
+        if !self.compatibility.base_protocols.is_empty()
+            && self.compatibility.min_netscope_version.is_empty()
+        {
+            errors.push(
+                "compatibility.min_netscope_version is required when base_protocols are specified"
+                    .into(),
+            );
         }
         for (i, dr) in self.vendor_signatures.device_id_ranges.iter().enumerate() {
             if dr.from.is_empty() || dr.to.is_empty() {
-                errors.push(format!("vendor_signatures.device_id_ranges[{}] needs non-empty from/to", i));
+                errors.push(format!(
+                    "vendor_signatures.device_id_ranges[{}] needs non-empty from/to",
+                    i
+                ));
             }
         }
         if errors.is_empty() {
@@ -186,9 +197,22 @@ test_pcaps = ["tests/s7-1500_tia_v17.pcap"]
         assert_eq!(m.vendor_signatures.mac_ouis.len(), 5);
         assert_eq!(m.vendor_signatures.pno_vendor_id, Some(42));
         assert_eq!(m.vendor_signatures.device_id_ranges.len(), 2);
-        assert_eq!(m.compatibility.base_protocols, vec!["profinet_rt", "profinet_dcp", "s7comm", "ethercat"]);
-        assert_eq!(m.protocols(), &["profinet_rt_siemens", "s7comm_plus_detail", "sinamics_drive_profile"]);
-        assert_eq!(m.dissector_files(), &["profinet_rt_siemens.rs", "s7comm_plus_detail.rs"]);
+        assert_eq!(
+            m.compatibility.base_protocols,
+            vec!["profinet_rt", "profinet_dcp", "s7comm", "ethercat"]
+        );
+        assert_eq!(
+            m.protocols(),
+            &[
+                "profinet_rt_siemens",
+                "s7comm_plus_detail",
+                "sinamics_drive_profile"
+            ]
+        );
+        assert_eq!(
+            m.dissector_files(),
+            &["profinet_rt_siemens.rs", "s7comm_plus_detail.rs"]
+        );
         assert_eq!(m.test_pcaps(), &["tests/s7-1500_tia_v17.pcap"]);
     }
 
@@ -213,8 +237,14 @@ file = "s7comm_plus_v5.rs"
         assert_eq!(m.firmware_variants.protocol.len(), 1);
         assert_eq!(m.firmware_variants.protocol[0].name, "s7comm_plus");
         assert_eq!(m.firmware_variants.protocol[0].variants.len(), 2);
-        assert_eq!(m.firmware_variants.protocol[0].variants[0].fw_range, ">= 4.0, < 5.0");
-        assert_eq!(m.firmware_variants.protocol[0].variants[1].file, "s7comm_plus_v5.rs");
+        assert_eq!(
+            m.firmware_variants.protocol[0].variants[0].fw_range,
+            ">= 4.0, < 5.0"
+        );
+        assert_eq!(
+            m.firmware_variants.protocol[0].variants[1].file,
+            "s7comm_plus_v5.rs"
+        );
     }
 
     #[test]

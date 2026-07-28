@@ -90,9 +90,9 @@ pub fn dissect_tls_ech_pqc_interop(
 
     let records = crate::dissectors::tls::drain_pqc_store();
     let pqc_count = records.iter().filter(|r| r.used_pqc()).count();
-    let ech_compatible = records.iter().any(|r| {
-        r.client_hello_size > 0 && r.server_hello_size > 0 && r.used_pqc()
-    });
+    let ech_compatible = records
+        .iter()
+        .any(|r| r.client_hello_size > 0 && r.server_hello_size > 0 && r.used_pqc());
 
     let compatibility = if ech_pqc_aware || ech_compatible {
         "PQC-compatible ECH"

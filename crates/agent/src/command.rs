@@ -53,7 +53,10 @@ pub async fn command_loop(state: AgentState) {
     }
 }
 
-async fn poll_commands(state: &AgentState, sensor_id: uuid::Uuid) -> anyhow::Result<Vec<ServerCommand>> {
+async fn poll_commands(
+    state: &AgentState,
+    sensor_id: uuid::Uuid,
+) -> anyhow::Result<Vec<ServerCommand>> {
     let path = format!("/api/v1/sensors/{}/commands", sensor_id);
     state.http_get(&path).await
 }
@@ -62,11 +65,15 @@ async fn execute_command(state: &AgentState, cmd: &ServerCommand) -> CommandResu
     let status = match cmd.command.as_str() {
         "ping" => "success".into(),
         "capture_start" => {
-            state.capture_active.store(true, std::sync::atomic::Ordering::Relaxed);
+            state
+                .capture_active
+                .store(true, std::sync::atomic::Ordering::Relaxed);
             "success".into()
         }
         "capture_stop" => {
-            state.capture_active.store(false, std::sync::atomic::Ordering::Relaxed);
+            state
+                .capture_active
+                .store(false, std::sync::atomic::Ordering::Relaxed);
             "success".into()
         }
         "set_filter" => {
@@ -75,18 +82,18 @@ async fn execute_command(state: &AgentState, cmd: &ServerCommand) -> CommandResu
             }
             "success".into()
         }
-        "upgrade" => {
-            match crate::upgrade::do_upgrade(&state).await {
-                Ok(_) => "success".into(),
-                Err(e) => {
-                    tracing::error!("Upgrade failed: {}", e);
-                    format!("failed: {}", e)
-                }
+        "upgrade" => match crate::upgrade::do_upgrade(state).await {
+            Ok(_) => "success".into(),
+            Err(e) => {
+                tracing::error!("Upgrade failed: {}", e);
+                format!("failed: {}", e)
             }
-        }
+        },
         "restart" => {
             tracing::info!("Restart command received, initiating shutdown...");
-            state.shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
+            state
+                .shutdown
+                .store(true, std::sync::atomic::Ordering::Relaxed);
             "success".into()
         }
         other => format!("unknown_command: {}", other),
