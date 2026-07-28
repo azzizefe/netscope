@@ -43,4 +43,36 @@ impl CacheLayer {
             .await?;
         Ok(())
     }
+
+    pub async fn incr(&self, key: &str) -> Result<i64> {
+        let mut con = self.con.clone();
+        let val: i64 = redis::cmd("INCR")
+            .arg(key)
+            .query_async(&mut con)
+            .await?;
+        Ok(val)
+    }
+
+    pub async fn expire(&self, key: &str, secs: i64) -> Result<bool> {
+        let mut con = self.con.clone();
+        let val: bool = redis::cmd("EXPIRE")
+            .arg(key)
+            .arg(secs)
+            .query_async(&mut con)
+            .await?;
+        Ok(val)
+    }
+
+    pub async fn set_nx_ttl(&self, key: &str, value: &str, ttl_secs: u64) -> Result<bool> {
+        let mut con = self.con.clone();
+        let val: Option<String> = redis::cmd("SET")
+            .arg(key)
+            .arg(value)
+            .arg("EX")
+            .arg(ttl_secs)
+            .arg("NX")
+            .query_async(&mut con)
+            .await?;
+        Ok(val.is_some())
+    }
 }

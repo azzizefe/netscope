@@ -63,7 +63,7 @@ fn system_info(state: &AgentState) -> RegisterRequest {
     sys.refresh_memory();
 
     RegisterRequest {
-        hostname: state.config.identity.hostname.clone(),
+        hostname: state.config.read().identity.hostname.clone(),
         ip_address: local_ip().unwrap_or_else(|| "127.0.0.1".into()),
         os,
         version: env!("CARGO_PKG_VERSION").into(),

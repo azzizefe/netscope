@@ -5,6 +5,7 @@ pub mod events;
 pub mod health;
 pub mod rules;
 pub mod sensors;
+pub mod sensors_config;
 pub mod upgrade;
 
 use axum::Router;

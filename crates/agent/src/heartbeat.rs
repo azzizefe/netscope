@@ -15,7 +15,6 @@ pub struct HeartbeatPayload {
 }
 
 pub async fn heartbeat_loop(state: AgentState, started_at: Instant) {
-    let interval = std::time::Duration::from_secs(state.config.heartbeat.interval_secs);
     let mut sys = System::new();
     let mut disks = Disks::new();
 
@@ -24,6 +23,7 @@ pub async fn heartbeat_loop(state: AgentState, started_at: Instant) {
             break;
         }
 
+        let interval = std::time::Duration::from_secs(state.config.read().heartbeat.interval_secs);
         tokio::time::sleep(interval).await;
         if let Err(e) = send_heartbeat(&state, &mut sys, &mut disks, started_at).await {
             tracing::warn!("Heartbeat failed: {}", e);

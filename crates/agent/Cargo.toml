@@ -14,6 +14,9 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+rustls = "0.23"
+futures-util = "0.3"
 # Kept in step with `netscope-server`'s sqlx: both reach `libsqlite3-sys`, and
 # only one version of a `-sys` crate can exist in a build. rusqlite 0.32 moved
 # to libsqlite3-sys 0.30, which is what sqlx 0.8.6 also wants — pinned lower,

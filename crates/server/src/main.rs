@@ -139,6 +139,7 @@ async fn main() -> Result<()> {
 
     // WebSocket broadcast
     let ws_state = Arc::new(WsState::new());
+    let sensor_ws_registry = Arc::new(crate::ws::SensorWsRegistry::new());
     let commands = crate::api::sensors::CommandStore::new();
     let api_state = Arc::new(ApiState {
         pool: pool.clone(),
@@ -160,6 +161,7 @@ async fn main() -> Result<()> {
         ))
         .layer(axum::extract::Extension(api_state))
         .layer(axum::extract::Extension(ws_state))
+        .layer(axum::extract::Extension(sensor_ws_registry))
         .layer(TraceLayer::new_for_http())
         .layer(
             CorsLayer::new()
@@ -229,7 +231,7 @@ async fn main() -> Result<()> {
             .unwrap_or(false);
 
     // ── gRPC server (separate port) ──
-    let grpc_svc = grpc::grpc_service(pool.clone());
+    let grpc_svc = grpc::grpc_service(pool.clone(), cache.clone());
 
     let grpc_handle = if grpc_enabled {
         tracing::info!("gRPC server starting on {}", grpc_listen_addr);

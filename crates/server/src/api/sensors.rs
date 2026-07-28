@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, State, Extension};
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::middleware::from_fn;
 use axum::response::IntoResponse;
@@ -10,6 +11,9 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
+
+use crate::ws::SensorWsRegistry;
+use crate::api::sensors_config::validate_and_canonicalize;
 
 use crate::api::ApiState;
 use crate::auth::require;
@@ -112,6 +116,24 @@ pub fn routes(state: Arc<ApiState>) -> Router {
             "/{id}/commands/{cmd_id}/result",
             put(command_result).route_layer(write()),
         )
+        .route(
+            "/{id}/config",
+            get(get_sensor_config_route)
+                .route_layer(read())
+                .merge(put(update_sensor_config_route).route_layer(write())),
+        )
+        .route(
+            "/{id}/config/history",
+            get(get_sensor_config_history_route).route_layer(read()),
+        )
+        .route(
+            "/{id}/config/rollback",
+            post(rollback_sensor_config_route).route_layer(write()),
+        )
+        .route(
+            "/{id}/ws",
+            get(sensor_ws_handler),
+        )
         .with_state(state)
 }
 
@@ -150,8 +172,20 @@ async fn register_sensor(
 }
 
 async fn get_sensor(State(state): State<Arc<ApiState>>, Path(id): Path<Uuid>) -> impl IntoResponse {
+    let cached_hb = if let Some(ref cache) = state.cache {
+        let key = format!("sensor:heartbeat:{}", id);
+        cache.get::<String>(&key).await.ok().flatten()
+    } else {
+        None
+    };
+
     match queries::get_sensor(&state.pool, id).await {
-        Ok(Some(s)) => (StatusCode::OK, Json(json!(s))).into_response(),
+        Ok(Some(mut s)) => {
+            if cached_hb.is_some() {
+                s.status = "online".into();
+            }
+            (StatusCode::OK, Json(json!(s))).into_response()
+        }
         Ok(None) => (
             StatusCode::NOT_FOUND,
             Json(json!({"error": "sensor not found"})),
@@ -201,11 +235,18 @@ async fn sensor_heartbeat(
     };
 
     match queries::update_sensor_heartbeat(&state.pool, id, &db_hb).await {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(json!({"status": "ok", "sensor_id": id, "hostname": sensor.hostname})),
-        )
-            .into_response(),
+        Ok(_) => {
+            if let Some(ref cache) = state.cache {
+                let key = format!("sensor:heartbeat:{}", id);
+                let hb_str = serde_json::to_string(&hb).unwrap_or_default();
+                let _ = cache.set_ttl(&key, hb_str, 60).await;
+            }
+            (
+                StatusCode::OK,
+                Json(json!({"status": "ok", "sensor_id": id, "hostname": sensor.hostname})),
+            )
+                .into_response()
+        }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": e.to_string()})),
@@ -214,7 +255,7 @@ async fn sensor_heartbeat(
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SensorHeartbeatPayload {
     pub cpu_load_pct: f32,
     pub ram_used_mb: i32,
@@ -323,4 +364,149 @@ async fn command_result(
         })),
     )
         .into_response()
+}
+
+// ── Sensor Config Route Handlers ──
+
+async fn get_sensor_config_route(
+    State(state): State<Arc<ApiState>>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match queries::get_sensor_config(&state.pool, id).await {
+        Ok(Some(cfg)) => (StatusCode::OK, Json(cfg)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "No config found for this sensor"}))).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateConfigPayload {
+    pub config_data: String,
+}
+
+async fn update_sensor_config_route(
+    State(state): State<Arc<ApiState>>,
+    Extension(claims): Extension<crate::auth::Claims>,
+    Extension(ws_registry): Extension<Arc<SensorWsRegistry>>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateConfigPayload>,
+) -> impl IntoResponse {
+    let canonicalized_toml = match validate_and_canonicalize(&payload.config_data) {
+        Ok(toml) => toml,
+        Err(e) => return (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
+    };
+
+    let config = match queries::update_sensor_config(&state.pool, id, &canonicalized_toml, Some(claims.sub)).await {
+        Ok(cfg) => cfg,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+    };
+
+    let details = json!({
+        "version": config.version,
+        "config_len": config.config_data.len()
+    });
+    if let Err(e) = queries::insert_audit_log(&state.pool, Some(claims.sub), "config_update", "sensor_config", Some(id), details).await {
+        tracing::error!("Failed to write to audit log: {}", e);
+    }
+
+    let pushed = ws_registry.push_config(id, &config.config_data);
+    tracing::info!("Pushed config to sensor {} (version {}): success={}", id, config.version, pushed);
+
+    (StatusCode::OK, Json(config)).into_response()
+}
+
+async fn get_sensor_config_history_route(
+    State(state): State<Arc<ApiState>>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match queries::get_sensor_config_history(&state.pool, id).await {
+        Ok(history) => (StatusCode::OK, Json(history)).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RollbackPayload {
+    pub version: i32,
+}
+
+async fn rollback_sensor_config_route(
+    State(state): State<Arc<ApiState>>,
+    Extension(claims): Extension<crate::auth::Claims>,
+    Extension(ws_registry): Extension<Arc<SensorWsRegistry>>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<RollbackPayload>,
+) -> impl IntoResponse {
+    let historical = match queries::get_sensor_config_version(&state.pool, id, payload.version).await {
+        Ok(Some(h)) => h,
+        Ok(None) => return (StatusCode::NOT_FOUND, Json(json!({"error": "Config version not found"}))).into_response(),
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+    };
+
+    let config = match queries::update_sensor_config(&state.pool, id, &historical.config_data, Some(claims.sub)).await {
+        Ok(cfg) => cfg,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+    };
+
+    let details = json!({
+        "rolled_back_to_version": historical.version,
+        "new_version": config.version
+    });
+    if let Err(e) = queries::insert_audit_log(&state.pool, Some(claims.sub), "config_rollback", "sensor_config", Some(id), details).await {
+        tracing::error!("Failed to write to audit log: {}", e);
+    }
+
+    let pushed = ws_registry.push_config(id, &config.config_data);
+    tracing::info!("Pushed rolled-back config to sensor {} (version {}): success={}", id, config.version, pushed);
+
+    (StatusCode::OK, Json(config)).into_response()
+}
+
+// ── Sensor WebSocket Upgrade Route ──
+
+async fn sensor_ws_handler(
+    ws: WebSocketUpgrade,
+    Path(id): Path<Uuid>,
+    Extension(ws_registry): Extension<Arc<SensorWsRegistry>>,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_sensor_ws(socket, id, ws_registry))
+}
+
+async fn handle_sensor_ws(
+    mut socket: WebSocket,
+    sensor_id: Uuid,
+    ws_registry: Arc<SensorWsRegistry>,
+) {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
+    ws_registry.register(sensor_id, tx);
+    tracing::info!("Sensor WS connected: {}", sensor_id);
+
+    loop {
+        tokio::select! {
+            msg = rx.recv() => {
+                match msg {
+                    Some(m) => {
+                        if socket.send(m).await.is_err() {
+                            break;
+                        }
+                    }
+                    None => break,
+                }
+            }
+            ws_msg = socket.recv() => {
+                match ws_msg {
+                    Some(Ok(Message::Close(_))) | None => break,
+                    Some(Ok(Message::Ping(payload))) => {
+                        if socket.send(Message::Pong(payload)).await.is_err() {
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    ws_registry.unregister(sensor_id);
+    tracing::info!("Sensor WS disconnected: {}", sensor_id);
 }

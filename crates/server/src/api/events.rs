@@ -92,6 +92,22 @@ async fn ingest_events_batch(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> impl IntoResponse {
+    let client_ip = headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("unknown");
+
+    if let Some(ref cache) = state.cache {
+        let rate_key = format!("rate_limit:events:{}", client_ip);
+        if is_rate_limited(cache, &rate_key, 60, 60).await {
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                Json(json!({"error": "Rate limit exceeded (max 60 batch requests per minute)"})),
+            )
+                .into_response();
+        }
+    }
+
     let content_type = headers
         .get("content-type")
         .and_then(|v| v.to_str().ok())
@@ -105,6 +121,7 @@ async fn ingest_events_batch(
                     StatusCode::BAD_REQUEST,
                     Json(json!({"error": format!("Decompress error: {}", e)})),
                 )
+                    .into_response()
             }
         }
     } else {
@@ -117,12 +134,13 @@ async fn ingest_events_batch(
             return (
                 StatusCode::BAD_REQUEST,
                 Json(json!({"error": format!("Invalid JSON: {}", e)})),
-            );
+            )
+                .into_response();
         }
     };
 
     if events.is_empty() {
-        return (StatusCode::OK, Json(json!({"accepted": 0})));
+        return (StatusCode::OK, Json(json!({"accepted": 0}))).into_response();
     }
 
     let mut accepted = 0u64;
@@ -141,26 +159,23 @@ async fn ingest_events_batch(
             port: ev.port,
             raw_data: ev.raw_data.as_ref().map(|s| json!(s)),
             tags: json!([]),
-            // When the sensor saw it, not when we received it. The agent
-            // buffers events while the server is unreachable, so a batch can
-            // arrive long after the traffic that produced it — stamping the
-            // ingest time here collapsed an entire outage onto the moment the
-            // link came back, and the SOC timeline lost the ordering it is
-            // read for. An unparseable stamp still falls back to now rather
-            // than dropping the event.
             timestamp: DateTime::parse_from_rfc3339(&ev.timestamp)
                 .map(|t| t.with_timezone(&Utc))
                 .unwrap_or_else(|_| Utc::now()),
         };
 
         match queries::insert_event(&state.pool, &db_event).await {
-            Ok(_) => {
+            Ok(inserted_ev) => {
                 accepted += 1;
-                // The whole point of the WebSocket: a dashboard sees the event
-                // as it lands, not on its next poll. Nothing pushed into it
-                // before this, so `/ws/events` accepted connections and then
-                // stayed silent forever.
-                ws.broadcast(&db_event);
+                ws.broadcast(&inserted_ev);
+
+                if let Ok(rules) = queries::list_rules(&state.pool).await {
+                    for rule in rules {
+                        if rule.enabled && event_matches_rule(&inserted_ev, &rule) {
+                            evaluate_alert_dedup(&state.pool, state.cache.as_deref(), &inserted_ev, &rule).await;
+                        }
+                    }
+                }
             }
             Err(e) => tracing::warn!("Failed to insert event: {}", e),
         }
@@ -173,6 +188,7 @@ async fn ingest_events_batch(
             "total": events.len(),
         })),
     )
+        .into_response()
 }
 
 fn decompress_zstd(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
@@ -180,4 +196,200 @@ fn decompress_zstd(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let mut decompressed = Vec::new();
     decoder.read_to_end(&mut decompressed)?;
     Ok(decompressed)
+}
+
+pub async fn is_rate_limited(
+    cache: &crate::cache::CacheLayer,
+    key: &str,
+    limit: u64,
+    window_secs: u64,
+) -> bool {
+    match cache.incr(key).await {
+        Ok(count) => {
+            if count == 1 {
+                if let Err(e) = cache.expire(key, window_secs as i64).await {
+                    tracing::error!("Failed to set TTL for rate limit key {}: {}", key, e);
+                }
+            }
+            count as u64 > limit
+        }
+        Err(e) => {
+            tracing::error!("Redis rate limit incr error for key {}: {}", key, e);
+            false
+        }
+    }
+}
+
+pub fn event_matches_rule(event: &Event, rule: &crate::db::models::AlertRule) -> bool {
+    let cond = &rule.condition;
+    if let Some(et) = cond.get("event_type").and_then(|v| v.as_str()) {
+        if et != event.event_type {
+            return false;
+        }
+    }
+    if let Some(sev) = cond.get("severity").and_then(|v| v.as_str()) {
+        if sev != event.severity {
+            return false;
+        }
+    }
+    if let Some(proto) = cond.get("protocol").and_then(|v| v.as_str()) {
+        if event.protocol.as_ref().map(|s| s.as_str()) != Some(proto) {
+            return false;
+        }
+    }
+    if let Some(port) = cond.get("port").and_then(|v| v.as_i64()) {
+        if event.port.map(|p| p as i64) != Some(port) {
+            return false;
+        }
+    }
+    true
+}
+
+pub async fn evaluate_alert_dedup(
+    pool: &sqlx::PgPool,
+    cache: Option<&crate::cache::CacheLayer>,
+    event: &Event,
+    rule: &crate::db::models::AlertRule,
+) {
+    if let Some(cache_layer) = cache {
+        let dedup_key = format!("alert:dedup:{}:{}", rule.id, event.sensor_id.unwrap_or_default());
+        match cache_layer.set_nx_ttl(&dedup_key, "1", rule.cooldown_secs as u64).await {
+            Ok(true) => {
+                create_alert_and_log(pool, event, rule).await;
+            }
+            Ok(false) => {
+                tracing::debug!("Deduplicated alert for rule {} sensor {:?}", rule.id, event.sensor_id);
+            }
+            Err(e) => {
+                tracing::error!("Redis alert dedup check failed: {}", e);
+                create_alert_and_log(pool, event, rule).await;
+            }
+        }
+    } else {
+        create_alert_and_log(pool, event, rule).await;
+    }
+}
+
+async fn create_alert_and_log(
+    pool: &sqlx::PgPool,
+    event: &Event,
+    rule: &crate::db::models::AlertRule,
+) {
+    match queries::insert_alert(
+        pool,
+        Some(rule.id),
+        event.sensor_id,
+        Some(event.id),
+        &rule.severity,
+        &format!("Alert triggered: {}", rule.name),
+        rule.description.as_deref(),
+        event.source_ip.as_deref(),
+        event.dest_ip.as_deref(),
+        event.raw_data.as_ref(),
+    )
+    .await
+    {
+        Ok(alert) => {
+            tracing::info!("Alert created for rule {} (ID: {})", rule.name, alert.id);
+        }
+        Err(e) => {
+            tracing::error!("Failed to create alert: {}", e);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::models::AlertRule;
+    use serde_json::json;
+
+    #[test]
+    fn test_event_matches_rule_basic() {
+        let event = Event {
+            id: Uuid::new_v4(),
+            sensor_id: Some(Uuid::new_v4()),
+            event_type: "threat".into(),
+            severity: "high".into(),
+            title: "SQL Injection".into(),
+            description: None,
+            source_ip: Some("192.168.1.1".into()),
+            dest_ip: Some("10.0.0.1".into()),
+            protocol: Some("tcp".into()),
+            port: Some(80),
+            raw_data: None,
+            tags: json!([]),
+            timestamp: chrono::Utc::now(),
+        };
+
+        let rule1 = AlertRule {
+            id: Uuid::new_v4(),
+            name: "Test Rule 1".into(),
+            description: None,
+            enabled: true,
+            severity: "high".into(),
+            condition: json!({
+                "event_type": "threat",
+                "severity": "high"
+            }),
+            actions: json!([]),
+            cooldown_secs: 60,
+            created_by: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+        assert!(event_matches_rule(&event, &rule1));
+
+        let rule2 = AlertRule {
+            condition: json!({
+                "protocol": "tcp",
+                "port": 80
+            }),
+            ..rule1.clone()
+        };
+        assert!(event_matches_rule(&event, &rule2));
+
+        let rule3 = AlertRule {
+            condition: json!({
+                "event_type": "anomaly"
+            }),
+            ..rule1.clone()
+        };
+        assert!(!event_matches_rule(&event, &rule3));
+    }
+
+    #[tokio::test]
+    async fn test_redis_operations_if_available() {
+        let redis_url = "redis://127.0.0.1:6379";
+        let cache_result = tokio::time::timeout(
+            std::time::Duration::from_millis(200),
+            crate::cache::CacheLayer::new(redis_url)
+        ).await;
+
+        let cache = match cache_result {
+            Ok(Ok(c)) => c,
+            _ => {
+                println!("Skipping Redis cache tests because no local Redis server was found or connection timed out.");
+                return;
+            }
+        };
+
+        let test_key_limit = format!("test:rate_limit:{}", Uuid::new_v4());
+
+        let limited1 = is_rate_limited(&cache, &test_key_limit, 2, 10).await;
+        assert!(!limited1);
+
+        let limited2 = is_rate_limited(&cache, &test_key_limit, 2, 10).await;
+        assert!(!limited2);
+
+        let limited3 = is_rate_limited(&cache, &test_key_limit, 2, 10).await;
+        assert!(limited3);
+
+        let test_key_nx = format!("test:nx:{}", Uuid::new_v4());
+        let set1 = cache.set_nx_ttl(&test_key_nx, "val", 10).await.unwrap();
+        assert!(set1);
+
+        let set2 = cache.set_nx_ttl(&test_key_nx, "val2", 10).await.unwrap();
+        assert!(!set2);
+    }
 }

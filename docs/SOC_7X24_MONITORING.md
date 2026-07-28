@@ -59,7 +59,7 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
   sensors, sensor_heartbeats, events, alerts, alert_rules,
   threat_indicators, audit_log, users, roles, api_keys
   ```
-- [ ] **0.1.5** Redis cache katmanı — sensor heartbeat'leri, rate-limit, alert dedup için
+- [x] **0.1.5** Redis cache katmanı — sensor heartbeat'leri, rate-limit, alert dedup için
 - [x] **0.1.6** TLS 1.3 (mTLS) — sensör ↔ server arası tüm trafik şifreli, client certificate ile mutual auth
 - [x] **0.1.7** gRPC streaming — yüksek throughput'lu sensör → server telemetri kanalı (REST + WS alternatifi)
 
@@ -76,10 +76,10 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 0.3 — Merkezi Yapılandırma (Central Config)
 
-- [ ] **0.3.1** Server-side config store — her sensör için ayrı ayrı override edilebilir YAML/TOML config
-- [ ] **0.3.2** Config push — server'da config değişince sensöre otomatik push (WebSocket üzerinden)
-- [ ] **0.3.3** Config versioning — her değişiklik audit log'a kaydedilsin, rollback yapılabilsin
-- [ ] **0.3.4** Config validation — sensör config'i kabul etmeden önce server tarafında validate et (schema-based)
+- [x] **0.3.1** Server-side config store — her sensör için ayrı ayrı override edilebilir YAML/TOML config
+- [x] **0.3.2** Config push — server'da config değişince sensöre otomatik push (WebSocket üzerinden)
+- [x] **0.3.3** Config versioning — her değişiklik audit log'a kaydedilsin, rollback yapılabilsin
+- [x] **0.3.4** Config validation — sensör config'i kabul etmeden önce server tarafında validate et (schema-based)
 
 ---
 

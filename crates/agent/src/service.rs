@@ -9,6 +9,7 @@ use crate::heartbeat;
 use crate::register;
 use crate::state::AgentState;
 use crate::upgrade;
+use crate::ws_client;
 
 pub async fn run_agent(args: CliArgs) -> anyhow::Result<()> {
     let config = AgentConfig::load(&args)?;
@@ -22,7 +23,7 @@ pub async fn run_agent(args: CliArgs) -> anyhow::Result<()> {
 
     tracing::info!("Starting netscope-agent v{}", env!("CARGO_PKG_VERSION"));
 
-    let state = AgentState::new(config.clone()).await?;
+    let state = AgentState::new(config.clone(), args.config.clone()).await?;
 
     if args.register || state.get_sensor_id().is_none() {
         match register::register(&state).await {
@@ -53,6 +54,7 @@ pub async fn run_agent(args: CliArgs) -> anyhow::Result<()> {
         handles.push(tokio::spawn(command::command_loop(state.clone())));
         handles.push(tokio::spawn(events::event_loop(state.clone(), event_rx)));
         handles.push(tokio::spawn(upgrade::upgrade_loop(state.clone())));
+        handles.push(tokio::spawn(ws_client::ws_loop(state.clone())));
     }
 
     if state.get_sensor_id().is_some() {

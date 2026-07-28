@@ -7,6 +7,7 @@ mod register;
 mod service;
 mod state;
 mod upgrade;
+mod ws_client;
 
 use clap::Parser;
 use config::CliArgs;

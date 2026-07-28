@@ -236,3 +236,25 @@ pub struct CountBySeverity {
 // for the `roles` table described something nothing reads or writes. If roles
 // ever become editable at runtime, the model comes back with the queries that
 // use it.
+
+// ── Sensor Configuration ──
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SensorConfig {
+    pub sensor_id: Uuid,
+    pub config_data: String,
+    pub version: i32,
+    pub updated_at: DateTime<Utc>,
+    pub updated_by: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SensorConfigHistory {
+    pub id: Uuid,
+    pub sensor_id: Uuid,
+    pub config_data: String,
+    pub version: i32,
+    pub created_at: DateTime<Utc>,
+    pub created_by: Option<Uuid>,
+}
+

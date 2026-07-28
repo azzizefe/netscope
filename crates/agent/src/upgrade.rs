@@ -31,7 +31,7 @@ pub struct UpgradeInfo {
 const UPDATE_PUBKEY: Option<&str> = option_env!("NETSCOPE_AGENT_UPDATE_PUBKEY");
 
 pub async fn upgrade_loop(state: AgentState) {
-    if !state.config.upgrade.enabled {
+    if !state.config.read().upgrade.enabled {
         return;
     }
 
@@ -47,13 +47,12 @@ pub async fn upgrade_loop(state: AgentState) {
         return;
     }
 
-    let interval = std::time::Duration::from_secs(state.config.upgrade.check_interval_secs);
-
     loop {
         if state.shutdown.load(std::sync::atomic::Ordering::Relaxed) {
             break;
         }
 
+        let interval = std::time::Duration::from_secs(state.config.read().upgrade.check_interval_secs);
         tokio::time::sleep(interval).await;
 
         match check_upgrade(&state).await {
@@ -79,7 +78,7 @@ pub async fn upgrade_loop(state: AgentState) {
 
 async fn check_upgrade(state: &AgentState) -> anyhow::Result<Option<UpgradeInfo>> {
     let current = env!("CARGO_PKG_VERSION");
-    let channel = &state.config.upgrade.channel;
+    let channel = state.config.read().upgrade.channel.clone();
 
     let info: UpgradeInfo = state
         .http_get(&format!(
@@ -114,7 +113,7 @@ fn is_newer(offered: &str, current: &str) -> bool {
 
 pub async fn do_upgrade(state: &AgentState) -> anyhow::Result<()> {
     let current = env!("CARGO_PKG_VERSION");
-    let channel = &state.config.upgrade.channel;
+    let channel = state.config.read().upgrade.channel.clone();
 
     let info: UpgradeInfo = state
         .http_get(&format!(
@@ -145,7 +144,7 @@ async fn upgrade_binary(state: &AgentState, info: &UpgradeInfo) -> anyhow::Resul
     let url = if info.url.starts_with("http") {
         info.url.clone()
     } else {
-        format!("{}{}", state.config.server.url, info.url)
+        format!("{}{}", state.config.read().server.url, info.url)
     };
 
     tracing::info!("Downloading new binary from {}", url);

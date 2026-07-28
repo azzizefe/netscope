@@ -39,14 +39,19 @@ pub struct RawEvent {
 }
 
 pub async fn event_loop(state: AgentState, mut rx: mpsc::Receiver<RawEvent>) {
-    let batch_interval = std::time::Duration::from_millis(state.config.events.batch_interval_ms);
-    let max_batch = state.config.events.batch_max_events;
-    let use_compression = state.config.events.compression;
-
-    let mut batch: Vec<BatchEvent> = Vec::with_capacity(max_batch);
+    let mut batch: Vec<BatchEvent> = Vec::new();
     let mut last_flush = Instant::now();
 
     loop {
+        let (batch_interval, max_batch, use_compression) = {
+            let cfg = state.config.read();
+            (
+                std::time::Duration::from_millis(cfg.events.batch_interval_ms),
+                cfg.events.batch_max_events,
+                cfg.events.compression,
+            )
+        };
+
         tokio::select! {
             Some(event) = rx.recv() => {
                 let sensor_id = state.get_sensor_id()

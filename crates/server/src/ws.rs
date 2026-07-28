@@ -4,6 +4,43 @@ use crate::db::models::Event;
 use axum::extract::ws::{Message, WebSocket};
 use parking_lot::RwLock;
 use tokio::sync::broadcast;
+use uuid::Uuid;
+use dashmap::DashMap;
+use tokio::sync::mpsc;
+
+#[derive(Clone)]
+pub struct SensorWsRegistry {
+    pub sensors: Arc<DashMap<Uuid, mpsc::UnboundedSender<Message>>>,
+}
+
+impl SensorWsRegistry {
+    pub fn new() -> Self {
+        Self {
+            sensors: Arc::new(DashMap::new()),
+        }
+    }
+
+    pub fn register(&self, sensor_id: Uuid, tx: mpsc::UnboundedSender<Message>) {
+        self.sensors.insert(sensor_id, tx);
+    }
+
+    pub fn unregister(&self, sensor_id: Uuid) {
+        self.sensors.remove(&sensor_id);
+    }
+
+    pub fn push_config(&self, sensor_id: Uuid, config_data: &str) -> bool {
+        if let Some(tx) = self.sensors.get(&sensor_id) {
+            let msg = serde_json::json!({
+                "event": "config_update",
+                "config": config_data
+            });
+            if let Ok(text) = serde_json::to_string(&msg) {
+                return tx.send(Message::Text(text.into())).is_ok();
+            }
+        }
+        false
+    }
+}
 
 #[derive(Clone)]
 pub struct WsState {

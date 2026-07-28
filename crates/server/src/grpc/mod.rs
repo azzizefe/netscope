@@ -1,5 +1,6 @@
 pub mod proto;
 
+use std::sync::Arc;
 use sqlx::PgPool;
 use tonic::{async_trait, Request, Response, Status, Streaming};
 use uuid::Uuid;
@@ -8,10 +9,12 @@ use self::proto::sensor_service_server::{SensorService, SensorServiceServer};
 use self::proto::*;
 use crate::db::models::{Event, RegisterSensor};
 use crate::db::queries;
+use crate::cache::CacheLayer;
 
 #[derive(Clone)]
 pub struct SensorGrpcService {
     pool: PgPool,
+    cache: Option<Arc<CacheLayer>>,
 }
 
 #[async_trait]
@@ -76,6 +79,20 @@ impl SensorService for SensorGrpcService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        if let Some(ref cache) = self.cache {
+            let key = format!("sensor:heartbeat:{}", sensor_id);
+            let hb_json = serde_json::json!({
+                "cpu_load_pct": req.cpu_load_pct,
+                "ram_used_mb": req.ram_used_mb,
+                "capture_throughput_bps": req.capture_throughput_bps,
+                "uptime_secs": req.uptime_secs,
+                "disk_free_mb": req.disk_free_mb,
+            });
+            if let Ok(hb_str) = serde_json::to_string(&hb_json) {
+                let _ = cache.set_ttl(&key, hb_str, 60).await;
+            }
+        }
+
         Ok(Response::new(HeartbeatResponse { acknowledged: true }))
     }
 
@@ -88,6 +105,14 @@ impl SensorService for SensorGrpcService {
         &self,
         request: Request<Streaming<EventMessage>>,
     ) -> Result<Response<EventSummary>, Status> {
+        if let Some(ref cache) = self.cache {
+            let peer_ip = request.remote_addr().map(|a| a.ip().to_string()).unwrap_or_else(|| "unknown".into());
+            let rate_key = format!("rate_limit:grpc:{}", peer_ip);
+            if crate::api::events::is_rate_limited(cache, &rate_key, 10, 60).await {
+                return Err(Status::resource_exhausted("Rate limit exceeded for gRPC event stream connections"));
+            }
+        }
+
         let mut stream = request.into_inner();
         let mut count = 0i64;
 
@@ -127,8 +152,19 @@ impl SensorService for SensorGrpcService {
                 tags: serde_json::Value::Array(Vec::new()),
                 timestamp: chrono::Utc::now(),
             };
-            if queries::insert_event(&self.pool, &db_event).await.is_ok() {
-                count += 1;
+
+            match queries::insert_event(&self.pool, &db_event).await {
+                Ok(inserted_ev) => {
+                    count += 1;
+                    if let Ok(rules) = queries::list_rules(&self.pool).await {
+                        for rule in rules {
+                            if rule.enabled && crate::api::events::event_matches_rule(&inserted_ev, &rule) {
+                                crate::api::events::evaluate_alert_dedup(&self.pool, self.cache.as_deref(), &inserted_ev, &rule).await;
+                            }
+                        }
+                    }
+                }
+                Err(_) => {}
             }
         }
 
@@ -151,6 +187,9 @@ impl SensorService for SensorGrpcService {
     }
 }
 
-pub fn grpc_service(pool: PgPool) -> SensorServiceServer<SensorGrpcService> {
-    SensorServiceServer::new(SensorGrpcService { pool })
+pub fn grpc_service(
+    pool: PgPool,
+    cache: Option<Arc<CacheLayer>>,
+) -> SensorServiceServer<SensorGrpcService> {
+    SensorServiceServer::new(SensorGrpcService { pool, cache })
 }

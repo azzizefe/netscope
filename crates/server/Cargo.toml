@@ -62,6 +62,7 @@ argon2 = "0.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
+serde_yaml = "0.9"
 
 # CLI
 clap = { version = "4", features = ["derive"] }

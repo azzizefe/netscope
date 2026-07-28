@@ -449,3 +449,145 @@ pub async fn dashboard_summary(pool: &PgPool) -> Result<DashboardSummary> {
         alerts_by_severity,
     })
 }
+
+// ── Sensor Configuration Queries ──
+
+pub async fn get_sensor_config(pool: &PgPool, sensor_id: Uuid) -> Result<Option<SensorConfig>> {
+    Ok(sqlx::query_as::<_, SensorConfig>(
+        "SELECT sensor_id, config_data, version, updated_at, updated_by
+         FROM sensor_configs WHERE sensor_id = $1",
+    )
+    .bind(sensor_id)
+    .fetch_optional(pool)
+    .await?)
+}
+
+pub async fn update_sensor_config(
+    pool: &PgPool,
+    sensor_id: Uuid,
+    config_data: &str,
+    user_id: Option<Uuid>,
+) -> Result<SensorConfig> {
+    let mut tx = pool.begin().await?;
+
+    let current_version: Option<(i32,)> = sqlx::query_as(
+        "SELECT version FROM sensor_configs WHERE sensor_id = $1"
+    )
+    .bind(sensor_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    let next_version = current_version.map(|v| v.0 + 1).unwrap_or(1);
+
+    let config = sqlx::query_as::<_, SensorConfig>(
+        "INSERT INTO sensor_configs (sensor_id, config_data, version, updated_at, updated_by)
+         VALUES ($1, $2, $3, now(), $4)
+         ON CONFLICT (sensor_id) DO UPDATE
+         SET config_data = EXCLUDED.config_data,
+             version = EXCLUDED.version,
+             updated_at = now(),
+             updated_by = EXCLUDED.updated_by
+         RETURNING sensor_id, config_data, version, updated_at, updated_by"
+    )
+    .bind(sensor_id)
+    .bind(config_data)
+    .bind(next_version)
+    .bind(user_id)
+    .fetch_one(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO sensor_config_history (sensor_id, config_data, version, created_at, created_by)
+         VALUES ($1, $2, $3, now(), $4)"
+    )
+    .bind(sensor_id)
+    .bind(config_data)
+    .bind(next_version)
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+    Ok(config)
+}
+
+pub async fn get_sensor_config_history(pool: &PgPool, sensor_id: Uuid) -> Result<Vec<SensorConfigHistory>> {
+    Ok(sqlx::query_as::<_, SensorConfigHistory>(
+        "SELECT id, sensor_id, config_data, version, created_at, created_by
+         FROM sensor_config_history WHERE sensor_id = $1 ORDER BY version DESC",
+    )
+    .bind(sensor_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn get_sensor_config_version(
+    pool: &PgPool,
+    sensor_id: Uuid,
+    version: i32,
+) -> Result<Option<SensorConfigHistory>> {
+    Ok(sqlx::query_as::<_, SensorConfigHistory>(
+        "SELECT id, sensor_id, config_data, version, created_at, created_by
+         FROM sensor_config_history WHERE sensor_id = $1 AND version = $2",
+    )
+    .bind(sensor_id)
+    .bind(version)
+    .fetch_optional(pool)
+    .await?)
+}
+
+pub async fn insert_audit_log(
+    pool: &PgPool,
+    user_id: Option<Uuid>,
+    action: &str,
+    resource_type: &str,
+    resource_id: Option<Uuid>,
+    details: serde_json::Value,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO audit_log (user_id, action, resource_type, resource_id, details)
+         VALUES ($1, $2, $3, $4, $5::jsonb)",
+    )
+    .bind(user_id)
+    .bind(action)
+    .bind(resource_type)
+    .bind(resource_id)
+    .bind(details)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn insert_alert(
+    pool: &PgPool,
+    rule_id: Option<Uuid>,
+    sensor_id: Option<Uuid>,
+    event_id: Option<Uuid>,
+    severity: &str,
+    title: &str,
+    description: Option<&str>,
+    source_ip: Option<&str>,
+    dest_ip: Option<&str>,
+    raw_data: Option<&serde_json::Value>,
+) -> Result<Alert> {
+    Ok(sqlx::query_as::<_, Alert>(
+        "INSERT INTO alerts (rule_id, sensor_id, event_id, status, severity, title, description, source_ip::inet, dest_ip::inet, raw_data)
+         VALUES ($1, $2, $3, 'open', $4, $5, $6, $7::inet, $8::inet, $9::jsonb)
+         RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
+                   source_ip::inet, dest_ip::inet, raw_data,
+                   acknowledged_by, acknowledged_at, resolved_by, resolved_at,
+                   created_at, updated_at",
+    )
+    .bind(rule_id)
+    .bind(sensor_id)
+    .bind(event_id)
+    .bind(severity)
+    .bind(title)
+    .bind(description)
+    .bind(source_ip)
+    .bind(dest_ip)
+    .bind(raw_data)
+    .fetch_one(pool)
+    .await?)
+}
+
