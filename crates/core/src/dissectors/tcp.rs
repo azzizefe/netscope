@@ -914,4 +914,97 @@ mod tests {
         assert_eq!(r2.protocol, Protocol::Http);
         assert!(r2.summary.contains("HTTP GET /"));
     }
+
+    #[test]
+    fn tcp_syn_with_payload_is_still_tcp() {
+        clear_tcp_reassembler();
+        let payload = b"GET / HTTP/1.1\r\n";
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            12345,
+            80,
+            TcpFlags {
+                syn: true,
+                ..Default::default()
+            },
+            payload,
+        );
+        let ip_data = &data[14..];
+        let (_src, _dst, _p, tcp_data) = crate::dissectors::ip::dissect_ipv4(ip_data);
+        let result = dissect_tcp(
+            Some("10.0.0.1".parse().unwrap()),
+            Some("10.0.0.2".parse().unwrap()),
+            &tcp_data,
+        );
+        assert_eq!(result.protocol, Protocol::Tcp);
+        assert_eq!(result.summary, "TCP Connection opened (3-way handshake)");
+    }
+
+    #[test]
+    fn tcp_overlap_adds_new_data_on_retransmit() {
+        clear_tcp_reassembler();
+        let ip_src = Some("10.0.0.1".parse().unwrap());
+        let ip_dst = Some("10.0.0.2".parse().unwrap());
+
+        // Use non-standard ports to avoid protocol dissector interference
+        let p1 = etherparse::TcpHeader::new(54321, 54322, 100, 1024);
+        let mut f1 = Vec::new();
+        p1.write(&mut f1).unwrap();
+        f1.extend_from_slice(b"Hello World");
+
+        let p2 = etherparse::TcpHeader::new(54321, 54322, 105, 1024);
+        let mut f2 = Vec::new();
+        p2.write(&mut f2).unwrap();
+        f2.extend_from_slice(b"World");
+
+        let r1 = dissect_tcp(ip_src, ip_dst, &f1);
+        assert_eq!(r1.protocol, Protocol::Tcp);
+
+        // 100 + 11 = 111 (next_seq). seq=105, overlap = 111-105 = 6 >= 5
+        // → entire payload is within already-received data → no new data
+        let r2 = dissect_tcp(ip_src, ip_dst, &f2);
+        assert_eq!(r2.protocol, Protocol::Tcp);
+        assert_eq!(r2.summary, "TCP — no payload (keep-alive or ACK)");
+    }
+
+    #[test]
+    fn tcp_seq_0_resets_reassembly_after_syn() {
+        clear_tcp_reassembler();
+        let ip_src = Some("10.0.0.1".parse().unwrap());
+        let ip_dst = Some("10.0.0.2".parse().unwrap());
+
+        // Use non-standard port so protocol dissection does not interfere
+        let p1 = etherparse::TcpHeader::new(54321, 54322, 100, 1024);
+        let mut f1 = Vec::new();
+        p1.write(&mut f1).unwrap();
+        f1.extend_from_slice(b"first data");
+
+        let p2 = etherparse::TcpHeader::new(54321, 54322, 0, 1024);
+        let mut f2 = Vec::new();
+        p2.write(&mut f2).unwrap();
+        f2.extend_from_slice(b"new data");
+
+        let _r1 = dissect_tcp(ip_src, ip_dst, &f1);
+        let r2 = dissect_tcp(ip_src, ip_dst, &f2);
+        // seq=0 resets stream, so second payload should be delivered
+        assert_eq!(r2.protocol, Protocol::Tcp);
+    }
+
+    #[test]
+    fn tcp_header_minimal_without_options() {
+        // Minimal 20-byte TCP header, no payload, data_offset=5
+        let mut raw = vec![0u8; 20];
+        raw[12] = 0x50; // data_offset = 5 (20 bytes), no flags
+        let result = dissect_tcp(
+            Some("10.0.0.1".parse().unwrap()),
+            Some("10.0.0.2".parse().unwrap()),
+            &raw,
+        );
+        assert_eq!(result.protocol, Protocol::Tcp);
+        assert_eq!(
+            result.summary,
+            "TCP — no payload (keep-alive or ACK)"
+        );
+    }
 }

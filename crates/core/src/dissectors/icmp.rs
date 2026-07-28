@@ -143,4 +143,76 @@ mod tests {
         assert!(result.src_addr.is_none());
         assert!(result.dst_addr.is_none());
     }
+
+    #[test]
+    fn icmp_destination_unreachable() {
+        let result = dissect_icmp(None, None, &[3, 0], false);
+        assert_eq!(result.summary, "Destination unreachable");
+    }
+
+    #[test]
+    fn icmp_redirect() {
+        let result = dissect_icmp(None, None, &[5, 0], false);
+        assert_eq!(result.summary, "Redirect");
+    }
+
+    #[test]
+    fn icmpv6_parameter_problem() {
+        let result = dissect_icmp(None, None, &[4, 0], true);
+        assert_eq!(result.summary, "Parameter problem");
+    }
+
+    #[test]
+    fn icmpv6_packet_too_big() {
+        let result = dissect_icmp(None, None, &[2, 0], true);
+        assert_eq!(result.summary, "Packet too big");
+    }
+
+    #[test]
+    fn icmpv6_mld_query() {
+        let result = dissect_icmp(None, None, &[130, 0], true);
+        assert_eq!(result.summary, "MLD query (who is listening to this group?)");
+    }
+
+    #[test]
+    fn icmpv6_mld_report() {
+        let result = dissect_icmp(None, None, &[131, 0], true);
+        assert_eq!(
+            result.summary,
+            "MLD report (I am listening to this group)"
+        );
+    }
+
+    #[test]
+    fn icmpv6_mld_done() {
+        let result = dissect_icmp(None, None, &[132, 0], true);
+        assert_eq!(result.summary, "MLD done (I have stopped listening)");
+    }
+
+    #[test]
+    fn icmpv6_mldv2_report() {
+        let result = dissect_icmp(None, None, &[143, 0], true);
+        assert_eq!(
+            result.summary,
+            "MLDv2 report (multicast group membership)"
+        );
+    }
+
+    #[test]
+    fn icmpv6_router_renumbering() {
+        let result = dissect_icmp(None, None, &[138, 0], true);
+        assert_eq!(result.summary, "Router renumbering");
+    }
+
+    #[test]
+    fn icmpv6_destination_unreachable() {
+        let result = dissect_icmp(None, None, &[1, 0], true);
+        assert_eq!(result.summary, "Destination unreachable");
+    }
+
+    #[test]
+    fn icmpv6_hop_limit_exceeded() {
+        let result = dissect_icmp(None, None, &[3, 0], true);
+        assert_eq!(result.summary, "Hop limit exceeded");
+    }
 }

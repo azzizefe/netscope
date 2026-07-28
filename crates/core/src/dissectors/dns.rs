@@ -544,4 +544,93 @@ mod tests {
         let r = dissect_dns(None, None, 54321, 53, &payload);
         assert!(!r.summary.contains("rcode"), "{}", r.summary);
     }
+
+    /// Build a DNS response with a non-A/AAAA record (CNAME, MX, or TXT).
+    fn response_with_record(domain: &str, rtype: u16, rdata: &[u8]) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[0x12, 0x34]); // ID
+        buf.extend_from_slice(&[0x81, 0x80]); // flags: response, no error
+        buf.extend_from_slice(&[0x00, 0x01]); // questions: 1
+        buf.extend_from_slice(&[0x00, 0x01]); // answers: 1
+        buf.extend_from_slice(&[0x00, 0x00]); // authority: 0
+        buf.extend_from_slice(&[0x00, 0x00]); // additional: 0
+        for part in domain.split('.') {
+            buf.push(part.len() as u8);
+            buf.extend_from_slice(part.as_bytes());
+        }
+        buf.push(0x00);
+        buf.extend_from_slice(&[0x00, rtype as u8]); // type
+        buf.extend_from_slice(&[0x00, 0x01]); // class: IN
+        buf.extend_from_slice(&[0xc0, 0x0c]); // name pointer
+        buf.extend_from_slice(&rtype.to_be_bytes()); // type
+        buf.extend_from_slice(&[0x00, 0x01]); // class: IN
+        buf.extend_from_slice(&[0x00, 0x00, 0x00, 0x3c]); // TTL: 60
+        buf.extend_from_slice(&(rdata.len() as u16).to_be_bytes());
+        buf.extend_from_slice(rdata);
+        buf
+    }
+
+    #[test]
+    fn dns_cname_response() {
+        let cname = b"\x03www\x07example\x03com\x00".to_vec();
+        let data = response_with_record("example.com", 0x05, &cname);
+        let r = dissect_dns(None, None, 53, 54321, &data);
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert!(r.summary.contains("example.com"), "{}", r.summary);
+        assert!(r.summary.contains("record"), "{}", r.summary);
+    }
+
+    #[test]
+    fn dns_mx_response() {
+        let mut mx = vec![0x00, 0x0a]; // preference: 10
+        mx.extend_from_slice(b"\x0Amailserver\x03com\x00");
+        let data = response_with_record("example.com", 0x0f, &mx);
+        let r = dissect_dns(None, None, 53, 54321, &data);
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert!(r.summary.contains("example.com"), "{}", r.summary);
+        assert!(r.summary.contains("record"), "{}", r.summary);
+    }
+
+    #[test]
+    fn dns_txt_response() {
+        let mut rdata = vec![11]; // "hello world" is 11 chars
+        rdata.extend_from_slice(b"hello world");
+        let data = response_with_record("example.com", 0x10, &rdata);
+        let r = dissect_dns(None, None, 53, 54321, &data);
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert!(r.summary.contains("example.com"), "{}", r.summary);
+        assert!(r.summary.contains("record"), "{}", r.summary);
+    }
+
+    #[test]
+    fn dns_mixed_records_fall_through_to_count() {
+        // Two answers: one CNAME, one MX
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[0x12, 0x34]); // ID
+        buf.extend_from_slice(&[0x81, 0x80]); // flags: response, no error
+        buf.extend_from_slice(&[0x00, 0x01]); // questions: 1
+        buf.extend_from_slice(&[0x00, 0x02]); // answers: 2
+        buf.extend_from_slice(&[0x00, 0x00]); // authority: 0
+        buf.extend_from_slice(&[0x00, 0x00]); // additional: 0
+        buf.extend_from_slice(b"\x07example\x03com\x00");
+        buf.extend_from_slice(&[0x00, 0x01, 0x00, 0x01]); // A, IN
+        // CNAME answer
+        buf.extend_from_slice(&[0xc0, 0x0c]);
+        buf.extend_from_slice(&[0x00, 0x05, 0x00, 0x01]); // CNAME, IN
+        buf.extend_from_slice(&[0x00, 0x00, 0x00, 0x3c]);
+        buf.extend_from_slice(&[0x00, 0x11]); // rdlength: 17
+        buf.extend_from_slice(b"\x03www\x07example\x03com\x00");
+        // MX answer
+        buf.extend_from_slice(&[0xc0, 0x0c]);
+        buf.extend_from_slice(&[0x00, 0x0f, 0x00, 0x01]); // MX, IN
+        buf.extend_from_slice(&[0x00, 0x00, 0x00, 0x3c]);
+        buf.extend_from_slice(&[0x00, 0x12]); // rdlength: 18
+        buf.extend_from_slice(&[0x00, 0x0a]); // preference: 10
+        buf.extend_from_slice(b"\x0Amailserver\x03com\x00");
+
+        let r = dissect_dns(None, None, 53, 54321, &buf);
+        assert_eq!(r.protocol, Protocol::Dns);
+        assert!(r.summary.contains("example.com"), "{}", r.summary);
+        assert!(r.summary.contains("2 records"), "{}", r.summary);
+    }
 }

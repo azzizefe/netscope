@@ -73,6 +73,22 @@ pub struct AlertEngine {
     
     // Multi-sensor state for correlation: dst_ip -> set of sensor_ids that scanned it
     sensor_scans: HashMap<String, HashSet<String>>,
+
+    // Smart Alert states (2.2)
+    pkt_rates: VecDeque<usize>,
+    last_second: Instant,
+    current_second_pkts: usize,
+
+    http_error_rates: VecDeque<usize>,
+    last_minute: Instant,
+    current_minute_errors: usize,
+    prev_minute_errors: usize,
+
+    seen_ips: HashSet<String>,
+    seen_protocols: HashSet<String>,
+    beacon_timestamps: HashMap<(String, String), Vec<Instant>>,
+    total_outbound_bytes: usize,
+    lateral_destinations: HashMap<String, (Instant, HashSet<String>)>,
 }
 
 fn parse_duration(s: &str) -> Duration {
@@ -120,6 +136,20 @@ fn is_time_in_range(time_str: &str, start_str: &str, end_str: &str) -> bool {
     }
 }
 
+fn shannon_entropy(s: &str) -> f64 {
+    let mut counts = HashMap::new();
+    for c in s.chars() {
+        *counts.entry(c).or_insert(0) += 1;
+    }
+    let len = s.len() as f64;
+    let mut entropy = 0.0;
+    for &count in counts.values() {
+        let p = count as f64 / len;
+        entropy -= p * p.log2();
+    }
+    entropy
+}
+
 impl AlertEngine {
     pub fn new(rules: Vec<AlertRule>) -> Self {
         let mut compiled_filters = HashMap::new();
@@ -138,6 +168,18 @@ impl AlertEngine {
             suppressed_ips: HashSet::new(),
             alerts_history_24h: HashMap::new(),
             sensor_scans: HashMap::new(),
+            pkt_rates: VecDeque::new(),
+            last_second: Instant::now(),
+            current_second_pkts: 0,
+            http_error_rates: VecDeque::new(),
+            last_minute: Instant::now(),
+            current_minute_errors: 0,
+            prev_minute_errors: 0,
+            seen_ips: HashSet::new(),
+            seen_protocols: HashSet::new(),
+            beacon_timestamps: HashMap::new(),
+            total_outbound_bytes: 0,
+            lateral_destinations: HashMap::new(),
         }
     }
 
@@ -148,12 +190,205 @@ impl AlertEngine {
 
         let rules = self.rules.clone();
 
+        // ----------------------------------------------------
+        // HEURISTIC / SMART ALERTS (2.2)
+        // ----------------------------------------------------
+
+        // 2.2.1 Traffic spike alert (3-sigma deviation)
+        self.current_second_pkts += 1;
+        if now.duration_since(self.last_second) >= Duration::from_secs(1) {
+            self.pkt_rates.push_back(self.current_second_pkts);
+            if self.pkt_rates.len() > 60 {
+                self.pkt_rates.pop_front();
+            }
+            self.current_second_pkts = 0;
+            self.last_second = now;
+
+            if self.pkt_rates.len() >= 10 {
+                let sum: usize = self.pkt_rates.iter().sum();
+                let mean = sum as f64 / self.pkt_rates.len() as f64;
+                let variance: f64 = self.pkt_rates.iter().map(|&x| {
+                    let diff = x as f64 - mean;
+                    diff * diff
+                }).sum::<f64>() / self.pkt_rates.len() as f64;
+                let std_dev = variance.sqrt();
+
+                if self.pkt_rates.back().cloned().unwrap_or(0) as f64 > mean + 3.0 * std_dev {
+                    if self.should_trigger_alert("Traffic Spike", "", "", now) {
+                        alerts.push(self.create_smart_alert("Traffic Spike", "medium", format!("Traffic rate spike: 3-sigma exceeded. Current: {}, Mean: {:.2}", self.pkt_rates.back().unwrap_or(&0), mean), pkt));
+                    }
+                }
+            }
+        }
+
+        // 2.2.2 Error burst alert
+        let is_http_err = pkt.protocol.to_string().to_lowercase() == "http" && 
+            (pkt.summary.contains("404") || pkt.summary.contains("500") || pkt.summary.contains("503") || pkt.summary.contains("400") || pkt.summary.contains("403"));
+        if is_http_err {
+            self.current_minute_errors += 1;
+        }
+        if now.duration_since(self.last_minute) >= Duration::from_secs(60) {
+            self.prev_minute_errors = self.current_minute_errors;
+            self.current_minute_errors = 0;
+            self.last_minute = now;
+
+            if self.prev_minute_errors > 5 {
+                if self.should_trigger_alert("Error Burst", "", "", now) {
+                    alerts.push(self.create_smart_alert("Error Burst", "high", format!("HTTP error burst: {} errors in 1 minute", self.prev_minute_errors), pkt));
+                }
+            }
+        }
+
+        // 2.2.3 New host alert
+        if let Some(ref src) = pkt.src_addr {
+            let ip_str = src.to_string();
+            if !self.seen_ips.contains(&ip_str) {
+                self.seen_ips.insert(ip_str.clone());
+                if self.seen_ips.len() > 1 {
+                    if self.should_trigger_alert("New Host Detected", &ip_str, "", now) {
+                        alerts.push(self.create_smart_alert("New Host Detected", "low", format!("New host seen on network: {}", ip_str), pkt));
+                    }
+                }
+            }
+        }
+
+        // 2.2.4 New protocol alert
+        let proto_str = pkt.protocol.to_string();
+        if !self.seen_protocols.contains(&proto_str) {
+            self.seen_protocols.insert(proto_str.clone());
+            if self.seen_protocols.len() > 1 {
+                if self.should_trigger_alert("New Protocol Detected", "", "", now) {
+                    alerts.push(self.create_smart_alert("New Protocol Detected", "low", format!("New protocol seen on network: {}", proto_str), pkt));
+                }
+            }
+        }
+
+        // 2.2.5 Beaconing alert
+        if let (Some(src), Some(dst)) = (pkt.src_addr, pkt.dst_addr) {
+            let key = (src.to_string(), dst.to_string());
+            let timestamps = self.beacon_timestamps.entry(key.clone()).or_default();
+            timestamps.push(now);
+            if timestamps.len() > 5 {
+                timestamps.remove(0);
+            }
+            if timestamps.len() == 5 {
+                let mut intervals = Vec::new();
+                for i in 0..4 {
+                    intervals.push(timestamps[i+1].duration_since(timestamps[i]).as_secs_f64());
+                }
+                let mean: f64 = intervals.iter().sum::<f64>() / 4.0;
+                let variance: f64 = intervals.iter().map(|x| (x - mean) * (x - mean)).sum::<f64>() / 4.0;
+                if variance < 0.05 && mean > 0.5 {
+                    if self.should_trigger_alert("Beaconing Detected", &key.0, &key.1, now) {
+                        alerts.push(self.create_smart_alert("Beaconing Detected", "high", format!("C2 beaconing behavior detected: mean interval {:.2}s, variance {:.4}", mean, variance), pkt));
+                    }
+                }
+            }
+        }
+
+        // 2.2.6 Data exfiltration alert
+        self.total_outbound_bytes += pkt.length;
+        if self.total_outbound_bytes > 100_000_000 {
+            if self.should_trigger_alert("Data Exfiltration", "", "", now) {
+                alerts.push(self.create_smart_alert("Data Exfiltration", "high", "Potential data exfiltration: outbound traffic exceeded 100MB threshold".to_string(), pkt));
+            }
+        }
+
+        // 2.2.7 Privilege escalation alert
+        if let (Some(src_p), Some(dst_p)) = (pkt.src_port, pkt.dst_port) {
+            if (dst_p == 22 || dst_p == 3389 || dst_p == 445) && src_p < 1024 {
+                if self.should_trigger_alert("Privilege Escalation", "", "", now) {
+                    alerts.push(self.create_smart_alert("Privilege Escalation", "high", format!("Privilege escalation alert: low port {} connected to high-value service port {}", src_p, dst_p), pkt));
+                }
+            }
+        }
+
+        // 2.2.8 Lateral movement alert
+        let is_lateral_movement = if let (Some(src), Some(dst)) = (pkt.src_addr, pkt.dst_addr) {
+            let src_str = src.to_string();
+            let dst_str = dst.to_string();
+            let entry = self.lateral_destinations.entry(src_str.clone()).or_insert_with(|| (now, HashSet::new()));
+            if now.duration_since(entry.0) > Duration::from_secs(10) {
+                entry.0 = now;
+                entry.1.clear();
+            }
+            entry.1.insert(dst_str);
+            entry.1.len() >= 5
+        } else {
+            false
+        };
+
+        if is_lateral_movement {
+            if let Some(ref src) = pkt.src_addr {
+                let src_str = src.to_string();
+                if self.should_trigger_alert("Lateral Movement", &src_str, "", now) {
+                    let targets_count = self.lateral_destinations.get(&src_str).map(|(_, h)| h.len()).unwrap_or(0);
+                    alerts.push(self.create_smart_alert("Lateral Movement", "high", format!("Lateral movement warning: host connected to {} internal targets", targets_count), pkt));
+                }
+            }
+        }
+
+        // 2.2.9 DNS tunneling alert
+        let is_dns = pkt.protocol.to_string().to_lowercase() == "dns";
+        if is_dns && pkt.summary.len() > 60 {
+            if self.should_trigger_alert("DNS Tunneling", "", "", now) {
+                alerts.push(self.create_smart_alert("DNS Tunneling", "high", format!("Suspicious DNS Tunneling: domain or query name size is {} chars", pkt.summary.len()), pkt));
+            }
+        }
+
+        // 2.2.10 DGA domain alert
+        if is_dns {
+            let domain = pkt.summary.split_whitespace().last().unwrap_or("");
+            if !domain.is_empty() && shannon_entropy(domain) > 4.2 {
+                if self.should_trigger_alert("DGA Domain", "", "", now) {
+                    alerts.push(self.create_smart_alert("DGA Domain", "medium", format!("DGA domain detected with high Shannon entropy ({:.2}): {}", shannon_entropy(domain), domain), pkt));
+                }
+            }
+        }
+
+        // 2.2.11 Encrypted traffic anomaly
+        let is_tls = pkt.protocol.to_string().to_lowercase() == "tls";
+        let is_http = pkt.protocol.to_string().to_lowercase() == "http";
+        let is_anomaly = (is_tls && pkt.dst_port == Some(80)) || (is_http && pkt.dst_port == Some(443));
+        if is_anomaly {
+            if self.should_trigger_alert("Encrypted Traffic Anomaly", "", "", now) {
+                alerts.push(self.create_smart_alert("Encrypted Traffic Anomaly", "medium", "Encrypted traffic anomaly: TLS on port 80 or plaintext HTTP on port 443".to_string(), pkt));
+            }
+        }
+
+        // 2.2.12 Expired certificate alert
+        let has_expired_cert = is_tls && pkt.summary.to_lowercase().contains("expired");
+        if has_expired_cert {
+            if self.should_trigger_alert("Expired Certificate", "", "", now) {
+                alerts.push(self.create_smart_alert("Expired Certificate", "medium", "TLS session established using expired security certificate".to_string(), pkt));
+            }
+        }
+
+        // 2.2.13 Weak cipher alert
+        let has_weak_cipher = is_tls && (pkt.summary.contains("TLS 1.0") || pkt.summary.contains("TLS 1.1") || pkt.summary.contains("RC4") || pkt.summary.contains("3DES") || pkt.summary.contains("MD5"));
+        if has_weak_cipher {
+            if self.should_trigger_alert("Weak Cipher Alert", "", "", now) {
+                alerts.push(self.create_smart_alert("Weak Cipher Alert", "medium", "TLS connection negotiated using obsolete/weak cryptographic algorithms".to_string(), pkt));
+            }
+        }
+
+        // 2.2.14 PQC migration gap alert
+        let has_pqc_gap = is_tls && pkt.dst_port == Some(443) && !pkt.summary.to_lowercase().contains("kyber") && !pkt.summary.to_lowercase().contains("ml-kem");
+        if has_pqc_gap {
+            if self.should_trigger_alert("PQC Migration Gap", "", "", now) {
+                alerts.push(self.create_smart_alert("PQC Migration Gap", "low", "TLS 1.3 connection to HTTPS without Post-Quantum Cryptography (ML-KEM/Kyber)".to_string(), pkt));
+            }
+        }
+
+        // ----------------------------------------------------
+        // STATIC RULE DSL MATCHES
+        // ----------------------------------------------------
+
         // Check each rule
         for rule in &rules {
             let src_str = pkt.src_addr.map(|a| a.to_string()).unwrap_or_default();
             let dst_str = pkt.dst_addr.map(|a| a.to_string()).unwrap_or_default();
 
-            // 1. Alert suppression (2.1.4)
             if self.suppressed_ips.contains(&src_str) || self.suppressed_ips.contains(&dst_str) {
                 continue;
             }
@@ -165,7 +400,6 @@ impl AlertEngine {
 
             let matches = filter.matches(pkt);
 
-            // Update absence tracker if filter matches
             if matches && rule.trigger.trigger_type == "absence" {
                 self.absence_history.insert(rule.name.clone(), now);
             }
@@ -175,7 +409,6 @@ impl AlertEngine {
                     if matches {
                         let window_dur = parse_duration(rule.trigger.window.as_deref().unwrap_or("30s"));
                         
-                        // Custom threshold override for time-based rules
                         let mut limit = rule.trigger.threshold.unwrap_or(50);
                         if rule.trigger.trigger_type == "time-based" {
                             let current_time_str = pkt.timestamp.format("%H:%M").to_string();
@@ -263,7 +496,6 @@ impl AlertEngine {
                 _ => {}
             }
 
-            // Multi-sensor correlation engine (2.1.6)
             let is_distributed_scanning = if matches && sensor_id.is_some() && !dst_str.is_empty() {
                 let s_id = sensor_id.unwrap().to_string();
                 let sensors = self.sensor_scans.entry(dst_str.clone()).or_default();
@@ -291,7 +523,7 @@ impl AlertEngine {
             }
         }
 
-        // Check absence rules (2.1.2)
+        // Check absence rules
         let absence_rules: Vec<AlertRule> = rules.iter().filter(|r| r.trigger.trigger_type == "absence").cloned().collect();
         for rule in &absence_rules {
             let window_dur = parse_duration(rule.trigger.window.as_deref().unwrap_or("30s"));
@@ -317,7 +549,7 @@ impl AlertEngine {
             }
         }
 
-        // Record historical counts for enrichment (2.1.5)
+        // Record historical counts for enrichment
         for alert in &alerts {
             if let Some(ref src) = alert.src_ip {
                 let history = self.alerts_history_24h.entry(src.clone()).or_default();
@@ -331,7 +563,6 @@ impl AlertEngine {
     fn should_trigger_alert(&mut self, rule_name: &str, src: &str, dst: &str, now: Instant) -> bool {
         let key = (rule_name.to_string(), src.to_string(), dst.to_string());
         if let Some(&last) = self.dedup_history.get(&key) {
-            // Deduplication (2.1.3): 10 seconds interval
             if now.duration_since(last) < Duration::from_secs(10) {
                 return false;
             }
@@ -345,7 +576,7 @@ impl AlertEngine {
         let dst_str = pkt.dst_addr.map(|a| a.to_string());
         let now_utc = Utc::now();
 
-        // WHOIS lookup (2.1.5)
+        // WHOIS lookup
         let whois_info = src_str.as_ref().map(|ip| {
             if ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("172.16.") {
                 "Private Network (RFC 1918)".to_string()
@@ -354,7 +585,7 @@ impl AlertEngine {
             }
         });
 
-        // Passive DNS (2.1.5)
+        // Passive DNS
         let dns_history = dst_str.as_ref().and_then(|ip| {
             if let Ok(addr) = ip.parse::<std::net::IpAddr>() {
                 crate::siem::global_name_cache().lock().unwrap().name_for(addr).map(|s| s.to_string())
@@ -363,7 +594,7 @@ impl AlertEngine {
             }
         });
 
-        // 24 Hour alert count (2.1.5)
+        // 24 Hour alert count
         let count = src_str.as_ref().map(|src| {
             if let Some(history) = self.alerts_history_24h.get(src) {
                 let mut valid = 0;
@@ -392,6 +623,44 @@ impl AlertEngine {
             dns_history,
             related_connections: Some(format!("Related connection: {} -> {}", src_str.unwrap_or_default(), dst_str.unwrap_or_default())),
             historical_alerts_count_24h: count,
+        }
+    }
+
+    fn create_smart_alert(&self, rule_name: &str, severity: &str, msg: String, pkt: &Packet) -> Alert {
+        let src_str = pkt.src_addr.map(|a| a.to_string());
+        let dst_str = pkt.dst_addr.map(|a| a.to_string());
+        let now_utc = Utc::now();
+
+        let whois_info = src_str.as_ref().map(|ip| {
+            if ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("172.16.") {
+                "Private Network (RFC 1918)".to_string()
+            } else {
+                format!("Simulated WHOIS for {}: Owner: Netscope, Registrar: IANA", ip)
+            }
+        });
+
+        let dns_history = dst_str.as_ref().and_then(|ip| {
+            if let Ok(addr) = ip.parse::<std::net::IpAddr>() {
+                crate::siem::global_name_cache().lock().unwrap().name_for(addr).map(|s| s.to_string())
+            } else {
+                None
+            }
+        });
+
+        Alert {
+            timestamp: now_utc.to_rfc3339(),
+            rule_name: rule_name.to_string(),
+            severity: severity.to_string(),
+            msg,
+            src_ip: src_str,
+            dst_ip: dst_str,
+            mitre_attack: None,
+            kill_chain: None,
+            actions_taken: vec!["alert".to_string()],
+            whois_info,
+            dns_history,
+            related_connections: None,
+            historical_alerts_count_24h: 0,
         }
     }
 }
@@ -493,5 +762,89 @@ mod tests {
 
         let alerts = engine.check_packet(&pkt, None);
         assert!(alerts.is_empty()); // Suppressed!
+    }
+
+    #[test]
+    fn test_smart_alerts() {
+        let mut engine = AlertEngine::new(vec![]);
+
+        // 1. First packet to populate seen lists
+        let pkt1 = Packet {
+            timestamp: Utc::now(),
+            src_addr: Some("10.0.0.9".parse().unwrap()),
+            dst_addr: Some("10.0.0.10".parse().unwrap()),
+            src_port: Some(1234),
+            dst_port: Some(80),
+            protocol: Protocol::Http,
+            length: 100,
+            summary: "HTTP GET /".to_string(),
+            data: Bytes::new(),
+            llm: None,
+        };
+        let _ = engine.check_packet(&pkt1, None);
+
+        // Second packet with a new host
+        let pkt2 = Packet {
+            timestamp: Utc::now(),
+            src_addr: Some("10.0.0.11".parse().unwrap()),
+            dst_addr: Some("10.0.0.10".parse().unwrap()),
+            src_port: Some(1234),
+            dst_port: Some(80),
+            protocol: Protocol::Http,
+            length: 100,
+            summary: "HTTP GET /".to_string(),
+            data: Bytes::new(),
+            llm: None,
+        };
+        let alerts = engine.check_packet(&pkt2, None);
+        assert!(alerts.iter().any(|a| a.rule_name == "New Host Detected"));
+
+        // 2. DNS Tunneling
+        let long_dns_pkt = Packet {
+            timestamp: Utc::now(),
+            src_addr: Some("10.0.0.9".parse().unwrap()),
+            dst_addr: Some("10.0.0.10".parse().unwrap()),
+            src_port: Some(1234),
+            dst_port: Some(53),
+            protocol: Protocol::Dns,
+            length: 100,
+            summary: "DNS Query for aaaaaabbbbbbccccccddddddeeeeeeffffffgggggghhhhhhiiiiii.com".to_string(),
+            data: Bytes::new(),
+            llm: None,
+        };
+        let alerts = engine.check_packet(&long_dns_pkt, None);
+        assert!(alerts.iter().any(|a| a.rule_name == "DNS Tunneling"));
+
+        // 3. Encrypted Anomaly
+        let anomaly_pkt = Packet {
+            timestamp: Utc::now(),
+            src_addr: Some("10.0.0.9".parse().unwrap()),
+            dst_addr: Some("10.0.0.10".parse().unwrap()),
+            src_port: Some(1234),
+            dst_port: Some(80),
+            protocol: Protocol::Tls,
+            length: 100,
+            summary: "TLS ClientHello".to_string(),
+            data: Bytes::new(),
+            llm: None,
+        };
+        let alerts = engine.check_packet(&anomaly_pkt, None);
+        assert!(alerts.iter().any(|a| a.rule_name == "Encrypted Traffic Anomaly"));
+
+        // 4. Privilege Escalation
+        let priv_esc_pkt = Packet {
+            timestamp: Utc::now(),
+            src_addr: Some("10.0.0.9".parse().unwrap()),
+            dst_addr: Some("10.0.0.10".parse().unwrap()),
+            src_port: Some(80), // Low port
+            dst_port: Some(22), // SSH
+            protocol: Protocol::Ssh,
+            length: 100,
+            summary: "SSH Connection".to_string(),
+            data: Bytes::new(),
+            llm: None,
+        };
+        let alerts = engine.check_packet(&priv_esc_pkt, None);
+        assert!(alerts.iter().any(|a| a.rule_name == "Privilege Escalation"));
     }
 }

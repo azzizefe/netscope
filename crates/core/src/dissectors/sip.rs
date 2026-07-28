@@ -172,4 +172,58 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Sip);
         assert_eq!(r.summary, "SIP message");
     }
+
+    #[test]
+    fn bye_request() {
+        let msg = b"BYE sip:bob@biloxi.com SIP/2.0\r\nVia: SIP/2.0/UDP\r\n\r\n";
+        let r = dissect_sip(None, None, 5060, 5060, msg);
+        assert_eq!(r.protocol, Protocol::Sip);
+        assert_eq!(r.summary, "SIP BYE — sip:bob@biloxi.com");
+    }
+
+    #[test]
+    fn cancel_request() {
+        let msg = b"CANCEL sip:alice@example.com SIP/2.0\r\nCSeq: 1 CANCEL\r\n\r\n";
+        let r = dissect_sip(None, None, 5060, 5060, msg);
+        assert_eq!(r.protocol, Protocol::Sip);
+        assert_eq!(r.summary, "SIP CANCEL — sip:alice@example.com");
+    }
+
+    #[test]
+    fn register_without_uri_still_shows_method() {
+        // SIP method without URI — just the method name
+        let msg = b"REGISTER\r\nVia: SIP/2.0/UDP\r\n\r\n";
+        let r = dissect_sip(None, None, 5060, 5060, msg);
+        assert_eq!(r.protocol, Protocol::Sip);
+        assert_eq!(r.summary, "SIP REGISTER");
+    }
+
+    #[test]
+    fn sip_status_401() {
+        let msg = b"SIP/2.0 401 Unauthorized\r\nWWW-Authenticate: Digest realm=example.com\r\n\r\n";
+        let r = dissect_sip(None, None, 5060, 5060, msg);
+        assert_eq!(r.summary, "SIP 401 Unauthorized");
+    }
+
+    #[test]
+    fn sip_status_503() {
+        let msg = b"SIP/2.0 503 Service Unavailable\r\nRetry-After: 120\r\n\r\n";
+        let r = dissect_sip(None, None, 5060, 5060, msg);
+        assert_eq!(r.summary, "SIP 503 Service Unavailable");
+    }
+
+    #[test]
+    fn sip_status_603() {
+        let msg = b"SIP/2.0 603 Decline\r\n\r\n";
+        let r = dissect_sip(None, None, 5060, 5060, msg);
+        assert_eq!(r.summary, "SIP 603 Decline");
+    }
+
+    #[test]
+    fn sip_status_without_reason() {
+        // Status line with only the code, no reason phrase
+        let msg = b"SIP/2.0 999\r\n\r\n";
+        let r = dissect_sip(None, None, 5060, 5060, msg);
+        assert_eq!(r.summary, "SIP 999");
+    }
 }
