@@ -707,7 +707,7 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .leak {
   display: grid;
   grid-template-columns: 170px 1fr;
-  grid-template-areas: 'kind value' 'kind context' 'kind where';
+  grid-template-areas: 'kind value' 'kind facts' 'kind context' 'kind where';
   gap: 2px 12px;
   padding: 8px 12px;
   margin-bottom: 6px;
@@ -725,6 +725,26 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
   word-break: break-all;
 }
 .leak-masked { opacity: 0.75; letter-spacing: 0.5px; }
+/* Provenance: field, endpoint, source, time. This is the part someone acts
+   on, so it sits directly under the value rather than in a tooltip. */
+.leak-facts {
+  grid-area: facts;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.leak-fact { display: inline-flex; align-items: baseline; gap: 5px; }
+.leak-fk { opacity: 0.5; text-transform: uppercase; letter-spacing: 0.04em; font-size: 10px; }
+.leak-facts code {
+  font-family: var(--mono, ui-monospace, monospace);
+  background: color-mix(in srgb, var(--border) 40%, transparent);
+  padding: 0 4px;
+  border-radius: 3px;
+  word-break: break-all;
+}
+.leak-more { opacity: 0.6; cursor: help; text-decoration: underline dotted; }
 /* The request text the value sat in — what answers "where did it get this
    from" without opening the packet. The value is redacted out of it while
    masking is on; showing it here would have made the mask decorative. */

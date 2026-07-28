@@ -1718,7 +1718,22 @@ function findSensitiveData(text) {
       note: note || null,
       index: index ?? -1,
       context: context ?? null,
+      field: fieldAt(index),
     });
+  };
+
+  /**
+   * The parameter or JSON key the value was assigned to.
+   *
+   * This is the single most actionable fact about a finding: `card=` in a form
+   * body, `"pan":` in a JSON request and `?email=` in a query string are three
+   * different things to go and fix, and the value alone does not say which.
+   */
+  const fieldAt = (at) => {
+    if (at == null || at < 0) return null;
+    const before = text.slice(Math.max(0, at - 96), at);
+    const m = before.match(/([\w.[\]-]{1,64})"?\s*[=:]\s*"?\s*$/);
+    return m ? m[1] : null;
   };
 
   /** The surrounding text, so the reader can see what the value was found in. */
@@ -1819,6 +1834,48 @@ function maskSecret(kind, value) {
   return `${value.slice(0, 4)}${'•'.repeat(Math.min(12, value.length - 8))}${value.slice(-4)}`;
 }
 
+/**
+ * The HTTP request a payload belongs to, as far as it can be read.
+ *
+ * A finding is only actionable if you know where it was sent. "A card number
+ * appeared" is a curiosity; "this device POSTed it to /pay on shop.example in
+ * the `card` field at 12:00:03" is something you can go and fix — the endpoint
+ * names the service, the field names the code, and the time and source name
+ * the request in the server's own logs.
+ *
+ * Returns nulls rather than guesses when the payload is not a request: a
+ * response, a continuation segment, or a non-HTTP protocol all land here.
+ */
+function httpRequestInfo(text) {
+  const out = { method: null, path: null, host: null, referer: null };
+  if (!text) return out;
+
+  const req = text.match(/^([A-Z]{3,7}) (\S+) HTTP\/\d(?:\.\d)?/m);
+  if (req) { out.method = req[1]; out.path = req[2]; }
+
+  const host = text.match(/^host:[ \t]*(\S+)/im);
+  if (host) out.host = host[1];
+
+  const ref = text.match(/^referer:[ \t]*(\S+)/im);
+  if (ref) out.referer = ref[1];
+
+  return out;
+}
+
+/**
+ * One line naming where a value was sent — `POST shop.example/pay`.
+ *
+ * The Host header is preferred over the resolved hostname: a request carries
+ * the name the client actually asked for, and on shared hosting that is the
+ * virtual host you need, not whatever reverse DNS says about the address.
+ */
+function endpointOf(req, pkt) {
+  const host = req.host || pkt.dst_host || pkt.dst_addr;
+  if (!host) return null;
+  if (!req.path) return host;
+  return `${req.method ? `${req.method} ` : ''}${host}${req.path}`;
+}
+
 /** How much each kind of finding matters, worst first. */
 const LEAK_RANK = {
   'Private key block': 0, 'API key': 1, 'Basic auth': 2, 'Credential': 3,
@@ -1846,17 +1903,31 @@ function collectLeaks(pkts) {
     // Where the payload starts in the frame, so a text index becomes a byte
     // the hex dump can highlight.
     const base = payloadOffset(p.raw);
+    const req = httpRequestInfo(text);
 
     for (const hit of findSensitiveData(text)) {
       const id = `${hit.kind}:${hit.value}`;
       const existing = found.get(id);
-      if (existing) { existing.count += 1; continue; }
+      if (existing) {
+        existing.count += 1;
+        // Every distinct endpoint it reached matters: the same key sent to two
+        // services is two places to rotate it.
+        const where = endpointOf(req, p);
+        if (where && !existing.endpoints.includes(where)) existing.endpoints.push(where);
+        continue;
+      }
       found.set(id, {
         ...hit,
         count: 1,
         packet: i + 1,
         host: p.dst_host || p.dst_addr || '?',
+        source: p.src_addr || '?',
+        time: p.timestamp || null,
         protocol: p.protocol,
+        method: req.method,
+        path: req.path,
+        referer: req.referer,
+        endpoints: [endpointOf(req, p)].filter(Boolean),
         byteStart: hit.index >= 0 && base >= 0 ? base + hit.index : -1,
         byteEnd: hit.index >= 0 && base >= 0 ? base + hit.index + hit.value.length : -1,
       });
@@ -1897,14 +1968,32 @@ function renderLeaks() {
       ? null
       : reveal ? l.context : l.context.split(l.value).join(maskSecret(l.kind, l.value));
     const rank = LEAK_RANK[l.kind] ?? 99;
+
+    // The provenance block: everything needed to go and deal with it. Each
+    // fact is omitted rather than filled with a placeholder when the traffic
+    // did not carry it — a row of dashes reads as "unknown" far less clearly
+    // than the fact simply not being there.
+    const facts = [];
+    if (l.field) facts.push(`<span class="leak-fact"><span class="leak-fk">field</span><code>${esc(l.field)}</code></span>`);
+    if (l.endpoints.length) {
+      facts.push(`<span class="leak-fact"><span class="leak-fk">sent to</span><code>${esc(l.endpoints[0])}</code>${
+        l.endpoints.length > 1 ? ` <span class="leak-more" title="${esc(l.endpoints.slice(1).join('\n'))}">+${l.endpoints.length - 1} more</span>` : ''}</span>`);
+    } else {
+      facts.push(`<span class="leak-fact"><span class="leak-fk">sent to</span><code>${esc(l.host)}</code></span>`);
+    }
+    facts.push(`<span class="leak-fact"><span class="leak-fk">from</span><code>${esc(l.source)}</code></span>`);
+    if (l.time) facts.push(`<span class="leak-fact"><span class="leak-fk">first seen</span><code>${esc(l.time)}</code></span>`);
+    if (l.referer) facts.push(`<span class="leak-fact"><span class="leak-fk">referer</span><code>${esc(l.referer)}</code></span>`);
+
     return `<div class="leak leak-r${Math.min(rank, 8)}">
       <div class="leak-kind">${esc(l.kind)}${l.note ? ` <span class="leak-note">${esc(l.note)}</span>` : ''}</div>
       <div class="leak-value${reveal ? '' : ' leak-masked'}">${esc(shown)}</div>
+      <div class="leak-facts">${facts.join('')}</div>
       ${context ? `<div class="leak-context">${esc(context)}</div>` : ''}
-      <div class="leak-where">${esc(l.protocol)} → ${esc(l.host)}
+      <div class="leak-where">${esc(l.protocol)}
         · <button class="leak-jump" data-leak-pkt="${l.packet}"
             data-leak-from="${l.byteStart}" data-leak-to="${l.byteEnd}"
-            title="Open the packet and highlight these bytes">packet #${l.packet}</button>${l.count > 1 ? ` · seen ${l.count}×` : ''}</div>
+            title="Open the packet and highlight these bytes">packet #${l.packet}</button>${l.count > 1 ? ` · seen ${l.count}× across ${l.endpoints.length || 1} endpoint${(l.endpoints.length || 1) === 1 ? '' : 's'}` : ''}</div>
     </div>`;
   }).join('');
 }
@@ -4063,6 +4152,12 @@ function pushAlert(sev, msg) {
   updateAlertBadge();
   if (els.alertPanel && !els.alertPanel.classList.contains('hidden')) renderAlerts();
 }
+function onAlert(event) {
+  const a = event.payload;
+  const severity = a.severity === 'high' || a.severity === 'critical' ? 'error' : 'warn';
+  const msg = a.rule_name ? `${a.rule_name}: ${a.msg}` : a.msg;
+  pushAlert(severity, msg);
+}
 function updateAlertBadge() {
   if (!els.alertBadge) return;
   const unseen = state.alerts.length - state.alertsSeen;
@@ -5672,6 +5767,7 @@ async function init() {
     // A live capture that stops on its own (autostop limit reached, remote/USB
     // stream ended) → return the UI to idle.
     await listen('capture-stopped', onCaptureStopped);
+    await listen('alert', onAlert);
   } catch (e) { console.error('event subscription failed', e); }
 
   // Layered config (~/.netscope): surface what the backend loaded at startup

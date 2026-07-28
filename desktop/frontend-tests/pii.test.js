@@ -166,8 +166,10 @@ describe('collectLeaks', () => {
       ...[...text].map((c) => c.charCodeAt(0)),
     ],
     protocol: 'HTTP',
+    src_addr: '10.0.0.1',
     dst_addr: '10.0.0.2',
     dst_host: 'shop.example',
+    timestamp: '12:00:00.123',
     ...over,
   });
 
@@ -224,6 +226,55 @@ describe('collectLeaks', () => {
     const digits = String.fromCharCode(...raw.slice(leak.byteStart, leak.byteEnd));
 
     expect(digits).toBe('4111111111111111');
+  });
+
+  /// A finding is only actionable if you know where it was sent. These four
+  /// facts are what turn "a card number appeared" into something that can be
+  /// gone and fixed: which field, which endpoint, which device, and when.
+  it('records the field, endpoint, source and time of each finding', () => {
+    const body = 'POST /pay?ref=1 HTTP/1.1\r\nHost: shop.example\r\n'
+      + 'Referer: https://shop.example/checkout\r\n\r\namount=250&card=4111111111111111';
+    const [leak] = app.collectLeaks([pkt(body)]);
+
+    expect(leak.field).toBe('card');
+    expect(leak.endpoints[0]).toBe('POST shop.example/pay?ref=1');
+    expect(leak.source).toBe('10.0.0.1');
+    expect(leak.referer).toBe('https://shop.example/checkout');
+  });
+
+  it('names the JSON key when the value came from a body rather than a form', () => {
+    const body = 'POST /v1/charge HTTP/1.1\r\nHost: api.example\r\n\r\n{"amount":250,"pan":"4111111111111111"}';
+    const [leak] = app.collectLeaks([pkt(body)]);
+    expect(leak.field).toBe('pan');
+  });
+
+  /// The Host header beats reverse DNS: the request carries the name the
+  /// client actually asked for, which on shared hosting is the virtual host
+  /// you need rather than whatever the address resolves to.
+  it('prefers the Host header over the resolved hostname', () => {
+    const body = 'GET /?token=AKIAIOSFODNN7EXAMPLE HTTP/1.1\r\nHost: real-vhost.example\r\n\r\n';
+    const [leak] = app.collectLeaks([pkt(body)]);
+    expect(leak.endpoints[0]).toContain('real-vhost.example');
+  });
+
+  /// The same secret sent to two services is two places to rotate it, so each
+  /// distinct endpoint is kept rather than only the first.
+  it('collects every endpoint a repeated value reached', () => {
+    const one = 'POST /a HTTP/1.1\r\nHost: one.example\r\n\r\nkey=AKIAIOSFODNN7EXAMPLE';
+    const two = 'POST /b HTTP/1.1\r\nHost: two.example\r\n\r\nkey=AKIAIOSFODNN7EXAMPLE';
+    const [leak] = app.collectLeaks([pkt(one), pkt(two)]);
+
+    expect(leak.count).toBe(2);
+    expect(leak.endpoints).toHaveLength(2);
+    expect(leak.endpoints[1]).toContain('two.example/b');
+  });
+
+  /// Non-HTTP traffic has no request line. The endpoint falls back to the host
+  /// rather than inventing a method and path.
+  it('falls back to the host when the payload is not an HTTP request', () => {
+    const [leak] = app.collectLeaks([pkt('random binary-ish payload password=hunter2')]);
+    expect(leak.method).toBeNull();
+    expect(leak.endpoints[0]).toBe('shop.example');
   });
 
   it('ignores packets with no payload', () => {

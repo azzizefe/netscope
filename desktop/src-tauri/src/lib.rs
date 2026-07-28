@@ -3,6 +3,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
+use netscope_core::alerting::{Alert, AlertEngine, AlertRule, RuleTrigger};
 use netscope_core::capture::{CaptureEngine, CaptureOptions, StopConditions};
 use netscope_core::config::Config;
 use netscope_core::models::Packet;
@@ -18,6 +19,19 @@ struct CaptureState {
     packet_buffer: Vec<Packet>,
     names: NameCache,
     _packet_count: u64,
+    alert_engine: Option<AlertEngine>,
+}
+
+#[derive(Serialize, Clone)]
+struct AlertInfo {
+    timestamp: String,
+    rule_name: String,
+    severity: String,
+    msg: String,
+    src_ip: Option<String>,
+    dst_ip: Option<String>,
+    mitre_attack: Option<String>,
+    kill_chain: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -680,6 +694,7 @@ fn adopt_capture(
     guard.running.store(true, Ordering::SeqCst);
     guard.packet_buffer.clear();
     guard.names.clear();
+    guard.alert_engine = Some(AlertEngine::new(default_alert_rules()));
     drop(guard);
 
     let app_handle = app.clone();
@@ -687,32 +702,107 @@ fn adopt_capture(
         loop {
             match packet_rx.recv_timeout(std::time::Duration::from_millis(50)) {
                 Ok(pkt) => {
-                    let info = if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
-                        // Learn hostnames from DNS, then resolve this packet's addrs.
+                    let (info, alerts) = if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
                         g.names.observe(&pkt);
                         let info = packet_to_info(&pkt, &g.names);
+                        let alerts = g.alert_engine.as_mut()
+                            .map(|ae| ae.check_packet(&pkt, None))
+                            .unwrap_or_default();
                         g.packet_buffer.push(pkt);
                         if g.packet_buffer.len() > 100_000 {
                             g.packet_buffer.drain(..50_000);
                         }
-                        info
+                        (info, alerts)
                     } else {
-                        packet_to_info(&pkt, &NameCache::new())
+                        (packet_to_info(&pkt, &NameCache::new()), vec![])
                     };
                     let _ = app_handle.emit("packet", info);
+                    for a in alerts {
+                        let _ = app_handle.emit("alert", alert_to_info(&a));
+                    }
                 }
                 Err(crossbeam_channel::RecvTimeoutError::Timeout) => continue,
                 Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
             }
         }
-        // The channel only disconnects when every capture pipeline has
-        // drained — either a manual stop or the engine stopping itself
-        // (autostop, stream end). Tell the UI either way; it ignores the
-        // event when it already knows the capture is over.
         let _ = app_handle.emit("capture-stopped", ());
     });
 
     Ok(())
+}
+
+fn alert_to_info(a: &Alert) -> AlertInfo {
+    AlertInfo {
+        timestamp: a.timestamp.clone(),
+        rule_name: a.rule_name.clone(),
+        severity: a.severity.clone(),
+        msg: a.msg.clone(),
+        src_ip: a.src_ip.clone(),
+        dst_ip: a.dst_ip.clone(),
+        mitre_attack: a.mitre_attack.clone(),
+        kill_chain: a.kill_chain.clone(),
+    }
+}
+
+#[tauri::command]
+fn get_alert_rules() -> Vec<AlertRule> {
+    default_alert_rules()
+}
+
+fn default_alert_rules() -> Vec<AlertRule> {
+    vec![
+        AlertRule {
+            name: "New Host Detected".into(),
+            severity: "medium".into(),
+            mitre_attack: Some("TA0007".into()),
+            kill_chain: None,
+            trigger: RuleTrigger {
+                trigger_type: "anomaly".into(),
+                filter: "".into(),
+                group_by: None,
+                threshold: None,
+                window: None,
+                sub_rules: None,
+                start_time: None,
+                end_time: None,
+            },
+            actions: vec!["alert".into()],
+        },
+        AlertRule {
+            name: "High Traffic Volume".into(),
+            severity: "high".into(),
+            mitre_attack: Some("TA0011".into()),
+            kill_chain: None,
+            trigger: RuleTrigger {
+                trigger_type: "threshold".into(),
+                filter: "".into(),
+                group_by: None,
+                threshold: Some(1000),
+                window: Some("1s".into()),
+                sub_rules: None,
+                start_time: None,
+                end_time: None,
+            },
+            actions: vec!["alert".into()],
+        },
+        AlertRule {
+            name: "Suspicious Port Scan".into(),
+            severity: "high".into(),
+            mitre_attack: Some("TA0043".into()),
+            kill_chain: None,
+            trigger: RuleTrigger {
+                trigger_type: "anomaly".into(),
+                filter: "tcp or udp".into(),
+                group_by: None,
+                threshold: None,
+                window: None,
+                sub_rules: None,
+                start_time: None,
+                end_time: None,
+            },
+            actions: vec!["alert".into()],
+        },
+    ]
 }
 
 #[tauri::command]
@@ -1166,6 +1256,7 @@ pub fn run() {
             packet_buffer: Vec::new(),
             names: NameCache::new(),
             _packet_count: 0,
+            alert_engine: None,
         }))
         .manage(Mutex::new(geo))
         .manage(Mutex::new(config_state))
@@ -1199,6 +1290,7 @@ pub fn run() {
             save_object,
             open_detached_window,
             open_new_window,
+            get_alert_rules,
         ])
         .run(tauri::generate_context!())
         .expect("error while running netscope desktop");
