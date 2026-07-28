@@ -12,11 +12,29 @@ Triggered on every push to `main` and pull requests.
 - cargo fmt --check
 ```
 
+Needs `libpcap-dev` and `protoc`. `protoc` is not optional even though this job
+only lints: `--workspace` builds `netscope-server`, whose `build.rs` generates
+the gRPC stubs.
+
 #### 2. test (matrix: Ubuntu, macOS, Windows)
 For each OS:
-- Install pcap dependency (libpcap-dev on Linux, Npcap SDK on Windows)
-- `cargo build -p netscope-core -p netscope-tui`
-- `cargo test -p netscope-core -p netscope-tui`
+- Install pcap dependency (libpcap-dev on Linux, Npcap SDK on Windows) and `protoc`
+- `cargo build -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent`
+- `cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent`
+- `cargo test -p netscope-desktop` (Windows and macOS only — Tauri needs seven
+  apt packages on Linux, which is a lot of setup for two tests)
+
+None of these need a database or a Redis. The server's router tests hold a lazy
+`PgPool` that never dials, because the permission check they exercise runs
+before the handler that would query.
+
+#### 3. frontend (Ubuntu)
+Builds `netscope-wasm` for `wasm32-unknown-unknown`, runs `wasm-bindgen`, then
+`npm test` (vitest) in `desktop/frontend-tests`.
+
+#### 4. bench (Ubuntu)
+`parse_throughput` and `filter_match` in `--quick` mode, plus `mem_usage` over
+200k packets.
 
 ### Caching
 Uses `Swatinem/rust-cache@v2` for faster subsequent runs.
@@ -60,8 +78,10 @@ Depends on both TUI and desktop jobs. Downloads all artifacts and creates a GitH
 
 ## Workflow Files
 
-- `.github/workflows/ci.yml` — 56 lines, 2 jobs
-- `.github/workflows/release.yml` — 148 lines, 3 jobs
+- `.github/workflows/ci.yml` — 4 jobs (lint, test, frontend, bench)
+- `.github/workflows/release.yml` — 3 jobs (TUI binary, desktop installer, release)
+- `.github/workflows/publish.yml` — crates.io publish for `netscope-core` and
+  `netscope-tui` only, so it needs no `protoc`
 
 ## Adding a New Platform
 

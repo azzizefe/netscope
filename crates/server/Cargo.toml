@@ -17,14 +17,13 @@ tokio = { version = "1", features = ["full"] }
 
 # HTTP / Web
 axum = { version = "0.8", features = ["macros", "ws"] }
-axum-extra = { version = "0.10", features = ["typed-header"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip", "validate-request"]}
 http = "1"
-hyper = { version = "1", features = ["full"] }
-hyper-util = { version = "0.1", features = ["full"] }
 
-# gRPC
+# gRPC. `prost` and `tonic-prost` have no mention in this crate's sources on
+# purpose — `grpc/proto.rs` is one `tonic::include_proto!`, and the code that
+# expands there is what refers to them.
 tonic = { version = "0.14", features = ["transport", "channel", "server", "tls-webpki-roots"] }
 tonic-prost = "0.14"
 prost = "0.14"
@@ -64,11 +63,9 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Errors
 anyhow = "1"
-thiserror = "2"
 
 # Utilities
 futures = "0.3"
-tokio-stream = "0.1"
 dashmap = "6"
 parking_lot = "0.12"
 

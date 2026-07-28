@@ -1,7 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-#[cfg(not(target_arch = "wasm32"))]
+
+// What is gated below is what needs something wasm does not have: a socket, a
+// thread, a subprocess, a file, a database. Everything else builds everywhere.
+//
+// Five of these gates were on the wrong module, and the result was that
+// `netscope-core` did not compile for wasm32 at all — so neither did
+// `netscope-wasm`, and CI's `frontend` job failed before reaching the tests it
+// exists to run. `registry` and `ai_traffic` were gated out while `models`,
+// `flows`, `education` and `stats` used them unconditionally; `api_server`,
+// `remote` and `discover` were left ungated while depending on `capture`,
+// `db`, `pipeline` and `pcap`, which are correctly gated.
 pub mod ai_traffic;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
@@ -9,6 +20,7 @@ pub mod config;
 pub mod crypto;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod db;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod discover;
 pub mod dissectors;
 #[cfg(not(target_arch = "wasm32"))]
@@ -42,8 +54,8 @@ pub mod pqc_dashboard;
 pub mod pqc_handshake;
 pub mod pqc_rules;
 pub mod pqc_wizard;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod registry;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rotate;

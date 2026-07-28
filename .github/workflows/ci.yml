@@ -146,13 +146,20 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/frontend-tests/package-lock.json
 
-      # Build the WASM filter module — frontend tests load it at runtime
+      # Compile first, tool second. `cargo install wasm-bindgen-cli` takes
+      # minutes; a `netscope-core` that does not build for wasm32 is the more
+      # likely failure and costs seconds to find. These were the other way
+      # round, so the one real failure this job has caught so far only
+      # surfaced after the slowest step in it had already run.
+      - name: Build WASM filter module
+        run: cargo build -p netscope-wasm --release --target wasm32-unknown-unknown
+
       - name: Install wasm-bindgen-cli
         run: cargo install wasm-bindgen-cli --version 0.2.126
 
-      - name: Build WASM filter module
+      # The frontend tests load this module at runtime.
+      - name: Generate WASM bindings
         run: |
-          cargo build -p netscope-wasm --release --target wasm32-unknown-unknown
           wasm-bindgen \
             --target web \
             --out-dir desktop/frontend/wasm \
