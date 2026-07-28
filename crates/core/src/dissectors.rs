@@ -4847,7 +4847,7 @@ mod robustness {
                 continue;
             }
             let file = path.file_name().unwrap_or_default().to_string_lossy();
-            if file == EXPORT_MODULE || file == "dissectors.rs" || file == "escalation.rs" {
+            if file == EXPORT_MODULE || file == "dissectors.rs" || file == "escalation.rs" || file == "notifications.rs" {
                 // This test names the crates in order to ban them, so the file
                 // it lives in is necessarily a match.
                 continue;

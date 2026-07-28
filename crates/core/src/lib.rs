@@ -14,6 +14,7 @@
 pub mod ai_traffic;
 pub mod alerting;
 pub mod escalation;
+pub mod notifications;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]

@@ -1206,7 +1206,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{protocol_table, replay_packet};
+    use super::{protocol_table, replay_packet, protocol_count, get_glossary, get_protocol_risk};
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
@@ -1288,5 +1288,31 @@ mod tests {
             profinet.rank > table["TCP"].rank,
             "PROFINET must be able to name its own flow"
         );
+    }
+
+    #[test]
+    fn protocol_count_matches_table_length() {
+        let count = protocol_count();
+        let table = protocol_table();
+        assert_eq!(count as usize, table.len());
+    }
+
+    #[test]
+    fn glossary_contains_common_terms() {
+        let glossary = get_glossary();
+        assert!(!glossary.is_empty());
+        assert!(glossary.iter().any(|e| e.term == "IP address"));
+    }
+
+    #[test]
+    fn protocol_risk_known_protocol() {
+        let risk = get_protocol_risk("HTTP".to_string()).unwrap();
+        assert!(!risk.severity.is_empty());
+    }
+
+    #[test]
+    fn protocol_risk_unknown_returns_none() {
+        let risk = get_protocol_risk("NONEXISTENT_PROTOCOL_XYZ".to_string());
+        assert!(risk.is_none());
     }
 }

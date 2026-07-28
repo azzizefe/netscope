@@ -564,4 +564,56 @@ mod tests {
         assert!(snap.top_talkers_sent.is_empty());
         assert!(snap.top_domains.is_empty());
     }
+
+    #[test]
+    fn bandwidth_tick_records_sample_after_one_second() {
+        let mut engine = StatsEngine::new();
+        engine.last_second_check = Instant::now() - Duration::from_secs(2);
+        engine.bytes_this_second = 5000;
+        engine.tick();
+        assert_eq!(engine.bandwidth_samples.len(), 1);
+        // 5000 bytes / 2 sec ≈ 2500
+        assert!((engine.bandwidth_samples[0] - 2500.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn bandwidth_tick_under_one_second_does_not_sample() {
+        let mut engine = StatsEngine::new();
+        engine.last_second_check = Instant::now();
+        engine.bytes_this_second = 5000;
+        engine.tick();
+        assert!(engine.bandwidth_samples.is_empty());
+    }
+
+    #[test]
+    fn bandwidth_rolling_window_capped_at_60() {
+        let mut engine = StatsEngine::new();
+        for i in 0..65 {
+            engine.last_second_check = Instant::now() - Duration::from_secs(1 + i as u64);
+            engine.bytes_this_second = 1000;
+            engine.tick();
+        }
+        assert_eq!(engine.bandwidth_samples.len(), 60);
+    }
+
+    #[test]
+    fn snapshot_bandwidth_values() {
+        let mut engine = StatsEngine::new();
+        engine.last_second_check = Instant::now() - Duration::from_secs(2);
+        engine.bytes_this_second = 2000;
+        engine.tick();
+        // tick consumed bytes_this_second; record one more packet before snapshot
+        engine.record_packet(&test_packet(Protocol::Tcp, None, None, 500, ""));
+        let snap = engine.snapshot();
+        assert!(snap.average_bandwidth > 0.0);
+    }
+
+    #[test]
+    fn record_packet_increments_bytes_this_second() {
+        let mut engine = StatsEngine::new();
+        engine.record_packet(&test_packet(Protocol::Tcp, None, None, 150, ""));
+        assert_eq!(engine.bytes_this_second, 150);
+        engine.record_packet(&test_packet(Protocol::Udp, None, None, 50, ""));
+        assert_eq!(engine.bytes_this_second, 200);
+    }
 }

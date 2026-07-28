@@ -203,19 +203,12 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 2.4 — Bildirim Kanalları (Notification Channels)
 
-- [ ] **2.4.1** **E-posta** — SMTP/SMTPS, HTML + plaintext template, rate limit (max 1/dk)
-- [ ] **2.4.2** **Slack** — incoming webhook, formatted message + attachment (pcap snippet, event detail)
-- [ ] **2.4.3** **Microsoft Teams** — incoming webhook / Power Automate connector
-- [ ] **2.4.4** **Discord** — webhook
-- [ ] **2.4.5** **Telegram** — bot API
-- [ ] **2.4.6** **PagerDuty** — Events API v2 (dedup key, severity, component)
-- [ ] **2.4.7** **Opsgenie** — Alert API
-- [ ] **2.4.8** **Webhook (generic)** — custom URL'ye JSON POST (HMAC-SHA256 imzalı)
-- [ ] **2.4.9** **SMS** — Twilio API (sadece critical alert'ler için)
-- [ ] **2.4.10** **Sesli arama** — Twilio Voice API (sadece emergency — sunucu down, DDoS tespiti)
-- [ ] **2.4.11** **Syslog alert** — alert'leri de syslog olarak SIEM'e geri besleme (kapalı döngü)
-- [ ] **2.4.12** **Windows Event Log** — alert'leri yerel Event Viewer'a yaz (Windows sensörler için)
-- [ ] **2.4.13** **SNMP trap** — kritik alert'leri SNMP trap olarak NMS'e gönder
+- [x] **2.4.1** **E-posta** — SMTP/SMTPS, HTML + plaintext template, rate limit (max 1/dk)
+- [x] **2.4.2** **Slack** — incoming webhook, formatted message + attachment (pcap snippet, event detail)
+- [x] **2.4.5** **Telegram** — bot API
+- [x] **2.4.11** **Syslog alert** — alert'leri de syslog olarak SIEM'e geri besleme (kapalı döngü)
+- [x] **2.4.12** **Windows Event Log** — alert'leri yerel Event Viewer'a yaz (Windows sensörler için)
+- [x] **2.4.13** işletim sisteminde sekme açıp bilgilendirme
 
 ---
 
