@@ -9,6 +9,7 @@
 // the imports are only dereferenced inside function bodies, long after both
 // modules have finished evaluating.
 import { $, beautifyPayload, colorRuleFor, decodeStreamText, els, endpointLabel, enrichGeo, esc, expertInfo, extractPayload, formatPacketTime, guessProtocol, isNoise, isPublicIp, matchesFilter, protoColor, semanticEvents, state, transportOf, updateFilterFeedback } from '../../app.js';
+import { invoke } from '../api.js';
 
 const ROW_H = 24;
 const VSCROLL_OVERSCAN = 12;
@@ -376,9 +377,46 @@ export function showDetail(index) {
   els.hexLen.textContent = `${(pkt.raw || []).length} bytes`;
   enrichGeo(pkt);
 
+  showProtocolRisk(pkt.protocol);
+
   if (window.__TAURI__) {
     window.__TAURI__.event.emit("packet-selected", pkt);
   }
+}
+
+/**
+ * Append the selected protocol's documented security risk, if it has one.
+ *
+ * Most protocols have none and nothing is appended — that silence is the
+ * design. A note that appears for everything would say nothing for anything,
+ * and the reader would stop looking at the one that matters.
+ *
+ * Fetched per selection rather than carried on every packet: the notes are a
+ * few hundred bytes each and a capture holds thousands of packets.
+ */
+async function showProtocolRisk(protocol) {
+  const wanted = protocol;
+  let risk = null;
+  try {
+    risk = await invoke('get_protocol_risk', { protocol });
+  } catch {
+    return; // Backend unavailable — the detail tree is still complete without this.
+  }
+  // The user can select another packet while this is in flight; only render if
+  // the answer still matches what is on screen.
+  if (!risk || !state.selectedPacket || state.selectedPacket.protocol !== wanted) return;
+
+  const sev = risk.severity.toLowerCase();
+  els.detailTree.insertAdjacentHTML('beforeend',
+    `<div class="tnode tnode-risk risk-${sev}"><div class="tnode-head">` +
+    `<span class="twist">▾</span><span class="tlabel">⚠ Security risk ` +
+    `<span class="risk-badge risk-badge-${sev}">${esc(risk.severity)}</span></span></div>` +
+    `<div class="tbody">` +
+    `<div class="risk-headline">${esc(risk.headline)}</div>` +
+    `<div class="risk-detail">${esc(risk.detail)}</div>` +
+    `<div class="risk-field"><span class="risk-key">What to do</span>${esc(risk.mitigation)}</div>` +
+    `<div class="risk-field"><span class="risk-key">Source</span>${esc(risk.reference)}</div>` +
+    `</div></div>`);
 }
 window.showDetail = showDetail;
 

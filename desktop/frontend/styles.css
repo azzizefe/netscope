@@ -680,6 +680,37 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .diff-section h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 8px; }
 .diff-table { width: 100%; max-width: 720px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 
+/* Security-risk node in the packet detail. Only appears for protocols that
+   have a documented weakness, so it is allowed to be loud when it does. */
+.tnode-risk .risk-headline { font-weight: 600; margin-bottom: 6px; }
+.tnode-risk .risk-detail { opacity: 0.9; margin-bottom: 8px; }
+.tnode-risk .risk-field { margin-top: 4px; }
+.tnode-risk .risk-key {
+  display: inline-block;
+  min-width: 92px;
+  opacity: 0.7;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.risk-badge {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+.risk-badge-critical { background: #dc2626; }
+.risk-badge-high { background: #ea580c; }
+.risk-badge-medium { background: #ca8a04; }
+.risk-badge-info { background: #0284c7; }
+.tnode-risk.risk-critical { border-left: 3px solid #dc2626; }
+.tnode-risk.risk-high { border-left: 3px solid #ea580c; }
+.tnode-risk.risk-medium { border-left: 3px solid #ca8a04; }
+.tnode-risk.risk-info { border-left: 3px solid #0284c7; }
+
 /* Packet-header comparison. Only the differing rows are marked — the point of
    the view is that the eye lands on them without reading the identical ones. */
 .diff-table tr.diff-sec td {

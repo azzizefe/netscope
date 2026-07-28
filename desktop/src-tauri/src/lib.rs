@@ -112,6 +112,39 @@ fn get_lessons() -> Vec<LessonInfo> {
         .collect()
 }
 
+#[derive(Serialize, Clone)]
+struct RiskInfo {
+    severity: String,
+    headline: String,
+    detail: String,
+    mitigation: String,
+    reference: String,
+}
+
+/// The documented security risk of one protocol, by its display name.
+///
+/// Fetched when a packet is selected rather than attached to every `PacketInfo`:
+/// the notes run to a few hundred bytes each and a batch carries thousands of
+/// packets, so shipping them per packet would cost far more than it returns.
+///
+/// `None` is the honest and common answer — most protocols have nothing
+/// specific to say, and the panel shows nothing rather than filler.
+#[tauri::command]
+fn get_protocol_risk(protocol: String) -> Option<RiskInfo> {
+    use netscope_core::models::Protocol;
+    let proto = Protocol::ALL
+        .iter()
+        .find(|p| p.display_name() == protocol)?;
+    let r = netscope_core::protocol_risk::risk(proto)?;
+    Some(RiskInfo {
+        severity: r.severity.label().to_string(),
+        headline: r.headline.to_string(),
+        detail: r.detail.to_string(),
+        mitigation: r.mitigation.to_string(),
+        reference: r.reference.to_string(),
+    })
+}
+
 #[tauri::command]
 fn get_glossary() -> Vec<TermInfo> {
     netscope_core::education::glossary()
@@ -1147,6 +1180,7 @@ pub fn run() {
             save_pcap,
             save_pcap_encrypted,
             get_lessons,
+            get_protocol_risk,
             get_glossary,
             is_elevated,
             protocol_count,
