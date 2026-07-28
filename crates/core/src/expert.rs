@@ -52,3 +52,71 @@ pub fn classify(pkt: &Packet) -> ExpertSeverity {
         ExpertSeverity::Chat
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::Protocol;
+    use chrono::Utc;
+    use bytes::Bytes;
+
+    fn pkt(summary: &str) -> Packet {
+        Packet {
+            timestamp: Utc::now(),
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: Protocol::Unknown(0),
+            length: 0,
+            summary: summary.into(),
+            data: Bytes::new(),
+            llm: None,
+        }
+    }
+
+    #[test]
+    fn error_keywords() {
+        assert_eq!(classify(&pkt("reset")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("RST")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("Malformed packet")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("unreachable")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("bad checksum")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("Threat detected")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("Alert triggered")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("AbuseIPDB match")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("URLhaus hit")), ExpertSeverity::Error);
+    }
+
+    #[test]
+    fn warning_keywords() {
+        assert_eq!(classify(&pkt("[TCP Retransmission]")), ExpertSeverity::Warning);
+        assert_eq!(classify(&pkt("[TCP Dup ACK 42]")), ExpertSeverity::Warning);
+        assert_eq!(classify(&pkt("[TCP Out-of-Order]")), ExpertSeverity::Warning);
+        assert_eq!(classify(&pkt("SERVFAIL")), ExpertSeverity::Warning);
+        assert_eq!(classify(&pkt("NXDOMAIN")), ExpertSeverity::Warning);
+    }
+
+    #[test]
+    fn note_keywords() {
+        assert_eq!(classify(&pkt("304 Not Modified")), ExpertSeverity::Note);
+        assert_eq!(classify(&pkt("opened")), ExpertSeverity::Note);
+        assert_eq!(classify(&pkt("closing")), ExpertSeverity::Note);
+        assert_eq!(classify(&pkt("SYN")), ExpertSeverity::Note);
+        assert_eq!(classify(&pkt("FIN")), ExpertSeverity::Note);
+    }
+
+    #[test]
+    fn chat_is_the_fallback() {
+        assert_eq!(classify(&pkt("normal packet")), ExpertSeverity::Chat);
+        assert_eq!(classify(&pkt("")), ExpertSeverity::Chat);
+    }
+
+    #[test]
+    fn label_roundtrip() {
+        assert_eq!(ExpertSeverity::Chat.label(), "Chat");
+        assert_eq!(ExpertSeverity::Note.label(), "Note");
+        assert_eq!(ExpertSeverity::Warning.label(), "Warning");
+        assert_eq!(ExpertSeverity::Error.label(), "Error");
+    }
+}
