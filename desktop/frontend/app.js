@@ -4556,6 +4556,47 @@ function renderAll() {
   else if (state.view === 'script') updateScriptCount();
   else if (state.view === 'insights') renderInsights();
   else if (state.view === 'wifi') renderWifi();
+  else if (state.view === 'soc') renderSoc();
+}
+
+function renderSoc() {
+  const rulesEl = $('#soc-rules-list');
+  const escalationEl = $('#soc-escalation-list');
+  const statsEl = $('#soc-stats-list');
+
+  if (rulesEl) {
+    invoke('get_alert_rules').then((rules) => {
+      if (rules && rules.length) {
+        rulesEl.innerHTML = rules.map((r) =>
+          `<div class="soc-rule">
+            <span class="soc-rule-name">${esc(r.name)}</span>
+            <span class="soc-rule-severity soc-sev-${r.severity}">${esc(r.severity)}</span>
+            <span class="soc-rule-trigger">${esc(r.trigger.type)}</span>
+            ${r.mitre_attack ? `<span class="soc-rule-mitre">MITRE: ${esc(r.mitre_attack)}</span>` : ''}
+          </div>`
+        ).join('');
+      } else {
+        rulesEl.innerHTML = `<div class="soc-empty">${I18N.t('soc.norules')}</div>`;
+      }
+    }).catch(() => {
+      rulesEl.innerHTML = `<div class="soc-empty">${I18N.t('soc.norules')}</div>`;
+    });
+  }
+
+  if (escalationEl) {
+    escalationEl.innerHTML = `<div class="soc-empty">${I18N.t('soc.noescalation')}</div>`;
+  }
+
+  if (statsEl) {
+    const s = state.stats;
+    const alerts = state.alerts;
+    statsEl.innerHTML = `
+      <div class="soc-stat-row"><span class="soc-stat-label">Total packets</span><span class="soc-stat-value">${s ? s.totalPackets.toLocaleString() : '—'}</span></div>
+      <div class="soc-stat-row"><span class="soc-stat-label">Total alerts</span><span class="soc-stat-value">${alerts ? alerts.length.toLocaleString() : '0'}</span></div>
+      <div class="soc-stat-row"><span class="soc-stat-label">Active triggers</span><span class="soc-stat-value">${state.triggers ? state.triggers.length : '0'}</span></div>
+      <div class="soc-stat-row"><span class="soc-stat-label">Capture running</span><span class="soc-stat-value">${state.status === STATES.CAPTURING ? 'Yes' : 'No'}</span></div>
+    `;
+  }
 }
 
 // ==== Wireshark-style menu bar =========================================

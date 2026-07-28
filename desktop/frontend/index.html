@@ -297,6 +297,7 @@
       <button class="tab" role="tab" aria-selected="false" data-view="diff" data-i18n="tab.diff">🔀 Diff</button>
       <button class="tab" role="tab" aria-selected="false" data-view="script" data-i18n="tab.script">⚡ Script</button>
       <button class="tab" role="tab" aria-selected="false" data-view="learn" data-i18n="tab.learn">🎓 Learn</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="soc" data-i18n="tab.soc">🛡 SOC</button>
       <select id="split-view-select" class="split-view-select hidden" aria-label="Split view tab" style="margin-left:auto; background:var(--bg-card); color:var(--text); border:1px solid var(--border); padding:2px 8px; border-radius:4px">
         <option value="none">— Select Split View —</option>
         <option value="connections" data-i18n="tab.connections">Connections</option>
@@ -580,6 +581,38 @@
           <div id="glossary-list"></div>
           <h2 class="learn-h2" data-i18n="learn.features">✨ netscope Features — how to use them</h2>
           <div id="feature-cards"></div>
+        </div>
+      </section>
+
+      <!-- SOC 7×24 Monitoring View -->
+      <section id="view-soc" class="view">
+        <div class="soc-header">
+          <h2 data-i18n="soc.title">🛡 SOC — Security Operations Center</h2>
+          <p class="soc-subtitle" data-i18n="soc.subtitle">7×24 monitoring, alerting, and notification channels</p>
+        </div>
+        <div class="soc-grid">
+          <div class="card" id="soc-alert-rules">
+            <h3 data-i18n="soc.alertrules">🔔 Active Alert Rules</h3>
+            <div id="soc-rules-list" class="soc-list"></div>
+          </div>
+          <div class="card" id="soc-notifications">
+            <h3 data-i18n="soc.notifications">📨 Notification Channels</h3>
+            <div class="soc-list">
+              <div class="soc-channel"><span class="soc-channel-name">🔊 Syslog</span><span class="soc-channel-status active" data-i18n="soc.active">Active</span></div>
+              <div class="soc-channel"><span class="soc-channel-name">📧 Email (SMTP)</span><span class="soc-channel-status" data-i18n="soc.available">Available</span></div>
+              <div class="soc-channel"><span class="soc-channel-name">💬 Slack Webhook</span><span class="soc-channel-status" data-i18n="soc.available">Available</span></div>
+              <div class="soc-channel"><span class="soc-channel-name">✉ Telegram Bot</span><span class="soc-channel-status" data-i18n="soc.available">Available</span></div>
+              <div class="soc-channel"><span class="soc-channel-name">🪟 Windows Event Log</span><span class="soc-channel-status active" data-i18n="soc.active">Active</span></div>
+            </div>
+          </div>
+          <div class="card" id="soc-escalation">
+            <h3 data-i18n="soc.escalation">📈 Escalation Rules</h3>
+            <div id="soc-escalation-list" class="soc-list"></div>
+          </div>
+          <div class="card" id="soc-stats">
+            <h3 data-i18n="soc.stats">📊 Session Stats</h3>
+            <div id="soc-stats-list" class="soc-list"></div>
+          </div>
         </div>
       </section>
     </main>
