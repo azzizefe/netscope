@@ -89,14 +89,14 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 1.1 — SIEM Format Desteği
 
-- [ ] **1.1.1** **Syslog (RFC 5424)** çıktı formatı — structured data + severity mapping
-- [ ] **1.1.2** **CEF (Common Event Format)** — ArcSight, McAfee ESM, Sumo Logic için
+- [x] **1.1.1** **Syslog (RFC 5424)** çıktı formatı — structured data + severity mapping
+- [x] **1.1.2** **CEF (Common Event Format)** — ArcSight, McAfee ESM, Sumo Logic için
   ```
   CEF:0|netscope|netscope-agent|2.0|100|Suspicious Beaconing|5|src=10.0.0.5 dst=203.0.113.42 ...
   ```
-- [ ] **1.1.3** **LEEF (Log Event Extended Format)** — QRadar için
-- [ ] **1.1.4** **JSON Lines (NDJSON)** — Elasticsearch, Splunk HEC, Loki için (mevcut kod iyileştirilecek)
-- [ ] **1.1.5** **Raw PCAP export** — alert tetiklendiğinde ilgili .pcap parçasını otomatik dışa aktar
+- [x] **1.1.3** **LEEF (Log Event Extended Format)** — QRadar için
+- [x] **1.1.4** **JSON Lines (NDJSON)** — Elasticsearch, Splunk HEC, Loki için (mevcut kod iyileştirilecek)
+- [x] **1.1.5** **Raw PCAP export** — alert tetiklendiğinde ilgili .pcap parçasını otomatik dışa aktar
 
 ### 1.2 — SIEM Connector'lar
 

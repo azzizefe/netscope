@@ -67,6 +67,7 @@ enterprise = []
 
 [dev-dependencies]
 criterion = "0.5"
+crossbeam-channel = "0.5"
 # Same versions as [dependencies] — used by the benches to build test frames
 # and Packet values through the public API.
 etherparse = "0.16"
