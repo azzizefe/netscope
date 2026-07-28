@@ -97,3 +97,62 @@ impl Columns {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_columns() {
+        let c = Columns::default();
+        assert!(c.num);
+        assert!(c.time);
+        assert!(c.source);
+        assert!(c.destination);
+        assert!(c.protocol);
+        assert!(!c.length);
+    }
+
+    #[test]
+    fn toggle_switches_state() {
+        let mut c = Columns::default();
+        c.toggle(Column::Time);
+        assert!(!c.time);
+        c.toggle(Column::Time);
+        assert!(c.time);
+    }
+
+    #[test]
+    fn toggle_index_bounds() {
+        let mut c = Columns::default();
+        c.toggle_index(0);  // ignored
+        c.toggle_index(7);  // ignored
+        assert!(c.num);
+        c.toggle_index(1);  // Num
+        assert!(!c.num);
+        c.toggle_index(6);  // Length (default false)
+        assert!(c.length);
+    }
+
+    #[test]
+    fn column_labels() {
+        assert_eq!(Column::Num.label(), "No.");
+        assert_eq!(Column::Time.label(), "Time");
+        assert_eq!(Column::Source.label(), "Source");
+        assert_eq!(Column::Destination.label(), "Destination");
+        assert_eq!(Column::Protocol.label(), "Protocol");
+        assert_eq!(Column::Length.label(), "Length");
+    }
+
+    #[test]
+    fn all_columns_toggle() {
+        for col in &Column::ALL {
+            let mut c = Columns::default();
+            let expected_initial = c.is_on(*col);
+            c.toggle(*col);
+            assert_ne!(c.is_on(*col), expected_initial);
+            c.toggle(*col);
+            assert_eq!(c.is_on(*col), expected_initial);
+        }
+    }
+}

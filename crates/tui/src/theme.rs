@@ -80,3 +80,25 @@ impl Theme {
             .position(|t| t.name.eq_ignore_ascii_case(name))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn theme_index_by_name() {
+        assert_eq!(Theme::index_by_name("dark"), Some(0));
+        assert_eq!(Theme::index_by_name("light"), Some(1));
+    }
+
+    #[test]
+    fn theme_index_case_insensitive() {
+        assert_eq!(Theme::index_by_name("DARK"), Some(0));
+        assert_eq!(Theme::index_by_name("Solarized"), Some(2));
+    }
+
+    #[test]
+    fn theme_index_unknown() {
+        assert_eq!(Theme::index_by_name("nonexistent"), None);
+    }
+}

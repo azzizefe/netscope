@@ -12,14 +12,12 @@ import { $, STATES, buildCaptureOptions, closeToolModal, els, esc, markCapturing
 
 export async function invoke(cmd, args = {}) {
   if (window.__TAURI__) return window.__TAURI__.core.invoke(cmd, args);
-  console.warn(`[mock] invoke ${cmd}`, args);
   return null;
 }
 window.invoke = invoke;
 
 export async function listen(event, handler) {
   if (window.__TAURI__) return window.__TAURI__.event.listen(event, handler);
-  console.warn(`[mock] listen ${event}`);
 }
 window.listen = listen;
 

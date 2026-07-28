@@ -13,6 +13,7 @@
 // `db`, `pipeline` and `pcap`, which are correctly gated.
 pub mod ai_traffic;
 pub mod alerting;
+pub mod escalation;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]

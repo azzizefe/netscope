@@ -193,13 +193,13 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 2.3 — Alert Eskalasyon (Escalation)
 
-- [ ] **2.3.1** Eskalasyon seviyeleri (zaman bazlı):
+- [x] **2.3.1** Eskalasyon seviyeleri (zaman bazlı):
   ```
   L1 (SOC Analyst) → 15 dk → L2 (Senior Analyst) → 30 dk → L3 (IR Lead) → 1 saat → CISO
   ```
-- [ ] **2.3.2** Eskalasyon policy — her kural için ayrı ayrı override edilebilir eskalasyon zinciri
-- [ ] **2.3.3** On-call schedule entegrasyonu — PagerDuty, Opsgenie, VictorOps API
-- [ ] **2.3.4** Shift rotation — haftalık nöbet çizelgesi, otomatik atama
+- [x] **2.3.2** Eskalasyon policy — her kural için ayrı ayrı override edilebilir eskalasyon zinciri
+- [x] **2.3.3** On-call schedule entegrasyonu — PagerDuty, Opsgenie, VictorOps API
+- [x] **2.3.4** Shift rotation — haftalık nöbet çizelgesi, otomatik atama
 
 ### 2.4 — Bildirim Kanalları (Notification Channels)
 
