@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 // netscope Desktop — Frontend
 // Talks to the Rust backend over Tauri IPC (window.__TAURI__).
@@ -190,6 +190,8 @@ export const state = {
   // headers are lined up field by field. Independent — you can use either
   // comparison without the other.
   diff: { a: null, b: null, pktA: null, pktB: null },
+  // Leak values are masked until asked for, every time. See the reveal button.
+  leaksRevealed: false,
   alerts: [], alertsSeen: 0,          // Smart Alerts feed
   triggers: loadJSON('netscope.triggers', []), // Event triggers (IFTTT)
   coloring: loadJSON('netscope.coloring', null) || DEFAULT_COLOR_RULES.map((r) => ({ ...r })),
@@ -500,6 +502,19 @@ export function extractPayload(raw) {
     return null;
   }
   return o <= raw.length ? raw.slice(o) : new Uint8Array(0);
+}
+
+/**
+ * Byte offset of the payload within the frame, or -1 if there is none.
+ *
+ * `extractPayload` returns the slice and drops where it came from, which is
+ * exactly what is needed to point at a finding in the hex dump. The header
+ * walk is shared rather than repeated: this calls the same function and
+ * derives the offset from the length it returned, so the two cannot disagree.
+ */
+export function payloadOffset(raw) {
+  const p = extractPayload(raw);
+  return p ? raw.length - p.length : -1;
 }
 
 export function decodeStreamText(bytes, proto) {
@@ -1621,6 +1636,301 @@ function analyzeServiceCalls(flows) {
     // Slowest first: the reason to open this view is to find what is holding
     // the chain up, not to read an inventory of everything that is fine.
     .sort((a, b) => (b.service?.median ?? -1) - (a.service?.median ?? -1));
+}
+
+// ---- Sensitive data in cleartext (PII / secret finder) ----
+
+/** Luhn check digit, the validation every issued card number satisfies. */
+function luhnValid(digits) {
+  if (digits.length < 13 || digits.length > 19) return false;
+  let sum = 0;
+  let alt = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let d = digits.charCodeAt(i) - 48;
+    if (d < 0 || d > 9) return false;
+    if (alt) { d *= 2; if (d > 9) d -= 9; }
+    sum += d;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+/**
+ * The issuer ranges, with the lengths each actually issues.
+ *
+ * Luhn alone is a weak filter: one in ten random numbers of the right length
+ * passes it, and plenty of identifiers carry a Luhn digit *by design* — an
+ * IMEI is Luhn-checked, fifteen digits, and often starts with a 4, so a
+ * Luhn-only check reports every phone in the capture as a Visa card.
+ *
+ * Requiring the number to match a real issuer prefix **at a length that issuer
+ * uses** is what removes them. It is the difference between "this looks like a
+ * number" and "this could have been issued".
+ */
+const CARD_NETWORKS = [
+  { name: 'Visa', prefix: /^4/, lengths: [13, 16, 19] },
+  { name: 'Mastercard', prefix: /^(5[1-5]|2(2[2-9]|[3-6]\d|7[01]|720))/, lengths: [16] },
+  { name: 'Amex', prefix: /^3[47]/, lengths: [15] },
+  { name: 'Discover', prefix: /^(6011|65|64[4-9])/, lengths: [16, 19] },
+  { name: 'JCB', prefix: /^35(2[89]|[3-8]\d)/, lengths: [16, 19] },
+  { name: 'Diners', prefix: /^(36|38|30[0-5])/, lengths: [14, 16, 19] },
+  { name: 'UnionPay', prefix: /^62/, lengths: [16, 17, 18, 19] },
+  { name: 'Troy', prefix: /^9792/, lengths: [16] },
+];
+
+/** The issuing network, or null when no issuer uses this prefix at this length. */
+function cardNetwork(n) {
+  const hit = CARD_NETWORKS.find((c) => c.prefix.test(n) && c.lengths.includes(n.length));
+  return hit ? hit.name : null;
+}
+
+/**
+ * Secrets and personal data visible in cleartext.
+ *
+ * Two rules keep this from becoming noise:
+ *
+ * 1. **Structure is checked, not just shape.** A card number must pass Luhn
+ *    *and* match an issuer prefix at a length that issuer uses — see
+ *    [`CARD_NETWORKS`] for why Luhn on its own is not enough. API keys are
+ *    matched on their vendor's documented prefix, not on "long random-looking
+ *    string".
+ * 2. **Only what was actually readable.** This runs on decoded payloads. TLS
+ *    traffic never reaches it, so nothing here is a guess about ciphertext.
+ *
+ * Values are returned whole; masking is the caller's decision, because the
+ * caller knows whether it is rendering to a screen someone may be sharing.
+ */
+function findSensitiveData(text) {
+  if (!text || text.length > 262144) return [];
+  const out = [];
+  const seen = new Set();
+  // `index` is where the match starts in the decoded text. `decodePlainStream`
+  // emits one character per byte, so it doubles as the byte offset into the
+  // payload — which is what lets a finding point at itself in the hex dump
+  // instead of just naming the packet.
+  const add = (kind, value, note, index, context) => {
+    const id = `${kind}:${value}`;
+    if (seen.has(id)) return;
+    seen.add(id);
+    out.push({
+      kind,
+      value,
+      note: note || null,
+      index: index ?? -1,
+      context: context ?? null,
+    });
+  };
+
+  /** The surrounding text, so the reader can see what the value was found in. */
+  const around = (at, len) => {
+    if (at == null || at < 0) return null;
+    const from = Math.max(0, at - 34);
+    const to = Math.min(text.length, at + len + 26);
+    return (from > 0 ? '…' : '') + text.slice(from, to).replace(/[\r\n\t]+/g, ' ').trim()
+      + (to < text.length ? '…' : '');
+  };
+
+  // Credentials in a form body or query string. The name is what makes it a
+  // credential; the value can be anything.
+  const credRe = /\b(password|passwd|pwd|pass|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|session[_-]?id|client[_-]?secret)\b\s*[=:]\s*"?([^&"'\s,}]{3,256})/gi;
+  for (const m of text.matchAll(credRe)) {
+    add('Credential', m[2], m[1].toLowerCase(), m.index, around(m.index, m[0].length));
+  }
+
+  // HTTP Basic: the base64 is trivially reversible, so it is cleartext.
+  for (const m of text.matchAll(/^authorization:[ \t]*basic[ \t]+([A-Za-z0-9+/=]+)/gim)) {
+    let decoded = null;
+    try { decoded = atob(m[1]); } catch { /* not valid base64 — report it raw */ }
+    add('Basic auth', decoded || m[1], decoded ? 'base64 decoded' : null,
+      m.index, around(m.index, m[0].length));
+  }
+  for (const m of text.matchAll(/^authorization:[ \t]*bearer[ \t]+([\w.\-+/=]{8,})/gim)) {
+    add('Bearer token', m[1], null, m.index, around(m.index, m[0].length));
+  }
+
+  // Issuer-prefixed keys: each of these is documented by its vendor, so a
+  // match is a real key rather than a string that looks like one.
+  const keyPatterns = [
+    [/\bAKIA[0-9A-Z]{16}\b/g, 'AWS access key'],
+    [/\bASIA[0-9A-Z]{16}\b/g, 'AWS temporary key'],
+    [/\bgh[pousr]_[A-Za-z0-9]{36,}\b/g, 'GitHub token'],
+    [/\bAIza[0-9A-Za-z_-]{35}\b/g, 'Google API key'],
+    [/\bxox[baprs]-[0-9A-Za-z-]{10,}\b/g, 'Slack token'],
+    [/\bsk-[A-Za-z0-9]{20,}\b/g, 'OpenAI-style secret key'],
+    [/\bsk_live_[A-Za-z0-9]{16,}\b/g, 'Stripe live key'],
+    [/-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----/g, 'Private key block'],
+  ];
+  for (const [re, label] of keyPatterns) {
+    for (const m of text.matchAll(re)) {
+      add('API key', m[0], label, m.index, around(m.index, m[0].length));
+    }
+  }
+
+  // A JWT is three base64url segments; the header and payload are readable.
+  for (const m of text.matchAll(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g)) {
+    add('JWT', m[0], 'header and claims are readable', m.index, around(m.index, m[0].length));
+  }
+
+  // Card numbers. Luhn *and* an issuer that uses this prefix at this length —
+  // see CARD_NETWORKS. A number that passes Luhn but no issuer range is left
+  // alone: it is far more likely an identifier that happens to carry a check
+  // digit than a card nobody could have been issued.
+  for (const m of text.matchAll(/\b(?:\d[ -]?){12,18}\d\b/g)) {
+    const digits = m[0].replace(/[ -]/g, '');
+    if (!luhnValid(digits)) continue;
+    const network = cardNetwork(digits);
+    if (!network) continue;
+    add('Card number', digits, network, m.index, around(m.index, m[0].length));
+  }
+
+  for (const m of text.matchAll(/\b[\w.+-]+@[\w-]+\.[\w.-]{2,}\b/g)) {
+    add('Email', m[0], null, m.index, around(m.index, m[0].length));
+  }
+
+  // IBAN: country, check digits, then the account. Length is country-specific;
+  // this checks the general shape and the mod-97 checksum that all of them
+  // satisfy, which is what separates an IBAN from an order reference.
+  for (const m of text.matchAll(/\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g)) {
+    if (ibanValid(m[0])) add('IBAN', m[0], null, m.index, around(m.index, m[0].length));
+  }
+
+  return out;
+}
+
+/** IBAN mod-97 checksum (ISO 13616): rearrange, letters to numbers, mod 97 = 1. */
+function ibanValid(iban) {
+  const s = iban.slice(4) + iban.slice(0, 4);
+  let rem = 0;
+  for (const ch of s) {
+    const v = /[0-9]/.test(ch) ? ch : (ch.charCodeAt(0) - 55).toString();
+    for (const d of v) rem = (rem * 10 + (d.charCodeAt(0) - 48)) % 97;
+  }
+  return rem === 1;
+}
+
+/** Mask a value for display, keeping just enough to recognise it. */
+function maskSecret(kind, value) {
+  if (kind === 'Card number') return `${'•'.repeat(value.length - 4)}${value.slice(-4)}`;
+  if (kind === 'Email') {
+    const [user, domain] = value.split('@');
+    return `${user.slice(0, 2)}${'•'.repeat(Math.max(1, user.length - 2))}@${domain}`;
+  }
+  if (value.length <= 8) return '•'.repeat(value.length);
+  return `${value.slice(0, 4)}${'•'.repeat(Math.min(12, value.length - 8))}${value.slice(-4)}`;
+}
+
+/** How much each kind of finding matters, worst first. */
+const LEAK_RANK = {
+  'Private key block': 0, 'API key': 1, 'Basic auth': 2, 'Credential': 3,
+  'Bearer token': 4, 'Card number': 5, 'IBAN': 6, 'JWT': 7, 'Email': 8,
+};
+
+/**
+ * Every secret and piece of personal data readable in the capture, as one list.
+ *
+ * The same value usually appears many times — a session cookie rides on every
+ * request — so findings are collapsed by (kind, value) with a count and the
+ * first place it was seen. A list with one row per packet would bury the
+ * twelve things that matter under nine hundred repeats of one of them.
+ */
+function collectLeaks(pkts) {
+  const found = new Map();
+
+  for (let i = 0; i < pkts.length; i++) {
+    const p = pkts[i];
+    const payload = p.raw && p.raw.length ? extractPayload(p.raw) : null;
+    if (!payload || !payload.length) continue;
+    const text = decodeStreamText(payload);
+    if (!text) continue;
+
+    // Where the payload starts in the frame, so a text index becomes a byte
+    // the hex dump can highlight.
+    const base = payloadOffset(p.raw);
+
+    for (const hit of findSensitiveData(text)) {
+      const id = `${hit.kind}:${hit.value}`;
+      const existing = found.get(id);
+      if (existing) { existing.count += 1; continue; }
+      found.set(id, {
+        ...hit,
+        count: 1,
+        packet: i + 1,
+        host: p.dst_host || p.dst_addr || '?',
+        protocol: p.protocol,
+        byteStart: hit.index >= 0 && base >= 0 ? base + hit.index : -1,
+        byteEnd: hit.index >= 0 && base >= 0 ? base + hit.index + hit.value.length : -1,
+      });
+    }
+  }
+
+  return [...found.values()].sort((a, b) =>
+    (LEAK_RANK[a.kind] ?? 99) - (LEAK_RANK[b.kind] ?? 99) || b.count - a.count);
+}
+
+/** Render the leak detector list in the Privacy tab. */
+function renderLeaks() {
+  const host = els.leakList;
+  if (!host) return;
+
+  const leaks = collectLeaks(state.packets);
+  if (els.leakReveal) els.leakReveal.disabled = !leaks.length;
+
+  if (!leaks.length) {
+    host.innerHTML = '<div class="insights-empty">Nothing readable found. ' +
+      'This panel only sees cleartext — anything inside TLS stays unread, which is the point of it.</div>';
+    if (els.leakSummary) els.leakSummary.textContent = '';
+    return;
+  }
+
+  const reveal = state.leaksRevealed;
+  const worst = leaks.filter((l) => (LEAK_RANK[l.kind] ?? 99) <= 3).length;
+  if (els.leakSummary) {
+    els.leakSummary.innerHTML = `<b>${leaks.length}</b> value${leaks.length === 1 ? '' : 's'} in the clear` +
+      (worst ? ` · <span class="sev-dot sev-high"></span><b>${worst}</b> credential or key` : '');
+  }
+
+  host.innerHTML = leaks.map((l) => {
+    const shown = reveal ? l.value : maskSecret(l.kind, l.value);
+    // The context is the raw request text, so it contains the value. Printing
+    // it unchanged next to a masked value would have made the mask decorative.
+    const context = l.context == null
+      ? null
+      : reveal ? l.context : l.context.split(l.value).join(maskSecret(l.kind, l.value));
+    const rank = LEAK_RANK[l.kind] ?? 99;
+    return `<div class="leak leak-r${Math.min(rank, 8)}">
+      <div class="leak-kind">${esc(l.kind)}${l.note ? ` <span class="leak-note">${esc(l.note)}</span>` : ''}</div>
+      <div class="leak-value${reveal ? '' : ' leak-masked'}">${esc(shown)}</div>
+      ${context ? `<div class="leak-context">${esc(context)}</div>` : ''}
+      <div class="leak-where">${esc(l.protocol)} → ${esc(l.host)}
+        · <button class="leak-jump" data-leak-pkt="${l.packet}"
+            data-leak-from="${l.byteStart}" data-leak-to="${l.byteEnd}"
+            title="Open the packet and highlight these bytes">packet #${l.packet}</button>${l.count > 1 ? ` · seen ${l.count}×` : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+/**
+ * Open the packet a finding came from.
+ *
+ * The finding stores an index into `state.packets`, but selection runs over
+ * `state.filteredPackets` — so the row is found by identity rather than by
+ * reusing the number. With a filter active the packet may not be on screen at
+ * all, and saying so beats selecting whatever happens to sit at that index.
+ */
+function jumpToPacket(oneBasedIndex, from = -1, to = -1) {
+  const pkt = state.packets[oneBasedIndex - 1];
+  if (!pkt) return;
+  const idx = state.filteredPackets.indexOf(pkt);
+  if (idx < 0) {
+    setStatus('That packet is hidden by the active filter — clear it to open the packet.');
+    return;
+  }
+  switchView('packets');
+  showDetail(idx);
+  // Land on the bytes themselves. `showDetail` rebuilds the hex dump, so the
+  // highlight has to come after it — and only when the finding knew where it
+  // was, rather than highlighting offset 0 as a consolation.
+  if (from >= 0 && to > from) highlightBytes(from, to);
 }
 
 // ---- Distributed trace correlation (W3C Trace Context / B3) ----
@@ -3407,7 +3717,7 @@ function renderPacketDiff(pktA, pktB) {
       : `<td class="diff-cell${same ? '' : ` ${klass}`}">${esc(v)}</td>`);
     rows.push(`<tr class="${same ? '' : 'diff-changed'}">` +
       `<td class="diff-key">${esc(k.key)}</td>` +
-      cell(va, 'diff-old') + cell(vb, 'diff-new') + '</tr>');
+      cell(va, 'diffcell-old') + cell(vb, 'diffcell-new') + '</tr>');
   }
 
   const label = (p) => `#${p.__diffIndex ?? '?'} ${p.protocol}`;
@@ -4134,9 +4444,9 @@ function applySplitView(viewName) {
       target.classList.add('split-active');
       if (viewName === 'connections') renderConnections();
       else if (viewName === 'dashboard') { renderStats(); renderLive(); }
-      else if (viewName === 'topology') renderTopology(true);
+      else if (viewName === 'topology') { renderTopology(true); renderServiceCalls(); renderTraces(); }
       else if (viewName === 'insights') renderInsights();
-      else if (viewName === 'privacy') renderPrivacy();
+      else if (viewName === 'privacy') { renderPrivacy(); renderLeaks(); }
       else if (viewName === 'diff') renderDiff();
     }
   }
@@ -4145,9 +4455,9 @@ function renderAll() {
   if (state.view === 'packets') renderPacketList();
   else if (state.view === 'connections') renderConnections();
   else if (state.view === 'dashboard') { renderStats(); renderLive(); }
-  else if (state.view === 'topology') renderTopology(true);
+  else if (state.view === 'topology') { renderTopology(true); renderServiceCalls(); renderTraces(); }
   else if (state.view === 'diff') renderDiff();
-  else if (state.view === 'privacy') renderPrivacy();
+  else if (state.view === 'privacy') { renderPrivacy(); renderLeaks(); }
   else if (state.view === 'script') updateScriptCount();
   else if (state.view === 'insights') renderInsights();
   else if (state.view === 'wifi') renderWifi();
@@ -5208,6 +5518,7 @@ async function init() {
     talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
     lessonSearch: $('#lesson-search'), lessonCount: $('#lesson-count'),
     serviceCalls: $('#service-calls'), traceList: $('#trace-list'),
+    leakList: $('#leak-list'), leakSummary: $('#leak-summary'), leakReveal: $('#leak-reveal'),
     diffPktA: $('#diff-pkt-a'), diffPktB: $('#diff-pkt-b'),
     diffPktALabel: $('#diff-pkt-a-label'), diffPktBLabel: $('#diff-pkt-b-label'),
     glossaryList: $('#glossary-list'), featureCards: $('#feature-cards'),
@@ -5383,6 +5694,26 @@ async function init() {
   els.filterInput.addEventListener('input', () => { state.filterText = els.filterInput.value; renderPacketList(); refreshSuggestions(); });
   els.filterInput.addEventListener('keydown', filterKeydown);
   els.lessonSearch?.addEventListener('input', renderLessons);
+  // Masked is the default and reverts on every re-render: a capture is often
+  // reviewed on a shared screen, and leaving real card numbers on it while
+  // fixing a leak would be one.
+  els.leakReveal?.addEventListener('click', () => {
+    state.leaksRevealed = !state.leaksRevealed;
+    // Through I18N, not a literal: the button's initial label comes from the
+    // dictionary, so hardcoding the toggled one turned a Turkish button into
+    // an English one on first click.
+    els.leakReveal.textContent = I18N.t(state.leaksRevealed ? 'privacy.hide' : 'privacy.reveal');
+    renderLeaks();
+  });
+  // Delegated: the list is re-rendered on every refresh, so per-row listeners
+  // would be re-attached to freshly discarded nodes.
+  els.leakList?.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.leak-jump');
+    if (btn) {
+      jumpToPacket(Number(btn.dataset.leakPkt),
+        Number(btn.dataset.leakFrom), Number(btn.dataset.leakTo));
+    }
+  });
   els.diffPktA?.addEventListener('click', () => setDiffPacket('a'));
   els.diffPktB?.addEventListener('click', () => setDiffPacket('b'));
   els.filterInput.addEventListener('blur', () => setTimeout(hideSuggestions, 120));

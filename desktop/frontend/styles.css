@@ -702,6 +702,58 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .call-bar { height: 3px; background: color-mix(in srgb, var(--border) 50%, transparent); border-radius: 2px; margin-top: 3px; }
 .call-bar span { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
 
+/* Leak detector. Severity shows as a left edge rather than a background wash,
+   so a long list stays readable and the worst rows still stand out. */
+.leak {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  grid-template-areas: 'kind value' 'kind context' 'kind where';
+  gap: 2px 12px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elev);
+}
+.leak-kind { grid-area: kind; font-weight: 600; font-size: 12px; }
+.leak-note { font-weight: 400; opacity: 0.6; font-size: 11px; }
+.leak-value {
+  grid-area: value;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  word-break: break-all;
+}
+.leak-masked { opacity: 0.75; letter-spacing: 0.5px; }
+/* The request text the value sat in — what answers "where did it get this
+   from" without opening the packet. The value is redacted out of it while
+   masking is on; showing it here would have made the mask decorative. */
+.leak-context {
+  grid-area: context;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  opacity: 0.55;
+  word-break: break-all;
+  margin-top: 2px;
+}
+.leak-where { grid-area: where; font-size: 11px; opacity: 0.6; }
+.leak-jump {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.leak-jump:hover { text-decoration-style: solid; }
+/* Ranked worst-first: a private key or credential is a different order of
+   problem from an email address appearing in a query string. */
+.leak-r0, .leak-r1, .leak-r2 { border-left-color: #dc2626; }
+.leak-r3, .leak-r4 { border-left-color: #ea580c; }
+.leak-r5, .leak-r6 { border-left-color: #ca8a04; }
+.leak-r7, .leak-r8 { border-left-color: #0284c7; }
+
 /* Trace waterfall. Each bar is positioned against its own trace's span, so a
    row reads as "when in this request, and for how long" — an absolute scale
    across traces would make a fast trace an invisible sliver. */
@@ -778,14 +830,21 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
    green the one that replaced it. Both carry a left border as well as a fill,
    so the distinction survives for a red-green colour-blind reader — the fill
    alone would not (ROADMAP §6.3). */
+/* `diffcell-`, not `diff-new`/`diff-old`: those already exist further down as
+   the snapshot diff's filled badges, which set a dark `color` for their light
+   background. Reusing the names left the green cells with near-black text on
+   the dark theme — invisible, and only visible by looking at the rendered
+   page. The colour is set explicitly here for the same reason. */
 .diff-table .diff-cell { padding: 3px 8px; }
-.diff-table .diff-old {
+.diff-table .diffcell-old {
   background: color-mix(in srgb, #dc2626 16%, transparent);
   border-left: 3px solid #dc2626;
+  color: var(--text);
 }
-.diff-table .diff-new {
+.diff-table .diffcell-new {
   background: color-mix(in srgb, #16a34a 16%, transparent);
   border-left: 3px solid #16a34a;
+  color: var(--text);
 }
 .diff-table .diff-missing { background: repeating-linear-gradient(
   45deg, transparent, transparent 4px,

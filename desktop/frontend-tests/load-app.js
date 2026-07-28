@@ -69,6 +69,11 @@ export function loadApp() {
     fetch: () => Promise.reject(new Error('network disabled in tests')),
     TextDecoder,
     TextEncoder,
+    // The webview has these; Node's vm context does not. The PII finder
+    // decodes HTTP Basic with `atob`, and without a stub here it would silently
+    // fall back to reporting the base64 — a pass for the wrong reason.
+    atob: (s) => Buffer.from(s, 'base64').toString('binary'),
+    btoa: (s) => Buffer.from(s, 'binary').toString('base64'),
   };
   ctx.window = ctx;
   ctx.self = ctx;

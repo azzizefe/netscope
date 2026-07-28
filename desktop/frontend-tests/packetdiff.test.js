@@ -112,10 +112,10 @@ describe('renderPacketDiff', () => {
     const html = withPackets(packet(), packet({ dst_port: 8080 }));
     const row = html.split('<tr').find((r) => r.includes('diff-changed'));
 
-    expect(row).toContain('diff-old');
-    expect(row).toContain('diff-new');
+    expect(row).toContain('diffcell-old');
+    expect(row).toContain('diffcell-new');
     // The colours have to land on the right side of the row.
-    expect(row.indexOf('diff-old')).toBeLessThan(row.indexOf('diff-new'));
+    expect(row.indexOf('diffcell-old')).toBeLessThan(row.indexOf('diffcell-new'));
     expect(row.indexOf('51000')).toBeLessThan(row.indexOf('8080'));
   });
 
@@ -126,14 +126,14 @@ describe('renderPacketDiff', () => {
     const row = html.split('<tr').find((r) => r.includes('Source port'));
 
     expect(row).toContain('diff-missing');
-    expect(row).not.toContain('diff-new');
+    expect(row).not.toContain('diffcell-new');
   });
 
   /// Identical rows carry no colour at all. If every row were tinted the view
   /// would be a wall again and the differences would stop standing out.
   it('leaves identical fields uncoloured', () => {
     const html = withPackets(packet(), packet());
-    expect(html).not.toContain('diff-old');
-    expect(html).not.toContain('diff-new');
+    expect(html).not.toContain('diffcell-old');
+    expect(html).not.toContain('diffcell-new');
   });
 });
