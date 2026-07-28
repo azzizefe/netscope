@@ -587,6 +587,31 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
   border-radius: 8px;
   padding: 14px 16px;
 }
+
+/* The lesson list covers every protocol with a lesson of its own — far too
+   many to scroll, so the search box is the way in rather than a nicety. */
+.lesson-search {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  padding: 9px 12px;
+  margin-bottom: 6px;
+}
+
+.lesson-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.lesson-count {
+  color: var(--muted, #8a8a8a);
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
 .lesson-card h4 { font-size: 15px; margin-bottom: 4px; }
 .lesson-card .gist { color: var(--text-muted); font-style: italic; margin-bottom: 8px; }
 .lesson-card .body { line-height: 1.55; margin-bottom: 8px; }

@@ -32,19 +32,18 @@ use super::{
     aerospike, afp, amqp, amt, b_r_automation_pvi, bacnet, beckhoff_twincat_analytics, bfcp, bfd,
     bgp, bosch_nexeed_edge, bosch_rexroth_open_core, capwap, cassandra, ccp, cip_safety, cmp, coap,
     dhcp, dhcp_failover, dhcpv6, dicom, dmx, dnp3, doip, e1ap, edge_inference_onnx,
-    edge_pytorch_mobile, edge_tensorflow_lite, enip, epic_online_eos_p2p, f1ap,
-    factorytalk_view_hmi, fanuc_focas2, finger, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp,
-    h225ras, hl7, hnbap, hsrp, iax2, interbus, ipsec, isakmp, iscsi, isns, kerberos, kpasswd, l2tp,
-    lcsap, ldap, ldp, lisp, m2ap, m2pa, m2ua, m3ap, m3ua, matter, mechatrolink, memcached,
-    mitsubishi_melsec_proto, modbus, mongodb, mqtt, mqttsn, mssqlbrowser, mumble, mysql, nbap,
-    nbds, nbns, netflow, ngap, ninep, nintendo_npln_p2p, nsip, ntp, nxp_eiq_inference,
-    omron_fins_udp_detail, opcua, openflow, p_net, pcp, pfcp, psn_matchmaking_v3, ptp, q931,
-    radius, rdp, redis, rip, ripng, rockwell_factorytalk_edge, rpc, rpkirtr, rtpmidi, rtsp, rua,
-    rwho, s1ap, s7comm_plus_detail, sabp, sbcap, sflow, siemens_industrial_edge,
-    simatic_hmi_smartsrv, sinumerik_nck_channel, sip, snmp, steam_datagram_relay, stm_stm32cube_ai,
-    studio5000_online_comm, stun, sua, syslog, tacacs, tia_portal_online_diag, tls,
-    twincat_router_telemetry, twincat_scope_view, uadp, vxlangpe, wccp, wireguard, wsd,
-    xbox_live_sdv2, xcp, xnap,
+    edge_tensorflow_lite, enip, epic_online_eos_p2p, f1ap, factorytalk_view_hmi, fanuc_focas2,
+    finger, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp, h225ras, hl7, hnbap, hsrp, iax2,
+    interbus, ipsec, isakmp, iscsi, isns, kerberos, kpasswd, l2tp, lcsap, ldap, ldp, lisp, m2ap,
+    m2pa, m2ua, m3ap, m3ua, matter, mechatrolink, memcached, mitsubishi_melsec_proto, modbus,
+    mongodb, mqtt, mqttsn, mssqlbrowser, mumble, mysql, nbap, nbds, nbns, netflow, ngap, ninep,
+    nintendo_npln_p2p, nsip, ntp, omron_fins_udp_detail, opcua, openflow, p_net, pcp, pfcp,
+    psn_matchmaking_v3, ptp, q931, radius, rdp, redis, rip, ripng, rockwell_factorytalk_edge, rpc,
+    rpkirtr, rtpmidi, rtsp, rua, rwho, s1ap, s7comm_plus_detail, sabp, sbcap, sflow,
+    siemens_industrial_edge, simatic_hmi_smartsrv, sinumerik_nck_channel, sip, snmp,
+    steam_datagram_relay, studio5000_online_comm, stun, sua, syslog, tacacs,
+    tia_portal_online_diag, tls, twincat_router_telemetry, twincat_scope_view, uadp, vxlangpe,
+    wccp, wireguard, wsd, xbox_live_sdv2, xcp, xnap,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -190,9 +189,20 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
         48899,
         twincat_router_telemetry::dissect_twincat_router_telemetry,
     ),
-    (51000, edge_pytorch_mobile::dissect_edge_pytorch_mobile),
-    (51001, nxp_eiq_inference::dissect_nxp_eiq_inference),
-    (51002, stm_stm32cube_ai::dissect_stm_stm32cube_ai),
+    // 51000/51001/51002 held `edge_pytorch_mobile`, `nxp_eiq_inference` and
+    // `stm_stm32cube_ai`. All three are gone: the ports are invented — three
+    // consecutive numbers in the middle of the Linux ephemeral range
+    // (32768-60999) — and none of the three dissectors validates a single byte
+    // before claiming the flow. This table matches source ports as well as
+    // destination ports, so any ordinary outbound connection that happened to
+    // be assigned 51000 came back labelled as PyTorch Mobile inference. A test
+    // in tcp.rs pins this: 64 zero bytes on an ephemeral port is TCP.
+    //
+    // This is the rule in the precedence list at the top of this file, applied:
+    // a port in the ephemeral range may only claim a flow together with a
+    // content guard. These have no framing to check, so there is no guard to
+    // write — reinstate them if the real port assignments or a recognisable
+    // header turn up. An unlabelled flow beats a wrongly labelled one.
     (64738, mumble::dissect_mumble),
 ];
 

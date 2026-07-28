@@ -93,68 +93,16 @@ struct TermInfo {
 
 #[tauri::command]
 fn get_lessons() -> Vec<LessonInfo> {
-    use netscope_core::models::Protocol;
-    let protos = [
-        ("DNS", Protocol::Dns),
-        ("TCP", Protocol::Tcp),
-        ("TLS", Protocol::Tls),
-        ("HTTP", Protocol::Http),
-        ("UDP", Protocol::Udp),
-        ("ICMP", Protocol::Icmp),
-        ("ARP", Protocol::Arp),
-        ("DHCP", Protocol::Dhcp),
-        ("NTP", Protocol::Ntp),
-        ("mDNS", Protocol::Mdns),
-        ("SNMP", Protocol::Snmp),
-        ("QUIC", Protocol::Quic),
-        ("SIP", Protocol::Sip),
-        ("SSH", Protocol::Ssh),
-        ("FTP", Protocol::Ftp),
-        ("SMTP", Protocol::Smtp),
-        ("IMAP", Protocol::Imap),
-        ("POP3", Protocol::Pop3),
-        ("Telnet", Protocol::Telnet),
-        ("RDP", Protocol::Rdp),
-        ("WebSocket", Protocol::WebSocket),
-        ("HTTP/2", Protocol::Http2),
-        ("gRPC", Protocol::Grpc),
-        ("VXLAN", Protocol::Vxlan),
-        ("PostgreSQL", Protocol::Postgres),
-        ("MySQL", Protocol::Mysql),
-        ("MongoDB", Protocol::Mongodb),
-        ("Redis", Protocol::Redis),
-        ("Cassandra", Protocol::Cassandra),
-        ("Modbus", Protocol::Modbus),
-        ("DNP3", Protocol::Dnp3),
-        ("BACnet", Protocol::Bacnet),
-        ("EtherNet/IP", Protocol::Enip),
-        ("OPC UA", Protocol::OpcUa),
-        ("RTP", Protocol::Rtp),
-        ("RTCP", Protocol::Rtcp),
-        ("Kerberos", Protocol::Kerberos),
-        ("LDAP", Protocol::Ldap),
-        ("RADIUS", Protocol::Radius),
-        ("OpenVPN", Protocol::OpenVpn),
-        ("WireGuard", Protocol::WireGuard),
-        ("ESP", Protocol::Esp),
-        ("AH", Protocol::Ah),
-        ("MQTT", Protocol::Mqtt),
-        ("CoAP", Protocol::Coap),
-        ("BGP", Protocol::Bgp),
-        ("OSPF", Protocol::Ospf),
-        ("LLDP", Protocol::Lldp),
-        ("LACP", Protocol::Lacp),
-        ("STP", Protocol::Stp),
-        ("MPLS", Protocol::Mpls),
-        ("802.11", Protocol::Wlan),
-        ("Unknown", Protocol::Unknown(String::new())),
-    ];
-    protos
-        .iter()
-        .map(|(name, p)| {
+    // Every protocol that has a lesson of its own — about 1,400 of them.
+    // This used to be a hand-written array of 53 `("DNS", Protocol::Dns)`
+    // pairs, so the Learn tab showed a twenty-fifth of what `education.rs`
+    // contains and silently stopped growing when protocols were added.
+    netscope_core::education::protocols_with_lessons()
+        .into_iter()
+        .map(|p| {
             let l = netscope_core::education::lesson(p);
             LessonInfo {
-                protocol: name.to_string(),
+                protocol: p.display_name().to_string(),
                 title: l.title.to_string(),
                 summary: l.summary.to_string(),
                 body: l.body.to_string(),

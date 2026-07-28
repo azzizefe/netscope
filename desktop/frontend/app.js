@@ -1890,6 +1890,40 @@ const FEATURE_CARDS = [
   },
 ];
 
+// The backend returns a lesson for every protocol that has one — around 1,400.
+// Rendering all of them at once is a wall nobody reads and a DOM nobody wants,
+// so the list is capped and the search box is how you reach the rest. The cap
+// is on rendering only: the filter always runs over the full set.
+const LESSON_RENDER_CAP = 60;
+
+function renderLessons() {
+  const all = state.lessons || [];
+  const query = (els.lessonSearch?.value || '').trim().toLowerCase();
+  const matches = query
+    ? all.filter((l) =>
+        l.protocol.toLowerCase().includes(query) ||
+        l.title.toLowerCase().includes(query) ||
+        l.summary.toLowerCase().includes(query))
+    : all;
+
+  const shown = matches.slice(0, LESSON_RENDER_CAP);
+  if (els.lessonCount) {
+    els.lessonCount.textContent = matches.length > shown.length
+      ? `${shown.length} / ${matches.length} — keep typing to narrow it down`
+      : `${matches.length} protocol${matches.length === 1 ? '' : 's'}`;
+  }
+
+  els.lessonCards.innerHTML = shown.map((l) => {
+    const c = protoColor(l.protocol);
+    return `<div class="lesson-card" style="border-left-color:${c}">
+      <h4 style="color:${c}">${l.title}</h4>
+      <div class="gist">${l.summary}</div>
+      <div class="body">${l.body}</div>
+      <div class="look">${l.look_for}</div>
+    </div>`;
+  }).join('');
+}
+
 async function loadLearn() {
   try {
     const lessons = await invoke('get_lessons');
@@ -1902,15 +1936,8 @@ async function loadLearn() {
         <div class="look">${f.look}</div>
       </div>`).join('');
     if (lessons) {
-      els.lessonCards.innerHTML = lessons.map((l) => {
-        const c = protoColor(l.protocol);
-        return `<div class="lesson-card" style="border-left-color:${c}">
-          <h4 style="color:${c}">${l.title}</h4>
-          <div class="gist">${l.summary}</div>
-          <div class="body">${l.body}</div>
-          <div class="look">${l.look_for}</div>
-        </div>`;
-      }).join('');
+      state.lessons = lessons;
+      renderLessons();
     }
     if (glossary) {
       els.glossaryList.innerHTML = glossary.map((t) =>
@@ -4703,6 +4730,7 @@ async function init() {
     statTotalPackets: $('#stat-total-packets'), statTotalBytes: $('#stat-total-bytes'),
     statBandwidth: $('#stat-bandwidth'), statBlocked: $('#stat-blocked'), protoBars: $('#proto-bars'),
     talkerList: $('#talker-list'), dnsList: $('#dns-list'), lessonCards: $('#lesson-cards'),
+    lessonSearch: $('#lesson-search'), lessonCount: $('#lesson-count'),
     glossaryList: $('#glossary-list'), featureCards: $('#feature-cards'),
     scriptEditor: $('#script-editor'), scriptRun: $('#script-run'), scriptClear: $('#script-clear'),
     scriptExamples: $('#script-examples'), scriptOutput: $('#script-output'),
@@ -4875,6 +4903,7 @@ async function init() {
   els.stopBtn.addEventListener('click', stopCapture);
   els.filterInput.addEventListener('input', () => { state.filterText = els.filterInput.value; renderPacketList(); refreshSuggestions(); });
   els.filterInput.addEventListener('keydown', filterKeydown);
+  els.lessonSearch?.addEventListener('input', renderLessons);
   els.filterInput.addEventListener('blur', () => setTimeout(hideSuggestions, 120));
   // Click a suggestion to accept it (mousedown so it fires before blur hides).
   $('#filter-suggest').addEventListener('mousedown', (e) => {

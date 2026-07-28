@@ -558,7 +558,7 @@ fn cmp_num(field: Option<u64>, op: CmpOp, value: &Value) -> bool {
         CmpOp::Lt => field < *v,
         CmpOp::Ge => field >= *v,
         CmpOp::Le => field <= *v,
-        CmpOp::Contains => unreachable!(),
+        CmpOp::Contains => false,
     }
 }
 

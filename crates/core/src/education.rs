@@ -8416,6 +8416,63 @@ number) and moves on. This includes things like IGMP, GRE tunnels, or IPsec.",
     }
 }
 
+/// Title of the lesson [`lesson`] returns when a protocol has none of its own.
+const GENERIC_LESSON_TITLE: &str = "Unknown / other traffic";
+
+/// Every protocol that has a lesson written specifically for it.
+///
+/// [`lesson`] is total — it answers for any protocol — so a caller that wants
+/// to *list* lessons cannot use `Protocol::ALL` directly: most of the registry
+/// falls through to one generic entry, and the reader would get the same
+/// paragraph over a thousand times. This returns the ones that say something.
+pub fn protocols_with_lessons() -> Vec<&'static Protocol> {
+    Protocol::ALL
+        .iter()
+        .filter(|p| lesson(p).title != GENERIC_LESSON_TITLE)
+        .collect()
+}
+
+#[cfg(test)]
+mod lesson_listing_tests {
+    use super::*;
+
+    /// The desktop app used to carry its own hardcoded array of ~50 protocols,
+    /// so the Learn tab showed a fraction of what this file contains. Anything
+    /// that enumerates lessons should get all of them.
+    #[test]
+    fn the_listing_covers_far_more_than_a_hand_written_selection() {
+        let listed = protocols_with_lessons();
+        assert!(
+            listed.len() > 1000,
+            "only {} protocols have their own lesson — did the match collapse?",
+            listed.len(),
+        );
+        assert!(listed.len() < Protocol::ALL.len());
+    }
+
+    /// The filter must exclude the fallback, or the list is padded with the
+    /// same paragraph repeated for every protocol without a lesson.
+    #[test]
+    fn no_listed_protocol_falls_back_to_the_generic_lesson() {
+        for p in protocols_with_lessons() {
+            assert_ne!(lesson(p).title, GENERIC_LESSON_TITLE, "{p:?}");
+        }
+    }
+
+    /// Protocols a beginner actually meets must be in the list — a filter that
+    /// accidentally excluded everything would still pass a count check alone.
+    #[test]
+    fn the_everyday_protocols_are_present() {
+        let listed = protocols_with_lessons();
+        for expected in [Protocol::Dns, Protocol::Tcp, Protocol::Tls, Protocol::Http] {
+            assert!(
+                listed.iter().any(|p| **p == expected),
+                "{expected:?} is missing from the lesson listing",
+            );
+        }
+    }
+}
+
 /// General lesson for a high-level protocol category.
 pub fn category_lesson(category: Category) -> Option<Lesson> {
     match category {

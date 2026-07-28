@@ -9,8 +9,8 @@ use crate::models::Protocol;
 
 use super::{
     amqp1, bindings, consul_rpc, drbd, fix, hl7, http, http2, iec101, memcached_bin, milter,
-    modbus_ascii, modbus_rtu, ntlm, openvpn, redis_cluster, schneider_ecostruxure_edge, someip,
-    syslog, websocket, zmtp, DissectedResult,
+    modbus_ascii, modbus_rtu, ntlm, opc_ua_dpi, openvpn, redis_cluster, schneider_ecostruxure_edge,
+    someip, syslog, websocket, zmtp, DissectedResult,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -387,6 +387,19 @@ fn dissect_tcp_inner(
         if zmtp::looks_like_zmtp(tcp_payload) {
             return zmtp::dissect_zmtp(src_ip, dst_ip, src_port, dst_port, tcp_payload);
         }
+        // OPC UA binary on a port that is not 4840. Plant deployments move it
+        // constantly — a server per line, or a gateway multiplexing several —
+        // and until this ran those sessions were reported as bare TCP. Port
+        // 4840 is unaffected: the table above matched it before reaching here,
+        // so `opcua` still owns the standard port and this only picks up what
+        // would otherwise have gone unrecognised.
+        //
+        // The signature is strong enough to sniff on: three ASCII bytes from a
+        // closed set of seven message types, a chunk byte that must be F, C or
+        // A, and a length field that has to agree with the frame.
+        if opc_ua_dpi::looks_like_opcua_dpi(tcp_payload) {
+            return opc_ua_dpi::dissect_opc_ua_dpi(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+        }
         // WebSocket and HTTP/2 (h2c) live on no fixed port (an HTTP connection
         // is upgraded in place, or the h2c preface opens any port), so their
         // traffic can show up anywhere. Route upgrade handshakes through the
@@ -472,6 +485,108 @@ mod tests {
         assert_eq!(result.src_port, Some(12345));
         assert_eq!(result.dst_port, Some(80));
         assert_eq!(result.summary, "TCP Connection opened (3-way handshake)");
+    }
+
+    /// An OPC UA `HEL` chunk: three ASCII message-type bytes, the `F` chunk
+    /// marker, and a little-endian length that agrees with the frame.
+    fn opcua_hello(extra: usize) -> Vec<u8> {
+        let len = 8 + extra;
+        let mut msg = Vec::from(b"HELF");
+        msg.extend_from_slice(&(len as u32).to_le_bytes());
+        msg.resize(len, 0);
+        msg
+    }
+
+    fn dissect_on_port(dst_port: u16, payload: &[u8]) -> DissectedResult {
+        let data = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            51000,
+            dst_port,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            payload,
+        );
+        let (_src, _dst, _p, tcp_data) = crate::dissectors::ip::dissect_ipv4(&data[14..]);
+        dissect_tcp(
+            Some("10.0.0.1".parse().unwrap()),
+            Some("10.0.0.2".parse().unwrap()),
+            &tcp_data,
+        )
+    }
+
+    /// Plants move OPC UA off 4840 constantly — one server per line, or a
+    /// gateway multiplexing several. Until the structural sniff was wired,
+    /// every one of those sessions came back as bare TCP.
+    #[test]
+    fn opc_ua_is_recognised_off_its_standard_port() {
+        let result = dissect_on_port(49320, &opcua_hello(24));
+        assert_ne!(
+            result.protocol,
+            Protocol::Tcp,
+            "OPC UA on a non-standard port fell through to bare TCP",
+        );
+    }
+
+    /// The sniff runs after the port table, so 4840 is untouched by it — that
+    /// port belongs to `opcua`, which is a different dissector with different
+    /// output. Adding a heuristic must not quietly re-route the standard port.
+    #[test]
+    fn port_4840_still_belongs_to_the_port_table() {
+        let dpi = dissect_on_port(49320, &opcua_hello(24)).protocol;
+        let standard = dissect_on_port(4840, &opcua_hello(24)).protocol;
+        assert_ne!(
+            standard, dpi,
+            "the structural sniff took over port 4840 from the binding table",
+        );
+    }
+
+    /// The guard must not claim traffic that merely happens to be long enough.
+    /// A dissector wired by framing alone is one loose check away from renaming
+    /// unrelated flows.
+    ///
+    /// This asserts only that OPC UA does not claim them — an HTTP request is
+    /// still expected to come back as HTTP, so "nothing recognised it" would be
+    /// the wrong assertion.
+    #[test]
+    fn the_opc_ua_sniff_does_not_claim_arbitrary_payloads() {
+        for payload in [
+            &b"GET / HTTP/1.1\r\nHost: x\r\n\r\n"[..],
+            &[0u8; 64][..],
+            // Right shape, wrong message type: `HELX` is not one of the seven.
+            &b"HELX\x20\x00\x00\x00padding padding padding"[..],
+            // Right message type, wrong chunk byte.
+            &b"HELZ\x20\x00\x00\x00padding padding padding"[..],
+        ] {
+            assert_ne!(
+                dissect_on_port(49321, payload).protocol,
+                Protocol::OpcUaDpi,
+                "the OPC UA sniff claimed a payload that is not OPC UA",
+            );
+        }
+    }
+
+    /// An unguarded dissector on a port inside the ephemeral range relabels
+    /// ordinary traffic, because the binding table matches source ports too.
+    /// 51000-51002 held three edge-AI dissectors that validated nothing, so a
+    /// connection assigned 51000 as its source port was reported as PyTorch
+    /// Mobile inference. Nothing may claim a bare payload on those ports again.
+    #[test]
+    fn an_ephemeral_source_port_is_not_a_protocol() {
+        for port in [51000u16, 51001, 51002] {
+            let protocol = dissect_on_port(port, &[0u8; 64]).protocol;
+            assert!(
+                !matches!(
+                    protocol,
+                    Protocol::EdgePytorchMobile
+                        | Protocol::NxpEiqInference
+                        | Protocol::StmStm32cubeAi
+                ),
+                "port {port} claimed 64 zero bytes as {protocol:?}",
+            );
+        }
     }
 
     #[test]
