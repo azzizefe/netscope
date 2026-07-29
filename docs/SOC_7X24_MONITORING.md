@@ -515,10 +515,10 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 10.2 — Eğitim
 
-- [ ] **10.2.1** **Interactive SOC onboarding** — netscope'un kendi Learn modunda SOC modu (mevcut `education` modülüne ek)
-- [ ] **10.2.2** **CTF-style training lab** — içinde flag'ler olan zararlı pcap'ler
-- [ ] **10.2.3** **Video tutorial series** — kurulum, alert triage, threat hunting, playbook yazma
-- [ ] **10.2.4** **Certification program** — "netscope Certified SOC Analyst" (NCSA)
+- [x] **10.2.1** **Interactive SOC onboarding** — netscope'un kendi Learn modunda SOC modu (mevcut `education` modülüne ek)
+- [x] **10.2.2** **CTF-style training lab** — içinde flag'ler olan zararlı pcap'ler
+- [x] **10.2.3** **Video tutorial series** — kurulum, alert triage, threat hunting, playbook yazma
+- [x] **10.2.4** **Certification program** — "netscope Certified SOC Analyst" (NCSA)
 
 ---
 

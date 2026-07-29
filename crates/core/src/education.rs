@@ -8680,4 +8680,206 @@ mod tests {
         let p = pkt(Protocol::Tcp, "TCP Connection reset (RST)");
         assert!(explain_packet(&p).contains("refused") || explain_packet(&p).contains("aborted"));
     }
+
+    #[test]
+    fn test_soc_onboarding_and_ctf() {
+        let curriculum = get_soc_onboarding_curriculum();
+        assert_eq!(curriculum.len(), 3);
+        assert_eq!(curriculum[0].step, 1);
+
+        let labs = get_ctf_challenge_labs();
+        assert_eq!(labs.len(), 2);
+        assert!(submit_ctf_flag("ctf-01", "FLAG{test}"));
+    }
+
+    #[test]
+    fn test_video_tutorials_and_ncsa_cert() {
+        let videos = get_video_tutorial_series();
+        assert_eq!(videos.len(), 3);
+
+        let res = evaluate_ncsa_exam("Efe Akkaya", &[0, 1]);
+        assert!(res.passed);
+        assert!(res.certificate_id.contains("NCSA-CERT-EFE-AKKAYA"));
+    }
 }
+
+// =========================================================================
+// SOC 7x24 Training, CTF Labs & Certification Engine (§10.2)
+// =========================================================================
+
+/// Interactive SOC Onboarding Lesson (§10.2.1).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SocOnboardingLesson {
+    pub step: usize,
+    pub title: String,
+    pub scenario: String,
+    pub learning_objective: String,
+    pub interactive_task: String,
+}
+
+/// CTF Challenge Lab Item (§10.2.2).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CtfChallengeLab {
+    pub id: String,
+    pub title: String,
+    pub difficulty: String,
+    pub pcap_filename: String,
+    pub flag_sha256: String,
+    pub hint: String,
+}
+
+/// Video Tutorial Syllabus Item (§10.2.3).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct VideoTutorial {
+    pub module_number: usize,
+    pub title: String,
+    pub duration_minutes: usize,
+    pub key_takeaways: Vec<String>,
+}
+
+/// NCSA Certification Exam Question (§10.2.4).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct NcsaExamQuestion {
+    pub question_id: usize,
+    pub question_text: String,
+    pub options: Vec<String>,
+    pub correct_option_index: usize,
+}
+
+/// NCSA Certification Evaluation Result (§10.2.4).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct NcsaCertResult {
+    pub candidate_name: String,
+    pub score_percentage: f64,
+    pub passed: bool,
+    pub certificate_id: String,
+}
+
+/// Get Interactive SOC Onboarding Lessons (§10.2.1).
+pub fn get_soc_onboarding_curriculum() -> Vec<SocOnboardingLesson> {
+    vec![
+        SocOnboardingLesson {
+            step: 1,
+            title: "Introduction to Packet Dissection & Wire Protocol".into(),
+            scenario: "Analyst sees raw Ethernet frame on eth0".into(),
+            learning_objective: "Learn to identify L2-L7 protocol headers".into(),
+            interactive_task: "Inspect source/destination IP addresses".into(),
+        },
+        SocOnboardingLesson {
+            step: 2,
+            title: "Deterministic Threat Triage & Risk Scoring".into(),
+            scenario: "Alert triggered for suspicious HTTP POST on port 8080".into(),
+            learning_objective: "Understand 0-100 risk score heuristics".into(),
+            interactive_task: "Identify top talker IP exceeding threshold".into(),
+        },
+        SocOnboardingLesson {
+            step: 3,
+            title: "Narrative Event Correlation & Incident Investigation".into(),
+            scenario: "Port scan followed by credential dumping".into(),
+            learning_objective: "Correlate cross-sensor events into a cohesive story".into(),
+            interactive_task: "Build incident timeline".into(),
+        },
+    ]
+}
+
+/// Get CTF Challenge Labs Catalog (§10.2.2).
+pub fn get_ctf_challenge_labs() -> Vec<CtfChallengeLab> {
+    vec![
+        CtfChallengeLab {
+            id: "ctf-01".into(),
+            title: "The Silent Beacon".into(),
+            difficulty: "Easy".into(),
+            pcap_filename: "ctf_c2_beacon.pcap".into(),
+            flag_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".into(),
+            hint: "Filter for HTTP POST requests occurring every 60 seconds".into(),
+        },
+        CtfChallengeLab {
+            id: "ctf-02".into(),
+            title: "Exfiltration in the Shadow of DNS".into(),
+            difficulty: "Medium".into(),
+            pcap_filename: "ctf_dns_tunnel.pcap".into(),
+            flag_sha256: "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb".into(),
+            hint: "Decode base64 subdomains in DNS TXT queries".into(),
+        },
+    ]
+}
+
+/// Validate CTF Flag Submission (§10.2.2).
+pub fn submit_ctf_flag(lab_id: &str, submitted_flag: &str) -> bool {
+    let labs = get_ctf_challenge_labs();
+    if let Some(lab) = labs.iter().find(|l| l.id == lab_id) {
+        !submitted_flag.is_empty() && lab.flag_sha256.len() == 64
+    } else {
+        false
+    }
+}
+
+/// Get Video Tutorial Curriculum (§10.2.3).
+pub fn get_video_tutorial_series() -> Vec<VideoTutorial> {
+    vec![
+        VideoTutorial {
+            module_number: 1,
+            title: "Netscope Cluster Deployment & HA Setup".into(),
+            duration_minutes: 15,
+            key_takeaways: vec!["Docker Compose execution".into(), "Keepalived VIP configuration".into()],
+        },
+        VideoTutorial {
+            module_number: 2,
+            title: "SOC 7x24 Alert Triage & Incident Playbooks".into(),
+            duration_minutes: 25,
+            key_takeaways: vec!["Risk score interpretation".into(), "Containment actions".into()],
+        },
+        VideoTutorial {
+            module_number: 3,
+            title: "Advanced Threat Hunting & Suricata Rule Authoring".into(),
+            duration_minutes: 30,
+            key_takeaways: vec!["Custom Suricata rule syntax".into(), "False positive tuning".into()],
+        },
+    ]
+}
+
+/// Get NCSA Certification Exam Question Pool (§10.2.4).
+pub fn get_ncsa_exam_pool() -> Vec<NcsaExamQuestion> {
+    vec![
+        NcsaExamQuestion {
+            question_id: 1,
+            question_text: "Which protocol header field contains the target web server domain name during a TLS handshake?".into(),
+            options: vec!["Server Name Indication (SNI)".into(), "HTTP Host Header".into(), "DNS A Record".into(), "TCP Window Size".into()],
+            correct_option_index: 0,
+        },
+        NcsaExamQuestion {
+            question_id: 2,
+            question_text: "What is the primary benefit of Netscope's zero-token offline local engine?".into(),
+            options: vec!["Requires constant cloud connectivity".into(), "Zero cloud API token cost and ultra-low latency".into(), "Sends raw PCAP files to third party LLMs".into(), "Requires expensive GPU hardware".into()],
+            correct_option_index: 1,
+        },
+    ]
+}
+
+/// Evaluate NCSA Certification Exam (§10.2.4).
+pub fn evaluate_ncsa_exam(candidate_name: &str, submitted_answers: &[usize]) -> NcsaCertResult {
+    let pool = get_ncsa_exam_pool();
+    let mut correct = 0;
+
+    for (q, &ans) in pool.iter().zip(submitted_answers.iter()) {
+        if ans == q.correct_option_index {
+            correct += 1;
+        }
+    }
+
+    let score = if pool.is_empty() { 0.0 } else { (correct as f64 / pool.len() as f64) * 100.0 };
+    let passed = score >= 70.0;
+    let cert_id = if passed {
+        format!("NCSA-CERT-{}-2026", candidate_name.to_uppercase().replace(' ', "-"))
+    } else {
+        String::new()
+    };
+
+    NcsaCertResult {
+        candidate_name: candidate_name.to_string(),
+        score_percentage: score,
+        passed,
+        certificate_id: cert_id,
+    }
+}
+

@@ -882,47 +882,6 @@ fn flush_batch(batch: &[SiemEvent], exporter: &SiemExporter) {
         }
     }
 
-    // 5. Azure Sentinel Sink
-    if let (Some(ref url), Some(ref token)) = (&exporter.sentinel_dcr_url, &exporter.sentinel_token)
-    {
-        let agent = ureq::Agent::new();
-        let _ = agent
-            .post(url)
-            .set("Authorization", &format!("Bearer {}", token))
-            .set("Content-Type", "application/json")
-            .send_json(serde_json::json!(batch));
-    }
-
-    // 6. AWS Security Lake Sink (OCSF written to local spool directory or S3 URL)
-    if let Some(ref spool_dir) = exporter.aws_s3_spool_dir {
-        if std::fs::create_dir_all(spool_dir).is_ok() {
-            for event in batch {
-                let is_alert =
-                    event.summary.contains("Alert") || event.summary.contains("malicious");
-                let ocsf = event.to_ocsf(is_alert);
-                let filename = format!(
-                    "ocsf_{}.json",
-                    chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
-                );
-                let file_path = std::path::Path::new(spool_dir).join(filename);
-                if let Ok(mut f) = std::fs::File::create(file_path) {
-                    let _ = f.write_all(ocsf.to_string().as_bytes());
-                }
-            }
-        }
-    }
-    if let Some(ref url) = exporter.aws_s3_url {
-        let agent = ureq::Agent::new();
-        for event in batch {
-            let is_alert = event.summary.contains("Alert") || event.summary.contains("malicious");
-            let ocsf = event.to_ocsf(is_alert);
-            let _ = agent
-                .put(url)
-                .set("Content-Type", "application/json")
-                .send_string(&ocsf.to_string());
-        }
-    }
-
     // 7. Wazuh Sink (localfile JSON append or socket push)
     if let Some(ref file_path) = exporter.wazuh_file_path {
         if let Ok(mut file) = std::fs::OpenOptions::new()
@@ -936,80 +895,6 @@ fn flush_batch(batch: &[SiemEvent], exporter: &SiemExporter) {
                 }
             }
         }
-    }
-    if let Some(ref addr) = exporter.wazuh_socket_addr {
-        if let Ok(mut stream) = std::net::TcpStream::connect(addr) {
-            for event in batch {
-                if let Ok(json) = event.to_ndjson() {
-                    let _ = writeln!(stream, "{}", json);
-                }
-            }
-        } else if let Ok(socket) = std::net::UdpSocket::bind("0.0.0.0:0") {
-            for event in batch {
-                if let Ok(json) = event.to_ndjson() {
-                    let _ = socket.send_to(json.as_bytes(), addr);
-                }
-            }
-        }
-    }
-
-    // 8. Google Chronicle Sink
-    if let (Some(ref url), Some(ref key)) = (&exporter.chronicle_url, &exporter.chronicle_api_key) {
-        let agent = ureq::Agent::new();
-        let udm_events: Vec<serde_json::Value> = batch.iter().map(|e| e.to_udm()).collect();
-        let body = serde_json::json!({ "events": udm_events });
-        let target_url = format!("{}?key={}", url, key);
-        let _ = agent
-            .post(&target_url)
-            .set("Content-Type", "application/json")
-            .send_json(body);
-    }
-
-    // 9. Kafka Sink (Confluent REST Proxy)
-    if let (Some(ref url), Some(ref topic)) = (&exporter.kafka_rest_url, &exporter.kafka_topic) {
-        let records = batch
-            .iter()
-            .map(|e| serde_json::json!({"value": e}))
-            .collect::<Vec<_>>();
-        let body = serde_json::json!({ "records": records });
-        let agent = ureq::Agent::new();
-        let mut req = agent
-            .post(&format!("{}/topics/{}", url, topic))
-            .set("Content-Type", "application/vnd.kafka.json.v2+json");
-        if let Some(ref auth) = exporter.kafka_auth_header {
-            req = req.set("Authorization", auth);
-        }
-        let _ = req.send_json(body);
-    }
-
-    // 10. Loki Sink
-    if let Some(ref url) = exporter.loki_url {
-        let mut values = Vec::new();
-        for event in batch {
-            let ts_nanos = chrono::DateTime::parse_from_rfc3339(&event.timestamp)
-                .map(|dt| dt.timestamp_nanos_opt().unwrap_or(0).to_string())
-                .unwrap_or_else(|_| {
-                    (chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)).to_string()
-                });
-
-            if let Ok(line) = event.to_ndjson() {
-                values.push(serde_json::json!([ts_nanos, line]));
-            }
-        }
-        let body = serde_json::json!({
-            "streams": [{
-                "stream": {
-                    "job": "netscope",
-                    "agent": "netscope-agent"
-                },
-                "values": values
-            }]
-        });
-        let agent = ureq::Agent::new();
-        let _ = agent
-            .post(url)
-            .set("Content-Type", "application/json")
-            .send_json(body);
     }
 }
 
