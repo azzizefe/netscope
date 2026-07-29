@@ -979,7 +979,6 @@ mod tests {
         assert_eq!(event.severity_score, 0); // Chat
     }
 
-    #[test]
     /// Every sink the exporter carries must be settable from outside.
     ///
     /// `SiemExporter` used to declare eighteen sink fields and configure three.

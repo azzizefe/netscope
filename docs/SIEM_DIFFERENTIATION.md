@@ -90,7 +90,7 @@ Her event, 7 katmanda zenginleştirilir:
   - [x] Protokol seviyesinde risk flag'leri: `signing=disabled`, `encryption=none`, `weak_cipher=TLS_RSA_WITH_RC4_128_MD5`
   - [x] Protokol parametreleri event fields olarak expose edilsin (filtrelenebilir)
 
-- [ ] **1.1.3** **Katman 3 — Tehdit İstihbaratı (Threat Intelligence):**
+- [x] **1.1.3** **Katman 3 — Tehdit İstihbaratı (Threat Intelligence):**
   ```
   IP 185.220.101.34 (dst):
     - Tor Exit Node ✅ (AbuseIPDB: confidence 98%)
@@ -101,13 +101,13 @@ Her event, 7 katmanda zenginleştirilir:
     - AlienVault OTX: 12 pulses in last 30 days
     - GreyNoise: "commonly seen scanning the internet"
   ```
-  - [ ] AbuseIPDB (zaten var — event'e göm)
-  - [ ] URLhaus (zaten var — domain için)
-  - [ ] VirusTotal API (opsiyonel — API key ile)
-  - [ ] AlienVault OTX
-  - [ ] GreyNoise (özellikle internet background noise tespiti için)
-  - [ ] Shodan (açık port bilgisi)
-  - [ ] GeoIP + ASN (zaten var)
+  - [x] AbuseIPDB (zaten var — event'e göm)
+  - [x] URLhaus (zaten var — domain için)
+  - [x] VirusTotal API (opsiyonel — API key ile)
+  - [x] AlienVault OTX
+  - [x] GreyNoise (özellikle internet background noise tespiti için)
+  - [x] Shodan (açık port bilgisi)
+  - [x] GeoIP + ASN (zaten var)
 
 - [ ] **1.1.4** **Katman 4 — Davranışsal Baseline (Behavioral Baseline):**
   ```

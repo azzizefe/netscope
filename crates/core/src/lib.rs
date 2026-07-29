@@ -58,8 +58,8 @@ pub mod names;
 pub mod network_identity;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod notifications;
-pub mod opc_ua_traffic;
 pub mod op_docs;
+pub mod opc_ua_traffic;
 pub mod pair_correlation;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pcapng;
@@ -89,5 +89,6 @@ pub mod stream;
 pub mod test_data;
 pub mod test_strategy;
 pub mod threat;
+pub mod threat_intel;
 pub mod tls_keylog;
 pub mod triage;

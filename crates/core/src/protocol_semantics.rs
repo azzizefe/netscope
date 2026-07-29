@@ -54,7 +54,10 @@ impl ProtocolSemanticsEnricher {
             "smb" | "smb2" | "smb3" => {
                 fields.insert("smb.user".into(), user.unwrap_or("CORP\\jsmith").into());
                 fields.insert("smb.dialect".into(), "SMB 3.1.1".into());
-                fields.insert("smb.share".into(), resource.unwrap_or("\\\\FIN-DB-01\\payroll").into());
+                fields.insert(
+                    "smb.share".into(),
+                    resource.unwrap_or("\\\\FIN-DB-01\\payroll").into(),
+                );
 
                 risk_flags.signing_disabled = true;
                 risk_flags.encryption_disabled = true;
@@ -85,7 +88,10 @@ impl ProtocolSemanticsEnricher {
             }
             "http" => {
                 fields.insert("http.method".into(), "GET".into());
-                fields.insert("http.uri".into(), resource.unwrap_or("/api/v1/payroll").into());
+                fields.insert(
+                    "http.uri".into(),
+                    resource.unwrap_or("/api/v1/payroll").into(),
+                );
 
                 risk_flags.cleartext_credentials = true;
 
@@ -127,7 +133,10 @@ mod tests {
         assert!(semantics.semantic_summary.contains("SMB2 SESSION_SETUP"));
         assert!(semantics.risk_flags.signing_disabled);
         assert!(semantics.risk_flags.encryption_disabled);
-        assert_eq!(semantics.exposed_fields.get("smb.user").unwrap(), "CORP\\efe.akkaya");
+        assert_eq!(
+            semantics.exposed_fields.get("smb.user").unwrap(),
+            "CORP\\efe.akkaya"
+        );
     }
 
     #[test]
@@ -142,6 +151,9 @@ mod tests {
         );
 
         assert!(semantics.risk_flags.weak_cipher_detected.is_some());
-        assert_eq!(semantics.exposed_fields.get("tls.cipher_suite").unwrap(), "TLS_RSA_WITH_RC4_128_MD5");
+        assert_eq!(
+            semantics.exposed_fields.get("tls.cipher_suite").unwrap(),
+            "TLS_RSA_WITH_RC4_128_MD5"
+        );
     }
 }

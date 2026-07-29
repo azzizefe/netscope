@@ -78,7 +78,11 @@ impl NetworkIdentityEnricher {
         // 2. MAC OUI Vendor
         if let Some(mac_str) = mac {
             identity.mac_address = Some(mac_str.to_string());
-            let prefix = if mac_str.len() >= 8 { &mac_str[0..8] } else { "" };
+            let prefix = if mac_str.len() >= 8 {
+                &mac_str[0..8]
+            } else {
+                ""
+            };
             if let Some(vendor) = self.mac_oui_table.get(&prefix.to_uppercase()) {
                 identity.mac_vendor = Some(vendor.clone());
             }
@@ -87,7 +91,8 @@ impl NetworkIdentityEnricher {
         // 3. Kerberos / LDAP User correlation
         if let Some(user) = self.kerberos_user_map.get(ip) {
             identity.user_principal = Some(user.clone());
-            identity.ad_department_ou = Some("OU=HR,OU=Departments,DC=internal,DC=corp".to_string());
+            identity.ad_department_ou =
+                Some("OU=HR,OU=Departments,DC=internal,DC=corp".to_string());
             identity.network_segment = Some("Istanbul Office, Floor 3, HR Department".to_string());
             identity.vlan_name = Some("HR-Subnet".to_string());
             identity.vlan_id = Some(120);
@@ -96,7 +101,8 @@ impl NetworkIdentityEnricher {
         // 4. HTTP User-Agent OS/Browser detection
         if let Some(ua) = user_agent {
             if ua.contains("Windows NT 10.0") {
-                identity.os_and_device = Some("Windows 11 Pro 22H2, Dell Latitude 5540".to_string());
+                identity.os_and_device =
+                    Some("Windows 11 Pro 22H2, Dell Latitude 5540".to_string());
             } else if ua.contains("Macintosh") {
                 identity.os_and_device = Some("macOS Sonoma 14.5, Apple MacBook Pro".to_string());
             } else if ua.contains("Linux") {
@@ -120,8 +126,13 @@ mod tests {
     #[test]
     fn test_network_identity_enrichment() {
         let mut enricher = NetworkIdentityEnricher::new();
-        enricher.dns_ptr_cache.insert("10.0.1.47".to_string(), "HR-DESK-023.internal.corp".to_string());
-        enricher.kerberos_user_map.insert("10.0.1.47".to_string(), "efe.akkaya".to_string());
+        enricher.dns_ptr_cache.insert(
+            "10.0.1.47".to_string(),
+            "HR-DESK-023.internal.corp".to_string(),
+        );
+        enricher
+            .kerberos_user_map
+            .insert("10.0.1.47".to_string(), "efe.akkaya".to_string());
 
         let identity = enricher.enrich_identity(
             "10.0.1.47",
@@ -132,10 +143,17 @@ mod tests {
         );
 
         assert_eq!(identity.ip_address, "10.0.1.47");
-        assert_eq!(identity.hostname.as_deref(), Some("HR-DESK-023.internal.corp"));
+        assert_eq!(
+            identity.hostname.as_deref(),
+            Some("HR-DESK-023.internal.corp")
+        );
         assert_eq!(identity.mac_vendor.as_deref(), Some("Dell Inc."));
         assert_eq!(identity.user_principal.as_deref(), Some("efe.akkaya"));
         assert_eq!(identity.vlan_id, Some(120));
-        assert!(identity.os_and_device.as_ref().unwrap().contains("Windows 11 Pro"));
+        assert!(identity
+            .os_and_device
+            .as_ref()
+            .unwrap()
+            .contains("Windows 11 Pro"));
     }
 }

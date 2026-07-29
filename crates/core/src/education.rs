@@ -8821,19 +8821,28 @@ pub fn get_video_tutorial_series() -> Vec<VideoTutorial> {
             module_number: 1,
             title: "Netscope Cluster Deployment & HA Setup".into(),
             duration_minutes: 15,
-            key_takeaways: vec!["Docker Compose execution".into(), "Keepalived VIP configuration".into()],
+            key_takeaways: vec![
+                "Docker Compose execution".into(),
+                "Keepalived VIP configuration".into(),
+            ],
         },
         VideoTutorial {
             module_number: 2,
             title: "SOC 7x24 Alert Triage & Incident Playbooks".into(),
             duration_minutes: 25,
-            key_takeaways: vec!["Risk score interpretation".into(), "Containment actions".into()],
+            key_takeaways: vec![
+                "Risk score interpretation".into(),
+                "Containment actions".into(),
+            ],
         },
         VideoTutorial {
             module_number: 3,
             title: "Advanced Threat Hunting & Suricata Rule Authoring".into(),
             duration_minutes: 30,
-            key_takeaways: vec!["Custom Suricata rule syntax".into(), "False positive tuning".into()],
+            key_takeaways: vec![
+                "Custom Suricata rule syntax".into(),
+                "False positive tuning".into(),
+            ],
         },
     ]
 }
@@ -8867,10 +8876,17 @@ pub fn evaluate_ncsa_exam(candidate_name: &str, submitted_answers: &[usize]) -> 
         }
     }
 
-    let score = if pool.is_empty() { 0.0 } else { (correct as f64 / pool.len() as f64) * 100.0 };
+    let score = if pool.is_empty() {
+        0.0
+    } else {
+        (correct as f64 / pool.len() as f64) * 100.0
+    };
     let passed = score >= 70.0;
     let cert_id = if passed {
-        format!("NCSA-CERT-{}-2026", candidate_name.to_uppercase().replace(' ', "-"))
+        format!(
+            "NCSA-CERT-{}-2026",
+            candidate_name.to_uppercase().replace(' ', "-")
+        )
     } else {
         String::new()
     };
@@ -8882,4 +8898,3 @@ pub fn evaluate_ncsa_exam(candidate_name: &str, submitted_answers: &[usize]) -> 
         certificate_id: cert_id,
     }
 }
-

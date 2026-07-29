@@ -62,7 +62,8 @@ impl OpDocsEngine {
 - Perform single-tenant data exports via `TenantBackupPackage`.
 ## 3. Troubleshooting
 - Inspect audit logs via `TamperProofAuditLogger`.
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate SOC Analyst Playbook (§10.1.2).
@@ -75,7 +76,8 @@ impl OpDocsEngine {
 - Step 2: Correlate cross-sensor events using narrative engine.
 ## 3. Threat Hunting
 - Query ClickHouse/TimescaleDB analytical storage driver.
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate Rule Writing Guide (§10.1.3).
@@ -84,12 +86,14 @@ impl OpDocsEngine {
 - Use exact field filters (`ip.src == 10.0.0.1 && tcp.port == 80`).
 - Apply rate thresholding (`threshold: count 10, seconds 60`).
 - Avoid bare substring matching on headers.
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate OpenAPI 3.1 Specification (§10.1.4).
     pub fn generate_openapi_spec(&self) -> String {
-        r#"{"openapi": "3.1.0", "info": {"title": "Netscope SOC API", "version": "1.0.0"}}"#.to_string()
+        r#"{"openapi": "3.1.0", "info": {"title": "Netscope SOC API", "version": "1.0.0"}}"#
+            .to_string()
     }
 
     /// Get Incident Runbook Library (§10.1.5).
@@ -98,8 +102,14 @@ impl OpDocsEngine {
             IncidentRunbook {
                 alert_type: "C2_Beaconing".to_string(),
                 severity: "CRITICAL".to_string(),
-                triage_steps: vec!["Identify source host IP".into(), "Check beacon interval consistency".into()],
-                containment_steps: vec!["Isolate host via firewall rule".into(), "Revoke user API tokens".into()],
+                triage_steps: vec![
+                    "Identify source host IP".into(),
+                    "Check beacon interval consistency".into(),
+                ],
+                containment_steps: vec![
+                    "Isolate host via firewall rule".into(),
+                    "Revoke user API tokens".into(),
+                ],
                 eradication_steps: vec!["Reimage compromised host".into()],
             },
             IncidentRunbook {
@@ -114,20 +124,26 @@ impl OpDocsEngine {
 
     /// Get Architecture Decision Records (§10.1.6).
     pub fn get_adrs(&self) -> Vec<ArchitectureDecisionRecord> {
-        vec![
-            ArchitectureDecisionRecord {
-                id: 1,
-                title: "Zero-Token Offline Local Processing".to_string(),
-                status: "APPROVED".to_string(),
-                context: "External LLM APIs introduce latency, recurring costs, and cloud privacy concerns.".to_string(),
-                decision: "Implement 100% offline Rust heuristics for triage, correlation, and stats.".to_string(),
-                consequences: "Zero cloud API token cost, deterministic execution, ultra-low memory footprint.".to_string(),
-            },
-        ]
+        vec![ArchitectureDecisionRecord {
+            id: 1,
+            title: "Zero-Token Offline Local Processing".to_string(),
+            status: "APPROVED".to_string(),
+            context:
+                "External LLM APIs introduce latency, recurring costs, and cloud privacy concerns."
+                    .to_string(),
+            decision: "Implement 100% offline Rust heuristics for triage, correlation, and stats."
+                .to_string(),
+            consequences:
+                "Zero cloud API token cost, deterministic execution, ultra-low memory footprint."
+                    .to_string(),
+        }]
     }
 
     /// Calculate Hardware Sizing (§10.1.7).
-    pub fn calculate_hardware_sizing(&self, target_events_per_sec: u64) -> HardwareSizingRecommendation {
+    pub fn calculate_hardware_sizing(
+        &self,
+        target_events_per_sec: u64,
+    ) -> HardwareSizingRecommendation {
         let cores = ((target_events_per_sec / 25_000) + 2) as usize;
         let ram = ((target_events_per_sec / 12_500) + 4) as usize;
         let storage = (target_events_per_sec * 86400 * 7 * 500) / 1_000_000_000; // 7 days retention
@@ -150,9 +166,15 @@ mod tests {
     #[test]
     fn test_guides_and_openapi() {
         let engine = OpDocsEngine::new();
-        assert!(engine.generate_admin_guide().contains("Administrator Guide"));
-        assert!(engine.generate_analyst_playbook().contains("Analyst Playbook"));
-        assert!(engine.generate_rule_writing_guide().contains("False Positive"));
+        assert!(engine
+            .generate_admin_guide()
+            .contains("Administrator Guide"));
+        assert!(engine
+            .generate_analyst_playbook()
+            .contains("Analyst Playbook"));
+        assert!(engine
+            .generate_rule_writing_guide()
+            .contains("False Positive"));
         assert!(engine.generate_openapi_spec().contains("3.1.0"));
     }
 
