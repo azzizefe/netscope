@@ -159,8 +159,12 @@ impl DeterministicTriageEngine {
         base_alert_msg: Option<&str>,
     ) -> LocalTriageResult {
         // Check whitelist suppression (§6.2.4)
-        let is_suppressed = self.whitelist.is_whitelisted(src_ip, Some(features.dst_port), sid)
-            || self.whitelist.is_whitelisted(dst_ip, Some(features.dst_port), sid);
+        let is_suppressed = self
+            .whitelist
+            .is_whitelisted(src_ip, Some(features.dst_port), sid)
+            || self
+                .whitelist
+                .is_whitelisted(dst_ip, Some(features.dst_port), sid);
 
         let mut risk_score: u32 = 0;
         let mut reasons = Vec::new();
@@ -173,13 +177,19 @@ impl DeterministicTriageEngine {
         // Sensitive port assessment
         if [22, 23, 3389, 445, 1433, 3306].contains(&features.dst_port) {
             risk_score += 15;
-            reasons.push(format!("Sensitive administrative/database port access ({})", features.dst_port));
+            reasons.push(format!(
+                "Sensitive administrative/database port access ({})",
+                features.dst_port
+            ));
         }
 
         // High entropy payload check
         if features.payload_entropy > 7.5 && features.bytes_sent > 200 {
             risk_score += 25;
-            reasons.push(format!("High entropy payload ({:.2} bits/byte)", features.payload_entropy));
+            reasons.push(format!(
+                "High entropy payload ({:.2} bits/byte)",
+                features.payload_entropy
+            ));
         }
 
         // Abnormal TCP flags (e.g. RST/SYN anomalies)
@@ -262,7 +272,13 @@ mod tests {
             protocol: Protocol::Rdp,
         };
 
-        let res = engine.evaluate(&feat, None, None, Some(10001), Some("RDP Brute Force Attempt"));
+        let res = engine.evaluate(
+            &feat,
+            None,
+            None,
+            Some(10001),
+            Some("RDP Brute Force Attempt"),
+        );
         assert!(res.risk_score >= 70);
         assert_eq!(res.severity, TriageSeverity::High);
         assert!(!res.is_suppressed);

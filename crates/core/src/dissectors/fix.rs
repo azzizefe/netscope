@@ -50,7 +50,9 @@ pub fn dissect_fix(
     let target = field("56=");
 
     let summary = match (field("35="), sender, target) {
-        (Some(mt), Some(s), Some(t)) => format!("FIX {version} — {} ({s} → {t})", msg_type_name(&mt)),
+        (Some(mt), Some(s), Some(t)) => {
+            format!("FIX {version} — {} ({s} → {t})", msg_type_name(&mt))
+        }
         (Some(mt), _, _) => format!("FIX {version} — {}", msg_type_name(&mt)),
         (None, _, _) => format!("FIX {version}"),
     };

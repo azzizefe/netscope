@@ -281,14 +281,20 @@ impl BaselineEngine {
         }
     }
 
-    pub fn process_packet(&mut self, packet: &Packet, day_of_week: u32, hour: u32) -> Option<String> {
+    pub fn process_packet(
+        &mut self,
+        packet: &Packet,
+        day_of_week: u32,
+        hour: u32,
+    ) -> Option<String> {
         let bytes = packet.length as f64;
         self.pkt_rate.update(1.0);
         self.byte_rate.update(bytes);
         self.ewma_pkt_rate.update(1.0);
         self.ewma_byte_rate.update(bytes);
         self.seasonal.record(day_of_week, hour, bytes);
-        self.sliding_window.record_activity(1, packet.length as u64, 1);
+        self.sliding_window
+            .record_activity(1, packet.length as u64, 1);
 
         if let Some(src) = packet.src_addr {
             self.active_src_ips.insert(src);

@@ -116,11 +116,18 @@ impl AdaptiveSampler {
 
     /// Evaluates whether an incoming packet should be kept or sampled out.
     /// Returns `(should_keep, applied_sampling_ratio)`.
-    pub fn should_sample(&self, packet_idx: u64, ring_fill_pct: u32, cpu_fill_pct: u32) -> (bool, u32) {
+    pub fn should_sample(
+        &self,
+        packet_idx: u64,
+        ring_fill_pct: u32,
+        cpu_fill_pct: u32,
+    ) -> (bool, u32) {
         let current = self.current_ratio.load(Ordering::Relaxed);
         let mut target = current;
 
-        if cpu_fill_pct >= self.cpu_threshold_percent || ring_fill_pct >= self.queue_threshold_percent {
+        if cpu_fill_pct >= self.cpu_threshold_percent
+            || ring_fill_pct >= self.queue_threshold_percent
+        {
             if target < 16 {
                 target = (target * 2).min(16);
                 self.current_ratio.store(target, Ordering::Relaxed);
@@ -321,7 +328,11 @@ impl Pipeline {
             dropped: self.producer.counters.dropped.load(Ordering::Relaxed),
             dissected: self.producer.counters.dissected.load(Ordering::Relaxed),
             sampled_out: self.producer.counters.sampled_out.load(Ordering::Relaxed),
-            hw_timestamped: self.producer.counters.hw_timestamped.load(Ordering::Relaxed),
+            hw_timestamped: self
+                .producer
+                .counters
+                .hw_timestamped
+                .load(Ordering::Relaxed),
         }
     }
 

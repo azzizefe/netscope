@@ -997,7 +997,10 @@ mod tests {
             Some("Private network (RFC 1918)"),
             "172.16.0.0/12 runs to 172.31.255.255",
         );
-        assert_eq!(scope("127.0.0.1").as_deref(), Some("Loopback (127.0.0.0/8)"));
+        assert_eq!(
+            scope("127.0.0.1").as_deref(),
+            Some("Loopback (127.0.0.0/8)")
+        );
         assert_eq!(scope("::1").as_deref(), Some("Loopback (::1)"));
         assert_eq!(scope("fd00::1").as_deref(), Some("Unique local (fc00::/7)"));
 

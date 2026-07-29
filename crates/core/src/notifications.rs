@@ -240,10 +240,7 @@ impl NotificationEngine {
 
         match notice.channel.as_str() {
             "Slack" => self.send_slack(msg, "{}"),
-            "Email" => self.send_email(
-                &format!("netscope escalation: {}", notice.rule_name),
-                msg,
-            ),
+            "Email" => self.send_email(&format!("netscope escalation: {}", notice.rule_name), msg),
             "PagerDuty" => self.send_pagerduty(key()?, msg),
             "Opsgenie" => self.send_opsgenie(key()?, msg),
             "VictorOps" => self.send_victorops(key()?, msg),
@@ -264,10 +261,10 @@ impl NotificationEngine {
             .map_err(|e| format!("Failed to bind Syslog socket: {}", e))?;
 
         let prival = 136; // local1.alert (facility=17, severity=1)
-        // RFC 5424 HOSTNAME. This was the literal "localhost", which made every
-        // event on the SIEM side claim to come from a machine called localhost.
-        // "-" is the spec's NILVALUE and is the honest answer when the name is
-        // genuinely unknown — unlike a wrong name, it asserts nothing.
+                          // RFC 5424 HOSTNAME. This was the literal "localhost", which made every
+                          // event on the SIEM side claim to come from a machine called localhost.
+                          // "-" is the spec's NILVALUE and is the honest answer when the name is
+                          // genuinely unknown — unlike a wrong name, it asserts nothing.
         let syslog_msg = format!(
             "<{}>1 {} {} netscope - - - {}",
             prival,

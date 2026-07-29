@@ -466,7 +466,8 @@ mod tests {
         for name in ["indicators-ip.txt", "indicators-domain.txt"] {
             let body = std::fs::read_to_string(dir.join(name)).expect("starter file");
             assert!(
-                body.lines().all(|l| l.trim().is_empty() || l.starts_with('#')),
+                body.lines()
+                    .all(|l| l.trim().is_empty() || l.starts_with('#')),
                 "{name} contains entries netscope invented",
             );
         }

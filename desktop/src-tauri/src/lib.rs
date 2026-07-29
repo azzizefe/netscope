@@ -748,11 +748,7 @@ fn adopt_capture(
     // The notifier and the escalation ticker are app-lifetime, built once at
     // startup. They used to be created here, so every capture start spawned
     // another ticker thread that looped forever alongside the previous one.
-    let notifier = app
-        .state::<NotifierState>()
-        .inner()
-        .tx
-        .clone();
+    let notifier = app.state::<NotifierState>().inner().tx.clone();
 
     let app_handle = app.clone();
     std::thread::spawn(move || {
