@@ -171,6 +171,15 @@ pub struct Notifications {
     pub email_smtp_port: Option<u16>,
     pub email_from: String,
     pub email_to: String,
+    pub email_username: String,
+    pub email_password: String,
+    /// `"starttls"` (default), `"implicit"` or `"none"`.
+    ///
+    /// Explicit rather than inferred from the port: a silent downgrade to
+    /// plaintext is how credentials end up on the wire. `"none"` is allowed —
+    /// a local relay on port 25 is a real deployment — but it has to be asked
+    /// for by name.
+    pub email_tls: String,
 
     pub slack_webhook_url: String,
     pub telegram_token: String,
@@ -197,6 +206,9 @@ impl Notifications {
             email_smtp_port: self.email_smtp_port,
             email_from: opt(&self.email_from),
             email_to: opt(&self.email_to),
+            email_username: opt(&self.email_username),
+            email_password: opt(&self.email_password),
+            email_tls: opt(&self.email_tls),
             slack_webhook_url: opt(&self.slack_webhook_url),
             telegram_token: opt(&self.telegram_token),
             telegram_chat_id: opt(&self.telegram_chat_id),

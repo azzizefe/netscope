@@ -161,12 +161,7 @@ impl TamperProofAuditLogger {
         let mut hasher = Sha256::new();
         hasher.update(format!(
             "{}:{}:{}:{}:{}:{}",
-            index,
-            ts,
-            user,
-            action,
-            resource,
-            self.last_hash
+            index, ts, user, action, resource, self.last_hash
         ));
         let hash = format!("{:x}", hasher.finalize());
 

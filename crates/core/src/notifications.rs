@@ -13,6 +13,10 @@ pub struct NotificationConfig {
     pub email_smtp_port: Option<u16>,
     pub email_from: Option<String>,
     pub email_to: Option<String>,
+    pub email_username: Option<String>,
+    pub email_password: Option<String>,
+    /// `"starttls"` (default), `"implicit"` or `"none"`.
+    pub email_tls: Option<String>,
 
     pub slack_webhook_url: Option<String>,
     pub telegram_token: Option<String>,
@@ -50,14 +54,23 @@ impl NotificationEngine {
         }
     }
 
-    /// 2.4.1 Email SMTP/SMTPS with rate-limiting (max 1 per minute)
+    /// Send one alert mail, rate-limited to one per minute.
+    ///
+    /// This used to be a socket and a sequence of `let _ = write_all(..)`: it
+    /// never read a reply, never looked at a status code, and returned `Ok(())`
+    /// whenever the TCP connect succeeded. A refused recipient, a 550, an auth
+    /// challenge, or a server that hung up were all reported as a sent mail —
+    /// and the SOC view showed the channel as working. `lettre` speaks the
+    /// actual protocol, so a rejection comes back as a rejection.
     pub fn send_email(&self, subject: &str, body: &str) -> Result<(), String> {
+        use lettre::transport::smtp::authentication::Credentials;
+        use lettre::{Message, SmtpTransport, Transport};
+
         let host = self
             .config
             .email_smtp_host
             .as_ref()
             .ok_or("No SMTP host configured")?;
-        let port = self.config.email_smtp_port.unwrap_or(25);
         let from = self
             .config
             .email_from
@@ -69,7 +82,55 @@ impl NotificationEngine {
             .as_ref()
             .ok_or("No recipient configured")?;
 
-        // Rate limiting check
+        let message = Message::builder()
+            .from(from.parse().map_err(|e| format!("Bad email_from: {e}"))?)
+            .to(to.parse().map_err(|e| format!("Bad email_to: {e}"))?)
+            .subject(subject)
+            .header(lettre::message::header::ContentType::TEXT_PLAIN)
+            .body(body.to_string())
+            .map_err(|e| format!("Could not build the message: {e}"))?;
+
+        let tls = self.config.email_tls.as_deref().unwrap_or("starttls");
+        let mut builder = match tls {
+            "starttls" => SmtpTransport::starttls_relay(host)
+                .map_err(|e| format!("STARTTLS setup failed: {e}"))?,
+            "implicit" => {
+                SmtpTransport::relay(host).map_err(|e| format!("TLS setup failed: {e}"))?
+            }
+            // Explicitly asked for, never inferred — see `email_tls`.
+            "none" => SmtpTransport::builder_dangerous(host),
+            other => {
+                return Err(format!(
+                    "email_tls must be \"starttls\", \"implicit\" or \"none\", got {other:?}"
+                ))
+            }
+        };
+
+        if let Some(port) = self.config.email_smtp_port {
+            builder = builder.port(port);
+        }
+        match (
+            self.config.email_username.as_ref(),
+            self.config.email_password.as_ref(),
+        ) {
+            (Some(u), Some(p)) => {
+                if tls == "none" {
+                    return Err(
+                        "Refusing to send credentials over a plaintext SMTP session \
+                         (email_tls = \"none\"); use \"starttls\" or \"implicit\""
+                            .to_string(),
+                    );
+                }
+                builder = builder.credentials(Credentials::new(u.clone(), p.clone()));
+            }
+            (Some(_), None) => return Err("email_username set without email_password".into()),
+            (None, Some(_)) => return Err("email_password set without email_username".into()),
+            (None, None) => {}
+        }
+
+        // Rate-limit only once the message and transport are known to be
+        // well-formed: a misconfiguration should be reportable on every
+        // attempt, not silenced for a minute by the first one.
         {
             let mut last_sent = self.last_email_sent.lock().unwrap();
             if let Some(last) = *last_sent {
@@ -80,23 +141,10 @@ impl NotificationEngine {
             *last_sent = Some(Instant::now());
         }
 
-        // Establish SMTP socket connection
-        let mut stream = TcpStream::connect(format!("{}:{}", host, port))
-            .map_err(|e| format!("Failed to connect to SMTP server: {}", e))?;
-
-        let _ = stream.write_all(b"EHLO localhost\r\n");
-        let _ = stream.write_all(format!("MAIL FROM:<{}>\r\n", from).as_bytes());
-        let _ = stream.write_all(format!("RCPT TO:<{}>\r\n", to).as_bytes());
-        let _ = stream.write_all(b"DATA\r\n");
-
-        let email_headers = format!(
-            "From: {}\r\nTo: {}\r\nSubject: {}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n",
-            from, to, subject
-        );
-        let _ = stream.write_all(email_headers.as_bytes());
-        let _ = stream.write_all(body.as_bytes());
-        let _ = stream.write_all(b"\r\n.\r\nQUIT\r\n");
-
+        builder
+            .build()
+            .send(&message)
+            .map_err(|e| format!("SMTP send failed: {e}"))?;
         Ok(())
     }
 
@@ -365,6 +413,24 @@ impl NotificationEngine {
 mod tests {
     use super::*;
 
+    /// Nothing configured. Tests set only the fields they exercise.
+    fn blank_config() -> NotificationConfig {
+        NotificationConfig {
+            email_smtp_host: None,
+            email_smtp_port: None,
+            email_from: None,
+            email_to: None,
+            email_username: None,
+            email_password: None,
+            email_tls: None,
+            slack_webhook_url: None,
+            telegram_token: None,
+            telegram_chat_id: None,
+            syslog_host: None,
+            syslog_port: None,
+        }
+    }
+
     #[test]
     fn test_email_rate_limiting() {
         let config = NotificationConfig {
@@ -372,11 +438,8 @@ mod tests {
             email_smtp_port: Some(2525),
             email_from: Some("alert@netscope.com".to_string()),
             email_to: Some("soc@netscope.com".to_string()),
-            slack_webhook_url: None,
-            telegram_token: None,
-            telegram_chat_id: None,
-            syslog_host: None,
-            syslog_port: None,
+            email_tls: Some("none".to_string()),
+            ..blank_config()
         };
         let engine = NotificationEngine::new(config);
 
@@ -389,6 +452,73 @@ mod tests {
         assert_eq!(res2.unwrap_err(), "Email rate limited (max 1 per minute)");
     }
 
+    /// A server that rejects the mail must be reported as a failure.
+    ///
+    /// `send_email` used to write EHLO/MAIL FROM/RCPT TO/DATA with
+    /// `let _ = write_all(..)` and never read a byte back, so it returned
+    /// `Ok(())` whenever the TCP connect succeeded. A 550, a refused recipient,
+    /// an auth demand — all reported as sent, and the SOC view showed the
+    /// channel as healthy. This stands up a server that answers the greeting
+    /// and then rejects, which the old code could not distinguish from success.
+    #[test]
+    fn an_smtp_rejection_is_not_reported_as_sent() {
+        use std::io::{BufRead, BufReader, Write as _};
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        std::thread::spawn(move || {
+            if let Ok((sock, _)) = listener.accept() {
+                let mut reader = BufReader::new(sock.try_clone().unwrap());
+                let mut out = sock;
+                let _ = out.write_all(b"220 test ESMTP\r\n");
+                let mut line = String::new();
+                // Greet, then refuse whatever it asks for.
+                while reader.read_line(&mut line).is_ok() && !line.is_empty() {
+                    let _ = out.write_all(b"550 mailbox unavailable\r\n");
+                    line.clear();
+                }
+            }
+        });
+
+        let engine = NotificationEngine::new(NotificationConfig {
+            email_smtp_host: Some("127.0.0.1".to_string()),
+            email_smtp_port: Some(port),
+            email_from: Some("alert@example.com".to_string()),
+            email_to: Some("soc@example.com".to_string()),
+            // Plaintext so the test needs no certificate; the rejection path is
+            // what is under test, not the transport.
+            email_tls: Some("none".to_string()),
+            ..blank_config()
+        });
+
+        let err = engine
+            .send_email("Alert", "Body")
+            .expect_err("a 550 must not be reported as a sent mail");
+        assert!(
+            err.contains("SMTP send failed"),
+            "the error should name the SMTP failure, got {err:?}",
+        );
+    }
+
+    /// Credentials must never be handed to a plaintext session.
+    #[test]
+    fn credentials_are_refused_over_plaintext_smtp() {
+        let engine = NotificationEngine::new(NotificationConfig {
+            email_smtp_host: Some("127.0.0.1".to_string()),
+            email_from: Some("alert@example.com".to_string()),
+            email_to: Some("soc@example.com".to_string()),
+            email_username: Some("user".to_string()),
+            email_password: Some("hunter2".to_string()),
+            email_tls: Some("none".to_string()),
+            ..blank_config()
+        });
+
+        let err = engine.send_email("Alert", "Body").unwrap_err();
+        assert!(err.contains("Refusing to send credentials"), "got {err:?}",);
+    }
+
     #[test]
     fn test_syslog_and_windows_log() {
         let config = NotificationConfig {
@@ -396,6 +526,9 @@ mod tests {
             email_smtp_port: None,
             email_from: None,
             email_to: None,
+            email_username: None,
+            email_password: None,
+            email_tls: None,
             slack_webhook_url: None,
             telegram_token: None,
             telegram_chat_id: None,

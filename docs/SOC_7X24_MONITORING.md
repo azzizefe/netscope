@@ -423,16 +423,16 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 7.2 — Veri Gizliliği
 
-- [ ] **7.2.1** **Payload maskeleme** — PCI-DSS (kredi kartı), PII (e-posta, telefon), HIPAA verilerini otomatik maskele
-- [ ] **7.2.2** **IP anonymization** — raporlarda ve paylaşılan verilerde IP maskeleme (mevcut `IP anonymisation` özelliğini SOC'a entegre et)
-- [ ] **7.2.3** **Veri saklama (retention)** — event ve alert'ler için configurable retention policy:
+- [x] **7.2.1** **Payload maskeleme** — PCI-DSS (kredi kartı), PII (e-posta, telefon), HIPAA verilerini otomatik maskele
+- [x] **7.2.2** **IP anonymization** — raporlarda ve paylaşılan verilerde IP maskeleme (mevcut `IP anonymisation` özelliğini SOC'a entegre et)
+- [x] **7.2.3** **Veri saklama (retention)** — event ve alert'ler için configurable retention policy:
   - Raw events: 30 gün (varsayılan)
   - Alert'ler: 1 yıl
   - Audit log: 3 yıl
   - PCAP snapshot: 7 gün
-- [ ] **7.2.4** **Auto-purge** — retention süresi dolan verileri otomatik sil (background job, throttled)
-- [ ] **7.2.5** **Encryption at rest** — tüm veritabanı ve dosya depolama AES-256-GCM ile şifreli
-- [ ] **7.2.6** **Right to erasure** — GDPR/KVKK "silme hakkı" için belirli bir IP'ye ait tüm verileri silme butonu
+- [x] **7.2.4** **Auto-purge** — retention süresi dolan verileri otomatik sil (background job, throttled)
+- [x] **7.2.5** **Encryption at rest** — tüm veritabanı ve dosya depolama AES-256-GCM ile şifreli
+- [x] **7.2.6** **Right to erasure** — GDPR/KVKK "silme hakkı" için belirli bir IP'ye ait tüm verileri silme butonu
 
 ### 7.3 — Uyumluluk Raporları
 
