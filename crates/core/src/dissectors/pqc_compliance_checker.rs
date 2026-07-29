@@ -6,7 +6,6 @@ use crate::pqc_wizard::{ComplianceFramework, Tls13PqcWizard};
 
 use super::DissectedResult;
 
-
 pub fn dissect_pqc_compliance_checker(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,

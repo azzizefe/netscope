@@ -147,12 +147,35 @@ pub struct Alert {
     pub source_ip: Option<String>,
     pub dest_ip: Option<String>,
     pub raw_data: Option<serde_json::Value>,
+    pub assigned_to: Option<Uuid>,
     pub acknowledged_by: Option<Uuid>,
     pub acknowledged_at: Option<DateTime<Utc>>,
     pub resolved_by: Option<Uuid>,
     pub resolved_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlertDetail {
+    pub alert: Alert,
+    pub rule_name: Option<String>,
+    pub rule_description: Option<String>,
+    pub rule_yaml: Option<String>,
+    pub event_details: Option<serde_json::Value>,
+    pub assigned_username: Option<String>,
+    pub acknowledged_username: Option<String>,
+    pub resolved_username: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AlertNote {
+    pub id: Uuid,
+    pub alert_id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub username: Option<String>,
+    pub note: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -169,6 +192,7 @@ pub struct AlertFilter {
 #[derive(Debug, Deserialize)]
 pub struct UpdateAlertStatus {
     pub status: String,
+    pub assigned_to: Option<Uuid>,
 }
 
 // ── Alert Rules ──

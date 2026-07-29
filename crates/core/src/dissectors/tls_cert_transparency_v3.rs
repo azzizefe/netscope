@@ -4,7 +4,6 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-
 fn parse_sct_version(payload: &[u8]) -> u8 {
     payload.first().copied().unwrap_or(0)
 }

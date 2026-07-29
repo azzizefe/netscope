@@ -4,7 +4,6 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-
 fn parse_ech_config_version(payload: &[u8]) -> u16 {
     if payload.len() < 4 {
         return 0;

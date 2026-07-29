@@ -5,7 +5,6 @@ use crate::pqc_handshake::{KemId, PqcHandshakeStore};
 
 use super::DissectedResult;
 
-
 const PQC_CVE_DB: &[(&str, &str, &[KemId])] = &[
     (
         "CVE-2024-1234",

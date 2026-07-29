@@ -4,7 +4,6 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-
 fn compute_perf_stats(
     records: &[crate::pqc_handshake::PqcHandshakeRecord],
 ) -> (usize, f64, f64, f64, f64, f64) {

@@ -4,7 +4,6 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-
 fn detect_abnormal_sizes(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
     let mut findings = Vec::new();
     for r in records {

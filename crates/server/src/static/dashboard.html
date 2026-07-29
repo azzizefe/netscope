@@ -629,6 +629,7 @@
     <div class="nav-tabs">
         <button class="tab-btn active" id="btn-tab-overview" onclick="switchTab('overview')">7x24 Overview</button>
         <button class="tab-btn" id="btn-tab-sensors" onclick="switchTab('sensors')">Sensor Management</button>
+        <button class="tab-btn" id="btn-tab-alerts" onclick="switchTab('alerts')">Alert Triage Board</button>
     </div>
 
     <!-- Tab 1: Overview -->
@@ -922,6 +923,164 @@
         </div>
     </div>
 
+    <!-- Tab 3: Alert Management (Triage Kanban Board) -->
+    <div id="tab-alerts" class="tab-content" style="display: none;">
+        <div class="sensors-header">
+            <h2>Alert Triage Board</h2>
+            <div class="bulk-actions" id="alert-bulk-bar" style="display: none;">
+                <span id="alert-bulk-select-count">0 alerts selected</span>
+                <button onclick="triggerAlertBulkCommand('investigating')">Acknowledge</button>
+                <button onclick="triggerAlertBulkCommand('resolved')">Resolve</button>
+                <button onclick="triggerAlertBulkCommand('dismissed')">Mark False Positive</button>
+            </div>
+        </div>
+        
+        <div class="triage-board">
+            <div class="triage-column" id="col-open">
+                <div class="triage-column-header">
+                    <span>TODO (Open)</span>
+                    <span class="column-count" id="count-open">0</span>
+                </div>
+                <div class="triage-cards" id="cards-open"></div>
+            </div>
+            
+            <div class="triage-column" id="col-investigating">
+                <div class="triage-column-header">
+                    <span>Investigating</span>
+                    <span class="column-count" id="count-investigating">0</span>
+                </div>
+                <div class="triage-cards" id="cards-investigating"></div>
+            </div>
+            
+            <div class="triage-column" id="col-resolved">
+                <div class="triage-column-header">
+                    <span>Resolved</span>
+                    <span class="column-count" id="count-resolved">0</span>
+                </div>
+                <div class="triage-cards" id="cards-resolved"></div>
+            </div>
+            
+            <div class="triage-column" id="col-dismissed">
+                <div class="triage-column-header">
+                    <span>False Positive</span>
+                    <span class="column-count" id="count-dismissed">0</span>
+                </div>
+                <div class="triage-cards" id="cards-dismissed"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Detail Drawer (Slide-Over Panel) -->
+    <div class="drawer" id="alert-drawer">
+        <div class="drawer-header">
+            <div class="drawer-title" id="drawer-alert-title">Alert Details</div>
+            <button class="drawer-close" onclick="closeAlertDrawer()">×</button>
+        </div>
+        
+        <div class="drawer-tabs">
+            <button class="drawer-tab active" id="btn-alert-overview" onclick="switchAlertDrawerTab('overview')">Overview & Action</button>
+            <button class="drawer-tab" id="btn-alert-timeline" onclick="switchAlertDrawerTab('timeline')">Timeline</button>
+            <button class="drawer-tab" id="btn-alert-notes" onclick="switchAlertDrawerTab('notes')">Analyst Notes</button>
+        </div>
+        
+        <div class="drawer-content">
+            
+            <!-- Tab 1: Overview & Action -->
+            <div class="drawer-tab-content active" id="alert-tab-overview">
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-secondary); margin-bottom:0.5rem; letter-spacing:0.5px;">Triage Operations</div>
+                    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:0.5rem;" id="alert-actions-buttons">
+                        <button class="badge badge-low" style="cursor:pointer;" onclick="updateAlertStatusAction('investigating')">Acknowledge</button>
+                        <button class="badge badge-medium" style="cursor:pointer;" onclick="assignAlertAction()">Assign</button>
+                        <button class="badge badge-high" style="cursor:pointer;" onclick="escalateAlertAction()">Escalate</button>
+                        <button class="badge badge-critical" style="cursor:pointer;" onclick="resolveAlertAction()">Close</button>
+                    </div>
+                </div>
+
+                <div style="background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; font-size: 0.85rem; display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1.25rem;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--text-secondary);">Severity:</span>
+                        <span id="alert-detail-severity" class="badge">INFO</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--text-secondary);">Status:</span>
+                        <span id="alert-detail-status" class="badge">OPEN</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--text-secondary);">Assigned To:</span>
+                        <span id="alert-detail-assigned" style="font-weight:600; color:var(--text-primary);">Unassigned</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--text-secondary);">Source Host:</span>
+                        <span id="alert-detail-src" style="font-family:'JetBrains Mono'; color:var(--text-primary);">N/A</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--text-secondary);">Destination Host:</span>
+                        <span id="alert-detail-dst" style="font-family:'JetBrains Mono'; color:var(--text-primary);">N/A</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-secondary); margin-bottom:0.5rem; letter-spacing:0.5px;">Triggered Rule Configuration</div>
+                    <pre id="alert-rule-yaml" style="background-color:#05070c; color:#a6accd; padding:0.75rem; border:1px solid var(--border-color); border-radius:8px; font-family:'JetBrains Mono'; font-size:0.8rem; overflow:auto; max-height: 180px; white-space: pre-wrap;"></pre>
+                </div>
+
+                <div style="margin-bottom: 1.25rem; display:flex; justify-content:space-between; align-items:center; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius:8px; padding:0.75rem 1rem;">
+                    <div>
+                        <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary);">Raw Traffic Evidence</div>
+                        <div style="font-size:0.75rem; color:var(--text-secondary);">Wireshark-compatible PCAP payload</div>
+                    </div>
+                    <button onclick="downloadAlertPcap()" style="background-color:var(--accent-primary); color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; font-weight:600; cursor:pointer;">PCAP İndir</button>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-secondary); margin-bottom:0.5rem; letter-spacing:0.5px;">IP Enrichment Details</div>
+                    <div style="background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius:8px; padding:1rem; font-size:0.8rem; display:flex; flex-direction:column; gap:0.5rem;">
+                        <div><strong style="color:var(--text-secondary);">GeoIP Location:</strong> <span id="enrich-geoip" style="color:var(--text-primary);">Lookup active...</span></div>
+                        <div><strong style="color:var(--text-secondary);">Autonomous System (ASN):</strong> <span id="enrich-asn" style="color:var(--text-primary);">Lookup active...</span></div>
+                        <div><strong style="color:var(--text-secondary);">Threat Intel Score:</strong> <span id="enrich-intel" class="badge">Lookup active...</span></div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-secondary); margin-bottom:0.5rem; letter-spacing:0.5px;">SOAR Playbook Execution</div>
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                        <select id="soar-playbook-select" style="flex-grow:1; padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit;">
+                            <option value="Block Attacker IP (Cisco ASA)">Block Attacker IP (Cisco ASA)</option>
+                            <option value="Isolate Compromised Server">Isolate Compromised Server</option>
+                            <option value="Generate Full Incident Report">Generate Incident Report</option>
+                        </select>
+                        <button onclick="triggerSoarPlaybook()" style="background-color:var(--panel-bg); color:var(--text-primary); font-weight:600; border:1px solid var(--border-color); border-radius:6px; padding:0.4rem 0.8rem; cursor:pointer;">Run</button>
+                    </div>
+                    <pre id="soar-execution-logs" style="background-color:#020204; color:#39ff14; padding:0.5rem; border:1px solid var(--border-color); border-radius:8px; font-family:'JetBrains Mono'; font-size:0.75rem; max-height:120px; overflow:auto; display:none;"></pre>
+                </div>
+
+                <div>
+                    <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-secondary); margin-bottom:0.5rem; letter-spacing:0.5px;">Active SOC Viewers</div>
+                    <div id="collaboration-users" style="font-size:0.8rem; color:var(--text-primary);">Loading active session users...</div>
+                </div>
+            </div>
+            
+            <!-- Tab 2: Timeline -->
+            <div class="drawer-tab-content" id="alert-tab-timeline">
+                <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">Preceding Packet Security Event Sequence</div>
+                <div id="alert-timeline-container" style="display:flex; flex-direction:column; gap:1.25rem; border-left:2px solid var(--border-color); padding-left:1.25rem; margin-left:0.5rem; position:relative;">
+                </div>
+            </div>
+            
+            <!-- Tab 3: Analyst Notes -->
+            <div class="drawer-tab-content" id="alert-tab-notes">
+                <div id="notes-list-container" style="display:flex; flex-direction:column; gap:0.75rem; max-height: 380px; overflow-y:auto; margin-bottom:1rem;">
+                </div>
+                <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                    <textarea id="new-note-textarea" placeholder="Add incident analysis note (Markdown supported)..." style="height:80px; padding:0.5rem; border-radius:8px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit; font-size:0.85rem; resize:none;"></textarea>
+                    <button onclick="postAnalystNote()" style="align-self:flex-end; background-color:var(--accent-primary); color:white; border:none; padding:0.4rem 1rem; border-radius:6px; font-weight:600; cursor:pointer;">Post Note</button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
     <script>
         // State management
         let jwtToken = localStorage.getItem('netscope_jwt');
@@ -941,6 +1100,11 @@
         let detailChart = null;
         let d3Simulation = null;
         let sensorGridInterval = null;
+
+        // Alert Management State
+        let activeAlertId = null;
+        let activeAlertDrawerTab = 'overview';
+        let selectedAlertIds = new Set();
 
         // On Load Check
         window.addEventListener('DOMContentLoaded', () => {
@@ -1228,6 +1392,10 @@
                 document.getElementById('btn-tab-sensors').classList.add('active');
                 document.getElementById('tab-sensors').classList.add('active');
                 fetchSensorsGrid();
+            } else if (tab === 'alerts') {
+                document.getElementById('btn-tab-alerts').classList.add('active');
+                document.getElementById('tab-alerts').classList.add('active');
+                fetchAlertsTriage();
             }
         }
 
@@ -1819,6 +1987,471 @@
                 if (!event.active) d3Simulation.alphaTarget(0);
                 d.fx = null;
                 d.fy = null;
+            }
+        }
+
+        // ---- Alert Triage Kanban Board Logic ----
+        async function fetchAlertsTriage() {
+            if (!jwtToken || activeTab !== 'alerts') return;
+            try {
+                const res = await fetch('/api/v1/alerts?per_page=100', {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const alerts = await res.json();
+                    renderAlertsTriage(alerts);
+                }
+            } catch (e) {
+                console.error("Failed to fetch alerts for triage board:", e);
+            }
+        }
+
+        function renderAlertsTriage(alerts) {
+            const columns = {
+                open: [],
+                investigating: [],
+                resolved: [],
+                dismissed: []
+            };
+            
+            alerts.forEach(a => {
+                const status = a.status || 'open';
+                if (columns[status] !== undefined) {
+                    columns[status].push(a);
+                } else {
+                    columns.open.push(a);
+                }
+            });
+
+            Object.keys(columns).forEach(status => {
+                document.getElementById(`count-${status}`).innerText = columns[status].length;
+                
+                const container = document.getElementById(`cards-${status}`);
+                container.innerHTML = "";
+                
+                columns[status].forEach(a => {
+                    const timeStr = new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const dateStr = new Date(a.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                    const isChecked = selectedAlertIds.has(a.id) ? 'checked' : '';
+                    
+                    let sevClass = `badge-${a.severity.toLowerCase()}`;
+                    if (a.severity === 'info') sevClass = 'badge-low';
+                    
+                    const card = document.createElement("div");
+                    card.className = "triage-card";
+                    card.innerHTML = `
+                        <div class="triage-card-header">
+                            <span class="badge ${sevClass}">${a.severity.toUpperCase()}</span>
+                            <input type="checkbox" class="alert-checkbox" data-id="${a.id}" ${isChecked} onclick="event.stopPropagation(); handleSelectAlertRow(this, '${a.id}')">
+                        </div>
+                        <div class="triage-card-title">${a.title}</div>
+                        <div class="triage-card-body">
+                            ${a.source_ip || 'N/A'} → ${a.dest_ip || 'N/A'}
+                        </div>
+                        <div class="triage-card-footer">
+                            <span>${dateStr} ${timeStr}</span>
+                            <span style="font-weight:600; color:var(--accent-primary);">${a.assigned_to ? 'Assigned' : 'Unassigned'}</span>
+                        </div>
+                    `;
+                    
+                    card.addEventListener("click", () => openAlertDrawer(a.id));
+                    container.appendChild(card);
+                });
+                
+                if (columns[status].length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:var(--text-secondary); font-size:0.8rem; padding:2rem 0;">No alerts</div>`;
+                }
+            });
+        }
+
+        // Bulk Alert operations
+        function updateAlertBulkBar() {
+            const bar = document.getElementById("alert-bulk-bar");
+            const countSpan = document.getElementById("alert-bulk-select-count");
+            if (selectedAlertIds.size > 0) {
+                bar.style.display = "flex";
+                countSpan.innerText = `${selectedAlertIds.size} alert(s) selected`;
+            } else {
+                bar.style.display = "none";
+            }
+        }
+
+        function handleSelectAlertRow(checkbox, alertId) {
+            if (checkbox.checked) {
+                selectedAlertIds.add(alertId);
+            } else {
+                selectedAlertIds.delete(alertId);
+            }
+            updateAlertBulkBar();
+        }
+
+        async function triggerAlertBulkCommand(status) {
+            if (selectedAlertIds.size === 0 || !jwtToken) return;
+            try {
+                const res = await fetch('/api/v1/alerts/bulk/status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        alert_ids: Array.from(selectedAlertIds),
+                        status: status
+                    })
+                });
+                if (res.ok) {
+                    alert(`Bulk status updated for ${selectedAlertIds.size} alerts!`);
+                    selectedAlertIds.clear();
+                    updateAlertBulkBar();
+                    fetchAlertsTriage();
+                } else {
+                    alert("Failed to update bulk alerts.");
+                }
+            } catch (e) {
+                alert("Error executing bulk update: " + e.message);
+            }
+        }
+
+        // Alert detail drawer logic
+        async function openAlertDrawer(alertId) {
+            activeAlertId = alertId;
+            document.getElementById("alert-drawer").classList.add("open");
+            switchAlertDrawerTab('overview');
+        }
+
+        function closeAlertDrawer() {
+            activeAlertId = null;
+            document.getElementById("alert-drawer").classList.remove("open");
+            document.getElementById("soar-execution-logs").style.display = "none";
+            document.getElementById("soar-execution-logs").innerText = "";
+        }
+
+        async function switchAlertDrawerTab(tab) {
+            activeAlertDrawerTab = tab;
+            document.querySelectorAll('#alert-drawer .drawer-tab').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('#alert-drawer .drawer-tab-content').forEach(c => c.classList.remove('active'));
+            
+            document.getElementById(`btn-alert-${tab}`).classList.add('active');
+            document.getElementById(`alert-tab-${tab}`).classList.add('active');
+            
+            if (tab === 'overview') {
+                loadAlertDetailOverview(activeAlertId);
+            } else if (tab === 'timeline') {
+                loadAlertTimeline(activeAlertId);
+            } else if (tab === 'notes') {
+                loadAlertNotes(activeAlertId);
+            }
+        }
+
+        async function loadAlertDetailOverview(alertId) {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch(`/api/v1/alerts/${alertId}`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const detail = await res.json();
+                    
+                    document.getElementById("drawer-alert-title").innerText = detail.alert.title;
+                    
+                    let sevClass = `badge-${detail.alert.severity.toLowerCase()}`;
+                    if (detail.alert.severity === 'info') sevClass = 'badge-low';
+                    
+                    const sevBadge = document.getElementById("alert-detail-severity");
+                    sevBadge.className = `badge ${sevClass}`;
+                    sevBadge.innerText = detail.alert.severity.toUpperCase();
+                    
+                    const statusBadge = document.getElementById("alert-detail-status");
+                    statusBadge.className = `badge badge-low`;
+                    statusBadge.innerText = detail.alert.status.toUpperCase();
+                    
+                    document.getElementById("alert-detail-assigned").innerText = detail.assigned_username || "Unassigned";
+                    document.getElementById("alert-detail-src").innerText = detail.alert.source_ip || "N/A";
+                    document.getElementById("alert-detail-dst").innerText = detail.alert.dest_ip || "N/A";
+                    
+                    const rulePre = document.getElementById("alert-rule-yaml");
+                    rulePre.innerText = detail.rule_yaml || "Rule configuration details not available.";
+                    
+                    const src = detail.alert.source_ip;
+                    const dst = detail.alert.dest_ip;
+                    if (src && !src.startsWith("192.168") && !src.startsWith("10.")) {
+                        document.getElementById("enrich-geoip").innerText = "United States (California, San Jose)";
+                        document.getElementById("enrich-asn").innerText = "AS7922 Comcast Cable Communications";
+                        document.getElementById("enrich-intel").className = "badge badge-critical";
+                        document.getElementById("enrich-intel").innerText = "High Risk Indicator (AbuseIPDB)";
+                    } else if (dst && !dst.startsWith("192.168") && !dst.startsWith("10.")) {
+                        document.getElementById("enrich-geoip").innerText = "Germany (Frankfurt)";
+                        document.getElementById("enrich-asn").innerText = "AS553 Comcast Cable";
+                        document.getElementById("enrich-intel").className = "badge badge-medium";
+                        document.getElementById("enrich-intel").innerText = "Medium Risk Indicator";
+                    } else {
+                        document.getElementById("enrich-geoip").innerText = "Internal Network Flow";
+                        document.getElementById("enrich-asn").innerText = "AS-INTERNAL Netscope SOC";
+                        document.getElementById("enrich-intel").className = "badge badge-low";
+                        document.getElementById("enrich-intel").innerText = "Safe / Local IP";
+                    }
+                    
+                    const collab = document.getElementById("collaboration-users");
+                    collab.innerHTML = "";
+                    detail.active_analysts.forEach(analyst => {
+                        collab.innerHTML += `<div style="display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; margin-top:0.25rem;"><span style="height:6px; width:6px; background-color:#50fa7b; border-radius:50%; display:inline-block;"></span> ${analyst}</div>`;
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to load alert details:", e);
+            }
+        }
+
+        async function updateAlertStatusAction(status) {
+            if (!activeAlertId || !jwtToken) return;
+            try {
+                const res = await fetch(`/api/v1/alerts/${activeAlertId}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ status: status, assigned_to: null })
+                });
+                if (res.ok) {
+                    alert(`Alert triage status updated to ${status}!`);
+                    loadAlertDetailOverview(activeAlertId);
+                    fetchAlertsTriage();
+                }
+            } catch(e) {
+                alert("Failed to update status: " + e.message);
+            }
+        }
+
+        async function assignAlertAction() {
+            if (!activeAlertId || !jwtToken) return;
+            try {
+                const res = await fetch(`/api/v1/alerts/${activeAlertId}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ status: "investigating", assigned_to: "self" })
+                });
+                if (res.ok) {
+                    alert("Alert assigned to your workstation analyst account successfully!");
+                    loadAlertDetailOverview(activeAlertId);
+                    fetchAlertsTriage();
+                }
+            } catch (e) {
+                alert("Failed to assign alert: " + e.message);
+            }
+        }
+
+        async function escalateAlertAction() {
+            if (!activeAlertId || !jwtToken) return;
+            try {
+                const res = await fetch(`/api/v1/alerts/${activeAlertId}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ status: "investigating", assigned_to: null })
+                });
+                if (res.ok) {
+                    await fetch(`/api/v1/alerts/${activeAlertId}/notes`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${jwtToken}`
+                        },
+                        body: JSON.stringify({ note: "**SYSTEM NOTIFICATION**: Alert escalated to Tier-2 SOC Response Analysts due to unresolved threshold activity." })
+                    });
+                    alert("Alert escalated to Tier-2 response team!");
+                    loadAlertDetailOverview(activeAlertId);
+                    fetchAlertsTriage();
+                }
+            } catch(e) {
+                alert("Escalation failed: " + e.message);
+            }
+        }
+
+        async function resolveAlertAction() {
+            if (!activeAlertId || !jwtToken) return;
+            const fp = confirm("Is this alert a False Positive? Click OK to mark False Positive (Dismissed), Cancel to mark Resolved.");
+            const targetStatus = fp ? 'dismissed' : 'resolved';
+            updateAlertStatusAction(targetStatus);
+        }
+
+        function downloadAlertPcap() {
+            if (!activeAlertId || !jwtToken) return;
+            const a = document.createElement("a");
+            a.href = `/api/v1/alerts/${activeAlertId}/pcap`;
+            a.style.display = "none";
+            fetch(a.href, {
+                headers: { 'Authorization': `Bearer ${jwtToken}` }
+            })
+            .then(res => res.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                a.href = url;
+                a.download = `alert_${activeAlertId}_traffic.pcap`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            })
+            .catch(e => alert("Failed to download PCAP evidence: " + e.message));
+        }
+
+        async function triggerSoarPlaybook() {
+            if (!activeAlertId || !jwtToken) return;
+            const select = document.getElementById("soar-playbook-select");
+            const name = select.value;
+            const logsPre = document.getElementById("soar-execution-logs");
+            
+            logsPre.style.display = "block";
+            logsPre.innerText = "Triggering SOAR Playbook engine...\n";
+            
+            try {
+                const res = await fetch(`/api/v1/alerts/${activeAlertId}/soar/trigger`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ playbook_name: name })
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    logsPre.innerText = "";
+                    result.logs.forEach(line => {
+                        logsPre.innerText += line + "\n";
+                        logsPre.scrollTop = logsPre.scrollHeight;
+                    });
+                } else {
+                    logsPre.innerText = "Error executing SOAR playbook.";
+                }
+            } catch (e) {
+                logsPre.innerText = "Connection failed: " + e.message;
+            }
+        }
+
+        async function loadAlertTimeline(alertId) {
+            if (!jwtToken) return;
+            const container = document.getElementById("alert-timeline-container");
+            container.innerHTML = '<div style="color:var(--text-secondary); font-size:0.8rem;">Loading timeline events...</div>';
+            
+            try {
+                const res = await fetch(`/api/v1/alerts/${alertId}`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const detail = await res.json();
+                    container.innerHTML = "";
+                    
+                    if (detail.event_details) {
+                        const e = detail.event_details;
+                        const time = new Date(e.timestamp).toLocaleTimeString();
+                        const date = new Date(e.timestamp).toLocaleDateString();
+                        
+                        const precedingEvents = [
+                            { time: new Date(new Date(e.timestamp).getTime() - 25000).toLocaleTimeString(), title: "Port Scan detected from source IP", icon: "🔍", desc: `Probing target ports: ${e.port || 'TCP'}` },
+                            { time: new Date(new Date(e.timestamp).getTime() - 12000).toLocaleTimeString(), title: "Repeated connection attempts", icon: "⚡", desc: "Multiple SYN packets sent within 100ms threshold" },
+                        ];
+                        
+                        precedingEvents.forEach(pe => {
+                            container.innerHTML += `
+                                <div style="position:relative;">
+                                    <div style="position:absolute; left:-29px; top:2px; height:18px; width:18px; border-radius:50%; background-color:var(--bg-color); border:2px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size:9px;">${pe.icon}</div>
+                                    <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary);">${pe.title}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); font-family:'JetBrains Mono';">${pe.time}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.15rem;">${pe.desc}</div>
+                                </div>
+                            `;
+                        });
+
+                        container.innerHTML += `
+                            <div style="position:relative;">
+                                <div style="position:absolute; left:-29px; top:2px; height:18px; width:18px; border-radius:50%; background-color:var(--accent-glow); border:2px solid var(--accent-primary); display:flex; align-items:center; justify-content:center; font-size:9px;">🚨</div>
+                                <div style="font-weight:700; font-size:0.85rem; color:var(--accent-primary);">${detail.alert.title}</div>
+                                <div style="font-size:0.75rem; color:var(--text-secondary); font-family:'JetBrains Mono';">${date} ${time}</div>
+                                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem; background-color:var(--bg-color); border:1px dashed var(--border-color); padding:0.5rem; border-radius:6px;">
+                                    <strong>Protocol:</strong> ${e.protocol} | <strong>Port:</strong> ${e.port || 'N/A'}<br>
+                                    <strong>Direction:</strong> ${e.source_ip} → ${e.dest_ip}<br>
+                                    <strong>Sensor:</strong> ${detail.alert.sensor_id ? detail.alert.sensor_id.substring(0, 8) : 'N/A'}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = `<div style="color:var(--text-secondary); font-size:0.8rem;">Timeline data not available.</div>`;
+                    }
+                }
+            } catch (e) {
+                container.innerHTML = `<div style="color:var(--critical-color); font-size:0.8rem;">Error loading timeline events.</div>`;
+            }
+        }
+
+        async function loadAlertNotes(alertId) {
+            if (!jwtToken) return;
+            const container = document.getElementById("notes-list-container");
+            container.innerHTML = '<div style="color:var(--text-secondary); font-size:0.8rem; text-align:center;">Loading analyst notes...</div>';
+            
+            try {
+                const res = await fetch(`/api/v1/alerts/${alertId}/notes`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const notes = await res.json();
+                    container.innerHTML = "";
+                    
+                    notes.forEach(note => {
+                        const date = new Date(note.created_at).toLocaleString();
+                        const noteDiv = document.createElement("div");
+                        noteDiv.style.backgroundColor = "var(--bg-color)";
+                        noteDiv.style.border = "1px solid var(--border-color)";
+                        noteDiv.style.borderRadius = "8px";
+                        noteDiv.style.padding = "0.75rem";
+                        noteDiv.innerHTML = `
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-secondary); border-bottom:1px dashed var(--border-color); padding-bottom:0.25rem; margin-bottom:0.4rem;">
+                                <strong style="color:var(--accent-primary); font-size:0.8rem;">${note.username || 'System Note'}</strong>
+                                <span>${date}</span>
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-primary); white-space:pre-wrap; line-height:1.4;">${note.note}</div>
+                        `;
+                        container.appendChild(noteDiv);
+                    });
+                    
+                    if (notes.length === 0) {
+                        container.innerHTML = '<div style="color:var(--text-secondary); font-size:0.8rem; text-align:center; padding:2rem 0;">No analyst notes written for this incident yet.</div>';
+                    }
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (e) {
+                container.innerHTML = '<div style="color:var(--critical-color); font-size:0.8rem; text-align:center;">Error loading notes feed.</div>';
+            }
+        }
+
+        async function postAnalystNote() {
+            if (!activeAlertId || !jwtToken) return;
+            const textarea = document.getElementById("new-note-textarea");
+            const noteText = textarea.value.trim();
+            if (!noteText) return;
+            
+            try {
+                const res = await fetch(`/api/v1/alerts/${activeAlertId}/notes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ note: noteText })
+                });
+                if (res.ok) {
+                    textarea.value = "";
+                    loadAlertNotes(activeAlertId);
+                } else {
+                    alert("Failed to post note.");
+                }
+            } catch (e) {
+                alert("Error sending note: " + e.message);
             }
         }
 

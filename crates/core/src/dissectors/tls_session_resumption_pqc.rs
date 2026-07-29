@@ -4,7 +4,6 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-
 fn analyze_resumption(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> (usize, usize, f64) {
     let total = records.len();
     if total == 0 {

@@ -249,7 +249,6 @@ fn set_executable(_path: &Path) {
     }
 }
 
-
 fn restart_process(new_binary: &Path) {
     let args: Vec<String> = std::env::args().skip(1).collect();
 

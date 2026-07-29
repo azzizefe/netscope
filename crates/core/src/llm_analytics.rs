@@ -1135,7 +1135,7 @@ mod tests {
         let raw = br#"data: {"choices":[{"delta":{"content":"hello"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}"#;
         let meta = extract_llm_metadata(raw, &Protocol::OpenaiChatStream).expect("should extract");
         assert_eq!(meta.provider, "openai");
-        assert_eq!(meta.streaming, true);
+        assert!(meta.streaming);
         assert_eq!(meta.request_type, "chat");
         assert_eq!(meta.prompt_tokens, Some(10));
         assert_eq!(meta.completion_tokens, Some(5));
@@ -1161,7 +1161,7 @@ mod tests {
         let meta =
             extract_llm_metadata(raw, &Protocol::GoogleGeminiRestStream).expect("should extract");
         assert_eq!(meta.provider, "google");
-        assert_eq!(meta.streaming, true);
+        assert!(meta.streaming);
     }
 
     #[test]

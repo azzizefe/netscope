@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use super::models::*;
@@ -234,7 +234,7 @@ pub async fn list_alerts(pool: &PgPool, filter: &AlertFilter) -> Result<Vec<Aler
 
     let mut sql = String::from(
         "SELECT id, rule_id, sensor_id, event_id, status, severity, title, description,
-                source_ip::inet, dest_ip::inet, raw_data,
+                source_ip::inet, dest_ip::inet, raw_data, assigned_to,
                 acknowledged_by, acknowledged_at, resolved_by, resolved_at,
                 created_at, updated_at
          FROM alerts WHERE 1=1",
@@ -291,81 +291,208 @@ pub async fn update_alert_status(
     id: Uuid,
     status: &str,
     user_id: Option<Uuid>,
+    assigned_to: Option<Uuid>,
+    update_assignment: bool,
 ) -> Result<Option<Alert>> {
-    match status {
-        "acknowledged" | "investigating" => {
-            if let Some(uid) = user_id {
-                Ok(sqlx::query_as::<_, Alert>(
-                    "UPDATE alerts SET status = $1, acknowledged_by = $2, acknowledged_at = now(), updated_at = now()
-                     WHERE id = $3
-                     RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
-                               source_ip::inet, dest_ip::inet, raw_data,
-                               acknowledged_by, acknowledged_at, resolved_by, resolved_at,
-                               created_at, updated_at",
-                )
-                .bind(status)
-                .bind(uid)
-                .bind(id)
-                .fetch_optional(pool)
-                .await?)
-            } else {
-                Ok(sqlx::query_as::<_, Alert>(
-                    "UPDATE alerts SET status = $1, updated_at = now()
-                     WHERE id = $2
-                     RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
-                               source_ip::inet, dest_ip::inet, raw_data,
-                               acknowledged_by, acknowledged_at, resolved_by, resolved_at,
-                               created_at, updated_at",
-                )
-                .bind(status)
-                .bind(id)
-                .fetch_optional(pool)
-                .await?)
+    let alert = sqlx::query_as::<_, Alert>(
+        "UPDATE alerts 
+         SET status = $1,
+             assigned_to = CASE WHEN $5 THEN $2 ELSE assigned_to END,
+             acknowledged_by = CASE WHEN $1 IN ('acknowledged', 'investigating') AND acknowledged_by IS NULL THEN $3 ELSE acknowledged_by END,
+             acknowledged_at = CASE WHEN $1 IN ('acknowledged', 'investigating') AND acknowledged_at IS NULL THEN now() ELSE acknowledged_at END,
+             resolved_by = CASE WHEN $1 IN ('resolved', 'dismissed') AND resolved_by IS NULL THEN $3 ELSE resolved_by END,
+             resolved_at = CASE WHEN $1 IN ('resolved', 'dismissed') AND resolved_at IS NULL THEN now() ELSE resolved_at END,
+             updated_at = now()
+         WHERE id = $4
+         RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
+                   source_ip::inet, dest_ip::inet, raw_data, assigned_to,
+                   acknowledged_by, acknowledged_at, resolved_by, resolved_at,
+                   created_at, updated_at"
+    )
+    .bind(status)
+    .bind(assigned_to)
+    .bind(user_id)
+    .bind(id)
+    .bind(update_assignment)
+    .fetch_optional(pool)
+    .await?;
+    
+    Ok(alert)
+}
+
+pub async fn get_alert_detail(
+    pool: &PgPool,
+    id: Uuid,
+) -> Result<Option<AlertDetail>> {
+    let alert = sqlx::query_as::<_, Alert>(
+        "SELECT id, rule_id, sensor_id, event_id, status, severity, title, description,
+                source_ip::inet, dest_ip::inet, raw_data, assigned_to,
+                acknowledged_by, acknowledged_at, resolved_by, resolved_at,
+                created_at, updated_at
+         FROM alerts WHERE id = $1"
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(alert) = alert {
+        let mut rule_name = None;
+        let mut rule_description = None;
+        let mut rule_yaml = None;
+        if let Some(rid) = alert.rule_id {
+            if let Ok(Some(rule)) = get_rule(pool, rid).await {
+                rule_name = Some(rule.name.clone());
+                rule_description = rule.description.clone();
+                let condition_json = serde_json::to_string_pretty(&rule.condition).unwrap_or_default();
+                rule_yaml = Some(format!(
+                    "name: {}\nseverity: {}\ncooldown_secs: {}\ncondition: |\n  {}",
+                    rule.name, rule.severity, rule.cooldown_secs, condition_json.replace('\n', "\n  ")
+                ));
             }
         }
-        "resolved" | "dismissed" => {
-            if let Some(uid) = user_id {
-                Ok(sqlx::query_as::<_, Alert>(
-                    "UPDATE alerts SET status = $1, resolved_by = $2, resolved_at = now(), updated_at = now()
-                     WHERE id = $3
-                     RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
-                               source_ip::inet, dest_ip::inet, raw_data,
-                               acknowledged_by, acknowledged_at, resolved_by, resolved_at,
-                               created_at, updated_at",
-                )
-                .bind(status)
-                .bind(uid)
-                .bind(id)
-                .fetch_optional(pool)
-                .await?)
-            } else {
-                Ok(sqlx::query_as::<_, Alert>(
-                    "UPDATE alerts SET status = $1, updated_at = now()
-                     WHERE id = $2
-                     RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
-                               source_ip::inet, dest_ip::inet, raw_data,
-                               acknowledged_by, acknowledged_at, resolved_by, resolved_at,
-                               created_at, updated_at",
-                )
-                .bind(status)
-                .bind(id)
-                .fetch_optional(pool)
-                .await?)
+
+        let mut event_details = None;
+        if let Some(eid) = alert.event_id {
+            let event: Option<Event> = sqlx::query_as(
+                "SELECT id, sensor_id, event_type, severity, title, description,
+                        source_ip::inet, dest_ip::inet, protocol, port, raw_data, tags, timestamp
+                 FROM events WHERE id = $1"
+            )
+            .bind(eid)
+            .fetch_optional(pool)
+            .await?;
+            if let Some(e) = event {
+                event_details = Some(serde_json::to_value(e)?);
             }
         }
-        _ => Ok(sqlx::query_as::<_, Alert>(
-            "UPDATE alerts SET status = $1, updated_at = now()
-                 WHERE id = $2
-                 RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
-                           source_ip::inet, dest_ip::inet, raw_data,
-                           acknowledged_by, acknowledged_at, resolved_by, resolved_at,
-                           created_at, updated_at",
-        )
-        .bind(status)
-        .bind(id)
-        .fetch_optional(pool)
-        .await?),
+
+        let mut assigned_username = None;
+        if let Some(uid) = alert.assigned_to {
+            assigned_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1").bind(uid).fetch_optional(pool).await?;
+        }
+        let mut acknowledged_username = None;
+        if let Some(uid) = alert.acknowledged_by {
+            acknowledged_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1").bind(uid).fetch_optional(pool).await?;
+        }
+        let mut resolved_username = None;
+        if let Some(uid) = alert.resolved_by {
+            resolved_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1").bind(uid).fetch_optional(pool).await?;
+        }
+
+        Ok(Some(AlertDetail {
+            alert,
+            rule_name,
+            rule_description,
+            rule_yaml,
+            event_details,
+            assigned_username,
+            acknowledged_username,
+            resolved_username,
+        }))
+    } else {
+        Ok(None)
     }
+}
+
+pub async fn get_rule(pool: &PgPool, id: Uuid) -> Result<Option<AlertRule>> {
+    Ok(sqlx::query_as::<_, AlertRule>(
+        "SELECT id, name, description, enabled, severity, condition, actions, cooldown_secs,
+                created_by, created_at, updated_at
+         FROM alert_rules WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?)
+}
+
+pub async fn get_alert_notes(pool: &PgPool, alert_id: Uuid) -> Result<Vec<AlertNote>> {
+    Ok(sqlx::query_as::<_, AlertNote>(
+        "SELECT n.id, n.alert_id, n.user_id, u.username, n.note, n.created_at \
+         FROM alert_notes n \
+         LEFT JOIN users u ON u.id = n.user_id \
+         WHERE n.alert_id = $1 \
+         ORDER BY n.created_at ASC"
+    )
+    .bind(alert_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn insert_alert_note(
+    pool: &PgPool,
+    alert_id: Uuid,
+    user_id: Option<Uuid>,
+    note: &str,
+) -> Result<AlertNote> {
+    let row = sqlx::query(
+        "INSERT INTO alert_notes (alert_id, user_id, note) VALUES ($1, $2, $3) RETURNING id, created_at"
+    )
+    .bind(alert_id)
+    .bind(user_id)
+    .bind(note)
+    .fetch_one(pool)
+    .await?;
+
+    let id: Uuid = row.get(0);
+    let created_at: DateTime<Utc> = row.get(1);
+
+    let username = if let Some(uid) = user_id {
+        sqlx::query_scalar("SELECT username FROM users WHERE id = $1").bind(uid).fetch_optional(pool).await?
+    } else {
+        None
+    };
+
+    Ok(AlertNote {
+        id,
+        alert_id,
+        user_id,
+        username,
+        note: note.to_string(),
+        created_at,
+    })
+}
+
+pub async fn bulk_update_alerts_status(
+    pool: &PgPool,
+    ids: &[Uuid],
+    status: &str,
+    user_id: Option<Uuid>,
+) -> Result<u64> {
+    let mut tx = pool.begin().await?;
+    let mut updated_count = 0;
+    
+    for id in ids {
+        let query_str = match status {
+            "acknowledged" | "investigating" => {
+                if let Some(uid) = user_id {
+                    sqlx::query("UPDATE alerts SET status = $1, acknowledged_by = $2, acknowledged_at = now(), updated_at = now() WHERE id = $3")
+                        .bind(status).bind(uid).bind(*id)
+                } else {
+                    sqlx::query("UPDATE alerts SET status = $1, updated_at = now() WHERE id = $2")
+                        .bind(status).bind(*id)
+                }
+            }
+            "resolved" | "dismissed" => {
+                if let Some(uid) = user_id {
+                    sqlx::query("UPDATE alerts SET status = $1, resolved_by = $2, resolved_at = now(), updated_at = now() WHERE id = $3")
+                        .bind(status).bind(uid).bind(*id)
+                } else {
+                    sqlx::query("UPDATE alerts SET status = $1, updated_at = now() WHERE id = $2")
+                        .bind(status).bind(*id)
+                }
+            }
+            _ => {
+                sqlx::query("UPDATE alerts SET status = $1, updated_at = now() WHERE id = $2")
+                    .bind(status).bind(*id)
+            }
+        };
+        
+        let res = query_str.execute(&mut *tx).await?;
+        updated_count += res.rows_affected();
+    }
+    
+    tx.commit().await?;
+    Ok(updated_count)
 }
 
 // ── Rules ──

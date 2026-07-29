@@ -6,7 +6,6 @@ use crate::pqc_wizard::Tls13PqcWizard;
 
 use super::DissectedResult;
 
-
 pub fn dissect_tls_pqc_wizard_scan(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,

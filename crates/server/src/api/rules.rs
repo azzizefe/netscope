@@ -31,7 +31,9 @@ pub fn routes(state: Arc<ApiState>) -> Router {
         )
         .route(
             "/{id}",
-            put(update_rule).delete(delete_rule).route_layer(write()),
+            get(get_rule_route)
+                .route_layer(from_fn(require("rules:read")))
+                .merge(put(update_rule).delete(delete_rule).route_layer(write())),
         )
         .with_state(state)
 }
@@ -90,6 +92,25 @@ async fn delete_rule(
     match queries::delete_rule(&state.pool, id).await {
         Ok(true) => (StatusCode::NO_CONTENT, ()).into_response(),
         Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "rule not found"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+async fn get_rule_route(
+    State(state): State<Arc<ApiState>>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match queries::get_rule(&state.pool, id).await {
+        Ok(Some(rule)) => (StatusCode::OK, Json(json!(rule))).into_response(),
+        Ok(None) => (
             StatusCode::NOT_FOUND,
             Json(json!({"error": "rule not found"})),
         )

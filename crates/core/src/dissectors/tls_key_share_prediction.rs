@@ -5,7 +5,6 @@ use crate::pqc_handshake::PqcHandshakeStore;
 
 use super::DissectedResult;
 
-
 fn predict_failure_rate(store: &PqcHandshakeStore) -> (usize, f64) {
     let records = &store.records;
     if records.is_empty() {
