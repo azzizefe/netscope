@@ -67,6 +67,42 @@ impl ThreatIntelEnricher {
         }
     }
 
+    /// Load threat intel API keys from environment variables.
+    pub fn from_env() -> Self {
+        let mut enricher = Self::new();
+        if let Ok(key) = std::env::var("NETSCOPE_VIRUSTOTAL_API_KEY") {
+            enricher.api_keys.virustotal_key = Some(key);
+        }
+        if let Ok(key) = std::env::var("NETSCOPE_ALIENVAULT_API_KEY") {
+            enricher.api_keys.alienvault_otx_key = Some(key);
+        }
+        if let Ok(key) = std::env::var("NETSCOPE_GREYNOISE_API_KEY") {
+            enricher.api_keys.greynoise_key = Some(key);
+        }
+        if let Ok(key) = std::env::var("NETSCOPE_SHODAN_API_KEY") {
+            enricher.api_keys.shodan_key = Some(key);
+        }
+        enricher
+    }
+
+    /// Configure VirusTotal API key.
+    pub fn with_virustotal_key(mut self, key: impl Into<String>) -> Self {
+        self.api_keys.virustotal_key = Some(key.into());
+        self
+    }
+
+    /// Configure AlienVault OTX API key.
+    pub fn with_alienvault_key(mut self, key: impl Into<String>) -> Self {
+        self.api_keys.alienvault_otx_key = Some(key.into());
+        self
+    }
+
+    /// Configure Shodan API key.
+    pub fn with_shodan_key(mut self, key: impl Into<String>) -> Self {
+        self.api_keys.shodan_key = Some(key.into());
+        self
+    }
+
     /// Enrich target IP or domain with 7 Threat Intel feeds (§1.1.3).
     pub fn enrich_target(&self, target: &str) -> ThreatIntelEnrichment {
         let mut intel = ThreatIntelEnrichment {
@@ -134,5 +170,15 @@ mod tests {
         assert!(intel.urlhaus_malicious_domain);
         assert_eq!(intel.alienvault_otx_pulses, Some(12));
         assert!(intel.shodan_open_ports.contains(&8080));
+    }
+
+    #[test]
+    fn test_api_key_configuration() {
+        let enricher = ThreatIntelEnricher::new()
+            .with_virustotal_key("vt_test_key_12345")
+            .with_shodan_key("shodan_test_key_67890");
+
+        assert_eq!(enricher.api_keys.virustotal_key.as_deref(), Some("vt_test_key_12345"));
+        assert_eq!(enricher.api_keys.shodan_key.as_deref(), Some("shodan_test_key_67890"));
     }
 }
