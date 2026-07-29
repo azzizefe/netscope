@@ -52,7 +52,7 @@ pub struct ShiftRotation {
 /// With delivery moved out, the engine is pure time-and-state logic (and
 /// testable without a socket), and every channel goes through the one delivery
 /// path that already reports failures.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EscalationNotice {
     pub alert_id: String,
     pub rule_name: String,

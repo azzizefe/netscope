@@ -383,14 +383,14 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 6.1 — Yerel İstatistiksel Baseline & Anormallik Skorlaması
 
-- [ ] **6.1.1** **Hareketli Taban Çizgisi (Rolling Baseline)** — Her sensör için 100% yerel EWMA (Exponentially Weighted Moving Average) & Welford algoritması ile:
+- [x] **6.1.1** **Hareketli Taban Çizgisi (Rolling Baseline)** — Her sensör için 100% yerel EWMA (Exponentially Weighted Moving Average) & Welford algoritması ile:
   - pkt/s, bytes/s, connection/s
   - Benzersiz kaynak IP, hedef IP, hedef port sayıları
   - Protokol dağılım oranları (%TCP, %UDP, %TLS, %DNS)
-- [ ] **6.1.2** **Mevsimsel Saat/Gün Matrisi** — Haftanın günü ve saate göre lokal geçmiş matrisi (Pazartesi 09:00 normal trafik profili)
-- [ ] **6.1.3** **Z-Score & IQR Outlier Tespiti** — Yerel standart sapma ve Interquartile Range (IQR) ile anormallik skorlaması
-- [ ] **6.1.4** **Shannon Entropi Hesaplama Motoru** — IP/Port dağılımı ve paket yükü entropisi üzerinden şüpheli tünelleme tespiti (Zero-token)
-- [ ] **6.1.5** **Pencere Tabanlı Frekans Analizi** — Son N saniyedeki kayan pencere (sliding window) bağlantı ve burst oranları
+- [x] **6.1.2** **Mevsimsel Saat/Gün Matrisi** — Haftanın günü ve saate göre lokal geçmiş matrisi (Pazartesi 09:00 normal trafik profili)
+- [x] **6.1.3** **Z-Score & IQR Outlier Tespiti** — Yerel standart sapma ve Interquartile Range (IQR) ile anormallik skorlaması
+- [x] **6.1.4** **Shannon Entropi Hesaplama Motoru** — IP/Port dağılımı ve paket yükü entropisi üzerinden şüpheli tünelleme tespiti (Zero-token)
+- [x] **6.1.5** **Pencere Tabanlı Frekans Analizi** — Son N saniyedeki kayan pencere (sliding window) bağlantı ve burst oranları
 
 ### 6.2 — Deterministik Triage & Kural Tabanlı Önceliklendirme
 

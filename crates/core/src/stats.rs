@@ -60,6 +60,7 @@ pub struct StatsEngine {
     icmp_bytes: u64,
     llm: LlmAnalytics,
     ai_traffic: AiTrafficTracker,
+    pub baseline: crate::baseline::BaselineEngine,
 }
 
 impl Default for StatsEngine {
@@ -97,6 +98,7 @@ impl StatsEngine {
             icmp_bytes: 0,
             llm: LlmAnalytics::default(),
             ai_traffic: AiTrafficTracker::new(),
+            baseline: crate::baseline::BaselineEngine::new(),
         }
     }
 
@@ -105,6 +107,11 @@ impl StatsEngine {
         let bytes = packet.length as u64;
         self.total_bytes += bytes;
         self.bytes_this_second += bytes;
+
+        use chrono::{Datelike, Timelike};
+        let day = packet.timestamp.weekday().num_days_from_monday();
+        let hour = packet.timestamp.hour();
+        let _ = self.baseline.process_packet(packet, day, hour);
 
         // Buckets: 0-79, 80-639, 640-1279, 1280-1500, >1500
         if packet.length <= 79 {

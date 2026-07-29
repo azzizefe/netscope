@@ -745,8 +745,14 @@ fn adopt_capture(
     guard.alert_engine = Some(AlertEngine::new(default_alert_rules()));
     drop(guard);
 
-    let notifier = spawn_alert_notifier(app);
-    spawn_escalation_ticker(app);
+    // The notifier and the escalation ticker are app-lifetime, built once at
+    // startup. They used to be created here, so every capture start spawned
+    // another ticker thread that looped forever alongside the previous one.
+    let notifier = app
+        .state::<NotifierState>()
+        .inner()
+        .tx
+        .clone();
 
     let app_handle = app.clone();
     std::thread::spawn(move || {
@@ -786,7 +792,7 @@ fn adopt_capture(
                             }
                         }
                         if let Some(tx) = &notifier {
-                            let _ = tx.send(a);
+                            let _ = tx.send(Dispatch::Alert(a));
                         }
                     }
                 }
@@ -886,6 +892,15 @@ fn spawn_alert_notifier(app: &AppHandle) -> Option<crossbeam_channel::Sender<Dis
 struct NotificationError {
     channel: String,
     error: String,
+}
+
+/// The app-lifetime handle on the notifier queue.
+///
+/// Built once at startup so the delivery thread and the escalation ticker
+/// outlive any single capture, and so starting a capture twice cannot spawn a
+/// second copy of either.
+struct NotifierState {
+    tx: Option<crossbeam_channel::Sender<Dispatch>>,
 }
 
 /// What the notifier thread delivers.
@@ -992,13 +1007,13 @@ struct EscalationStatus {
 /// escalation to traffic arriving, which is backwards: the case that matters
 /// most is an alert on a link that then goes quiet. A 15-second tick is far
 /// finer than the minutes-long steps it drives.
-fn spawn_escalation_ticker(app: &AppHandle) {
+fn spawn_escalation_ticker(app: &AppHandle, notifier: Option<crossbeam_channel::Sender<Dispatch>>) {
     let app_handle = app.clone();
     std::thread::spawn(move || {
         loop {
             std::thread::sleep(std::time::Duration::from_secs(15));
             let state = app_handle.state::<Mutex<EscalationState>>();
-            let messages = {
+            let notices = {
                 let Ok(mut guard) = state.lock() else { break };
                 match guard.engine.as_mut() {
                     Some(engine) => engine.process_escalations(chrono::Utc::now()),
@@ -1007,8 +1022,22 @@ fn spawn_escalation_ticker(app: &AppHandle) {
                     None => Vec::new(),
                 }
             };
-            for m in messages {
-                let _ = app_handle.emit("escalation", m);
+            for notice in notices {
+                // Tell the UI a rung came due…
+                let _ = app_handle.emit("escalation", &notice);
+                // …and actually page the on-call. Without this the chain only
+                // ever produced text: the engine's own delivery had no arm for
+                // Slack or Email, so L1 and L2 reached nobody.
+                match &notifier {
+                    Some(tx) => {
+                        let _ = tx.send(Dispatch::Escalation(notice));
+                    }
+                    None => report_delivery(
+                        &app_handle,
+                        &notice.channel,
+                        Err("Escalation fired but no delivery channel is configured".into()),
+                    ),
+                }
             }
         }
     });
@@ -1775,6 +1804,16 @@ pub fn run() {
         .manage(Mutex::new(geo))
         .manage(Mutex::new(config_state))
         .manage(Mutex::new(escalation_state))
+        .setup(|app| {
+            // Delivery and the escalation clock are app-lifetime, not
+            // per-capture: an alert raised during one capture must keep
+            // climbing the chain after that capture stops.
+            let handle = app.handle();
+            let tx = spawn_alert_notifier(handle);
+            spawn_escalation_ticker(handle, tx.clone());
+            app.manage(NotifierState { tx });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             list_interfaces,
             arp_scan,
