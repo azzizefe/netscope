@@ -337,12 +337,12 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 4.3 — Ticketing Entegrasyonu
 
-- [ ] **4.3.1** **Jira** — REST API (create issue, transition, comment, close)
-- [ ] **4.3.2** **ServiceNow** — Table API
-- [ ] **4.3.3** **TheHive** — open-source case management API
-- [ ] **4.3.4** **Linear** — GraphQL API
-- [ ] **4.3.5** **GitHub Issues** — repo'ya issue aç (iç takım için)
-- [ ] **4.3.6** İki yönlü sync — ticket kapandığında alert de kapanır, alert kapandığında ticket da kapanır
+- [x] **4.3.1** **Jira** — REST API (create issue, transition, comment, close)
+- [x] **4.3.2** **ServiceNow** — Table API
+- [x] **4.3.3** **TheHive** — open-source case management API
+- [x] **4.3.4** **Linear** — GraphQL API
+- [x] **4.3.5** **GitHub Issues** — repo'ya issue aç (iç takım için)
+- [x] **4.3.6** İki yönlü sync — ticket kapandığında alert de kapanır, alert kapandığında ticket da kapanır
 
 ---
 
