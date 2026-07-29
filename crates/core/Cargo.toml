@@ -49,6 +49,17 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 memmap2 = "0.9"
 rcgen = { version = "0.13", default-features = false, features = ["pem", "ring"] }
 ureq = { version = "2.9", default-features = false, features = ["tls", "json"] }
+# Real SMTP. `send_email` used to open a TCP socket, write EHLO/MAIL FROM/DATA
+# with `let _ = write_all(..)`, never read a single reply, and return Ok(()) as
+# long as the connect succeeded — a 550 rejection was reported as a sent mail.
+# Hand-rolling SMTP with STARTTLS and AUTH is exactly the work that produced
+# that bug. `rustls` is already in the graph via ureq's `tls` feature.
+lettre = { version = "0.11", default-features = false, features = [
+    "smtp-transport",
+    "rustls-tls",
+    "builder",
+    "hostname",
+] }
 
 
 [features]

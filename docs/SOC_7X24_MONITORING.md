@@ -406,20 +406,20 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 7.1 — Platform Güvenliği
 
-- [ ] **7.1.1** **RBAC** — role-based access control:
+- [x] **7.1.1** **RBAC** — role-based access control:
   - `admin` — her şey
   - `soc_manager` — alert yönetimi, raporlar, kullanıcı yönetimi
   - `soc_analyst_l2` — alert acknowledge, incident oluşturma, kural önerme
   - `soc_analyst_l1` — sadece alert görüntüleme, triage
   - `readonly` — dashboard görüntüleme
   - `auditor` — sadece rapor ve audit log
-- [ ] **7.1.2** **MFA** — TOTP, WebAuthn (YubiKey) desteği
-- [ ] **7.1.3** **SSO** — SAML 2.0, OIDC (Azure AD, Okta, Keycloak)
-- [ ] **7.1.4** **API key** — servis hesabı için scoped API key (sadece event push, sadece alert read, ...)
-- [ ] **7.1.5** **Audit log** — her kullanıcı aksiyonu kayıt altında (kim, ne zaman, ne yaptı, hangi IP'den)
-- [ ] **7.1.6** **Tamper-proof log** — audit log'lar append-only, hash chain ile bütünlük doğrulamalı
-- [ ] **7.1.7** **Secret management** — API key, token, password'ler için HashiCorp Vault / AWS Secrets Manager entegrasyonu
-- [ ] **7.1.8** **Vulnerability scanning** — kendi ürününün bağımlılıklarını `cargo audit` + `npm audit` + Trivy ile tara, CI'da zorunlu
+- [x] **7.1.2** **MFA** — TOTP, WebAuthn (YubiKey) desteği
+- [x] **7.1.3** **SSO** — SAML 2.0, OIDC (Azure AD, Okta, Keycloak)
+- [x] **7.1.4** **API key** — servis hesabı için scoped API key (sadece event push, sadece alert read, ...)
+- [x] **7.1.5** **Audit log** — her kullanıcı aksiyonu kayıt altında (kim, ne zaman, ne yaptı, hangi IP'den)
+- [x] **7.1.6** **Tamper-proof log** — audit log'lar append-only, hash chain ile bütünlük doğrulamalı
+- [x] **7.1.7** **Secret management** — API key, token, password'ler için HashiCorp Vault / AWS Secrets Manager entegrasyonu
+- [x] **7.1.8** **Vulnerability scanning** — kendi ürününün bağımlılıklarını `cargo audit` + `npm audit` + Trivy ile tara, CI'da zorunlu
 
 ### 7.2 — Veri Gizliliği
 

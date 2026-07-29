@@ -67,6 +67,7 @@ pub mod pqc_rules;
 pub mod pqc_wizard;
 pub mod protocol_risk;
 pub mod registry;
+pub mod security;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]
