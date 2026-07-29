@@ -980,6 +980,42 @@ mod tests {
     }
 
     #[test]
+    /// Every sink the exporter carries must be settable from outside.
+    ///
+    /// `SiemExporter` used to declare eighteen sink fields and configure three.
+    /// The other fifteen — Sentinel, AWS Security Lake, Chronicle, Kafka, Loki,
+    /// a Wazuh socket, and the four TCP/UDP forwarders — were hardcoded to
+    /// `None` in `new` with no setter, so `flush_batch` carried five branches
+    /// that could never run. The struct advertised integrations that did not
+    /// exist. This pins that what remains is reachable.
+    #[test]
+    fn every_sink_is_reachable_from_a_constructor() {
+        let e = SiemExporter::new(
+            Some("http://es.example:9200".into()),
+            Some("https://splunk.example".into()),
+            Some("token".into()),
+        )
+        .with_splunk_tcp("127.0.0.1:1514")
+        .with_splunk_udp("127.0.0.1:1515")
+        .with_gelf_tcp("127.0.0.1:12201")
+        .with_gelf_udp("127.0.0.1:12202")
+        .with_wazuh_file("/tmp/netscope-wazuh.json");
+
+        for (name, set) in [
+            ("es_url", e.es_url.is_some()),
+            ("splunk_url", e.splunk_url.is_some()),
+            ("splunk_token", e.splunk_token.is_some()),
+            ("splunk_tcp_addr", e.splunk_tcp_addr.is_some()),
+            ("splunk_udp_addr", e.splunk_udp_addr.is_some()),
+            ("gelf_tcp_addr", e.gelf_tcp_addr.is_some()),
+            ("gelf_udp_addr", e.gelf_udp_addr.is_some()),
+            ("wazuh_file_path", e.wazuh_file_path.is_some()),
+        ] {
+            assert!(set, "{name} has no public way to configure it");
+        }
+    }
+
+    #[test]
     fn test_network_sinks_tcp_and_udp() {
         // Start TCP mock server
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();

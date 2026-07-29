@@ -70,7 +70,7 @@ Her event, 7 katmanda zenginleştirilir:
   - [x] HTTP User-Agent → OS/browser tespiti
   - [x] Active Directory OU → departman
 
-- [ ] **1.1.2** **Katman 2 — Protokol Semantik (Protocol Semantics):**
+- [x] **1.1.2** **Katman 2 — Protokol Semantik (Protocol Semantics):**
   ```
   Ham:  "TCP 10.0.1.47:52134 → 10.0.5.18:445 SYN"
   
@@ -86,9 +86,9 @@ Her event, 7 katmanda zenginleştirilir:
   Bu seviyede analiz **sadece netscope'un 250+ protokol dissector'ı ile mümkün**.
   Splunk/ELK bu trafiği sadece "TCP 445" olarak görür.
 
-  - [ ] Her dissector, SIEM event'ine **semantic summary** üretsin
-  - [ ] Protokol seviyesinde risk flag'leri: `signing=disabled`, `encryption=none`, `weak_cipher=TLS_RSA_WITH_RC4_128_MD5`
-  - [ ] Protokol parametreleri event fields olarak expose edilsin (filtrelenebilir)
+  - [x] Her dissector, SIEM event'ine **semantic summary** üretsin
+  - [x] Protokol seviyesinde risk flag'leri: `signing=disabled`, `encryption=none`, `weak_cipher=TLS_RSA_WITH_RC4_128_MD5`
+  - [x] Protokol parametreleri event fields olarak expose edilsin (filtrelenebilir)
 
 - [ ] **1.1.3** **Katman 3 — Tehdit İstihbaratı (Threat Intelligence):**
   ```
