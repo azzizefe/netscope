@@ -448,19 +448,19 @@ pub async fn dashboard_summary(pool: &PgPool) -> Result<DashboardSummary> {
     .await?;
 
     let open_alerts_l1: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::bigint FROM alerts WHERE status NOT IN ('resolved','dismissed') AND severity IN ('low','info')",
+        "SELECT COUNT(*)::bigint FROM alerts WHERE status = 'open' AND severity IN ('low','info')",
     )
     .fetch_one(pool)
     .await?;
 
     let open_alerts_l2: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::bigint FROM alerts WHERE status NOT IN ('resolved','dismissed') AND severity = 'medium'",
+        "SELECT COUNT(*)::bigint FROM alerts WHERE status = 'open' AND severity = 'medium'",
     )
     .fetch_one(pool)
     .await?;
 
     let open_alerts_l3: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::bigint FROM alerts WHERE status NOT IN ('resolved','dismissed') AND severity IN ('high','critical')",
+        "SELECT COUNT(*)::bigint FROM alerts WHERE status = 'open' AND severity IN ('high','critical')",
     )
     .fetch_one(pool)
     .await?;

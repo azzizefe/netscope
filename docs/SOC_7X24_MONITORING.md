@@ -219,20 +219,20 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 3.1 — Ana Dashboard
 
-- [ ] **3.1.1** **7×24 Overview** — tek ekranda tüm sensörlerin durumu:
-  - [ ] Aktif sensör sayısı + online/offline badge
-  - [ ] Son 24 saatte toplam event sayısı
-  - [ ] Açık (acknowledge edilmemiş) alert sayısı (L1/L2/L3 kırılımlı)
-  - [ ] Son 1 saatte alert trend sparkline'ı
-  - [ ] Top 5 attacker src IP (iç + dış)
-  - [ ] Top 5 targeted dst IP
-  - [ ] Protocol distribution pie chart
-  - [ ] Network throughput (aggregate, tüm sensörler)
-  - [ ] MTTR (Mean Time to Resolve) son 7 gün
-  - [ ] False positive oranı son 7 gün
-- [ ] **3.1.2** **Dark theme** default — SOC operatörleri karanlık odada çalışır (mevcut Midnight/Dracula/Nord tema'larını Web UI'a portla)
-- [ ] **3.1.3** **Auto-refresh** — 5 saniyede bir WebSocket üzerinden canlı güncelleme
-- [ ] **3.1.4** **Responsive** — 1080p, 1440p, 4K ve ultrawide (21:9, 32:9) monitörler için fluid layout
+- [x] **3.1.1** **7×24 Overview** — tek ekranda tüm sensörlerin durumu:
+  - [x] Aktif sensör sayısı + online/offline badge
+  - [x] Son 24 saatte toplam event sayısı
+  - [x] Açık (acknowledge edilmemiş) alert sayısı (L1/L2/L3 kırılımlı)
+  - [x] Son 1 saatte alert trend sparkline'ı
+  - [x] Top 5 attacker src IP (iç + dış)
+  - [x] Top 5 targeted dst IP
+  - [x] Protocol distribution pie chart
+  - [x] Network throughput (aggregate, tüm sensörler)
+  - [x] MTTR (Mean Time to Resolve) son 7 gün
+  - [x] False positive oranı son 7 gün
+- [x] **3.1.2** **Dark theme** default — SOC operatörleri karanlık odada çalışır (mevcut Midnight/Dracula/Nord tema'larını Web UI'a portla)
+- [x] **3.1.3** **Auto-refresh** — 5 saniyede bir WebSocket üzerinden canlı güncelleme
+- [x] **3.1.4** **Responsive** — 1080p, 1440p, 4K ve ultrawide (21:9, 32:9) monitörler için fluid layout
 
 ### 3.2 — Sensör Yönetimi
 

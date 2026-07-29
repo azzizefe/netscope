@@ -14,19 +14,19 @@
         /* Base Themes */
         :root {
             /* Default: Midnight Theme */
-            --bg-color: #0b0f19;
-            --panel-bg: #161b26;
-            --border-color: #232d3f;
-            --text-primary: #f3f4f6;
-            --text-secondary: #9ca3af;
-            --accent-primary: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.15);
+            --bg-color: #0f1520;
+            --panel-bg: #161d2b;
+            --border-color: #2a3547;
+            --text-primary: #e6ebf2;
+            --text-secondary: #8b98ab;
+            --accent-primary: #4a9ef5;
+            --accent-glow: rgba(74, 158, 245, 0.15);
             
             --critical-color: #ef4444;
             --high-color: #f97316;
             --medium-color: #eab308;
             --low-color: #10b981;
-            --info-color: #3b82f6;
+            --info-color: #4a9ef5;
             
             --critical-glow: rgba(239, 68, 68, 0.2);
             --high-glow: rgba(249, 115, 22, 0.2);
@@ -36,12 +36,12 @@
 
         [data-theme="dracula"] {
             --bg-color: #282a36;
-            --panel-bg: #44475a;
-            --border-color: #6272a4;
+            --panel-bg: #2f3140;
+            --border-color: #44475a;
             --text-primary: #f8f8f2;
             --text-secondary: #ff79c6;
             --accent-primary: #bd93f9;
-            --accent-glow: rgba(189, 147, 249, 0.2);
+            --accent-glow: rgba(189, 147, 249, 0.15);
 
             --critical-color: #ff5555;
             --high-color: #ffb86c;
@@ -49,20 +49,20 @@
             --low-color: #50fa7b;
             --info-color: #8be9fd;
             
-            --critical-glow: rgba(255, 85, 85, 0.25);
-            --high-glow: rgba(255, 184, 108, 0.25);
-            --medium-glow: rgba(241, 250, 140, 0.25);
-            --low-glow: rgba(80, 250, 123, 0.25);
+            --critical-glow: rgba(255, 85, 85, 0.2);
+            --high-glow: rgba(255, 184, 108, 0.2);
+            --medium-glow: rgba(241, 250, 140, 0.2);
+            --low-glow: rgba(80, 250, 123, 0.2);
         }
 
         [data-theme="nord"] {
             --bg-color: #2e3440;
             --panel-bg: #3b4252;
             --border-color: #4c566a;
-            --text-primary: #d8dee9;
+            --text-primary: #eceff4;
             --text-secondary: #88c0d0;
             --accent-primary: #81a1c1;
-            --accent-glow: rgba(129, 161, 193, 0.2);
+            --accent-glow: rgba(129, 161, 193, 0.15);
 
             --critical-color: #bf616a;
             --high-color: #d08770;
@@ -70,10 +70,10 @@
             --low-color: #a3be8c;
             --info-color: #88c0d0;
             
-            --critical-glow: rgba(191, 97, 106, 0.25);
-            --high-glow: rgba(208, 135, 112, 0.25);
-            --medium-glow: rgba(235, 203, 139, 0.25);
-            --low-glow: rgba(163, 190, 140, 0.25);
+            --critical-glow: rgba(191, 97, 106, 0.2);
+            --high-glow: rgba(208, 135, 112, 0.2);
+            --medium-glow: rgba(235, 203, 139, 0.2);
+            --low-glow: rgba(163, 190, 140, 0.2);
         }
 
         * {
@@ -160,6 +160,16 @@
         @media (max-width: 768px) {
             .dashboard-container {
                 grid-template-columns: 1fr;
+            }
+        }
+
+        @media (min-width: 2560px) {
+            .dashboard-container {
+                max-width: 2200px;
+                margin: 0 auto;
+                width: 100%;
+                gap: 2rem;
+                padding: 2.5rem;
             }
         }
 
@@ -428,7 +438,7 @@
         <div class="panel">
             <div class="panel-header">
                 <div class="panel-title">Sensors Status</div>
-                <span class="status-badge status-online">
+                <span class="status-badge status-online" id="sensor-status-badge">
                     <span class="status-dot"></span> Active
                 </span>
             </div>
@@ -449,7 +459,7 @@
         <!-- Panel 3: Open Alerts Break Down -->
         <div class="panel">
             <div class="panel-header">
-                <div class="panel-title">Unresolved Alerts</div>
+                <div class="panel-title">Open Alerts</div>
                 <div class="sparkline-container">
                     <canvas id="alert-trend-sparkline"></canvas>
                 </div>
@@ -581,6 +591,10 @@
 
         // On Load Check
         window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('netscope_dashboard_theme') || 'midnight';
+            changeTheme(savedTheme);
+            document.getElementById('theme-selector').value = savedTheme;
+
             if (jwtToken) {
                 document.getElementById('login-overlay').style.display = 'none';
                 initializeDashboard();
@@ -622,10 +636,34 @@
         // Theme switching
         function changeTheme(theme) {
             document.body.setAttribute('data-theme', theme);
-            // Refresh chart colors based on theme if charts exist
-            if (charts.protocol) {
+            localStorage.setItem('netscope_dashboard_theme', theme);
+            updateChartColors();
+        }
+
+        // Helper to update chart styling dynamically from active CSS variables
+        function updateChartColors() {
+            if (!charts || !charts.throughput || !charts.protocol) return;
+
+            requestAnimationFrame(() => {
+                const bodyStyle = getComputedStyle(document.body);
+                const borderCol = bodyStyle.getPropertyValue('--border-color').trim() || '#2a3547';
+                const textSec = bodyStyle.getPropertyValue('--text-secondary').trim() || '#8b98ab';
+                const accent = bodyStyle.getPropertyValue('--accent-primary').trim() || '#4a9ef5';
+                const accentGlow = bodyStyle.getPropertyValue('--accent-glow').trim() || 'rgba(74, 158, 245, 0.15)';
+
+                // Update Throughput Chart colors
+                charts.throughput.options.scales.x.grid.color = borderCol;
+                charts.throughput.options.scales.x.ticks.color = textSec;
+                charts.throughput.options.scales.y.grid.color = borderCol;
+                charts.throughput.options.scales.y.ticks.color = textSec;
+                charts.throughput.data.datasets[0].borderColor = accent;
+                charts.throughput.data.datasets[0].backgroundColor = accentGlow;
+                charts.throughput.update();
+
+                // Update Protocol Chart border color
+                charts.protocol.data.datasets[0].borderColor = borderCol;
                 charts.protocol.update();
-            }
+            });
         }
 
         // Fetch metrics
@@ -654,17 +692,43 @@
         // Update indicators
         function updateUI(data) {
             document.getElementById('val-sensors').innerText = `${data.online_sensors} / ${data.total_sensors}`;
+            
+            // Sensor Online/Offline Badge Update
+            const sensorBadge = document.getElementById('sensor-status-badge');
+            if (sensorBadge) {
+                if (data.online_sensors > 0) {
+                    sensorBadge.className = 'status-badge status-online';
+                    sensorBadge.innerHTML = '<span class="status-dot"></span> Online';
+                } else {
+                    sensorBadge.className = 'status-badge status-offline';
+                    sensorBadge.innerHTML = '<span class="status-dot"></span> Offline';
+                }
+            }
+
             document.getElementById('val-events-24h').innerText = data.total_events_24h.toLocaleString();
             document.getElementById('val-eps').innerText = `${data.events_per_second.toFixed(2)} events / sec`;
-            document.getElementById('val-alerts-total').innerText = data.active_alerts;
+            
+            // Open Alerts (Unacknowledged) total count
+            const openAlertsTotal = data.open_alerts_l1 + data.open_alerts_l2 + data.open_alerts_l3;
+            document.getElementById('val-alerts-total').innerText = openAlertsTotal;
             
             document.getElementById('val-alerts-l1').innerText = data.open_alerts_l1;
             document.getElementById('val-alerts-l2').innerText = data.open_alerts_l2;
             document.getElementById('val-alerts-l3').innerText = data.open_alerts_l3;
 
             // MTTR & FP Rate
-            const mttrMin = (data.mttr_seconds_7d / 60).toFixed(1);
-            document.getElementById('val-mttr').innerText = `${mttrMin}m`;
+            const mttrSec = data.mttr_seconds_7d;
+            let mttrDisplay = '0s';
+            if (mttrSec > 0) {
+                if (mttrSec < 60) {
+                    mttrDisplay = `${mttrSec.toFixed(0)}s`;
+                } else if (mttrSec < 3600) {
+                    mttrDisplay = `${(mttrSec / 60).toFixed(1)}m`;
+                } else {
+                    mttrDisplay = `${(mttrSec / 3600).toFixed(1)}h`;
+                }
+            }
+            document.getElementById('val-mttr').innerText = mttrDisplay;
             document.getElementById('val-fp-rate').innerText = `FP: ${(data.false_positive_rate_7d * 100).toFixed(1)}%`;
 
             // Throughput Bps to Kbps/Mbps conversion
@@ -888,6 +952,9 @@
 
             // Poll metrics every 5 seconds
             setInterval(fetchMetrics, 5000);
+
+            // Apply theme colors to chart elements initially
+            updateChartColors();
         }
     </script>
 </body>
