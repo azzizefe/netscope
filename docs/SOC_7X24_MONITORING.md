@@ -495,9 +495,9 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 9.2 — Test Verisi
 
-- [ ] **9.2.1** **Synthetic traffic generator** — normal + şüpheli trafik üreten araç (mevcut `gen-fixtures` iyileştir)
-- [ ] **9.2.2** **Malicious pcap library** — C2 beaconing, DGA DNS, SQLi, port scan, SMB exploit içeren pcap koleksiyonu
-- [ ] **9.2.3** **Benchmark dataset** — 100 GB'lık gerçek enterprise network capture (anonimleştirilmiş)
+- [x] **9.2.1** **Synthetic traffic generator** — normal + şüpheli trafik üreten araç (mevcut `gen-fixtures` iyileştir)
+- [x] **9.2.2** **Malicious pcap library** — C2 beaconing, DGA DNS, SQLi, port scan, SMB exploit içeren pcap koleksiyonu
+- [x] **9.2.3** **Benchmark dataset** — 100 GB'lık gerçek enterprise network capture (anonimleştirilmiş)
 
 ---
 
@@ -505,13 +505,13 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 10.1 — Operasyonel Dokümanlar
 
-- [ ] **10.1.1** **SOC Admin Guide** — kurulum, yapılandırma, HA, backup/restore, troubleshooting
-- [ ] **10.1.2** **SOC Analyst Playbook** — alert triage, incident response, threat hunting adımları
-- [ ] **10.1.3** **Rule Writing Guide** — etkili alert kuralı yazma rehberi, false positive azaltma
-- [ ] **10.1.4** **API Reference** — OpenAPI 3.1 spec, tüm endpoint'ler dokümante
-- [ ] **10.1.5** **Runbook library** — her alert tipi için adım adım müdahale runbook'u
-- [ ] **10.1.6** **Architecture Decision Records (ADR)** — mimari kararların nedenleri
-- [ ] **10.1.7** **Hardware sizing guide** — sensör/server için CPU/RAM/disk/network gereksinimleri
+- [x] **10.1.1** **SOC Admin Guide** — kurulum, yapılandırma, HA, backup/restore, troubleshooting
+- [x] **10.1.2** **SOC Analyst Playbook** — alert triage, incident response, threat hunting adımları
+- [x] **10.1.3** **Rule Writing Guide** — etkili alert kuralı yazma rehberi, false positive azaltma
+- [x] **10.1.4** **API Reference** — OpenAPI 3.1 spec, tüm endpoint'ler dokümante
+- [x] **10.1.5** **Runbook library** — her alert tipi için adım adım müdahale runbook'u
+- [x] **10.1.6** **Architecture Decision Records (ADR)** — mimari kararların nedenleri
+- [x] **10.1.7** **Hardware sizing guide** — sensör/server için CPU/RAM/disk/network gereksinimleri
 
 ### 10.2 — Eğitim
 

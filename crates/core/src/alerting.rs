@@ -127,12 +127,16 @@ pub struct Alert {
     pub historical_alerts_count_24h: usize,
 }
 
+/// Per-flow sliding windows for one threshold rule: `(src, dst)` to the capture
+/// timestamps of the matches still inside the window.
+type ThresholdWindows = HashMap<(String, String), VecDeque<DateTime<Utc>>>;
+
 pub struct AlertEngine {
     pub rules: Vec<AlertRule>,
     compiled_filters: HashMap<String, Filter>,
 
     // Threshold state: rule_name -> (src_ip, dst_ip) -> queue of matched timestamps
-    threshold_history: HashMap<String, HashMap<(String, String), VecDeque<DateTime<Utc>>>>,
+    threshold_history: HashMap<String, ThresholdWindows>,
 
     // Absence state: rule_name -> last_seen_instant
     absence_history: HashMap<String, DateTime<Utc>>,

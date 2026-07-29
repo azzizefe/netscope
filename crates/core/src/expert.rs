@@ -27,7 +27,8 @@ impl ExpertSeverity {
 /// `"304"` matched a 1304-byte length, port 3040 and the address `10.3.0.4`.
 /// Splitting on non-alphanumerics compares whole tokens instead.
 fn has_token(s: &str, token: &str) -> bool {
-    s.contains(token)
+    s.split(|c: char| !c.is_ascii_alphanumeric())
+        .any(|word| word.eq_ignore_ascii_case(token))
 }
 
 /// Rank a packet the way Wireshark's expert info does.
@@ -111,8 +112,14 @@ mod tests {
 
     #[test]
     fn error_keywords() {
-        assert_eq!(classify(&pkt("[RST] connection aborted")), ExpertSeverity::Error);
-        assert_eq!(classify(&pkt("Connection reset by peer")), ExpertSeverity::Error);
+        assert_eq!(
+            classify(&pkt("[RST] connection aborted")),
+            ExpertSeverity::Error
+        );
+        assert_eq!(
+            classify(&pkt("Connection reset by peer")),
+            ExpertSeverity::Error
+        );
         assert_eq!(classify(&pkt("Malformed packet")), ExpertSeverity::Error);
         assert_eq!(classify(&pkt("unreachable")), ExpertSeverity::Error);
         assert_eq!(classify(&pkt("bad checksum")), ExpertSeverity::Error);

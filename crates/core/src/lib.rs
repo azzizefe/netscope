@@ -58,6 +58,7 @@ pub mod names;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod notifications;
 pub mod opc_ua_traffic;
+pub mod op_docs;
 pub mod pair_correlation;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pcapng;
@@ -83,6 +84,7 @@ pub mod siem;
 pub mod stats;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stream;
+pub mod test_data;
 pub mod test_strategy;
 pub mod threat;
 pub mod tls_keylog;
