@@ -53,7 +53,14 @@ pub struct SuricataRule {
 
 impl SuricataRule {
     pub fn matches(&self, pkt: &Packet) -> bool {
-        // 1. Check protocol
+        // 1. Check protocol.
+        //
+        // The fallthrough here used to be `_ => {}`, so a rule written for a
+        // protocol this matcher cannot evaluate — `alert http`, `alert tls`,
+        // `alert dns` — skipped the protocol test entirely and went on to match
+        // on content alone, against every packet on the wire. `parse_rule` now
+        // refuses those rules outright; this arm stays as a closed door rather
+        // than an open one.
         match self.protocol.as_str() {
             "tcp" => {
                 if pkt.protocol == Protocol::Udp
@@ -72,7 +79,7 @@ impl SuricataRule {
                 }
             }
             "ip" => {}
-            _ => {}
+            _ => return false,
         }
 
         // 2. Check ports (if not "any")
@@ -212,9 +219,26 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
                 "reference" => reference.push(v.to_string()),
                 "rev" => rev = v.parse().unwrap_or(1),
                 "flow" => flow = Some(v.to_string()),
-                _ => {}
+                // Anything else narrows the rule, and dropping it widens what
+                // the rule matches. `nocase`, `depth`, `offset`, `distance`,
+                // `within`, `pcre`, `threshold`, `http_uri` and the rest all
+                // restrict a match; honouring only `content` turns a precise
+                // signature into a substring search over every packet. In a SOC
+                // that is a false positive nobody can explain, so the rule is
+                // refused rather than silently broadened.
+                other => {
+                    unsupported.push(other.to_string());
+                }
             }
         }
+    }
+
+    if !unsupported.is_empty() {
+        return Err(format!(
+            "rule sid:{sid} uses unsupported option(s): {}. \
+             Supported: msg, content, sid, classtype, reference, rev, flow.",
+            unsupported.join(", "),
+        ));
     }
 
     Some(SuricataRule {

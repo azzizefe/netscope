@@ -473,11 +473,11 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 8.4 — Deployment
 
-- [ ] **8.4.1** **Docker Compose** — tek komutla server + DB + Redis + UI ayağa kaldırma
-- [ ] **8.4.2** **Kubernetes Helm chart** — production-grade, tüm bileşenler
-- [ ] **8.4.3** **Air-gapped deployment** — internet olmayan ortamda çalışabilme (offline MaxMind, offline NTP)
-- [ ] **8.4.4** **Ansible playbook** — sensörlerin toplu kurulumu için
-- [ ] **8.4.5** **Terraform module** — bulut altyapısını (VM, VPC, subnet, mirror) otomatik kurma
+- [x] **8.4.1** **Docker Compose** — tek komutla server + DB + Redis + UI ayağa kaldırma
+- [x] **8.4.2** **Kubernetes Helm chart** — production-grade, tüm bileşenler
+- [x] **8.4.3** **Air-gapped deployment** — internet olmayan ortamda çalışabilme (offline MaxMind, offline NTP)
+- [x] **8.4.4** **Ansible playbook** — sensörlerin toplu kurulumu için
+- [x] **8.4.5** **Terraform module** — bulut altyapısını (VM, VPC, subnet, mirror) otomatik kurma
 
 ---
 

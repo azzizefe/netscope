@@ -25,6 +25,7 @@ pub mod config;
 pub mod crypto;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod db;
+pub mod deployment;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod discover;
 pub mod dissectors;
