@@ -450,11 +450,11 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 8.1 — Yüksek Erişilebilirlik (HA)
 
-- [ ] **8.1.1** **Active-Passive failover** — 2 server, floating IP / keepalived
-- [ ] **8.1.2** **Active-Active cluster** — N server, PostgreSQL streaming replication, Redis Sentinel
-- [ ] **8.1.3** **Load balancer** — sensörler HAProxy/Nginx upstream'a bağlanır, sticky session
-- [ ] **8.1.4** **Disaster recovery** — günlük off-site backup, 1 saat RTO, 5 dakika RPO
-- [ ] **8.1.5** **Multi-site federation** — farklı DC'lerdeki server'lar arası alert/event paylaşımı
+- [x] **8.1.1** **Active-Passive failover** — 2 server, floating IP / keepalived
+- [x] **8.1.2** **Active-Active cluster** — N server, PostgreSQL streaming replication, Redis Sentinel
+- [x] **8.1.3** **Load balancer** — sensörler HAProxy/Nginx upstream'a bağlanır, sticky session
+- [x] **8.1.4** **Disaster recovery** — günlük off-site backup, 1 saat RTO, 5 dakika RPO
+- [x] **8.1.5** **Multi-site federation** — farklı DC'lerdeki server'lar arası alert/event paylaşımı
 
 ### 8.2 — Ölçeklenebilirlik
 

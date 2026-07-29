@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::net::IpAddr;
-use std::time::{Duration, Instant};
+use chrono::Duration as ChronoDuration;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RuleTrigger {
@@ -132,16 +132,16 @@ pub struct AlertEngine {
     compiled_filters: HashMap<String, Filter>,
 
     // Threshold state: rule_name -> (src_ip, dst_ip) -> queue of matched timestamps
-    threshold_history: HashMap<String, HashMap<(String, String), VecDeque<Instant>>>,
+    threshold_history: HashMap<String, HashMap<(String, String), VecDeque<DateTime<Utc>>>>,
 
     // Absence state: rule_name -> last_seen_instant
-    absence_history: HashMap<String, Instant>,
+    absence_history: HashMap<String, DateTime<Utc>>,
 
     // Correlation state: rule_name -> list of seen sub_rules triggered for src_ip
     correlation_state: HashMap<String, HashMap<String, Vec<String>>>,
 
     // Deduplication state: (rule_name, src_ip, dst_ip) -> last_triggered_instant
-    dedup_history: HashMap<(String, String, String), Instant>,
+    dedup_history: HashMap<(String, String, String), DateTime<Utc>>,
 
     // Suppression settings
     pub suppressed_ips: HashSet<String>,
@@ -154,18 +154,18 @@ pub struct AlertEngine {
 
     // Smart Alert states (2.2)
     pkt_rates: VecDeque<usize>,
-    last_second: Instant,
+    last_second: DateTime<Utc>,
     current_second_pkts: usize,
 
-    last_minute: Instant,
+    last_minute: DateTime<Utc>,
     current_minute_errors: usize,
     prev_minute_errors: usize,
 
     seen_ips: HashSet<String>,
     seen_protocols: HashSet<String>,
-    beacon_timestamps: HashMap<(String, String), Vec<Instant>>,
+    beacon_timestamps: HashMap<(String, String), Vec<DateTime<Utc>>>,
     total_outbound_bytes: usize,
-    lateral_destinations: HashMap<String, (Instant, HashSet<String>)>,
+    lateral_destinations: HashMap<String, (DateTime<Utc>, HashSet<String>)>,
 }
 
 /// `"30s"`, `"5m"`, `"2h"` — anything else falls back to thirty seconds.
@@ -174,16 +174,16 @@ pub struct AlertEngine {
 /// an empty string and cuts a byte rather than a character, so a multi-byte
 /// suffix would slice mid-codepoint. Neither can happen here today, but the
 /// checked form costs nothing and cannot be broken by a later edit.
-fn parse_duration(s: &str) -> Duration {
+fn parse_duration(s: &str) -> ChronoDuration {
     let s = s.trim();
     if let Some(v) = s.strip_suffix('s') {
-        Duration::from_secs(v.parse().unwrap_or(30))
+        ChronoDuration::seconds(v.parse().unwrap_or(30))
     } else if let Some(v) = s.strip_suffix('m') {
-        Duration::from_secs(v.parse().unwrap_or(1) * 60)
+        ChronoDuration::seconds(v.parse().unwrap_or(1) * 60)
     } else if let Some(v) = s.strip_suffix('h') {
-        Duration::from_secs(v.parse().unwrap_or(1) * 3600)
+        ChronoDuration::seconds(v.parse().unwrap_or(1) * 3600)
     } else {
-        Duration::from_secs(30)
+        ChronoDuration::seconds(30)
     }
 }
 
@@ -249,9 +249,9 @@ impl AlertEngine {
             alerts_history_24h: HashMap::new(),
             sensor_scans: HashMap::new(),
             pkt_rates: VecDeque::new(),
-            last_second: Instant::now(),
+            last_second: Utc::now(),
             current_second_pkts: 0,
-            last_minute: Instant::now(),
+            last_minute: Utc::now(),
             current_minute_errors: 0,
             prev_minute_errors: 0,
             seen_ips: HashSet::new(),
@@ -262,10 +262,23 @@ impl AlertEngine {
         }
     }
 
+    /// Evaluate one packet and return whatever it set off.
+    ///
+    /// Every time window here — threshold rules, the traffic-rate and
+    /// error-burst heuristics, beacon spacing, deduplication — is measured
+    /// against **the packet's own timestamp**, not the wall clock.
+    ///
+    /// This used to read `Instant::now()`. On a live capture that merely made
+    /// detection sensitive to processing lag, but on a file it was wrong
+    /// outright: a pcap is read as fast as the disk allows, so "20 packets in
+    /// 60 seconds" was satisfied in microseconds and the rate heuristics
+    /// measured read speed. Using the capture timestamp makes a file replay
+    /// produce exactly the alerts the live capture would have produced, which
+    /// is the whole point of being able to open a pcap.
     pub fn check_packet(&mut self, pkt: &Packet, sensor_id: Option<&str>) -> Vec<Alert> {
         let mut alerts = Vec::new();
-        let now = Instant::now();
-        let now_utc = Utc::now();
+        let now = pkt.timestamp;
+        let now_utc = pkt.timestamp;
 
         let rules = self.rules.clone();
 
@@ -275,7 +288,7 @@ impl AlertEngine {
 
         // 2.2.1 Traffic spike alert (3-sigma deviation)
         self.current_second_pkts += 1;
-        if now.duration_since(self.last_second) >= Duration::from_secs(1) {
+        if now.signed_duration_since(self.last_second) >= ChronoDuration::seconds(1) {
             self.pkt_rates.push_back(self.current_second_pkts);
             if self.pkt_rates.len() > 60 {
                 self.pkt_rates.pop_front();
@@ -324,7 +337,7 @@ impl AlertEngine {
         if is_http_err {
             self.current_minute_errors += 1;
         }
-        if now.duration_since(self.last_minute) >= Duration::from_secs(60) {
+        if now.signed_duration_since(self.last_minute) >= ChronoDuration::seconds(60) {
             self.prev_minute_errors = self.current_minute_errors;
             self.current_minute_errors = 0;
             self.last_minute = now;
@@ -390,8 +403,9 @@ impl AlertEngine {
                 for i in 0..4 {
                     intervals.push(
                         timestamps[i + 1]
-                            .duration_since(timestamps[i])
-                            .as_secs_f64(),
+                            .signed_duration_since(timestamps[i])
+                            .num_milliseconds() as f64
+                            / 1000.0,
                     );
                 }
                 let mean: f64 = intervals.iter().sum::<f64>() / 4.0;
@@ -451,7 +465,7 @@ impl AlertEngine {
                 .lateral_destinations
                 .entry(src_str.clone())
                 .or_insert_with(|| (now, HashSet::new()));
-            if now.duration_since(entry.0) > Duration::from_secs(10) {
+            if now.signed_duration_since(entry.0) > ChronoDuration::seconds(10) {
                 entry.0 = now;
                 entry.1.clear();
             }
@@ -632,7 +646,7 @@ impl AlertEngine {
 
                             queue.push_back(now);
                             while let Some(&first) = queue.front() {
-                                if now.duration_since(first) > window_dur {
+                                if now.signed_duration_since(first) > window_dur {
                                     queue.pop_front();
                                 } else {
                                     break;
@@ -760,7 +774,7 @@ impl AlertEngine {
         for rule in &absence_rules {
             let window_dur = parse_duration(rule.trigger.window.as_deref().unwrap_or("30s"));
             let last_seen = self.absence_history.entry(rule.name.clone()).or_insert(now);
-            if now.duration_since(*last_seen) > window_dur
+            if now.signed_duration_since(*last_seen) > window_dur
                 && self.should_trigger_alert(&rule.name, "", "", now)
             {
                 let dummy_pkt = Packet {
@@ -804,11 +818,11 @@ impl AlertEngine {
         rule_name: &str,
         src: &str,
         dst: &str,
-        now: Instant,
+        now: DateTime<Utc>,
     ) -> bool {
         let key = (rule_name.to_string(), src.to_string(), dst.to_string());
         if let Some(&last) = self.dedup_history.get(&key) {
-            if now.duration_since(last) < Duration::from_secs(10) {
+            if now.signed_duration_since(last) < ChronoDuration::seconds(10) {
                 return false;
             }
         }

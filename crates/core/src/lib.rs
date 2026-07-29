@@ -42,6 +42,7 @@ pub mod export;
 pub mod fieldbus;
 pub mod filter;
 pub mod firewall;
+pub mod ha;
 pub mod flows;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod forensics;
