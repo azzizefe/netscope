@@ -1,34 +1,62 @@
 # Netscope — Eksik Kritik Bileşenler & Kritik Hatalar
 
+> Son doğrulama: **2026-07-29**. Aşağıdaki her satır o gün `cargo check` /
+> `cargo test` / `cargo clippy` / `cargo fmt` çalıştırılarak yeniden ölçüldü.
+> Bir maddeyi kapatmadan önce **doğrulama komutunu çalıştır** — bu dosyanın
+> önceki sürümü, çoktan düzeltilmiş 12 maddeyi açık gösteriyordu.
+
 ## 🔴 Kritik (CRITICAL)
 
-| # | Sorun | Detay |
-|---|---|---|
-| 1 | **`unreachable!()` panic riski — `filter.rs:561`** | `CmpOp::Contains` kolunda `unreachable!()` çağrılıyor. Hiçbir `match` guard yok — bu kod yoluna gelinirse **process panic** olur. |
-| 2 | **3 adet `unwrap()` üretim kodunda** | `crates/core/src/dissectors/ip.rs:42`, `tcp.rs:28`, `udp.rs:21` — `from_slice()` sonucu `unwrap()` ile açılıyor. Bozuk/malformed paketlerde **panic**. |
-| 3 | **`sqlx-postgres` 0.8.0 — Rust 2024 uyumsuzluğu** | `cargo report future-incompatibilities` çıktısına göre: `!` (never type) `()` fallback kullanımı **Rust 2024'te hard error**. Güncelleme gerekli (`>= 0.8.1`). |
-| 4 | **Derleme uyarısı — Kullanılmayan import** | `bindings.rs:35-44`: `edge_pytorch_mobile`, `nxp_eiq_inference`, `stm_stm32cube_ai` import edilmiş ama kullanılmıyor (port satırları silinmiş, importlar kalmış). |
-| 5 | **8 commit pushlenmemiş** | `main`, `origin/main`'in **8 commit önünde**. Yerel değişiklikler remote'da yok — veri kaybı riski. |
-| 6 | **2 değiştirilmiş dosya stage edilmemiş** | `bindings.rs` + `tcp.rs` — değişiklikler commit'lenmemiş, üstelik `bindings.rs` warning üretiyor. |
+| # | Sorun | Detay | Doğrulama |
+|---|---|---|---|
+| 1 | **`netscope-server` derlenmiyor** | `api/hunt.rs`: `queries::CreateRule` private, ayrıca 3 tip uyuşmazlığı (`enabled`, `severity`, `actions`). `main` şu an derlenmeyen halde commit'li. Diğer 5 crate temiz. | `cargo check -p netscope-server` |
 
 ## 🟠 Yüksek (HIGH)
 
-| # | Sorun | Detay |
-|---|---|---|
-| 7 | **npcap-sdk `gitignore`'da ama build bağımlı** | `.gitignore` `npcap-sdk/`'yı kapsıyor, ama `.cargo/config.toml` `LIBPCAP_LIBDIR` olarak `npcap-sdk/Lib/x64`'ü gösteriyor. **Fresh clone'da build kırılır.** |
-| 8 | **`target/` şişkinliği — onlarca GB stale incremental cache** | Yüzlerce `dep-graph.bin` (10-58 MB) ve `query-cache.bin` (10-44 MB) dosyası. **Hiçbiri `gitignore`'da değil** (sadece `/target` ignore). |
-| 9 | **`.env.example` yok** | `.gitignore` `!.env.example` ile referans veriyor ama dosya mevcut değil. Server/agent yapılandırması için belirsizlik. |
-| 10 | **WASM binary çok büyük (56.6 MB)** | `netscope_wasm.wasm` debug build = **56.6 MB**. Frontend yükleme süresi olumsuz etkilenir. Release'de optimize edilmeli. |
-| 11 | **TUI test kapsamı hala sıfır** | UNTESTED.md "TUI 30 test" dense de, `crates/tui/src/` altında **hiç test modülü yok**. |
-| 12 | **Frontend `console.log` kalıntıları** | `app.js`'de 8 adet `console.log` — üretim kodunda temizlenmemiş debug çıktısı. |
+| # | Sorun | Detay | Doğrulama |
+|---|---|---|---|
+| 2 | **145 dissector modülü dispatch'ten erişilemiyor** | Modüller derleniyor, kendi testleri geçiyor, ama hiçbir çağrı yolu yok. Çoğunun **tanıma imzası yok** (magic byte / `looks_like_*` yok) — bu yüzden basit "wiring" ile çözülmez. **Tahmini porta bağlamak yasak**: bu depoda 3 kez gerçek hataya yol açtı (`bindings.rs` başındaki kurala bak). | `cargo test -p netscope-core --lib every_dissector_module_is_reachable -- --ignored` |
+| 3 | **1938 protokol registry'de ama hiçbir dissector üretmiyor** | `registry.rs` tablosunda tanımlı, fakat hiçbir kod yolu bu `Protocol` değerini atamıyor. Filtre/renk/eğitim içeriği bu satırlardan türediği için kullanıcıya asla görünmeyen protokoller listeleniyor. | `cargo test -p netscope-core --lib every_protocol_is_produced_by_some_dissector -- --ignored` |
+| 4 | **4 yeni PQC modülü sınıflandırılmamış** | `pqc_cve_feed_integration`, `tls_cert_transparency_v3`, `tls_ech_pqc_interop`, `tls_session_resumption_pqc` — dördü de `drain_pqc_store()` okuyor, ama ikisi (`cert_transparency_v3`, `ech_pqc_interop`) ayrıca **doğrulamasız sabit offset** ile payload ayrıştırıyor (`parse_sct_version` herhangi bir baytı SCT sürümü sayar). Ya `HELPER_MODULES`'a eklenmeli (saf analiz geçişiyse) ya da önce gerçek bir imza yazılmalı. Madde 2'nin sayısını 141'den 145'e çıkaran bunlar. | `dissectors.rs:3073` `HELPER_MODULES` |
+| 5 | **npcap-sdk taze klonda build'i kırıyor** | `.gitignore` `npcap-sdk/`'yı dışlıyor, `.cargo/config.toml` ise `LIBPCAP_LIBDIR`'ı repo köküne göreli `npcap-sdk/Lib/x64`'e sabitliyor. CI çalışıyor çünkü SDK'yı `$TEMP`'e indirip env değişkenini set ediyor (env, config.toml'u ezer). **Yerel taze klon link hatası verir.** README artık doğru konumu belgeliyor (2026-07-29). | `README.md` § Prerequisites → Windows |
 
 ## 🟡 Orta (MEDIUM)
 
-| # | Sorun | Detay |
+| # | Sorun | Detay | Doğrulama |
+|---|---|---|---|
+| 6 | **`netscope-server` clippy uyarıları** | `AlertNote` / `AlertDetail` hiç construct edilmiyor, `assigned_to` hiç okunmuyor, `sensors.rs:644` manuel `+=`. Yeni alert-notes özelliği yarım. | `cargo clippy -p netscope-server` |
+| 7 | **`netscope-server` formatlanmamış** | `api/alerts.rs`, `api/sensors.rs`, `db/queries.rs` — CI'ın fmt job'ı bu haliyle kırmızı kalır. Diğer crate'ler temiz. | `cargo fmt --all --check` |
+| 8 | **`target/` 29 GB** | Git sorunu **değil** (`/target` ignore'lu, doğru). Sadece disk: bayat incremental cache. | `cargo clean` |
+| 9 | **Bütünleşik test kapsamı dar** | `crates/core/tests/integration_test.rs` tek dosya. TUI+core ve Desktop+core uçtan uca senaryolar hâlâ kapsanmıyor. | — |
+| 10 | **WASM glue'da otomatik üretilmiş TODO** | `desktop/frontend/wasm/netscope_wasm.js` — wasm-bindgen çıktısı, elle düzeltilmemeli. Düşük öncelik. | — |
+
+## ✅ Doğrulanıp Kapatılanlar (2026-07-29)
+
+Bu maddeler dosyanın önceki sürümünde açıktı; hepsi ölçülerek kapatıldı:
+
+| Eski # | Sorun | Bulgu |
 |---|---|---|
-| 13 | **Desktop Tauri komutları — 9/11 test edilmemiş** | `start_capture`, `stop_capture`, `save_pcap`, `block_ip` gibi kritik komutların **testi yok**. |
-| 14 | **Bütünleşik test (integration test) — %0** | TUI+core, Desktop+core, filtre+pcap uçtan uca senaryoların **hiçbiri otomatik test edilmiyor**. |
-| 15 | **CRLF/ LF satır sonu karışıklığı** | Git `LF will be replaced by CRLF` uyarısı veriyor. Platformlar arası sorun çıkarabilir. |
-| 16 | **WASM glue code'da TODO** | `desktop/frontend/wasm/netscope_wasm.js:328` — otomatik üretilmiş kodda açık TODO. |
-| 17 | **20+ dissector'da hata yolu testi yok** | Sadece happy path test edilmiş. QUIC, TLS, DNS (CNAME/MX/TXT), SIP (BYE/CANCEL) gibi protokoller test dışı. |
-| 18 | **StatsEngine bandwidth sampling testi yok** | `tick()` saniye bazlı örnekleme, 60sn rolling window limiti, concurrent `record_packet()` — test edilmemiş. |
+| 1 | `unreachable!()` — `filter.rs:561` | `crates/` altında **hiç** `unreachable!` yok. |
+| 2 | 3 `unwrap()` (`ip.rs`/`tcp.rs`/`udp.rs`) | `from_slice().unwrap()` kalmamış. Kalan `unwrap()`'lar test kodunda ve mutex `lock()`'ta — normal. |
+| 3 | `sqlx-postgres` 0.8.0 Rust 2024 uyumsuz | Artık **0.8.6**. `cargo report future-incompatibilities` → rapor yok. |
+| 4 | `bindings.rs` kullanılmayan import | Derleme **sıfır uyarı**. Üç uydurma port bağlaması da kaldırılmış. |
+| 5, 6 | Pushlanmamış / stage edilmemiş değişiklikler | Çalışma ağacı temiz. (Not: `origin/main` hâlâ geride — push edilmeli.) |
+| 9 | `.env.example` yok | Dosya mevcut (992 B). |
+| 10 | WASM 56.6 MB | `netscope_wasm_bg.wasm` = **154 KB**. |
+| 11 | TUI testi sıfır | 10 modülde test var, **44 test** geçiyor. |
+| 12 | `app.js`'de 8 `console.log` | **0** kaldı. |
+| 18 | StatsEngine bandwidth testi yok | 4 test mevcut (`bandwidth_tick_*`, `bandwidth_rolling_window_capped_at_60`, `snapshot_bandwidth_values`). |
+
+## Sağlık Durumu (2026-07-29)
+
+| Ölçüm | Durum |
+|---|---|
+| `cargo check` (core, agent, tui, desktop, wasm) | ✅ sıfır uyarı |
+| `cargo check -p netscope-server` | ❌ 4 hata (madde 1) |
+| Test | ✅ **2 279 geçti**, 0 başarısız (server hariç) |
+| `cargo clippy` (server hariç) | ✅ sıfır uyarı |
+| `cargo fmt --check` (server hariç) | ✅ temiz |
+
+> `cargo test` **`RUST_MIN_STACK=134217728` gerektirir** — `.cargo/config.toml`
+> bunu zaten set ediyor. Ortamda daha küçük bir değer export edilmişse cargo onu
+> ezmez ve codegen `STATUS_STACK_OVERFLOW` ile ölür.

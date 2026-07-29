@@ -586,6 +586,106 @@
         .drawer-tab-content.active {
             display: block;
         }
+
+        /* ---- Triage Kanban Board ---- */
+        .triage-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            padding: 0 2rem 2rem 2rem;
+            height: calc(100vh - 180px);
+            overflow: hidden;
+        }
+
+        .triage-column {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .triage-column-header {
+            padding: 1rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.01);
+        }
+
+        .column-count {
+            background-color: var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .triage-cards {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            overflow-y: auto;
+            flex-grow: 1;
+            height: 100%;
+        }
+
+        .triage-card {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .triage-card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .triage-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .triage-card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            word-break: break-word;
+            margin-right: 0.5rem;
+        }
+
+        .triage-card-body {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .triage-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            border-top: 1px dashed var(--border-color);
+            padding-top: 0.5rem;
+            margin-top: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -630,6 +730,8 @@
         <button class="tab-btn active" id="btn-tab-overview" onclick="switchTab('overview')">7x24 Overview</button>
         <button class="tab-btn" id="btn-tab-sensors" onclick="switchTab('sensors')">Sensor Management</button>
         <button class="tab-btn" id="btn-tab-alerts" onclick="switchTab('alerts')">Alert Triage Board</button>
+        <button class="tab-btn" id="btn-tab-hunt" onclick="switchTab('hunt')">Threat Hunting</button>
+        <button class="tab-btn" id="btn-tab-reports" onclick="switchTab('reports')">Reporting & KPI</button>
     </div>
 
     <!-- Tab 1: Overview -->
@@ -970,6 +1072,277 @@
         </div>
     </div>
 
+    <!-- Tab 4: Threat Hunting -->
+    <div id="tab-hunt" class="tab-content" style="display: none; padding: 2rem;">
+        <div class="sensors-header" style="padding: 0 0 1.5rem 0;">
+            <h2>Threat Hunting Console</h2>
+            <div>
+                <button class="badge badge-low" style="cursor:pointer; padding:0.5rem 1rem; font-weight:600;" onclick="openSaveSearchModal()">Save Current Search</button>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div class="panel" style="padding: 1.5rem;">
+                <div class="panel-header" style="margin-bottom:1rem;">
+                    <div class="panel-title">Visual Query Builder (AND/OR/NOT rules)</div>
+                </div>
+                <div id="query-builder-container" style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
+                </div>
+                <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; border-top:1px solid var(--border-color); padding-top:1rem;">
+                    <button class="tab-btn" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="addQueryRow()">+ Add Rule</button>
+                    <div style="flex-grow:1;"></div>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <label style="font-size:0.8rem; color:var(--text-secondary);">Start:</label>
+                        <input type="datetime-local" id="hunt-time-start" style="padding:0.3rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.8rem;">
+                        <label style="font-size:0.8rem; color:var(--text-secondary);">End:</label>
+                        <input type="datetime-local" id="hunt-time-end" style="padding:0.3rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.8rem;">
+                    </div>
+                    <button onclick="executeThreatHunt()" style="background-color:var(--accent-primary); color:white; border:none; padding:0.5rem 1.5rem; border-radius:6px; font-weight:700; cursor:pointer; box-shadow: 0 4px 12px var(--accent-glow);">Execute Hunt</button>
+                </div>
+            </div>
+
+            <div class="panel" style="padding: 1.5rem; display:flex; flex-direction:column; max-height: 380px; overflow:hidden;">
+                <div class="panel-header" style="margin-bottom:1rem;">
+                    <div class="panel-title">Saved Searches</div>
+                </div>
+                <div id="saved-searches-list" style="display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; flex-grow:1;">
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+            <div class="panel-header" style="margin-bottom:1rem;">
+                <div class="panel-title">Hunt Event Frequency Histogram (Time Series)</div>
+            </div>
+            <div style="height: 180px; position: relative;">
+                <canvas id="hunt-histogram-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="panel" style="padding: 1.5rem; overflow:hidden;">
+            <div class="panel-header" style="margin-bottom:1rem;">
+                <div class="panel-title" id="hunt-results-title">Hunt Query Results (0 events found)</div>
+            </div>
+            <div style="overflow-x: auto; max-height:450px; overflow-y:auto;">
+                <table class="data-table" id="hunt-results-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Type</th>
+                            <th>Severity</th>
+                            <th>Title</th>
+                            <th>Source Host (Pivot)</th>
+                            <th>Destination Host (Pivot)</th>
+                            <th>Protocol (Pivot)</th>
+                            <th>Port (Pivot)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hunt-results-body">
+                        <tr>
+                            <td colspan="8" style="text-align:center; color:var(--text-secondary); padding:3rem;">
+                                Construct filters and execute a hunt query to view matched network indicators.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="save-search-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.65); z-index:2000; align-items:center; justify-content:center;">
+        <div style="background-color:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:1.5rem; width:400px; display:flex; flex-direction:column; gap:1rem;">
+            <h3 style="color:var(--text-primary); margin:0;">Save Threat Hunt Search</h3>
+            <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                <label style="font-size:0.8rem; color:var(--text-secondary);">Query Name</label>
+                <input type="text" id="save-search-name-input" placeholder="e.g. DNS Anomaly Hunt" style="padding:0.5rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+                <button onclick="closeSaveSearchModal()" style="background-color:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:0.4rem 1rem; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button onclick="submitSaveSearch()" style="background-color:var(--accent-primary); border:none; color:white; padding:0.4rem 1rem; border-radius:6px; font-weight:600; cursor:pointer;">Save Search</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 5: Reporting & KPI -->
+    <div id="tab-reports" class="tab-content" style="display: none; padding: 2rem;">
+        <div class="sensors-header" style="padding: 0 0 1.5rem 0;">
+            <h2>Reporting & Executive KPI Dashboard</h2>
+            <div>
+                <a href="/api/v1/reports/executive" target="_blank" class="badge badge-low" style="text-decoration:none; padding:0.5rem 1rem; font-weight:600; cursor:pointer; display:inline-block; margin-right:0.5rem;">View Web Executive Report</a>
+                <button class="badge badge-low" style="cursor:pointer; padding:0.5rem 1rem; font-weight:600;" onclick="downloadExecutivePDF()">Download Executive PDF</button>
+            </div>
+        </div>
+
+        <div class="grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="panel" style="padding: 1.5rem; text-align: center; border-top: 4px solid var(--accent-primary);">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">ISO 27001 SLA Response Compliance</div>
+                <div id="kpi-sla-score" style="font-size: 3rem; font-weight: 800; margin: 0.5rem 0; color: #10b981;">0.0%</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Avg. acknowledgement within 1h threshold (target >90%)</div>
+            </div>
+            <div class="panel" style="padding: 1.5rem; text-align: center; border-top: 4px solid var(--accent-primary);">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">NIS2 Sensors Fleet Uptime</div>
+                <div id="kpi-uptime-score" style="font-size: 3rem; font-weight: 800; margin: 0.5rem 0; color: #10b981;">0.0%</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Fleet health status ratio (target >98%)</div>
+            </div>
+            <div class="panel" style="padding: 1.5rem; text-align: center; border-top: 4px solid var(--accent-primary);">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">PCI-DSS Encryption Index</div>
+                <div id="kpi-pci-score" style="font-size: 3rem; font-weight: 800; margin: 0.5rem 0; color: #f59e0b;">0.0%</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Encrypted protocol ratio (HTTPS/TLS/SSH vs cleartext)</div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="panel" style="padding: 1.5rem;">
+                <div class="panel-header" style="margin-bottom: 1rem;">
+                    <div class="panel-title">Daily SOC Report Summary (Last 24 Hours)</div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding-bottom:0.4rem;">
+                        <span style="color:var(--text-secondary);">Total Event Volume:</span>
+                        <span id="daily-total-events" style="font-weight:700;">0</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding-bottom:0.4rem;">
+                        <span style="color:var(--text-secondary);">Triggered Alerts Count:</span>
+                        <span id="daily-total-alerts" style="font-weight:700;">0</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding-bottom:0.4rem;">
+                        <span style="color:var(--text-secondary);">Resolved / False Positive Triage:</span>
+                        <span><strong id="daily-resolved">0</strong> / <strong id="daily-fp">0</strong></span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding-bottom:0.4rem;">
+                        <span style="color:var(--text-secondary);">Mean Time to Resolution (MTTR):</span>
+                        <span id="daily-mttr" style="font-weight:700;">0s</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding-bottom:0.4rem;">
+                        <span style="color:var(--text-secondary);">Mean Time to Acknowledge (MTA):</span>
+                        <span id="daily-mta" style="font-weight:700;">0s</span>
+                    </div>
+                    <div style="margin-top:0.5rem;">
+                        <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.4rem; color:var(--accent-primary);">Top Triggering Rules</div>
+                        <ul id="daily-top-rules" style="margin:0; padding-left:1.2rem; font-size:0.85rem; display:flex; flex-direction:column; gap:0.25rem;">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" style="padding: 1.5rem;">
+                <div class="panel-header" style="margin-bottom: 1rem;">
+                    <div class="panel-title">Compliance Metrics Matrix & Scores</div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                            <span style="font-weight:600; font-size:0.85rem;">GDPR (General Data Privacy Regulation)</span>
+                            <span id="score-gdpr" style="font-weight:700; color:#10b981;">0%</span>
+                        </div>
+                        <div style="width:100%; height:6px; background-color:var(--bg-color); border-radius:3px; overflow:hidden; margin-bottom:0.25rem;">
+                            <div id="bar-gdpr" style="height:100%; width:0%; background-color:#10b981; border-radius:3px;"></div>
+                        </div>
+                        <div id="desc-gdpr" style="font-size:0.75rem; color:var(--text-secondary);">Calculating...</div>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                            <span style="font-weight:600; font-size:0.85rem;">KVKK (Kişisel Verilerin Korunması Kanunu)</span>
+                            <span id="score-kvkk" style="font-weight:700; color:#10b981;">0%</span>
+                        </div>
+                        <div style="width:100%; height:6px; background-color:var(--bg-color); border-radius:3px; overflow:hidden; margin-bottom:0.25rem;">
+                            <div id="bar-kvkk" style="height:100%; width:0%; background-color:#10b981; border-radius:3px;"></div>
+                        </div>
+                        <div id="desc-kvkk" style="font-size:0.75rem; color:var(--text-secondary);">Calculating...</div>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                            <span style="font-weight:600; font-size:0.85rem;">ISO 27001 (Information Security Management)</span>
+                            <span id="score-iso" style="font-weight:700; color:#10b981;">0%</span>
+                        </div>
+                        <div style="width:100%; height:6px; background-color:var(--bg-color); border-radius:3px; overflow:hidden; margin-bottom:0.25rem;">
+                            <div id="bar-iso" style="height:100%; width:0%; background-color:#10b981; border-radius:3px;"></div>
+                        </div>
+                        <div id="desc-iso" style="font-size:0.75rem; color:var(--text-secondary);">Calculating...</div>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                            <span style="font-weight:600; font-size:0.85rem;">PCI-DSS (Payment Card Security Standards)</span>
+                            <span id="score-pci" style="font-weight:700; color:#f59e0b;">0%</span>
+                        </div>
+                        <div style="width:100%; height:6px; background-color:var(--bg-color); border-radius:3px; overflow:hidden; margin-bottom:0.25rem;">
+                            <div id="bar-pci" style="height:100%; width:0%; background-color:#f59e0b; border-radius:3px;"></div>
+                        </div>
+                        <div id="desc-pci" style="font-size:0.75rem; color:var(--text-secondary);">Calculating...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="panel" style="padding: 1.5rem;">
+                <div class="panel-header" style="margin-bottom: 1rem;">
+                    <div class="panel-title">Custom Report Template Builder</div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.25rem;">Select data widgets to compile into your custom report:</div>
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="rep-build-uptime" checked> Sensors Fleet Health & Heartbeats Uptime
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="rep-build-throughput" checked> Capture Interface Throughput Rating
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="rep-build-attackers" checked> Top Network Talkers & Event Hosts
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="rep-build-alerts" checked> 30-Day Triage Incident Volume Stats
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="rep-build-compliance" checked> Standards Compliance Assessments Matrix
+                    </label>
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem;">
+                        <span style="font-size:0.85rem; color:var(--text-secondary);">Date Range:</span>
+                        <select id="rep-build-days" style="padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.8rem;">
+                            <option value="1">Last 24 Hours</option>
+                            <option value="7" selected>Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                        </select>
+                        <button onclick="generateCustomReport()" style="background-color:var(--accent-primary); border:none; color:white; padding:0.4rem 1.2rem; border-radius:6px; font-weight:600; cursor:pointer; margin-left:auto;">Compile Custom Report</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" style="padding: 1.5rem; display:flex; flex-direction:column; max-height:450px; overflow:hidden;">
+                <div class="panel-header" style="margin-bottom: 1rem;">
+                    <div class="panel-title">Automated Scheduled Deliveries</div>
+                </div>
+                <div style="display:flex; gap:0.5rem; flex-direction:column; border-bottom:1px solid var(--border-color); padding-bottom:1rem; margin-bottom:1rem;">
+                    <div style="display:flex; gap:0.5rem;">
+                        <select id="sched-type" style="padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.8rem; flex-grow:1;">
+                            <option value="daily">Daily SOC Summary</option>
+                            <option value="weekly">Weekly Executive PDF</option>
+                            <option value="monthly">Monthly NIS2 Compliance</option>
+                        </select>
+                        <input type="text" id="sched-cron" placeholder="Cron e.g. 0 8 * * *" style="padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.8rem; width:150px;">
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <input type="text" id="sched-recipients" placeholder="Recipients e.g. admin@netscope.local, executive@netscope.local" style="padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.8rem; flex-grow:1;">
+                        <button onclick="registerScheduledReport()" style="background-color:var(--accent-primary); border:none; color:white; padding:0.4rem 1.2rem; border-radius:6px; font-weight:600; cursor:pointer;">Schedule</button>
+                    </div>
+                </div>
+                <div id="scheduled-deliveries-list" style="display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; flex-grow:1;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-report-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.65); z-index:2000; align-items:center; justify-content:center;">
+        <div style="background-color:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:1.5rem; width:650px; max-height:85vh; display:flex; flex-direction:column; gap:1rem; overflow:hidden;">
+            <h3 style="color:var(--text-primary); margin:0;">Compiled Custom Report Preview</h3>
+            <div id="custom-report-preview-content" style="flex-grow:1; background-color:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:1rem; font-family:'JetBrains Mono', monospace; font-size:0.8rem; overflow-y:auto; color:var(--text-primary); white-space:pre-wrap;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button onclick="document.getElementById('custom-report-modal').style.display = 'none'" style="background-color:var(--accent-primary); border:none; color:white; padding:0.4rem 1.2rem; border-radius:6px; font-weight:600; cursor:pointer;">Dismiss Preview</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Alert Detail Drawer (Slide-Over Panel) -->
     <div class="drawer" id="alert-drawer">
         <div class="drawer-header">
@@ -1105,6 +1478,14 @@
         let activeAlertId = null;
         let activeAlertDrawerTab = 'overview';
         let selectedAlertIds = new Set();
+
+        // Threat Hunting State
+        let huntHistogramChart = null;
+        let queryBuilderRules = [];
+        let savedSearches = [];
+
+        // Reporting State
+        let scheduledReports = [];
 
         // On Load Check
         window.addEventListener('DOMContentLoaded', () => {
@@ -1396,6 +1777,14 @@
                 document.getElementById('btn-tab-alerts').classList.add('active');
                 document.getElementById('tab-alerts').classList.add('active');
                 fetchAlertsTriage();
+            } else if (tab === 'hunt') {
+                document.getElementById('btn-tab-hunt').classList.add('active');
+                document.getElementById('tab-hunt').classList.add('active');
+                initializeThreatHuntingPanel();
+            } else if (tab === 'reports') {
+                document.getElementById('btn-tab-reports').classList.add('active');
+                document.getElementById('tab-reports').classList.add('active');
+                initializeReportsPanel();
             }
         }
 
@@ -2455,6 +2844,697 @@
             }
         }
 
+        // ---- Threat Hunting Logic ----
+        function initializeThreatHuntingPanel() {
+            const now = new Date();
+            const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            
+            const formatLocalISO = (d) => {
+                const tzoffset = d.getTimezoneOffset() * 60000;
+                const localISOTime = (new Date(d - tzoffset)).toISOString().slice(0, 16);
+                return localISOTime;
+            };
+
+            const startInput = document.getElementById("hunt-time-start");
+            const endInput = document.getElementById("hunt-time-end");
+            if (startInput && !startInput.value) startInput.value = formatLocalISO(start);
+            if (endInput && !endInput.value) endInput.value = formatLocalISO(now);
+
+            const container = document.getElementById("query-builder-container");
+            if (container.children.length === 0) {
+                addQueryRow("event_type", "eq", "threat");
+            }
+
+            loadSavedSearches();
+            initHuntHistogramChart();
+        }
+
+        let ruleRowCounter = 0;
+        function addQueryRow(field = "source_ip", operator = "eq", value = "") {
+            const container = document.getElementById("query-builder-container");
+            const rowId = `rule-row-${ruleRowCounter++}`;
+            
+            const row = document.createElement("div");
+            row.id = rowId;
+            row.style.display = "flex";
+            row.style.gap = "0.5rem";
+            row.style.alignItems = "center";
+            
+            row.innerHTML = `
+                <select class="query-field-select" style="padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit; font-size:0.8rem; width:150px;" onchange="updateQueryOperatorSelect('${rowId}')">
+                    <option value="source_ip" ${field === "source_ip" ? "selected" : ""}>Source IP</option>
+                    <option value="dest_ip" ${field === "dest_ip" ? "selected" : ""}>Destination IP</option>
+                    <option value="protocol" ${field === "protocol" ? "selected" : ""}>Protocol</option>
+                    <option value="port" ${field === "port" ? "selected" : ""}>Port</option>
+                    <option value="event_type" ${field === "event_type" ? "selected" : ""}>Event Type</option>
+                    <option value="severity" ${field === "severity" ? "selected" : ""}>Severity</option>
+                    <option value="title" ${field === "title" ? "selected" : ""}>Title</option>
+                    <option value="description" ${field === "description" ? "selected" : ""}>Description</option>
+                </select>
+                <select class="query-operator-select" style="padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit; font-size:0.8rem; width:130px;">
+                </select>
+                <input type="text" class="query-value-input" value="${value}" placeholder="Value..." style="flex-grow:1; padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit; font-size:0.85rem;">
+                <button onclick="removeQueryRow('${rowId}')" style="background-color:transparent; border:none; color:var(--critical-color); font-size:1.2rem; cursor:pointer; padding:0 0.5rem;">×</button>
+            `;
+            
+            container.appendChild(row);
+            updateQueryOperatorSelect(rowId, operator);
+        }
+
+        function removeQueryRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) row.remove();
+        }
+
+        const operatorOptions = {
+            string: [
+                { value: "eq", label: "Equals" },
+                { value: "neq", label: "Not Equals" },
+                { value: "contains", label: "Contains" },
+                { value: "not_contains", label: "Not Contains" }
+            ],
+            numeric: [
+                { value: "eq", label: "Equals" },
+                { value: "neq", label: "Not Equals" },
+                { value: "gt", label: "Greater Than" },
+                { value: "lt", label: "Less Than" }
+            ]
+        };
+
+        function updateQueryOperatorSelect(rowId, selectedOp = "eq") {
+            const row = document.getElementById(rowId);
+            if (!row) return;
+            const field = row.querySelector(".query-field-select").value;
+            const opSelect = row.querySelector(".query-operator-select");
+            
+            let type = "string";
+            if (field === "port") {
+                type = "numeric";
+            }
+            
+            opSelect.innerHTML = "";
+            operatorOptions[type].forEach(opt => {
+                opSelect.innerHTML += `<option value="${opt.value}" ${opt.value === selectedOp ? "selected" : ""}>${opt.label}</option>`;
+            });
+        }
+
+        function buildQueryTree() {
+            const container = document.getElementById("query-builder-container");
+            const rows = container.querySelectorAll("[id^='rule-row-']");
+            if (rows.length === 0) return null;
+            
+            const conditions = [];
+            rows.forEach(row => {
+                const field = row.querySelector(".query-field-select").value;
+                const operator = row.querySelector(".query-operator-select").value;
+                const value = row.querySelector(".query-value-input").value.trim();
+                
+                if (value) {
+                    conditions.push({
+                        field: field,
+                        operator: operator,
+                        value: value
+                    });
+                }
+            });
+            
+            if (conditions.length === 0) return null;
+            
+            return {
+                logical: "AND",
+                rules: conditions
+            };
+        }
+
+        async function executeThreatHunt() {
+            if (!jwtToken) return;
+            const filter = buildQueryTree();
+            const start = document.getElementById("hunt-time-start").value;
+            const end = document.getElementById("hunt-time-end").value;
+            
+            const payload = {
+                filter: filter,
+                timerange_start: start ? new Date(start).toISOString() : null,
+                timerange_end: end ? new Date(end).toISOString() : null,
+                page: 1,
+                per_page: 100
+            };
+
+            try {
+                const res = await fetch("/api/v1/hunt/events", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderHuntResults(data);
+                }
+            } catch (e) {
+                console.error("Failed to execute hunt query:", e);
+            }
+
+            const startTime = start ? new Date(start).getTime() : Date.now() - 24*3600*1000;
+            const endTime = end ? new Date(end).getTime() : Date.now();
+            const rangeSecs = (endTime - startTime) / 1000;
+            
+            let bucketSize = 3600;
+            if (rangeSecs <= 3600) {
+                bucketSize = 60;
+            } else if (rangeSecs <= 12 * 3600) {
+                bucketSize = 300;
+            } else if (rangeSecs <= 48 * 3600) {
+                bucketSize = 1800;
+            } else if (rangeSecs > 7 * 24 * 3600) {
+                bucketSize = 86400;
+            }
+
+            const histPayload = {
+                filter: filter,
+                timerange_start: start ? new Date(start).toISOString() : null,
+                timerange_end: end ? new Date(end).toISOString() : null,
+                bucket_size_secs: bucketSize
+            };
+
+            try {
+                const res = await fetch("/api/v1/hunt/histogram", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify(histPayload)
+                });
+                if (res.ok) {
+                    const buckets = await res.json();
+                    renderHuntHistogram(buckets);
+                }
+            } catch (e) {
+                console.error("Failed to fetch histogram counts:", e);
+            }
+        }
+
+        function renderHuntResults(data) {
+            const events = data.events;
+            const intel = data.threat_intel_overlay || {};
+            
+            document.getElementById("hunt-results-title").innerText = `Hunt Query Results (${events.length} events found)`;
+            
+            const body = document.getElementById("hunt-results-body");
+            body.innerHTML = "";
+            
+            events.forEach(e => {
+                const time = new Date(e.timestamp).toLocaleString();
+                
+                let sevClass = `badge-${e.severity.toLowerCase()}`;
+                if (e.severity === 'info') sevClass = 'badge-low';
+                
+                const srcIntel = intel[e.source_ip] ? ` <span class="badge ${intel[e.source_ip].class}" title="${intel[e.source_ip].provider}: ${intel[e.source_ip].verdict}">${intel[e.source_ip].score}%</span>` : "";
+                const dstIntel = intel[e.dest_ip] ? ` <span class="badge ${intel[e.dest_ip].class}" title="${intel[e.dest_ip].provider}: ${intel[e.dest_ip].verdict}">${intel[e.dest_ip].score}%</span>` : "";
+                
+                const srcHtml = e.source_ip 
+                    ? `<span style="font-family:'JetBrains Mono';">${e.source_ip}</span>${srcIntel} <a href="#" style="font-size:0.7rem; color:var(--accent-primary); margin-left:0.25rem;" onclick="pivotHunt('source_ip', '${e.source_ip}')">Pivot</a>`
+                    : "N/A";
+                    
+                const dstHtml = e.dest_ip
+                    ? `<span style="font-family:'JetBrains Mono';">${e.dest_ip}</span>${dstIntel} <a href="#" style="font-size:0.7rem; color:var(--accent-primary); margin-left:0.25rem;" onclick="pivotHunt('dest_ip', '${e.dest_ip}')">Pivot</a>`
+                    : "N/A";
+                    
+                const protoHtml = e.protocol
+                    ? `${e.protocol.toUpperCase()} <a href="#" style="font-size:0.7rem; color:var(--accent-primary); margin-left:0.25rem;" onclick="pivotHunt('protocol', '${e.protocol}')">Pivot</a>`
+                    : "N/A";
+                    
+                const portHtml = e.port
+                    ? `${e.port} <a href="#" style="font-size:0.7rem; color:var(--accent-primary); margin-left:0.25rem;" onclick="pivotHunt('port', '${e.port}')">Pivot</a>`
+                    : "N/A";
+
+                body.innerHTML += `
+                    <tr>
+                        <td style="font-family:'JetBrains Mono'; font-size:0.8rem;">${time}</td>
+                        <td><span class="badge badge-low">${e.event_type}</span></td>
+                        <td><span class="badge ${sevClass}">${e.severity}</span></td>
+                        <td style="font-size:0.85rem; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${e.title}">${e.title}</td>
+                        <td>${srcHtml}</td>
+                        <td>${dstHtml}</td>
+                        <td>${protoHtml}</td>
+                        <td>${portHtml}</td>
+                    </tr>
+                `;
+            });
+            
+            if (events.length === 0) {
+                body.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-secondary); padding:3rem;">No events match your current hunt query filters.</td></tr>';
+            }
+        }
+
+        function pivotHunt(field, value) {
+            switchTab('hunt');
+            
+            const container = document.getElementById("query-builder-container");
+            container.innerHTML = "";
+            
+            addQueryRow(field, "eq", value);
+            executeThreatHunt();
+        }
+
+        function initHuntHistogramChart() {
+            if (huntHistogramChart) return;
+            const ctx = document.getElementById("hunt-histogram-chart").getContext("2d");
+            huntHistogramChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Event Frequency',
+                        data: [],
+                        borderColor: '#bd93f9',
+                        backgroundColor: 'rgba(189, 147, 249, 0.08)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(35, 45, 63, 0.5)' },
+                            ticks: { color: '#9ca3af', font: { family: 'Outfit', size: 10 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(35, 45, 63, 0.5)' },
+                            ticks: { color: '#9ca3af', font: { family: 'Outfit', size: 10 } },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: { legend: { display: false } },
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function renderHuntHistogram(buckets) {
+            if (!huntHistogramChart) initHuntHistogramChart();
+            
+            const labels = buckets.map(b => new Date(b.bucket_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            const data = buckets.map(b => b.count);
+            
+            huntHistogramChart.data.labels = labels;
+            huntHistogramChart.data.datasets[0].data = data;
+            
+            const theme = document.getElementById('theme-selector').value;
+            if (theme === 'dracula') {
+                huntHistogramChart.data.datasets[0].borderColor = '#ff79c6';
+                huntHistogramChart.data.datasets[0].backgroundColor = 'rgba(255, 121, 198, 0.08)';
+            } else if (theme === 'matrix') {
+                huntHistogramChart.data.datasets[0].borderColor = '#00ff00';
+                huntHistogramChart.data.datasets[0].backgroundColor = 'rgba(0, 255, 0, 0.08)';
+            } else {
+                huntHistogramChart.data.datasets[0].borderColor = '#4a9ef5';
+                huntHistogramChart.data.datasets[0].backgroundColor = 'rgba(74, 158, 245, 0.08)';
+            }
+            
+            huntHistogramChart.update();
+        }
+
+        async function loadSavedSearches() {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch("/api/v1/hunt/saved-searches", {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    savedSearches = await res.json();
+                    renderSavedSearchesList();
+                }
+            } catch (e) {
+                console.error("Failed to load saved searches:", e);
+            }
+        }
+
+        function renderSavedSearchesList() {
+            const container = document.getElementById("saved-searches-list");
+            container.innerHTML = "";
+            
+            savedSearches.forEach(s => {
+                const item = document.createElement("div");
+                item.style.backgroundColor = "var(--bg-color)";
+                item.style.border = "1px solid var(--border-color)";
+                item.style.borderRadius = "8px";
+                item.style.padding = "0.6rem";
+                item.style.cursor = "pointer";
+                item.style.display = "flex";
+                item.style.flexDirection = "column";
+                item.style.gap = "0.4rem";
+                item.style.transition = "border-color 0.2s";
+                
+                item.innerHTML = `
+                    <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${s.name}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--border-color); padding-top:0.4rem; margin-top:0.1rem;">
+                        <button onclick="event.stopPropagation(); convertSavedSearchToRule('${s.id}')" style="background-color:transparent; border:none; color:var(--accent-primary); font-size:0.7rem; font-weight:700; cursor:pointer; padding:0;">Alert'e Dönüştür</button>
+                        <span style="font-size:0.65rem; color:var(--text-secondary);">${new Date(s.created_at).toLocaleDateString()}</span>
+                    </div>
+                `;
+                
+                item.addEventListener("click", () => applySavedSearch(s.id));
+                item.addEventListener("mouseenter", () => item.style.borderColor = "var(--accent-primary)");
+                item.addEventListener("mouseleave", () => item.style.borderColor = "var(--border-color)");
+                
+                container.appendChild(item);
+            });
+            
+            if (savedSearches.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-secondary); text-align:center; font-size:0.8rem; padding:1rem 0;">No saved searches</div>';
+            }
+        }
+
+        function applySavedSearch(id) {
+            const search = savedSearches.find(s => s.id === id);
+            if (!search) return;
+            
+            const container = document.getElementById("query-builder-container");
+            container.innerHTML = "";
+            
+            const rule = search.query_json;
+            if (rule.rules) {
+                rule.rules.forEach(r => {
+                    addQueryRow(r.field, r.operator, r.value);
+                });
+            } else if (rule.field) {
+                addQueryRow(rule.field, rule.operator, rule.value);
+            }
+            
+            alert(`Loaded search query: ${search.name}`);
+        }
+
+        async function convertSavedSearchToRule(id) {
+            if (!jwtToken) return;
+            const search = savedSearches.find(s => s.id === id);
+            if (!search) return;
+            
+            const ok = confirm(`Do you want to convert the saved hunt query "${search.name}" into a live alert rule?`);
+            if (!ok) return;
+            
+            try {
+                const res = await fetch(`/api/v1/hunt/saved-searches/${id}/convert-to-rule`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const rule = await res.json();
+                    alert(`Successfully converted search into alert rule: ${rule.name}!`);
+                } else {
+                    const err = await res.json();
+                    alert(`Conversion failed: ${err.error || "Unknown error"}`);
+                }
+            } catch (e) {
+                alert(`Error converting search: ${e.message}`);
+            }
+        }
+
+        function openSaveSearchModal() {
+            const filter = buildQueryTree();
+            if (!filter) {
+                alert("Please add at least one query builder condition before saving.");
+                return;
+            }
+            document.getElementById("save-search-name-input").value = "";
+            document.getElementById("save-search-modal").style.display = "flex";
+        }
+
+        function closeSaveSearchModal() {
+            document.getElementById("save-search-modal").style.display = "none";
+        }
+
+        async function submitSaveSearch() {
+            if (!jwtToken) return;
+            const nameInput = document.getElementById("save-search-name-input");
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert("Please enter a valid query name.");
+                return;
+            }
+            
+            const filter = buildQueryTree();
+            if (!filter) return;
+            
+            try {
+                const res = await fetch("/api/v1/hunt/saved-searches", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        query_json: filter
+                    })
+                });
+                if (res.ok) {
+                    alert("Search query saved successfully!");
+                    closeSaveSearchModal();
+                    loadSavedSearches();
+                } else {
+                    alert("Failed to save search query.");
+                }
+            } catch (e) {
+                alert("Error saving search: " + e.message);
+            }
+        }
+
+        // ---- Reporting & KPI Dashboard Logic ----
+        async function initializeReportsPanel() {
+            if (!jwtToken) return;
+            
+            try {
+                const res = await fetch("/api/v1/reports/daily", {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    document.getElementById("daily-total-events").innerText = data.total_events.toLocaleString();
+                    document.getElementById("daily-total-alerts").innerText = data.total_alerts.toLocaleString();
+                    document.getElementById("daily-resolved").innerText = data.resolved_alerts;
+                    document.getElementById("daily-fp").innerText = data.false_positive_alerts;
+                    document.getElementById("daily-mttr").innerText = `${data.mttr_seconds.toFixed(1)}s`;
+                    document.getElementById("daily-mta").innerText = `${data.mean_ack_seconds.toFixed(1)}s`;
+                    
+                    const rulesList = document.getElementById("daily-top-rules");
+                    rulesList.innerHTML = "";
+                    if (data.top_rules.length === 0) {
+                        rulesList.innerHTML = '<li style="color:var(--text-secondary);">No alerts generated in last 24h</li>';
+                    } else {
+                        data.top_rules.forEach(r => {
+                            rulesList.innerHTML += `<li><strong>${r.count} triggers</strong> &mdash; ${r.name}</li>`;
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load daily SOC summary report:", e);
+            }
+            
+            try {
+                const res = await fetch("/api/v1/reports/compliance", {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const comp = await res.json();
+                    
+                    const slaEl = document.getElementById("kpi-sla-score");
+                    slaEl.innerText = `${comp.iso27001_score.toFixed(1)}%`;
+                    slaEl.style.color = comp.iso27001_score >= 90 ? "#10b981" : (comp.iso27001_score >= 75 ? "#f59e0b" : "#ef4444");
+
+                    const uptimeEl = document.getElementById("kpi-uptime-score");
+                    uptimeEl.innerText = `${comp.nis2_score.toFixed(1)}%`;
+                    uptimeEl.style.color = comp.nis2_score >= 98 ? "#10b981" : (comp.nis2_score >= 90 ? "#f59e0b" : "#ef4444");
+
+                    const pciEl = document.getElementById("kpi-pci-score");
+                    pciEl.innerText = `${comp.pci_dss_score.toFixed(1)}%`;
+                    pciEl.style.color = comp.pci_dss_score >= 85 ? "#10b981" : (comp.pci_dss_score >= 60 ? "#f59e0b" : "#ef4444");
+                    
+                    document.getElementById("score-gdpr").innerText = `${comp.gdpr_score.toFixed(0)}%`;
+                    document.getElementById("bar-gdpr").style.width = `${comp.gdpr_score}%`;
+                    document.getElementById("desc-gdpr").innerText = comp.gdpr_details;
+                    
+                    document.getElementById("score-kvkk").innerText = `${comp.kvkk_score.toFixed(0)}%`;
+                    document.getElementById("bar-kvkk").style.width = `${comp.kvkk_score}%`;
+                    document.getElementById("desc-kvkk").innerText = comp.kvkk_details;
+                    
+                    document.getElementById("score-iso").innerText = `${comp.iso27001_score.toFixed(0)}%`;
+                    document.getElementById("bar-iso").style.width = `${comp.iso27001_score}%`;
+                    document.getElementById("desc-iso").innerText = comp.iso27001_details;
+                    
+                    document.getElementById("score-pci").innerText = `${comp.pci_dss_score.toFixed(0)}%`;
+                    document.getElementById("bar-pci").style.width = `${comp.pci_dss_score}%`;
+                    document.getElementById("desc-pci").innerText = comp.pci_dss_details;
+                }
+            } catch (e) {
+                console.error("Failed to load compliance metrics:", e);
+            }
+            
+            loadScheduledReports();
+        }
+
+        function downloadExecutivePDF() {
+            if (!jwtToken) return;
+            window.open(`/api/v1/reports/executive/download`, '_blank');
+        }
+
+        async function generateCustomReport() {
+            if (!jwtToken) return;
+            
+            const sections = [];
+            if (document.getElementById("rep-build-uptime").checked) sections.push("uptime");
+            if (document.getElementById("rep-build-throughput").checked) sections.push("throughput");
+            if (document.getElementById("rep-build-attackers").checked) sections.push("attackers");
+            if (document.getElementById("rep-build-alerts").checked) sections.push("alerts");
+            if (document.getElementById("rep-build-compliance").checked) sections.push("compliance");
+            
+            if (sections.length === 0) {
+                alert("Please select at least one widget section to include in custom report.");
+                return;
+            }
+            
+            const days = parseInt(document.getElementById("rep-build-days").value, 10);
+            
+            try {
+                const res = await fetch("/api/v1/reports/custom", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        sections: sections,
+                        timerange_days: days
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    const preview = document.getElementById("custom-report-preview-content");
+                    preview.textContent = JSON.stringify(data, null, 4);
+                    
+                    document.getElementById("custom-report-modal").style.display = "flex";
+                } else {
+                    alert("Failed to compile custom report.");
+                }
+            } catch (e) {
+                alert("Error generating custom report: " + e.message);
+            }
+        }
+
+        async function loadScheduledReports() {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch("/api/v1/reports/schedule", {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    scheduledReports = await res.json();
+                    renderScheduledReportsList();
+                }
+            } catch (e) {
+                console.error("Failed to load scheduled reports:", e);
+            }
+        }
+
+        function renderScheduledReportsList() {
+            const container = document.getElementById("scheduled-deliveries-list");
+            container.innerHTML = "";
+            
+            scheduledReports.forEach(s => {
+                const row = document.createElement("div");
+                row.style.backgroundColor = "var(--bg-color)";
+                row.style.border = "1px solid var(--border-color)";
+                row.style.borderRadius = "8px";
+                row.style.padding = "0.75rem";
+                row.style.display = "flex";
+                row.style.justifyContent = "space-between";
+                row.style.alignItems = "center";
+                row.style.gap = "0.5rem";
+                
+                row.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:0.2rem; min-width:0; flex-grow:1;">
+                        <div style="font-weight:700; font-size:0.85rem; text-transform:capitalize; color:var(--text-primary);">${s.report_type} Report</div>
+                        <div style="font-size:0.75rem; color:var(--text-secondary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">To: ${s.recipients}</div>
+                        <div style="font-size:0.7rem; font-family:monospace; color:var(--accent-primary);">Schedule: ${s.schedule}</div>
+                    </div>
+                    <button onclick="deleteScheduledReport('${s.id}')" style="background-color:transparent; border:1px solid var(--border-color); color:var(--critical-color); font-size:0.75rem; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer;">Delete</button>
+                `;
+                
+                container.appendChild(row);
+            });
+            
+            if (scheduledReports.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:var(--text-secondary); font-size:0.8rem; padding:1.5rem 0;">No automated report delivery schedules registered.</div>';
+            }
+        }
+
+        async function registerScheduledReport() {
+            if (!jwtToken) return;
+            const type = document.getElementById("sched-type").value;
+            const cron = document.getElementById("sched-cron").value.trim();
+            const recipients = document.getElementById("sched-recipients").value.trim();
+            
+            if (!cron || !recipients) {
+                alert("Please enter both cron schedule expression and recipients email addresses.");
+                return;
+            }
+            
+            try {
+                const res = await fetch("/api/v1/reports/schedule", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        report_type: type,
+                        recipients: recipients,
+                        schedule: cron
+                    })
+                });
+                if (res.ok) {
+                    alert("Automated report delivery scheduled successfully!");
+                    document.getElementById("sched-cron").value = "";
+                    document.getElementById("sched-recipients").value = "";
+                    loadScheduledReports();
+                } else {
+                    const err = await res.json();
+                    alert(`Failed to register schedule: ${err.error || "Unknown error"}`);
+                }
+            } catch (e) {
+                alert("Error registering scheduled report: " + e.message);
+            }
+        }
+
+        async function deleteScheduledReport(id) {
+            if (!jwtToken) return;
+            const ok = confirm("Are you sure you want to delete this scheduled report delivery job?");
+            if (!ok) return;
+            
+            try {
+                const res = await fetch(`/api/v1/reports/schedule/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.status === 204) {
+                    alert("Schedule deleted successfully.");
+                    loadScheduledReports();
+                } else {
+                    alert("Failed to delete schedule.");
+                }
+            } catch (e) {
+                alert("Error deleting schedule: " + e.message);
+            }
+        }
+
         // Initialize Charts
         function initializeDashboard() {
             // Protocol Chart
@@ -2547,6 +3627,9 @@
 
             // Poll sensors grid every 10 seconds
             setInterval(fetchSensorsGrid, 10000);
+
+            // Poll alerts triage board every 10 seconds
+            setInterval(fetchAlertsTriage, 10000);
 
             // Apply theme colors to chart elements initially
             updateChartColors();

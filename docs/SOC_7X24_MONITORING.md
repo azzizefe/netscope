@@ -248,43 +248,43 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 3.3 — Alert Yönetimi
 
-- [ ] **3.3.1** Alert queue — triage board (TODO / Investigating / Resolved / False Positive)
-- [ ] **3.3.2** Alert detay sayfası:
-  - [ ] Hangi kural tetiklendi + kuralın YAML tanımı
-  - [ ] İlgili event'ler (timeline, packet detail)
-  - [ ] Kaynak ve hedef hakkında zenginleştirilmiş bilgi (GeoIP, ASN, threat intel)
-  - [ ] Acknowledge / Assign / Escalate / Close butonları
-  - [ ] Alert notları (analistler arası iletişim, Markdown destekli)
-  - [ ] İlgili pcap parçasını indir
-  - [ ] "Bunu araştıran diğer analistler" (collaboration)
-  - [ ] SOAR playbook tetikleme butonu
-- [ ] **3.3.3** Alert timeline — kronolojik sırada tüm alert + event akışı, görsel correlation çizgileriyle
-- [ ] **3.3.4** Alert bulk operations — N alert'i aynı anda kapat, FP işaretle, assign et
+- [x] **3.3.1** Alert queue — triage board (TODO / Investigating / Resolved / False Positive)
+- [x] **3.3.2** Alert detay sayfası:
+  - [x] Hangi kural tetiklendi + kuralın YAML tanımı
+  - [x] İlgili event'ler (timeline, packet detail)
+  - [x] Kaynak ve hedef hakkında zenginleştirilmiş bilgi (GeoIP, ASN, threat intel)
+  - [x] Acknowledge / Assign / Escalate / Close butonları
+  - [x] Alert notları (analistler arası iletişim, Markdown destekli)
+  - [x] İlgili pcap parçasını indir
+  - [x] "Bunu araştıran diğer analistler" (collaboration)
+  - [x] SOAR playbook tetikleme butonu
+- [x] **3.3.3** Alert timeline — kronolojik sırada tüm alert + event akışı, görsel correlation çizgileriyle
+- [x] **3.3.4** Alert bulk operations — N alert'i aynı anda kapat, FP işaretle, assign et
 
 ### 3.4 — Threat Hunting
 
-- [ ] **3.4.1** **Interactive query builder** — görsel display-filter builder (AND/OR/NOT blokları, drag & drop)
-- [ ] **3.4.2** **Histogram view** — seçilen filter için event frekansının zaman çizelgesi
-- [ ] **3.4.3** **Pivot** — bir event'ten başlayarak tüm ilişkili event'lere atlama:
+- [x] **3.4.1** **Interactive query builder** — görsel display-filter builder (AND/OR/NOT blokları, drag & drop)
+- [x] **3.4.2** **Histogram view** — seçilen filter için event frekansının zaman çizelgesi
+- [x] **3.4.3** **Pivot** — bir event'ten başlayarak tüm ilişkili event'lere atlama:
   - Bu src IP başka nelere bağlanmış?
   - Bu dst IP'ye başka kimler bağlanmış?
   - Bu port'ta başka neler olmuş?
   - Bu JA3 fingerprint başka nerelerde görülmüş?
-- [ ] **3.4.4** **Saved searches** — sık kullanılan hunt query'leri kaydet, paylaş, alert'e dönüştür
-- [ ] **3.4.5** **Threat intel overlay** — search sonuçlarının üzerine VirusTotal/AbuseIPDB sonuçlarını overlay et
+- [x] **3.4.4** **Saved searches** — sık kullanılan hunt query'leri kaydet, paylaş, alert'e dönüştür
+- [x] **3.4.5** **Threat intel overlay** — search sonuçlarının üzerine VirusTotal/AbuseIPDB sonuçlarını overlay et
 
 ### 3.5 — Raporlama
 
-- [ ] **3.5.1** **Daily SOC report** — otomatik oluşan günlük özet:
+- [x] **3.5.1** **Daily SOC report** — otomatik oluşan günlük özet:
   - Toplam event, alert (severity kırılımlı), resolved, FP
   - En aktif sensörler, en çok alert üreten kurallar
   - Yeni görülen IP/protocol/domain'ler
   - MTTR, ortalama acknowledge süresi
-- [ ] **3.5.2** **Weekly executive report** — PDF, yönetime sunulacak formatta
-- [ ] **3.5.3** **Monthly compliance report** — KVKK, GDPR, ISO 27001, PCI-DSS, NIS2 metrikleri
-- [ ] **3.5.4** **Custom report builder** — drag & drop ile özel rapor şablonu oluşturma
-- [ ] **3.5.5** **Scheduled report delivery** — e-posta ile otomatik gönderim (günlük/haftalık/aylık)
-- [ ] **3.5.6** **Executive KPI dashboard** — yönetim için sadeleştirilmiş, büyük rakamlı, yeşil/sarı/kırmızı renkli özet ekran
+- [x] **3.5.2** **Weekly executive report** — PDF, yönetime sunulacak formatta
+- [x] **3.5.3** **Monthly compliance report** — KVKK, GDPR, ISO 27001, PCI-DSS, NIS2 metrikleri
+- [x] **3.5.4** **Custom report builder** — drag & drop ile özel rapor şablonu oluşturma
+- [x] **3.5.5** **Scheduled report delivery** — e-posta ile otomatik gönderim (günlük/haftalık/aylık)
+- [x] **3.5.6** **Executive KPI dashboard** — yönetim için sadeleştirilmiş, büyük rakamlı, yeşil/sarı/kırmızı renkli özet ekran
 
 ---
 

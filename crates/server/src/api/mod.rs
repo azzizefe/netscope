@@ -3,6 +3,8 @@ pub mod auth_routes;
 pub mod dashboard;
 pub mod events;
 pub mod health;
+pub mod hunt;
+pub mod reports;
 pub mod rules;
 pub mod sensors;
 pub mod sensors_config;
@@ -49,6 +51,8 @@ pub fn build_router(
         .nest("/api/v1/events", events::routes(api_state.clone()))
         .nest("/api/v1/alerts", alerts::routes(api_state.clone()))
         .nest("/api/v1/rules", rules::routes(api_state.clone()))
+        .nest("/api/v1/hunt", hunt::routes(api_state.clone()))
+        .nest("/api/v1/reports", reports::routes(api_state.clone()))
         .nest("/api/v1/dashboard", dashboard::routes(api_state.clone()))
         // Health carries no data and is what a load balancer polls, so it needs
         // authentication but no particular role.

@@ -194,14 +194,22 @@ capture library headers.
 
 1. **Npcap** — Install from [npcap.com](https://npcap.com) with both
    **"WinPcap API-compatible mode"** and **"Install Npcap SDK"** ticked.
-2. **Npcap SDK** — If the SDK wasn't installed alongside the driver, download
-   it separately from [npcap.com/dist](https://npcap.com/dist/npcap-sdk-1.13.zip)
-   and extract it. Then set the environment variable so the `pcap` crate can
-   find it:
+2. **Npcap SDK** — Required to *link*, and not vendored in the repo
+   (`npcap-sdk/` is gitignored). `.cargo/config.toml` points the `pcap` crate at
+   `npcap-sdk/Lib/x64` **relative to the repo root**, so the simplest setup is to
+   extract the SDK to exactly that location:
    ```powershell
-   # PowerShell — adjust the path to where you extracted the SDK
-   $env:LIB = "C:\npcap-sdk\Lib\x64;$env:LIB"
+   # From the repo root
+   Invoke-WebRequest https://npcap.com/dist/npcap-sdk-1.13.zip -OutFile "$env:TEMP\npcap-sdk.zip"
+   Expand-Archive "$env:TEMP\npcap-sdk.zip" -DestinationPath .\npcap-sdk -Force
    ```
+   To keep the SDK elsewhere, export `LIBPCAP_LIBDIR` instead — a value already
+   in the environment takes precedence over `.cargo/config.toml`:
+   ```powershell
+   $env:LIBPCAP_LIBDIR = "C:\npcap-sdk\Lib\x64"
+   ```
+   Without either, the build fails at link time with an unresolved `wpcap`
+   reference rather than a message naming the SDK.
 3. **WebView2** — Pre-installed on Windows 10/11 (needed for the desktop app).
 4. **Visual Studio Build Tools** — `rustup` on Windows needs the MSVC toolchain.
    Install "Desktop development with C++" from

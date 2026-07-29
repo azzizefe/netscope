@@ -4,7 +4,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::middleware::from_fn;
 use axum::response::IntoResponse;
-use axum::routing::{get, patch};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use serde::Deserialize;
 use serde_json::json;
@@ -238,9 +238,10 @@ async fn trigger_soar_playbook_route(
                 "[INFO] Playbook execution completed successfully. Target block confirmed.".to_string(),
             ];
             
+            let exec_id = format!("soar_exec_{}", &Uuid::new_v4().to_string()[..8]);
             (StatusCode::OK, Json(json!({
                 "status": "success",
-                "execution_id": format!("soar_exec_{}", Uuid::new_v4().to_string()[..8]),
+                "execution_id": exec_id,
                 "playbook": name,
                 "logs": logs
             }))).into_response()

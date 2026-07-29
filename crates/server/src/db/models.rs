@@ -324,3 +324,114 @@ pub struct TopologyEdge {
     pub protocol: String,
     pub count: i64,
 }
+
+// ── Threat Hunting ──
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum HuntRule {
+    Group {
+        logical: String,
+        rules: Vec<HuntRule>,
+    },
+    Condition {
+        field: String,
+        operator: String,
+        value: serde_json::Value,
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HuntQueryPayload {
+    pub filter: Option<HuntRule>,
+    pub timerange_start: Option<DateTime<Utc>>,
+    pub timerange_end: Option<DateTime<Utc>>,
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistogramPayload {
+    pub filter: Option<HuntRule>,
+    pub timerange_start: Option<DateTime<Utc>>,
+    pub timerange_end: Option<DateTime<Utc>>,
+    pub bucket_size_secs: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct HistogramBucket {
+    pub bucket_time: DateTime<Utc>,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SavedSearch {
+    pub id: Uuid,
+    pub name: String,
+    pub query_json: serde_json::Value,
+    pub created_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSavedSearch {
+    pub name: String,
+    pub query_json: serde_json::Value,
+}
+
+// ── Reporting & Scheduling ──
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ScheduledReport {
+    pub id: Uuid,
+    pub report_type: String,
+    pub recipients: String,
+    pub schedule: String,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateScheduledReport {
+    pub report_type: String,
+    pub recipients: String,
+    pub schedule: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailySocReport {
+    pub total_events: i64,
+    pub total_alerts: i64,
+    pub alerts_by_severity: std::collections::HashMap<String, i64>,
+    pub resolved_alerts: i64,
+    pub false_positive_alerts: i64,
+    pub top_sensors: Vec<CountByEntity>,
+    pub top_rules: Vec<CountByEntity>,
+    pub new_ips: Vec<String>,
+    pub new_protocols: Vec<String>,
+    pub mttr_seconds: f64,
+    pub mean_ack_seconds: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CountByEntity {
+    pub name: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceReport {
+    pub overall_score: f64,
+    pub gdpr_score: f64,
+    pub gdpr_details: String,
+    pub kvkk_score: f64,
+    pub kvkk_details: String,
+    pub iso27001_score: f64,
+    pub iso27001_details: String,
+    pub pci_dss_score: f64,
+    pub pci_dss_details: String,
+    pub nis2_score: f64,
+    pub nis2_details: String,
+    pub generated_at: DateTime<Utc>,
+}
