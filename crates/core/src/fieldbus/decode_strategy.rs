@@ -342,7 +342,7 @@ mod tests {
         let rec = decode_frame(&data, DLT_EN10MB).unwrap();
         assert_eq!(rec.ethertype, ETHERTYPE_PROFINET);
         assert_eq!(rec.protocol_family, FieldbusFamily::Profinet);
-        assert_eq!(rec.is_tsn_frame, true);
+        assert!(rec.is_tsn_frame);
     }
 
     #[test]
@@ -450,7 +450,7 @@ mod tests {
         data.extend_from_slice(&[0x00; 10]);
 
         let rec = decode_frame(&data, DLT_EN10MB).unwrap();
-        assert_eq!(rec.needs_plugin_update, true);
+        assert!(rec.needs_plugin_update);
         assert_eq!(rec.decode_layer, DecodeLayer::L2BaseFamily);
     }
 

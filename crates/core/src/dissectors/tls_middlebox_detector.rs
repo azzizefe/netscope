@@ -4,6 +4,92 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
+
+fn detect_abnormal_sizes(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
+    let mut findings = Vec::new();
+    for r in records {
+        if r.client_hello_size > 2048 {
+            findings.push(format!(
+                "{}: oversized ClientHello ({}B)",
+                r.server_name, r.client_hello_size,
+            ));
+        }
+        if r.server_hello_size > 2048 {
+            findings.push(format!(
+                "{}: oversized ServerHello ({}B)",
+                r.server_name, r.server_hello_size,
+            ));
+        }
+        if r.cert_chain_length > 5 {
+            findings.push(format!(
+                "{}: deep cert chain ({} certs)",
+                r.server_name, r.cert_chain_length,
+            ));
+        }
+    }
+    findings
+}
+
+fn detect_protocol_anomalies(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
+    let mut findings = Vec::new();
+    for r in records {
+        if r.tls_version.as_u16() == 0x0304 && !r.is_success && r.pqc_kem.is_some() {
+            findings.push(format!(
+                "{}: TLS 1.3 PQC rejected — possible middlebox",
+                r.server_name,
+            ));
+        }
+        if r.is_hybrid_kem && !r.is_success {
+            findings.push(format!(
+                "{}: hybrid KEM stripped — middlebox interference",
+                r.server_name,
+            ));
+        }
+    }
+    findings
+}
+
+pub fn dissect_tls_middlebox_detector(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    _payload: &[u8],
+) -> DissectedResult {
+    let records = crate::dissectors::tls::drain_pqc_store();
+    let size_findings = detect_abnormal_sizes(&records);
+    let proto_findings = detect_protocol_anomalies(&records);
+    let total = size_findings.len() + proto_findings.len();
+
+    let summary = if total > 0 {
+        let mut parts = Vec::new();
+        if !size_findings.is_empty() {
+            parts.push(format!("size: {}", size_findings.join("; ")));
+        }
+        if !proto_findings.is_empty() {
+            parts.push(format!("proto: {}", proto_findings.join("; ")));
+        }
+        format!(
+            "TLS Middlebox Detector: {} anomalies — {}",
+            total,
+            parts.join(" | "),
+        )
+    } else {
+        format!(
+            "TLS Middlebox Detector: no interference detected ({} sessions)",
+            records.len(),
+        )
+    };
+    DissectedResult {
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::TlsMiddleboxDetector,
+        summary,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,90 +240,5 @@ mod tests {
         let result = dissect_tls_middlebox_detector(None, None, 443, 54321, &[]);
         assert!(result.summary.contains("anomalies"));
         assert!(result.summary.contains("bad.example"));
-    }
-}
-
-fn detect_abnormal_sizes(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
-    let mut findings = Vec::new();
-    for r in records {
-        if r.client_hello_size > 2048 {
-            findings.push(format!(
-                "{}: oversized ClientHello ({}B)",
-                r.server_name, r.client_hello_size,
-            ));
-        }
-        if r.server_hello_size > 2048 {
-            findings.push(format!(
-                "{}: oversized ServerHello ({}B)",
-                r.server_name, r.server_hello_size,
-            ));
-        }
-        if r.cert_chain_length > 5 {
-            findings.push(format!(
-                "{}: deep cert chain ({} certs)",
-                r.server_name, r.cert_chain_length,
-            ));
-        }
-    }
-    findings
-}
-
-fn detect_protocol_anomalies(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
-    let mut findings = Vec::new();
-    for r in records {
-        if r.tls_version.as_u16() == 0x0304 && !r.is_success && r.pqc_kem.is_some() {
-            findings.push(format!(
-                "{}: TLS 1.3 PQC rejected — possible middlebox",
-                r.server_name,
-            ));
-        }
-        if r.is_hybrid_kem && !r.is_success {
-            findings.push(format!(
-                "{}: hybrid KEM stripped — middlebox interference",
-                r.server_name,
-            ));
-        }
-    }
-    findings
-}
-
-pub fn dissect_tls_middlebox_detector(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    _payload: &[u8],
-) -> DissectedResult {
-    let records = crate::dissectors::tls::drain_pqc_store();
-    let size_findings = detect_abnormal_sizes(&records);
-    let proto_findings = detect_protocol_anomalies(&records);
-    let total = size_findings.len() + proto_findings.len();
-
-    let summary = if total > 0 {
-        let mut parts = Vec::new();
-        if !size_findings.is_empty() {
-            parts.push(format!("size: {}", size_findings.join("; ")));
-        }
-        if !proto_findings.is_empty() {
-            parts.push(format!("proto: {}", proto_findings.join("; ")));
-        }
-        format!(
-            "TLS Middlebox Detector: {} anomalies — {}",
-            total,
-            parts.join(" | "),
-        )
-    } else {
-        format!(
-            "TLS Middlebox Detector: no interference detected ({} sessions)",
-            records.len(),
-        )
-    };
-    DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
-        protocol: Protocol::TlsMiddleboxDetector,
-        summary,
     }
 }

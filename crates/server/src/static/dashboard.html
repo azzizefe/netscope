@@ -8,8 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Chart.js CDN -->
+    <!-- Chart.js and D3.js CDNs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <style>
         /* Base Themes */
         :root {
@@ -392,6 +393,199 @@
             font-size: 0.85rem;
             text-align: center;
         }
+
+        /* ---- Navigation Tabs ---- */
+        .nav-tabs {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0 2rem;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.85rem 0.5rem;
+            border-radius: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .tab-content {
+            display: none;
+            flex-grow: 1;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ---- Sensor Fleet Grid Layout ---- */
+        .sensors-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem 0.5rem 2rem;
+        }
+
+        .bulk-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background-color: var(--accent-glow);
+            border: 1px solid var(--accent-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bulk-actions button {
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .bulk-actions button:hover {
+            opacity: 0.9;
+        }
+
+        #sensors-grid-table tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #sensors-grid-table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .sensor-checkbox-cell {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* ---- Sensor Detail Drawer ---- */
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -650px;
+            width: 650px;
+            height: 100vh;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            transition: right 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drawer-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .drawer-close {
+            background: transparent;
+            border: none;
+            font-size: 2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .drawer-close:hover {
+            color: var(--critical-color);
+        }
+
+        .drawer-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 1.5rem;
+            background-color: var(--bg-color);
+        }
+
+        .drawer-tab {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 0;
+            transition: all 0.2s;
+        }
+
+        .drawer-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .drawer-tab.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .drawer-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer-tab-content {
+            display: none;
+            height: 100%;
+        }
+
+        .drawer-tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -431,8 +625,15 @@
         </div>
     </header>
 
-    <!-- Dashboard Main Grid -->
-    <div class="dashboard-container">
+    <!-- Sub Header / Navigation Tabs -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" id="btn-tab-overview" onclick="switchTab('overview')">7x24 Overview</button>
+        <button class="tab-btn" id="btn-tab-sensors" onclick="switchTab('sensors')">Sensor Management</button>
+    </div>
+
+    <!-- Tab 1: Overview -->
+    <div id="tab-overview" class="tab-content active">
+        <div class="dashboard-container">
         
         <!-- Panel 1: Online Sensors -->
         <div class="panel">
@@ -576,9 +777,149 @@
                 <div class="alert-item" style="color: var(--text-secondary); text-align: center; padding: 2rem;">
                     Awaiting live security event signals from WebSocket...
                 </div>
+    </div> <!-- Close dashboard-container -->
+    </div> <!-- Close tab-overview -->
+
+    <!-- Tab 2: Sensor Management -->
+    <div id="tab-sensors" class="tab-content" style="display: none;">
+        <div class="sensors-header">
+            <h2>Sensor Fleet</h2>
+            <div class="bulk-actions" id="bulk-bar" style="display: none;">
+                <span id="bulk-select-count">0 sensors selected</span>
+                <button onclick="triggerBulkCommand('restart')">Bulk Restart</button>
+                <button onclick="triggerBulkCommand('config_push')">Bulk Push Config</button>
+                <button onclick="triggerBulkCommand('set_filter')">Bulk Set Filter</button>
             </div>
         </div>
+        
+        <div style="padding: 0 2rem 2rem 2rem;">
+            <div class="panel" style="overflow-x: auto;">
+                <table class="data-table" id="sensors-grid-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"><input type="checkbox" id="select-all-sensors" onchange="toggleSelectAllSensors(this)"></th>
+                            <th>Hostname</th>
+                            <th>IP Address</th>
+                            <th>OS</th>
+                            <th>Version</th>
+                            <th>Uptime</th>
+                            <th>CPU Load</th>
+                            <th>RAM Usage</th>
+                            <th>Throughput</th>
+                            <th>Status</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sensors-grid-body">
+                        <tr>
+                            <td colspan="11" style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                                Loading sensor fleet metrics...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
+    <!-- Sensor Detail Drawer (Slide-Over Panel) -->
+    <div class="drawer" id="sensor-drawer">
+        <div class="drawer-header">
+            <div class="drawer-title" id="drawer-sensor-hostname">Sensor Detail</div>
+            <button class="drawer-close" onclick="closeSensorDrawer()">×</button>
+        </div>
+        
+        <!-- Drawer Tabs -->
+        <div class="drawer-tabs">
+            <button class="drawer-tab active" id="btn-detail-telemetry" onclick="switchDrawerTab('telemetry')">Telemetry & Config</button>
+            <button class="drawer-tab" id="btn-detail-events" onclick="switchDrawerTab('events')">Recent Events</button>
+            <button class="drawer-tab" id="btn-detail-logs" onclick="switchDrawerTab('logs')">Live Logs</button>
+            <button class="drawer-tab" id="btn-detail-topology" onclick="switchDrawerTab('topology')">Topology</button>
+        </div>
+        
+        <div class="drawer-content">
+            
+            <!-- Drawer Tab 1: Telemetry & Config -->
+            <div class="drawer-tab-content active" id="detail-tab-telemetry">
+                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color:var(--text-secondary);">
+                    <span>Throughput (Last 1 hour)</span>
+                    <span id="detail-throughput-value" style="font-weight:600; color:var(--accent-primary);">0 Kbps</span>
+                </div>
+                <div style="height: 180px; width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding:0.5rem; margin-bottom: 1rem;">
+                    <canvas id="sensor-detail-chart"></canvas>
+                </div>
+                
+                <div style="background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; font-size: 0.9rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                        <span style="color:var(--text-secondary);">Active BPF Filter:</span>
+                        <span id="detail-active-filter" style="font-family:'JetBrains Mono', monospace; font-weight:600; color:var(--text-primary);">None</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                        <span style="color:var(--text-secondary);">Capture PCAP File:</span>
+                        <span id="detail-pcap-path" style="font-family:'JetBrains Mono', monospace; font-size:0.85rem; color:var(--text-primary);">/var/log/netscope/capture.pcap</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--text-secondary);">Uptime:</span>
+                        <span id="detail-uptime-val" style="color:var(--text-primary);">0s</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1.5rem;">
+                    <div style="font-size:0.85rem; text-transform:uppercase; font-weight:600; color:var(--text-secondary); margin-bottom:0.75rem; letter-spacing:0.5px;">Sensor Operations</div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.75rem;">
+                        <button onclick="issueSensorCommand('capture_restart')" style="background-color:var(--panel-bg); font-weight:600; border-color:var(--border-color);">Restart Capture</button>
+                        <button onclick="issueSensorCommand('change_filter')" style="background-color:var(--panel-bg); font-weight:600; border-color:var(--border-color);">Change Filter</button>
+                        <button onclick="issueSensorCommand('pcap_rotate')" style="background-color:var(--panel-bg); font-weight:600; border-color:var(--border-color);">Rotate PCAP</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Drawer Tab 2: Recent Events -->
+            <div class="drawer-tab-content" id="detail-tab-events">
+                <div style="margin-bottom: 0.75rem; display:flex; gap:0.5rem;">
+                    <input type="text" id="events-filter-input" placeholder="Filter events..." style="flex-grow:1; padding: 0.5rem 0.75rem; border-radius:6px; background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary);" oninput="filterSensorEvents()">
+                </div>
+                <div style="max-height: 450px; overflow-y: auto;">
+                    <table class="data-table" id="sensor-events-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Severity</th>
+                                <th>Title</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sensor-events-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Drawer Tab 3: Live Logs -->
+            <div class="drawer-tab-content" id="detail-tab-logs">
+                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                    <span style="font-size:0.85rem; color:var(--text-secondary);">Real-Time Tail (max 1000 lines)</span>
+                    <label style="font-size:0.85rem; display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
+                        <input type="checkbox" id="logs-autoscroll" checked> Autoscroll
+                    </label>
+                </div>
+                <div id="logs-console" style="height: 380px; width: 100%; border: 1px solid var(--border-color); border-radius: 8px; background-color: #05070c; color: #39ff14; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; overflow-y: auto; padding: 0.75rem; white-space: pre-wrap; line-height: 1.4;">
+                    Initializing log tail...
+                </div>
+            </div>
+            
+            <!-- Drawer Tab 4: Topology -->
+            <div class="drawer-tab-content" id="detail-tab-topology">
+                <div style="margin-bottom: 0.5rem; font-size: 0.85rem; color:var(--text-secondary);">
+                    Observed Host Network Relationships (Force-Directed Graph)
+                </div>
+                <div style="height: 380px; width: 100%; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background-color: var(--bg-color); position: relative;">
+                    <svg id="topology-svg" style="width:100%; height:100%;"></svg>
+                </div>
+            </div>
+            
+        </div>
     </div>
 
     <script>
@@ -588,6 +929,18 @@
         let throughputLabels = Array(15).fill('');
         
         let charts = {};
+
+        // Sensor Management State
+        let activeTab = 'overview';
+        let activeSensorId = null;
+        let activeDrawerTab = 'telemetry';
+        let selectedSensorIds = new Set();
+        let sensorEventsHistory = [];
+        let logPollInterval = null;
+        let lastLogTimestamp = null;
+        let detailChart = null;
+        let d3Simulation = null;
+        let sensorGridInterval = null;
 
         // On Load Check
         window.addEventListener('DOMContentLoaded', () => {
@@ -862,6 +1215,612 @@
                 container.removeChild(container.lastChild);
             }
         }
+        // Tab switching
+        function switchTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tab === 'overview') {
+                document.getElementById('btn-tab-overview').classList.add('active');
+                document.getElementById('tab-overview').classList.add('active');
+            } else if (tab === 'sensors') {
+                document.getElementById('btn-tab-sensors').classList.add('active');
+                document.getElementById('tab-sensors').classList.add('active');
+                fetchSensorsGrid();
+            }
+        }
+
+        // Fetch sensors list
+        async function fetchSensorsGrid() {
+            if (!jwtToken || activeTab !== 'sensors') return;
+            try {
+                const res = await fetch('/api/v1/sensors', {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const sensors = await res.json();
+                    renderSensorsGrid(sensors);
+                }
+            } catch (e) {
+                console.error("Failed to fetch sensors grid:", e);
+            }
+        }
+
+        // Render sensors list
+        function renderSensorsGrid(sensors) {
+            const body = document.getElementById("sensors-grid-body");
+            body.innerHTML = "";
+            
+            sensors.forEach(s => {
+                const uptime = s.uptime_secs ? formatDuration(s.uptime_secs) : 'N/A';
+                const cpu = s.cpu_load_pct !== null && s.cpu_load_pct !== undefined ? `${s.cpu_load_pct.toFixed(1)}%` : 'N/A';
+                
+                let ram = 'N/A';
+                if (s.ram_used_mb !== null && s.ram_mb !== null) {
+                    ram = `${s.ram_used_mb}MB / ${s.ram_mb}MB`;
+                } else if (s.ram_mb !== null) {
+                    ram = `${s.ram_mb}MB`;
+                }
+                
+                let throughput = 'N/A';
+                if (s.capture_throughput_bps !== null) {
+                    const kbps = s.capture_throughput_bps / 1024;
+                    throughput = kbps > 1024 ? `${(kbps / 1024).toFixed(1)} Mbps` : `${kbps.toFixed(0)} Kbps`;
+                }
+                
+                const statusClass = s.status === 'online' ? 'status-online' : 'status-offline';
+                const lastSeen = s.last_heartbeat ? new Date(s.last_heartbeat).toLocaleTimeString() : 'Never';
+                const isChecked = selectedSensorIds.has(s.id) ? 'checked' : '';
+
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td class="sensor-checkbox-cell" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="sensor-checkbox" data-id="${s.id}" ${isChecked} onchange="handleSelectSensorRow(this, '${s.id}')">
+                    </td>
+                    <td style="font-weight:600; color:var(--text-primary);">${s.hostname}</td>
+                    <td style="font-family:'JetBrains Mono', monospace; font-size:0.85rem;">${s.ip_address}</td>
+                    <td style="font-size:0.85rem;">${s.os || 'Linux'}</td>
+                    <td style="font-size:0.85rem;">v${s.version}</td>
+                    <td style="font-size:0.85rem;">${uptime}</td>
+                    <td style="font-size:0.85rem;">${cpu}</td>
+                    <td style="font-size:0.85rem;">${ram}</td>
+                    <td style="font-size:0.85rem;">${throughput}</td>
+                    <td>
+                        <span class="status-badge ${statusClass}">
+                            <span class="status-dot"></span> ${s.status}
+                        </span>
+                    </td>
+                    <td style="font-size:0.85rem; color:var(--text-secondary);">${lastSeen}</td>
+                `;
+                
+                row.addEventListener("click", () => openSensorDrawer(s.id, s.hostname, uptime));
+                body.appendChild(row);
+            });
+
+            if (sensors.length === 0) {
+                body.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No sensors registered in the fleet</td></tr>';
+            }
+        }
+
+        // Helper to format uptime duration
+        function formatDuration(seconds) {
+            if (seconds < 60) return `${seconds}s`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ${minutes % 60}m`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ${hours % 24}h`;
+        }
+
+        // Bulk selection logic
+        function updateBulkBar() {
+            const bar = document.getElementById("bulk-bar");
+            const countSpan = document.getElementById("bulk-select-count");
+            if (selectedSensorIds.size > 0) {
+                bar.style.display = "flex";
+                countSpan.innerText = `${selectedSensorIds.size} sensor(s) selected`;
+            } else {
+                bar.style.display = "none";
+            }
+        }
+
+        function handleSelectSensorRow(checkbox, sensorId) {
+            if (checkbox.checked) {
+                selectedSensorIds.add(sensorId);
+            } else {
+                selectedSensorIds.delete(sensorId);
+            }
+            updateBulkBar();
+        }
+
+        function toggleSelectAllSensors(selectAllCheckbox) {
+            const checkboxes = document.querySelectorAll(".sensor-checkbox");
+            selectedSensorIds.clear();
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+                if (selectAllCheckbox.checked) {
+                    selectedSensorIds.add(cb.dataset.id);
+                }
+            });
+            updateBulkBar();
+        }
+
+        async function triggerBulkCommand(action) {
+            if (selectedSensorIds.size === 0 || !jwtToken) return;
+            
+            let cmdName = "";
+            let params = {};
+            
+            if (action === 'restart') {
+                cmdName = "restart";
+            } else if (action === 'config_push') {
+                cmdName = "upgrade";
+            } else if (action === 'set_filter') {
+                const filter = prompt("Enter new BPF Filter for bulk push:");
+                if (filter === null) return;
+                cmdName = "set_filter";
+                params = { "bpf_filter": filter };
+            } else {
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/v1/sensors/bulk/command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        sensor_ids: Array.from(selectedSensorIds),
+                        command: cmdName,
+                        parameters: params
+                    })
+                });
+                if (res.ok) {
+                    alert(`Bulk command '${cmdName}' queued for ${selectedSensorIds.size} sensors!`);
+                    selectedSensorIds.clear();
+                    document.getElementById("select-all-sensors").checked = false;
+                    const checkboxes = document.querySelectorAll(".sensor-checkbox");
+                    checkboxes.forEach(cb => cb.checked = false);
+                    updateBulkBar();
+                    fetchSensorsGrid();
+                } else {
+                    alert("Failed to execute bulk command.");
+                }
+            } catch (e) {
+                alert("Error executing bulk command: " + e.message);
+            }
+        }
+
+        // Drawer Operations
+        function openSensorDrawer(sensorId, hostname, uptime) {
+            activeSensorId = sensorId;
+            document.getElementById("drawer-sensor-hostname").innerText = `${hostname} Detail`;
+            document.getElementById("detail-uptime-val").innerText = uptime;
+            
+            // Open drawer UI
+            document.getElementById("sensor-drawer").classList.add("open");
+            
+            // Set initial subtab
+            switchDrawerTab('telemetry');
+        }
+
+        function closeSensorDrawer() {
+            activeSensorId = null;
+            document.getElementById("sensor-drawer").classList.remove("open");
+            stopLogTail();
+            if (d3Simulation) {
+                d3Simulation.stop();
+                d3Simulation = null;
+            }
+        }
+
+        function switchDrawerTab(tab) {
+            activeDrawerTab = tab;
+            document.querySelectorAll('.drawer-tab').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.drawer-tab-content').forEach(c => c.classList.remove('active'));
+            
+            document.getElementById(`btn-detail-${tab}`).classList.add('active');
+            document.getElementById(`detail-tab-${tab}`).classList.add('active');
+            
+            stopLogTail();
+            if (d3Simulation) {
+                d3Simulation.stop();
+                d3Simulation = null;
+            }
+            
+            if (tab === 'telemetry') {
+                loadSensorThroughput(activeSensorId);
+                loadSensorConfigDetails(activeSensorId);
+            } else if (tab === 'events') {
+                loadSensorEvents(activeSensorId);
+            } else if (tab === 'logs') {
+                startLogTail(activeSensorId);
+            } else if (tab === 'topology') {
+                loadSensorTopology(activeSensorId);
+            }
+        }
+
+        // Detailed Telemetry & Config loader
+        async function loadSensorThroughput(sensorId) {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch(`/api/v1/sensors/${sensorId}/throughput`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const points = await res.json();
+                    const labels = points.map(p => new Date(p.minute).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                    const data = points.map(p => (p.throughput || 0) / 1024);
+                    
+                    const latestThroughput = data.length > 0 ? data[data.length - 1] : 0;
+                    document.getElementById("detail-throughput-value").innerText = latestThroughput > 1024 
+                        ? `${(latestThroughput / 1024).toFixed(2)} Mbps` 
+                        : `${latestThroughput.toFixed(0)} Kbps`;
+
+                    if (detailChart) {
+                        detailChart.data.labels = labels;
+                        detailChart.data.datasets[0].data = data;
+                        detailChart.update();
+                    } else {
+                        const ctx = document.getElementById("sensor-detail-chart").getContext("2d");
+                        const bodyStyle = getComputedStyle(document.body);
+                        const borderCol = bodyStyle.getPropertyValue('--border-color').trim() || '#2a3547';
+                        const textSec = bodyStyle.getPropertyValue('--text-secondary').trim() || '#8b98ab';
+                        const accent = bodyStyle.getPropertyValue('--accent-primary').trim() || '#4a9ef5';
+                        const accentGlow = bodyStyle.getPropertyValue('--accent-glow').trim() || 'rgba(74, 158, 245, 0.15)';
+
+                        detailChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Throughput (Kbps)',
+                                    data: data,
+                                    borderColor: accent,
+                                    backgroundColor: accentGlow,
+                                    borderWidth: 2,
+                                    tension: 0.2,
+                                    fill: true,
+                                    pointRadius: 2
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    x: {
+                                        grid: { color: borderCol },
+                                        ticks: { color: textSec, font: { family: 'Outfit', size: 9 } }
+                                    },
+                                    y: {
+                                        grid: { color: borderCol },
+                                        ticks: { color: textSec, font: { family: 'Outfit', size: 9 } }
+                                    }
+                                },
+                                plugins: { legend: { display: false } },
+                                responsive: true,
+                                maintainAspectRatio: false
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load throughput history:", e);
+            }
+        }
+
+        async function loadSensorConfigDetails(sensorId) {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch(`/api/v1/sensors/${sensorId}/config`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const config = await res.json();
+                    let filter = "None";
+                    let pcapPath = "/var/log/netscope/capture_active.pcap";
+                    
+                    const configData = config.config_data || "";
+                    const filterMatch = configData.match(/bpf_filter\s*=\s*\"([^\"]+)\"/);
+                    if (filterMatch) {
+                        filter = filterMatch[1];
+                    }
+                    
+                    const dbPathMatch = configData.match(/db_path\s*=\s*\"([^\"]+)\"/);
+                    if (dbPathMatch) {
+                        pcapPath = dbPathMatch[1];
+                    }
+                    
+                    document.getElementById("detail-active-filter").innerText = filter;
+                    document.getElementById("detail-pcap-path").innerText = pcapPath;
+                } else {
+                    document.getElementById("detail-active-filter").innerText = "None (Default)";
+                    document.getElementById("detail-pcap-path").innerText = "/var/log/netscope/capture_active.pcap";
+                }
+            } catch (e) {
+                console.error("Failed to load config details:", e);
+                document.getElementById("detail-active-filter").innerText = "None (Error)";
+                document.getElementById("detail-pcap-path").innerText = "/var/log/netscope/capture_active.pcap";
+            }
+        }
+
+        async function issueSensorCommand(type) {
+            if (!activeSensorId || !jwtToken) return;
+            
+            let cmdName = "";
+            let params = {};
+            
+            if (type === 'capture_restart') {
+                try {
+                    const resStop = await fetch(`/api/v1/sensors/${activeSensorId}/command`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${jwtToken}`
+                        },
+                        body: JSON.stringify({ command: "capture_stop", parameters: {} })
+                    });
+                    if (resStop.ok) {
+                        setTimeout(async () => {
+                            await fetch(`/api/v1/sensors/${activeSensorId}/command`, {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${jwtToken}`
+                                },
+                                body: JSON.stringify({ command: "capture_start", parameters: {} })
+                            });
+                            alert("Capture restart commands queued successfully!");
+                        }, 1000);
+                    } else {
+                        alert("Failed to queue capture stop command.");
+                    }
+                } catch(e) {
+                    alert("Error sending capture restart command: " + e.message);
+                }
+                return;
+            } else if (type === 'change_filter') {
+                const newFilter = prompt("Enter new BPF Filter (e.g. tcp port 443, udp port 53):");
+                if (newFilter === null) return;
+                cmdName = "set_filter";
+                params = { "bpf_filter": newFilter };
+            } else if (type === 'pcap_rotate') {
+                cmdName = "pcap_rotate";
+            } else {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/v1/sensors/${activeSensorId}/command`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ command: cmdName, parameters: params })
+                });
+                if (res.ok) {
+                    alert(`Command '${cmdName}' queued successfully!`);
+                    setTimeout(() => {
+                        loadSensorConfigDetails(activeSensorId);
+                    }, 1500);
+                } else {
+                    alert(`Failed to queue command '${cmdName}'`);
+                }
+            } catch (e) {
+                alert("Error sending command: " + e.message);
+            }
+        }
+
+        // Drawer Tab 2: Events
+        async function loadSensorEvents(sensorId) {
+            if (!jwtToken) return;
+            const body = document.getElementById("sensor-events-body");
+            body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">Loading events...</td></tr>';
+            
+            try {
+                const res = await fetch(`/api/v1/events?sensor_id=${sensorId}&per_page=50`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    sensorEventsHistory = await res.json();
+                    renderSensorEvents(sensorEventsHistory);
+                } else {
+                    body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--critical-color);">Failed to load events</td></tr>';
+                }
+            } catch (e) {
+                console.error("Failed to load sensor events:", e);
+                body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--critical-color);">Error connecting to API</td></tr>';
+            }
+        }
+
+        function renderSensorEvents(events) {
+            const body = document.getElementById("sensor-events-body");
+            body.innerHTML = "";
+            
+            events.forEach(e => {
+                const time = new Date(e.timestamp).toLocaleTimeString();
+                let sevClass = `badge-${e.severity.toLowerCase()}`;
+                if (e.severity === 'info') sevClass = 'badge-low';
+                
+                body.innerHTML += `
+                    <tr>
+                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">${time}</td>
+                        <td><span class="badge badge-low">${e.event_type}</span></td>
+                        <td><span class="badge ${sevClass}">${e.severity}</span></td>
+                        <td style="font-size: 0.85rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.title}</td>
+                    </tr>
+                `;
+            });
+            
+            if (events.length === 0) {
+                body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">No events recorded for this sensor</td></tr>';
+            }
+        }
+
+        function filterSensorEvents() {
+            const query = document.getElementById("events-filter-input").value.toLowerCase();
+            const filtered = sensorEventsHistory.filter(e => 
+                e.title.toLowerCase().includes(query) || 
+                e.event_type.toLowerCase().includes(query) || 
+                e.severity.toLowerCase().includes(query)
+            );
+            renderSensorEvents(filtered);
+        }
+
+        // Drawer Tab 3: Logs Tail
+        function startLogTail(sensorId) {
+            if (logPollInterval) clearInterval(logPollInterval);
+            const consoleDiv = document.getElementById("logs-console");
+            consoleDiv.innerHTML = "Initializing log stream...\n";
+            lastLogTimestamp = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+            async function poll() {
+                if (!jwtToken) return;
+                try {
+                    const res = await fetch(`/api/v1/sensors/${sensorId}/logs?since=${encodeURIComponent(lastLogTimestamp)}`, {
+                        headers: { 'Authorization': `Bearer ${jwtToken}` }
+                    });
+                    if (res.ok) {
+                        const logs = await res.json();
+                        if (logs.length > 0) {
+                            if (consoleDiv.innerText.includes("Initializing log stream")) {
+                                consoleDiv.innerHTML = "";
+                            }
+                            
+                            logs.forEach(l => {
+                                const line = document.createElement("div");
+                                let levelColor = "#39ff14";
+                                if (l.level === "WARN") levelColor = "#ffb86c";
+                                if (l.level === "ERROR") levelColor = "#ff5555";
+                                
+                                line.innerHTML = `<span style="color: var(--text-secondary)">[${new Date(l.timestamp).toLocaleTimeString()}]</span> <span style="color: ${levelColor}">[${l.level}]</span> ${l.message}`;
+                                consoleDiv.appendChild(line);
+                                lastLogTimestamp = l.timestamp;
+                            });
+                            
+                            while (consoleDiv.children.length > 1000) {
+                                consoleDiv.removeChild(consoleDiv.firstChild);
+                            }
+                            
+                            if (document.getElementById("logs-autoscroll").checked) {
+                                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to poll logs:", e);
+                }
+            }
+
+            poll();
+            logPollInterval = setInterval(poll, 2000);
+        }
+
+        // Drawer Tab 4: Network Topology
+        async function loadSensorTopology(sensorId) {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch(`/api/v1/sensors/${sensorId}/topology`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderTopology(data.nodes, data.links);
+                }
+            } catch (e) {
+                console.error("Failed to load topology:", e);
+            }
+        }
+
+        function renderTopology(nodes, links) {
+            const svg = d3.select("#topology-svg");
+            svg.selectAll("*").remove();
+
+            const rect = svg.node().getBoundingClientRect();
+            const width = rect.width || 550;
+            const height = rect.height || 380;
+
+            d3Simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(110))
+                .force("charge", d3.forceManyBody().strength(-180))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+
+            const link = svg.append("g")
+                .attr("stroke", "var(--border-color)")
+                .attr("stroke-opacity", 0.6)
+                .selectAll("line")
+                .data(links)
+                .join("line")
+                .attr("stroke-width", d => Math.max(1.5, Math.min(6, d.value / 100)));
+
+            const linkText = svg.append("g")
+                .selectAll("text")
+                .data(links)
+                .join("text")
+                .attr("fill", "var(--text-secondary)")
+                .attr("font-size", "8px")
+                .attr("font-family", "JetBrains Mono")
+                .attr("text-anchor", "middle")
+                .text(d => d.protocol);
+
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(nodes)
+                .join("g")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
+            node.append("circle")
+                .attr("r", d => d.group === 1 ? 10 : 8)
+                .attr("fill", d => d.group === 1 ? "var(--accent-primary)" : "var(--medium-color)")
+                .attr("stroke", "var(--border-color)")
+                .attr("stroke-width", 1.5);
+
+            node.append("text")
+                .attr("dx", 12)
+                .attr("dy", ".35em")
+                .attr("fill", "var(--text-primary)")
+                .attr("font-size", "10px")
+                .attr("font-family", "Outfit")
+                .text(d => d.id);
+
+            d3Simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                linkText
+                    .attr("x", d => (d.source.x + d.target.x) / 2)
+                    .attr("y", d => (d.source.y + d.target.y) / 2 - 4);
+
+                node
+                    .attr("transform", d => `translate(${d.x}, ${d.y})`);
+            });
+
+            function dragstarted(event, d) {
+                if (!event.active) d3Simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) d3Simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
 
         // Initialize Charts
         function initializeDashboard() {
@@ -952,6 +1911,9 @@
 
             // Poll metrics every 5 seconds
             setInterval(fetchMetrics, 5000);
+
+            // Poll sensors grid every 10 seconds
+            setInterval(fetchSensorsGrid, 10000);
 
             // Apply theme colors to chart elements initially
             updateChartColors();

@@ -6,6 +6,44 @@ use crate::pqc_wizard::Tls13PqcWizard;
 
 use super::DissectedResult;
 
+
+pub fn dissect_tls_pqc_wizard_scan(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    _payload: &[u8],
+) -> DissectedResult {
+    let store = {
+        let records = crate::dissectors::tls::drain_pqc_store();
+        let mut s = pqc_handshake::PqcHandshakeStore::new();
+        for r in records {
+            s.push(r);
+        }
+        s
+    };
+    let report = Tls13PqcWizard::analyze(&store);
+
+    let vuln_count = report.vulnerabilities.len();
+    let rec_count = report.recommendations.len();
+    let comp_count = report.compliance.len();
+    let risk = report.overview.risk_score.label();
+    let adoption = report.overview.adoption_rate;
+
+    let summary = format!(
+        "TLS PQC Wizard Scan: {} handshakes, adoption {:.1}%, risk {}, {} vulnerabilities, {} recommendations, {} compliance flags",
+        report.raw_records, adoption, risk, vuln_count, rec_count, comp_count,
+    );
+    DissectedResult {
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::TlsPqcWizardScan,
+        summary,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,42 +106,5 @@ mod tests {
         assert!(result.summary.contains("2 handshakes"));
         assert!(result.src_port == Some(443));
         assert!(result.dst_port == Some(54321));
-    }
-}
-
-pub fn dissect_tls_pqc_wizard_scan(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    _payload: &[u8],
-) -> DissectedResult {
-    let store = {
-        let records = crate::dissectors::tls::drain_pqc_store();
-        let mut s = pqc_handshake::PqcHandshakeStore::new();
-        for r in records {
-            s.push(r);
-        }
-        s
-    };
-    let report = Tls13PqcWizard::analyze(&store);
-
-    let vuln_count = report.vulnerabilities.len();
-    let rec_count = report.recommendations.len();
-    let comp_count = report.compliance.len();
-    let risk = report.overview.risk_score.label();
-    let adoption = report.overview.adoption_rate;
-
-    let summary = format!(
-        "TLS PQC Wizard Scan: {} handshakes, adoption {:.1}%, risk {}, {} vulnerabilities, {} recommendations, {} compliance flags",
-        report.raw_records, adoption, risk, vuln_count, rec_count, comp_count,
-    );
-    DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
-        protocol: Protocol::TlsPqcWizardScan,
-        summary,
     }
 }

@@ -4,6 +4,81 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
+
+fn detect_version_downgrade(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
+    let mut findings = Vec::new();
+    for r in records {
+        if let Some(ref reason) = r.pqc_fallback_reason {
+            if reason.contains("downgrade") || reason.contains("fallback") || reason.contains("1.2")
+            {
+                findings.push(format!("{}: {}", r.server_name, reason,));
+            }
+        }
+        if !r.is_success && r.pqc_kem.is_some() {
+            findings.push(format!(
+                "{}: PQC KEM offered but handshake failed",
+                r.server_name,
+            ));
+        }
+    }
+    findings
+}
+
+fn detect_hybrid_stripping(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
+    records
+        .iter()
+        .filter(|r| r.pqc_kem.is_some() && !r.is_success && r.is_hybrid_kem)
+        .map(|r| {
+            format!(
+                "{}: hybrid KEM advertised but negotiation failed",
+                r.server_name,
+            )
+        })
+        .collect()
+}
+
+pub fn dissect_tls_downgrade_detector(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    _payload: &[u8],
+) -> DissectedResult {
+    let records = crate::dissectors::tls::drain_pqc_store();
+
+    let downgrade_findings = detect_version_downgrade(&records);
+    let stripping_findings = detect_hybrid_stripping(&records);
+    let total_findings = downgrade_findings.len() + stripping_findings.len();
+
+    let summary = if total_findings > 0 {
+        let mut parts = Vec::new();
+        if !downgrade_findings.is_empty() {
+            parts.push(format!("downgrade: {}", downgrade_findings.join("; ")));
+        }
+        if !stripping_findings.is_empty() {
+            parts.push(format!("hybrid-strip: {}", stripping_findings.join("; ")));
+        }
+        format!(
+            "TLS Downgrade Detector: {} alerts — {}",
+            total_findings,
+            parts.join(" | "),
+        )
+    } else {
+        format!(
+            "TLS Downgrade Detector: no downgrade detected ({} sessions analyzed)",
+            records.len(),
+        )
+    };
+    DissectedResult {
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::TlsDowngradeDetector,
+        summary,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,79 +191,5 @@ mod tests {
         let result = dissect_tls_downgrade_detector(None, None, 443, 54321, &[]);
         assert!(result.summary.contains("alerts"));
         assert!(result.summary.contains("bad.example"));
-    }
-}
-
-fn detect_version_downgrade(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
-    let mut findings = Vec::new();
-    for r in records {
-        if let Some(ref reason) = r.pqc_fallback_reason {
-            if reason.contains("downgrade") || reason.contains("fallback") || reason.contains("1.2")
-            {
-                findings.push(format!("{}: {}", r.server_name, reason,));
-            }
-        }
-        if !r.is_success && r.pqc_kem.is_some() {
-            findings.push(format!(
-                "{}: PQC KEM offered but handshake failed",
-                r.server_name,
-            ));
-        }
-    }
-    findings
-}
-
-fn detect_hybrid_stripping(records: &[crate::pqc_handshake::PqcHandshakeRecord]) -> Vec<String> {
-    records
-        .iter()
-        .filter(|r| r.pqc_kem.is_some() && !r.is_success && r.is_hybrid_kem)
-        .map(|r| {
-            format!(
-                "{}: hybrid KEM advertised but negotiation failed",
-                r.server_name,
-            )
-        })
-        .collect()
-}
-
-pub fn dissect_tls_downgrade_detector(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    _payload: &[u8],
-) -> DissectedResult {
-    let records = crate::dissectors::tls::drain_pqc_store();
-
-    let downgrade_findings = detect_version_downgrade(&records);
-    let stripping_findings = detect_hybrid_stripping(&records);
-    let total_findings = downgrade_findings.len() + stripping_findings.len();
-
-    let summary = if total_findings > 0 {
-        let mut parts = Vec::new();
-        if !downgrade_findings.is_empty() {
-            parts.push(format!("downgrade: {}", downgrade_findings.join("; ")));
-        }
-        if !stripping_findings.is_empty() {
-            parts.push(format!("hybrid-strip: {}", stripping_findings.join("; ")));
-        }
-        format!(
-            "TLS Downgrade Detector: {} alerts — {}",
-            total_findings,
-            parts.join(" | "),
-        )
-    } else {
-        format!(
-            "TLS Downgrade Detector: no downgrade detected ({} sessions analyzed)",
-            records.len(),
-        )
-    };
-    DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
-        protocol: Protocol::TlsDowngradeDetector,
-        summary,
     }
 }

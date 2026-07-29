@@ -1440,7 +1440,7 @@ mod tests {
     fn protocol_count_matches_table_length() {
         let count = protocol_count();
         let table = protocol_table();
-        assert_eq!(count as usize, table.len());
+        assert_eq!(count, table.len());
     }
 
     #[test]

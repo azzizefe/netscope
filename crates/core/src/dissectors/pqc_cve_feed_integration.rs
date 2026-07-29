@@ -5,6 +5,85 @@ use crate::pqc_handshake::{KemId, PqcHandshakeStore};
 
 use super::DissectedResult;
 
+
+const PQC_CVE_DB: &[(&str, &str, &[KemId])] = &[
+    (
+        "CVE-2024-1234",
+        "BIKE-L1 timing side-channel",
+        &[KemId::BikeL1],
+    ),
+    ("CVE-2024-5678", "HQC-128 weak parameter", &[KemId::Hqc128]),
+    (
+        "CVE-2025-0001",
+        "FrodoKEM-640 constant-time issue",
+        &[KemId::FrodoKem640Aes],
+    ),
+];
+
+fn check_cve_matches(store: &PqcHandshakeStore) -> Vec<(&'static str, &'static str)> {
+    let mut matches = Vec::new();
+    for r in &store.records {
+        if let Some(ref kem) = r.pqc_kem {
+            for (cve_id, desc, affected_kems) in PQC_CVE_DB {
+                if affected_kems.contains(&kem.algorithm) {
+                    matches.push((*cve_id, *desc));
+                }
+            }
+        }
+    }
+    matches.sort();
+    matches.dedup();
+    matches
+}
+
+pub fn dissect_pqc_cve_feed_integration(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    payload: &[u8],
+) -> DissectedResult {
+    let records = crate::dissectors::tls::drain_pqc_store();
+    let mut store = PqcHandshakeStore::new();
+    for r in records {
+        store.push(r);
+    }
+
+    let cve_matches = check_cve_matches(&store);
+    let total_cves = PQC_CVE_DB.len();
+    let feed_version = if payload.len() >= 4 {
+        u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]])
+    } else {
+        0
+    };
+
+    let summary = if cve_matches.is_empty() {
+        format!(
+            "PQC CVE Feed: v{} — {} CVEs monitored, no matches — environment clean",
+            feed_version, total_cves,
+        )
+    } else {
+        let cve_list: Vec<String> = cve_matches
+            .iter()
+            .map(|(id, desc)| format!("{} ({})", id, desc))
+            .collect();
+        format!(
+            "PQC CVE Feed: v{} — {} alerts — {}",
+            feed_version,
+            cve_matches.len(),
+            cve_list.join("; "),
+        )
+    };
+    DissectedResult {
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::PqcCveFeedIntegration,
+        summary,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,83 +203,5 @@ mod tests {
         crate::dissectors::tls::push_pqc_record_for_test(r);
         let result = dissect_pqc_cve_feed_integration(None, None, 443, 54321, &[]);
         assert!(result.summary.contains("1 alert"));
-    }
-}
-
-const PQC_CVE_DB: &[(&str, &str, &[KemId])] = &[
-    (
-        "CVE-2024-1234",
-        "BIKE-L1 timing side-channel",
-        &[KemId::BikeL1],
-    ),
-    ("CVE-2024-5678", "HQC-128 weak parameter", &[KemId::Hqc128]),
-    (
-        "CVE-2025-0001",
-        "FrodoKEM-640 constant-time issue",
-        &[KemId::FrodoKem640Aes],
-    ),
-];
-
-fn check_cve_matches(store: &PqcHandshakeStore) -> Vec<(&'static str, &'static str)> {
-    let mut matches = Vec::new();
-    for r in &store.records {
-        if let Some(ref kem) = r.pqc_kem {
-            for (cve_id, desc, affected_kems) in PQC_CVE_DB {
-                if affected_kems.contains(&kem.algorithm) {
-                    matches.push((*cve_id, *desc));
-                }
-            }
-        }
-    }
-    matches.sort();
-    matches.dedup();
-    matches
-}
-
-pub fn dissect_pqc_cve_feed_integration(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    payload: &[u8],
-) -> DissectedResult {
-    let records = crate::dissectors::tls::drain_pqc_store();
-    let mut store = PqcHandshakeStore::new();
-    for r in records {
-        store.push(r);
-    }
-
-    let cve_matches = check_cve_matches(&store);
-    let total_cves = PQC_CVE_DB.len();
-    let feed_version = if payload.len() >= 4 {
-        u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]])
-    } else {
-        0
-    };
-
-    let summary = if cve_matches.is_empty() {
-        format!(
-            "PQC CVE Feed: v{} — {} CVEs monitored, no matches — environment clean",
-            feed_version, total_cves,
-        )
-    } else {
-        let cve_list: Vec<String> = cve_matches
-            .iter()
-            .map(|(id, desc)| format!("{} ({})", id, desc))
-            .collect();
-        format!(
-            "PQC CVE Feed: v{} — {} alerts — {}",
-            feed_version,
-            cve_matches.len(),
-            cve_list.join("; "),
-        )
-    };
-    DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
-        protocol: Protocol::PqcCveFeedIntegration,
-        summary,
     }
 }

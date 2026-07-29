@@ -4,6 +4,89 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
+
+fn compute_perf_stats(
+    records: &[crate::pqc_handshake::PqcHandshakeRecord],
+) -> (usize, f64, f64, f64, f64, f64) {
+    let total = records.len();
+    if total == 0 {
+        return (0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    }
+
+    let pqc_count = records.iter().filter(|r| r.used_pqc()).count();
+    let total_hs: f64 = records.iter().map(|r| r.total_handshake_ms as f64).sum();
+    let avg_hs = total_hs / total as f64;
+
+    let pqc_hs_times: Vec<f64> = records
+        .iter()
+        .filter(|r| r.used_pqc())
+        .map(|r| r.total_handshake_ms as f64)
+        .collect();
+
+    let kem_times: Vec<f64> = records
+        .iter()
+        .filter(|r| r.used_pqc())
+        .map(|r| r.pqc_kem_time_us as f64 / 1000.0)
+        .collect();
+
+    let avg_pqc = if pqc_hs_times.is_empty() {
+        0.0
+    } else {
+        pqc_hs_times.iter().sum::<f64>() / pqc_hs_times.len() as f64
+    };
+
+    let avg_kem = if kem_times.is_empty() {
+        0.0
+    } else {
+        kem_times.iter().sum::<f64>() / kem_times.len() as f64
+    };
+
+    let overhead = records
+        .iter()
+        .map(|r| r.pqc_overhead_ms as f64)
+        .sum::<f64>()
+        / total as f64;
+    let extra_bytes: f64 = records
+        .iter()
+        .map(|r| r.pqc_packet_size_extra as f64)
+        .sum::<f64>()
+        / total as f64;
+
+    (pqc_count, avg_hs, avg_pqc, overhead, avg_kem, extra_bytes)
+}
+
+pub fn dissect_tls_perf_benchmark_model(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    _payload: &[u8],
+) -> DissectedResult {
+    let records = crate::dissectors::tls::drain_pqc_store();
+
+    let (pqc_count, avg_hs, avg_pqc_hs, overhead, avg_kem, extra_bytes) =
+        compute_perf_stats(&records);
+
+    let summary = format!(
+        "TLS Perf Benchmark: {} sessions ({} PQC) — avg handshake {:.1}ms, PQC avg {:.1}ms, KEM {:.1}ms, overhead {:.1}ms, extra {:.0}B",
+        records.len(),
+        pqc_count,
+        avg_hs,
+        avg_pqc_hs,
+        avg_kem,
+        overhead,
+        extra_bytes,
+    );
+    DissectedResult {
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::TlsPerfBenchmarkModel,
+        summary,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,87 +187,5 @@ mod tests {
         let result = dissect_tls_perf_benchmark_model(None, None, 443, 54321, &[]);
         assert!(result.summary.contains("1 session"));
         assert!(result.summary.contains("1 PQC"));
-    }
-}
-
-fn compute_perf_stats(
-    records: &[crate::pqc_handshake::PqcHandshakeRecord],
-) -> (usize, f64, f64, f64, f64, f64) {
-    let total = records.len();
-    if total == 0 {
-        return (0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    }
-
-    let pqc_count = records.iter().filter(|r| r.used_pqc()).count();
-    let total_hs: f64 = records.iter().map(|r| r.total_handshake_ms as f64).sum();
-    let avg_hs = total_hs / total as f64;
-
-    let pqc_hs_times: Vec<f64> = records
-        .iter()
-        .filter(|r| r.used_pqc())
-        .map(|r| r.total_handshake_ms as f64)
-        .collect();
-
-    let kem_times: Vec<f64> = records
-        .iter()
-        .filter(|r| r.used_pqc())
-        .map(|r| r.pqc_kem_time_us as f64 / 1000.0)
-        .collect();
-
-    let avg_pqc = if pqc_hs_times.is_empty() {
-        0.0
-    } else {
-        pqc_hs_times.iter().sum::<f64>() / pqc_hs_times.len() as f64
-    };
-
-    let avg_kem = if kem_times.is_empty() {
-        0.0
-    } else {
-        kem_times.iter().sum::<f64>() / kem_times.len() as f64
-    };
-
-    let overhead = records
-        .iter()
-        .map(|r| r.pqc_overhead_ms as f64)
-        .sum::<f64>()
-        / total as f64;
-    let extra_bytes: f64 = records
-        .iter()
-        .map(|r| r.pqc_packet_size_extra as f64)
-        .sum::<f64>()
-        / total as f64;
-
-    (pqc_count, avg_hs, avg_pqc, overhead, avg_kem, extra_bytes)
-}
-
-pub fn dissect_tls_perf_benchmark_model(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    _payload: &[u8],
-) -> DissectedResult {
-    let records = crate::dissectors::tls::drain_pqc_store();
-
-    let (pqc_count, avg_hs, avg_pqc_hs, overhead, avg_kem, extra_bytes) =
-        compute_perf_stats(&records);
-
-    let summary = format!(
-        "TLS Perf Benchmark: {} sessions ({} PQC) — avg handshake {:.1}ms, PQC avg {:.1}ms, KEM {:.1}ms, overhead {:.1}ms, extra {:.0}B",
-        records.len(),
-        pqc_count,
-        avg_hs,
-        avg_pqc_hs,
-        avg_kem,
-        overhead,
-        extra_bytes,
-    );
-    DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
-        protocol: Protocol::TlsPerfBenchmarkModel,
-        summary,
     }
 }

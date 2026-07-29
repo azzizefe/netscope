@@ -76,11 +76,15 @@ pub struct SensorSummary {
     pub id: Uuid,
     pub hostname: String,
     pub ip_address: String,
+    pub os: Option<String>,
     pub version: String,
     pub status: String,
     pub last_heartbeat: Option<DateTime<Utc>>,
     pub uptime_secs: Option<i64>,
     pub cpu_load_pct: Option<f32>,
+    pub ram_used_mb: Option<i32>,
+    pub ram_mb: Option<i32>,
+    pub capture_throughput_bps: Option<i64>,
 }
 
 // ── Heartbeats ──
@@ -281,4 +285,18 @@ pub struct SensorConfigHistory {
     pub version: i32,
     pub created_at: DateTime<Utc>,
     pub created_by: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ThroughputPoint {
+    pub minute: DateTime<Utc>,
+    pub throughput: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TopologyEdge {
+    pub source_ip: String,
+    pub dest_ip: String,
+    pub protocol: String,
+    pub count: i64,
 }

@@ -5,6 +5,90 @@ use crate::pqc_handshake::PqcHandshakeStore;
 
 use super::DissectedResult;
 
+
+fn predict_failure_rate(store: &PqcHandshakeStore) -> (usize, f64) {
+    let records = &store.records;
+    if records.is_empty() {
+        return (0, 0.0);
+    }
+    let failures = records.iter().filter(|r| !r.is_success).count();
+    let rate = failures as f64 / records.len() as f64 * 100.0;
+    (failures, rate)
+}
+
+fn find_mismatches(store: &PqcHandshakeStore) -> Vec<String> {
+    store
+        .records
+        .iter()
+        .filter_map(|r| {
+            if r.pqc_kem.is_some() && !r.is_success {
+                let kem = r
+                    .pqc_kem
+                    .as_ref()
+                    .map(|k| format!("{:?}", k.algorithm))
+                    .unwrap_or_else(|| "unknown".into());
+                Some(format!(
+                    "KEM {} failed (fallback: {:?})",
+                    kem, r.pqc_fallback_reason
+                ))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+pub fn dissect_tls_key_share_prediction(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    _payload: &[u8],
+) -> DissectedResult {
+    let records = crate::dissectors::tls::drain_pqc_store();
+    let mut store = PqcHandshakeStore::new();
+    for r in records {
+        store.push(r);
+    }
+
+    let (failures, fail_rate) = predict_failure_rate(&store);
+    let mismatches = find_mismatches(&store);
+    let total = store.total_handshakes();
+
+    let predictions = if mismatches.is_empty() {
+        "no failures predicted".into()
+    } else {
+        format!(
+            "{} predicted failures: {}",
+            mismatches.len(),
+            mismatches.join("; ")
+        )
+    };
+
+    let summary = format!(
+        "Key Share Prediction: {} sessions, {} failures ({:.1}%), {} — {}",
+        total,
+        failures,
+        fail_rate,
+        predictions,
+        if fail_rate > 20.0 {
+            "HIGH RISK: KEM negotiation may fail"
+        } else if fail_rate > 5.0 {
+            "MEDIUM: elevated failure rate"
+        } else {
+            "LOW: stable key share negotiation"
+        },
+    );
+    DissectedResult {
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::TlsKeySharePrediction,
+        summary,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,88 +200,5 @@ mod tests {
         crate::dissectors::tls::push_pqc_record_for_test(r);
         let result = dissect_tls_key_share_prediction(None, None, 443, 54321, &[]);
         assert!(result.summary.contains("1 session"));
-    }
-}
-
-fn predict_failure_rate(store: &PqcHandshakeStore) -> (usize, f64) {
-    let records = &store.records;
-    if records.is_empty() {
-        return (0, 0.0);
-    }
-    let failures = records.iter().filter(|r| !r.is_success).count();
-    let rate = failures as f64 / records.len() as f64 * 100.0;
-    (failures, rate)
-}
-
-fn find_mismatches(store: &PqcHandshakeStore) -> Vec<String> {
-    store
-        .records
-        .iter()
-        .filter_map(|r| {
-            if r.pqc_kem.is_some() && !r.is_success {
-                let kem = r
-                    .pqc_kem
-                    .as_ref()
-                    .map(|k| format!("{:?}", k.algorithm))
-                    .unwrap_or_else(|| "unknown".into());
-                Some(format!(
-                    "KEM {} failed (fallback: {:?})",
-                    kem, r.pqc_fallback_reason
-                ))
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-pub fn dissect_tls_key_share_prediction(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    _payload: &[u8],
-) -> DissectedResult {
-    let records = crate::dissectors::tls::drain_pqc_store();
-    let mut store = PqcHandshakeStore::new();
-    for r in records {
-        store.push(r);
-    }
-
-    let (failures, fail_rate) = predict_failure_rate(&store);
-    let mismatches = find_mismatches(&store);
-    let total = store.total_handshakes();
-
-    let predictions = if mismatches.is_empty() {
-        "no failures predicted".into()
-    } else {
-        format!(
-            "{} predicted failures: {}",
-            mismatches.len(),
-            mismatches.join("; ")
-        )
-    };
-
-    let summary = format!(
-        "Key Share Prediction: {} sessions, {} failures ({:.1}%), {} — {}",
-        total,
-        failures,
-        fail_rate,
-        predictions,
-        if fail_rate > 20.0 {
-            "HIGH RISK: KEM negotiation may fail"
-        } else if fail_rate > 5.0 {
-            "MEDIUM: elevated failure rate"
-        } else {
-            "LOW: stable key share negotiation"
-        },
-    );
-    DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
-        protocol: Protocol::TlsKeySharePrediction,
-        summary,
     }
 }

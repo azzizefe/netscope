@@ -143,7 +143,7 @@ mod tests {
     /// Build a mailbox frame carrying `protocol` and `body`.
     fn mbox_frame(protocol: u8, body: &[u8]) -> Vec<u8> {
         // Frame header: type 4 in the top nibble, length in the low bits.
-        let hdr = (u16::from(FRAME_TYPE_MAILBOX) << 12) | (body.len() + MBOX_HEADER) as u16;
+        let hdr = (FRAME_TYPE_MAILBOX << 12) | (body.len() + MBOX_HEADER) as u16;
         let mut f = hdr.to_le_bytes().to_vec();
         f.extend_from_slice(&(body.len() as u16).to_le_bytes()); // mailbox length
         f.extend_from_slice(&[0x00, 0x00]); // address
@@ -196,14 +196,14 @@ mod tests {
     /// A truncated mailbox header is not read past.
     #[test]
     fn a_truncated_mailbox_does_not_panic() {
-        let hdr = ((u16::from(FRAME_TYPE_MAILBOX) << 12) | 4).to_le_bytes();
+        let hdr = ((FRAME_TYPE_MAILBOX << 12) | 4).to_le_bytes();
         let r = dissect_ethercat(&[hdr[0], hdr[1], 0x01]);
         assert_eq!(r.protocol, Protocol::Ethercat);
     }
 
     /// Build a datagram frame addressing register `offset`.
     fn datagram(cmd: u8, offset: u16, data: &[u8]) -> Vec<u8> {
-        let hdr = (u16::from(FRAME_TYPE_DATAGRAMS) << 12) | (DATAGRAM_HEADER + data.len()) as u16;
+        let hdr = (FRAME_TYPE_DATAGRAMS << 12) | (DATAGRAM_HEADER + data.len()) as u16;
         let mut f = hdr.to_le_bytes().to_vec();
         f.push(cmd);
         f.push(0); // index

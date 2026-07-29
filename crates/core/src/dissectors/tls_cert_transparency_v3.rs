@@ -4,6 +4,55 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
+
+fn parse_sct_version(payload: &[u8]) -> u8 {
+    payload.first().copied().unwrap_or(0)
+}
+
+fn count_sct_entries(payload: &[u8]) -> usize {
+    if payload.len() < 3 {
+        return 0;
+    }
+    let count = u16::from_be_bytes([payload[1], payload[2]]);
+    count as usize
+}
+
+pub fn dissect_tls_cert_transparency_v3(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    payload: &[u8],
+) -> DissectedResult {
+    let sct_version = parse_sct_version(payload);
+    let entry_count = count_sct_entries(payload);
+
+    let record_count = crate::dissectors::tls::drain_pqc_store().len();
+
+    let summary = if sct_version > 0 {
+        format!(
+            "Certificate Transparency v3: SCT version {}, {} entries (from {} TLS records) — PQC-aware SCT parsing {}",
+            sct_version,
+            entry_count,
+            record_count,
+            if entry_count > 0 { "active" } else { "idle" },
+        )
+    } else {
+        format!(
+            "Certificate Transparency v3: no SCT data ({} TLS records tracked)",
+            record_count,
+        )
+    };
+    DissectedResult {
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::TlsCertTransparencyV3,
+        summary,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,53 +110,5 @@ mod tests {
         assert_eq!(result.dst_addr, dst);
         assert_eq!(result.src_port, Some(443));
         assert_eq!(result.dst_port, Some(54321));
-    }
-}
-
-fn parse_sct_version(payload: &[u8]) -> u8 {
-    payload.first().copied().unwrap_or(0)
-}
-
-fn count_sct_entries(payload: &[u8]) -> usize {
-    if payload.len() < 3 {
-        return 0;
-    }
-    let count = u16::from_be_bytes([payload[1], payload[2]]);
-    count as usize
-}
-
-pub fn dissect_tls_cert_transparency_v3(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    payload: &[u8],
-) -> DissectedResult {
-    let sct_version = parse_sct_version(payload);
-    let entry_count = count_sct_entries(payload);
-
-    let record_count = crate::dissectors::tls::drain_pqc_store().len();
-
-    let summary = if sct_version > 0 {
-        format!(
-            "Certificate Transparency v3: SCT version {}, {} entries (from {} TLS records) — PQC-aware SCT parsing {}",
-            sct_version,
-            entry_count,
-            record_count,
-            if entry_count > 0 { "active" } else { "idle" },
-        )
-    } else {
-        format!(
-            "Certificate Transparency v3: no SCT data ({} TLS records tracked)",
-            record_count,
-        )
-    };
-    DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
-        protocol: Protocol::TlsCertTransparencyV3,
-        summary,
     }
 }

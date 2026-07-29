@@ -53,11 +53,11 @@ pub async fn register_sensor(pool: &PgPool, sensor: &RegisterSensor) -> Result<S
 
 pub async fn list_sensors(pool: &PgPool) -> Result<Vec<SensorSummary>> {
     Ok(sqlx::query_as::<_, SensorSummary>(
-        "SELECT s.id, s.hostname, s.ip_address::inet, s.version, s.status, s.last_heartbeat,
-                sh.uptime_secs, sh.cpu_load_pct
+        "SELECT s.id, s.hostname, s.ip_address::inet, s.os, s.version, s.status, s.last_heartbeat,
+                sh.uptime_secs, sh.cpu_load_pct, sh.ram_used_mb, s.ram_mb, sh.capture_throughput_bps
          FROM sensors s
          LEFT JOIN LATERAL (
-             SELECT uptime_secs, cpu_load_pct
+             SELECT uptime_secs, cpu_load_pct, ram_used_mb, capture_throughput_bps
              FROM sensor_heartbeats
              WHERE sensor_id = s.id
              ORDER BY received_at DESC
@@ -104,6 +104,39 @@ pub async fn update_sensor_heartbeat(
     .execute(pool)
     .await?;
     Ok(())
+}
+
+pub async fn get_sensor_throughput_history(
+    pool: &PgPool,
+    sensor_id: Uuid,
+) -> Result<Vec<ThroughputPoint>> {
+    Ok(sqlx::query_as::<_, ThroughputPoint>(
+        "SELECT date_trunc('minute', received_at) as minute, AVG(capture_throughput_bps)::bigint as throughput \
+         FROM sensor_heartbeats \
+         WHERE sensor_id = $1 AND received_at > now() - interval '1 hour' \
+         GROUP BY minute ORDER BY minute"
+    )
+    .bind(sensor_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn get_sensor_topology(
+    pool: &PgPool,
+    sensor_id: Uuid,
+) -> Result<Vec<TopologyEdge>> {
+    Ok(sqlx::query_as::<_, TopologyEdge>(
+        "SELECT source_ip::text as source_ip, dest_ip::text as dest_ip, \
+                COALESCE(protocol, 'unknown') as protocol, COUNT(*)::bigint as count \
+         FROM events \
+         WHERE sensor_id = $1 AND source_ip IS NOT NULL AND dest_ip IS NOT NULL \
+         GROUP BY source_ip, dest_ip, protocol \
+         ORDER BY count DESC \
+         LIMIT 100"
+    )
+    .bind(sensor_id)
+    .fetch_all(pool)
+    .await?)
 }
 
 // ── Events ──

@@ -6,6 +6,62 @@ use crate::pqc_wizard::{ComplianceFramework, Tls13PqcWizard};
 
 use super::DissectedResult;
 
+
+pub fn dissect_pqc_compliance_checker(
+    src_ip: Option<IpAddr>,
+    dst_ip: Option<IpAddr>,
+    src_port: u16,
+    dst_port: u16,
+    _payload: &[u8],
+) -> DissectedResult {
+    let records = crate::dissectors::tls::drain_pqc_store();
+    let mut store = PqcHandshakeStore::new();
+    for r in records {
+        store.push(r);
+    }
+
+    let report = Tls13PqcWizard::analyze(&store);
+    let compliant_count = report.compliance.iter().filter(|c| c.compliant).count();
+    let non_compliant_count = report.compliance.len() - compliant_count;
+
+    let frameworks: Vec<String> = report
+        .compliance
+        .iter()
+        .map(|c| {
+            let status = if c.compliant { "✅" } else { "⚠️" };
+            format!("{} {} — {}", status, c.framework.label(), c.note)
+        })
+        .collect();
+
+    let summary = format!(
+        "PQC Compliance Checker: {}/{} compliant ({} non-compliant) — {}",
+        compliant_count,
+        report.compliance.len(),
+        non_compliant_count,
+        frameworks.join("; "),
+    );
+    DissectedResult {
+        src_addr: src_ip,
+        dst_addr: dst_ip,
+        src_port: Some(src_port),
+        dst_port: Some(dst_port),
+        protocol: Protocol::PqcComplianceChecker,
+        summary,
+    }
+}
+
+impl ComplianceFramework {
+    fn label(&self) -> &'static str {
+        match self {
+            ComplianceFramework::NistSp800131a => "NIST SP 800-131A",
+            ComplianceFramework::BsiTr02102 => "BSI TR-02102",
+            ComplianceFramework::AnssiPqc => "ANSSI PQC",
+            ComplianceFramework::Cnsa2 => "NSA CNSA 2.0",
+            ComplianceFramework::EtsiTs119312 => "ETSI TS 119 312",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,60 +129,5 @@ mod tests {
         crate::dissectors::tls::push_pqc_record_for_test(r);
         let result = dissect_pqc_compliance_checker(None, None, 443, 54321, &[]);
         assert!(result.summary.contains("compliant"));
-    }
-}
-
-pub fn dissect_pqc_compliance_checker(
-    src_ip: Option<IpAddr>,
-    dst_ip: Option<IpAddr>,
-    src_port: u16,
-    dst_port: u16,
-    _payload: &[u8],
-) -> DissectedResult {
-    let records = crate::dissectors::tls::drain_pqc_store();
-    let mut store = PqcHandshakeStore::new();
-    for r in records {
-        store.push(r);
-    }
-
-    let report = Tls13PqcWizard::analyze(&store);
-    let compliant_count = report.compliance.iter().filter(|c| c.compliant).count();
-    let non_compliant_count = report.compliance.len() - compliant_count;
-
-    let frameworks: Vec<String> = report
-        .compliance
-        .iter()
-        .map(|c| {
-            let status = if c.compliant { "✅" } else { "⚠️" };
-            format!("{} {} — {}", status, c.framework.label(), c.note)
-        })
-        .collect();
-
-    let summary = format!(
-        "PQC Compliance Checker: {}/{} compliant ({} non-compliant) — {}",
-        compliant_count,
-        report.compliance.len(),
-        non_compliant_count,
-        frameworks.join("; "),
-    );
-    DissectedResult {
-        src_addr: src_ip,
-        dst_addr: dst_ip,
-        src_port: Some(src_port),
-        dst_port: Some(dst_port),
-        protocol: Protocol::PqcComplianceChecker,
-        summary,
-    }
-}
-
-impl ComplianceFramework {
-    fn label(&self) -> &'static str {
-        match self {
-            ComplianceFramework::NistSp800131a => "NIST SP 800-131A",
-            ComplianceFramework::BsiTr02102 => "BSI TR-02102",
-            ComplianceFramework::AnssiPqc => "ANSSI PQC",
-            ComplianceFramework::Cnsa2 => "NSA CNSA 2.0",
-            ComplianceFramework::EtsiTs119312 => "ETSI TS 119 312",
-        }
     }
 }

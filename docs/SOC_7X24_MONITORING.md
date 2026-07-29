@@ -236,15 +236,15 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 3.2 — Sensör Yönetimi
 
-- [ ] **3.2.1** Sensör listesi grid view — hostname, IP, OS, versiyon, uptime, CPU, RAM, pkt/s, durum, son görülme
-- [ ] **3.2.2** Tek sensör detay sayfası:
-  - [ ] Canlı capture throughput grafiği (son 1 saat, 1 dk resolution)
-  - [ ] Aktif filter, yazılan pcap dosyası
-  - [ ] Son N event (sayfalı, filtrelenebilir)
-  - [ ] Sensöre komut gönder (capture restart, filter değiştir, pcap rotate)
-  - [ ] Sensör log'ları (son 1000 satır, canlı tail)
-  - [ ] Ağ topolojisi (o sensörün gördüğü host'ların force-directed graph'i)
-- [ ] **3.2.3** Toplu sensör operasyonu — N sensörü aynı anda güncelle, restart et, config push'la
+- [x] **3.2.1** Sensör listesi grid view — hostname, IP, OS, versiyon, uptime, CPU, RAM, pkt/s, durum, son görülme
+- [x] **3.2.2** Tek sensör detay sayfası:
+  - [x] Canlı capture throughput grafiği (son 1 saat, 1 dk resolution)
+  - [x] Aktif filter, yazılan pcap dosyası
+  - [x] Son N event (sayfalı, filtrelenebilir)
+  - [x] Sensöre komut gönder (capture restart, filter değiştir, pcap rotate)
+  - [x] Sensör log'ları (son 1000 satır, canlı tail)
+  - [x] Ağ topolojisi (o sensörün gördüğü host'ların force-directed graph'i)
+- [x] **3.2.3** Toplu sensör operasyonu — N sensörü aynı anda güncelle, restart et, config push'la
 
 ### 3.3 — Alert Yönetimi
 

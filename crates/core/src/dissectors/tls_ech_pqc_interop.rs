@@ -4,64 +4,6 @@ use crate::models::Protocol;
 
 use super::DissectedResult;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_ech_config_version_short() {
-        assert_eq!(parse_ech_config_version(&[]), 0);
-        assert_eq!(parse_ech_config_version(&[0x00, 0x01, 0x02]), 0);
-    }
-
-    #[test]
-    fn parse_ech_config_version_valid() {
-        assert_eq!(parse_ech_config_version(&[0x00, 0x01, 0x00, 0x00, 0xFF]), 1);
-        assert_eq!(parse_ech_config_version(&[0xFE, 0xFE, 0x00, 0x00]), 0xFEFE);
-    }
-
-    #[test]
-    fn has_pqc_kem_ids_present() {
-        let data = [0x00, 0x39, 0x00, 0x3A, 0x00, 0x3B];
-        assert!(has_pqc_kem_ids(&data));
-    }
-
-    #[test]
-    fn has_pqc_kem_ids_absent() {
-        assert!(!has_pqc_kem_ids(&[0x00, 0x17, 0x00, 0x1D]));
-    }
-
-    #[test]
-    fn has_pqc_kem_ids_empty() {
-        assert!(!has_pqc_kem_ids(&[]));
-    }
-
-    #[test]
-    fn dissect_no_ech_payload() {
-        crate::dissectors::tls::clear_tls_sessions();
-        let result = dissect_tls_ech_pqc_interop(None, None, 443, 54321, &[]);
-        assert_eq!(result.protocol, Protocol::TlsEchPqcInterop);
-        assert!(result.summary.contains("no ECH payload"));
-    }
-
-    #[test]
-    fn dissect_with_ech_pqc_kem() {
-        crate::dissectors::tls::clear_tls_sessions();
-        let payload = [0x00, 0x01, 0x00, 0x39]; // version=1, KEM 0x0039
-        let result = dissect_tls_ech_pqc_interop(None, None, 443, 54321, &payload);
-        assert_eq!(result.protocol, Protocol::TlsEchPqcInterop);
-        assert!(result.summary.contains("ECH v1"));
-        assert!(result.summary.contains("PQC-aware KEM IDs present"));
-    }
-
-    #[test]
-    fn dissect_with_ech_no_pqc() {
-        crate::dissectors::tls::clear_tls_sessions();
-        let payload = [0x00, 0x01, 0x00, 0x17]; // version=1, X25519 (not PQC)
-        let result = dissect_tls_ech_pqc_interop(None, None, 443, 54321, &payload);
-        assert!(result.summary.contains("PQC-aware KEM IDs absent"));
-    }
-}
 
 fn parse_ech_config_version(payload: &[u8]) -> u16 {
     if payload.len() < 4 {
@@ -123,5 +65,64 @@ pub fn dissect_tls_ech_pqc_interop(
         dst_port: Some(dst_port),
         protocol: Protocol::TlsEchPqcInterop,
         summary,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_ech_config_version_short() {
+        assert_eq!(parse_ech_config_version(&[]), 0);
+        assert_eq!(parse_ech_config_version(&[0x00, 0x01, 0x02]), 0);
+    }
+
+    #[test]
+    fn parse_ech_config_version_valid() {
+        assert_eq!(parse_ech_config_version(&[0x00, 0x01, 0x00, 0x00, 0xFF]), 1);
+        assert_eq!(parse_ech_config_version(&[0xFE, 0xFE, 0x00, 0x00]), 0xFEFE);
+    }
+
+    #[test]
+    fn has_pqc_kem_ids_present() {
+        let data = [0x00, 0x39, 0x00, 0x3A, 0x00, 0x3B];
+        assert!(has_pqc_kem_ids(&data));
+    }
+
+    #[test]
+    fn has_pqc_kem_ids_absent() {
+        assert!(!has_pqc_kem_ids(&[0x00, 0x17, 0x00, 0x1D]));
+    }
+
+    #[test]
+    fn has_pqc_kem_ids_empty() {
+        assert!(!has_pqc_kem_ids(&[]));
+    }
+
+    #[test]
+    fn dissect_no_ech_payload() {
+        crate::dissectors::tls::clear_tls_sessions();
+        let result = dissect_tls_ech_pqc_interop(None, None, 443, 54321, &[]);
+        assert_eq!(result.protocol, Protocol::TlsEchPqcInterop);
+        assert!(result.summary.contains("no ECH payload"));
+    }
+
+    #[test]
+    fn dissect_with_ech_pqc_kem() {
+        crate::dissectors::tls::clear_tls_sessions();
+        let payload = [0x00, 0x01, 0x00, 0x39]; // version=1, KEM 0x0039
+        let result = dissect_tls_ech_pqc_interop(None, None, 443, 54321, &payload);
+        assert_eq!(result.protocol, Protocol::TlsEchPqcInterop);
+        assert!(result.summary.contains("ECH v1"));
+        assert!(result.summary.contains("PQC-aware KEM IDs present"));
+    }
+
+    #[test]
+    fn dissect_with_ech_no_pqc() {
+        crate::dissectors::tls::clear_tls_sessions();
+        let payload = [0x00, 0x01, 0x00, 0x17]; // version=1, X25519 (not PQC)
+        let result = dissect_tls_ech_pqc_interop(None, None, 443, 54321, &payload);
+        assert!(result.summary.contains("PQC-aware KEM IDs absent"));
     }
 }

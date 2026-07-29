@@ -249,6 +249,20 @@ fn set_executable(_path: &Path) {
     }
 }
 
+
+fn restart_process(new_binary: &Path) {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+
+    let _ = std::process::Command::new(new_binary)
+        .args(&args)
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
+        .spawn();
+
+    std::process::exit(0);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -327,17 +341,4 @@ mod tests {
         assert!(is_newer("nightly-2026-07-28", "0.2.0"));
         assert!(!is_newer("nightly-2026-07-28", "nightly-2026-07-28"));
     }
-}
-
-fn restart_process(new_binary: &Path) {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-
-    let _ = std::process::Command::new(new_binary)
-        .args(&args)
-        .stdin(std::process::Stdio::inherit())
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
-        .spawn();
-
-    std::process::exit(0);
 }
