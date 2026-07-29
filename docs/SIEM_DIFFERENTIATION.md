@@ -172,8 +172,9 @@ Her event, 7 katmanda zenginleştirilir:
   sıfırlayın, SMB signing'i tüm domain'de zorunlu hale getirin.
   ```
   - [ ] Her alert için otomatik "why this matters" paragrafı
-  - [ ] LLM destekli (mevcut `llm_analytics` modülü) veya template-based
-  - [ ] Aksiyon önerisi (1-2-3 adım)
+  - [ ] Template-based üretim (Handlebars/Tera şablonları ile — LLM kullanmaz, token harcamaz)
+  - [ ] Her event tipi + severity kombinasyonu için önceden yazılmış şablon kütüphanesi
+  - [ ] Aksiyon önerisi (1-2-3 adım) — rule-based, önceden tanımlanmış aksiyon kataloğundan
 
 ### 1.2 — Zenginleştirilmiş Event Schema (OCSF Uyumlu)
 
@@ -332,7 +333,7 @@ Her event, 7 katmanda zenginleştirilir:
   - [ ] **Temporal sequencer** — event'leri kronolojik sırala, faz geçişlerini tespit et (Discovery → Lateral → Collection → Exfil)
   - [ ] **Kill Chain phase detector** — her event grubunun hangi Kill Chain fazına denk geldiğini belirle
   - [ ] **Narrative template engine** — her saldırı pattern'i için önceden tanımlanmış hikaye şablonları
-  - [ ] **LLM finalizer** — şablonu al, gerçek verilerle doldur, doğal dilde hikaye üret (opsiyonel, LLM analytics modülü ile)
+  - [ ] **Template finalizer** — şablondaki `{{placeholder}}`'ları gerçek verilerle doldur, Tera/Handlebars template engine ile doğal dilde hikaye üret (LLM kullanmaz, sıfır maliyet)
 
 - [ ] **2.1.3** Önceden tanımlanmış saldırı pattern'leri (narrative template library):
   ```
@@ -497,12 +498,11 @@ Her event, 7 katmanda zenginleştirilir:
 
 - [ ] **5.1.1** **Unified search** — tüm event'ler, alert'ler, narrative'ler, threat intel tek bir search bar'da
   ```sql
-  -- Doğal dil: "show me all SMB access to finance servers in the last 24 hours"
   -- Display filter: smb && ip.dst in 10.0.5.0/24 && time > -24h
   ```
 - [ ] **5.1.2** **Search autocomplete** — IP, hostname, protocol, ATT&CK technique, event type
-- [ ] **5.1.3** **Search result "explain"** — her sonuç için "bu neden eşleşti?" açıklaması
-- [ ] **5.1.4** **Natural language → filter** — "finance sunucusuna gece erişim" → `ip.dst in finance_segment && time between 22:00-06:00`
+- [ ] **5.1.3** **Search result "explain"** — her sonuç için "bu neden eşleşti?" açıklaması (rule-based: hangi filter kısmının hangi event alanıyla eşleştiğini göster)
+- [ ] **5.1.4** **Saved filter templates** — sık kullanılan sorgular için önceden tanımlanmış filtreler: "Finance sunucusuna gece erişim" → `ip.dst in finance_segment && time between 22:00-06:00` (LLM yerine kullanıcının kaydettiği preset'ler)
 - [ ] **5.1.5** **Pivot (ilişkili veriye atlama)** — tek tıkla:
   - Bu IP'den başka event'ler
   - Bu kullanıcının diğer aktiviteleri
