@@ -827,11 +827,14 @@ fn get_alert_rules() -> Vec<AlertRule> {
 /// stalling capture. Failures are reported to the UI rather than retried:
 /// a channel that is down stays down, and silently swallowing that is exactly
 /// the behaviour this whole view exists to get rid of.
-fn spawn_alert_notifier(app: &AppHandle) -> Option<crossbeam_channel::Sender<Alert>> {
-    let settings = {
+fn spawn_alert_notifier(app: &AppHandle) -> Option<crossbeam_channel::Sender<Dispatch>> {
+    let (settings, escalation_on) = {
         let cfg = app.state::<Mutex<ConfigState>>();
         let guard = cfg.lock().ok()?;
-        guard.config.notifications.clone()
+        (
+            guard.config.notifications.clone(),
+            guard.config.escalation.enabled && !guard.config.escalation.oncall.is_empty(),
+        )
     };
 
     let targets: Vec<String> = notification_channels(&settings)
@@ -839,34 +842,38 @@ fn spawn_alert_notifier(app: &AppHandle) -> Option<crossbeam_channel::Sender<Ale
         .filter(|c| c.configured && c.available)
         .map(|c| c.id)
         .collect();
-    if targets.is_empty() {
+    // Escalation reaches PagerDuty/Opsgenie/VictorOps through the on-call
+    // integration key rather than a `[notifications]` setting, so it needs this
+    // thread even when no ordinary channel is configured.
+    if targets.is_empty() && !escalation_on {
         return None;
     }
 
     let engine = netscope_core::notifications::NotificationEngine::new(settings.to_engine_config());
-    let (tx, rx) = crossbeam_channel::unbounded::<Alert>();
+    let (tx, rx) = crossbeam_channel::unbounded::<Dispatch>();
     let app_handle = app.clone();
 
     std::thread::spawn(move || {
-        for alert in rx {
-            let msg = format!("[{}] {}: {}", alert.severity, alert.rule_name, alert.msg);
-            for id in &targets {
-                let sent = match id.as_str() {
-                    "syslog" => engine.send_syslog(&msg),
-                    "email" => engine.send_email(&alert.rule_name, &msg),
-                    "slack" => engine.send_slack(&msg, "{}"),
-                    "telegram" => engine.send_telegram(&msg),
-                    "winevent" => engine.write_windows_event_log(&msg),
-                    _ => Ok(()),
-                };
-                if let Err(e) = sent {
-                    let _ = app_handle.emit(
-                        "notification-error",
-                        NotificationError {
-                            channel: id.clone(),
-                            error: e,
-                        },
-                    );
+        for item in rx {
+            match item {
+                Dispatch::Alert(alert) => {
+                    let msg = format!("[{}] {}: {}", alert.severity, alert.rule_name, alert.msg);
+                    for id in &targets {
+                        let sent = match id.as_str() {
+                            "syslog" => engine.send_syslog(&msg),
+                            "email" => engine.send_email(&alert.rule_name, &msg),
+                            "slack" => engine.send_slack(&msg, "{}"),
+                            "telegram" => engine.send_telegram(&msg),
+                            "winevent" => engine.write_windows_event_log(&msg),
+                            _ => Ok(()),
+                        };
+                        report_delivery(&app_handle, id, sent);
+                    }
+                }
+                // One escalation step goes to the one channel its chain names.
+                Dispatch::Escalation(notice) => {
+                    let channel = notice.channel.clone();
+                    report_delivery(&app_handle, &channel, engine.send_escalation(&notice));
                 }
             }
         }
@@ -879,6 +886,29 @@ fn spawn_alert_notifier(app: &AppHandle) -> Option<crossbeam_channel::Sender<Ale
 struct NotificationError {
     channel: String,
     error: String,
+}
+
+/// What the notifier thread delivers.
+///
+/// Alerts fan out to every configured channel; an escalation step goes to the
+/// single channel its rung of the chain names. Both travel the same queue so
+/// there is one delivery path, and therefore one place that reports failure.
+enum Dispatch {
+    Alert(Alert),
+    Escalation(netscope_core::escalation::EscalationNotice),
+}
+
+/// Surface a delivery failure to the UI. Success is silent.
+fn report_delivery(app: &AppHandle, channel: &str, result: Result<(), String>) {
+    if let Err(error) = result {
+        let _ = app.emit(
+            "notification-error",
+            NotificationError {
+                channel: channel.to_string(),
+                error,
+            },
+        );
+    }
 }
 
 // ---- Escalation ------------------------------------------------------------

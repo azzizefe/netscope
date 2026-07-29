@@ -379,29 +379,26 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ---
 
-## 🧠 Faz 6 — Anormallik Tespiti & AI/ML (Advanced Detection)
+## 📊 Faz 6 — İstatistiksel & Deterministik Anormallik Tespiti (Zero-Token / 100% Yerel)
 
-### 6.1 — Baseline & Anomaly
+### 6.1 — Yerel İstatistiksel Baseline & Anormallik Skorlaması
 
-- [ ] **6.1.1** **Adaptive baseline** — her sensör için 7 günlük rolling baseline:
+- [ ] **6.1.1** **Hareketli Taban Çizgisi (Rolling Baseline)** — Her sensör için 100% yerel EWMA (Exponentially Weighted Moving Average) & Welford algoritması ile:
   - pkt/s, bytes/s, connection/s
-  - unique src IP, unique dst IP, unique dst port
-  - protocol distribution (%TCP, %UDP, %TLS, %DNS, ...)
-- [ ] **6.1.2** **Seasonal decomposition** — haftanın günü + saate göre normal pattern (Pazartesi 09:00 spike'ı normal)
-- [ ] **6.1.3** **Z-score / Modified Z-score** anormallik skorlaması
-- [ ] **6.1.4** **Isolation Forest** — çok boyutlu anormallik (src IP entropy + dst port entropy + packet size variance)
-- [ ] **6.1.5** **DBSCAN clustering** — normal trafik kümeleri dışında kalan outlier'lar
-- [ ] **6.1.6** **Holt-Winters forecasting** — mevcut least-squares prediction'ı mevsimsellik destekli hale getir
+  - Benzersiz kaynak IP, hedef IP, hedef port sayıları
+  - Protokol dağılım oranları (%TCP, %UDP, %TLS, %DNS)
+- [ ] **6.1.2** **Mevsimsel Saat/Gün Matrisi** — Haftanın günü ve saate göre lokal geçmiş matrisi (Pazartesi 09:00 normal trafik profili)
+- [ ] **6.1.3** **Z-Score & IQR Outlier Tespiti** — Yerel standart sapma ve Interquartile Range (IQR) ile anormallik skorlaması
+- [ ] **6.1.4** **Shannon Entropi Hesaplama Motoru** — IP/Port dağılımı ve paket yükü entropisi üzerinden şüpheli tünelleme tespiti (Zero-token)
+- [ ] **6.1.5** **Pencere Tabanlı Frekans Analizi** — Son N saniyedeki kayan pencere (sliding window) bağlantı ve burst oranları
 
-### 6.2 — AI/ML Pipeline
+### 6.2 — Deterministik Triage & Kural Tabanlı Önceliklendirme
 
-- [ ] **6.2.1** **Feature extraction** — her connection için 50+ feature vektörü (süre, byte, pkt, flag'ler, entropy, ...)
-- [ ] **6.2.2** **XGBoost / LightGBM classifier** — malicious vs benign connection sınıflandırma
-- [ ] **6.2.3** **Autoencoder anomaly detection** — reconstruction error yüksekse anormal
-- [ ] **6.2.4** **LLM-based triage** — alert detayını LLM'e özetletip ilk triage'ı otomatik yap (mevcut `llm_analytics` modülü üzerine inşa et)
-- [ ] **6.2.5** **Model serving** — ONNX runtime ile cross-platform inference
-- [ ] **6.2.6** **Model retraining pipeline** — ayda bir yeni veriyle retrain, A/B test, canary deploy
-- [ ] **6.2.7** **Feedback loop** — analistin "FP" işaretlediği alert'ler eğitim verisine negatif örnek olarak eklenir
+- [ ] **6.2.1** **Lokal Öz Nitelik Çıkarımı (Feature Extraction)** — Her bağlantı için süre, bayt, paket, TCP bayrakları ve entropi değerlerinin yerel hesaplanması
+- [ ] **6.2.2** **Deterministik Risk Skorlama Motoru** — Kural ve istatistik tabanlı ağırlıklı tehdit puanlaması (0-100 Risk Score)
+- [ ] **6.2.3** **Otomatik Yerel Triage Engine** — LLM/Token kullanmadan, kural matrisi ve alarm korelasyonu ile anlık yerel triage (Zero-Token)
+- [ ] **6.2.4** **Yanlış Pozitif (FP) Bastırma & Beyaz Liste** — Statik/Dinamik beyaz liste ve analist onay mekanizması ile alarm gürültüsünü engelleme
+- [ ] **6.2.5** **Sıfır Dış Bağımlılık (100% Native Rust Engine)** — Harici API, LLM veya token maliyeti olmadan nano-saniye seviyesinde yerel analiz
 
 ---
 
