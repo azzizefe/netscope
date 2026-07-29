@@ -78,3 +78,4 @@ pub mod stats;
 pub mod stream;
 pub mod threat;
 pub mod tls_keylog;
+pub mod triage;

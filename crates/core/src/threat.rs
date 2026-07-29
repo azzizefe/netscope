@@ -263,8 +263,17 @@ impl ThreatEngine {
         let mut malicious_domains = HashSet::new();
         let mut suricata_rules = Vec::new();
 
-        // 1. Load AbuseIPDB malicious IPs
-        let abuse_path = dir.join("abuseipdb.txt");
+        // Indicator lists are supplied by the operator; netscope fetches
+        // nothing. On first run each file is created empty with a comment
+        // saying where the real feed comes from.
+        //
+        // These used to be seeded with three invented IP addresses under the
+        // header "# AbuseIPDB malicious IP list", and three invented domains
+        // under "# URLhaus / PhishTank threat domains" — indicators netscope
+        // made up, written to disk attributed to threat-intel vendors that had
+        // never seen them, and then reported as "AbuseIPDB:" matches. An empty
+        // list is the truth until the operator supplies one.
+        let abuse_path = dir.join("indicators-ip.txt");
         if let Ok(content) = std::fs::read_to_string(&abuse_path) {
             for line in content.lines() {
                 let ip = line.trim();
@@ -273,19 +282,18 @@ impl ThreatEngine {
                 }
             }
         } else {
-            let defaults = vec!["185.220.101.5", "45.143.203.2", "80.82.77.33"];
-            for ip in defaults {
-                malicious_ips.insert(ip.to_string());
-            }
             let _ = std::fs::create_dir_all(dir);
             let _ = std::fs::write(
                 &abuse_path,
-                "# AbuseIPDB malicious IP list\n185.220.101.5\n45.143.203.2\n80.82.77.33\n",
+                "# One IP address per line. Lines starting with # are ignored.\n\
+                 #\n\
+                 # netscope ships no indicators and fetches none. Populate this\n\
+                 # from a feed you trust, e.g. AbuseIPDB, Spamhaus DROP, or your\n\
+                 # own blocklist. Matches are reported as coming from this file.\n",
             );
         }
 
-        // 2. Load URLhaus malicious domains
-        let urlhaus_path = dir.join("urlhaus.txt");
+        let urlhaus_path = dir.join("indicators-domain.txt");
         if let Ok(content) = std::fs::read_to_string(&urlhaus_path) {
             for line in content.lines() {
                 let domain = line.trim();
@@ -294,15 +302,14 @@ impl ThreatEngine {
                 }
             }
         } else {
-            let defaults = vec![
-                "malicious-c2.com",
-                "phishing-bank-update.org",
-                "get-malware-now.ru",
-            ];
-            for d in defaults {
-                malicious_domains.insert(d.to_string());
-            }
-            let _ = std::fs::write(&urlhaus_path, "# URLhaus / PhishTank threat domains\nmalicious-c2.com\nphishing-bank-update.org\nget-malware-now.ru\n");
+            let _ = std::fs::write(
+                &urlhaus_path,
+                "# One domain per line. Lines starting with # are ignored.\n\
+                 #\n\
+                 # netscope ships no indicators and fetches none. Populate this\n\
+                 # from a feed you trust, e.g. URLhaus or PhishTank. Matches are\n\
+                 # reported as coming from this file.\n",
+            );
         }
 
         // 3. Load Suricata rules
@@ -327,14 +334,22 @@ impl ThreatEngine {
         }
 
         if !read_any_rule {
-            let rule_str = "alert tcp any any -> any 80 (msg:\"MALWARE payload detected\"; content:\"get_c2_payload\"; sid:100001;)\n\
-                            alert udp any any -> any 53 (msg:\"Suspicious DNS lookup request\"; content:\"phishing-bank\"; sid:100002;)\n";
+            // Two toy rules used to be written and loaded here, matching the
+            // literal strings "get_c2_payload" and "phishing-bank" — signatures
+            // that fire on nothing real, while making the rule count look
+            // non-zero. An empty starter file is honest.
             let default_rules_path = rules_dir.join("local.rules");
-            let _ = std::fs::write(&default_rules_path, rule_str);
-            for line in rule_str.lines() {
-                if let Some(rule) = parse_rule(line) {
-                    suricata_rules.push(rule);
-                }
+            if !default_rules_path.exists() {
+                let _ = std::fs::write(
+                    &default_rules_path,
+                    "# Suricata-format rules, one per line.\n\
+                     #\n\
+                     # netscope ships no signatures. Add your own, or drop a\n\
+                     # .rules file from a ruleset you trust into this directory.\n\
+                     # Only msg, content, sid, classtype, reference, rev and flow\n\
+                     # are honoured; a rule using any other option is rejected\n\
+                     # rather than silently widened.\n",
+                );
             }
         }
 
@@ -348,16 +363,16 @@ impl ThreatEngine {
     pub fn check_packet(&self, pkt: &Packet) -> Vec<ThreatAlert> {
         let mut alerts = Vec::new();
 
-        // 1. IP check (AbuseIPDB)
+        // Indicator matches name the local list they came from. They used to be
+        // reported as "AbuseIPDB:" and "URLhaus:" hits, which told the analyst a
+        // named vendor had flagged the address — netscope contacts no vendor and
+        // knows only what is in the operator's own file.
         if let Some(ref src) = pkt.src_addr {
             let src_str = src.to_string();
             if self.malicious_ips.contains(&src_str) {
                 alerts.push(ThreatAlert {
                     severity: "High".to_string(),
-                    msg: format!(
-                        "AbuseIPDB: Connection from malicious source IP ({})",
-                        src_str
-                    ),
+                    msg: format!("Source IP {src_str} is on the local indicator list"),
                     sid: 200001,
                 });
             }
@@ -367,16 +382,12 @@ impl ThreatEngine {
             if self.malicious_ips.contains(&dst_str) {
                 alerts.push(ThreatAlert {
                     severity: "High".to_string(),
-                    msg: format!(
-                        "AbuseIPDB: Traffic to malicious destination IP ({})",
-                        dst_str
-                    ),
+                    msg: format!("Destination IP {dst_str} is on the local indicator list"),
                     sid: 200002,
                 });
             }
         }
 
-        // 2. Domain check (URLhaus / PhishTank)
         let domain_opt = if pkt.protocol == Protocol::Dns || pkt.protocol == Protocol::Mdns {
             crate::filter::dns_qry_name(pkt)
         } else if pkt.protocol == Protocol::Http {
@@ -394,7 +405,7 @@ impl ThreatEngine {
             if self.malicious_domains.contains(&domain_lower) {
                 alerts.push(ThreatAlert {
                     severity: "High".to_string(),
-                    msg: format!("URLhaus: Malicious threat domain referenced ({})", domain),
+                    msg: format!("Domain {domain} is on the local indicator list"),
                     sid: 300001,
                 });
             }
@@ -421,6 +432,83 @@ mod tests {
     use crate::models::Protocol;
     use bytes::Bytes;
     use chrono::Utc;
+
+    /// A fresh install must have no indicators, and must not invent any.
+    ///
+    /// `load_from` used to seed three IP addresses and three domains of its own
+    /// invention on first run, write them to disk under the headers
+    /// "# AbuseIPDB malicious IP list" and "# URLhaus / PhishTank threat
+    /// domains", and then report matches as "AbuseIPDB:" hits. An analyst had
+    /// no way to tell that netscope had made the indicators up and that no
+    /// vendor had ever seen them.
+    #[test]
+    fn a_fresh_install_ships_no_indicators_and_invents_none() {
+        let dir = std::env::temp_dir().join("netscope-threat-fresh");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let engine = ThreatEngine::load_from(&dir);
+        assert!(
+            engine.malicious_ips.is_empty(),
+            "seeded IPs on a fresh install: {:?}",
+            engine.malicious_ips,
+        );
+        assert!(
+            engine.malicious_domains.is_empty(),
+            "seeded domains on a fresh install: {:?}",
+            engine.malicious_domains,
+        );
+        assert!(
+            engine.suricata_rules.is_empty(),
+            "seeded signatures on a fresh install",
+        );
+
+        // The starter files exist and explain themselves, but claim no vendor.
+        for name in ["indicators-ip.txt", "indicators-domain.txt"] {
+            let body = std::fs::read_to_string(dir.join(name)).expect("starter file");
+            assert!(
+                body.lines().all(|l| l.trim().is_empty() || l.starts_with('#')),
+                "{name} contains entries netscope invented",
+            );
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// An indicator match must be attributed to the operator's own list.
+    #[test]
+    fn indicator_matches_do_not_claim_a_vendor() {
+        let dir = std::env::temp_dir().join("netscope-threat-attrib");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("indicators-ip.txt"), "203.0.113.7\n").unwrap();
+
+        let engine = ThreatEngine::load_from(&dir);
+        let pkt = Packet {
+            timestamp: Utc::now(),
+            src_addr: Some("203.0.113.7".parse().unwrap()),
+            dst_addr: Some("10.0.0.1".parse().unwrap()),
+            src_port: Some(1234),
+            dst_port: Some(80),
+            protocol: Protocol::Tcp,
+            length: 60,
+            summary: String::new(),
+            data: Bytes::new(),
+            llm: None,
+        };
+
+        let alerts = engine.check_packet(&pkt);
+        assert_eq!(alerts.len(), 1);
+        for vendor in ["AbuseIPDB", "URLhaus", "PhishTank"] {
+            assert!(
+                !alerts[0].msg.contains(vendor),
+                "match credited to {vendor}, which netscope never contacted: {:?}",
+                alerts[0].msg,
+            );
+        }
+        assert!(alerts[0].msg.contains("local indicator list"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn test_parse_rule() {

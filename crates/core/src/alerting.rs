@@ -5,6 +5,7 @@ use crate::models::Packet;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -55,6 +56,56 @@ pub struct AlertRule {
     pub kill_chain: Option<String>,
     pub trigger: RuleTrigger,
     pub actions: Vec<String>, // "alert", "block_src", "pcap_dump"
+}
+
+/// What can be said about an address from the address itself, or `None`.
+///
+/// This field used to be filled with
+/// `"Simulated WHOIS for {ip}: Owner: Netscope, Registrar: IANA"` for every
+/// public address — an invented registry record presented to the analyst as
+/// enrichment. netscope makes no outbound requests, so it cannot know who owns
+/// a public address, and `None` is the honest answer.
+///
+/// What it *can* state is the address's own scope, which is a property of the
+/// number and needs no lookup. The old check was also wrong: it matched the
+/// prefix `"172.16."`, which is one sixteenth of RFC 1918's `172.16.0.0/12`, so
+/// hosts on `172.20.x.x` were reported as public.
+pub(crate) fn address_scope(addr: IpAddr) -> Option<String> {
+    let label = match addr {
+        IpAddr::V4(v4) => {
+            if v4.is_loopback() {
+                "Loopback (127.0.0.0/8)"
+            } else if v4.is_private() {
+                // Correctly covers 10/8, 172.16/12 and 192.168/16.
+                "Private network (RFC 1918)"
+            } else if v4.is_link_local() {
+                "Link-local (169.254.0.0/16)"
+            } else if v4.is_broadcast() {
+                "Broadcast"
+            } else if v4.is_multicast() {
+                "Multicast (224.0.0.0/4)"
+            } else if v4.octets()[0] == 100 && (64..128).contains(&v4.octets()[1]) {
+                "Carrier-grade NAT (100.64.0.0/10)"
+            } else {
+                return None;
+            }
+        }
+        IpAddr::V6(v6) => {
+            if v6.is_loopback() {
+                "Loopback (::1)"
+            } else if v6.octets()[0] & 0xfe == 0xfc {
+                // fc00::/7. `Ipv6Addr::is_unique_local` is still unstable.
+                "Unique local (fc00::/7)"
+            } else if v6.segments()[0] & 0xffc0 == 0xfe80 {
+                "Link-local (fe80::/10)"
+            } else if v6.is_multicast() {
+                "Multicast (ff00::/8)"
+            } else {
+                return None;
+            }
+        }
+    };
+    Some(label.to_string())
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -770,17 +821,7 @@ impl AlertEngine {
         let dst_str = pkt.dst_addr.map(|a| a.to_string());
         let now_utc = Utc::now();
 
-        // WHOIS lookup
-        let whois_info = src_str.as_ref().map(|ip| {
-            if ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("172.16.") {
-                "Private Network (RFC 1918)".to_string()
-            } else {
-                format!(
-                    "Simulated WHOIS for {}: Owner: Netscope, Registrar: IANA",
-                    ip
-                )
-            }
-        });
+        let whois_info = pkt.src_addr.and_then(address_scope);
 
         // Passive DNS
         let dns_history = dst_str.as_ref().and_then(|ip| {
@@ -845,16 +886,7 @@ impl AlertEngine {
         let dst_str = pkt.dst_addr.map(|a| a.to_string());
         let now_utc = Utc::now();
 
-        let whois_info = src_str.as_ref().map(|ip| {
-            if ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("172.16.") {
-                "Private Network (RFC 1918)".to_string()
-            } else {
-                format!(
-                    "Simulated WHOIS for {}: Owner: Netscope, Registrar: IANA",
-                    ip
-                )
-            }
-        });
+        let whois_info = pkt.src_addr.and_then(address_scope);
 
         let dns_history = dst_str.as_ref().and_then(|ip| {
             if let Ok(addr) = ip.parse::<std::net::IpAddr>() {
@@ -935,6 +967,47 @@ mod tests {
                     "`check` handles {quoted:?} but SUPPORTED_TYPES omits it",
                 );
             }
+        }
+    }
+
+    /// Enrichment must state facts about the address, never invent a record.
+    ///
+    /// Every public address used to come back as
+    /// `"Simulated WHOIS for {ip}: Owner: Netscope, Registrar: IANA"` — a
+    /// registry entry netscope made up, shown to the analyst as enrichment.
+    /// netscope makes no outbound requests, so "unknown" is the truth.
+    ///
+    /// The old private-network check matched the prefix `"172.16."`, covering
+    /// one sixteenth of RFC 1918's `172.16.0.0/12`.
+    #[test]
+    fn address_scope_states_facts_and_admits_ignorance() {
+        let scope = |s: &str| address_scope(s.parse().unwrap());
+
+        assert_eq!(
+            scope("10.0.0.5").as_deref(),
+            Some("Private network (RFC 1918)")
+        );
+        assert_eq!(
+            scope("192.168.1.1").as_deref(),
+            Some("Private network (RFC 1918)")
+        );
+        // The whole /12, not just 172.16/16 — this one used to read as public.
+        assert_eq!(
+            scope("172.20.5.5").as_deref(),
+            Some("Private network (RFC 1918)"),
+            "172.16.0.0/12 runs to 172.31.255.255",
+        );
+        assert_eq!(scope("127.0.0.1").as_deref(), Some("Loopback (127.0.0.0/8)"));
+        assert_eq!(scope("::1").as_deref(), Some("Loopback (::1)"));
+        assert_eq!(scope("fd00::1").as_deref(), Some("Unique local (fc00::/7)"));
+
+        // 172.32.x.x is outside the block and genuinely public.
+        for public in ["8.8.8.8", "93.184.216.34", "172.32.0.1", "2606:4700::1"] {
+            assert_eq!(
+                scope(public),
+                None,
+                "{public} is public; netscope does no WHOIS and must not invent one",
+            );
         }
     }
 

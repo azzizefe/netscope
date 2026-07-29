@@ -394,11 +394,11 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 6.2 — Deterministik Triage & Kural Tabanlı Önceliklendirme
 
-- [ ] **6.2.1** **Lokal Öz Nitelik Çıkarımı (Feature Extraction)** — Her bağlantı için süre, bayt, paket, TCP bayrakları ve entropi değerlerinin yerel hesaplanması
-- [ ] **6.2.2** **Deterministik Risk Skorlama Motoru** — Kural ve istatistik tabanlı ağırlıklı tehdit puanlaması (0-100 Risk Score)
-- [ ] **6.2.3** **Otomatik Yerel Triage Engine** — LLM/Token kullanmadan, kural matrisi ve alarm korelasyonu ile anlık yerel triage (Zero-Token)
-- [ ] **6.2.4** **Yanlış Pozitif (FP) Bastırma & Beyaz Liste** — Statik/Dinamik beyaz liste ve analist onay mekanizması ile alarm gürültüsünü engelleme
-- [ ] **6.2.5** **Sıfır Dış Bağımlılık (100% Native Rust Engine)** — Harici API, LLM veya token maliyeti olmadan nano-saniye seviyesinde yerel analiz
+- [x] **6.2.1** **Lokal Öz Nitelik Çıkarımı (Feature Extraction)** — Her bağlantı için süre, bayt, paket, TCP bayrakları ve entropi değerlerinin yerel hesaplanması
+- [x] **6.2.2** **Deterministik Risk Skorlama Motoru** — Kural ve istatistik tabanlı ağırlıklı tehdit puanlaması (0-100 Risk Score)
+- [x] **6.2.3** **Otomatik Yerel Triage Engine** — LLM/Token kullanmadan, kural matrisi ve alarm korelasyonu ile anlık yerel triage (Zero-Token)
+- [x] **6.2.4** **Yanlış Pozitif (FP) Bastırma & Beyaz Liste** — Statik/Dinamik beyaz liste ve analist onay mekanizması ile alarm gürültüsünü engelleme
+- [x] **6.2.5** **Sıfır Dış Bağımlılık (100% Native Rust Engine)** — Harici API, LLM veya token maliyeti olmadan nano-saniye seviyesinde yerel analiz
 
 ---
 

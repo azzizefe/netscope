@@ -315,27 +315,56 @@ mod tests {
         assert!(notifications.is_empty()); // Escalation paused!
     }
 
-    /// Every rung of the default chain must name a channel that can be
-    /// delivered.
+    /// Every rung of the default chain must reach a real arm of the dispatcher.
     ///
     /// The engine used to page people itself, through a `match` whose only arms
     /// were PagerDuty, Opsgenie and VictorOps, with `_ => {}` underneath. L1 and
-    /// L2 of this very chain are `"Slack"` and `"Email"` — so the first two
-    /// escalation levels hit the fallthrough and notified nobody, without an
-    /// error anywhere. Delivery now lives in `notifications::send_escalation`;
-    /// this pins that the chain and that dispatcher agree on the channel names.
+    /// L2 of this very chain are `"Slack"` and `"Email"`, so the first two
+    /// escalation levels hit the fallthrough and notified nobody, silently.
+    ///
+    /// This drives `notifications::send_escalation` for real rather than
+    /// comparing the chain against a second copy of the channel list — a copy
+    /// would keep passing if an arm were deleted, which is the same "looks
+    /// armed, never fires" failure the test exists to prevent. Nothing is
+    /// configured here, so each channel fails at its *own* precondition
+    /// (missing webhook, missing SMTP host, missing integration key) without
+    /// touching the network. The one error that must never appear is the
+    /// unknown-channel error, because that is the fallthrough.
     #[test]
-    fn every_default_chain_step_names_a_deliverable_channel() {
-        const DELIVERABLE: &[&str] = &["Slack", "Email", "PagerDuty", "Opsgenie", "VictorOps"];
+    fn every_default_chain_step_reaches_the_dispatcher() {
+        use crate::notifications::{NotificationConfig, NotificationEngine};
+
+        let notifier = NotificationEngine::new(NotificationConfig {
+            email_smtp_host: None,
+            email_smtp_port: None,
+            email_from: None,
+            email_to: None,
+            slack_webhook_url: None,
+            telegram_token: None,
+            telegram_chat_id: None,
+            syslog_host: None,
+            syslog_port: None,
+        });
 
         let engine = EscalationEngine::new(HashMap::new());
         let chain = &engine.default_policy.chain;
         assert!(!chain.is_empty());
 
         for step in chain {
+            let notice = EscalationNotice {
+                alert_id: "a1".into(),
+                rule_name: "Port scan".into(),
+                level: step.level,
+                channel: step.notify_channel.clone(),
+                on_call: None,
+                message: "test".into(),
+            };
+            let err = notifier
+                .send_escalation(&notice)
+                .expect_err("nothing is configured, so every channel must fail");
             assert!(
-                DELIVERABLE.contains(&step.notify_channel.as_str()),
-                "{:?} escalates over {:?}, which send_escalation cannot deliver",
+                !err.starts_with("Unknown escalation channel"),
+                "{:?} escalates over {:?}, which send_escalation has no arm for",
                 step.level,
                 step.notify_channel,
             );

@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
-use crate::models::{Packet, Protocol};
+use crate::models::Packet;
 
 /// Online running mean and variance computation using Welford's algorithm (§6.1.1).
 #[derive(Debug, Clone, Default)]
@@ -324,8 +324,6 @@ impl BaselineEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytes::Bytes;
-    use chrono::Utc;
 
     #[test]
     fn test_welford_variance_and_zscore() {
