@@ -638,16 +638,19 @@
           </div>
           <div class="card" id="soc-notifications">
             <h3 data-i18n="soc.notifications">📨 Notification Channels</h3>
-            <div class="soc-list">
-              <div class="soc-channel"><span class="soc-channel-name">🔊 Syslog</span><span class="soc-channel-status active" data-i18n="soc.active">Active</span></div>
-              <div class="soc-channel"><span class="soc-channel-name">📧 Email (SMTP)</span><span class="soc-channel-status" data-i18n="soc.available">Available</span></div>
-              <div class="soc-channel"><span class="soc-channel-name">💬 Slack Webhook</span><span class="soc-channel-status" data-i18n="soc.available">Available</span></div>
-              <div class="soc-channel"><span class="soc-channel-name">✉ Telegram Bot</span><span class="soc-channel-status" data-i18n="soc.available">Available</span></div>
-              <div class="soc-channel"><span class="soc-channel-name">🪟 Windows Event Log</span><span class="soc-channel-status active" data-i18n="soc.active">Active</span></div>
-            </div>
+            <!-- Filled from get_notification_channels(). This was five hard-coded
+                 rows with fixed "Active"/"Available" badges that no code ever
+                 read, so it claimed Syslog was live on a machine with nothing
+                 configured. -->
+            <div id="soc-channels-list" class="soc-list"></div>
+            <p class="soc-hint" data-i18n="soc.channels.hint">Configure these under [notifications] in config.toml.</p>
           </div>
+          <!-- On-call + live escalations, from get_escalation_status(). This
+               card used to print "No escalation rules configured" from a fixed
+               string no matter what was set up, because nothing ever built an
+               EscalationEngine. -->
           <div class="card" id="soc-escalation">
-            <h3 data-i18n="soc.escalation">📈 Escalation Rules</h3>
+            <h3 data-i18n="soc.escalation">📈 Escalation &amp; On-Call</h3>
             <div id="soc-escalation-list" class="soc-list"></div>
           </div>
           <div class="card" id="soc-stats">

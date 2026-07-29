@@ -745,6 +745,9 @@ fn adopt_capture(
     guard.alert_engine = Some(AlertEngine::new(default_alert_rules()));
     drop(guard);
 
+    let notifier = spawn_alert_notifier(app);
+    spawn_escalation_ticker(app);
+
     let app_handle = app.clone();
     std::thread::spawn(move || {
         loop {
@@ -770,6 +773,21 @@ fn adopt_capture(
                     let _ = app_handle.emit("packet", info);
                     for a in alerts {
                         let _ = app_handle.emit("alert", alert_to_info(&a));
+                        // Start the clock before handing the alert off, so an
+                        // unacknowledged alert climbs the chain even if every
+                        // notification channel is failing.
+                        if let Ok(mut esc) = app_handle.state::<Mutex<EscalationState>>().lock() {
+                            if let Some(engine) = esc.engine.as_mut() {
+                                engine.trigger_alert_escalation(
+                                    format!("{}|{}", a.timestamp, a.rule_name),
+                                    a.rule_name.clone(),
+                                    a.msg.clone(),
+                                );
+                            }
+                        }
+                        if let Some(tx) = &notifier {
+                            let _ = tx.send(a);
+                        }
                     }
                 }
                 Err(crossbeam_channel::RecvTimeoutError::Timeout) => continue,
@@ -798,6 +816,417 @@ fn alert_to_info(a: &Alert) -> AlertInfo {
 #[tauri::command]
 fn get_alert_rules() -> Vec<AlertRule> {
     default_alert_rules()
+}
+
+/// Start a thread that delivers alerts to every configured channel.
+///
+/// Returns `None` when nothing is configured, so the common case costs no
+/// thread and no queue. Delivery is blocking I/O — SMTP handshakes, HTTPS
+/// posts — so it must not happen on the capture loop that produces the alerts;
+/// the channel between them is what keeps a slow or unreachable endpoint from
+/// stalling capture. Failures are reported to the UI rather than retried:
+/// a channel that is down stays down, and silently swallowing that is exactly
+/// the behaviour this whole view exists to get rid of.
+fn spawn_alert_notifier(app: &AppHandle) -> Option<crossbeam_channel::Sender<Alert>> {
+    let settings = {
+        let cfg = app.state::<Mutex<ConfigState>>();
+        let guard = cfg.lock().ok()?;
+        guard.config.notifications.clone()
+    };
+
+    let targets: Vec<String> = notification_channels(&settings)
+        .into_iter()
+        .filter(|c| c.configured && c.available)
+        .map(|c| c.id)
+        .collect();
+    if targets.is_empty() {
+        return None;
+    }
+
+    let engine = netscope_core::notifications::NotificationEngine::new(settings.to_engine_config());
+    let (tx, rx) = crossbeam_channel::unbounded::<Alert>();
+    let app_handle = app.clone();
+
+    std::thread::spawn(move || {
+        for alert in rx {
+            let msg = format!("[{}] {}: {}", alert.severity, alert.rule_name, alert.msg);
+            for id in &targets {
+                let sent = match id.as_str() {
+                    "syslog" => engine.send_syslog(&msg),
+                    "email" => engine.send_email(&alert.rule_name, &msg),
+                    "slack" => engine.send_slack(&msg, "{}"),
+                    "telegram" => engine.send_telegram(&msg),
+                    "winevent" => engine.write_windows_event_log(&msg),
+                    _ => Ok(()),
+                };
+                if let Err(e) = sent {
+                    let _ = app_handle.emit(
+                        "notification-error",
+                        NotificationError {
+                            channel: id.clone(),
+                            error: e,
+                        },
+                    );
+                }
+            }
+        }
+    });
+
+    Some(tx)
+}
+
+#[derive(Serialize, Clone)]
+struct NotificationError {
+    channel: String,
+    error: String,
+}
+
+// ---- Escalation ------------------------------------------------------------
+//
+// `escalation.rs` had every piece of this — the L1→L2→L3→CISO chain, the
+// weekly rotation, the on-call API calls — and nothing ever constructed an
+// engine, so the SOC card said "no escalation rules configured" no matter what
+// was in the config. These wire it to real alerts and report its real state.
+
+struct EscalationState {
+    /// `None` when `[escalation] enabled` is false, which is the default:
+    /// escalation pages people, so it never starts by itself.
+    engine: Option<netscope_core::escalation::EscalationEngine>,
+}
+
+/// Build the engine from config, or `None` when escalation is switched off.
+fn build_escalation_engine(
+    cfg: &netscope_core::config::Escalation,
+) -> Option<netscope_core::escalation::EscalationEngine> {
+    // An empty rotation would escalate happily and page nobody, which looks
+    // exactly like working escalation until the night it matters. Treat it as
+    // not configured so the UI can say so.
+    if !cfg.enabled || cfg.oncall.is_empty() {
+        return None;
+    }
+    let mut engine = netscope_core::escalation::EscalationEngine::new(cfg.shift_rotations());
+
+    // Custom step timings replace the built-in 15/30/60-minute chain, keeping
+    // each step's level and channel. Extra entries are ignored rather than
+    // inventing levels the engine has no name for.
+    if !cfg.step_minutes.is_empty() {
+        for (step, mins) in engine
+            .default_policy
+            .chain
+            .iter_mut()
+            .zip(cfg.step_minutes.iter())
+        {
+            step.wait_duration_secs = mins.saturating_mul(60);
+        }
+    }
+    Some(engine)
+}
+
+#[derive(Serialize, Clone)]
+struct OnCallInfo {
+    name: String,
+    email: String,
+    phone: String,
+}
+
+#[derive(Serialize, Clone)]
+struct ActiveEscalationInfo {
+    alert_id: String,
+    rule_name: String,
+    alert_msg: String,
+    /// "Escalating" | "Acknowledged" | "Resolved".
+    status: String,
+    /// Which rung of the chain it has reached, as a name the UI can show.
+    level: String,
+    /// Seconds since the alert first escalated — the number that decides
+    /// whether anyone is actually responding.
+    age_secs: i64,
+}
+
+#[derive(Serialize, Clone)]
+struct EscalationStatus {
+    enabled: bool,
+    /// Why it is off, when it is. Empty when running.
+    reason: String,
+    iso_week: u32,
+    primary: Option<OnCallInfo>,
+    backup: Option<OnCallInfo>,
+    steps: Vec<String>,
+    active: Vec<ActiveEscalationInfo>,
+}
+
+/// Advance the escalation chain on a timer.
+///
+/// The chain is time-based — a step fires when nobody acknowledged within its
+/// wait — so something has to ask. Doing it from the packet loop would tie
+/// escalation to traffic arriving, which is backwards: the case that matters
+/// most is an alert on a link that then goes quiet. A 15-second tick is far
+/// finer than the minutes-long steps it drives.
+fn spawn_escalation_ticker(app: &AppHandle) {
+    let app_handle = app.clone();
+    std::thread::spawn(move || {
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(15));
+            let state = app_handle.state::<Mutex<EscalationState>>();
+            let messages = {
+                let Ok(mut guard) = state.lock() else { break };
+                match guard.engine.as_mut() {
+                    Some(engine) => engine.process_escalations(chrono::Utc::now()),
+                    // Escalation is off; nothing to do, but keep the thread so
+                    // it starts working if it is switched on and reloaded.
+                    None => Vec::new(),
+                }
+            };
+            for m in messages {
+                let _ = app_handle.emit("escalation", m);
+            }
+        }
+    });
+}
+
+#[tauri::command]
+fn get_escalation_status(
+    esc: State<'_, Mutex<EscalationState>>,
+    cfg: State<'_, Mutex<ConfigState>>,
+) -> EscalationStatus {
+    use chrono::{Datelike, Utc};
+
+    let now = Utc::now();
+    let iso_week = now.iso_week().week();
+
+    let guard = esc.lock().unwrap();
+    let Some(engine) = guard.engine.as_ref() else {
+        let enabled = cfg
+            .lock()
+            .ok()
+            .map(|c| c.config.escalation.enabled)
+            .unwrap_or(false);
+        return EscalationStatus {
+            enabled: false,
+            reason: if enabled {
+                // enabled but no engine can only mean an empty rotation
+                "No one is listed under [[escalation.oncall]].".into()
+            } else {
+                "Set [escalation] enabled = true to turn this on.".into()
+            },
+            iso_week,
+            primary: None,
+            backup: None,
+            steps: Vec::new(),
+            active: Vec::new(),
+        };
+    };
+
+    let rotation = engine.get_on_call_for_time(now);
+    let person = |u: &netscope_core::escalation::OnCallUser| OnCallInfo {
+        name: u.name.clone(),
+        email: u.email.clone(),
+        phone: u.phone.clone(),
+    };
+
+    let steps = engine
+        .default_policy
+        .chain
+        .iter()
+        .map(|s| {
+            format!(
+                "{:?} after {} min via {}",
+                s.level,
+                s.wait_duration_secs / 60,
+                s.notify_channel
+            )
+        })
+        .collect();
+
+    let mut active: Vec<ActiveEscalationInfo> = engine
+        .active_escalations
+        .values()
+        .map(|e| ActiveEscalationInfo {
+            alert_id: e.alert_id.clone(),
+            rule_name: e.rule_name.clone(),
+            alert_msg: e.alert_msg.clone(),
+            status: e.status.clone(),
+            level: engine
+                .default_policy
+                .chain
+                .get(e.current_step_index)
+                .map(|s| format!("{:?}", s.level))
+                // Past the last rung there is nowhere left to escalate to.
+                .unwrap_or_else(|| "Top".into()),
+            age_secs: now.signed_duration_since(e.start_time).num_seconds(),
+        })
+        .collect();
+    // Oldest first: the one nobody has answered longest is the urgent one.
+    active.sort_by_key(|e| std::cmp::Reverse(e.age_secs));
+
+    EscalationStatus {
+        enabled: true,
+        reason: String::new(),
+        iso_week,
+        primary: rotation.map(|r| person(&r.primary_user)),
+        backup: rotation.map(|r| person(&r.backup_user)),
+        steps,
+        active,
+    }
+}
+
+#[tauri::command]
+fn acknowledge_escalation(
+    alert_id: String,
+    esc: State<'_, Mutex<EscalationState>>,
+) -> Result<(), String> {
+    let mut guard = esc.lock().map_err(|e| e.to_string())?;
+    let engine = guard.engine.as_mut().ok_or("Escalation is not enabled")?;
+    engine.acknowledge_escalation(&alert_id);
+    Ok(())
+}
+
+#[tauri::command]
+fn resolve_escalation(
+    alert_id: String,
+    esc: State<'_, Mutex<EscalationState>>,
+) -> Result<(), String> {
+    let mut guard = esc.lock().map_err(|e| e.to_string())?;
+    let engine = guard.engine.as_mut().ok_or("Escalation is not enabled")?;
+    engine.resolve_escalation(&alert_id);
+    Ok(())
+}
+
+// ---- Notification channels -------------------------------------------------
+//
+// The SOC view used to list these as a hard-coded block of HTML with Syslog and
+// the Windows Event Log marked "Active" — no code read any setting, so the
+// badges were the same whether a channel was set up or not. These commands
+// report what `[notifications]` in config.toml actually contains, and let the
+// user prove a channel works by sending through it.
+
+#[derive(Serialize, Clone)]
+struct NotificationChannelInfo {
+    /// Stable key the UI passes back to `test_notification_channel`.
+    id: String,
+    label: String,
+    /// Whether the settings this channel needs are present.
+    configured: bool,
+    /// Where it would deliver, or what is missing. Never a secret: tokens and
+    /// webhook URLs are credentials, so only their presence is reported.
+    detail: String,
+    /// False when the channel cannot work on this platform at all.
+    available: bool,
+}
+
+fn notification_channels(n: &netscope_core::config::Notifications) -> Vec<NotificationChannelInfo> {
+    let some = |s: &str| !s.trim().is_empty();
+
+    let email_ready = some(&n.email_smtp_host) && some(&n.email_to);
+    let telegram_ready = some(&n.telegram_token) && some(&n.telegram_chat_id);
+
+    vec![
+        NotificationChannelInfo {
+            id: "syslog".into(),
+            label: "🔊 Syslog".into(),
+            configured: some(&n.syslog_host),
+            detail: if some(&n.syslog_host) {
+                format!("{}:{}", n.syslog_host.trim(), n.syslog_port.unwrap_or(514))
+            } else {
+                "Set notifications.syslog_host".into()
+            },
+            available: true,
+        },
+        NotificationChannelInfo {
+            id: "email".into(),
+            label: "📧 Email (SMTP)".into(),
+            configured: email_ready,
+            detail: if email_ready {
+                format!(
+                    "{}:{} → {}",
+                    n.email_smtp_host.trim(),
+                    n.email_smtp_port.unwrap_or(25),
+                    n.email_to.trim(),
+                )
+            } else {
+                "Set notifications.email_smtp_host and email_to".into()
+            },
+            available: true,
+        },
+        NotificationChannelInfo {
+            id: "slack".into(),
+            label: "💬 Slack Webhook".into(),
+            configured: some(&n.slack_webhook_url),
+            detail: if some(&n.slack_webhook_url) {
+                "Webhook configured".into()
+            } else {
+                "Set notifications.slack_webhook_url".into()
+            },
+            available: true,
+        },
+        NotificationChannelInfo {
+            id: "telegram".into(),
+            label: "✉ Telegram Bot".into(),
+            configured: telegram_ready,
+            detail: if telegram_ready {
+                format!("Chat {}", n.telegram_chat_id.trim())
+            } else {
+                "Set notifications.telegram_token and telegram_chat_id".into()
+            },
+            available: true,
+        },
+        NotificationChannelInfo {
+            id: "winevent".into(),
+            label: "🪟 Windows Event Log".into(),
+            // Nothing to configure — it either works here or it does not, and
+            // whether netscope is elevated only shows up when it is used.
+            configured: cfg!(target_os = "windows"),
+            detail: if cfg!(target_os = "windows") {
+                "Application log — needs an elevated netscope".into()
+            } else {
+                "Windows only".into()
+            },
+            available: cfg!(target_os = "windows"),
+        },
+    ]
+}
+
+#[tauri::command]
+fn get_notification_channels(cfg: State<'_, Mutex<ConfigState>>) -> Vec<NotificationChannelInfo> {
+    let cfg = cfg.lock().unwrap();
+    notification_channels(&cfg.config.notifications)
+}
+
+/// Deliver a test message through one channel and report what happened.
+///
+/// The point is that this is the same code path a real alert takes, so a green
+/// result here means alerts will actually arrive.
+#[tauri::command]
+fn test_notification_channel(
+    channel: String,
+    cfg: State<'_, Mutex<ConfigState>>,
+) -> Result<String, String> {
+    let engine = {
+        let cfg = cfg.lock().map_err(|e| e.to_string())?;
+        netscope_core::notifications::NotificationEngine::new(
+            cfg.config.notifications.to_engine_config(),
+        )
+    };
+
+    let msg = "netscope test notification — the SOC view sent this to check the channel.";
+    match channel.as_str() {
+        "syslog" => engine
+            .send_syslog(msg)
+            .map(|_| "Syslog datagram sent.".into()),
+        "email" => engine
+            .send_email("netscope test notification", msg)
+            .map(|_| "Test email sent.".into()),
+        "slack" => engine
+            .send_slack(msg, "{}")
+            .map(|_| "Posted to the Slack webhook.".into()),
+        "telegram" => engine
+            .send_telegram(msg)
+            .map(|_| "Sent to the Telegram chat.".into()),
+        "winevent" => engine
+            .write_windows_event_log(msg)
+            .map(|_| "Wrote to the Windows Application log.".into()),
+        other => Err(format!("Unknown notification channel {other:?}")),
+    }
 }
 
 fn default_alert_rules() -> Vec<AlertRule> {
@@ -1293,6 +1722,10 @@ pub fn run() {
         }
     }
 
+    let escalation_state = EscalationState {
+        engine: build_escalation_engine(&config.escalation),
+    };
+
     let config_state = ConfigState {
         config,
         plugins_loaded: outcome.loaded,
@@ -1311,6 +1744,7 @@ pub fn run() {
         }))
         .manage(Mutex::new(geo))
         .manage(Mutex::new(config_state))
+        .manage(Mutex::new(escalation_state))
         .invoke_handler(tauri::generate_handler![
             list_interfaces,
             arp_scan,
@@ -1345,6 +1779,11 @@ pub fn run() {
             open_detached_window,
             open_new_window,
             get_alert_rules,
+            get_notification_channels,
+            test_notification_channel,
+            get_escalation_status,
+            acknowledge_escalation,
+            resolve_escalation,
         ])
         .run(tauri::generate_context!())
         .expect("error while running netscope desktop");
@@ -1353,9 +1792,12 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        get_alert_rules, get_glossary, get_lessons, get_protocol_risk, protocol_count,
-        protocol_table, replay_packet, tls_keylog_clear, tls_keylog_load, tls_keylog_status,
+        build_pcap_bytes, build_pcapng_bytes, get_alert_rules, get_glossary, get_lessons,
+        get_protocol_risk, is_elevated, list_plugins, notification_channels, protocol_count,
+        protocol_table, replay_packet, save_object, tls_keylog_clear, tls_keylog_load,
+        tls_keylog_status, NotificationChannelInfo,
     };
+    use netscope_core::models::Packet;
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
@@ -1538,6 +1980,102 @@ mod tests {
         }
     }
 
+    /// A channel is "configured" only when its settings are actually present.
+    ///
+    /// This guards against what the view used to do: five rows of markup with
+    /// fixed badges, so Syslog read "Active" on a machine with nothing set up.
+    /// Every badge now has to be derivable from `[notifications]`, so a default
+    /// config must report nothing as configured.
+    #[test]
+    fn channel_status_is_read_from_config_not_assumed() {
+        use netscope_core::config::Notifications;
+
+        let empty = Notifications::default();
+        for c in notification_channels(&empty) {
+            if c.id == "winevent" {
+                // The one channel with nothing to configure: it depends on the
+                // platform, not on settings.
+                assert_eq!(c.configured, cfg!(target_os = "windows"));
+                continue;
+            }
+            assert!(!c.configured, "{} claims to be configured by default", c.id);
+            assert!(
+                c.detail.contains("notifications."),
+                "{} should name the missing setting, got {:?}",
+                c.id,
+                c.detail,
+            );
+        }
+
+        let mut set = Notifications {
+            syslog_host: "10.0.0.9".into(),
+            slack_webhook_url: "https://hooks.example/abc".into(),
+            email_smtp_host: "smtp.example".into(),
+            email_to: "soc@example".into(),
+            // Deliberately only half of Telegram: one field cannot deliver.
+            telegram_token: "secret-token".into(),
+            ..Default::default()
+        };
+        let configured = |cs: &[NotificationChannelInfo], id: &str| {
+            cs.iter()
+                .find(|c| c.id == id)
+                .unwrap_or_else(|| panic!("channel {id} missing"))
+                .configured
+        };
+
+        let cs = notification_channels(&set);
+        assert!(configured(&cs, "syslog"));
+        assert!(configured(&cs, "slack"));
+        assert!(configured(&cs, "email"));
+        assert!(!configured(&cs, "telegram"), "a token alone cannot deliver");
+
+        set.telegram_chat_id = "12345".into();
+        assert!(configured(&notification_channels(&set), "telegram"));
+
+        // Tokens and webhook URLs are credentials; only their presence is
+        // reported, so they must not travel to the UI in `detail`.
+        for c in notification_channels(&set) {
+            assert!(
+                !c.detail.contains("secret-token"),
+                "leaked token in {}",
+                c.id
+            );
+            assert!(
+                !c.detail.contains("hooks.example"),
+                "leaked webhook in {}",
+                c.id
+            );
+        }
+    }
+
+    /// Blank and whitespace-only settings must read as absent, so the engine's
+    /// own "not configured" checks stay the single source of truth.
+    #[test]
+    fn blank_notification_settings_become_none() {
+        use netscope_core::config::Notifications;
+
+        let blanks = Notifications {
+            syslog_host: "   ".into(),
+            slack_webhook_url: String::new(),
+            telegram_token: "\t".into(),
+            ..Default::default()
+        };
+        let cfg = blanks.to_engine_config();
+        assert!(cfg.syslog_host.is_none());
+        assert!(cfg.slack_webhook_url.is_none());
+        assert!(cfg.telegram_token.is_none());
+
+        let padded = Notifications {
+            syslog_host: "  10.0.0.9  ".into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            padded.to_engine_config().syslog_host.as_deref(),
+            Some("10.0.0.9"),
+            "surrounding whitespace must not reach the socket",
+        );
+    }
+
     /// `tls_keylog_*` are thin wrappers whose only real job is mapping the core
     /// stats onto the fields the UI reads. A swap of `added`/`rejected` would
     /// report every accepted secret as junk, so both counts are pinned here.
@@ -1592,5 +2130,101 @@ mod tests {
     fn protocol_risk_unknown_returns_none() {
         let risk = get_protocol_risk("NONEXISTENT_PROTOCOL_XYZ".to_string());
         assert!(risk.is_none());
+    }
+
+    #[test]
+    fn save_object_writes_to_disk() {
+        let dir = std::env::temp_dir().join("netscope-test-save-object");
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("test.bin");
+        let path_str = path.to_string_lossy().into_owned();
+
+        let result = save_object(path_str, vec![1, 2, 3, 4, 5]);
+        assert!(result.is_ok());
+
+        let read_back = std::fs::read(&path).unwrap();
+        assert_eq!(read_back, vec![1, 2, 3, 4, 5]);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn save_object_reports_io_error() {
+        let bogus = format!("Z:\\{}\0", std::process::id());
+        let result = save_object(bogus, vec![]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn list_plugins_returns_vec() {
+        let plugins = list_plugins();
+        // plugins() reads from a directory — it may be empty, but it must be a
+        // valid Vec<PluginInfo> with sensible defaults for every entry.
+        for p in &plugins {
+            assert!(!p.name.is_empty());
+            assert!(matches!(p.transport.as_str(), "tcp" | "udp"));
+            assert!(!p.description.is_empty());
+        }
+    }
+
+    #[test]
+    fn is_elevated_returns_bool() {
+        let elevated = is_elevated();
+        // Must return a bool (not crash). On CI without admin rights this is
+        // false; the point is that the function compiles and runs.
+        assert!(elevated == true || elevated == false);
+    }
+
+    #[test]
+    fn build_pcap_bytes_produces_valid_header() {
+        use std::io::{Cursor, Read};
+
+        let packet = Packet {
+            timestamp: chrono::Utc::now(),
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: netscope_core::models::Protocol::Tcp,
+            length: 4,
+            summary: "test".into(),
+            data: b"ping"[..].into(),
+            llm: None,
+        };
+        let bytes = build_pcap_bytes(&[packet]);
+
+        let mut r = Cursor::new(&bytes);
+        let mut buf = [0u8; 4];
+        r.read_exact(&mut buf).unwrap();
+        assert_eq!(u32::from_le_bytes(buf), 0xa1b2c3d4, "pcap magic");
+        assert_eq!(
+            bytes.len(),
+            24 + 16 + 4,
+            "global header + rec header + payload"
+        );
+    }
+
+    #[test]
+    fn build_pcapng_bytes_produces_valid_block() {
+        use std::io::{Cursor, Read};
+
+        let packet = Packet {
+            timestamp: chrono::Utc::now(),
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: netscope_core::models::Protocol::Udp,
+            length: 3,
+            summary: "test".into(),
+            data: b"abc"[..].into(),
+            llm: None,
+        };
+        let bytes = build_pcapng_bytes(&[packet]).unwrap();
+
+        let mut r = Cursor::new(&bytes);
+        let mut buf = [0u8; 4];
+        r.read_exact(&mut buf).unwrap();
+        assert_eq!(buf, [0x0A, 0x0D, 0x0D, 0x0A], "pcapng SHB magic");
     }
 }

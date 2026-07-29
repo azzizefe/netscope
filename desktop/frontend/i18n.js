@@ -714,6 +714,23 @@ const I18N = (() => {
       'soc.server.badurl': 'Yalnızca http:// ve https:// adreslerine izin veriliyor.',
       'soc.server.failed': 'Sunucuya ulaşılamadı.',
       'soc.server.local': 'Yalnızca bu makine gösteriliyor — tam konsol için bir sunucuya bağlanın.',
+      // Bildirim kanalları
+      'soc.channel.configured': 'Yapılandırıldı',
+      'soc.channel.unconfigured': 'Yapılandırılmadı',
+      'soc.channel.unavailable': 'Kullanılamıyor',
+      'soc.channel.test': 'Test',
+      'soc.channel.testing': 'Gönderiliyor…',
+      'soc.channels.none': 'Kullanılabilir bildirim kanalı yok.',
+      'soc.channels.hint': 'Bunları config.toml içindeki [notifications] bölümünden yapılandırın.',
+      // Yükseltme ve nöbet
+      'soc.escalation': '📈 Yükseltme ve Nöbet',
+      'soc.esc.week': 'ISO haftası',
+      'soc.esc.primary': 'Birincil nöbetçi',
+      'soc.esc.backup': 'Yedek',
+      'soc.esc.active': 'Aktif yükseltmeler',
+      'soc.esc.none': 'Şu an yükselen bir uyarı yok.',
+      'soc.esc.ack': 'Sahiplen',
+      'soc.esc.resolve': 'Çöz',
     },
   };
   // English strings for the new keys (other languages fall back to these).
@@ -771,6 +788,23 @@ const I18N = (() => {
     'soc.server.badurl': 'Only http:// and https:// addresses are allowed.',
     'soc.server.failed': 'Could not reach that server.',
     'soc.server.local': 'Showing this machine only — connect a server for the full console.',
+    // Notification channels
+    'soc.channel.configured': 'Configured',
+    'soc.channel.unconfigured': 'Not configured',
+    'soc.channel.unavailable': 'Unavailable',
+    'soc.channel.test': 'Test',
+    'soc.channel.testing': 'Sending…',
+    'soc.channels.none': 'No notification channels available.',
+    'soc.channels.hint': 'Configure these under [notifications] in config.toml.',
+    // Escalation & on-call
+    'soc.escalation': '📈 Escalation & On-Call',
+    'soc.esc.week': 'ISO week',
+    'soc.esc.primary': 'Primary on-call',
+    'soc.esc.backup': 'Backup',
+    'soc.esc.active': 'Active escalations',
+    'soc.esc.none': 'Nothing escalating right now.',
+    'soc.esc.ack': 'Acknowledge',
+    'soc.esc.resolve': 'Resolve',
   });
   for (const l of Object.keys(DICT)) Object.assign(DICT[l], EXTRA[l] || {});
 

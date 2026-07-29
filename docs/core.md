@@ -209,6 +209,85 @@ One discoverable home for user settings, shared by TUI and desktop:
 - `parse_coloring_rules(text)` reads both the `[[rule]]` TOML form and the
   legacy `RRGGBB <filter>` line form (used by the TUI).
 
+### `[notifications]` — where alerts are delivered
+
+Alerts always appear in the UI. This section is what additionally sends them
+out, and it is read by the desktop SOC view to report each channel's real
+state. Every key is optional; a channel is contacted only when the keys it
+needs are present, so an empty section means nothing is ever sent.
+
+```toml
+[notifications]
+# Syslog — needs syslog_host. RFC 5424 over UDP, port defaults to 514.
+syslog_host = "10.0.0.9"
+syslog_port = 514
+
+# Email — needs email_smtp_host and email_to. Rate-limited to one per minute.
+email_smtp_host = "smtp.example.com"
+email_smtp_port = 587
+email_from      = "netscope@example.com"
+email_to        = "soc@example.com"
+
+# Slack — needs slack_webhook_url.
+slack_webhook_url = "https://hooks.slack.com/services/…"
+
+# Telegram — needs BOTH telegram_token and telegram_chat_id; one alone
+# cannot deliver, and the SOC view reports the channel as unconfigured.
+telegram_token   = "123456:ABC…"
+telegram_chat_id = "-1001234567890"
+```
+
+The Windows Event Log channel has nothing to configure — it is available on
+Windows only, and writing the Application log needs netscope to run elevated.
+`Notifications::to_engine_config()` maps blank and whitespace-only values to
+`None`, so [`notifications::NotificationEngine`]'s own "not configured" checks
+stay the single source of truth.
+
+The SOC view's **Test** button sends through the same code path a real alert
+takes, so a green result means delivery actually works. Delivery failures
+during a capture surface as a `notification-error` event rather than being
+swallowed.
+
+### `[escalation]` — who gets woken up, and how fast
+
+Off by default: escalation pages people, so it never starts on its own. An
+alert starts climbing the chain the moment it fires and stops when somebody
+acknowledges or resolves it in the SOC view.
+
+```toml
+[escalation]
+enabled = true
+# Minutes at each rung before handing up: L1 → L2 → L3 → CISO.
+# Omit to use the built-in 15 / 30 / 60.
+step_minutes = [15, 30, 60]
+
+# The rotation, in order. Week n takes oncall[n % len] as primary and the
+# next person as backup, so two names cover the whole year.
+[[escalation.oncall]]
+name = "Ayşe"
+email = "ayse@example.com"
+phone = "+90…"
+integration_key = "R0UT1NG"   # PagerDuty routing key / Opsgenie API key
+
+[[escalation.oncall]]
+name = "Mehmet"
+email = "mehmet@example.com"
+```
+
+- `Escalation::shift_rotations()` expands that list across ISO weeks 1–53.
+  [`escalation::EscalationEngine::get_on_call_for_time`] looks up the *exact*
+  week and reports a miss as `Primary: None` rather than as an error, so a
+  literal config would need all 53 weeks spelled out or most of the year would
+  quietly have nobody on call.
+- Listing one person is a real answer — they are always on call, and their own
+  backup.
+- `enabled = true` with an empty `oncall` list counts as **not configured**: it
+  would escalate happily and page nobody, which looks like working escalation
+  until the night it matters. The SOC view says so instead.
+- A 15-second ticker drives `process_escalations()`. It is deliberately not
+  driven by the packet loop — the case that matters most is an alert on a link
+  that then goes quiet, and traffic-driven escalation would stall exactly then.
+
 ---
 
 ## Dissectors (`dissectors.rs` + `dissectors/`)

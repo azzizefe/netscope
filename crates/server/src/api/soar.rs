@@ -12,9 +12,7 @@ use uuid::Uuid;
 
 use crate::api::ApiState;
 use crate::auth::{require, Claims};
-use crate::db::models::{
-    CreateCase, CreatePlaybook, CreateTicketingIntegration,
-};
+use crate::db::models::{CreateCase, CreatePlaybook, CreateTicketingIntegration};
 use crate::db::queries;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -77,23 +75,57 @@ pub fn routes(state: Arc<ApiState>) -> Router {
     let write = || from_fn(require("alerts:write"));
 
     Router::new()
-        .route("/playbooks", get(list_playbooks_route).post(save_playbook_route).route_layer(read()))
-        .route("/playbooks/debug", post(debug_playbook_route).route_layer(read()))
-        .route("/playbooks/execute", post(execute_playbook_route).route_layer(write()))
-        .route("/playbooks/marketplace", get(marketplace_list_route).route_layer(read()))
-        .route("/cases", get(list_cases_route).post(create_case_route).route_layer(read()))
+        .route(
+            "/playbooks",
+            get(list_playbooks_route)
+                .post(save_playbook_route)
+                .route_layer(read()),
+        )
+        .route(
+            "/playbooks/debug",
+            post(debug_playbook_route).route_layer(read()),
+        )
+        .route(
+            "/playbooks/execute",
+            post(execute_playbook_route).route_layer(write()),
+        )
+        .route(
+            "/playbooks/marketplace",
+            get(marketplace_list_route).route_layer(read()),
+        )
+        .route(
+            "/cases",
+            get(list_cases_route)
+                .post(create_case_route)
+                .route_layer(read()),
+        )
         .route("/cases/{id}", get(get_case_route).route_layer(read()))
-        .route("/cases/{id}/status", post(update_case_status_route).route_layer(write()))
-        .route("/cases/{id}/evidence", post(upload_evidence_route).route_layer(write()))
-        .route("/cases/{id}/post-mortem", get(get_post_mortem_route).route_layer(read()))
-        .route("/ticketing", get(list_integrations_route).post(save_integration_route).route_layer(read()))
-        .route("/ticketing/webhook", post(ticketing_webhook_route).route_layer(write()))
+        .route(
+            "/cases/{id}/status",
+            post(update_case_status_route).route_layer(write()),
+        )
+        .route(
+            "/cases/{id}/evidence",
+            post(upload_evidence_route).route_layer(write()),
+        )
+        .route(
+            "/cases/{id}/post-mortem",
+            get(get_post_mortem_route).route_layer(read()),
+        )
+        .route(
+            "/ticketing",
+            get(list_integrations_route)
+                .post(save_integration_route)
+                .route_layer(read()),
+        )
+        .route(
+            "/ticketing/webhook",
+            post(ticketing_webhook_route).route_layer(write()),
+        )
         .with_state(state)
 }
 
-async fn list_playbooks_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn list_playbooks_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     match queries::list_playbooks(&state.pool).await {
         Ok(playbooks) => (StatusCode::OK, Json(playbooks)).into_response(),
         Err(e) => (
@@ -118,9 +150,7 @@ async fn save_playbook_route(
     }
 }
 
-async fn debug_playbook_route(
-    Json(payload): Json<DebugPlaybookRequest>,
-) -> impl IntoResponse {
+async fn debug_playbook_route(Json(payload): Json<DebugPlaybookRequest>) -> impl IntoResponse {
     // 1. Parse Playbook YAML
     let playbook: PlaybookYaml = match serde_yaml::from_str(&payload.yaml_content) {
         Ok(pb) => pb,
@@ -138,11 +168,11 @@ async fn debug_playbook_route(
 
     // 2. Trace dry run evaluations
     let mut step_traces = Vec::new();
-    
+
     for (idx, step) in playbook.steps.iter().enumerate() {
         let mut condition_matched = true;
         let condition_logs;
-        
+
         if let Some(ref cond) = step.condition {
             // Simple dry-run condition parsing: e.g. AbuseIPDB confidence confidence > 80
             if cond.contains("confidence") {
@@ -151,14 +181,14 @@ async fn debug_playbook_route(
                     .get("confidence")
                     .and_then(|v| v.as_i64())
                     .unwrap_or(75);
-                
+
                 // Extract comparison number
                 let compare_val: i64 = cond
                     .split('>')
                     .nth(1)
                     .and_then(|s| s.trim().parse().ok())
                     .unwrap_or(80);
-                
+
                 condition_matched = mock_conf > compare_val;
                 condition_logs = format!(
                     "Condition check: (Mock confidence: {}) > (Required: {}) -> Evaluated to: {}",
@@ -170,7 +200,7 @@ async fn debug_playbook_route(
         } else {
             condition_logs = "No condition defined, executed unconditionally".to_string();
         }
-        
+
         step_traces.push(json!({
             "step_index": idx + 1,
             "action": step.action,
@@ -199,38 +229,59 @@ async fn execute_playbook_route(
     Json(payload): Json<ExecutePlaybookRequest>,
 ) -> impl IntoResponse {
     let user_id = claims.map(|c| c.0.sub);
-    
+
     // Simulate finding the playbook in DB
     let pb_name = &payload.playbook_name;
     let alert_id = payload.alert_id;
-    
+
     let mut execution_logs = Vec::new();
-    execution_logs.push(format!("[INFO] Resolving playbooks details for: {}", pb_name));
-    execution_logs.push(format!("[INFO] Fetching context for target alert ID: {}", alert_id));
-    
+    execution_logs.push(format!(
+        "[INFO] Resolving playbooks details for: {}",
+        pb_name
+    ));
+    execution_logs.push(format!(
+        "[INFO] Fetching context for target alert ID: {}",
+        alert_id
+    ));
+
     // Check target alert
     if let Ok(Some(alert)) = queries::get_alert_detail(&state.pool, alert_id).await {
-        let ip_to_block = alert.alert.source_ip.clone().unwrap_or_else(|| "192.168.1.100".to_string());
-        
-        execution_logs.push(format!("[INFO] Target entity resolved: SrcIP={}", ip_to_block));
-        
+        let ip_to_block = alert
+            .alert
+            .source_ip
+            .clone()
+            .unwrap_or_else(|| "192.168.1.100".to_string());
+
+        execution_logs.push(format!(
+            "[INFO] Target entity resolved: SrcIP={}",
+            ip_to_block
+        ));
+
         // Execute block host action (Trigger CommandStore sensor block commands!)
         let cmd = state.commands.push(
             alert.alert.sensor_id.unwrap_or_else(Uuid::new_v4),
             "block_host".to_string(),
             json!({ "ip": ip_to_block }),
         );
-        execution_logs.push(format!("[SUCCESS] Block host command pushed to sensor queue: CommandID={}", cmd.id));
-        execution_logs.push("[INFO] Action snapshot_sensor: capture buffer snapshot committed to disk.".to_string());
-        execution_logs.push(format!("[INFO] Slack notification dispatched to channel #incident-response using template ransomware-alert."));
-        
+        execution_logs.push(format!(
+            "[SUCCESS] Block host command pushed to sensor queue: CommandID={}",
+            cmd.id
+        ));
+        execution_logs.push(
+            "[INFO] Action snapshot_sensor: capture buffer snapshot committed to disk.".to_string(),
+        );
+        execution_logs.push("[INFO] Slack notification dispatched to channel #incident-response using template ransomware-alert.".to_string());
+
         // Try to find if a case is linked to this alert and log timeline events
         // (Just queries cases links if available)
         let _ = queries::insert_timeline_event(
             &state.pool,
             Uuid::new_v4(), // mock or default case id
             "playbook_run",
-            &format!("Executed playbook '{}' for alert '{}'", pb_name, alert.alert.title),
+            &format!(
+                "Executed playbook '{}' for alert '{}'",
+                pb_name, alert.alert.title
+            ),
             user_id,
         )
         .await;
@@ -272,15 +323,13 @@ async fn marketplace_list_route() -> impl IntoResponse {
             "description": "Pushes malicious target DNS resolution domain hashes to local Pi-hole sinkholes dynamically.",
             "source": "Homelab Automations",
             "yaml_content": "name: \"DNS Sinkhole\"\ntrigger:\n  rule_ids: [302]\nsteps:\n  - action: dns_sinkhole\n    target: \"{{.QueryDomain}}\""
-        })
+        }),
     ];
 
     (StatusCode::OK, Json(community_playbooks)).into_response()
 }
 
-async fn list_cases_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn list_cases_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     match queries::list_cases(&state.pool).await {
         Ok(cases) => (StatusCode::OK, Json(cases)).into_response(),
         Err(e) => (
@@ -297,7 +346,7 @@ async fn create_case_route(
     Json(payload): Json<CreateCase>,
 ) -> impl IntoResponse {
     let user_id = claims.map(|c| c.0.sub);
-    
+
     match queries::insert_case(
         &state.pool,
         &payload.title,
@@ -312,17 +361,20 @@ async fn create_case_route(
             for aid in payload.alert_ids {
                 let _ = queries::link_alert_to_case(&state.pool, case.id, aid).await;
             }
-            
+
             // Add timeline event
             let _ = queries::insert_timeline_event(
                 &state.pool,
                 case.id,
                 "created",
-                &format!("Forensic Case created: '{}' with severity '{}'", case.title, case.severity),
+                &format!(
+                    "Forensic Case created: '{}' with severity '{}'",
+                    case.title, case.severity
+                ),
                 user_id,
             )
             .await;
-            
+
             (StatusCode::CREATED, Json(case)).into_response()
         }
         Err(e) => (
@@ -339,11 +391,19 @@ async fn get_case_route(
 ) -> impl IntoResponse {
     match queries::get_case_detail(&state.pool, id).await {
         Ok(Some(case)) => {
-            let alerts = queries::get_case_alerts(&state.pool, id).await.unwrap_or_default();
-            let timeline = queries::list_timeline_events(&state.pool, id).await.unwrap_or_default();
-            let evidence = queries::list_evidence(&state.pool, id).await.unwrap_or_default();
-            let custody = queries::list_custody_logs(&state.pool, id).await.unwrap_or_default();
-            
+            let alerts = queries::get_case_alerts(&state.pool, id)
+                .await
+                .unwrap_or_default();
+            let timeline = queries::list_timeline_events(&state.pool, id)
+                .await
+                .unwrap_or_default();
+            let evidence = queries::list_evidence(&state.pool, id)
+                .await
+                .unwrap_or_default();
+            let custody = queries::list_custody_logs(&state.pool, id)
+                .await
+                .unwrap_or_default();
+
             (
                 StatusCode::OK,
                 Json(json!({
@@ -356,7 +416,11 @@ async fn get_case_route(
             )
                 .into_response()
         }
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "Case not found"}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Case not found"})),
+        )
+            .into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": e.to_string()})),
@@ -372,12 +436,14 @@ async fn update_case_status_route(
     Json(payload): Json<CaseStatusUpdateRequest>,
 ) -> impl IntoResponse {
     let user_id = claims.map(|c| c.0.sub);
-    
+
     match queries::update_case_status(&state.pool, id, &payload.status).await {
         Ok(Some(case)) => {
             let desc = format!("Case status updated to '{}'", payload.status);
-            let _ = queries::insert_timeline_event(&state.pool, id, "status_changed", &desc, user_id).await;
-            
+            let _ =
+                queries::insert_timeline_event(&state.pool, id, "status_changed", &desc, user_id)
+                    .await;
+
             // Sync status to ticketing systems if resolved
             if payload.status == "resolved" || payload.status == "closed" {
                 let _ = queries::insert_timeline_event(
@@ -392,7 +458,11 @@ async fn update_case_status_route(
 
             (StatusCode::OK, Json(case)).into_response()
         }
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "Case not found"}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Case not found"})),
+        )
+            .into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": e.to_string()})),
@@ -408,13 +478,13 @@ async fn upload_evidence_route(
     Json(payload): Json<EvidenceUploadRequest>,
 ) -> impl IntoResponse {
     let user_id = claims.map(|c| c.0.sub);
-    
+
     // Calculate cryptographical signature (Chain of Custody / SHA-256)
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(payload.content.as_bytes());
     let checksum = format!("{:x}", hasher.finalize());
-    
+
     // Filepath mock
     let filepath = format!("/locker/{}/{}", id, payload.filename);
 
@@ -439,11 +509,13 @@ async fn upload_evidence_route(
                 Some("Forensic file upload integrity verified via SHA256"),
             )
             .await;
-            
+
             // Timeline event
             let desc = format!("Evidence added: {} (checksum: {})", ev.filename, checksum);
-            let _ = queries::insert_timeline_event(&state.pool, id, "evidence_added", &desc, user_id).await;
-            
+            let _ =
+                queries::insert_timeline_event(&state.pool, id, "evidence_added", &desc, user_id)
+                    .await;
+
             (StatusCode::CREATED, Json(ev)).into_response()
         }
         Err(e) => (
@@ -460,14 +532,22 @@ async fn get_post_mortem_route(
 ) -> impl IntoResponse {
     match queries::get_case_detail(&state.pool, id).await {
         Ok(Some(case)) => {
-            let timeline = queries::list_timeline_events(&state.pool, id).await.unwrap_or_default();
-            
+            let timeline = queries::list_timeline_events(&state.pool, id)
+                .await
+                .unwrap_or_default();
+
             let mut timeline_str = String::new();
             for t in timeline {
-                timeline_str.push_str(&format!("- **{}** ({}): {}\n", t.timestamp.to_rfc2822(), t.event_type, t.description));
+                timeline_str.push_str(&format!(
+                    "- **{}** ({}): {}\n",
+                    t.timestamp.to_rfc2822(),
+                    t.event_type,
+                    t.description
+                ));
             }
-            
-            let markdown = format!(r#"# Netscope Case Incident Post-Mortem Report
+
+            let markdown = format!(
+                r#"# Netscope Case Incident Post-Mortem Report
 
 - **Case Title**: {}
 - **Case ID**: {}
@@ -483,8 +563,14 @@ This incident case was analyzed by Security Operations analysts. All target sens
 ## Lessons Learned & Future Rule Proposals
 - Propose new alerting threshold tuning for Bruteforce detections.
 - DeployPi-hole DNS Sinkholes mapping rules globally.
-"#, case.title, case.id, case.severity, case.updated_at.to_rfc2822(), timeline_str);
-            
+"#,
+                case.title,
+                case.id,
+                case.severity,
+                case.updated_at.to_rfc2822(),
+                timeline_str
+            );
+
             (StatusCode::OK, markdown).into_response()
         }
         Ok(None) => (StatusCode::NOT_FOUND, "Case not found".to_string()).into_response(),
@@ -492,9 +578,7 @@ This incident case was analyzed by Security Operations analysts. All target sens
     }
 }
 
-async fn list_integrations_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn list_integrations_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     match queries::list_ticketing_integrations(&state.pool).await {
         Ok(integrations) => (StatusCode::OK, Json(integrations)).into_response(),
         Err(e) => (
@@ -534,7 +618,7 @@ async fn ticketing_webhook_route(
     Json(payload): Json<TicketingWebhookPayload>,
 ) -> impl IntoResponse {
     let user_id = claims.map(|c| c.0.sub);
-    
+
     // Bidirectional sync: if ticket is closed, close target case!
     if payload.action == "closed" {
         match queries::update_case_status(&state.pool, payload.case_id, "closed").await {
@@ -543,8 +627,15 @@ async fn ticketing_webhook_route(
                     "Case closed automatically via webhook from provider '{}' for ticket '{}'",
                     payload.integration_provider, payload.ticket_key
                 );
-                let _ = queries::insert_timeline_event(&state.pool, payload.case_id, "status_changed", &desc, user_id).await;
-                
+                let _ = queries::insert_timeline_event(
+                    &state.pool,
+                    payload.case_id,
+                    "status_changed",
+                    &desc,
+                    user_id,
+                )
+                .await;
+
                 (
                     StatusCode::OK,
                     Json(json!({
@@ -555,7 +646,11 @@ async fn ticketing_webhook_route(
                 )
                     .into_response()
             }
-            Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "Case not found"}))).into_response(),
+            Ok(None) => (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Case not found"})),
+            )
+                .into_response(),
             Err(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": e.to_string()})),

@@ -71,8 +71,12 @@ pub struct RegisterSensor {
     pub location: Option<String>,
 }
 
-fn default_deployment_type() -> String { "endpoint".to_string() }
-fn default_capture_mode() -> String { "passive".to_string() }
+fn default_deployment_type() -> String {
+    "endpoint".to_string()
+}
+fn default_capture_mode() -> String {
+    "passive".to_string()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InterfaceInfo {
@@ -349,7 +353,7 @@ pub enum HuntRule {
         field: String,
         operator: String,
         value: serde_json::Value,
-    }
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

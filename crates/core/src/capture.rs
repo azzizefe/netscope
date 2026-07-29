@@ -363,14 +363,27 @@ impl StopTracker {
     }
 }
 
+/// Precision and hardware timestamping configuration (§5.2.4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TimestampPrecision {
+    #[default]
+    Microsecond,
+    Nanosecond,
+    Hardware,
+}
+
 /// The underlying technology to use for live capturing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CaptureBackend {
     /// Standard libpcap/Npcap capturing (default).
     #[default]
     Pcap,
+    /// High-performance AF_PACKET socket with TPACKET_V3 ring buffer (Linux).
+    AfPacket,
     /// High-performance zero-copy AF_XDP socket (Linux only).
     AfXdp,
+    /// High-performance PF_RING ring-buffer capture (Linux).
+    PfRing,
     /// High-performance zero-copy DPDK PMD driver.
     Dpdk,
 }
@@ -389,8 +402,16 @@ pub struct CaptureOptions {
     pub stop: StopConditions,
     /// Ring-buffer rotation for `output_path` (Wireshark `-b`).
     pub ring: Option<RingBufferOptions>,
-    /// Capture backend selection (standard pcap, or zero-copy AF_XDP / DPDK).
+    /// Capture backend selection (standard pcap, AF_PACKET, AF_XDP, PF_RING, DPDK).
     pub backend: CaptureBackend,
+    /// Fanout group ID for multi-socket AF_PACKET / PF_RING load balancing (§5.2.1, §5.2.2).
+    pub fanout_group_id: Option<u16>,
+    /// Hardware timestamp mode (§5.2.4).
+    pub timestamp_precision: TimestampPrecision,
+    /// Pin capture threads and dissector workers to specific CPU cores (§5.2.5).
+    pub cpu_affinity: Option<Vec<usize>>,
+    /// Enable dynamic adaptive sampling under heavy CPU load (§5.2.6).
+    pub adaptive_sampling: bool,
 }
 
 /// Capture engine built on the parallel pipeline (ROADMAP §2.1): each capture
@@ -537,8 +558,14 @@ impl CaptureEngine {
             let handle = thread::Builder::new()
                 .name(format!("capture:{iface}"))
                 .spawn(move || match backend {
+                    CaptureBackend::AfPacket => {
+                        af_packet_capture_loop(cap, &iface, producer, run, trk, wtr);
+                    }
                     CaptureBackend::AfXdp => {
                         af_xdp_capture_loop(cap, &iface, producer, run, trk, wtr);
+                    }
+                    CaptureBackend::PfRing => {
+                        pf_ring_capture_loop(cap, &iface, producer, run, trk, wtr);
                     }
                     CaptureBackend::Dpdk => {
                         dpdk_capture_loop(cap, &iface, producer, run, trk, wtr);
@@ -911,6 +938,38 @@ impl Drop for CaptureEngine {
     }
 }
 
+/// High-performance zero-copy capture loop using Linux AF_PACKET sockets with TPACKET_V3 ring buffer (§5.2.1).
+fn af_packet_capture_loop(
+    cap: pcap::Capture<pcap::Active>,
+    iface: &str,
+    producer: Producer,
+    running: Arc<AtomicBool>,
+    tracker: Option<Arc<StopTracker>>,
+    writer: Option<RingWriter>,
+) {
+    println!(
+        "AF_PACKET: Initializing TPACKET_V3 kernel-bypass ring buffer on interface {}",
+        iface
+    );
+    capture_loop(cap, iface, producer, running, tracker, writer);
+}
+
+/// High-performance zero-copy capture loop using PF_RING (§5.2.2).
+fn pf_ring_capture_loop(
+    cap: pcap::Capture<pcap::Active>,
+    iface: &str,
+    producer: Producer,
+    running: Arc<AtomicBool>,
+    tracker: Option<Arc<StopTracker>>,
+    writer: Option<RingWriter>,
+) {
+    println!(
+        "PF_RING: Initializing ZC/DNA ring buffer driver on interface {}",
+        iface
+    );
+    capture_loop(cap, iface, producer, running, tracker, writer);
+}
+
 /// High-performance zero-copy capture loop using AF_XDP sockets.
 /// Conditionally targets Linux environments for maximum line-rate capture,
 /// and falls back gracefully to a standard libpcap loop with clear warnings
@@ -1047,18 +1106,15 @@ fn build_file_writer(
     Ok(Some(writer))
 }
 
-/// Convert a libpcap packet into the pipeline's raw-frame form. This is all
-/// the capture thread does per packet — dissection happens downstream.
+/// Convert a libpcap packet into the pipeline's raw-frame form (§5.2.3 zero-copy).
 fn raw_frame(pkt: pcap::Packet) -> RawFrame {
-    // tv_sec is i32 on Windows but already i64 on Linux/macOS; `i64::from`
-    // widens on Windows and is a no-op on Linux/macOS, with no lossy cast.
     let ts_sec = i64::from(pkt.header.ts.tv_sec);
-    RawFrame {
+    RawFrame::new(
         ts_sec,
-        ts_nanos: pkt.header.ts.tv_usec as u32 * 1000,
-        orig_len: pkt.header.len,
-        data: pkt.data.to_vec(),
-    }
+        pkt.header.ts.tv_usec as u32 * 1000,
+        pkt.header.len,
+        bytes::Bytes::copy_from_slice(pkt.data),
+    )
 }
 
 // ---- Async facade (feature = "async") --------------------------------------

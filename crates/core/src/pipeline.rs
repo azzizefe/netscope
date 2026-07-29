@@ -45,9 +45,26 @@ const BATCH: usize = 512;
 /// overhead only pays off once there is real work to split.
 const PARALLEL_THRESHOLD: usize = 32;
 
+use bytes::Bytes;
+
+use crate::dissectors;
+use crate::llm_analytics;
+use crate::models::Packet;
+
+/// Default ring size. 64k frames ≈ a full second of 10GbE minimum-size burst
+/// headroom, at ~48 bytes of queue overhead per slot.
+pub const DEFAULT_RING_CAPACITY: usize = 65_536;
+
+/// Frames drained per dissector pass.
+const BATCH: usize = 512;
+
+/// Below this many frames a batch is parsed inline — rayon's fork/join
+/// overhead only pays off once there is real work to split.
+const PARALLEL_THRESHOLD: usize = 32;
+
 /// A captured-but-not-yet-dissected frame, as cheap as the capture thread can
-/// make it: timestamp fields plus the raw bytes.
-#[derive(Debug)]
+/// make it: timestamp fields plus the raw bytes (§5.2.3 zero-copy pipeline).
+#[derive(Debug, Clone)]
 pub struct RawFrame {
     /// Seconds since the Unix epoch.
     pub ts_sec: i64,
@@ -55,8 +72,102 @@ pub struct RawFrame {
     pub ts_nanos: u32,
     /// Original on-wire length (may exceed `data.len()` under snaplen).
     pub orig_len: u32,
-    /// Captured bytes.
-    pub data: Vec<u8>,
+    /// Captured bytes using zero-copy ref-counted `Bytes` buffer (§5.2.3).
+    pub data: Bytes,
+    /// Whether timestamp originated from NIC hardware clock (§5.2.4).
+    pub hw_timestamp: bool,
+    /// Sampling ratio applied to this frame (1 for full capture, N for 1:N sampling) (§5.2.6).
+    pub sampling_ratio: u32,
+}
+
+impl RawFrame {
+    pub fn new(ts_sec: i64, ts_nanos: u32, orig_len: u32, data: impl Into<Bytes>) -> Self {
+        Self {
+            ts_sec,
+            ts_nanos,
+            orig_len,
+            data: data.into(),
+            hw_timestamp: false,
+            sampling_ratio: 1,
+        }
+    }
+
+    pub fn with_hw_timestamp(mut self, hw_ts: bool) -> Self {
+        self.hw_timestamp = hw_ts;
+        self
+    }
+
+    pub fn with_sampling_ratio(mut self, ratio: u32) -> Self {
+        self.sampling_ratio = ratio;
+        self
+    }
+}
+
+/// Dynamic adaptive packet sampling engine (§5.2.6).
+/// Scales sampling ratio (1:1 -> 1:N -> 1:1) dynamically based on CPU load and queue capacity.
+#[derive(Debug)]
+pub struct AdaptiveSampler {
+    pub cpu_threshold_percent: u32,
+    pub queue_threshold_percent: u32,
+    current_ratio: AtomicU64,
+    sampled_out_count: AtomicU64,
+}
+
+impl Default for AdaptiveSampler {
+    fn default() -> Self {
+        Self::new(90, 85)
+    }
+}
+
+impl AdaptiveSampler {
+    pub fn new(cpu_threshold_percent: u32, queue_threshold_percent: u32) -> Self {
+        Self {
+            cpu_threshold_percent,
+            queue_threshold_percent,
+            current_ratio: AtomicU64::new(1),
+            sampled_out_count: AtomicU64::new(0),
+        }
+    }
+
+    /// Evaluates whether an incoming packet should be kept or sampled out.
+    /// Returns `(should_keep, applied_sampling_ratio)`.
+    pub fn should_sample(&self, packet_idx: u64, ring_fill_pct: u32, cpu_fill_pct: u32) -> (bool, u32) {
+        let current = self.current_ratio.load(Ordering::Relaxed);
+        let mut target = current;
+
+        if cpu_fill_pct >= self.cpu_threshold_percent || ring_fill_pct >= self.queue_threshold_percent {
+            if target < 16 {
+                target = (target * 2).min(16);
+                self.current_ratio.store(target, Ordering::Relaxed);
+            }
+        } else if cpu_fill_pct < self.cpu_threshold_percent.saturating_sub(15)
+            && ring_fill_pct < self.queue_threshold_percent.saturating_sub(20)
+        {
+            if target > 1 {
+                target = (target / 2).max(1);
+                self.current_ratio.store(target, Ordering::Relaxed);
+            }
+        }
+
+        let ratio = target as u32;
+        if ratio <= 1 {
+            (true, 1)
+        } else {
+            let keep = (packet_idx % (ratio as u64)) == 0;
+            if !keep {
+                self.sampled_out_count.fetch_add(1, Ordering::Relaxed);
+            }
+            (keep, ratio)
+        }
+    }
+
+    pub fn current_ratio(&self) -> u32 {
+        self.current_ratio.load(Ordering::Relaxed) as u32
+    }
+
+    pub fn sampled_out_count(&self) -> u64 {
+        self.sampled_out_count.load(Ordering::Relaxed)
+    }
 }
 
 #[derive(Default)]
@@ -64,6 +175,8 @@ struct Counters {
     received: AtomicU64,
     dropped: AtomicU64,
     dissected: AtomicU64,
+    sampled_out: AtomicU64,
+    hw_timestamped: AtomicU64,
 }
 
 /// Point-in-time pipeline counters.
@@ -75,6 +188,10 @@ pub struct StatsSnapshot {
     pub dropped: u64,
     /// Frames dissected and forwarded downstream.
     pub dissected: u64,
+    /// Frames dropped by adaptive sampling (§5.2.6).
+    pub sampled_out: u64,
+    /// Frames tagged with NIC hardware timestamp (§5.2.4).
+    pub hw_timestamped: u64,
 }
 
 /// The capture side's handle: push frames, then declare the stream finished.
@@ -91,9 +208,18 @@ impl Producer {
     /// counted, exactly like a kernel buffer overflow. For live capture.
     pub fn push_live(&self, frame: RawFrame) {
         self.counters.received.fetch_add(1, Ordering::Relaxed);
+        if frame.hw_timestamp {
+            self.counters.hw_timestamped.fetch_add(1, Ordering::Relaxed);
+        }
         if self.ring.push(frame).is_err() {
             self.counters.dropped.fetch_add(1, Ordering::Relaxed);
         }
+    }
+
+    /// Record a frame dropped by adaptive sampling (§5.2.6).
+    pub fn push_sampled_out(&self) {
+        self.counters.received.fetch_add(1, Ordering::Relaxed);
+        self.counters.sampled_out.fetch_add(1, Ordering::Relaxed);
     }
 
     /// Push with backpressure — waits for ring space so nothing is lost. For
@@ -209,6 +335,8 @@ impl Pipeline {
             received: self.producer.counters.received.load(Ordering::Relaxed),
             dropped: self.producer.counters.dropped.load(Ordering::Relaxed),
             dissected: self.producer.counters.dissected.load(Ordering::Relaxed),
+            sampled_out: self.producer.counters.sampled_out.load(Ordering::Relaxed),
+            hw_timestamped: self.producer.counters.hw_timestamped.load(Ordering::Relaxed),
         }
     }
 
@@ -263,7 +391,7 @@ pub(crate) fn dissect_frame(frame: RawFrame, linktype: i32) -> Packet {
         protocol: d.protocol,
         length: frame.orig_len as usize,
         summary: d.summary,
-        data: frame.data.into(),
+        data: frame.data,
         llm,
     }
 }
@@ -277,12 +405,35 @@ mod tests {
     use crate::models::Protocol;
 
     fn frame(i: usize, data: Vec<u8>) -> RawFrame {
-        RawFrame {
-            ts_sec: 1_700_000_000 + i as i64,
-            ts_nanos: 0,
-            orig_len: data.len() as u32,
-            data,
-        }
+        RawFrame::new(
+            1_700_000_000 + i as i64,
+            0,
+            data.len() as u32,
+            Bytes::from(data),
+        )
+    }
+
+    #[test]
+    fn test_adaptive_sampler_dynamics() {
+        let sampler = AdaptiveSampler::new(90, 85);
+        assert_eq!(sampler.current_ratio(), 1);
+
+        // Low pressure -> 1:1 sampling
+        let (keep, ratio) = sampler.should_sample(0, 10, 20);
+        assert!(keep);
+        assert_eq!(ratio, 1);
+
+        // High CPU pressure (>90%) -> scale up sampling ratio to 1:2
+        let (_, ratio) = sampler.should_sample(1, 10, 95);
+        assert_eq!(ratio, 2);
+
+        // High queue pressure (>85%) -> scale up sampling ratio to 1:4
+        let (_, ratio) = sampler.should_sample(2, 90, 20);
+        assert_eq!(ratio, 4);
+
+        // Normal pressure drops -> scale back down towards 1:1
+        let _ = sampler.should_sample(3, 10, 10);
+        assert!(sampler.current_ratio() <= 2);
     }
 
     #[test]

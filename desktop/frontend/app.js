@@ -4768,10 +4768,149 @@ function renderAll() {
   else if (state.view === 'soc') renderSoc();
 }
 
+/** Render the notification channels from real config, each with a live test.
+ *
+ * The badge answers "will an alert actually go out here?", which is why it
+ * reads config instead of being fixed in the markup. Test runs the same code
+ * path a real alert takes, so a green result means delivery works — the point
+ * of the button is that it can come back red. */
+function renderSocChannels() {
+  const el = $('#soc-channels-list');
+  if (!el) return;
+
+  invoke('get_notification_channels').then((channels) => {
+    if (!channels || !channels.length) {
+      el.innerHTML = `<div class="soc-empty">${esc(I18N.t('soc.channels.none'))}</div>`;
+      return;
+    }
+    el.innerHTML = channels.map((c) => {
+      const cls = !c.available ? 'unavailable' : (c.configured ? 'active' : '');
+      const label = !c.available
+        ? I18N.t('soc.channel.unavailable')
+        : (c.configured ? I18N.t('soc.channel.configured') : I18N.t('soc.channel.unconfigured'));
+      // Only a configured, usable channel has anything to test.
+      const testBtn = (c.available && c.configured)
+        ? `<button class="btn btn-small soc-channel-test" data-channel="${esc(c.id)}" data-i18n="soc.channel.test">Test</button>`
+        : '';
+      return `<div class="soc-channel">
+        <span class="soc-channel-name">${esc(c.label)}</span>
+        <span class="soc-channel-detail">${esc(c.detail)}</span>
+        <span class="soc-channel-status ${cls}">${esc(label)}</span>
+        ${testBtn}
+      </div>
+      <div class="soc-channel-result" id="soc-test-${esc(c.id)}"></div>`;
+    }).join('');
+
+    el.querySelectorAll('.soc-channel-test').forEach((btn) => {
+      btn.addEventListener('click', () => testSocChannel(btn));
+    });
+  }).catch(() => {
+    el.innerHTML = `<div class="soc-empty">${esc(I18N.t('soc.channels.none'))}</div>`;
+  });
+}
+
+function testSocChannel(btn) {
+  const id = btn.dataset.channel;
+  const out = $(`#soc-test-${id}`);
+  btn.disabled = true;
+  if (out) { out.className = 'soc-channel-result'; out.textContent = I18N.t('soc.channel.testing'); }
+  invoke('test_notification_channel', { channel: id })
+    .then((okMsg) => {
+      if (out) { out.className = 'soc-channel-result ok'; out.textContent = `✓ ${okMsg}`; }
+    })
+    .catch((err) => {
+      // The error text is the whole value here — it says which setting is
+      // missing or which endpoint refused, so it is shown verbatim.
+      if (out) { out.className = 'soc-channel-result err'; out.textContent = `✗ ${err}`; }
+    })
+    .finally(() => { btn.disabled = false; });
+}
+
+/** How long an alert has gone unanswered, in the coarsest useful unit. */
+function escalationAge(secs) {
+  if (secs < 60) return `${secs}s`;
+  if (secs < 3600) return `${Math.floor(secs / 60)}m`;
+  return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`;
+}
+
+/** Render who is on call and what is currently climbing the chain.
+ *
+ * The card's job is to answer "is anyone dealing with this?", so an escalation
+ * that nobody has acknowledged is the thing it puts first. */
+function renderSocEscalation() {
+  const el = $('#soc-escalation-list');
+  if (!el) return;
+
+  invoke('get_escalation_status').then((s) => {
+    if (!s) { el.innerHTML = `<div class="soc-empty">${esc(I18N.t('soc.noescalation'))}</div>`; return; }
+
+    if (!s.enabled) {
+      // Say why it is off, not just that it is — the reason names the setting.
+      el.innerHTML = `<div class="soc-empty">${esc(s.reason || I18N.t('soc.noescalation'))}</div>`;
+      return;
+    }
+
+    const who = (u, roleKey) => u
+      ? `<div class="soc-stat-row">
+           <span class="soc-stat-label">${esc(I18N.t(roleKey))}</span>
+           <span class="soc-stat-value">${esc(u.name)}${u.email ? ` <span class="soc-oncall-contact">${esc(u.email)}</span>` : ''}</span>
+         </div>`
+      : '';
+
+    const active = s.active.length
+      ? s.active.map((a) => `
+          <div class="soc-esc-item soc-esc-${esc(a.status.toLowerCase())}">
+            <div class="soc-esc-head">
+              <span class="soc-esc-rule">${esc(a.rule_name)}</span>
+              <span class="soc-esc-level">${esc(a.level)}</span>
+              <span class="soc-esc-age">${esc(escalationAge(a.age_secs))}</span>
+              <span class="soc-esc-status">${esc(a.status)}</span>
+            </div>
+            <div class="soc-esc-msg">${esc(a.alert_msg)}</div>
+            <div class="soc-esc-actions">
+              ${a.status === 'Escalating'
+                ? `<button class="btn btn-small soc-esc-ack" data-alert="${esc(a.alert_id)}" data-i18n="soc.esc.ack">Acknowledge</button>`
+                : ''}
+              ${a.status !== 'Resolved'
+                ? `<button class="btn btn-small soc-esc-resolve" data-alert="${esc(a.alert_id)}" data-i18n="soc.esc.resolve">Resolve</button>`
+                : ''}
+            </div>
+          </div>`).join('')
+      : `<div class="soc-empty">${esc(I18N.t('soc.esc.none'))}</div>`;
+
+    el.innerHTML = `
+      <div class="soc-stat-row">
+        <span class="soc-stat-label">${esc(I18N.t('soc.esc.week'))}</span>
+        <span class="soc-stat-value">${s.iso_week}</span>
+      </div>
+      ${who(s.primary, 'soc.esc.primary')}
+      ${who(s.backup, 'soc.esc.backup')}
+      <div class="soc-esc-chain">${s.steps.map((t) => esc(t)).join(' → ')}</div>
+      <div class="soc-esc-active-head">${esc(I18N.t('soc.esc.active'))}</div>
+      ${active}`;
+
+    el.querySelectorAll('.soc-esc-ack').forEach((b) =>
+      b.addEventListener('click', () => escalationAction('acknowledge_escalation', b)));
+    el.querySelectorAll('.soc-esc-resolve').forEach((b) =>
+      b.addEventListener('click', () => escalationAction('resolve_escalation', b)));
+  }).catch(() => {
+    el.innerHTML = `<div class="soc-empty">${esc(I18N.t('soc.noescalation'))}</div>`;
+  });
+}
+
+function escalationAction(cmd, btn) {
+  btn.disabled = true;
+  invoke(cmd, { alertId: btn.dataset.alert })
+    .then(() => renderSocEscalation())
+    .catch((e) => { setStatus(String(e)); btn.disabled = false; });
+}
+
 function renderSoc() {
   const rulesEl = $('#soc-rules-list');
-  const escalationEl = $('#soc-escalation-list');
   const statsEl = $('#soc-stats-list');
+
+  renderSocChannels();
+  renderSocEscalation();
 
   if (rulesEl) {
     invoke('get_alert_rules').then((rules) => {
@@ -4790,10 +4929,6 @@ function renderSoc() {
     }).catch(() => {
       rulesEl.innerHTML = `<div class="soc-empty">${I18N.t('soc.norules')}</div>`;
     });
-  }
-
-  if (escalationEl) {
-    escalationEl.innerHTML = `<div class="soc-empty">${I18N.t('soc.noescalation')}</div>`;
   }
 
   if (statsEl) {
@@ -4830,8 +4965,11 @@ const SOC_SERVER_KEY = 'netscope.socServer';
 function normalizeSocServerUrl(raw) {
   const text = (raw || '').trim();
   if (!text) return '';
-  // Bare host:port is the common way to type this; assume plain http.
-  const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(text) ? text : `http://${text}`;
+  // Bare host:port is the common way to type this; assume plain http. The
+  // scheme test requires `://`, not just a colon — matching a bare colon reads
+  // the `localhost` in `localhost:8080` as a scheme and rejects the single
+  // most likely thing anyone types here.
+  const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(text) ? text : `http://${text}`;
   let url;
   try { url = new URL(withScheme); } catch { return ''; }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
@@ -4841,6 +4979,11 @@ function normalizeSocServerUrl(raw) {
 function setSocStatus(msgKey, kind) {
   const el = $('#soc-server-status');
   if (!el) return;
+  // Record the key, not just the text: this runs before I18N.apply() picks the
+  // startup language, and again whenever the user switches language. Carrying
+  // `data-i18n` lets apply() retranslate whatever the status currently says
+  // instead of leaving it frozen in the language it was first written in.
+  if (msgKey) el.dataset.i18n = msgKey; else delete el.dataset.i18n;
   el.textContent = msgKey ? I18N.t(msgKey) : '';
   el.classList.remove('ok', 'err');
   if (kind) el.classList.add(kind);

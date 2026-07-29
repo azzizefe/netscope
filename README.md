@@ -197,9 +197,13 @@ capture library headers.
 2. **Npcap SDK** — Required to *link*, and not vendored in the repo
    (`npcap-sdk/` is gitignored). `.cargo/config.toml` points the `pcap` crate at
    `npcap-sdk/Lib/x64` **relative to the repo root**, so the simplest setup is to
-   extract the SDK to exactly that location:
+   run the helper script from the repo root:
    ```powershell
-   # From the repo root
+   # One-command setup — downloads & extracts to the right place
+   .\tools\ensure-npcap-sdk.ps1
+   ```
+   Or manually extract the SDK to `npcap-sdk/Lib/x64`:
+   ```powershell
    Invoke-WebRequest https://npcap.com/dist/npcap-sdk-1.13.zip -OutFile "$env:TEMP\npcap-sdk.zip"
    Expand-Archive "$env:TEMP\npcap-sdk.zip" -DestinationPath .\npcap-sdk -Force
    ```
@@ -209,7 +213,7 @@ capture library headers.
    $env:LIBPCAP_LIBDIR = "C:\npcap-sdk\Lib\x64"
    ```
    Without either, the build fails at link time with an unresolved `wpcap`
-   reference rather than a message naming the SDK.
+   reference. Run `.\tools\ensure-npcap-sdk.ps1` to fix this.
 3. **WebView2** — Pre-installed on Windows 10/11 (needed for the desktop app).
 4. **Visual Studio Build Tools** — `rustup` on Windows needs the MSVC toolchain.
    Install "Desktop development with C++" from

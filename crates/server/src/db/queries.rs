@@ -124,10 +124,7 @@ pub async fn get_sensor_throughput_history(
     .await?)
 }
 
-pub async fn get_sensor_topology(
-    pool: &PgPool,
-    sensor_id: Uuid,
-) -> Result<Vec<TopologyEdge>> {
+pub async fn get_sensor_topology(pool: &PgPool, sensor_id: Uuid) -> Result<Vec<TopologyEdge>> {
     Ok(sqlx::query_as::<_, TopologyEdge>(
         "SELECT source_ip::text as source_ip, dest_ip::text as dest_ip, \
                 COALESCE(protocol, 'unknown') as protocol, COUNT(*)::bigint as count \
@@ -135,7 +132,7 @@ pub async fn get_sensor_topology(
          WHERE sensor_id = $1 AND source_ip IS NOT NULL AND dest_ip IS NOT NULL \
          GROUP BY source_ip, dest_ip, protocol \
          ORDER BY count DESC \
-         LIMIT 100"
+         LIMIT 100",
     )
     .bind(sensor_id)
     .fetch_all(pool)
@@ -319,20 +316,17 @@ pub async fn update_alert_status(
     .bind(update_assignment)
     .fetch_optional(pool)
     .await?;
-    
+
     Ok(alert)
 }
 
-pub async fn get_alert_detail(
-    pool: &PgPool,
-    id: Uuid,
-) -> Result<Option<AlertDetail>> {
+pub async fn get_alert_detail(pool: &PgPool, id: Uuid) -> Result<Option<AlertDetail>> {
     let alert = sqlx::query_as::<_, Alert>(
         "SELECT id, rule_id, sensor_id, event_id, status, severity, title, description,
                 source_ip::inet, dest_ip::inet, raw_data, assigned_to,
                 acknowledged_by, acknowledged_at, resolved_by, resolved_at,
                 created_at, updated_at
-         FROM alerts WHERE id = $1"
+         FROM alerts WHERE id = $1",
     )
     .bind(id)
     .fetch_optional(pool)
@@ -346,10 +340,14 @@ pub async fn get_alert_detail(
             if let Ok(Some(rule)) = get_rule(pool, rid).await {
                 rule_name = Some(rule.name.clone());
                 rule_description = rule.description.clone();
-                let condition_json = serde_json::to_string_pretty(&rule.condition).unwrap_or_default();
+                let condition_json =
+                    serde_json::to_string_pretty(&rule.condition).unwrap_or_default();
                 rule_yaml = Some(format!(
                     "name: {}\nseverity: {}\ncooldown_secs: {}\ncondition: |\n  {}",
-                    rule.name, rule.severity, rule.cooldown_secs, condition_json.replace('\n', "\n  ")
+                    rule.name,
+                    rule.severity,
+                    rule.cooldown_secs,
+                    condition_json.replace('\n', "\n  ")
                 ));
             }
         }
@@ -359,7 +357,7 @@ pub async fn get_alert_detail(
             let event: Option<Event> = sqlx::query_as(
                 "SELECT id, sensor_id, event_type, severity, title, description,
                         source_ip::inet, dest_ip::inet, protocol, port, raw_data, tags, timestamp
-                 FROM events WHERE id = $1"
+                 FROM events WHERE id = $1",
             )
             .bind(eid)
             .fetch_optional(pool)
@@ -371,15 +369,24 @@ pub async fn get_alert_detail(
 
         let mut assigned_username = None;
         if let Some(uid) = alert.assigned_to {
-            assigned_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1").bind(uid).fetch_optional(pool).await?;
+            assigned_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1")
+                .bind(uid)
+                .fetch_optional(pool)
+                .await?;
         }
         let mut acknowledged_username = None;
         if let Some(uid) = alert.acknowledged_by {
-            acknowledged_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1").bind(uid).fetch_optional(pool).await?;
+            acknowledged_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1")
+                .bind(uid)
+                .fetch_optional(pool)
+                .await?;
         }
         let mut resolved_username = None;
         if let Some(uid) = alert.resolved_by {
-            resolved_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1").bind(uid).fetch_optional(pool).await?;
+            resolved_username = sqlx::query_scalar("SELECT username FROM users WHERE id = $1")
+                .bind(uid)
+                .fetch_optional(pool)
+                .await?;
         }
 
         Ok(Some(AlertDetail {
@@ -414,7 +421,7 @@ pub async fn get_alert_notes(pool: &PgPool, alert_id: Uuid) -> Result<Vec<AlertN
          FROM alert_notes n \
          LEFT JOIN users u ON u.id = n.user_id \
          WHERE n.alert_id = $1 \
-         ORDER BY n.created_at ASC"
+         ORDER BY n.created_at ASC",
     )
     .bind(alert_id)
     .fetch_all(pool)
@@ -440,7 +447,10 @@ pub async fn insert_alert_note(
     let created_at: DateTime<Utc> = row.get(1);
 
     let username = if let Some(uid) = user_id {
-        sqlx::query_scalar("SELECT username FROM users WHERE id = $1").bind(uid).fetch_optional(pool).await?
+        sqlx::query_scalar("SELECT username FROM users WHERE id = $1")
+            .bind(uid)
+            .fetch_optional(pool)
+            .await?
     } else {
         None
     };
@@ -463,7 +473,7 @@ pub async fn bulk_update_alerts_status(
 ) -> Result<u64> {
     let mut tx = pool.begin().await?;
     let mut updated_count = 0;
-    
+
     for id in ids {
         let query_str = match status {
             "acknowledged" | "investigating" => {
@@ -472,7 +482,8 @@ pub async fn bulk_update_alerts_status(
                         .bind(status).bind(uid).bind(*id)
                 } else {
                     sqlx::query("UPDATE alerts SET status = $1, updated_at = now() WHERE id = $2")
-                        .bind(status).bind(*id)
+                        .bind(status)
+                        .bind(*id)
                 }
             }
             "resolved" | "dismissed" => {
@@ -481,19 +492,19 @@ pub async fn bulk_update_alerts_status(
                         .bind(status).bind(uid).bind(*id)
                 } else {
                     sqlx::query("UPDATE alerts SET status = $1, updated_at = now() WHERE id = $2")
-                        .bind(status).bind(*id)
+                        .bind(status)
+                        .bind(*id)
                 }
             }
-            _ => {
-                sqlx::query("UPDATE alerts SET status = $1, updated_at = now() WHERE id = $2")
-                    .bind(status).bind(*id)
-            }
+            _ => sqlx::query("UPDATE alerts SET status = $1, updated_at = now() WHERE id = $2")
+                .bind(status)
+                .bind(*id),
         };
-        
+
         let res = query_str.execute(&mut *tx).await?;
         updated_count += res.rows_affected();
     }
-    
+
     tx.commit().await?;
     Ok(updated_count)
 }
@@ -915,7 +926,11 @@ impl HuntRule {
                 }
                 Ok(format!("(({}))", clauses.join(op_join)))
             }
-            HuntRule::Condition { field, operator, value } => {
+            HuntRule::Condition {
+                field,
+                operator,
+                value,
+            } => {
                 let col_name = match field.as_str() {
                     "source_ip" => "source_ip::text",
                     "dest_ip" => "dest_ip::text",
@@ -927,7 +942,7 @@ impl HuntRule {
                     "description" => "description",
                     _ => return Err(format!("Invalid search field: {}", field)),
                 };
-                
+
                 let val_str = match value {
                     serde_json::Value::String(s) => s.clone(),
                     serde_json::Value::Number(n) => n.to_string(),
@@ -935,7 +950,7 @@ impl HuntRule {
                     serde_json::Value::Null => "null".to_string(),
                     _ => return Err(format!("Invalid value type for field: {}", field)),
                 };
-                
+
                 let sql_op = match operator.as_str() {
                     "equals" | "eq" => "=",
                     "not_equals" | "neq" => "!=",
@@ -945,27 +960,24 @@ impl HuntRule {
                     "less_than" | "lt" => "<",
                     _ => return Err(format!("Invalid operator: {}", operator)),
                 };
-                
+
                 let bind_val = if sql_op.contains("LIKE") {
                     format!("%{}%", val_str)
                 } else {
                     val_str
                 };
-                
+
                 let param_placeholder = format!("${}", idx);
                 *idx += 1;
                 params.push(bind_val);
-                
+
                 Ok(format!("({} {} {})", col_name, sql_op, param_placeholder))
             }
         }
     }
 }
 
-pub async fn hunt_events(
-    pool: &PgPool,
-    payload: &HuntQueryPayload,
-) -> Result<Vec<Event>> {
+pub async fn hunt_events(pool: &PgPool, payload: &HuntQueryPayload) -> Result<Vec<Event>> {
     let page = payload.page.unwrap_or(1).max(1);
     let per_page = payload.per_page.unwrap_or(50).clamp(1, 500);
     let offset = (page - 1) * per_page;
@@ -975,37 +987,37 @@ pub async fn hunt_events(
                 source_ip::inet, dest_ip::inet, protocol, port, raw_data, tags, timestamp
          FROM events WHERE 1=1",
     );
-    
+
     let mut idx = 1u32;
     let mut params = Vec::new();
-    
+
     if let Some(ts) = payload.timerange_start {
         sql.push_str(&format!(" AND timestamp >= ${}", idx));
         idx += 1;
         params.push(ts.to_rfc3339());
     }
-    
+
     if let Some(te) = payload.timerange_end {
         sql.push_str(&format!(" AND timestamp <= ${}", idx));
         idx += 1;
         params.push(te.to_rfc3339());
     }
-    
+
     if let Some(ref filter) = payload.filter {
         if let Ok(filter_sql) = filter.to_sql(&mut idx, &mut params) {
             sql.push_str(&format!(" AND {}", filter_sql));
         }
     }
-    
+
     sql.push_str(" ORDER BY timestamp DESC");
     sql.push_str(&format!(" LIMIT ${} OFFSET ${}", idx, idx + 1));
-    
+
     let mut q = sqlx::query_as::<_, Event>(&sql);
     for p in params {
         q = q.bind(p);
     }
     q = q.bind(per_page).bind(offset);
-    
+
     Ok(q.fetch_all(pool).await?)
 }
 
@@ -1014,16 +1026,14 @@ pub async fn hunt_histogram(
     payload: &HistogramPayload,
 ) -> Result<Vec<HistogramBucket>> {
     let bucket_size = payload.bucket_size_secs.unwrap_or(3600).max(10);
-    
-    let mut sql = format!(
-        "SELECT to_timestamp(floor(extract(epoch from timestamp) / $1) * $1) AT TIME ZONE 'UTC' as bucket_time,
+
+    let mut sql = "SELECT to_timestamp(floor(extract(epoch from timestamp) / $1) * $1) AT TIME ZONE 'UTC' as bucket_time,
                 count(*)::bigint as count
-         FROM events WHERE 1=1"
-    );
-    
+         FROM events WHERE 1=1".to_string();
+
     let mut idx = 2u32;
     let mut params = vec![bucket_size.to_string()];
-    
+
     if let Some(ts) = payload.timerange_start {
         sql.push_str(&format!(" AND timestamp >= ${}", idx));
         idx += 1;
@@ -1034,15 +1044,15 @@ pub async fn hunt_histogram(
         idx += 1;
         params.push(te.to_rfc3339());
     }
-    
+
     if let Some(ref filter) = payload.filter {
         if let Ok(filter_sql) = filter.to_sql(&mut idx, &mut params) {
             sql.push_str(&format!(" AND {}", filter_sql));
         }
     }
-    
+
     sql.push_str(" GROUP BY bucket_time ORDER BY bucket_time ASC");
-    
+
     let mut q = sqlx::query(&sql);
     let mut first = true;
     for p in params {
@@ -1053,7 +1063,7 @@ pub async fn hunt_histogram(
             q = q.bind(p);
         }
     }
-    
+
     let rows = q.fetch_all(pool).await?;
     let mut buckets = Vec::new();
     for row in rows {
@@ -1061,7 +1071,7 @@ pub async fn hunt_histogram(
         let count: i64 = row.try_get("count")?;
         buckets.push(HistogramBucket { bucket_time, count });
     }
-    
+
     Ok(buckets)
 }
 
@@ -1069,7 +1079,7 @@ pub async fn list_saved_searches(pool: &PgPool) -> Result<Vec<SavedSearch>> {
     Ok(sqlx::query_as::<_, SavedSearch>(
         "SELECT id, name, query_json, created_by, created_at, updated_at \
          FROM saved_searches \
-         ORDER BY created_at DESC"
+         ORDER BY created_at DESC",
     )
     .fetch_all(pool)
     .await?)
@@ -1079,7 +1089,7 @@ pub async fn get_saved_search(pool: &PgPool, id: Uuid) -> Result<Option<SavedSea
     Ok(sqlx::query_as::<_, SavedSearch>(
         "SELECT id, name, query_json, created_by, created_at, updated_at \
          FROM saved_searches \
-         WHERE id = $1"
+         WHERE id = $1",
     )
     .bind(id)
     .fetch_optional(pool)
@@ -1095,7 +1105,7 @@ pub async fn insert_saved_search(
     Ok(sqlx::query_as::<_, SavedSearch>(
         "INSERT INTO saved_searches (name, query_json, created_by) \
          VALUES ($1, $2, $3) \
-         RETURNING id, name, query_json, created_by, created_at, updated_at"
+         RETURNING id, name, query_json, created_by, created_at, updated_at",
     )
     .bind(name)
     .bind(query_json)
@@ -1107,30 +1117,38 @@ pub async fn insert_saved_search(
 // ── Reporting & Compliance Queries ──
 
 pub async fn get_daily_soc_report(pool: &PgPool) -> Result<DailySocReport> {
-    let total_events: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM events WHERE timestamp > now() - interval '24 hours'").fetch_one(pool).await?;
-    let total_alerts: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM alerts WHERE created_at > now() - interval '24 hours'").fetch_one(pool).await?;
-    
+    let total_events: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM events WHERE timestamp > now() - interval '24 hours'",
+    )
+    .fetch_one(pool)
+    .await?;
+    let total_alerts: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM alerts WHERE created_at > now() - interval '24 hours'",
+    )
+    .fetch_one(pool)
+    .await?;
+
     let severities: Vec<CountBySeverity> = sqlx::query_as("SELECT severity, COUNT(*)::bigint as count FROM alerts WHERE created_at > now() - interval '24 hours' GROUP BY severity").fetch_all(pool).await?;
     let mut alerts_by_severity = std::collections::HashMap::new();
     for s in severities {
         alerts_by_severity.insert(s.severity, s.count);
     }
-    
+
     let resolved: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM alerts WHERE status = 'resolved' AND resolved_at > now() - interval '24 hours'").fetch_one(pool).await?;
     let dismissed: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM alerts WHERE status = 'dismissed' AND resolved_at > now() - interval '24 hours'").fetch_one(pool).await?;
-    
+
     let top_sensors: Vec<CountByEntity> = sqlx::query_as("SELECT COALESCE(s.name, e.sensor_id::text) as name, COUNT(*)::bigint as count FROM events e LEFT JOIN sensors s ON s.id = e.sensor_id WHERE e.timestamp > now() - interval '24 hours' GROUP BY s.name, e.sensor_id ORDER BY count DESC LIMIT 5").fetch_all(pool).await?;
     let top_rules: Vec<CountByEntity> = sqlx::query_as("SELECT COALESCE(r.name, a.rule_id::text) as name, COUNT(*)::bigint as count FROM alerts a LEFT JOIN alert_rules r ON r.id = a.rule_id WHERE a.created_at > now() - interval '24 hours' GROUP BY r.name, a.rule_id ORDER BY count DESC LIMIT 5").fetch_all(pool).await?;
-    
+
     let mttr: (Option<f64>,) = sqlx::query_as("SELECT AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)))::float8 FROM alerts WHERE status = 'resolved' AND resolved_at > now() - interval '24 hours'").fetch_one(pool).await?;
     let mack: (Option<f64>,) = sqlx::query_as("SELECT AVG(EXTRACT(EPOCH FROM (acknowledged_at - created_at)))::float8 FROM alerts WHERE acknowledged_at > now() - interval '24 hours'").fetch_one(pool).await?;
-    
+
     let new_ips_rows: Vec<(String,)> = sqlx::query_as("SELECT DISTINCT source_ip::text FROM events WHERE source_ip IS NOT NULL AND timestamp > now() - interval '24 hours' LIMIT 10").fetch_all(pool).await?;
     let new_ips = new_ips_rows.into_iter().map(|(ip,)| ip).collect();
-    
+
     let new_protos_rows: Vec<(Option<String>,)> = sqlx::query_as("SELECT DISTINCT protocol FROM events WHERE protocol IS NOT NULL AND timestamp > now() - interval '24 hours' LIMIT 5").fetch_all(pool).await?;
     let new_protocols = new_protos_rows.into_iter().filter_map(|(p,)| p).collect();
-    
+
     Ok(DailySocReport {
         total_events: total_events.0,
         total_alerts: total_alerts.0,
@@ -1147,33 +1165,62 @@ pub async fn get_daily_soc_report(pool: &PgPool) -> Result<DailySocReport> {
 }
 
 pub async fn get_compliance_report(pool: &PgPool) -> Result<ComplianceReport> {
-    let total_30d: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM alerts WHERE created_at > now() - interval '30 days'").fetch_one(pool).await?;
+    let total_30d: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM alerts WHERE created_at > now() - interval '30 days'",
+    )
+    .fetch_one(pool)
+    .await?;
     let in_sla_30d: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM alerts WHERE created_at > now() - interval '30 days' AND (acknowledged_at IS NOT NULL AND EXTRACT(EPOCH FROM (acknowledged_at - created_at)) < 3600)").fetch_one(pool).await?;
-    let iso27001_score = if total_30d.0 > 0 { (in_sla_30d.0 as f64) / (total_30d.0 as f64) * 100.0 } else { 94.5 };
-    
+    let iso27001_score = if total_30d.0 > 0 {
+        (in_sla_30d.0 as f64) / (total_30d.0 as f64) * 100.0
+    } else {
+        94.5
+    };
+
     let cleartext_count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM events WHERE protocol IN ('http', 'ftp', 'telnet') AND timestamp > now() - interval '30 days'").fetch_one(pool).await?;
     let secure_count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM events WHERE protocol IN ('https', 'tls', 'ssh') AND timestamp > now() - interval '30 days'").fetch_one(pool).await?;
     let total_proto = cleartext_count.0 + secure_count.0;
-    let pci_dss_score = if total_proto > 0 { (secure_count.0 as f64) / (total_proto as f64) * 100.0 } else { 89.0 };
+    let pci_dss_score = if total_proto > 0 {
+        (secure_count.0 as f64) / (total_proto as f64) * 100.0
+    } else {
+        89.0
+    };
 
-    let online_count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors WHERE status = 'online'").fetch_one(pool).await?;
-    let total_sensors_count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors").fetch_one(pool).await?;
-    let nis2_score = if total_sensors_count.0 > 0 { (online_count.0 as f64) / (total_sensors_count.0 as f64) * 100.0 } else { 100.0 };
+    let online_count: (i64,) =
+        sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors WHERE status = 'online'")
+            .fetch_one(pool)
+            .await?;
+    let total_sensors_count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors")
+        .fetch_one(pool)
+        .await?;
+    let nis2_score = if total_sensors_count.0 > 0 {
+        (online_count.0 as f64) / (total_sensors_count.0 as f64) * 100.0
+    } else {
+        100.0
+    };
 
     let gdpr_score = 92.0;
     let kvkk_score = 90.0;
-    let overall_score = (iso27001_score + pci_dss_score + nis2_score + gdpr_score + kvkk_score) / 5.0;
+    let overall_score =
+        (iso27001_score + pci_dss_score + nis2_score + gdpr_score + kvkk_score) / 5.0;
 
     Ok(ComplianceReport {
         overall_score,
         gdpr_score,
         gdpr_details: "PII flows monitored. No sensitive data exfiltration anomalies.".to_string(),
         kvkk_score,
-        kvkk_details: "SLA response requirements achieved. Sensitive asset tags configured.".to_string(),
+        kvkk_details: "SLA response requirements achieved. Sensitive asset tags configured."
+            .to_string(),
         iso27001_score,
-        iso27001_details: format!("Incident Acknowledge SLA: {:.1}% within 1h threshold.", iso27001_score),
+        iso27001_details: format!(
+            "Incident Acknowledge SLA: {:.1}% within 1h threshold.",
+            iso27001_score
+        ),
         pci_dss_score,
-        pci_dss_details: format!("Transport security rating: {:.1}% encrypted protocol flows.", pci_dss_score),
+        pci_dss_details: format!(
+            "Transport security rating: {:.1}% encrypted protocol flows.",
+            pci_dss_score
+        ),
         nis2_score,
         nis2_details: format!("Sensors fleet operational uptime: {:.1}%.", nis2_score),
         generated_at: Utc::now(),
@@ -1205,7 +1252,10 @@ pub async fn insert_scheduled_report(
 }
 
 pub async fn delete_scheduled_report(pool: &PgPool, id: Uuid) -> Result<bool> {
-    let res = sqlx::query("DELETE FROM scheduled_reports WHERE id = $1").bind(id).execute(pool).await?;
+    let res = sqlx::query("DELETE FROM scheduled_reports WHERE id = $1")
+        .bind(id)
+        .execute(pool)
+        .await?;
     Ok(res.rows_affected() > 0)
 }
 
@@ -1253,7 +1303,7 @@ pub async fn insert_case(
     Ok(sqlx::query_as::<_, Case>(
         "INSERT INTO cases (title, description, severity, assigned_to) \
          VALUES ($1, $2, $3, $4) \
-         RETURNING id, title, description, status, severity, assigned_to, created_at, updated_at"
+         RETURNING id, title, description, status, severity, assigned_to, created_at, updated_at",
     )
     .bind(title)
     .bind(description)
@@ -1264,11 +1314,13 @@ pub async fn insert_case(
 }
 
 pub async fn link_alert_to_case(pool: &PgPool, case_id: Uuid, alert_id: Uuid) -> Result<()> {
-    sqlx::query("INSERT INTO case_alerts (case_id, alert_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
-        .bind(case_id)
-        .bind(alert_id)
-        .execute(pool)
-        .await?;
+    sqlx::query(
+        "INSERT INTO case_alerts (case_id, alert_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+    )
+    .bind(case_id)
+    .bind(alert_id)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
@@ -1341,7 +1393,7 @@ pub async fn insert_custody_log(
     Ok(sqlx::query_as::<_, ChainOfCustody>(
         "INSERT INTO chain_of_custody (evidence_id, action, performed_by, notes) \
          VALUES ($1, $2, $3, $4) \
-         RETURNING id, evidence_id, action, performed_by, performed_at, notes"
+         RETURNING id, evidence_id, action, performed_by, performed_at, notes",
     )
     .bind(evidence_id)
     .bind(action)
@@ -1372,7 +1424,7 @@ pub async fn insert_timeline_event(
     Ok(sqlx::query_as::<_, IncidentTimeline>(
         "INSERT INTO incident_timeline (case_id, event_type, description, actor) \
          VALUES ($1, $2, $3, $4) \
-         RETURNING id, case_id, event_type, description, timestamp, actor"
+         RETURNING id, case_id, event_type, description, timestamp, actor",
     )
     .bind(case_id)
     .bind(event_type)
@@ -1396,7 +1448,7 @@ pub async fn insert_playbook(pool: &PgPool, name: &str, yaml_content: &str) -> R
     Ok(sqlx::query_as::<_, DbPlaybook>(
         "INSERT INTO playbooks (name, yaml_content) VALUES ($1, $2) \
          ON CONFLICT (name) DO UPDATE SET yaml_content = EXCLUDED.yaml_content, updated_at = now() \
-         RETURNING id, name, yaml_content, created_at, updated_at"
+         RETURNING id, name, yaml_content, created_at, updated_at",
     )
     .bind(name)
     .bind(yaml_content)

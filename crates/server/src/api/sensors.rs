@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{Extension, Path, State, Query};
+use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
 use axum::middleware::from_fn;
 use axum::response::IntoResponse;
@@ -138,10 +138,7 @@ pub fn routes(state: Arc<ApiState>) -> Router {
             "/{id}/throughput",
             get(sensor_throughput_history_route).route_layer(read()),
         )
-        .route(
-            "/{id}/logs",
-            get(sensor_logs_route).route_layer(read()),
-        )
+        .route("/{id}/logs", get(sensor_logs_route).route_layer(read()))
         .route(
             "/{id}/topology",
             get(sensor_topology_route).route_layer(read()),
@@ -615,37 +612,72 @@ async fn sensor_logs_route(
     match queries::get_sensor(&state.pool, id).await {
         Ok(Some(sensor)) => {
             let limit = params.limit.unwrap_or(100).min(1000);
-            let since = params.since.unwrap_or_else(|| chrono::Utc::now() - chrono::Duration::hours(1));
-            
+            let since = params
+                .since
+                .unwrap_or_else(|| chrono::Utc::now() - chrono::Duration::hours(1));
+
             let mut logs = Vec::new();
             let mut current_time = since;
             let now = chrono::Utc::now();
-            
+
             let mock_messages = [
-                ("INFO", "Packet capture engine initialized on interface eth0."),
-                ("INFO", "Loaded protocol dissectors: TCP, UDP, DNS, HTTP, TLS, J1708."),
+                (
+                    "INFO",
+                    "Packet capture engine initialized on interface eth0.",
+                ),
+                (
+                    "INFO",
+                    "Loaded protocol dissectors: TCP, UDP, DNS, HTTP, TLS, J1708.",
+                ),
                 ("DEBUG", "Acquiring memory-mapped ring buffer lock..."),
                 ("INFO", "BPF Filter applied successfully: tcp port 80"),
-                ("INFO", "Connected to Netscope Central Server at wss://127.0.0.1:9443/ws."),
-                ("DEBUG", "Sent heartbeat payload: CPU 4.5%, RAM 52%, Uptime 1800s."),
-                ("INFO", "Log rotation triggered by timer. Rotating capture file."),
-                ("INFO", "Capture file closed: /var/log/netscope/capture_active.pcap"),
-                ("INFO", "New capture file opened: /var/log/netscope/capture_rotate_1.pcap"),
-                ("WARN", "High throughput warning: Interface rx rate exceeded 800 Mbps."),
-                ("ERROR", "DNS parser encountered malformed query header from 10.0.4.15."),
-                ("INFO", "Command received from server: set_filter [id: cmd_123]"),
+                (
+                    "INFO",
+                    "Connected to Netscope Central Server at wss://127.0.0.1:9443/ws.",
+                ),
+                (
+                    "DEBUG",
+                    "Sent heartbeat payload: CPU 4.5%, RAM 52%, Uptime 1800s.",
+                ),
+                (
+                    "INFO",
+                    "Log rotation triggered by timer. Rotating capture file.",
+                ),
+                (
+                    "INFO",
+                    "Capture file closed: /var/log/netscope/capture_active.pcap",
+                ),
+                (
+                    "INFO",
+                    "New capture file opened: /var/log/netscope/capture_rotate_1.pcap",
+                ),
+                (
+                    "WARN",
+                    "High throughput warning: Interface rx rate exceeded 800 Mbps.",
+                ),
+                (
+                    "ERROR",
+                    "DNS parser encountered malformed query header from 10.0.4.15.",
+                ),
+                (
+                    "INFO",
+                    "Command received from server: set_filter [id: cmd_123]",
+                ),
                 ("INFO", "Bpf filter changed to: udp port 53"),
-                ("DEBUG", "Garbage collection run complete. Freed 24MB memory-mapped buffer."),
+                (
+                    "DEBUG",
+                    "Garbage collection run complete. Freed 24MB memory-mapped buffer.",
+                ),
             ];
 
             let mut idx = 0;
             while current_time < now && logs.len() < limit {
                 let seconds_to_add = (idx * 7 + 11) % 65;
-                current_time = current_time + chrono::Duration::seconds(seconds_to_add as i64);
+                current_time += chrono::Duration::seconds(seconds_to_add as i64);
                 if current_time >= now {
                     break;
                 }
-                
+
                 let (level, msg) = mock_messages[idx % mock_messages.len()];
                 logs.push(json!({
                     "timestamp": current_time.to_rfc3339(),
@@ -657,8 +689,16 @@ async fn sensor_logs_route(
 
             (StatusCode::OK, Json(logs)).into_response()
         }
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "sensor not found"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "sensor not found"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -668,7 +708,11 @@ async fn sensor_throughput_history_route(
 ) -> impl IntoResponse {
     match queries::get_sensor_throughput_history(&state.pool, id).await {
         Ok(points) => (StatusCode::OK, Json(points)).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -692,12 +736,16 @@ async fn sensor_topology_route(
                     }));
                 }
                 let nodes_list: Vec<_> = nodes.into_iter().map(|ip| json!({ "id": ip, "group": if ip.starts_with("10.") || ip.starts_with("192.") { 1 } else { 2 } })).collect();
-                return (StatusCode::OK, Json(json!({
-                    "nodes": nodes_list,
-                    "links": links
-                }))).into_response();
+                return (
+                    StatusCode::OK,
+                    Json(json!({
+                        "nodes": nodes_list,
+                        "links": links
+                    })),
+                )
+                    .into_response();
             }
-            
+
             let nodes = vec![
                 json!({ "id": "192.168.1.1", "group": 1 }),
                 json!({ "id": "192.168.1.10", "group": 1 }),
@@ -707,7 +755,7 @@ async fn sensor_topology_route(
                 json!({ "id": "8.8.8.8", "group": 2 }),
                 json!({ "id": "104.244.42.1", "group": 2 }),
             ];
-            
+
             let links = vec![
                 json!({ "source": "192.168.1.10", "target": "192.168.1.1", "protocol": "ARP", "value": 50 }),
                 json!({ "source": "192.168.1.100", "target": "192.168.1.1", "protocol": "TCP", "value": 150 }),
@@ -719,13 +767,21 @@ async fn sensor_topology_route(
                 json!({ "source": "192.168.1.100", "target": "104.244.42.1", "protocol": "HTTPS", "value": 310 }),
                 json!({ "source": "192.168.1.10", "target": "192.168.1.50", "protocol": "UDP", "value": 140 }),
             ];
-            
-            (StatusCode::OK, Json(json!({
-                "nodes": nodes,
-                "links": links
-            }))).into_response()
+
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "nodes": nodes,
+                    "links": links
+                })),
+            )
+                .into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -742,10 +798,14 @@ async fn bulk_sensor_command(
 ) -> impl IntoResponse {
     let mut queued_count = 0;
     for sensor_id in payload.sensor_ids {
-        state.commands.push(sensor_id, payload.command.clone(), payload.parameters.clone());
+        state.commands.push(
+            sensor_id,
+            payload.command.clone(),
+            payload.parameters.clone(),
+        );
         queued_count += 1;
     }
-    
+
     (
         StatusCode::ACCEPTED,
         Json(json!({

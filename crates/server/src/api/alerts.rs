@@ -39,7 +39,8 @@ pub fn routes(state: Arc<ApiState>) -> Router {
             "/{id}/notes",
             get(get_alert_notes_route)
                 .route_layer(from_fn(require("alerts:read")))
-                .post(create_alert_note_route).route_layer(from_fn(require("alerts:write"))),
+                .post(create_alert_note_route)
+                .route_layer(from_fn(require("alerts:write"))),
         )
         .route(
             "/{id}/pcap",
@@ -99,12 +100,12 @@ async fn update_alert_status(
             StatusCode::NOT_FOUND,
             Json(json!({"error": "alert not found"})),
         )
-        .into_response(),
+            .into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": e.to_string()})),
         )
-        .into_response(),
+            .into_response(),
     }
 }
 
@@ -115,11 +116,20 @@ async fn get_alert_detail_route(
     match queries::get_alert_detail(&state.pool, id).await {
         Ok(Some(detail)) => {
             let mut detail_json = serde_json::to_value(detail).unwrap_or_default();
-            detail_json["active_analysts"] = json!(["Alice (Senior Threat Hunter)", "Bob (SOC Lead)"]);
+            detail_json["active_analysts"] =
+                json!(["Alice (Senior Threat Hunter)", "Bob (SOC Lead)"]);
             (StatusCode::OK, Json(detail_json)).into_response()
         }
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "alert not found"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "alert not found"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -129,7 +139,11 @@ async fn get_alert_notes_route(
 ) -> impl IntoResponse {
     match queries::get_alert_notes(&state.pool, id).await {
         Ok(notes) => (StatusCode::OK, Json(notes)).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -147,7 +161,11 @@ async fn create_alert_note_route(
     let user_id = claims.map(|c| c.0.sub);
     match queries::insert_alert_note(&state.pool, id, user_id, &body.note).await {
         Ok(note) => (StatusCode::CREATED, Json(note)).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -157,22 +175,39 @@ async fn download_alert_pcap_route(
 ) -> impl IntoResponse {
     match queries::get_alert_detail(&state.pool, id).await {
         Ok(Some(detail)) => {
-            let src = detail.alert.source_ip.unwrap_or_else(|| "192.168.1.100".to_string());
-            let dst = detail.alert.dest_ip.unwrap_or_else(|| "8.8.8.8".to_string());
+            let src = detail
+                .alert
+                .source_ip
+                .unwrap_or_else(|| "192.168.1.100".to_string());
+            let dst = detail
+                .alert
+                .dest_ip
+                .unwrap_or_else(|| "8.8.8.8".to_string());
             let proto = "TCP";
-            
+
             let pcap_bytes = generate_mock_pcap(&src, &dst, proto);
             let filename = format!("alert_{}_slice.pcap", id);
-            
+
             axum::response::Response::builder()
                 .status(StatusCode::OK)
                 .header("content-type", "application/vnd.tcpdump.pcap")
-                .header("content-disposition", format!("attachment; filename=\"{}\"", filename))
+                .header(
+                    "content-disposition",
+                    format!("attachment; filename=\"{}\"", filename),
+                )
                 .body(axum::body::Body::from(pcap_bytes))
                 .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
         }
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "alert not found"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "alert not found"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -185,26 +220,30 @@ fn generate_mock_pcap(source_ip: &str, dest_ip: &str, protocol: &str) -> Vec<u8>
     pcap.extend_from_slice(&0u32.to_le_bytes());
     pcap.extend_from_slice(&65535u32.to_le_bytes());
     pcap.extend_from_slice(&1u32.to_le_bytes());
-    
+
     for i in 0..3 {
         pcap.extend_from_slice(&(1782637200u32 + i).to_le_bytes());
         pcap.extend_from_slice(&(i * 1000).to_le_bytes());
-        
+
         let mut packet_data = vec![0u8; 64];
         packet_data[0..6].copy_from_slice(&[0x00, 0x0c, 0x29, 0x3e, 0x5a, 0xbc]);
         packet_data[6..12].copy_from_slice(&[0x00, 0x50, 0x56, 0xc0, 0x00, 0x08]);
         packet_data[12..14].copy_from_slice(&[0x08, 0x00]);
         packet_data[14] = 0x45;
         packet_data[16..18].copy_from_slice(&40u16.to_be_bytes());
-        packet_data[23] = if protocol.to_lowercase() == "udp" { 17 } else { 6 };
-        
+        packet_data[23] = if protocol.to_lowercase() == "udp" {
+            17
+        } else {
+            6
+        };
+
         if let Ok(ip) = source_ip.parse::<std::net::Ipv4Addr>() {
             packet_data[26..30].copy_from_slice(&ip.octets());
         }
         if let Ok(ip) = dest_ip.parse::<std::net::Ipv4Addr>() {
             packet_data[30..34].copy_from_slice(&ip.octets());
         }
-        
+
         pcap.extend_from_slice(&64u32.to_le_bytes());
         pcap.extend_from_slice(&64u32.to_le_bytes());
         pcap.extend(packet_data);
@@ -224,9 +263,13 @@ async fn trigger_soar_playbook_route(
 ) -> impl IntoResponse {
     match queries::get_alert_detail(&state.pool, id).await {
         Ok(Some(detail)) => {
-            let src = detail.alert.source_ip.clone().unwrap_or_else(|| "185.220.101.5".to_string());
+            let src = detail
+                .alert
+                .source_ip
+                .clone()
+                .unwrap_or_else(|| "185.220.101.5".to_string());
             let name = &body.playbook_name;
-            
+
             let logs = vec![
                 format!("[INFO] Initializing SOAR Playbook: {}", name),
                 format!("[INFO] Scanning alert context: id = {}", id),
@@ -237,17 +280,29 @@ async fn trigger_soar_playbook_route(
                 "[INFO] SIEM Alert tickets updated to 'investigating'.".to_string(),
                 "[INFO] Playbook execution completed successfully. Target block confirmed.".to_string(),
             ];
-            
+
             let exec_id = format!("soar_exec_{}", &Uuid::new_v4().to_string()[..8]);
-            (StatusCode::OK, Json(json!({
-                "status": "success",
-                "execution_id": exec_id,
-                "playbook": name,
-                "logs": logs
-            }))).into_response()
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "status": "success",
+                    "execution_id": exec_id,
+                    "playbook": name,
+                    "logs": logs
+                })),
+            )
+                .into_response()
         }
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "alert not found"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "alert not found"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -263,15 +318,27 @@ async fn bulk_update_alerts_status_route(
     Json(payload): Json<BulkAlertStatusPayload>,
 ) -> impl IntoResponse {
     let user_id = claims.map(|c| c.0.sub);
-    match queries::bulk_update_alerts_status(&state.pool, &payload.alert_ids, &payload.status, user_id).await {
+    match queries::bulk_update_alerts_status(
+        &state.pool,
+        &payload.alert_ids,
+        &payload.status,
+        user_id,
+    )
+    .await
+    {
         Ok(count) => (
             StatusCode::OK,
             Json(json!({
                 "status": "success",
                 "updated_count": count
-            }))
-        ).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 

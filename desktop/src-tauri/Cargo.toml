@@ -17,4 +17,7 @@ tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 crossbeam-channel = "0.5"
 maxminddb = "0.27"
+# Same 0.4 as netscope-core: the escalation engine's API is in `chrono` types,
+# so driving it from here means speaking them.
+chrono = "0.4"
 netscope-core = { path = "../../crates/core" }

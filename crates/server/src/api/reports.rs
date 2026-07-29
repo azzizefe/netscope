@@ -27,10 +27,16 @@ pub fn routes(state: Arc<ApiState>) -> Router {
 
     Router::new()
         .route("/daily", get(daily_report_route).route_layer(read()))
-        .route("/compliance", get(compliance_report_route).route_layer(read()))
+        .route(
+            "/compliance",
+            get(compliance_report_route).route_layer(read()),
+        )
         .route("/custom", post(custom_report_route).route_layer(read()))
         .route("/executive", get(executive_html_route).route_layer(read()))
-        .route("/executive/download", get(executive_pdf_download_route).route_layer(read()))
+        .route(
+            "/executive/download",
+            get(executive_pdf_download_route).route_layer(read()),
+        )
         .route(
             "/schedule",
             get(list_schedules_route)
@@ -45,9 +51,7 @@ pub fn routes(state: Arc<ApiState>) -> Router {
         .with_state(state)
 }
 
-async fn daily_report_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn daily_report_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     match queries::get_daily_soc_report(&state.pool).await {
         Ok(report) => (StatusCode::OK, Json(report)).into_response(),
         Err(e) => (
@@ -58,9 +62,7 @@ async fn daily_report_route(
     }
 }
 
-async fn compliance_report_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn compliance_report_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     match queries::get_compliance_report(&state.pool).await {
         Ok(report) => (StatusCode::OK, Json(report)).into_response(),
         Err(e) => (
@@ -76,9 +78,9 @@ async fn custom_report_route(
     Json(payload): Json<CustomReportRequest>,
 ) -> impl IntoResponse {
     let days = payload.timerange_days.unwrap_or(7);
-    
+
     let mut report_data = serde_json::Map::new();
-    
+
     // Fetch statistics depending on user builder request
     if payload.sections.contains(&"uptime".to_string()) {
         if let Ok(summary) = queries::dashboard_summary(&state.pool).await {
@@ -86,7 +88,7 @@ async fn custom_report_route(
             report_data.insert("online_sensors".to_string(), json!(summary.online_sensors));
         }
     }
-    
+
     if payload.sections.contains(&"throughput".to_string()) {
         let throughput = sqlx::query_scalar::<_, Option<i64>>(
             "SELECT SUM(capture_throughput_bps)::bigint FROM (SELECT DISTINCT ON (sensor_id) capture_throughput_bps FROM sensor_heartbeats ORDER BY sensor_id, received_at DESC) last_heartbeats"
@@ -96,7 +98,7 @@ async fn custom_report_route(
         .unwrap_or(None);
         report_data.insert("throughput_bps".to_string(), json!(throughput.unwrap_or(0)));
     }
-    
+
     if payload.sections.contains(&"attackers".to_string()) {
         let attackers = sqlx::query_as::<_, (String, i64)>(
             "SELECT source_ip::text, COUNT(*)::bigint FROM events WHERE source_ip IS NOT NULL GROUP BY source_ip ORDER BY count DESC LIMIT 5"
@@ -104,14 +106,17 @@ async fn custom_report_route(
         .fetch_all(&state.pool)
         .await
         .unwrap_or_default();
-        
-        let mapped: Vec<serde_json::Value> = attackers.into_iter().map(|(ip, count)| json!({"name": ip, "count": count})).collect();
+
+        let mapped: Vec<serde_json::Value> = attackers
+            .into_iter()
+            .map(|(ip, count)| json!({"name": ip, "count": count}))
+            .collect();
         report_data.insert("top_attackers".to_string(), json!(mapped));
     }
-    
+
     if payload.sections.contains(&"alerts".to_string()) {
         let alerts_count = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM alerts WHERE created_at > now() - interval '30 days'"
+            "SELECT COUNT(*) FROM alerts WHERE created_at > now() - interval '30 days'",
         )
         .fetch_one(&state.pool)
         .await
@@ -125,23 +130,26 @@ async fn custom_report_route(
         }
     }
 
-    (StatusCode::OK, Json(json!({
-        "generated_at": chrono::Utc::now(),
-        "days_limit": days,
-        "sections_included": payload.sections,
-        "data": report_data
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(json!({
+            "generated_at": chrono::Utc::now(),
+            "days_limit": days,
+            "sections_included": payload.sections,
+            "data": report_data
+        })),
+    )
+        .into_response()
 }
 
-async fn executive_html_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn executive_html_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     let report = match queries::get_daily_soc_report(&state.pool).await {
         Ok(r) => r,
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     };
-    
-    let html = format!(r#"
+
+    let html = format!(
+        r#"
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -263,21 +271,29 @@ async fn executive_html_route(
             <button class="no-print" onclick="window.print()" style="background-color:#3b82f6; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; margin-top:20px;">Print Report / Save as PDF</button>
         </body>
         </html>
-    "#, 
-    chrono::Utc::now().to_rfc2822(),
-    report.total_events,
-    report.total_alerts,
-    report.mttr_seconds,
-    report.top_sensors.iter().map(|s| format!("<tr><td>{}</td><td>{}</td></tr>", s.name, s.count)).collect::<Vec<_>>().join(""),
-    report.top_rules.iter().map(|r| format!("<tr><td>{}</td><td>{}</td></tr>", r.name, r.count)).collect::<Vec<_>>().join("")
+    "#,
+        chrono::Utc::now().to_rfc2822(),
+        report.total_events,
+        report.total_alerts,
+        report.mttr_seconds,
+        report
+            .top_sensors
+            .iter()
+            .map(|s| format!("<tr><td>{}</td><td>{}</td></tr>", s.name, s.count))
+            .collect::<Vec<_>>()
+            .join(""),
+        report
+            .top_rules
+            .iter()
+            .map(|r| format!("<tr><td>{}</td><td>{}</td></tr>", r.name, r.count))
+            .collect::<Vec<_>>()
+            .join("")
     );
-    
+
     Html(html).into_response()
 }
 
-async fn executive_pdf_download_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn executive_pdf_download_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     let report = match queries::get_daily_soc_report(&state.pool).await {
         Ok(r) => r,
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
@@ -343,22 +359,26 @@ async fn executive_pdf_download_route(
         report.mean_ack_seconds
     );
 
-    let filename = format!("Netscope_Executive_Report_{}.pdf", chrono::Utc::now().format("%Y%m%d"));
-    
+    let filename = format!(
+        "Netscope_Executive_Report_{}.pdf",
+        chrono::Utc::now().format("%Y%m%d")
+    );
+
     (
         StatusCode::OK,
         [
             (header::CONTENT_TYPE, "application/pdf"),
-            (header::CONTENT_DISPOSITION, &format!("attachment; filename=\"{}\"", filename)),
+            (
+                header::CONTENT_DISPOSITION,
+                &format!("attachment; filename=\"{}\"", filename),
+            ),
         ],
         pdf_content,
     )
         .into_response()
 }
 
-async fn list_schedules_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn list_schedules_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     match queries::list_scheduled_reports(&state.pool).await {
         Ok(schedules) => (StatusCode::OK, Json(schedules)).into_response(),
         Err(e) => (
@@ -390,7 +410,7 @@ async fn create_schedule_route(
                 schedule.recipients,
                 schedule.schedule
             );
-            
+
             (StatusCode::CREATED, Json(schedule)).into_response()
         }
         Err(e) => (
@@ -431,7 +451,7 @@ mod tests {
             "sections": ["uptime", "throughput", "compliance"],
             "timerange_days": 30
         });
-        
+
         let parsed: CustomReportRequest = serde_json::from_value(req_json).unwrap();
         assert_eq!(parsed.sections.len(), 3);
         assert_eq!(parsed.sections[0], "uptime");
@@ -445,7 +465,7 @@ mod tests {
             "recipients": "test@netscope.local",
             "schedule": "0 8 * * *"
         });
-        
+
         let parsed: CreateScheduledReport = serde_json::from_value(payload_json).unwrap();
         assert_eq!(parsed.report_type, "daily");
         assert_eq!(parsed.recipients, "test@netscope.local");

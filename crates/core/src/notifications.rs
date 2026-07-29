@@ -165,11 +165,17 @@ impl NotificationEngine {
     }
 
     /// 2.4.12 Write alerts to Windows Event Viewer (Application log)
+    ///
+    /// Reports what actually happened. `eventcreate` needs an elevated process
+    /// to write the Application log, and this used to print a warning and
+    /// return `Ok(())` anyway — so a caller testing the channel was told it
+    /// worked while nothing had been written. The SOC view surfaces this result
+    /// to the user, which only means anything if a failure comes back as one.
     pub fn write_windows_event_log(&self, alert_msg: &str) -> Result<(), String> {
         #[cfg(target_os = "windows")]
         {
             let desc = format!("Netscope Alert Event: {}", alert_msg);
-            let status_res = Command::new("eventcreate")
+            let status = Command::new("eventcreate")
                 .args([
                     "/ID",
                     "100",
@@ -182,37 +188,25 @@ impl NotificationEngine {
                     "/D",
                     &desc,
                 ])
-                .status();
+                .status()
+                .map_err(|e| format!("Could not run eventcreate: {e}"))?;
 
-            match status_res {
-                Ok(status) => {
-                    if !status.success() {
-                        // eventcreate fails if current user doesn't have Administrator/elevated permissions
-                        println!(
-                            "[Windows Event Log Warning] eventcreate exited with status {:?}",
-                            status.code()
-                        );
-                    }
-                }
-                Err(e) => {
-                    println!(
-                        "[Windows Event Log Warning] Failed to execute eventcreate: {}",
-                        e
-                    );
-                }
+            if !status.success() {
+                return Err(match status.code() {
+                    Some(c) => format!(
+                        "eventcreate exited with {c} — writing the Application log needs netscope to run elevated"
+                    ),
+                    None => "eventcreate was terminated by a signal".to_string(),
+                });
             }
+            Ok(())
         }
 
         #[cfg(not(target_os = "windows"))]
         {
-            // On non-Windows platforms, mock write target
-            println!(
-                "[Mock Event Log] WARNING: Netscope Alert Event: {}",
-                alert_msg
-            );
+            let _ = alert_msg;
+            Err("The Windows Event Log channel is only available on Windows".to_string())
         }
-
-        Ok(())
     }
 
     /// 2.4.13 Open a browser tab to notify the user
@@ -298,7 +292,21 @@ mod tests {
         // Syslog send UDP should work offline (UDP is fire-and-forget)
         assert!(engine.send_syslog("Mock alert payload").is_ok());
 
-        // Event log works natively (resilient if not admin) or mock-prints
-        assert!(engine.write_windows_event_log("Port scan alert").is_ok());
+        // The event log is the one channel whose outcome depends on privilege
+        // and platform, so this pins the contract rather than the result: it
+        // either writes, or explains why it could not. What it must never do is
+        // the old behaviour — report success after printing a warning and
+        // writing nothing.
+        match engine.write_windows_event_log("Port scan alert") {
+            // Success is only reachable on Windows, and only when elevated.
+            Ok(()) if cfg!(target_os = "windows") => {}
+            Ok(()) => panic!("only Windows can write the Application log"),
+            Err(e) => assert!(
+                e.contains("elevated")
+                    || e.contains("only available on Windows")
+                    || e.contains("eventcreate"),
+                "unhelpful event-log error: {e}"
+            ),
+        }
     }
 }

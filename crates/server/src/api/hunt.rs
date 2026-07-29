@@ -11,9 +11,7 @@ use uuid::Uuid;
 
 use crate::api::ApiState;
 use crate::auth::{require, Claims};
-use crate::db::models::{
-    CreateSavedSearch, HistogramPayload, HuntQueryPayload, HuntRule,
-};
+use crate::db::models::{CreateSavedSearch, HistogramPayload, HuntQueryPayload, HuntRule};
 use crate::db::queries;
 
 pub fn routes(state: Arc<ApiState>) -> Router {
@@ -47,7 +45,10 @@ async fn hunt_events_route(
             let mut overlay = serde_json::Map::new();
             for ev in &events {
                 if let Some(ref ip) = ev.source_ip {
-                    if !ip.starts_with("192.168") && !ip.starts_with("10.") && !overlay.contains_key(ip) {
+                    if !ip.starts_with("192.168")
+                        && !ip.starts_with("10.")
+                        && !overlay.contains_key(ip)
+                    {
                         overlay.insert(
                             ip.clone(),
                             json!({
@@ -60,7 +61,10 @@ async fn hunt_events_route(
                     }
                 }
                 if let Some(ref ip) = ev.dest_ip {
-                    if !ip.starts_with("192.168") && !ip.starts_with("10.") && !overlay.contains_key(ip) {
+                    if !ip.starts_with("192.168")
+                        && !ip.starts_with("10.")
+                        && !overlay.contains_key(ip)
+                    {
                         overlay.insert(
                             ip.clone(),
                             json!({
@@ -73,7 +77,7 @@ async fn hunt_events_route(
                     }
                 }
             }
-            
+
             (
                 StatusCode::OK,
                 Json(json!({
@@ -105,9 +109,7 @@ async fn hunt_histogram_route(
     }
 }
 
-async fn list_saved_searches_route(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn list_saved_searches_route(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     match queries::list_saved_searches(&state.pool).await {
         Ok(searches) => (StatusCode::OK, Json(searches)).into_response(),
         Err(e) => (
@@ -124,13 +126,8 @@ async fn create_saved_search_route(
     Json(payload): Json<CreateSavedSearch>,
 ) -> impl IntoResponse {
     let user_id = claims.map(|c| c.0.sub);
-    match queries::insert_saved_search(
-        &state.pool,
-        &payload.name,
-        &payload.query_json,
-        user_id,
-    )
-    .await
+    match queries::insert_saved_search(&state.pool, &payload.name, &payload.query_json, user_id)
+        .await
     {
         Ok(search) => (StatusCode::CREATED, Json(search)).into_response(),
         Err(e) => (
@@ -147,23 +144,26 @@ async fn convert_to_rule_route(
     claims: Option<axum::extract::Extension<Claims>>,
 ) -> impl IntoResponse {
     let user_id = claims.map(|c| c.0.sub);
-    
+
     // 1. Fetch saved search
     match queries::get_saved_search(&state.pool, id).await {
         Ok(Some(search)) => {
             // 2. Parse query_json into HuntRule
             let rule_tree: Result<HuntRule, _> = serde_json::from_value(search.query_json.clone());
             let mut cond_map = serde_json::Map::new();
-            
+
             if let Ok(ref tree) = rule_tree {
                 flatten_hunt_rule(tree, &mut cond_map);
             }
-            
+
             // Default rule details
             let rule_name = format!("Converted Hunt Rule: {}", search.name);
-            let description = format!("Alert generated from saved Threat Hunt Query: {}", search.name);
+            let description = format!(
+                "Alert generated from saved Threat Hunt Query: {}",
+                search.name
+            );
             let condition_val = serde_json::Value::Object(cond_map);
-            
+
             let create_payload = crate::db::models::CreateRule {
                 name: rule_name,
                 description: Some(description),
@@ -173,7 +173,7 @@ async fn convert_to_rule_route(
                 actions: Some(json!([])),
                 cooldown_secs: Some(300),
             };
-            
+
             // 3. Create the alert rule
             match queries::create_rule(&state.pool, &create_payload, user_id).await {
                 Ok(rule) => (StatusCode::CREATED, Json(rule)).into_response(),
@@ -197,10 +197,7 @@ async fn convert_to_rule_route(
     }
 }
 
-fn flatten_hunt_rule(
-    rule: &HuntRule,
-    cond_map: &mut serde_json::Map<String, serde_json::Value>,
-) {
+fn flatten_hunt_rule(rule: &HuntRule, cond_map: &mut serde_json::Map<String, serde_json::Value>) {
     match rule {
         HuntRule::Group { logical, rules } => {
             if logical.to_uppercase() == "AND" {
@@ -238,16 +235,16 @@ mod tests {
             operator: "gt".to_string(),
             value: json!(80),
         };
-        
+
         let root = HuntRule::Group {
             logical: "AND".to_string(),
             rules: vec![condition1, condition2],
         };
-        
+
         let mut idx = 1u32;
         let mut params = Vec::new();
         let sql = root.to_sql(&mut idx, &mut params).unwrap();
-        
+
         assert_eq!(sql, "(((protocol = $1) AND (port::text > $2)))");
         assert_eq!(params.len(), 2);
         assert_eq!(params[0], "TCP");
@@ -266,16 +263,19 @@ mod tests {
             operator: "eq".to_string(),
             value: json!("UDP"),
         };
-        
+
         let root = HuntRule::Group {
             logical: "AND".to_string(),
             rules: vec![condition1, condition2],
         };
-        
+
         let mut cond_map = serde_json::Map::new();
         flatten_hunt_rule(&root, &mut cond_map);
-        
-        assert_eq!(cond_map.get("severity").unwrap().as_str().unwrap(), "critical");
+
+        assert_eq!(
+            cond_map.get("severity").unwrap().as_str().unwrap(),
+            "critical"
+        );
         assert_eq!(cond_map.get("protocol").unwrap().as_str().unwrap(), "UDP");
     }
 }

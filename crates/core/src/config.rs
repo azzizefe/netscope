@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Layered configuration — a single, discoverable home for netscope's
 //! user settings, shared by the TUI and desktop (ROADMAP §2.4).
@@ -56,6 +56,7 @@
 //! `general.profile` key in `config.toml`. [`Config::load_profile`] applies
 //! one explicitly, and [`Config::profiles`] lists what is available.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
@@ -155,6 +156,129 @@ impl Default for Plugins {
     }
 }
 
+/// Where alerts are delivered, on top of showing up in the UI.
+///
+/// Every field is optional and empty by default, and a channel counts as
+/// configured only when the fields it actually needs are filled in — see
+/// [`crate::notifications::NotificationConfig`], which this converts into.
+/// Nothing is enabled implicitly: an unconfigured channel is simply never
+/// contacted, which is why the SOC view can report each one's real state
+/// instead of guessing.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct Notifications {
+    pub email_smtp_host: String,
+    pub email_smtp_port: Option<u16>,
+    pub email_from: String,
+    pub email_to: String,
+
+    pub slack_webhook_url: String,
+    pub telegram_token: String,
+    pub telegram_chat_id: String,
+
+    pub syslog_host: String,
+    pub syslog_port: Option<u16>,
+}
+
+impl Notifications {
+    /// Convert into the engine's config, mapping empty strings to `None` so the
+    /// engine's own "not configured" checks stay the single source of truth.
+    pub fn to_engine_config(&self) -> crate::notifications::NotificationConfig {
+        fn opt(s: &str) -> Option<String> {
+            let t = s.trim();
+            if t.is_empty() {
+                None
+            } else {
+                Some(t.to_string())
+            }
+        }
+        crate::notifications::NotificationConfig {
+            email_smtp_host: opt(&self.email_smtp_host),
+            email_smtp_port: self.email_smtp_port,
+            email_from: opt(&self.email_from),
+            email_to: opt(&self.email_to),
+            slack_webhook_url: opt(&self.slack_webhook_url),
+            telegram_token: opt(&self.telegram_token),
+            telegram_chat_id: opt(&self.telegram_chat_id),
+            syslog_host: opt(&self.syslog_host),
+            syslog_port: self.syslog_port,
+        }
+    }
+}
+
+/// One person in the on-call rotation.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct OnCall {
+    pub name: String,
+    pub email: String,
+    pub phone: String,
+    /// PagerDuty routing key / Opsgenie API key, if that channel is used.
+    pub integration_key: String,
+}
+
+/// Who gets woken up when an alert goes unacknowledged, and how fast.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct Escalation {
+    /// Off unless asked for: escalation pages people, so it never starts by
+    /// itself just because a rotation happens to be listed.
+    pub enabled: bool,
+    /// The rotation, in order. Week *n* takes `oncall[n % len]` as primary and
+    /// the next person as backup.
+    pub oncall: Vec<OnCall>,
+    /// Minutes at each step before handing up the chain: L1, L2, L3, CISO.
+    /// Empty uses the engine's default (15 / 30 / 60 minutes).
+    pub step_minutes: Vec<u64>,
+}
+
+impl Escalation {
+    /// Expand the ordered rotation into the week-keyed map the engine wants.
+    ///
+    /// [`crate::escalation::EscalationEngine::get_on_call_for_time`] looks up
+    /// the exact ISO week, so a literal config would need all 53 weeks spelled
+    /// out or most of the year would have nobody on call — and the engine
+    /// reports that as "Primary: None" rather than as an error. Rotating a
+    /// short list across every week is what makes two names enough.
+    pub fn shift_rotations(&self) -> HashMap<u32, crate::escalation::ShiftRotation> {
+        let people = &self.oncall;
+        if people.is_empty() {
+            return HashMap::new();
+        }
+        let to_user = |u: &OnCall| crate::escalation::OnCallUser {
+            name: u.name.clone(),
+            email: u.email.clone(),
+            phone: u.phone.clone(),
+            integration_key: {
+                let k = u.integration_key.trim();
+                if k.is_empty() {
+                    None
+                } else {
+                    Some(k.to_string())
+                }
+            },
+        };
+
+        // ISO weeks run 1..=53.
+        (1..=53u32)
+            .map(|week| {
+                let i = (week as usize - 1) % people.len();
+                let backup = &people[(i + 1) % people.len()];
+                (
+                    week,
+                    crate::escalation::ShiftRotation {
+                        week_number: week,
+                        primary_user: to_user(&people[i]),
+                        // With one person listed they are their own backup;
+                        // that is the honest reading of a one-person rotation.
+                        backup_user: to_user(backup),
+                    },
+                )
+            })
+            .collect()
+    }
+}
+
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -162,6 +286,8 @@ pub struct Config {
     pub geoip: Geoip,
     pub coloring: Coloring,
     pub plugins: Plugins,
+    pub notifications: Notifications,
+    pub escalation: Escalation,
     /// Directory this config was loaded from — the anchor for relative paths.
     /// Skipped during deserialization; filled in by [`Config::load`].
     #[serde(skip)]
@@ -381,6 +507,150 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    fn person(name: &str) -> OnCall {
+        OnCall {
+            name: name.into(),
+            email: format!("{name}@example.com"),
+            phone: String::new(),
+            integration_key: String::new(),
+        }
+    }
+
+    /// A short rotation has to cover the whole year.
+    ///
+    /// `EscalationEngine::get_on_call_for_time` looks up the exact ISO week and
+    /// reports a miss as "Primary: None" rather than as an error, so a config
+    /// listing two people would leave 51 weeks silently uncovered if the list
+    /// were used literally. Every week must resolve to somebody.
+    #[test]
+    fn oncall_rotation_covers_every_iso_week() {
+        let cfg = Escalation {
+            enabled: true,
+            oncall: vec![person("ayse"), person("mehmet")],
+            step_minutes: vec![],
+        };
+        let rotations = cfg.shift_rotations();
+
+        assert_eq!(rotations.len(), 53, "ISO years can have 53 weeks");
+        for week in 1..=53u32 {
+            let r = rotations
+                .get(&week)
+                .unwrap_or_else(|| panic!("week {week} uncovered"));
+            assert!(
+                !r.primary_user.name.is_empty(),
+                "week {week} has no primary"
+            );
+            assert_ne!(
+                r.primary_user.name, r.backup_user.name,
+                "week {week} makes one person their own backup",
+            );
+        }
+
+        // The list is walked in order, starting at week 1.
+        assert_eq!(rotations[&1].primary_user.name, "ayse");
+        assert_eq!(rotations[&2].primary_user.name, "mehmet");
+        assert_eq!(rotations[&3].primary_user.name, "ayse");
+        assert_eq!(rotations[&1].backup_user.name, "mehmet");
+    }
+
+    /// One name listed is a real answer: that person is always on call. It must
+    /// not be mistaken for "nobody".
+    #[test]
+    fn a_single_person_rotation_still_covers_the_year() {
+        let cfg = Escalation {
+            enabled: true,
+            oncall: vec![person("solo")],
+            step_minutes: vec![],
+        };
+        let rotations = cfg.shift_rotations();
+        assert_eq!(rotations.len(), 53);
+        assert_eq!(rotations[&17].primary_user.name, "solo");
+        assert_eq!(
+            rotations[&17].backup_user.name, "solo",
+            "with one person listed they back themselves up",
+        );
+    }
+
+    #[test]
+    fn no_oncall_listed_means_no_rotation() {
+        let cfg = Escalation::default();
+        assert!(cfg.shift_rotations().is_empty());
+    }
+
+    /// A blank integration key must read as absent — the engine branches on
+    /// `Some(key)` to decide whether it can page PagerDuty at all.
+    #[test]
+    fn blank_integration_key_becomes_none() {
+        let mut p = person("ayse");
+        p.integration_key = "   ".into();
+        let cfg = Escalation {
+            enabled: true,
+            oncall: vec![p.clone(), person("mehmet")],
+            step_minutes: vec![],
+        };
+        assert!(cfg.shift_rotations()[&1]
+            .primary_user
+            .integration_key
+            .is_none());
+
+        let mut q = person("ayse");
+        q.integration_key = "  R0UT1NG  ".into();
+        let cfg = Escalation {
+            enabled: true,
+            oncall: vec![q, person("mehmet")],
+            step_minutes: vec![],
+        };
+        assert_eq!(
+            cfg.shift_rotations()[&1]
+                .primary_user
+                .integration_key
+                .as_deref(),
+            Some("R0UT1NG"),
+            "whitespace must not reach the PagerDuty routing key",
+        );
+    }
+
+    /// The whole `[escalation]` block has to survive a real TOML round-trip,
+    /// since that is the only way anyone configures it.
+    #[test]
+    fn escalation_parses_from_toml() {
+        let dir = temp_dir("escalation");
+        std::fs::write(
+            dir.join("config.toml"),
+            r#"
+[escalation]
+enabled = true
+step_minutes = [5, 10, 20]
+
+[[escalation.oncall]]
+name = "Ayşe"
+email = "ayse@example.com"
+integration_key = "R0UT1NG"
+
+[[escalation.oncall]]
+name = "Mehmet"
+email = "mehmet@example.com"
+"#,
+        )
+        .unwrap();
+
+        let cfg = Config::load_from(&dir);
+        assert!(cfg.escalation.enabled);
+        assert_eq!(cfg.escalation.oncall.len(), 2);
+        assert_eq!(cfg.escalation.oncall[0].name, "Ayşe");
+        assert_eq!(cfg.escalation.step_minutes, vec![5, 10, 20]);
+        assert_eq!(cfg.escalation.shift_rotations().len(), 53);
+    }
+
+    /// Escalation stays off unless asked for — it pages people.
+    #[test]
+    fn escalation_is_off_by_default() {
+        let dir = temp_dir("escalation-default");
+        let cfg = Config::load_from(&dir);
+        assert!(!cfg.escalation.enabled);
+        assert!(cfg.escalation.oncall.is_empty());
     }
 
     #[test]
