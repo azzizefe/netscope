@@ -702,6 +702,18 @@ const I18N = (() => {
       'npcap.win': 'Npcap’i “WinPcap API uyumlu mod” işaretli kurun, sonra uygulamayı Yönetici olarak yeniden başlatın',
       'npcap.linux': 'sudo ile çalıştırın ya da ikili dosyaya CAP_NET_RAW yetkisi verin',
       'npcap.mac': 'ek kurulum gerekmez; gerekirse yükseltilmiş yetkiyle çalıştırın',
+      // SOC sunucu konsolu
+      'soc.server.label': 'SOC sunucusu',
+      'soc.server.ph': 'http://localhost:8080',
+      'soc.server.title': 'Çalışan bir netscope-server adresi. Yalnızca http:// ve https:// kabul edilir.',
+      'soc.server.connect': '🔌 Bağlan',
+      'soc.server.disconnect': '✕ Bağlantıyı kes',
+      'soc.server.connecting': 'Konsol açılıyor…',
+      'soc.server.connected': 'Konsol yüklendi — panelin içinden giriş yapın.',
+      'soc.server.needurl': 'Önce sunucu adresini girin.',
+      'soc.server.badurl': 'Yalnızca http:// ve https:// adreslerine izin veriliyor.',
+      'soc.server.failed': 'Sunucuya ulaşılamadı.',
+      'soc.server.local': 'Yalnızca bu makine gösteriliyor — tam konsol için bir sunucuya bağlanın.',
     },
   };
   // English strings for the new keys (other languages fall back to these).
@@ -747,6 +759,18 @@ const I18N = (() => {
     'remote.start': '▶ Connect & capture', 'remote.connecting': 'Connecting…',
     'remote.needhost': 'Please enter a remote host.',
     'remote.failed': 'Could not start remote capture:',
+    // SOC server console
+    'soc.server.label': 'SOC server',
+    'soc.server.ph': 'http://localhost:8080',
+    'soc.server.title': 'Address of a running netscope-server. Only http:// and https:// are accepted.',
+    'soc.server.connect': '🔌 Connect',
+    'soc.server.disconnect': '✕ Disconnect',
+    'soc.server.connecting': 'Opening console…',
+    'soc.server.connected': 'Console loaded — sign in inside the panel.',
+    'soc.server.needurl': 'Enter the server address first.',
+    'soc.server.badurl': 'Only http:// and https:// addresses are allowed.',
+    'soc.server.failed': 'Could not reach that server.',
+    'soc.server.local': 'Showing this machine only — connect a server for the full console.',
   });
   for (const l of Object.keys(DICT)) Object.assign(DICT[l], EXTRA[l] || {});
 

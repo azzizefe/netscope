@@ -600,7 +600,38 @@
           <h2 data-i18n="soc.title">🛡 SOC — Security Operations Center</h2>
           <p class="soc-subtitle" data-i18n="soc.subtitle">7×24 monitoring, alerting, and notification channels</p>
         </div>
-        <div class="soc-grid">
+
+        <!-- Server console bar.
+             The cards below cover this machine only. A netscope-server also
+             serves the full multi-sensor console (alerts, cases, hunt, SOAR,
+             reports) at its root; pointing this at one embeds that console
+             rather than reimplementing it here, so it cannot drift from the
+             server it belongs to. The frame carries the server's own origin,
+             which is why its login and RBAC apply inside it and no token is
+             ever handled by the desktop app.
+
+             This needs `frame-src http: https:` in tauri.conf.json — the server
+             address is whatever the user configures, so it cannot be pinned at
+             build time. What keeps that from being a hole is
+             normalizeSocServerUrl() in app.js: the src is only ever an origin
+             parsed from that setting, and only with an http/https scheme. -->
+        <div class="soc-server-bar">
+          <label for="soc-server-url" data-i18n="soc.server.label">SOC server</label>
+          <input id="soc-server-url" type="url" inputmode="url" spellcheck="false"
+                 placeholder="http://localhost:8080" data-i18n-ph="soc.server.ph"
+                 data-i18n-title="soc.server.title"
+                 title="Address of a running netscope-server. Only http:// and https:// are accepted." />
+          <button id="soc-server-connect" class="btn btn-small" data-i18n="soc.server.connect">🔌 Connect</button>
+          <button id="soc-server-disconnect" class="btn btn-small hidden" data-i18n="soc.server.disconnect">✕ Disconnect</button>
+          <span id="soc-server-status" class="soc-server-status" role="status" aria-live="polite"></span>
+        </div>
+
+        <div id="soc-server-frame-wrap" class="soc-frame-wrap hidden">
+          <iframe id="soc-server-frame" class="soc-frame" title="netscope SOC console"
+                  referrerpolicy="no-referrer"></iframe>
+        </div>
+
+        <div id="soc-local-grid" class="soc-grid">
           <div class="card" id="soc-alert-rules">
             <h3 data-i18n="soc.alertrules">🔔 Active Alert Rules</h3>
             <div id="soc-rules-list" class="soc-list"></div>

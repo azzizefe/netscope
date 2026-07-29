@@ -680,6 +680,18 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .soc-header h2 { font-size: 18px; margin: 0 0 4px; }
 .soc-subtitle { margin: 0; color: var(--text-muted); font-size: 13px; }
 .soc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 960px; }
+
+/* Server console bar + embedded frame. */
+.soc-server-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; max-width: 960px; }
+.soc-server-bar label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.soc-server-bar input { flex: 1; min-width: 200px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 13px; font-family: monospace; }
+.soc-server-status { font-size: 12px; color: var(--text-muted); }
+.soc-server-status.ok { color: #16a34a; }
+.soc-server-status.err { color: #dc2626; }
+/* The console is a full app in its own right, so it gets the whole pane
+   rather than a fixed box that would force it to scroll inside a scroll. */
+.soc-frame-wrap { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: calc(100vh - 220px); min-height: 360px; }
+.soc-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
 .soc-list { font-size: 13px; }
 .soc-rule { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
 .soc-rule:last-child { border-bottom: none; }

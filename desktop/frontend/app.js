@@ -4808,6 +4808,99 @@ function renderSoc() {
   }
 }
 
+// ---- SOC server console ---------------------------------------------------
+//
+// The cards above describe this machine. A netscope-server serves the full
+// multi-sensor console (alerts, cases, hunt, SOAR, reports) at its root, and
+// this embeds that page instead of reimplementing it — there is one copy of
+// that UI, on the server that owns the data, so the two cannot drift apart.
+//
+// The frame runs at the server's origin, so the server's own login and RBAC
+// apply inside it and its API calls never leave that origin. That is the whole
+// reason no token or session is handled here.
+
+const SOC_SERVER_KEY = 'netscope.socServer';
+
+/** The server origin, or '' if `raw` is not a usable http(s) address.
+ *
+ * The return value becomes an iframe `src`, so the scheme check is load-bearing
+ * rather than cosmetic: without it a pasted `javascript:` or `data:` URL would
+ * run in the app's own context. Only the origin is kept — the console lives at
+ * the root, and dropping any path keeps a stray one from being framed. */
+function normalizeSocServerUrl(raw) {
+  const text = (raw || '').trim();
+  if (!text) return '';
+  // Bare host:port is the common way to type this; assume plain http.
+  const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(text) ? text : `http://${text}`;
+  let url;
+  try { url = new URL(withScheme); } catch { return ''; }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+  return url.origin;
+}
+
+function setSocStatus(msgKey, kind) {
+  const el = $('#soc-server-status');
+  if (!el) return;
+  el.textContent = msgKey ? I18N.t(msgKey) : '';
+  el.classList.remove('ok', 'err');
+  if (kind) el.classList.add(kind);
+}
+
+/** Show either the embedded console or the local cards, never both. */
+function syncSocServerUi(connected) {
+  $('#soc-server-frame-wrap')?.classList.toggle('hidden', !connected);
+  $('#soc-local-grid')?.classList.toggle('hidden', connected);
+  $('#soc-server-disconnect')?.classList.toggle('hidden', !connected);
+  $('#soc-server-connect')?.classList.toggle('hidden', connected);
+}
+
+function connectSocServer() {
+  const input = $('#soc-server-url');
+  const frame = $('#soc-server-frame');
+  if (!input || !frame) return;
+
+  const raw = input.value;
+  if (!raw.trim()) { setSocStatus('soc.server.needurl', 'err'); return; }
+
+  const origin = normalizeSocServerUrl(raw);
+  if (!origin) { setSocStatus('soc.server.badurl', 'err'); return; }
+
+  input.value = origin;
+  saveJSON(SOC_SERVER_KEY, origin);
+  setSocStatus('soc.server.connecting', null);
+
+  // Cross-origin means we cannot inspect what loaded; the panel itself shows
+  // whether the server answered, so the status stays deliberately modest.
+  frame.onload = () => setSocStatus('soc.server.connected', 'ok');
+  frame.onerror = () => setSocStatus('soc.server.failed', 'err');
+  frame.src = origin;
+  syncSocServerUi(true);
+}
+
+function disconnectSocServer() {
+  const frame = $('#soc-server-frame');
+  if (frame) { frame.onload = null; frame.onerror = null; frame.src = 'about:blank'; }
+  syncSocServerUi(false);
+  setSocStatus('soc.server.local', null);
+  renderSoc();
+}
+
+function initSocServer() {
+  const input = $('#soc-server-url');
+  if (!input) return;
+  const saved = loadJSON(SOC_SERVER_KEY, '');
+  if (saved) input.value = saved;
+  syncSocServerUi(false);
+  setSocStatus('soc.server.local', null);
+
+  on('#soc-server-connect', connectSocServer);
+  on('#soc-server-disconnect', disconnectSocServer);
+  // Enter in the address field connects, matching every other address bar.
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); connectSocServer(); }
+  });
+}
+
 // ==== Wireshark-style menu bar =========================================
 // Pure compute helpers (unit-tested) are kept side-effect free; the DOM
 // wiring below turns their output into a modal.
@@ -5918,6 +6011,7 @@ async function init() {
   document.addEventListener('keydown', handleKeydown);
   initMenuBar();
   initWifi();
+  initSocServer();
 
   // Bind custom desktop layout events
   const miNewWindow = $('#mi-new-window');
