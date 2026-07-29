@@ -436,13 +436,13 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 7.3 — Uyumluluk Raporları
 
-- [ ] **7.3.1** **ISO 27001** — Annex A kontrol listesi mapping'i, uyum skoru
-- [ ] **7.3.2** **PCI-DSS v4.0** — requirement mapping, ağ segmentasyonu görünürlüğü
-- [ ] **7.3.3** **GDPR / KVKK** — kişisel veri içeren trafik raporu, data flow map
-- [ ] **7.3.4** **NIS2** — kritik altyapı ağ izleme kanıtı raporu
-- [ ] **7.3.5** **SOC 2 Type II** — ağ güvenliği kontrol kanıtı
-- [ ] **7.3.6** **MITRE ATT&CK coverage** — hangi teknikleri tespit edebiliyoruz, hangilerini edemiyoruz matrisi
-- [ ] **7.3.7** **Cyber Kill Chain coverage** — her faz için tespit kabiliyetimizin görsel haritası
+- [x] **7.3.1** **ISO 27001** — Annex A kontrol listesi mapping'i, uyum skoru
+- [x] **7.3.2** **PCI-DSS v4.0** — requirement mapping, ağ segmentasyonu görünürlüğü
+- [x] **7.3.3** **GDPR / KVKK** — kişisel veri içeren trafik raporu, data flow map
+- [x] **7.3.4** **NIS2** — kritik altyapı ağ izleme kanıtı raporu
+- [x] **7.3.5** **SOC 2 Type II** — ağ güvenliği kontrol kanıtı
+- [x] **7.3.6** **MITRE ATT&CK coverage** — hangi teknikleri tespit edebiliyoruz, hangilerini edemiyoruz matrisi
+- [x] **7.3.7** **Cyber Kill Chain coverage** — her faz için tespit kabiliyetimizin görsel haritası
 
 ---
 

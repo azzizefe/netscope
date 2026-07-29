@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use serde::{Deserialize, Serialize};
-use std::io::Write;
-use std::net::{TcpStream, UdpSocket};
+use std::net::UdpSocket;
 use std::process::Command;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};

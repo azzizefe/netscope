@@ -137,15 +137,30 @@ mod imp {
     pub fn unblock(_ip: IpAddr) -> Result<()> {
         anyhow::bail!("blocking is currently implemented for Windows only")
     }
+    /// Always empty here — netscope installs no rules on this platform.
+    ///
+    /// Callers must pair this with [`super::is_supported`]; on its own an empty
+    /// set reads as "nothing is blocked", which is a different claim from
+    /// "netscope cannot see or set blocks here".
     pub fn blocked_ips() -> BTreeSet<IpAddr> {
         BTreeSet::new()
     }
     pub fn unblock_all() -> Result<usize> {
-        Ok(0)
+        // This used to return `Ok(0)` — a successful removal of zero rules,
+        // indistinguishable from a working no-op, while `block`/`unblock` next
+        // to it correctly refused.
+        anyhow::bail!("blocking is currently implemented for Windows only")
     }
     pub fn is_elevated() -> bool {
-        // On Unix, treat root (uid 0) as elevated.
-        std::env::var("USER").map(|u| u == "root").unwrap_or(false)
+        // Ask the kernel, not the environment. This used to read
+        // `std::env::var("USER") == "root"`, which `sudo` usually leaves as the
+        // invoking user (so a genuinely root process reported unprivileged),
+        // and which any caller could set to "root" to claim elevation it did
+        // not have.
+        //
+        // SAFETY: `geteuid` is a pure read of the calling process's effective
+        // uid. It takes no arguments, cannot fail, and touches no memory.
+        unsafe { libc::geteuid() == 0 }
     }
 }
 

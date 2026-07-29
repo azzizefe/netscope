@@ -2234,10 +2234,19 @@ mod tests {
 
     #[test]
     fn is_elevated_returns_bool() {
+        // Whether this process is elevated depends on how it was launched, so
+        // there is no value to assert. What matters is that the probe returns
+        // rather than panicking — on Windows it shells out to `whoami /groups`.
+        //
+        // This used to read `assert!(elevated == true || elevated == false)`,
+        // which is a tautology for a `bool`: the test could not fail even if
+        // the function were replaced by one that always returned false.
         let elevated = is_elevated();
-        // Must return a bool (not crash). On CI without admin rights this is
-        // false; the point is that the function compiles and runs.
-        assert!(elevated == true || elevated == false);
+        assert_eq!(
+            elevated,
+            netscope_core::firewall::is_elevated(),
+            "the command must report the same privilege state as the core probe",
+        );
     }
 
     #[test]
