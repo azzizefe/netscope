@@ -319,44 +319,25 @@ fn get_client_key_exchange_encrypted_pre_master(payload: &[u8]) -> Option<Vec<u8
     None
 }
 
-fn decode_hex(s: &str) -> Result<Vec<u8>, ()> {
-    if !s.len().is_multiple_of(2) {
-        return Err(());
-    }
-    (0..s.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).map_err(|_| ()))
-        .collect()
-}
+// `decode_hex` used to live here for the key-log parse that this file did
+// itself. That moved to `crate::tls_keylog`, which owns the format, and the
+// copy here had no other caller.
 
+/// Secrets for this connection, from the loaded key log.
+///
+/// This used to open and parse the whole `SSLKEYLOGFILE` here, once per
+/// ServerHello — a file read and a full scan for every TLS session in the
+/// capture, against a log that runs to thousands of lines in a browser. The
+/// parsing now happens once, in [`crate::tls_keylog`], and this is a hash
+/// lookup. That module also keeps the environment-variable fallback, so a
+/// shell that exports `SSLKEYLOGFILE` behaves as before.
 fn get_secrets_for_random(client_random: &[u8; 32]) -> Option<HashMap<String, Vec<u8>>> {
-    let path = std::env::var("SSLKEYLOGFILE").ok()?;
-    let content = std::fs::read_to_string(path).ok()?;
-    let target_hex = hex_encode(client_random);
-    let mut secrets = HashMap::new();
-    for line in content.lines() {
-        if line.starts_with('#') {
-            continue;
-        }
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() == 3 {
-            let label = parts[0];
-            let rand_hex = parts[1];
-            let secret_hex = parts[2];
-            if rand_hex.to_lowercase() == target_hex {
-                if let Ok(sec) = decode_hex(secret_hex) {
-                    secrets.insert(label.to_string(), sec);
-                }
-            }
-        }
-    }
-    if secrets.is_empty() {
-        None
-    } else {
-        Some(secrets)
-    }
+    crate::tls_keylog::secrets_for(client_random)
 }
 
+/// Only the key-log test builds a hex string now that the parsing lives in
+/// `crate::tls_keylog`; without the gate this is dead code in the lib build.
+#[cfg(test)]
 fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }

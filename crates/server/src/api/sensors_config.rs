@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(default)]
@@ -138,7 +138,8 @@ pub fn validate_and_canonicalize(config_data: &str) -> Result<String, String> {
     }
 
     if let Ok(config) = serde_yaml::from_str::<AgentConfig>(config_data) {
-        return toml::to_string(&config).map_err(|e| format!("Failed to serialize validated config as TOML: {e}"));
+        return toml::to_string(&config)
+            .map_err(|e| format!("Failed to serialize validated config as TOML: {e}"));
     }
 
     let toml_err = toml::from_str::<AgentConfig>(config_data).unwrap_err();

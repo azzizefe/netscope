@@ -1708,7 +1708,15 @@ function findSensitiveData(text) {
   // emits one character per byte, so it doubles as the byte offset into the
   // payload — which is what lets a finding point at itself in the hex dump
   // instead of just naming the packet.
-  const add = (kind, value, note, index, context) => {
+  /**
+   * `index` and `length` describe the text **as it appears on the wire**, which
+   * is not always the reported value: a credential match spans `password=...`
+   * while the value is what follows the `=`, and HTTP Basic reports the decoded
+   * `user:pass` while the wire carries base64. Highlighting `value.length`
+   * bytes from the start of the match put the marker on `passwor` instead of
+   * `hunter2`.
+   */
+  const add = (kind, value, note, index, context, length) => {
     const id = `${kind}:${value}`;
     if (seen.has(id)) return;
     seen.add(id);
@@ -1717,6 +1725,7 @@ function findSensitiveData(text) {
       value,
       note: note || null,
       index: index ?? -1,
+      length: length ?? value.length,
       context: context ?? null,
       field: fieldAt(index),
     });
@@ -1748,19 +1757,26 @@ function findSensitiveData(text) {
   // Credentials in a form body or query string. The name is what makes it a
   // credential; the value can be anything.
   const credRe = /\b(password|passwd|pwd|pass|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|session[_-]?id|client[_-]?secret)\b\s*[=:]\s*"?([^&"'\s,}]{3,256})/gi;
+  // `at` is where the captured group sits, not where the whole match starts —
+  // the match includes the `password=` that identifies it, the value does not.
+  const groupAt = (m, group) => m.index + m[0].lastIndexOf(group);
+
   for (const m of text.matchAll(credRe)) {
-    add('Credential', m[2], m[1].toLowerCase(), m.index, around(m.index, m[0].length));
+    const at = groupAt(m, m[2]);
+    add('Credential', m[2], m[1].toLowerCase(), at, around(m.index, m[0].length), m[2].length);
   }
 
-  // HTTP Basic: the base64 is trivially reversible, so it is cleartext.
+  // HTTP Basic: the base64 is trivially reversible, so it is cleartext. The
+  // reported value is the decoded `user:pass`, but the bytes on the wire are
+  // the base64 — so the highlight covers that, at its length.
   for (const m of text.matchAll(/^authorization:[ \t]*basic[ \t]+([A-Za-z0-9+/=]+)/gim)) {
     let decoded = null;
     try { decoded = atob(m[1]); } catch { /* not valid base64 — report it raw */ }
     add('Basic auth', decoded || m[1], decoded ? 'base64 decoded' : null,
-      m.index, around(m.index, m[0].length));
+      groupAt(m, m[1]), around(m.index, m[0].length), m[1].length);
   }
   for (const m of text.matchAll(/^authorization:[ \t]*bearer[ \t]+([\w.\-+/=]{8,})/gim)) {
-    add('Bearer token', m[1], null, m.index, around(m.index, m[0].length));
+    add('Bearer token', m[1], null, groupAt(m, m[1]), around(m.index, m[0].length), m[1].length);
   }
 
   // Issuer-prefixed keys: each of these is documented by its vendor, so a
@@ -1795,7 +1811,9 @@ function findSensitiveData(text) {
     if (!luhnValid(digits)) continue;
     const network = cardNetwork(digits);
     if (!network) continue;
-    add('Card number', digits, network, m.index, around(m.index, m[0].length));
+    // `m[0]` may carry the spaces or hyphens a form sent; the value is the
+    // digits alone, so the highlight uses the matched length, not the value's.
+    add('Card number', digits, network, m.index, around(m.index, m[0].length), m[0].length);
   }
 
   for (const m of text.matchAll(/\b[\w.+-]+@[\w-]+\.[\w.-]{2,}\b/g)) {
@@ -1809,7 +1827,41 @@ function findSensitiveData(text) {
     if (ibanValid(m[0])) add('IBAN', m[0], null, m.index, around(m.index, m[0].length));
   }
 
+  // National identity numbers, by checksum. Eleven digits alone is a phone
+  // number or an order id far more often than an identity number — the two
+  // check digits are the whole reason this is reportable.
+  for (const m of text.matchAll(/\b[1-9][0-9]{10}\b/g)) {
+    if (tcKimlikValid(m[0])) {
+      add('National ID', m[0], 'T.C. Kimlik No', m.index, around(m.index, m[0].length));
+    }
+  }
+
   return out;
+}
+
+/**
+ * Turkish national identity number (T.C. Kimlik No).
+ *
+ * Eleven digits with two check digits, which is what makes it worth detecting:
+ * an eleven-digit number on its own is a phone number, an order id or a
+ * timestamp, and only the checksum separates them.
+ *
+ *   - it cannot start with 0
+ *   - d10 = ((sum of digits 1,3,5,7,9) * 7 - (sum of 2,4,6,8)) mod 10
+ *   - d11 = (sum of the first ten digits) mod 10
+ */
+function tcKimlikValid(n) {
+  if (!/^[1-9][0-9]{10}$/.test(n)) return false;
+  const d = [...n].map(Number);
+  let odd = 0;
+  let even = 0;
+  for (let i = 0; i < 9; i++) {
+    if (i % 2 === 0) odd += d[i];
+    else even += d[i];
+  }
+  if (((odd * 7 - even) % 10 + 10) % 10 !== d[9]) return false;
+  const first10 = d.slice(0, 10).reduce((a, b) => a + b, 0);
+  return first10 % 10 === d[10];
 }
 
 /** IBAN mod-97 checksum (ISO 13616): rearrange, letters to numbers, mod 97 = 1. */
@@ -1832,6 +1884,62 @@ function maskSecret(kind, value) {
   }
   if (value.length <= 8) return '•'.repeat(value.length);
   return `${value.slice(0, 4)}${'•'.repeat(Math.min(12, value.length - 8))}${value.slice(-4)}`;
+}
+
+/**
+ * The parts of a payload worth scanning, each with its offset into the payload.
+ *
+ * `decodeStreamText` exists for the detail pane: it interleaves frame
+ * descriptions with content and truncates each HTTP/2 DATA frame at 200
+ * characters, both of which are right for reading and wrong for scanning — a
+ * secret 300 bytes into a body would be missed, and the text offsets no longer
+ * correspond to bytes, so a finding could not point at itself in the hex dump.
+ *
+ * This returns the content only, at its true offset, untruncated.
+ *
+ * HTTP/2 HEADERS frames are deliberately skipped. They are HPACK, and this app
+ * does not carry an HPACK decoder — scanning compressed bytes as if they were
+ * text is the "shape rather than structure" mistake this whole detector is
+ * built to avoid. It does mean an `Authorization` header sent over h2c is not
+ * visible here; the DATA frames that carry request bodies are.
+ */
+function scannableSegments(payload, proto) {
+  if (!payload || !payload.length) return [];
+
+  if (proto === 'HTTP/2' || proto === 'gRPC') {
+    const segments = [];
+    let off = 0;
+    let framed = false;
+    // Skip the connection preface if this segment opens with it.
+    const PREFACE = 'PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n';
+    if (payload.length >= 24
+      && decodePlainStream(payload.slice(0, 24)) === PREFACE) {
+      off = 24;
+      framed = true;
+    }
+    while (off + 9 <= payload.length) {
+      const len = (payload[off] << 16) | (payload[off + 1] << 8) | payload[off + 2];
+      const type = payload[off + 3];
+      const start = off + 9;
+      const end = Math.min(start + len, payload.length);
+      framed = true;
+      if (type === 0 && end > start) {
+        segments.push({ text: decodePlainStream(payload.slice(start, end)), offset: start });
+      }
+      if (len < 0 || start + len <= off) break; // malformed length — do not spin
+      off = start + len;
+    }
+    // Falling back only when *no* frame was parsed at all. A payload that did
+    // parse — but whose frames were HEADERS, SETTINGS or WINDOW_UPDATE — has
+    // nothing scannable in it, and scanning it flat would mine HPACK bytes for
+    // accidental matches, which is the thing the skip above exists to prevent.
+    if (framed) return segments;
+    // Nothing parsed: most likely a body split across TCP segments, so the
+    // whole thing is content.
+    return [{ text: decodePlainStream(payload), offset: 0 }];
+  }
+
+  return [{ text: decodePlainStream(payload), offset: 0 }];
 }
 
 /**
@@ -1879,7 +1987,8 @@ function endpointOf(req, pkt) {
 /** How much each kind of finding matters, worst first. */
 const LEAK_RANK = {
   'Private key block': 0, 'API key': 1, 'Basic auth': 2, 'Credential': 3,
-  'Bearer token': 4, 'Card number': 5, 'IBAN': 6, 'JWT': 7, 'Email': 8,
+  'Bearer token': 4, 'Card number': 5, 'National ID': 6, 'IBAN': 7,
+  'JWT': 8, 'Email': 9,
 };
 
 /**
@@ -1897,45 +2006,145 @@ function collectLeaks(pkts) {
     const p = pkts[i];
     const payload = p.raw && p.raw.length ? extractPayload(p.raw) : null;
     if (!payload || !payload.length) continue;
-    const text = decodeStreamText(payload);
-    if (!text) continue;
+    const segments = scannableSegments(payload, p.protocol);
+    if (!segments.length) continue;
 
     // Where the payload starts in the frame, so a text index becomes a byte
     // the hex dump can highlight.
     const base = payloadOffset(p.raw);
-    const req = httpRequestInfo(text);
+    // The request line and headers are in the first segment for plain HTTP.
+    // Over HTTP/2 they are HPACK and unreadable, so this comes back empty and
+    // the endpoint falls back to the host — see `endpointOf`.
+    const req = httpRequestInfo(segments[0].text);
 
-    for (const hit of findSensitiveData(text)) {
-      const id = `${hit.kind}:${hit.value}`;
-      const existing = found.get(id);
-      if (existing) {
-        existing.count += 1;
-        // Every distinct endpoint it reached matters: the same key sent to two
-        // services is two places to rotate it.
-        const where = endpointOf(req, p);
-        if (where && !existing.endpoints.includes(where)) existing.endpoints.push(where);
-        continue;
+    for (const seg of segments) {
+      for (const hit of findSensitiveData(seg.text)) {
+        const id = `${hit.kind}:${hit.value}`;
+        const existing = found.get(id);
+        if (existing) {
+          existing.count += 1;
+          // Every distinct endpoint it reached matters: the same key sent to
+          // two services is two places to rotate it.
+          const where = endpointOf(req, p);
+          if (where && !existing.endpoints.includes(where)) existing.endpoints.push(where);
+          continue;
+        }
+        // Frame offset = payload start + this segment's offset + the match
+        // within it. The middle term is what makes an HTTP/2 body land on its
+        // own bytes rather than 9 bytes of frame header early.
+        const at = hit.index >= 0 && base >= 0 ? base + seg.offset + hit.index : -1;
+        found.set(id, {
+          ...hit,
+          count: 1,
+          packet: i + 1,
+          host: p.dst_host || p.dst_addr || '?',
+          source: p.src_addr || '?',
+          time: p.timestamp || null,
+          protocol: p.protocol,
+          method: req.method,
+          path: req.path,
+          referer: req.referer,
+          endpoints: [endpointOf(req, p)].filter(Boolean),
+          byteStart: at,
+          byteEnd: at >= 0 ? at + hit.length : -1,
+        });
       }
-      found.set(id, {
-        ...hit,
-        count: 1,
-        packet: i + 1,
-        host: p.dst_host || p.dst_addr || '?',
-        source: p.src_addr || '?',
-        time: p.timestamp || null,
-        protocol: p.protocol,
-        method: req.method,
-        path: req.path,
-        referer: req.referer,
-        endpoints: [endpointOf(req, p)].filter(Boolean),
-        byteStart: hit.index >= 0 && base >= 0 ? base + hit.index : -1,
-        byteEnd: hit.index >= 0 && base >= 0 ? base + hit.index + hit.value.length : -1,
-      });
     }
   }
 
   return [...found.values()].sort((a, b) =>
     (LEAK_RANK[a.kind] ?? 99) - (LEAK_RANK[b.kind] ?? 99) || b.count - a.count);
+}
+
+// ---- TLS key log ----------------------------------------------------------
+
+/**
+ * Load `SSLKEYLOGFILE` text so captured HTTPS can be decrypted.
+ *
+ * The file contents go to the backend, not a path. A dropped file already
+ * arrives as contents in the browser, and passing the text keeps this from
+ * becoming a way to make the app read an arbitrary file off disk.
+ */
+async function loadKeyLog(text) {
+  try {
+    const st = await invoke('tls_keylog_load', { text });
+    describeKeyLog(st, st.rejected
+      ? `${st.added} secret${st.added === 1 ? '' : 's'} loaded, ${st.rejected} line${st.rejected === 1 ? '' : 's'} unusable`
+      : `${st.added} secret${st.added === 1 ? '' : 's'} loaded`);
+    // Re-dissect what is already captured: the secrets change what the
+    // existing packets decode to, and leaving the view on the pre-key reading
+    // would look like the load had failed.
+    renderAll();
+  } catch (e) {
+    if (els.keylogStatus) els.keylogStatus.textContent = `Could not load: ${e}`;
+  }
+}
+
+/**
+ * Say what the load actually achieved.
+ *
+ * Zero usable sessions after dropping a file is the case worth naming: it
+ * almost always means the keys and the capture are from different runs, and
+ * without saying so the panel just sits there looking like it worked.
+ */
+function describeKeyLog(st, detail) {
+  if (!els.keylogStatus) return;
+  if (!st || !st.sessions) {
+    els.keylogStatus.innerHTML = detail
+      ? `<b>No usable keys.</b> ${esc(detail)}. Keys and capture must be from the same session.`
+      : 'No keys loaded — HTTPS stays encrypted.';
+    return;
+  }
+  els.keylogStatus.innerHTML =
+    `<b>${st.sessions}</b> session${st.sessions === 1 ? '' : 's'} decryptable`
+    + (detail ? ` · ${esc(detail)}` : '');
+}
+
+function initKeyLogPanel() {
+  const drop = els.keylogDrop;
+  if (!drop) return;
+
+  const read = (file) => {
+    const reader = new FileReader();
+    reader.onload = () => loadKeyLog(String(reader.result || ''));
+    reader.readAsText(file);
+  };
+
+  // `dragover` must be cancelled or the browser navigates to the file instead
+  // of handing it over — the drop would look like the app crashed.
+  ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => {
+    e.preventDefault();
+    drop.classList.add('keylog-over');
+  }));
+  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => {
+    e.preventDefault();
+    drop.classList.remove('keylog-over');
+  }));
+  drop.addEventListener('drop', (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (file) read(file);
+  });
+
+  // Dragging is not the only way in: a keyboard user, or anyone whose window
+  // manager makes dropping awkward, gets a file picker on click or Enter.
+  const pick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.log,.txt,.keys,text/plain';
+    input.addEventListener('change', () => { if (input.files[0]) read(input.files[0]); });
+    input.click();
+  };
+  drop.addEventListener('click', pick);
+  drop.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
+  });
+
+  els.keylogClear?.addEventListener('click', async () => {
+    describeKeyLog(await invoke('tls_keylog_clear'), 'keys forgotten');
+    renderAll();
+  });
+
+  invoke('tls_keylog_status').then((st) => describeKeyLog(st, null)).catch(() => {});
 }
 
 /** Render the leak detector list in the Privacy tab. */
@@ -1985,7 +2194,7 @@ function renderLeaks() {
     if (l.time) facts.push(`<span class="leak-fact"><span class="leak-fk">first seen</span><code>${esc(l.time)}</code></span>`);
     if (l.referer) facts.push(`<span class="leak-fact"><span class="leak-fk">referer</span><code>${esc(l.referer)}</code></span>`);
 
-    return `<div class="leak leak-r${Math.min(rank, 8)}">
+    return `<div class="leak leak-r${Math.min(rank, 9)}">
       <div class="leak-kind">${esc(l.kind)}${l.note ? ` <span class="leak-note">${esc(l.note)}</span>` : ''}</div>
       <div class="leak-value${reveal ? '' : ' leak-masked'}">${esc(shown)}</div>
       <div class="leak-facts">${facts.join('')}</div>
@@ -5655,6 +5864,7 @@ async function init() {
     lessonSearch: $('#lesson-search'), lessonCount: $('#lesson-count'),
     serviceCalls: $('#service-calls'), traceList: $('#trace-list'),
     leakList: $('#leak-list'), leakSummary: $('#leak-summary'), leakReveal: $('#leak-reveal'),
+    keylogDrop: $('#keylog-drop'), keylogStatus: $('#keylog-status'), keylogClear: $('#keylog-clear'),
     diffPktA: $('#diff-pkt-a'), diffPktB: $('#diff-pkt-b'),
     diffPktALabel: $('#diff-pkt-a-label'), diffPktBLabel: $('#diff-pkt-b-label'),
     glossaryList: $('#glossary-list'), featureCards: $('#feature-cards'),
@@ -5844,6 +6054,7 @@ async function init() {
   });
   // Delegated: the list is re-rendered on every refresh, so per-row listeners
   // would be re-attached to freshly discarded nodes.
+  initKeyLogPanel();
   els.leakList?.addEventListener('click', (ev) => {
     const btn = ev.target.closest('.leak-jump');
     if (btn) {

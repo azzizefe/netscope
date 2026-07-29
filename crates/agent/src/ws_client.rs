@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
-use std::time::Duration;
+use crate::state::AgentState;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
+use std::time::Duration;
 use tokio_tungstenite::tungstenite::Message;
-use crate::state::AgentState;
 
 #[derive(Debug, Deserialize)]
 struct WsPayload {
@@ -124,7 +124,10 @@ async fn connect_and_handle(
     if !auth_token.is_empty() {
         request.headers_mut().insert(
             "Authorization",
-            tokio_tungstenite::tungstenite::http::HeaderValue::from_str(&format!("Bearer {}", auth_token))?,
+            tokio_tungstenite::tungstenite::http::HeaderValue::from_str(&format!(
+                "Bearer {}",
+                auth_token
+            ))?,
         );
     }
 
@@ -133,18 +136,15 @@ async fn connect_and_handle(
             .dangerous()
             .with_custom_certificate_verifier(std::sync::Arc::new(NoVerifier))
             .with_no_client_auth();
-        Some(tokio_tungstenite::Connector::Rustls(std::sync::Arc::new(client_config)))
+        Some(tokio_tungstenite::Connector::Rustls(std::sync::Arc::new(
+            client_config,
+        )))
     } else {
         None
     };
 
-    let (mut ws_stream, _) = tokio_tungstenite::connect_async_tls_with_config(
-        request,
-        None,
-        false,
-        connector,
-    )
-    .await?;
+    let (mut ws_stream, _) =
+        tokio_tungstenite::connect_async_tls_with_config(request, None, false, connector).await?;
 
     tracing::info!("WebSocket connected successfully to server");
 

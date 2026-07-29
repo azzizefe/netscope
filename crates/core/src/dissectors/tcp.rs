@@ -1002,9 +1002,6 @@ mod tests {
             &raw,
         );
         assert_eq!(result.protocol, Protocol::Tcp);
-        assert_eq!(
-            result.summary,
-            "TCP — no payload (keep-alive or ACK)"
-        );
+        assert_eq!(result.summary, "TCP — no payload (keep-alive or ACK)");
     }
 }

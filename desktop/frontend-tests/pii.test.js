@@ -125,6 +125,33 @@ describe('findSensitiveData — card numbers', () => {
   });
 });
 
+describe('findSensitiveData — national identity numbers', () => {
+  // Checksum-valid T.C. Kimlik numbers, generated to satisfy both check digits.
+  const VALID = '10000000146';
+
+  it('accepts a checksum-valid number', () => {
+    expect(app.tcKimlikValid(VALID)).toBe(true);
+    expect(values(`tckn=${VALID}`, 'National ID')).toEqual([VALID]);
+  });
+
+  /// Eleven digits alone is a phone number or an order id far more often than
+  /// an identity number. Without the two check digits this would flag both.
+  it('rejects an eleven-digit number that fails the checksum', () => {
+    expect(app.tcKimlikValid('12345678901')).toBe(false);
+    expect(values('order=12345678901', 'National ID')).toEqual([]);
+    expect(values('phone=05321111111', 'National ID')).toEqual([]);
+  });
+
+  it('rejects a number starting with zero, which the format forbids', () => {
+    expect(app.tcKimlikValid('01234567890')).toBe(false);
+  });
+
+  it('rejects the wrong length', () => {
+    expect(app.tcKimlikValid(VALID.slice(0, 10))).toBe(false);
+    expect(app.tcKimlikValid(`${VALID}0`)).toBe(false);
+  });
+});
+
 describe('findSensitiveData — personal data', () => {
   it('finds an email address', () => {
     expect(values('to=efe.ziza%40example.com&x=1'.replace('%40', '@'), 'Email'))
@@ -228,6 +255,40 @@ describe('collectLeaks', () => {
     expect(digits).toBe('4111111111111111');
   });
 
+  /// A credential match spans `password=...` but the value is what follows the
+  /// `=`. Highlighting `value.length` bytes from the start of the match landed
+  /// on `passwor` — the right number of bytes in the wrong place.
+  it('highlights the value, not the parameter name in front of it', () => {
+    const p = pkt('POST /login HTTP/1.1\r\n\r\nuser=efe&password=hunter2');
+    const [leak] = app.collectLeaks([p]);
+    const marked = String.fromCharCode(...p.raw.slice(leak.byteStart, leak.byteEnd));
+
+    expect(leak.value).toBe('hunter2');
+    expect(marked).toBe('hunter2');
+  });
+
+  /// HTTP Basic reports the decoded `user:pass`, but the wire carries base64 —
+  /// so the highlight has to cover the base64, at the base64's length.
+  it('highlights the base64 for a Basic auth finding, not the decoded value', () => {
+    const p = pkt('GET / HTTP/1.1\r\nAuthorization: Basic ZWZlOmh1bnRlcjI=\r\n\r\n');
+    const leak = app.collectLeaks([p]).find((l) => l.kind === 'Basic auth');
+    const marked = String.fromCharCode(...p.raw.slice(leak.byteStart, leak.byteEnd));
+
+    expect(leak.value).toBe('efe:hunter2');
+    expect(marked).toBe('ZWZlOmh1bnRlcjI=');
+  });
+
+  /// A card sent with the separators a form produces: the value is the digits
+  /// alone, but the bytes on the wire include the spaces.
+  it('highlights a separated card number across its separators', () => {
+    const p = pkt('POST /pay HTTP/1.1\r\n\r\ncard=4111 1111 1111 1111');
+    const [leak] = app.collectLeaks([p]);
+    const marked = String.fromCharCode(...p.raw.slice(leak.byteStart, leak.byteEnd));
+
+    expect(leak.value).toBe('4111111111111111');
+    expect(marked).toBe('4111 1111 1111 1111');
+  });
+
   /// A finding is only actionable if you know where it was sent. These four
   /// facts are what turn "a card number appeared" into something that can be
   /// gone and fixed: which field, which endpoint, which device, and when.
@@ -275,6 +336,62 @@ describe('collectLeaks', () => {
     const [leak] = app.collectLeaks([pkt('random binary-ish payload password=hunter2')]);
     expect(leak.method).toBeNull();
     expect(leak.endpoints[0]).toBe('shop.example');
+  });
+
+  /// HTTP/2 carries request bodies inside DATA frames, behind a 9-byte binary
+  /// header. Scanning the payload as flat text finds the body but reports its
+  /// bytes 9 early — inside the frame header — so the hex-dump highlight would
+  /// point at the wrong place.
+  it('finds a secret inside an HTTP/2 DATA frame and points at its real bytes', () => {
+    const body = 'password=hunter2';
+    const frame = [
+      0, 0, body.length,      // 24-bit length
+      0,                      // type 0 = DATA
+      1,                      // flags: END_STREAM
+      0, 0, 0, 1,             // stream id
+      ...[...body].map((c) => c.charCodeAt(0)),
+    ];
+    const p = pkt('', { protocol: 'HTTP/2' });
+    p.raw = p.raw.slice(0, 54).concat(frame);
+
+    const [leak] = app.collectLeaks([p]);
+    expect(leak.value).toBe('hunter2');
+
+    const digits = String.fromCharCode(...p.raw.slice(leak.byteStart, leak.byteEnd));
+    expect(digits).toBe('hunter2');
+  });
+
+  /// The display decoder truncates each DATA frame at 200 characters, which is
+  /// right for reading and wrong for scanning — a secret further in would be
+  /// missed entirely.
+  it('scans past the 200-character limit the detail view uses', () => {
+    const body = `${'x'.repeat(400)}&password=deepsecret`;
+    const frame = [
+      (body.length >> 16) & 0xff, (body.length >> 8) & 0xff, body.length & 0xff,
+      0, 1, 0, 0, 0, 1,
+      ...[...body].map((c) => c.charCodeAt(0)),
+    ];
+    const p = pkt('', { protocol: 'HTTP/2' });
+    p.raw = p.raw.slice(0, 54).concat(frame);
+
+    expect(app.collectLeaks([p]).map((l) => l.value)).toContain('deepsecret');
+  });
+
+  /// HEADERS frames are HPACK. Scanning compressed bytes as text is the
+  /// "shape rather than structure" mistake the whole detector avoids, so they
+  /// are skipped rather than mined for accidental matches.
+  it('does not scan HPACK header frames', () => {
+    const junk = 'password=notreally';
+    const frame = [
+      0, 0, junk.length,
+      1,                      // type 1 = HEADERS
+      4, 0, 0, 0, 1,
+      ...[...junk].map((c) => c.charCodeAt(0)),
+    ];
+    const p = pkt('', { protocol: 'HTTP/2' });
+    p.raw = p.raw.slice(0, 54).concat(frame);
+
+    expect(app.collectLeaks([p])).toEqual([]);
   });
 
   it('ignores packets with no payload', () => {

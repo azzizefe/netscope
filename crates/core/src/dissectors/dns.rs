@@ -614,7 +614,7 @@ mod tests {
         buf.extend_from_slice(&[0x00, 0x00]); // additional: 0
         buf.extend_from_slice(b"\x07example\x03com\x00");
         buf.extend_from_slice(&[0x00, 0x01, 0x00, 0x01]); // A, IN
-        // CNAME answer
+                                                          // CNAME answer
         buf.extend_from_slice(&[0xc0, 0x0c]);
         buf.extend_from_slice(&[0x00, 0x05, 0x00, 0x01]); // CNAME, IN
         buf.extend_from_slice(&[0x00, 0x00, 0x00, 0x3c]);

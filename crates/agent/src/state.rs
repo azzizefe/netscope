@@ -86,7 +86,9 @@ impl AgentState {
         let overlay: toml::Value = new_toml.parse()?;
         let mut base = if self.config_path.exists() {
             let base_text = std::fs::read_to_string(&self.config_path)?;
-            base_text.parse::<toml::Value>().unwrap_or_else(|_| toml::Value::Table(toml::map::Map::new()))
+            base_text
+                .parse::<toml::Value>()
+                .unwrap_or_else(|_| toml::Value::Table(toml::map::Map::new()))
         } else {
             toml::Value::Table(toml::map::Map::new())
         };
@@ -115,7 +117,10 @@ impl AgentState {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(&self.config_path, merged_toml_text)?;
-        tracing::info!("Successfully persisted updated config to {:?}", self.config_path);
+        tracing::info!(
+            "Successfully persisted updated config to {:?}",
+            self.config_path
+        );
 
         *self.config.write() = new_config;
         tracing::info!("Applied updated configuration in-memory.");
@@ -247,16 +252,23 @@ mod tests {
 
     #[test]
     fn test_update_config_merging_and_persisting() {
-        let temp_dir = std::env::temp_dir().join(format!("netscope-agent-state-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir = std::env::temp_dir().join(format!(
+            "netscope-agent-state-test-{}",
+            uuid::Uuid::new_v4()
+        ));
         std::fs::create_dir_all(&temp_dir).unwrap();
         let config_path = temp_dir.join("agent.toml");
 
-        std::fs::write(&config_path, r#"
+        std::fs::write(
+            &config_path,
+            r#"
         [heartbeat]
         interval_secs = 15
         [events]
         batch_max_events = 100
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
 
         let base_config = AgentConfig {
             heartbeat: crate::config::HeartbeatConfig { interval_secs: 15 },
@@ -268,18 +280,27 @@ mod tests {
             ..Default::default()
         };
 
-        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
         let state = rt.block_on(async {
-            AgentState::new(base_config, config_path.clone()).await.unwrap()
+            AgentState::new(base_config, config_path.clone())
+                .await
+                .unwrap()
         });
 
         assert_eq!(state.config.read().heartbeat.interval_secs, 15);
         assert_eq!(state.config.read().events.batch_max_events, 100);
 
-        state.update_config(r#"
+        state
+            .update_config(
+                r#"
         [heartbeat]
         interval_secs = 30
-        "#).unwrap();
+        "#,
+            )
+            .unwrap();
 
         assert_eq!(state.config.read().heartbeat.interval_secs, 30);
         assert_eq!(state.config.read().events.batch_max_events, 100);

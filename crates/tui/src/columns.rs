@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! User-selectable packet-list columns for the TUI (ROADMAP §6.1). The
 //! packet table can show any subset of the standard columns; the Columns
@@ -125,12 +125,12 @@ mod tests {
     #[test]
     fn toggle_index_bounds() {
         let mut c = Columns::default();
-        c.toggle_index(0);  // ignored
-        c.toggle_index(7);  // ignored
+        c.toggle_index(0); // ignored
+        c.toggle_index(7); // ignored
         assert!(c.num);
-        c.toggle_index(1);  // Num
+        c.toggle_index(1); // Num
         assert!(!c.num);
-        c.toggle_index(6);  // Length (default false)
+        c.toggle_index(6); // Length (default false)
         assert!(c.length);
     }
 

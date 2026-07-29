@@ -319,7 +319,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
-        
+
         let body_bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
             .await
             .unwrap();

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use crate::models::Packet;
+use crate::names::NameCache;
 use crossbeam_channel::Receiver;
+use maxminddb::Reader;
 use serde::Serialize;
+use std::io::Write;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
-use std::io::Write;
 use std::sync::Mutex;
 use std::sync::OnceLock;
-use crate::names::NameCache;
-use maxminddb::Reader;
+use std::thread;
+use std::time::Duration;
 
 static ES_SETUP_DONE: AtomicBool = AtomicBool::new(false);
 
@@ -34,7 +34,10 @@ fn global_geoip_reader() -> &'static Option<Reader<Vec<u8>>> {
     })
 }
 
-fn map_threat_intel_mitre_and_killchain(protocol: &str, summary: &str) -> (Option<String>, Option<String>, Option<String>) {
+fn map_threat_intel_mitre_and_killchain(
+    protocol: &str,
+    summary: &str,
+) -> (Option<String>, Option<String>, Option<String>) {
     let s = summary.to_lowercase();
     let proto = protocol.to_lowercase();
 
@@ -42,49 +45,49 @@ fn map_threat_intel_mitre_and_killchain(protocol: &str, summary: &str) -> (Optio
         (
             Some("Initial Access".to_string()),
             Some("T1190 - Exploit Public-Facing Application".to_string()),
-            Some("Delivery".to_string())
+            Some("Delivery".to_string()),
         )
     } else if s.contains("urlhaus") || s.contains("threat domain") {
         (
             Some("Command and Control".to_string()),
             Some("T1071 - Application Layer Protocol".to_string()),
-            Some("Command and Control".to_string())
+            Some("Command and Control".to_string()),
         )
     } else if s.contains("beaconing") || s.contains("beacon") {
         (
             Some("Command and Control".to_string()),
             Some("T1071.001 - Web Protocols".to_string()),
-            Some("Command and Control".to_string())
+            Some("Command and Control".to_string()),
         )
     } else if s.contains("malware") || s.contains("payload") {
         (
             Some("Execution".to_string()),
             Some("T1204 - User Execution".to_string()),
-            Some("Installation".to_string())
+            Some("Installation".to_string()),
         )
     } else if s.contains("scan") || s.contains("port scan") {
         (
             Some("Reconnaissance".to_string()),
             Some("T1595 - Active Scanning".to_string()),
-            Some("Recon".to_string())
+            Some("Recon".to_string()),
         )
     } else if proto == "dns" && s.contains("query") {
         (
             Some("Reconnaissance".to_string()),
             Some("T1590 - Gather Gather Groups/Host Info".to_string()),
-            Some("Recon".to_string())
+            Some("Recon".to_string()),
         )
     } else if proto == "ssh" || proto == "rdp" {
         (
             Some("Lateral Movement".to_string()),
             Some("T1021 - Remote Services".to_string()),
-            Some("Exploitation".to_string())
+            Some("Exploitation".to_string()),
         )
     } else if proto == "http" || proto == "tls" {
         (
             Some("Command and Control".to_string()),
             Some("T1071 - Application Layer Protocol".to_string()),
-            Some("Command and Control".to_string())
+            Some("Command and Control".to_string()),
         )
     } else {
         (None, None, None)
@@ -97,7 +100,11 @@ fn mac_vendor_lookup(mac: &[u8]) -> Option<String> {
     }
     let oui = [mac[0], mac[1], mac[2]];
     match oui {
-        [0x00, 0x1B, 0x1B] | [0x00, 0x0E, 0x8C] | [0x00, 0x1C, 0x06] | [0x28, 0x63, 0x36] | [0x00, 0x0F, 0xD3] => Some("Siemens".to_string()),
+        [0x00, 0x1B, 0x1B]
+        | [0x00, 0x0E, 0x8C]
+        | [0x00, 0x1C, 0x06]
+        | [0x28, 0x63, 0x36]
+        | [0x00, 0x0F, 0xD3] => Some("Siemens".to_string()),
         [0x00, 0x00, 0xBC] => Some("Rockwell".to_string()),
         [0x00, 0x01, 0x05] => Some("Beckhoff".to_string()),
         [0x00, 0x00, 0x0C] => Some("Cisco".to_string()),
@@ -209,9 +216,17 @@ impl SiemEvent {
         // Passive DNS
         global_name_cache().lock().unwrap().observe(pkt);
         let resolved_dns_name = if let Some(ip) = pkt.dst_addr {
-            global_name_cache().lock().unwrap().name_for(ip).map(|s| s.to_string())
+            global_name_cache()
+                .lock()
+                .unwrap()
+                .name_for(ip)
+                .map(|s| s.to_string())
         } else if let Some(ip) = pkt.src_addr {
-            global_name_cache().lock().unwrap().name_for(ip).map(|s| s.to_string())
+            global_name_cache()
+                .lock()
+                .unwrap()
+                .name_for(ip)
+                .map(|s| s.to_string())
         } else {
             None
         };
@@ -227,11 +242,14 @@ impl SiemEvent {
         // TLS Fingerprints
         let (ja3, ja4, ja3s) = if pkt.protocol == crate::registry::Protocol::Tls {
             let payload = tls_payload(pkt);
-            let ja3 = payload.and_then(|p| crate::dissectors::tls::parse_client_hello(p))
+            let ja3 = payload
+                .and_then(crate::dissectors::tls::parse_client_hello)
                 .map(|h| crate::dissectors::tls::ja3_hash(&h));
-            let ja4 = payload.and_then(|p| crate::dissectors::tls::parse_client_hello(p))
+            let ja4 = payload
+                .and_then(crate::dissectors::tls::parse_client_hello)
                 .map(|h| crate::dissectors::tls::ja4(&h, 't'));
-            let ja3s = payload.and_then(|p| crate::dissectors::tls::parse_server_hello(p))
+            let ja3s = payload
+                .and_then(crate::dissectors::tls::parse_server_hello)
                 .map(|s| crate::dissectors::tls::ja3s_hash(&s));
             (ja3, ja4, ja3s)
         } else {
@@ -248,12 +266,22 @@ impl SiemEvent {
             let lookup_ip = pkt.dst_addr.or(pkt.src_addr);
             if let Some(ip) = lookup_ip {
                 if let Ok(city) = reader.lookup::<maxminddb::geoip2::City>(ip) {
-                    geoip_country = city.country.and_then(|c| c.names).and_then(|n| n.get("en").map(|s| s.to_string()));
-                    geoip_city = city.city.and_then(|c| c.names).and_then(|n| n.get("en").map(|s| s.to_string()));
+                    geoip_country = city
+                        .country
+                        .and_then(|c| c.names)
+                        .and_then(|n| n.get("en").map(|s| s.to_string()));
+                    geoip_city = city
+                        .city
+                        .and_then(|c| c.names)
+                        .and_then(|n| n.get("en").map(|s| s.to_string()));
                 }
                 if let Ok(asn_info) = reader.lookup::<maxminddb::geoip2::Asn>(ip) {
-                    asn = asn_info.autonomous_system_number.map(|a| format!("AS{}", a));
-                    isp = asn_info.autonomous_system_organization.map(|s| s.to_string());
+                    asn = asn_info
+                        .autonomous_system_number
+                        .map(|a| format!("AS{}", a));
+                    isp = asn_info
+                        .autonomous_system_organization
+                        .map(|s| s.to_string());
                 }
             }
         }
@@ -263,7 +291,7 @@ impl SiemEvent {
             pkt.summary.contains("AbuseIPDB")
                 || pkt.summary.contains("URLhaus")
                 || pkt.summary.contains("Threat")
-                || pkt.summary.contains("malicious")
+                || pkt.summary.contains("malicious"),
         );
 
         SiemEvent {
@@ -301,12 +329,18 @@ impl SiemEvent {
         let hostname = std::env::var("COMPUTERNAME")
             .or_else(|_| std::env::var("HOSTNAME"))
             .unwrap_or_else(|_| "localhost".to_string());
-        
+
         let src_str = self.src.as_deref().unwrap_or("-");
         let dst_str = self.dst.as_deref().unwrap_or("-");
-        let src_port_str = self.src_port.map(|p| p.to_string()).unwrap_or_else(|| "-".to_string());
-        let dst_port_str = self.dst_port.map(|p| p.to_string()).unwrap_or_else(|| "-".to_string());
-        
+        let src_port_str = self
+            .src_port
+            .map(|p| p.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        let dst_port_str = self
+            .dst_port
+            .map(|p| p.to_string())
+            .unwrap_or_else(|| "-".to_string());
+
         let sd = format!(
             "[netscope@42424 src_ip=\"{}\" dst_ip=\"{}\" src_port=\"{}\" dst_port=\"{}\" protocol=\"{}\" length=\"{}\"]",
             src_str, dst_str, src_port_str, dst_port_str, self.protocol, self.length
@@ -314,7 +348,12 @@ impl SiemEvent {
 
         format!(
             "<{}>1 {} {} netscope-agent {} - - {} {}",
-            pri, self.timestamp, hostname, std::process::id(), sd, self.summary
+            pri,
+            self.timestamp,
+            hostname,
+            std::process::id(),
+            sd,
+            self.summary
         )
     }
 
@@ -335,10 +374,13 @@ impl SiemEvent {
         }
         ext.push(format!("proto={}", self.protocol));
         ext.push(format!("len={}", self.length));
-        
+
         format!(
             "CEF:0|netscope|netscope-agent|2.0|{}|{}|{}|{}",
-            signature_id, name, severity, ext.join(" ")
+            signature_id,
+            name,
+            severity,
+            ext.join(" ")
         )
     }
 
@@ -375,7 +417,7 @@ impl SiemEvent {
         let hostname = std::env::var("COMPUTERNAME")
             .or_else(|_| std::env::var("HOSTNAME"))
             .unwrap_or_else(|_| "localhost".to_string());
-        
+
         let ts = chrono::DateTime::parse_from_rfc3339(&self.timestamp)
             .map(|dt| dt.timestamp_millis() as f64 / 1000.0)
             .unwrap_or_else(|_| chrono::Utc::now().timestamp_millis() as f64 / 1000.0);
@@ -536,7 +578,7 @@ fn ensure_es_setup(url: &str) {
     if ES_SETUP_DONE.load(Ordering::SeqCst) {
         return;
     }
-    
+
     let base_url = if let Some(idx) = url.find("/_bulk") {
         &url[..idx]
     } else if let Some(idx) = url.find("/netscope-packets") {
@@ -569,7 +611,8 @@ fn ensure_es_setup(url: &str) {
             }
         }
     });
-    let _ = agent.put(&ilm_url)
+    let _ = agent
+        .put(&ilm_url)
         .set("Content-Type", "application/json")
         .send_json(ilm_body);
 
@@ -583,7 +626,8 @@ fn ensure_es_setup(url: &str) {
             }
         }
     });
-    let _ = agent.put(&template_url)
+    let _ = agent
+        .put(&template_url)
         .set("Content-Type", "application/json")
         .send_json(template_body);
 
@@ -709,10 +753,7 @@ impl SiemExporter {
     }
 }
 
-fn flush_batch(
-    batch: &[SiemEvent],
-    exporter: &SiemExporter,
-) {
+fn flush_batch(batch: &[SiemEvent], exporter: &SiemExporter) {
     if batch.is_empty() {
         return;
     }
@@ -724,9 +765,17 @@ fn flush_batch(
         let mut bulk_body = String::new();
         for event in batch {
             // Index rotation: netscope-YYYY.MM.DD
-            let date_part = event.timestamp.chars().take(10).collect::<String>().replace("-", ".");
+            let date_part = event
+                .timestamp
+                .chars()
+                .take(10)
+                .collect::<String>()
+                .replace("-", ".");
             let index_name = format!("netscope-{}", date_part);
-            bulk_body.push_str(&format!("{{\"index\":{{\"_index\":\"{}\"}}}}\n", index_name));
+            bulk_body.push_str(&format!(
+                "{{\"index\":{{\"_index\":\"{}\"}}}}\n",
+                index_name
+            ));
             if let Ok(json) = event.to_ndjson() {
                 bulk_body.push_str(&json);
                 bulk_body.push('\n');
@@ -748,11 +797,12 @@ fn flush_batch(
             .unwrap_or_else(|_| "localhost".to_string());
 
         for event in batch {
-            let sourcetype = if event.summary.contains("Alert") || event.summary.contains("malicious") {
-                "netscope:alert"
-            } else {
-                "netscope:packet"
-            };
+            let sourcetype =
+                if event.summary.contains("Alert") || event.summary.contains("malicious") {
+                    "netscope:alert"
+                } else {
+                    "netscope:packet"
+                };
 
             let event_wrapper = serde_json::json!({
                 "host": hostname,
@@ -776,7 +826,7 @@ fn flush_batch(
                 .set("Authorization", &format!("Splunk {}", token))
                 .set("Content-Type", "application/json")
                 .send_string(&splunk_body);
-            
+
             match res {
                 Ok(_) => break,
                 Err(_) => {
@@ -827,9 +877,11 @@ fn flush_batch(
     }
 
     // 5. Azure Sentinel Sink
-    if let (Some(ref url), Some(ref token)) = (&exporter.sentinel_dcr_url, &exporter.sentinel_token) {
+    if let (Some(ref url), Some(ref token)) = (&exporter.sentinel_dcr_url, &exporter.sentinel_token)
+    {
         let agent = ureq::Agent::new();
-        let _ = agent.post(url)
+        let _ = agent
+            .post(url)
             .set("Authorization", &format!("Bearer {}", token))
             .set("Content-Type", "application/json")
             .send_json(serde_json::json!(batch));
@@ -839,9 +891,13 @@ fn flush_batch(
     if let Some(ref spool_dir) = exporter.aws_s3_spool_dir {
         if std::fs::create_dir_all(spool_dir).is_ok() {
             for event in batch {
-                let is_alert = event.summary.contains("Alert") || event.summary.contains("malicious");
+                let is_alert =
+                    event.summary.contains("Alert") || event.summary.contains("malicious");
                 let ocsf = event.to_ocsf(is_alert);
-                let filename = format!("ocsf_{}.json", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+                let filename = format!(
+                    "ocsf_{}.json",
+                    chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+                );
                 let file_path = std::path::Path::new(spool_dir).join(filename);
                 if let Ok(mut f) = std::fs::File::create(file_path) {
                     let _ = f.write_all(ocsf.to_string().as_bytes());
@@ -854,7 +910,8 @@ fn flush_batch(
         for event in batch {
             let is_alert = event.summary.contains("Alert") || event.summary.contains("malicious");
             let ocsf = event.to_ocsf(is_alert);
-            let _ = agent.put(url)
+            let _ = agent
+                .put(url)
                 .set("Content-Type", "application/json")
                 .send_string(&ocsf.to_string());
         }
@@ -865,7 +922,8 @@ fn flush_batch(
         if let Ok(mut file) = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open(file_path) {
+            .open(file_path)
+        {
             for event in batch {
                 if let Ok(json) = event.to_ndjson() {
                     let _ = writeln!(file, "{}", json);
@@ -895,17 +953,22 @@ fn flush_batch(
         let udm_events: Vec<serde_json::Value> = batch.iter().map(|e| e.to_udm()).collect();
         let body = serde_json::json!({ "events": udm_events });
         let target_url = format!("{}?key={}", url, key);
-        let _ = agent.post(&target_url)
+        let _ = agent
+            .post(&target_url)
             .set("Content-Type", "application/json")
             .send_json(body);
     }
 
     // 9. Kafka Sink (Confluent REST Proxy)
     if let (Some(ref url), Some(ref topic)) = (&exporter.kafka_rest_url, &exporter.kafka_topic) {
-        let records = batch.iter().map(|e| serde_json::json!({"value": e})).collect::<Vec<_>>();
+        let records = batch
+            .iter()
+            .map(|e| serde_json::json!({"value": e}))
+            .collect::<Vec<_>>();
         let body = serde_json::json!({ "records": records });
         let agent = ureq::Agent::new();
-        let mut req = agent.post(&format!("{}/topics/{}", url, topic))
+        let mut req = agent
+            .post(&format!("{}/topics/{}", url, topic))
             .set("Content-Type", "application/vnd.kafka.json.v2+json");
         if let Some(ref auth) = exporter.kafka_auth_header {
             req = req.set("Authorization", auth);
@@ -919,8 +982,10 @@ fn flush_batch(
         for event in batch {
             let ts_nanos = chrono::DateTime::parse_from_rfc3339(&event.timestamp)
                 .map(|dt| dt.timestamp_nanos_opt().unwrap_or(0).to_string())
-                .unwrap_or_else(|_| (chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)).to_string());
-            
+                .unwrap_or_else(|_| {
+                    (chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)).to_string()
+                });
+
             if let Ok(line) = event.to_ndjson() {
                 values.push(serde_json::json!([ts_nanos, line]));
             }
@@ -935,7 +1000,8 @@ fn flush_batch(
             }]
         });
         let agent = ureq::Agent::new();
-        let _ = agent.post(url)
+        let _ = agent
+            .post(url)
             .set("Content-Type", "application/json")
             .send_json(body);
     }
@@ -947,8 +1013,8 @@ mod tests {
     use crate::models::Protocol;
     use bytes::Bytes;
     use chrono::Utc;
-    use std::net::TcpListener;
     use std::io::Read;
+    use std::net::TcpListener;
 
     #[test]
     fn test_siem_event_formatting() {
@@ -993,7 +1059,10 @@ mod tests {
 
         // 7. UDM
         let udm = event.to_udm();
-        assert_eq!(udm["metadata"]["event_type"].as_str().unwrap(), "NETWORK_CONNECTION");
+        assert_eq!(
+            udm["metadata"]["event_type"].as_str().unwrap(),
+            "NETWORK_CONNECTION"
+        );
 
         // 8. Severity Mappings (0-10 validation)
         assert_eq!(event.severity_score, 0); // Chat
@@ -1061,7 +1130,7 @@ mod tests {
     fn test_raw_pcap_export() {
         let temp_dir = std::env::temp_dir();
         let path = temp_dir.join("test_export_2.pcapng");
-        
+
         let pkt = Packet {
             timestamp: Utc::now(),
             src_addr: Some("127.0.0.1".parse().unwrap()),

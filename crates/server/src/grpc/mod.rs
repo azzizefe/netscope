@@ -1,15 +1,15 @@
 pub mod proto;
 
-use std::sync::Arc;
 use sqlx::PgPool;
+use std::sync::Arc;
 use tonic::{async_trait, Request, Response, Status, Streaming};
 use uuid::Uuid;
 
 use self::proto::sensor_service_server::{SensorService, SensorServiceServer};
 use self::proto::*;
+use crate::cache::CacheLayer;
 use crate::db::models::{Event, RegisterSensor};
 use crate::db::queries;
-use crate::cache::CacheLayer;
 
 #[derive(Clone)]
 pub struct SensorGrpcService {
@@ -106,10 +106,15 @@ impl SensorService for SensorGrpcService {
         request: Request<Streaming<EventMessage>>,
     ) -> Result<Response<EventSummary>, Status> {
         if let Some(ref cache) = self.cache {
-            let peer_ip = request.remote_addr().map(|a| a.ip().to_string()).unwrap_or_else(|| "unknown".into());
+            let peer_ip = request
+                .remote_addr()
+                .map(|a| a.ip().to_string())
+                .unwrap_or_else(|| "unknown".into());
             let rate_key = format!("rate_limit:grpc:{}", peer_ip);
             if crate::api::events::is_rate_limited(cache, &rate_key, 10, 60).await {
-                return Err(Status::resource_exhausted("Rate limit exceeded for gRPC event stream connections"));
+                return Err(Status::resource_exhausted(
+                    "Rate limit exceeded for gRPC event stream connections",
+                ));
             }
         }
 
@@ -153,18 +158,23 @@ impl SensorService for SensorGrpcService {
                 timestamp: chrono::Utc::now(),
             };
 
-            match queries::insert_event(&self.pool, &db_event).await {
-                Ok(inserted_ev) => {
-                    count += 1;
-                    if let Ok(rules) = queries::list_rules(&self.pool).await {
-                        for rule in rules {
-                            if rule.enabled && crate::api::events::event_matches_rule(&inserted_ev, &rule) {
-                                crate::api::events::evaluate_alert_dedup(&self.pool, self.cache.as_deref(), &inserted_ev, &rule).await;
-                            }
+            if let Ok(inserted_ev) = queries::insert_event(&self.pool, &db_event).await {
+                count += 1;
+                if let Ok(rules) = queries::list_rules(&self.pool).await {
+                    for rule in rules {
+                        if rule.enabled
+                            && crate::api::events::event_matches_rule(&inserted_ev, &rule)
+                        {
+                            crate::api::events::evaluate_alert_dedup(
+                                &self.pool,
+                                self.cache.as_deref(),
+                                &inserted_ev,
+                                &rule,
+                            )
+                            .await;
                         }
                     }
                 }
-                Err(_) => {}
             }
         }
 

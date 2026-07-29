@@ -206,7 +206,7 @@ pub struct DashboardSummary {
     pub top_talkers: Vec<TopTalker>,
     pub top_threats: Vec<TopThreat>,
     pub alerts_by_severity: Vec<CountBySeverity>,
-    
+
     // New Metrics
     pub total_events_24h: i64,
     pub open_alerts_l1: i64,
@@ -282,4 +282,3 @@ pub struct SensorConfigHistory {
     pub created_at: DateTime<Utc>,
     pub created_by: Option<Uuid>,
 }
-

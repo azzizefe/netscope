@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, State, Extension};
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{Extension, Path, State};
 use axum::http::StatusCode;
 use axum::middleware::from_fn;
 use axum::response::IntoResponse;
@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::ws::SensorWsRegistry;
 use crate::api::sensors_config::validate_and_canonicalize;
+use crate::ws::SensorWsRegistry;
 
 use crate::api::ApiState;
 use crate::auth::require;
@@ -130,10 +130,7 @@ pub fn routes(state: Arc<ApiState>) -> Router {
             "/{id}/config/rollback",
             post(rollback_sensor_config_route).route_layer(write()),
         )
-        .route(
-            "/{id}/ws",
-            get(sensor_ws_handler),
-        )
+        .route("/{id}/ws", get(sensor_ws_handler))
         .with_state(state)
 }
 
@@ -374,8 +371,16 @@ async fn get_sensor_config_route(
 ) -> impl IntoResponse {
     match queries::get_sensor_config(&state.pool, id).await {
         Ok(Some(cfg)) => (StatusCode::OK, Json(cfg)).into_response(),
-        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "No config found for this sensor"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "No config found for this sensor"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -396,21 +401,44 @@ async fn update_sensor_config_route(
         Err(e) => return (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     };
 
-    let config = match queries::update_sensor_config(&state.pool, id, &canonicalized_toml, Some(claims.sub)).await {
-        Ok(cfg) => cfg,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
-    };
+    let config =
+        match queries::update_sensor_config(&state.pool, id, &canonicalized_toml, Some(claims.sub))
+            .await
+        {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": e.to_string()})),
+                )
+                    .into_response()
+            }
+        };
 
     let details = json!({
         "version": config.version,
         "config_len": config.config_data.len()
     });
-    if let Err(e) = queries::insert_audit_log(&state.pool, Some(claims.sub), "config_update", "sensor_config", Some(id), details).await {
+    if let Err(e) = queries::insert_audit_log(
+        &state.pool,
+        Some(claims.sub),
+        "config_update",
+        "sensor_config",
+        Some(id),
+        details,
+    )
+    .await
+    {
         tracing::error!("Failed to write to audit log: {}", e);
     }
 
     let pushed = ws_registry.push_config(id, &config.config_data);
-    tracing::info!("Pushed config to sensor {} (version {}): success={}", id, config.version, pushed);
+    tracing::info!(
+        "Pushed config to sensor {} (version {}): success={}",
+        id,
+        config.version,
+        pushed
+    );
 
     (StatusCode::OK, Json(config)).into_response()
 }
@@ -421,7 +449,11 @@ async fn get_sensor_config_history_route(
 ) -> impl IntoResponse {
     match queries::get_sensor_config_history(&state.pool, id).await {
         Ok(history) => (StatusCode::OK, Json(history)).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -437,27 +469,67 @@ async fn rollback_sensor_config_route(
     Path(id): Path<Uuid>,
     Json(payload): Json<RollbackPayload>,
 ) -> impl IntoResponse {
-    let historical = match queries::get_sensor_config_version(&state.pool, id, payload.version).await {
-        Ok(Some(h)) => h,
-        Ok(None) => return (StatusCode::NOT_FOUND, Json(json!({"error": "Config version not found"}))).into_response(),
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
-    };
+    let historical =
+        match queries::get_sensor_config_version(&state.pool, id, payload.version).await {
+            Ok(Some(h)) => h,
+            Ok(None) => {
+                return (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({"error": "Config version not found"})),
+                )
+                    .into_response()
+            }
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": e.to_string()})),
+                )
+                    .into_response()
+            }
+        };
 
-    let config = match queries::update_sensor_config(&state.pool, id, &historical.config_data, Some(claims.sub)).await {
+    let config = match queries::update_sensor_config(
+        &state.pool,
+        id,
+        &historical.config_data,
+        Some(claims.sub),
+    )
+    .await
+    {
         Ok(cfg) => cfg,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     let details = json!({
         "rolled_back_to_version": historical.version,
         "new_version": config.version
     });
-    if let Err(e) = queries::insert_audit_log(&state.pool, Some(claims.sub), "config_rollback", "sensor_config", Some(id), details).await {
+    if let Err(e) = queries::insert_audit_log(
+        &state.pool,
+        Some(claims.sub),
+        "config_rollback",
+        "sensor_config",
+        Some(id),
+        details,
+    )
+    .await
+    {
         tracing::error!("Failed to write to audit log: {}", e);
     }
 
     let pushed = ws_registry.push_config(id, &config.config_data);
-    tracing::info!("Pushed rolled-back config to sensor {} (version {}): success={}", id, config.version, pushed);
+    tracing::info!(
+        "Pushed rolled-back config to sensor {} (version {}): success={}",
+        id,
+        config.version,
+        pushed
+    );
 
     (StatusCode::OK, Json(config)).into_response()
 }

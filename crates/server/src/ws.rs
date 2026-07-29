@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use crate::db::models::Event;
 use axum::extract::ws::{Message, WebSocket};
+use dashmap::DashMap;
 use parking_lot::RwLock;
 use tokio::sync::broadcast;
-use uuid::Uuid;
-use dashmap::DashMap;
 use tokio::sync::mpsc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct SensorWsRegistry {

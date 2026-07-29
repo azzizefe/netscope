@@ -12,9 +12,9 @@
 // `remote` and `discover` were left ungated while depending on `capture`,
 // `db`, `pipeline` and `pcap`, which are correctly gated.
 pub mod ai_traffic;
+// Gated because it exports alerts through `siem`, which is itself gated.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod alerting;
-pub mod escalation;
-pub mod notifications;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
@@ -29,6 +29,11 @@ pub mod dissectors;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
+// `escalation` and `notifications` both reach the network through `ureq`, a
+// blocking HTTP client that is not built for wasm32 and is declared only for
+// the other targets.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod escalation;
 pub mod expert;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod export;
@@ -45,6 +50,8 @@ pub mod industrial_edge;
 pub mod llm_analytics;
 pub mod models;
 pub mod names;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod notifications;
 pub mod opc_ua_traffic;
 pub mod pair_correlation;
 #[cfg(not(target_arch = "wasm32"))]
@@ -69,3 +76,4 @@ pub mod stats;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stream;
 pub mod threat;
+pub mod tls_keylog;

@@ -730,6 +730,32 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .call-bar { height: 3px; background: color-mix(in srgb, var(--border) 50%, transparent); border-radius: 2px; margin-top: 3px; }
 .call-bar span { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
 
+/* TLS key log panel. */
+.keylog-panel { display: flex; gap: 12px; align-items: stretch; margin: 10px 0 14px; }
+.keylog-drop {
+  flex: 1;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.keylog-drop:hover, .keylog-drop:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+/* The drop target has to change under the cursor, or a drag that is over the
+   right place looks identical to one that is not. */
+.keylog-over {
+  border-color: var(--accent);
+  border-style: solid;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.keylog-title { font-weight: 600; font-size: 13px; }
+.keylog-hint { font-size: 11px; opacity: 0.6; margin-top: 3px; }
+.keylog-side { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 210px; }
+.keylog-status { font-size: 11px; opacity: 0.8; }
+
 /* Leak detector. Severity shows as a left edge rather than a background wash,
    so a long list stays readable and the worst rows still stand out. */
 .leak {
@@ -799,8 +825,8 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
    problem from an email address appearing in a query string. */
 .leak-r0, .leak-r1, .leak-r2 { border-left-color: #dc2626; }
 .leak-r3, .leak-r4 { border-left-color: #ea580c; }
-.leak-r5, .leak-r6 { border-left-color: #ca8a04; }
-.leak-r7, .leak-r8 { border-left-color: #0284c7; }
+.leak-r5, .leak-r6, .leak-r7 { border-left-color: #ca8a04; }
+.leak-r8, .leak-r9 { border-left-color: #0284c7; }
 
 /* Trace waterfall. Each bar is positioned against its own trace's span, so a
    row reads as "when in this request, and for how long" — an absolute scale

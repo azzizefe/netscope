@@ -159,6 +159,54 @@ fn get_protocol_risk(protocol: String) -> Option<RiskInfo> {
     })
 }
 
+#[derive(Serialize, Clone)]
+struct KeyLogStatus {
+    /// Connections the loaded secrets can decrypt.
+    sessions: usize,
+    /// Secret lines accepted by this load.
+    added: usize,
+    /// Lines that were neither comments nor parseable.
+    rejected: usize,
+}
+
+/// Load `SSLKEYLOGFILE` contents so TLS sessions can be decrypted.
+///
+/// The text is passed in rather than a path: the UI accepts a drag-and-drop,
+/// and the browser hands over file *contents*. It also keeps this command from
+/// being a way to make the app read an arbitrary file off disk.
+///
+/// Loads merge — see `tls_keylog::KeyLog::merge_from` for why.
+#[tauri::command]
+fn tls_keylog_load(text: String) -> KeyLogStatus {
+    let stats = netscope_core::tls_keylog::load(&text);
+    KeyLogStatus {
+        sessions: netscope_core::tls_keylog::session_count(),
+        added: stats.secrets,
+        rejected: stats.rejected,
+    }
+}
+
+/// Forget every loaded secret. These decrypt real traffic, so being able to
+/// drop them without restarting the app is part of handling them responsibly.
+#[tauri::command]
+fn tls_keylog_clear() -> KeyLogStatus {
+    netscope_core::tls_keylog::clear();
+    KeyLogStatus {
+        sessions: 0,
+        added: 0,
+        rejected: 0,
+    }
+}
+
+#[tauri::command]
+fn tls_keylog_status() -> KeyLogStatus {
+    KeyLogStatus {
+        sessions: netscope_core::tls_keylog::session_count(),
+        added: 0,
+        rejected: 0,
+    }
+}
+
 #[tauri::command]
 fn get_glossary() -> Vec<TermInfo> {
     netscope_core::education::glossary()
@@ -702,20 +750,23 @@ fn adopt_capture(
         loop {
             match packet_rx.recv_timeout(std::time::Duration::from_millis(50)) {
                 Ok(pkt) => {
-                    let (info, alerts) = if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
-                        g.names.observe(&pkt);
-                        let info = packet_to_info(&pkt, &g.names);
-                        let alerts = g.alert_engine.as_mut()
-                            .map(|ae| ae.check_packet(&pkt, None))
-                            .unwrap_or_default();
-                        g.packet_buffer.push(pkt);
-                        if g.packet_buffer.len() > 100_000 {
-                            g.packet_buffer.drain(..50_000);
-                        }
-                        (info, alerts)
-                    } else {
-                        (packet_to_info(&pkt, &NameCache::new()), vec![])
-                    };
+                    let (info, alerts) =
+                        if let Ok(mut g) = app_handle.state::<Mutex<CaptureState>>().lock() {
+                            g.names.observe(&pkt);
+                            let info = packet_to_info(&pkt, &g.names);
+                            let alerts = g
+                                .alert_engine
+                                .as_mut()
+                                .map(|ae| ae.check_packet(&pkt, None))
+                                .unwrap_or_default();
+                            g.packet_buffer.push(pkt);
+                            if g.packet_buffer.len() > 100_000 {
+                                g.packet_buffer.drain(..50_000);
+                            }
+                            (info, alerts)
+                        } else {
+                            (packet_to_info(&pkt, &NameCache::new()), vec![])
+                        };
                     let _ = app_handle.emit("packet", info);
                     for a in alerts {
                         let _ = app_handle.emit("alert", alert_to_info(&a));
@@ -1272,6 +1323,9 @@ pub fn run() {
             save_pcap_encrypted,
             get_lessons,
             get_protocol_risk,
+            tls_keylog_load,
+            tls_keylog_clear,
+            tls_keylog_status,
             get_glossary,
             is_elevated,
             protocol_count,
@@ -1298,7 +1352,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{protocol_table, replay_packet, protocol_count, get_glossary, get_protocol_risk};
+    use super::{get_glossary, get_protocol_risk, protocol_count, protocol_table, replay_packet};
     use std::io::{Read, Write};
     use std::net::TcpListener;
 

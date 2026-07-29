@@ -13,13 +13,8 @@ fn fixtures() -> &'static Path {
 fn run_pcap(path: &Path) -> Vec<Packet> {
     let mut eng = CaptureEngine::new();
     let (tx, rx) = crossbeam_channel::unbounded();
-    eng.start_offline(
-        path.to_str().unwrap(),
-        None,
-        None,
-        tx,
-    )
-    .expect("start_offline should succeed");
+    eng.start_offline(path.to_str().unwrap(), None, None, tx)
+        .expect("start_offline should succeed");
     let packets: Vec<Packet> = rx.iter().collect();
     eng.stop();
     packets
@@ -53,7 +48,11 @@ fn run_pcap_with_limit(path: &Path, n: u64) -> Vec<Packet> {
 #[test]
 fn pcap_http_request() {
     let packets = run_pcap(&fixtures().join("http_request.pcap"));
-    assert_eq!(packets.len(), 1, "http_request.pcap should contain 1 packet");
+    assert_eq!(
+        packets.len(),
+        1,
+        "http_request.pcap should contain 1 packet"
+    );
     assert_eq!(packets[0].protocol, Protocol::Http);
     assert!(packets[0].summary.contains("GET") || packets[0].summary.contains("HTTP"));
     assert_eq!(packets[0].src_port, Some(12345));
@@ -63,7 +62,11 @@ fn pcap_http_request() {
 #[test]
 fn pcap_http_response() {
     let packets = run_pcap(&fixtures().join("http_response.pcap"));
-    assert_eq!(packets.len(), 1, "http_response.pcap should contain 1 packet");
+    assert_eq!(
+        packets.len(),
+        1,
+        "http_response.pcap should contain 1 packet"
+    );
     assert_eq!(packets[0].protocol, Protocol::Http);
     assert!(
         packets[0].summary.contains("200") || packets[0].summary.contains("OK"),
@@ -87,7 +90,11 @@ fn pcap_dns_query() {
 #[test]
 fn pcap_dns_response() {
     let packets = run_pcap(&fixtures().join("dns_response.pcap"));
-    assert_eq!(packets.len(), 1, "dns_response.pcap should contain 1 packet");
+    assert_eq!(
+        packets.len(),
+        1,
+        "dns_response.pcap should contain 1 packet"
+    );
     assert_eq!(packets[0].protocol, Protocol::Dns);
     let s = packets[0].summary.to_lowercase();
     assert!(
@@ -265,8 +272,8 @@ fn empty_pcap_produces_no_packets() {
     let mut eng = CaptureEngine::new();
     let (tx, rx) = crossbeam_channel::unbounded();
     let header = vec![
-        0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0xff, 0xff, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
     ];
     eng.start_read_stream(
         Box::new(std::io::Cursor::new(header)),
@@ -296,7 +303,11 @@ fn consecutive_reads_produce_same_results() {
     let path = fixtures().join("mixed.pcap");
     let a = run_pcap(&path);
     let b = run_pcap(&path);
-    assert_eq!(a.len(), b.len(), "consecutive reads should yield same count");
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "consecutive reads should yield same count"
+    );
     for (i, (pa, pb)) in a.iter().zip(b.iter()).enumerate() {
         assert_eq!(pa.protocol, pb.protocol, "packet {i} protocol mismatch");
         assert_eq!(pa.length, pb.length, "packet {i} length mismatch");

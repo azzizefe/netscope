@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use std::collections::HashMap;
 use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EscalationLevel {
-    L1,    // SOC Analyst
-    L2,    // Senior Analyst
-    L3,    // IR Lead
-    Ciso,  // CISO
+    L1,   // SOC Analyst
+    L2,   // Senior Analyst
+    L3,   // IR Lead
+    Ciso, // CISO
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -177,7 +177,12 @@ impl EscalationEngine {
 
                         // Invoke third-party APIs (2.3.3)
                         if let Some(on_call_user) = on_call.map(|o| &o.primary_user) {
-                            invoke_on_call_api(on_call_user, &next_step.level, &esc.alert_msg, &next_step.notify_channel);
+                            invoke_on_call_api(
+                                on_call_user,
+                                &next_step.level,
+                                &esc.alert_msg,
+                                &next_step.notify_channel,
+                            );
                         }
                     }
                 }
@@ -206,7 +211,8 @@ fn invoke_on_call_api(user: &OnCallUser, level: &EscalationLevel, alert_msg: &st
                         "severity": "critical"
                     }
                 });
-                let _ = client.post("https://events.pagerduty.com/v2/enqueue")
+                let _ = client
+                    .post("https://events.pagerduty.com/v2/enqueue")
                     .send_json(body);
             }
         }
@@ -217,7 +223,8 @@ fn invoke_on_call_api(user: &OnCallUser, level: &EscalationLevel, alert_msg: &st
                     "description": "Escalated from Netscope agent",
                     "priority": "P1"
                 });
-                let _ = client.post("https://api.opsgenie.com/v2/alerts")
+                let _ = client
+                    .post("https://api.opsgenie.com/v2/alerts")
                     .set("Authorization", &format!("GenieKey {}", key))
                     .send_json(body);
             }
@@ -229,7 +236,10 @@ fn invoke_on_call_api(user: &OnCallUser, level: &EscalationLevel, alert_msg: &st
                     "entity_id": "netscope-alert",
                     "state_message": format!("[{:?}] {}", level, alert_msg)
                 });
-                let url = format!("https://alert.victorops.com/integrations/generic/20131114/alert/{}", key);
+                let url = format!(
+                    "https://alert.victorops.com/integrations/generic/20131114/alert/{}",
+                    key
+                );
                 let _ = client.post(&url).send_json(body);
             }
         }
@@ -258,30 +268,40 @@ mod tests {
         };
 
         let mut shifts = HashMap::new();
-        shifts.insert(1, ShiftRotation {
-            week_number: 1,
-            primary_user: primary.clone(),
-            backup_user: backup.clone(),
-        });
+        shifts.insert(
+            1,
+            ShiftRotation {
+                week_number: 1,
+                primary_user: primary.clone(),
+                backup_user: backup.clone(),
+            },
+        );
 
         let mut engine = EscalationEngine::new(shifts);
 
         let start_time = Utc.with_ymd_and_hms(2026, 1, 5, 12, 0, 0).unwrap();
         let week = start_time.iso_week().week();
-        
-        engine.shift_rotations.insert(week, ShiftRotation {
-            week_number: week,
-            primary_user: primary.clone(),
-            backup_user: backup.clone(),
-        });
+
+        engine.shift_rotations.insert(
+            week,
+            ShiftRotation {
+                week_number: week,
+                primary_user: primary.clone(),
+                backup_user: backup.clone(),
+            },
+        );
 
         // Trigger alert
-        engine.trigger_alert_escalation("alert-123".to_string(), "Port scan detection".to_string(), "Threshold exceeded: 50 SYN packets".to_string());
+        engine.trigger_alert_escalation(
+            "alert-123".to_string(),
+            "Port scan detection".to_string(),
+            "Threshold exceeded: 50 SYN packets".to_string(),
+        );
         if let Some(esc) = engine.active_escalations.get_mut("alert-123") {
             esc.start_time = start_time;
             esc.last_escalated = start_time;
         }
-        
+
         assert_eq!(engine.active_escalations.len(), 1);
         assert_eq!(engine.active_escalations["alert-123"].status, "Escalating");
 

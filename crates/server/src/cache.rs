@@ -46,10 +46,7 @@ impl CacheLayer {
 
     pub async fn incr(&self, key: &str) -> Result<i64> {
         let mut con = self.con.clone();
-        let val: i64 = redis::cmd("INCR")
-            .arg(key)
-            .query_async(&mut con)
-            .await?;
+        let val: i64 = redis::cmd("INCR").arg(key).query_async(&mut con).await?;
         Ok(val)
     }
 

@@ -171,16 +171,16 @@ mod tests {
     #[test]
     fn icmpv6_mld_query() {
         let result = dissect_icmp(None, None, &[130, 0], true);
-        assert_eq!(result.summary, "MLD query (who is listening to this group?)");
+        assert_eq!(
+            result.summary,
+            "MLD query (who is listening to this group?)"
+        );
     }
 
     #[test]
     fn icmpv6_mld_report() {
         let result = dissect_icmp(None, None, &[131, 0], true);
-        assert_eq!(
-            result.summary,
-            "MLD report (I am listening to this group)"
-        );
+        assert_eq!(result.summary, "MLD report (I am listening to this group)");
     }
 
     #[test]
@@ -192,10 +192,7 @@ mod tests {
     #[test]
     fn icmpv6_mldv2_report() {
         let result = dissect_icmp(None, None, &[143, 0], true);
-        assert_eq!(
-            result.summary,
-            "MLDv2 report (multicast group membership)"
-        );
+        assert_eq!(result.summary, "MLDv2 report (multicast group membership)");
     }
 
     #[test]

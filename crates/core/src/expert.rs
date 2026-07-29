@@ -57,8 +57,8 @@ pub fn classify(pkt: &Packet) -> ExpertSeverity {
 mod tests {
     use super::*;
     use crate::models::Protocol;
-    use chrono::Utc;
     use bytes::Bytes;
+    use chrono::Utc;
 
     fn pkt(summary: &str) -> Packet {
         Packet {
@@ -90,9 +90,15 @@ mod tests {
 
     #[test]
     fn warning_keywords() {
-        assert_eq!(classify(&pkt("[TCP Retransmission]")), ExpertSeverity::Warning);
+        assert_eq!(
+            classify(&pkt("[TCP Retransmission]")),
+            ExpertSeverity::Warning
+        );
         assert_eq!(classify(&pkt("[TCP Dup ACK 42]")), ExpertSeverity::Warning);
-        assert_eq!(classify(&pkt("[TCP Out-of-Order]")), ExpertSeverity::Warning);
+        assert_eq!(
+            classify(&pkt("[TCP Out-of-Order]")),
+            ExpertSeverity::Warning
+        );
         assert_eq!(classify(&pkt("SERVFAIL")), ExpertSeverity::Warning);
         assert_eq!(classify(&pkt("NXDOMAIN")), ExpertSeverity::Warning);
     }

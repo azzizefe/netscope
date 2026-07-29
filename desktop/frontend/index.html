@@ -500,6 +500,16 @@
           <button id="leak-reveal" class="btn btn-small" data-i18n="privacy.reveal">👁 Reveal values</button>
         </div>
         <div id="privacy-cost"></div>
+          <div id="keylog-panel" class="keylog-panel">
+            <div class="keylog-drop" id="keylog-drop" tabindex="0" role="button">
+              <div class="keylog-title" data-i18n="keylog.title">🔑 TLS key log</div>
+              <div class="keylog-hint" data-i18n="keylog.hint">Drop an SSLKEYLOGFILE here to decrypt HTTPS captured with it.</div>
+            </div>
+            <div class="keylog-side">
+              <div id="keylog-status" class="keylog-status"></div>
+              <button id="keylog-clear" class="btn btn-small" data-i18n="keylog.clear">Forget keys</button>
+            </div>
+          </div>
           <h2 class="learn-h2" data-i18n="privacy.leaks">Leak detector — sensitive values in the clear</h2>
           <div id="leak-summary" class="insights-summary"></div>
           <div id="leak-list"></div>

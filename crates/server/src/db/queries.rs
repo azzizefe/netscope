@@ -1,7 +1,7 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 use super::models::*;
 
@@ -475,7 +475,7 @@ pub async fn dashboard_summary(pool: &PgPool) -> Result<DashboardSummary> {
     let now_utc = Utc::now();
     for (t,) in alert_times {
         let diff = now_utc.signed_duration_since(t).num_minutes();
-        if diff >= 0 && diff < 60 {
+        if (0..60).contains(&diff) {
             let bin = (diff / 5) as usize;
             if bin < 12 {
                 alert_trend_1h[11 - bin] += 1;
@@ -579,12 +579,11 @@ pub async fn update_sensor_config(
 ) -> Result<SensorConfig> {
     let mut tx = pool.begin().await?;
 
-    let current_version: Option<(i32,)> = sqlx::query_as(
-        "SELECT version FROM sensor_configs WHERE sensor_id = $1"
-    )
-    .bind(sensor_id)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let current_version: Option<(i32,)> =
+        sqlx::query_as("SELECT version FROM sensor_configs WHERE sensor_id = $1")
+            .bind(sensor_id)
+            .fetch_optional(&mut *tx)
+            .await?;
 
     let next_version = current_version.map(|v| v.0 + 1).unwrap_or(1);
 
@@ -596,7 +595,7 @@ pub async fn update_sensor_config(
              version = EXCLUDED.version,
              updated_at = now(),
              updated_by = EXCLUDED.updated_by
-         RETURNING sensor_id, config_data, version, updated_at, updated_by"
+         RETURNING sensor_id, config_data, version, updated_at, updated_by",
     )
     .bind(sensor_id)
     .bind(config_data)
@@ -620,7 +619,10 @@ pub async fn update_sensor_config(
     Ok(config)
 }
 
-pub async fn get_sensor_config_history(pool: &PgPool, sensor_id: Uuid) -> Result<Vec<SensorConfigHistory>> {
+pub async fn get_sensor_config_history(
+    pool: &PgPool,
+    sensor_id: Uuid,
+) -> Result<Vec<SensorConfigHistory>> {
     Ok(sqlx::query_as::<_, SensorConfigHistory>(
         "SELECT id, sensor_id, config_data, version, created_at, created_by
          FROM sensor_config_history WHERE sensor_id = $1 ORDER BY version DESC",
@@ -667,20 +669,42 @@ pub async fn insert_audit_log(
     Ok(())
 }
 
-pub async fn insert_alert(
-    pool: &PgPool,
-    rule_id: Option<Uuid>,
-    sensor_id: Option<Uuid>,
-    event_id: Option<Uuid>,
-    severity: &str,
-    title: &str,
-    description: Option<&str>,
-    source_ip: Option<&str>,
-    dest_ip: Option<&str>,
-    raw_data: Option<&serde_json::Value>,
-) -> Result<Alert> {
+/// The columns of an alert that the caller supplies.
+///
+/// Grouped rather than passed as ten positional arguments: five of them are
+/// `Option`s of two types, so a pair swapped at a call site would still
+/// compile and would quietly file alerts against the wrong sensor.
+pub struct NewAlert<'a> {
+    pub rule_id: Option<Uuid>,
+    pub sensor_id: Option<Uuid>,
+    pub event_id: Option<Uuid>,
+    pub severity: &'a str,
+    pub title: &'a str,
+    pub description: Option<&'a str>,
+    pub source_ip: Option<&'a str>,
+    pub dest_ip: Option<&'a str>,
+    pub raw_data: Option<&'a serde_json::Value>,
+}
+
+pub async fn insert_alert(pool: &PgPool, alert: NewAlert<'_>) -> Result<Alert> {
+    let NewAlert {
+        rule_id,
+        sensor_id,
+        event_id,
+        severity,
+        title,
+        description,
+        source_ip,
+        dest_ip,
+        raw_data,
+    } = alert;
     Ok(sqlx::query_as::<_, Alert>(
-        "INSERT INTO alerts (rule_id, sensor_id, event_id, status, severity, title, description, source_ip::inet, dest_ip::inet, raw_data)
+        // The column list carries names only. It used to read
+        // `source_ip::inet, dest_ip::inet` here, which Postgres rejects as a
+        // syntax error — a cast is not a column name. The casts belong in the
+        // VALUES clause, where they already were, and where the neighbouring
+        // `events` and `sensors` inserts put theirs.
+        "INSERT INTO alerts (rule_id, sensor_id, event_id, status, severity, title, description, source_ip, dest_ip, raw_data)
          VALUES ($1, $2, $3, 'open', $4, $5, $6, $7::inet, $8::inet, $9::jsonb)
          RETURNING id, rule_id, sensor_id, event_id, status, severity, title, description,
                    source_ip::inet, dest_ip::inet, raw_data,
@@ -699,4 +723,3 @@ pub async fn insert_alert(
     .fetch_one(pool)
     .await?)
 }
-

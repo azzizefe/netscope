@@ -172,7 +172,13 @@ async fn ingest_events_batch(
                 if let Ok(rules) = queries::list_rules(&state.pool).await {
                     for rule in rules {
                         if rule.enabled && event_matches_rule(&inserted_ev, &rule) {
-                            evaluate_alert_dedup(&state.pool, state.cache.as_deref(), &inserted_ev, &rule).await;
+                            evaluate_alert_dedup(
+                                &state.pool,
+                                state.cache.as_deref(),
+                                &inserted_ev,
+                                &rule,
+                            )
+                            .await;
                         }
                     }
                 }
@@ -233,7 +239,7 @@ pub fn event_matches_rule(event: &Event, rule: &crate::db::models::AlertRule) ->
         }
     }
     if let Some(proto) = cond.get("protocol").and_then(|v| v.as_str()) {
-        if event.protocol.as_ref().map(|s| s.as_str()) != Some(proto) {
+        if event.protocol.as_deref() != Some(proto) {
             return false;
         }
     }
@@ -252,13 +258,24 @@ pub async fn evaluate_alert_dedup(
     rule: &crate::db::models::AlertRule,
 ) {
     if let Some(cache_layer) = cache {
-        let dedup_key = format!("alert:dedup:{}:{}", rule.id, event.sensor_id.unwrap_or_default());
-        match cache_layer.set_nx_ttl(&dedup_key, "1", rule.cooldown_secs as u64).await {
+        let dedup_key = format!(
+            "alert:dedup:{}:{}",
+            rule.id,
+            event.sensor_id.unwrap_or_default()
+        );
+        match cache_layer
+            .set_nx_ttl(&dedup_key, "1", rule.cooldown_secs as u64)
+            .await
+        {
             Ok(true) => {
                 create_alert_and_log(pool, event, rule).await;
             }
             Ok(false) => {
-                tracing::debug!("Deduplicated alert for rule {} sensor {:?}", rule.id, event.sensor_id);
+                tracing::debug!(
+                    "Deduplicated alert for rule {} sensor {:?}",
+                    rule.id,
+                    event.sensor_id
+                );
             }
             Err(e) => {
                 tracing::error!("Redis alert dedup check failed: {}", e);
@@ -275,17 +292,20 @@ async fn create_alert_and_log(
     event: &Event,
     rule: &crate::db::models::AlertRule,
 ) {
+    let title = format!("Alert triggered: {}", rule.name);
     match queries::insert_alert(
         pool,
-        Some(rule.id),
-        event.sensor_id,
-        Some(event.id),
-        &rule.severity,
-        &format!("Alert triggered: {}", rule.name),
-        rule.description.as_deref(),
-        event.source_ip.as_deref(),
-        event.dest_ip.as_deref(),
-        event.raw_data.as_ref(),
+        queries::NewAlert {
+            rule_id: Some(rule.id),
+            sensor_id: event.sensor_id,
+            event_id: Some(event.id),
+            severity: &rule.severity,
+            title: &title,
+            description: rule.description.as_deref(),
+            source_ip: event.source_ip.as_deref(),
+            dest_ip: event.dest_ip.as_deref(),
+            raw_data: event.raw_data.as_ref(),
+        },
     )
     .await
     {
@@ -363,8 +383,9 @@ mod tests {
         let redis_url = "redis://127.0.0.1:6379";
         let cache_result = tokio::time::timeout(
             std::time::Duration::from_millis(200),
-            crate::cache::CacheLayer::new(redis_url)
-        ).await;
+            crate::cache::CacheLayer::new(redis_url),
+        )
+        .await;
 
         let cache = match cache_result {
             Ok(Ok(c)) => c,

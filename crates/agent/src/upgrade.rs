@@ -52,7 +52,8 @@ pub async fn upgrade_loop(state: AgentState) {
             break;
         }
 
-        let interval = std::time::Duration::from_secs(state.config.read().upgrade.check_interval_secs);
+        let interval =
+            std::time::Duration::from_secs(state.config.read().upgrade.check_interval_secs);
         tokio::time::sleep(interval).await;
 
         match check_upgrade(&state).await {
