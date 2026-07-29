@@ -44,8 +44,34 @@ pub fn dissect_dnp3(
     } else {
         secondary_function(func)
     };
+    let app_info = if payload.len() >= 13 {
+        let app_fn = payload[12];
+        format!(" ({})", app_function(app_fn))
+    } else {
+        String::new()
+    };
 
-    result(format!("DNP3 {func_name} — {src} → {dest}"))
+    result(format!("DNP3 {func_name}{app_info} — {src} → {dest}"))
+}
+
+fn app_function(f: u8) -> &'static str {
+    match f {
+        0x00 => "Confirm",
+        0x01 => "Read",
+        0x02 => "Write",
+        0x03 => "Select",
+        0x04 => "Operate",
+        0x05 => "Direct Operate",
+        0x06 => "Direct Operate No Ack",
+        0x07 => "Immediate Freeze",
+        0x0D => "Cold Restart",
+        0x0E => "Warm Restart",
+        0x14 => "Enable Unsolicited",
+        0x15 => "Disable Unsolicited",
+        0x81 => "Response",
+        0x82 => "Unsolicited Response",
+        _ => "App Command",
+    }
 }
 
 /// Sync-byte signature, used to accept DNP3 on relocated ports.

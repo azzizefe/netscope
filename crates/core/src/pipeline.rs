@@ -47,21 +47,6 @@ const PARALLEL_THRESHOLD: usize = 32;
 
 use bytes::Bytes;
 
-use crate::dissectors;
-use crate::llm_analytics;
-use crate::models::Packet;
-
-/// Default ring size. 64k frames ≈ a full second of 10GbE minimum-size burst
-/// headroom, at ~48 bytes of queue overhead per slot.
-pub const DEFAULT_RING_CAPACITY: usize = 65_536;
-
-/// Frames drained per dissector pass.
-const BATCH: usize = 512;
-
-/// Below this many frames a batch is parsed inline — rayon's fork/join
-/// overhead only pays off once there is real work to split.
-const PARALLEL_THRESHOLD: usize = 32;
-
 /// A captured-but-not-yet-dissected frame, as cheap as the capture thread can
 /// make it: timestamp fields plus the raw bytes (§5.2.3 zero-copy pipeline).
 #[derive(Debug, Clone)]

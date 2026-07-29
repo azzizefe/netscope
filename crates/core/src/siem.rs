@@ -89,6 +89,12 @@ fn map_threat_intel_mitre_and_killchain(
             Some("T1071 - Application Layer Protocol".to_string()),
             Some("Command and Control".to_string()),
         )
+    } else if s.contains("pqc") || s.contains("quantum") || s.contains("classical-only") {
+        (
+            Some("Defense Evasion".to_string()),
+            Some("T1573 - Encrypted Channel / Post-Quantum Warning".to_string()),
+            Some("Command and Control".to_string()),
+        )
     } else {
         (None, None, None)
     }

@@ -27,6 +27,21 @@ pub struct NotificationEngine {
     pub last_email_sent: Mutex<Option<Instant>>,
 }
 
+/// This machine's name for the RFC 5424 HOSTNAME field, or `"-"` (NILVALUE).
+///
+/// Reads the environment rather than taking a dependency: `COMPUTERNAME` on
+/// Windows, `HOSTNAME` elsewhere. A shell does not always export `HOSTNAME`, so
+/// the NILVALUE fallback is a real path, not a formality — and it is still
+/// better than naming a machine wrongly.
+fn local_hostname() -> String {
+    std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .ok()
+        .map(|h| h.trim().to_string())
+        .filter(|h| !h.is_empty() && !h.contains(' '))
+        .unwrap_or_else(|| "-".to_string())
+}
+
 impl NotificationEngine {
     pub fn new(config: NotificationConfig) -> Self {
         NotificationEngine {
@@ -138,6 +153,104 @@ impl NotificationEngine {
         Ok(())
     }
 
+    // ---- On-call paging ---------------------------------------------------
+    //
+    // These three moved here from `escalation::invoke_on_call_api`, which
+    // discarded every result with `let _ =`. `ureq` reports a non-2xx as
+    // `Err(Error::Status(code, _))`, so `?` on `send_json` is what turns a
+    // rejected page back into a failure the caller can show.
+
+    /// PagerDuty Events API v2.
+    pub fn send_pagerduty(&self, routing_key: &str, summary: &str) -> Result<(), String> {
+        let body = serde_json::json!({
+            "routing_key": routing_key,
+            "event_action": "trigger",
+            "payload": {
+                "summary": summary,
+                "source": "netscope",
+                "severity": "critical"
+            }
+        });
+        ureq::Agent::new()
+            .post("https://events.pagerduty.com/v2/enqueue")
+            .send_json(body)
+            .map_err(|e| format!("PagerDuty page failed: {e}"))?;
+        Ok(())
+    }
+
+    /// Opsgenie Alert API v2.
+    pub fn send_opsgenie(&self, api_key: &str, message: &str) -> Result<(), String> {
+        let body = serde_json::json!({
+            "message": message,
+            "description": "Escalated by netscope",
+            "priority": "P1"
+        });
+        ureq::Agent::new()
+            .post("https://api.opsgenie.com/v2/alerts")
+            .set("Authorization", &format!("GenieKey {api_key}"))
+            .send_json(body)
+            .map_err(|e| format!("Opsgenie page failed: {e}"))?;
+        Ok(())
+    }
+
+    /// VictorOps (Splunk On-Call) generic integration.
+    pub fn send_victorops(&self, key: &str, message: &str) -> Result<(), String> {
+        let body = serde_json::json!({
+            "message_type": "CRITICAL",
+            "entity_id": "netscope-alert",
+            "state_message": message
+        });
+        ureq::Agent::new()
+            .post(&format!(
+                "https://alert.victorops.com/integrations/generic/20131114/alert/{key}"
+            ))
+            .send_json(body)
+            .map_err(|e| format!("VictorOps page failed: {e}"))?;
+        Ok(())
+    }
+
+    /// Deliver one escalation step over whatever channel its chain names.
+    ///
+    /// Every channel in [`crate::escalation::EscalationStep::notify_channel`]'s
+    /// documented set is handled here. An unrecognised name is an error, not a
+    /// no-op — the bug this replaces was a `_ => {}` that swallowed `"Slack"`
+    /// and `"Email"`, so the first two rungs of the default chain paged nobody
+    /// and reported nothing.
+    pub fn send_escalation(
+        &self,
+        notice: &crate::escalation::EscalationNotice,
+    ) -> Result<(), String> {
+        let msg = notice.message.as_str();
+        // The paging services identify the responder by their integration key;
+        // without one there is no way to reach them, and saying so beats
+        // returning Ok after doing nothing.
+        let key = || -> Result<&str, String> {
+            notice
+                .on_call
+                .as_ref()
+                .and_then(|u| u.integration_key.as_deref())
+                .ok_or_else(|| {
+                    format!(
+                        "{} needs an integration_key for the week's on-call \
+                         (set it under [[escalation.oncall]])",
+                        notice.channel,
+                    )
+                })
+        };
+
+        match notice.channel.as_str() {
+            "Slack" => self.send_slack(msg, "{}"),
+            "Email" => self.send_email(
+                &format!("netscope escalation: {}", notice.rule_name),
+                msg,
+            ),
+            "PagerDuty" => self.send_pagerduty(key()?, msg),
+            "Opsgenie" => self.send_opsgenie(key()?, msg),
+            "VictorOps" => self.send_victorops(key()?, msg),
+            other => Err(format!("Unknown escalation channel {other:?}")),
+        }
+    }
+
     /// 2.4.11 Syslog alert feed-back
     pub fn send_syslog(&self, alert_msg: &str) -> Result<(), String> {
         let host = self
@@ -151,10 +264,15 @@ impl NotificationEngine {
             .map_err(|e| format!("Failed to bind Syslog socket: {}", e))?;
 
         let prival = 136; // local1.alert (facility=17, severity=1)
+        // RFC 5424 HOSTNAME. This was the literal "localhost", which made every
+        // event on the SIEM side claim to come from a machine called localhost.
+        // "-" is the spec's NILVALUE and is the honest answer when the name is
+        // genuinely unknown — unlike a wrong name, it asserts nothing.
         let syslog_msg = format!(
-            "<{}>1 {} localhost netscope - - - {}",
+            "<{}>1 {} {} netscope - - - {}",
             prival,
             chrono::Utc::now().to_rfc3339(),
+            local_hostname(),
             alert_msg
         );
 

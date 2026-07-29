@@ -46,9 +46,13 @@ pub fn dissect_fix(
             .find_map(|f| f.strip_prefix(tag).map(|v| v.to_string()))
     };
     let version = field("8=").unwrap_or_else(|| "FIX".to_string());
-    let summary = match field("35=") {
-        Some(mt) => format!("FIX {version} — {}", msg_type_name(&mt)),
-        None => format!("FIX {version}"),
+    let sender = field("49=");
+    let target = field("56=");
+
+    let summary = match (field("35="), sender, target) {
+        (Some(mt), Some(s), Some(t)) => format!("FIX {version} — {} ({s} → {t})", msg_type_name(&mt)),
+        (Some(mt), _, _) => format!("FIX {version} — {}", msg_type_name(&mt)),
+        (None, _, _) => format!("FIX {version}"),
     };
     DissectedResult {
         src_addr: src_ip,
@@ -70,6 +74,6 @@ mod tests {
         assert!(looks_like_fix(msg));
         let r = dissect_fix(None, None, 40000, 5001, msg);
         assert_eq!(r.protocol, Protocol::Fix);
-        assert_eq!(r.summary, "FIX FIX.4.2 — NewOrderSingle");
+        assert_eq!(r.summary, "FIX FIX.4.2 — NewOrderSingle (CLIENT → BROKER)");
     }
 }

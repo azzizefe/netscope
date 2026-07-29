@@ -152,16 +152,16 @@ impl<R: Read> PcapStreamReader<R> {
         self.src
             .read_exact(&mut data)
             .context("capture stream ended mid-record")?;
-        Ok(Some(RawFrame {
-            ts_sec: ts_sec as i64,
-            ts_nanos: if nanos {
+        Ok(Some(RawFrame::new(
+            ts_sec as i64,
+            if nanos {
                 ts_frac
             } else {
                 ts_frac.saturating_mul(1000)
             },
             orig_len,
             data,
-        }))
+        )))
     }
 
     fn next_pcapng_frame(&mut self) -> Result<Option<RawFrame>> {
@@ -186,12 +186,12 @@ impl<R: Read> PcapStreamReader<R> {
                     let ts = (ts_high << 32) | ts_low;
                     let tps = self.if_tps.get(iface).copied().unwrap_or(DEFAULT_TPS);
                     let (ts_sec, ts_nanos) = split_timestamp(ts, tps);
-                    return Ok(Some(RawFrame {
+                    return Ok(Some(RawFrame::new(
                         ts_sec,
                         ts_nanos,
                         orig_len,
-                        data: body[20..20 + caplen].to_vec(),
-                    }));
+                        body[20..20 + caplen].to_vec(),
+                    )));
                 }
                 BLOCK_SPB => {
                     if body.len() < 4 {
@@ -199,12 +199,12 @@ impl<R: Read> PcapStreamReader<R> {
                     }
                     let orig_len = read_u32(&body[0..4], self.swapped());
                     let caplen = (body.len() - 4).min(orig_len as usize);
-                    return Ok(Some(RawFrame {
-                        ts_sec: 0,
-                        ts_nanos: 0,
+                    return Ok(Some(RawFrame::new(
+                        0,
+                        0,
                         orig_len,
-                        data: body[4..4 + caplen].to_vec(),
-                    }));
+                        body[4..4 + caplen].to_vec(),
+                    )));
                 }
                 BLOCK_PACKET_OBSOLETE => {
                     // Legacy Packet Block: iface u16, drops u16, then EPB-like.
@@ -222,12 +222,12 @@ impl<R: Read> PcapStreamReader<R> {
                     }
                     let tps = self.if_tps.get(iface).copied().unwrap_or(DEFAULT_TPS);
                     let (ts_sec, ts_nanos) = split_timestamp((ts_high << 32) | ts_low, tps);
-                    return Ok(Some(RawFrame {
+                    return Ok(Some(RawFrame::new(
                         ts_sec,
                         ts_nanos,
                         orig_len,
-                        data: body[20..20 + caplen].to_vec(),
-                    }));
+                        body[20..20 + caplen].to_vec(),
+                    )));
                 }
                 BLOCK_IDB => self.parse_idb(&body),
                 PCAPNG_SHB => {

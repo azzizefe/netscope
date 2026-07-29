@@ -39,6 +39,8 @@ pub fn dissect_hl7(
         } else {
             format!("HL7 {} (MLLP)", super::truncate(msg_type, 24))
         }
+    } else if let Some(fhir_res) = detect_fhir_resource(payload) {
+        format!("HL7 FHIR REST — {fhir_res}")
     } else {
         "HL7 v2 message".to_string()
     };
@@ -49,6 +51,28 @@ pub fn dissect_hl7(
         dst_port: Some(dst_port),
         protocol: Protocol::Hl7,
         summary,
+    }
+}
+
+pub fn detect_fhir_resource(payload: &[u8]) -> Option<&'static str> {
+    let text = String::from_utf8_lossy(payload);
+    let lower = text.to_lowercase();
+    if lower.contains("/fhir/") || lower.contains("\"resourcetype\"") {
+        if lower.contains("patient") {
+            Some("Patient Resource")
+        } else if lower.contains("observation") {
+            Some("Observation Resource")
+        } else if lower.contains("encounter") {
+            Some("Encounter Resource")
+        } else if lower.contains("diagnosticreport") {
+            Some("DiagnosticReport Resource")
+        } else if lower.contains("medicationrequest") {
+            Some("MedicationRequest Resource")
+        } else {
+            Some("FHIR Resource Payload")
+        }
+    } else {
+        None
     }
 }
 

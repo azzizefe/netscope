@@ -287,16 +287,16 @@ impl ModifiedPcapReader {
         self.file
             .read_exact(&mut data)
             .context("modified pcap: truncated record")?;
-        Ok(Some(RawFrame {
-            ts_sec: ts_sec as i64,
-            ts_nanos: if self.nanos {
+        Ok(Some(RawFrame::new(
+            ts_sec as i64,
+            if self.nanos {
                 ts_frac
             } else {
                 ts_frac.saturating_mul(1000)
             },
             orig_len,
             data,
-        }))
+        )))
     }
 }
 
@@ -347,12 +347,12 @@ impl SnoopReader {
         if rec_len > consumed {
             skip(&mut self.file, (rec_len - consumed) as u64)?;
         }
-        Ok(Some(RawFrame {
-            ts_sec: ts_sec as i64,
-            ts_nanos: ts_usec.saturating_mul(1000),
+        Ok(Some(RawFrame::new(
+            ts_sec as i64,
+            ts_usec.saturating_mul(1000),
             orig_len,
             data,
-        }))
+        )))
     }
 }
 
@@ -435,21 +435,11 @@ impl ErfReader {
                         continue;
                     }
                     let data = body[off + 2..].to_vec();
-                    RawFrame {
-                        ts_sec,
-                        ts_nanos,
-                        orig_len: data.len() as u32,
-                        data,
-                    }
+                    RawFrame::new(ts_sec, ts_nanos, data.len() as u32, data)
                 }
                 ERF_TYPE_IPV4 | ERF_TYPE_IPV6 => {
                     let data = body[off..].to_vec();
-                    RawFrame {
-                        ts_sec,
-                        ts_nanos,
-                        orig_len: data.len() as u32,
-                        data,
-                    }
+                    RawFrame::new(ts_sec, ts_nanos, data.len() as u32, data)
                 }
                 _ => continue, // unsupported record type — skip to the next
             };
@@ -501,12 +491,12 @@ fn parse_k12(text: &str) -> (Vec<RawFrame>, i32) {
                  have: &mut bool| {
         if *have && !bytes.is_empty() {
             let (ts_sec, ts_nanos) = time.unwrap_or((0, 0));
-            frames.push(RawFrame {
+            frames.push(RawFrame::new(
                 ts_sec,
                 ts_nanos,
-                orig_len: bytes.len() as u32,
-                data: std::mem::take(bytes),
-            });
+                bytes.len() as u32,
+                std::mem::take(bytes),
+            ));
         }
         bytes.clear();
         *time = None;
@@ -713,12 +703,7 @@ impl NetMonReader {
             ts_nanos -= 1_000_000_000;
         }
 
-        Ok(Some(RawFrame {
-            ts_sec,
-            ts_nanos,
-            orig_len,
-            data,
-        }))
+        Ok(Some(RawFrame::new(ts_sec, ts_nanos, orig_len, data)))
     }
 }
 
@@ -777,12 +762,7 @@ impl SnifferReader {
         let ts_sec = self.start_sec + (ts_val / 1_000_000) as i64;
         let ts_nanos = ((ts_val % 1_000_000) * 1_000) as u32;
 
-        Ok(Some(RawFrame {
-            ts_sec,
-            ts_nanos,
-            orig_len,
-            data,
-        }))
+        Ok(Some(RawFrame::new(ts_sec, ts_nanos, orig_len, data)))
     }
 }
 

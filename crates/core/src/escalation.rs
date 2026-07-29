@@ -25,7 +25,7 @@ pub struct EscalationPolicy {
     pub chain: Vec<EscalationStep>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OnCallUser {
     pub name: String,
     pub email: String,
@@ -38,6 +38,32 @@ pub struct ShiftRotation {
     pub week_number: u32,
     pub primary_user: OnCallUser,
     pub backup_user: OnCallUser,
+}
+
+/// One step of the chain coming due: who should be paged, over what channel.
+///
+/// `process_escalations` returns these instead of delivering them itself. That
+/// split is the whole point: this module used to carry its own `ureq` client
+/// alongside the one in [`crate::notifications`], and its `match` on the channel
+/// name had no arm for `"Slack"` or `"Email"` — which are exactly the channels
+/// of L1 and L2 in the default chain. The first two escalation levels therefore
+/// paged nobody, silently, because the fallthrough arm was `_ => {}`.
+///
+/// With delivery moved out, the engine is pure time-and-state logic (and
+/// testable without a socket), and every channel goes through the one delivery
+/// path that already reports failures.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EscalationNotice {
+    pub alert_id: String,
+    pub rule_name: String,
+    pub level: EscalationLevel,
+    /// "Slack" | "Email" | "PagerDuty" | "Opsgenie" | "VictorOps".
+    pub channel: String,
+    /// `None` when no rotation covers this ISO week — there is nobody to page,
+    /// and the caller must say so rather than quietly escalating into a void.
+    pub on_call: Option<OnCallUser>,
+    /// Human-readable line for the UI and the notification body.
+    pub message: String,
 }
 
 #[derive(Debug, Clone)]
@@ -128,7 +154,11 @@ impl EscalationEngine {
         self.shift_rotations.get(&week)
     }
 
-    pub fn process_escalations(&mut self, current_time: DateTime<Utc>) -> Vec<String> {
+    /// Advance every active escalation and report the steps that came due.
+    ///
+    /// Returns what *should* be delivered; it sends nothing itself. See
+    /// [`EscalationNotice`] for why.
+    pub fn process_escalations(&mut self, current_time: DateTime<Utc>) -> Vec<EscalationNotice> {
         let mut notifications = Vec::new();
         let mut keys_to_remove = Vec::new();
 
@@ -163,27 +193,30 @@ impl EscalationEngine {
 
                     if esc.current_step_index < chain.len() {
                         let next_step = &chain[esc.current_step_index];
-                        let on_call = rotations.get(&current_time.iso_week().week());
+                        let week = current_time.iso_week().week();
+                        let on_call = rotations.get(&week).map(|r| r.primary_user.clone());
 
-                        let level_notification = format!(
-                            "Alert {} escalated to level {:?}. Notifying current week {} on-call (Primary: {}) via {}",
+                        let message = format!(
+                            "Alert {} escalated to {:?} — week {} on-call: {} (via {}). {}",
                             esc.alert_id,
                             next_step.level,
-                            current_time.iso_week().week(),
-                            on_call.map(|o| o.primary_user.name.as_str()).unwrap_or("None"),
-                            next_step.notify_channel
+                            week,
+                            on_call
+                                .as_ref()
+                                .map(|u| u.name.as_str())
+                                .unwrap_or("nobody on the rotation"),
+                            next_step.notify_channel,
+                            esc.alert_msg,
                         );
-                        notifications.push(level_notification);
 
-                        // Invoke third-party APIs (2.3.3)
-                        if let Some(on_call_user) = on_call.map(|o| &o.primary_user) {
-                            invoke_on_call_api(
-                                on_call_user,
-                                &next_step.level,
-                                &esc.alert_msg,
-                                &next_step.notify_channel,
-                            );
-                        }
+                        notifications.push(EscalationNotice {
+                            alert_id: esc.alert_id.clone(),
+                            rule_name: esc.rule_name.clone(),
+                            level: next_step.level,
+                            channel: next_step.notify_channel.clone(),
+                            on_call,
+                            message,
+                        });
                     }
                 }
             }
@@ -197,55 +230,12 @@ impl EscalationEngine {
     }
 }
 
-fn invoke_on_call_api(user: &OnCallUser, level: &EscalationLevel, alert_msg: &str, channel: &str) {
-    let client = ureq::Agent::new();
-    match channel {
-        "PagerDuty" => {
-            if let Some(ref key) = user.integration_key {
-                let body = serde_json::json!({
-                    "routing_key": key,
-                    "event_action": "trigger",
-                    "payload": {
-                        "summary": format!("[{:?}] {}", level, alert_msg),
-                        "source": "netscope-agent",
-                        "severity": "critical"
-                    }
-                });
-                let _ = client
-                    .post("https://events.pagerduty.com/v2/enqueue")
-                    .send_json(body);
-            }
-        }
-        "Opsgenie" => {
-            if let Some(ref key) = user.integration_key {
-                let body = serde_json::json!({
-                    "message": format!("[{:?}] {}", level, alert_msg),
-                    "description": "Escalated from Netscope agent",
-                    "priority": "P1"
-                });
-                let _ = client
-                    .post("https://api.opsgenie.com/v2/alerts")
-                    .set("Authorization", &format!("GenieKey {}", key))
-                    .send_json(body);
-            }
-        }
-        "VictorOps" => {
-            if let Some(ref key) = user.integration_key {
-                let body = serde_json::json!({
-                    "message_type": "CRITICAL",
-                    "entity_id": "netscope-alert",
-                    "state_message": format!("[{:?}] {}", level, alert_msg)
-                });
-                let url = format!(
-                    "https://alert.victorops.com/integrations/generic/20131114/alert/{}",
-                    key
-                );
-                let _ = client.post(&url).send_json(body);
-            }
-        }
-        _ => {}
-    }
-}
+// `invoke_on_call_api` used to live here. It was a second `ureq` client parallel
+// to the one in `notifications`, it discarded every HTTP result with `let _ =`
+// (so a 401 was indistinguishable from a page), and its `_ => {}` arm silently
+// dropped "Slack" and "Email" — the L1 and L2 channels. Delivery now lives in
+// `notifications::send_escalation`, which returns a `Result` and handles all
+// five channels.
 
 #[cfg(test)]
 mod tests {
@@ -310,13 +300,80 @@ mod tests {
         let notifications = engine.process_escalations(time_l2);
 
         assert_eq!(notifications.len(), 1);
-        assert!(notifications[0].contains("escalated to level L2"));
-        assert!(notifications[0].contains("John SOC Analyst"));
+        assert!(notifications[0].message.contains("escalated to L2"));
+        assert!(notifications[0].message.contains("John SOC Analyst"));
+        assert_eq!(notifications[0].alert_id, "alert-123");
+        assert_eq!(
+            notifications[0].on_call.as_ref().map(|u| u.name.as_str()),
+            Some("John SOC Analyst"),
+        );
 
         // 2. Acknowledge escalation
         engine.acknowledge_escalation("alert-123");
         let time_l3 = time_l2 + chrono::Duration::minutes(35);
         let notifications = engine.process_escalations(time_l3);
         assert!(notifications.is_empty()); // Escalation paused!
+    }
+
+    /// Every rung of the default chain must name a channel that can be
+    /// delivered.
+    ///
+    /// The engine used to page people itself, through a `match` whose only arms
+    /// were PagerDuty, Opsgenie and VictorOps, with `_ => {}` underneath. L1 and
+    /// L2 of this very chain are `"Slack"` and `"Email"` — so the first two
+    /// escalation levels hit the fallthrough and notified nobody, without an
+    /// error anywhere. Delivery now lives in `notifications::send_escalation`;
+    /// this pins that the chain and that dispatcher agree on the channel names.
+    #[test]
+    fn every_default_chain_step_names_a_deliverable_channel() {
+        const DELIVERABLE: &[&str] = &["Slack", "Email", "PagerDuty", "Opsgenie", "VictorOps"];
+
+        let engine = EscalationEngine::new(HashMap::new());
+        let chain = &engine.default_policy.chain;
+        assert!(!chain.is_empty());
+
+        for step in chain {
+            assert!(
+                DELIVERABLE.contains(&step.notify_channel.as_str()),
+                "{:?} escalates over {:?}, which send_escalation cannot deliver",
+                step.level,
+                step.notify_channel,
+            );
+        }
+
+        // Pin the two that used to be silently dropped, by position.
+        assert_eq!(chain[0].notify_channel, "Slack");
+        assert_eq!(chain[1].notify_channel, "Email");
+    }
+
+    /// An escalation with nobody on the rotation must still surface.
+    ///
+    /// `get_on_call_for_time` returns `None` for an uncovered week, and the old
+    /// code turned that into the string "Primary: None" and moved on. The notice
+    /// now carries `on_call: None` so the delivery layer can fail loudly for the
+    /// paging channels instead of pretending someone was reached.
+    #[test]
+    fn an_uncovered_week_still_produces_a_notice_with_no_on_call() {
+        let mut engine = EscalationEngine::new(HashMap::new()); // no rotations at all
+        let start = Utc.with_ymd_and_hms(2026, 3, 2, 9, 0, 0).unwrap();
+
+        engine.trigger_alert_escalation(
+            "alert-999".into(),
+            "Port scan".into(),
+            "50 SYN packets".into(),
+        );
+        if let Some(e) = engine.active_escalations.get_mut("alert-999") {
+            e.start_time = start;
+            e.last_escalated = start;
+        }
+
+        let notices = engine.process_escalations(start + chrono::Duration::minutes(16));
+        assert_eq!(notices.len(), 1);
+        assert!(notices[0].on_call.is_none());
+        assert!(
+            notices[0].message.contains("nobody on the rotation"),
+            "the message must say the rotation is empty, got {:?}",
+            notices[0].message,
+        );
     }
 }

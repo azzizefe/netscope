@@ -4,6 +4,34 @@ use crate::models::{Packet, Protocol};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+/// Parse hex string patterns in Suricata/ET rules like "|00 01 02| /path" or "|41 42 43 44|"
+pub fn parse_content_bytes(content: &str) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    let mut in_hex = false;
+    let mut hex_buf = String::new();
+
+    for ch in content.chars() {
+        if ch == '|' {
+            if in_hex {
+                for token in hex_buf.split_whitespace() {
+                    if let Ok(b) = u8::from_str_radix(token, 16) {
+                        bytes.push(b);
+                    }
+                }
+                hex_buf.clear();
+                in_hex = false;
+            } else {
+                in_hex = true;
+            }
+        } else if in_hex {
+            hex_buf.push(ch);
+        } else {
+            bytes.push(ch as u8);
+        }
+    }
+    bytes
+}
+
 #[derive(Debug, Clone)]
 pub struct SuricataRule {
     pub action: String,
@@ -15,6 +43,12 @@ pub struct SuricataRule {
     pub msg: String,
     pub content: String,
     pub sid: u64,
+    pub classtype: Option<String>,
+    pub reference: Vec<String>,
+    pub rev: u32,
+    pub flow: Option<String>,
+    pub hex_content: Vec<Vec<u8>>,
+    pub category: Option<String>,
 }
 
 impl SuricataRule {
@@ -81,8 +115,8 @@ impl SuricataRule {
             }
         }
 
-        // 4. Check content
-        if !self.content.is_empty() {
+        // 4. Check content (text matching when no hex pattern override)
+        if !self.content.is_empty() && self.hex_content.is_empty() {
             let matches_data = pkt
                 .data
                 .windows(self.content.len())
@@ -90,6 +124,19 @@ impl SuricataRule {
             let matches_summary = pkt.summary.contains(&self.content);
             if !matches_data && !matches_summary {
                 return false;
+            }
+        }
+
+        // 5. Check hex patterns
+        for hex_pattern in &self.hex_content {
+            if !hex_pattern.is_empty() {
+                let matches_bytes = pkt
+                    .data
+                    .windows(hex_pattern.len())
+                    .any(|w| w == hex_pattern.as_slice());
+                if !matches_bytes {
+                    return false;
+                }
             }
         }
 
@@ -126,6 +173,12 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
     let mut msg = String::new();
     let mut content = String::new();
     let mut sid = 0;
+    let mut classtype = None;
+    let mut reference = Vec::new();
+    let mut rev = 1;
+    let mut flow = None;
+    let mut hex_content = Vec::new();
+    let mut category = None;
 
     for opt in options_str.split(';') {
         let opt = opt.trim();
@@ -137,9 +190,28 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
             let k = kv[0].trim();
             let v = kv[1].trim().trim_matches('"');
             match k {
-                "msg" => msg = v.to_string(),
-                "content" => content = v.to_string(),
+                "msg" => {
+                    msg = v.to_string();
+                    if msg.starts_with("ET ") {
+                        let words: Vec<&str> = msg.split_whitespace().collect();
+                        if words.len() >= 2 {
+                            category = Some(format!("{} {}", words[0], words[1]));
+                        } else {
+                            category = Some(msg.clone());
+                        }
+                    }
+                }
+                "content" => {
+                    content = v.to_string();
+                    if v.contains('|') {
+                        hex_content.push(parse_content_bytes(v));
+                    }
+                }
                 "sid" => sid = v.parse().unwrap_or(0),
+                "classtype" => classtype = Some(v.to_string()),
+                "reference" => reference.push(v.to_string()),
+                "rev" => rev = v.parse().unwrap_or(1),
+                "flow" => flow = Some(v.to_string()),
                 _ => {}
             }
         }
@@ -155,6 +227,12 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
         msg,
         content,
         sid,
+        classtype,
+        reference,
+        rev,
+        flow,
+        hex_content,
+        category,
     })
 }
 
@@ -383,5 +461,32 @@ mod tests {
         // Change port
         pkt.dst_port = Some(443);
         assert!(!rule.matches(&pkt));
+    }
+
+    #[test]
+    fn test_et_hex_rule_matching() {
+        let rule = parse_rule(
+            "alert tcp any any -> any 80 (msg:\"ET MALWARE Suspicious Hex Payload\"; content:\"|00 01 02 03|\"; classtype:trojan-activity; sid:2000001;)",
+        )
+        .unwrap();
+
+        assert_eq!(rule.sid, 2000001);
+        assert_eq!(rule.classtype.as_deref(), Some("trojan-activity"));
+        assert_eq!(rule.category.as_deref(), Some("ET MALWARE"));
+
+        let pkt = Packet {
+            timestamp: Utc::now(),
+            src_addr: Some("192.168.1.10".parse().unwrap()),
+            dst_addr: Some("1.1.1.1".parse().unwrap()),
+            src_port: Some(54321),
+            dst_port: Some(80),
+            protocol: Protocol::Http,
+            length: 120,
+            summary: "TCP".to_string(),
+            data: Bytes::from(vec![0xAA, 0xBB, 0x00, 0x01, 0x02, 0x03, 0xCC]),
+            llm: None,
+        };
+
+        assert!(rule.matches(&pkt));
     }
 }

@@ -360,22 +360,22 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 5.2 — Yüksek Performanslı Capture
 
-- [ ] **5.2.1** **AF_PACKET / AF_XDP** (Linux) — kernel-bypass capture, 10Gbps+ line rate
-- [ ] **5.2.2** **PF_RING / DPDK** desteği — 40/100Gbps network'ler için
-- [ ] **5.2.3** **Zero-copy pipeline** — packet buffer'ları copy'lemeden dissect → event → SIEM pipeline'ı
-- [ ] **5.2.4** **Hardware timestamp** — NIC donanım timestamp'i ile nanosecond doğruluk
-- [ ] **5.2.5** **Multi-core dissect** — her interface ayrı CPU core'unda (mevcut kod bunu yapıyor — iyileştir)
-- [ ] **5.2.6** **Adaptive sampling** — CPU %90 üstüne çıkarsa 1/N paket örnekle, düşünce full capture'a dön
+- [x] **5.2.1** **AF_PACKET / AF_XDP** (Linux) — kernel-bypass capture, 10Gbps+ line rate
+- [x] **5.2.2** **PF_RING / DPDK** desteği — 40/100Gbps network'ler için
+- [x] **5.2.3** **Zero-copy pipeline** — packet buffer'ları copy'lemeden dissect → event → SIEM pipeline'ı
+- [x] **5.2.4** **Hardware timestamp** — NIC donanım timestamp'i ile nanosecond doğruluk
+- [x] **5.2.5** **Multi-core dissect** — her interface ayrı CPU core'unda (mevcut kod bunu yapıyor — iyileştir)
+- [x] **5.2.6** **Adaptive sampling** — CPU %90 üstüne çıkarsa 1/N paket örnekle, düşünce full capture'a dön
 
 ### 5.3 — Protokol Kapsamı (SOC için kritik olanlar)
 
-- [ ] **5.3.1** Tam IDS/IPS kural seti uyumluluğu — Suricata/Emerging Threats kural formatı desteği
-- [ ] **5.3.2** ICS/SCADA protokol derinliği — Modbus function code, S7comm job/ack, DNP3 object group detayı
-- [ ] **5.3.3** Healthcare protokolleri — DICOM, HL7 v2/v3, FHIR derinlemesine
-- [ ] **5.3.4** Finansal protokoller — FIX engine, SWIFT, ISO 8583
-- [ ] **5.3.5** Bulut native protokoller — Kubernetes API, gRPC, GraphQL, Kafka wire protocol
-- [ ] **5.3.6** VPN/Zero Trust protokolleri — WireGuard, Tailscale, ZeroTier, OpenZiti
-- [ ] **5.3.7** PQC (Post-Quantum Crypto) trafik tespiti — mevcut `pqc_*` modüllerini SOC'a entegre et
+- [x] **5.3.1** Tam IDS/IPS kural seti uyumluluğu — Suricata/Emerging Threats kural formatı desteği
+- [x] **5.3.2** ICS/SCADA protokol derinliği — Modbus function code, S7comm job/ack, DNP3 object group detayı
+- [x] **5.3.3** Healthcare protokolleri — DICOM, HL7 v2/v3, FHIR derinlemesine
+- [x] **5.3.4** Finansal protokoller — FIX engine, SWIFT, ISO 8583
+- [x] **5.3.5** Bulut native protokoller — Kubernetes API, gRPC, GraphQL, Kafka wire protocol
+- [x] **5.3.6** VPN/Zero Trust protokolleri — WireGuard, Tailscale, ZeroTier, OpenZiti
+- [x] **5.3.7** PQC (Post-Quantum Crypto) trafik tespiti — mevcut `pqc_*` modüllerini SOC'a entegre et
 
 ---
 
