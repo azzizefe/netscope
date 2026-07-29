@@ -1035,6 +1035,72 @@ mod tests {
     }
 
     #[test]
+    /// Windows are measured on the capture clock, not the processing clock.
+    ///
+    /// `check_packet` used to call `Instant::now()`, so every window closed
+    /// against wall time. Replaying a pcap feeds thousands of packets through
+    /// in microseconds, which satisfied *any* "N in T seconds" rule instantly
+    /// and made the rate heuristics measure disk speed. Three packets spaced a
+    /// minute apart in the capture are not a burst, however fast they are read.
+    #[test]
+    fn threshold_windows_follow_the_capture_clock_not_the_wall_clock() {
+        let rule = |name: &str| AlertRule {
+            name: name.to_string(),
+            severity: "high".to_string(),
+            mitre_attack: None,
+            kill_chain: None,
+            trigger: RuleTrigger {
+                trigger_type: "threshold".to_string(),
+                filter: "tcp.port == 80".to_string(),
+                group_by: Some(vec!["src".into(), "dst".into()]),
+                threshold: Some(3),
+                window: Some("10s".into()),
+                sub_rules: None,
+                start_time: None,
+                end_time: None,
+            },
+            actions: vec!["alert".to_string()],
+        };
+
+        let at = |secs: i64| Packet {
+            timestamp: Utc::now() + ChronoDuration::seconds(secs),
+            src_addr: Some("10.0.0.1".parse().unwrap()),
+            dst_addr: Some("10.0.0.2".parse().unwrap()),
+            src_port: Some(1234),
+            dst_port: Some(80),
+            protocol: Protocol::Http,
+            length: 60,
+            summary: "HTTP GET".to_string(),
+            data: Bytes::new(),
+            llm: None,
+        };
+
+        // Three packets a minute apart. Read back-to-back here, exactly as a
+        // pcap replay would, but 60s apart on the wire — not a burst.
+        let mut spread = AlertEngine::new(vec![rule("Spread")]);
+        let fired: usize = [0, 60, 120]
+            .iter()
+            .map(|s| spread.check_packet(&at(*s), None).len())
+            .sum();
+        assert_eq!(
+            fired, 0,
+            "3 packets over 2 minutes tripped a 3-in-10s rule — the window is \
+             following processing speed, not the capture timestamps",
+        );
+
+        // The same three packets, now genuinely within the window.
+        let mut burst = AlertEngine::new(vec![rule("Burst")]);
+        let fired: usize = [0, 1, 2]
+            .iter()
+            .map(|s| burst.check_packet(&at(*s), None).len())
+            .sum();
+        assert!(
+            fired > 0,
+            "3 packets inside 10s did not trip a 3-in-10s rule",
+        );
+    }
+
+    #[test]
     fn test_threshold_and_deduplication() {
         let rule = AlertRule {
             name: "Threshold Alert Test".to_string(),

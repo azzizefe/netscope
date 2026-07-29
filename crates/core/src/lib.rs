@@ -74,6 +74,7 @@ pub mod registry;
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rotate;
+pub mod scalability;
 pub mod security;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod siem;

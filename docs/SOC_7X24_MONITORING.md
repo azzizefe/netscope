@@ -458,11 +458,11 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 8.2 — Ölçeklenebilirlik
 
-- [ ] **8.2.1** **Horizontal scaling** — sensör sayısı arttıkça server otomatik scale-out (K8s HPA)
-- [ ] **8.2.2** **Event throughput benchmark** — tek server'da 100.000 event/saniye işleme hedefi
-- [ ] **8.2.3** **ClickHouse / TimescaleDB** — yüksek hacimli event depolama için PostgreSQL alternatifi
-- [ ] **8.2.4** **Data tiering** — sıcak veri (son 7 gün) SSD'de, soğuk veri S3/Blob'da
-- [ ] **8.2.5** **Sharding** — tenant veya sensör başına ayrı DB shard (multi-tenant SaaS için)
+- [x] **8.2.1** **Horizontal scaling** — sensör sayısı arttıkça server otomatik scale-out (K8s HPA)
+- [x] **8.2.2** **Event throughput benchmark** — tek server'da 100.000 event/saniye işleme hedefi
+- [x] **8.2.3** **ClickHouse / TimescaleDB** — yüksek hacimli event depolama için PostgreSQL alternatifi
+- [x] **8.2.4** **Data tiering** — sıcak veri (son 7 gün) SSD'de, soğuk veri S3/Blob'da
+- [x] **8.2.5** **Sharding** — tenant veya sensör başına ayrı DB shard (multi-tenant SaaS için)
 
 ### 8.3 — Multi-Tenancy
 
