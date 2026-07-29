@@ -151,15 +151,22 @@ impl SuricataRule {
     }
 }
 
-pub fn parse_rule(line: &str) -> Option<SuricataRule> {
+/// Parse one Suricata-format rule, or explain why it was refused.
+///
+/// Refusing is the point. This used to return `Option` and drop every option it
+/// did not recognise through a `_ => {}` arm, which turned a narrow signature
+/// into a broad one: a rule qualified by `depth`, `offset`, `nocase`, `pcre` or
+/// `flow` direction matched far more traffic than it was written to match, and
+/// nothing said so. A rule that cannot be honoured exactly is not loaded.
+pub fn parse_rule(line: &str) -> Result<SuricataRule, String> {
     let line = line.trim();
     if line.starts_with('#') || line.is_empty() {
-        return None;
+        return Err(String::new()); // comment or blank: not a rule, not an error
     }
 
     let parts: Vec<&str> = line.splitn(2, '(').collect();
     if parts.len() < 2 {
-        return None;
+        return Err(format!("no option block in rule: {line}"));
     }
 
     let header = parts[0].trim();
@@ -167,11 +174,17 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
 
     let header_tokens: Vec<&str> = header.split_whitespace().collect();
     if header_tokens.len() < 7 {
-        return None;
+        return Err(format!("malformed rule header: {header}"));
     }
 
     let action = header_tokens[0].to_string();
     let protocol = header_tokens[1].to_ascii_lowercase();
+    // Only these three can actually be evaluated by `matches`.
+    if !matches!(protocol.as_str(), "tcp" | "udp" | "ip") {
+        return Err(format!(
+            "protocol {protocol:?} cannot be evaluated; only tcp, udp and ip are supported"
+        ));
+    }
     let src_ip = header_tokens[2].to_string();
     let src_port = header_tokens[3].to_string();
     let dst_ip = header_tokens[5].to_string();
@@ -186,6 +199,7 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
     let mut flow = None;
     let mut hex_content = Vec::new();
     let mut category = None;
+    let mut unsupported: Vec<String> = Vec::new();
 
     for opt in options_str.split(';') {
         let opt = opt.trim();
@@ -230,6 +244,13 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
                     unsupported.push(other.to_string());
                 }
             }
+        } else {
+            // A bare flag with no `:` — `nocase`, `http_uri`, `http_header`,
+            // `startswith`. These change what the content match applies to, so
+            // skipping them silently is the same over-matching bug as dropping
+            // a keyed option: `http_uri` confines the match to the URI, and
+            // without it the pattern is tested against the whole packet.
+            unsupported.push(opt.to_string());
         }
     }
 
@@ -241,7 +262,7 @@ pub fn parse_rule(line: &str) -> Option<SuricataRule> {
         ));
     }
 
-    Some(SuricataRule {
+    Ok(SuricataRule {
         action,
         protocol,
         src_ip,
@@ -271,6 +292,11 @@ pub struct ThreatEngine {
     pub malicious_ips: HashSet<String>,
     pub malicious_domains: HashSet<String>,
     pub suricata_rules: Vec<SuricataRule>,
+    /// Rules that were refused, with the reason and the file:line they came
+    /// from. A refused rule is not loaded, so it cannot fire — surfacing this
+    /// is the difference between "no detections" and "your ruleset never
+    /// loaded".
+    pub rule_errors: Vec<String>,
 }
 
 impl ThreatEngine {
@@ -286,6 +312,7 @@ impl ThreatEngine {
         let mut malicious_ips = HashSet::new();
         let mut malicious_domains = HashSet::new();
         let mut suricata_rules = Vec::new();
+        let mut rule_errors: Vec<String> = Vec::new();
 
         // Indicator lists are supplied by the operator; netscope fetches
         // nothing. On first run each file is created empty with a comment
@@ -346,10 +373,20 @@ impl ThreatEngine {
                 let path = entry.path();
                 if path.extension().is_some_and(|ext| ext == "rules") {
                     if let Ok(content) = std::fs::read_to_string(&path) {
-                        for line in content.lines() {
-                            if let Some(rule) = parse_rule(line) {
-                                suricata_rules.push(rule);
-                                read_any_rule = true;
+                        for (n, line) in content.lines().enumerate() {
+                            match parse_rule(line) {
+                                Ok(rule) => {
+                                    suricata_rules.push(rule);
+                                    read_any_rule = true;
+                                }
+                                // An empty reason means the line was a comment
+                                // or blank, not a rejected rule.
+                                Err(reason) if reason.is_empty() => {}
+                                Err(reason) => rule_errors.push(format!(
+                                    "{}:{}: {reason}",
+                                    path.display(),
+                                    n + 1,
+                                )),
                             }
                         }
                     }
@@ -381,6 +418,7 @@ impl ThreatEngine {
             malicious_ips,
             malicious_domains,
             suricata_rules,
+            rule_errors,
         }
     }
 
@@ -456,6 +494,55 @@ mod tests {
     use crate::models::Protocol;
     use bytes::Bytes;
     use chrono::Utc;
+
+    /// A rule that cannot be honoured exactly must be refused, not widened.
+    ///
+    /// Every option other than msg/content/sid *narrows* a signature. The
+    /// parser used to drop unknown options through `_ => {}`, so a rule
+    /// qualified by `depth`, `offset`, `nocase` or `pcre` was loaded as a bare
+    /// substring search and matched far more traffic than it was written for.
+    /// Likewise `alert http` fell through the protocol check in `matches` and
+    /// was tested against every packet on the wire. Both are now rejections
+    /// with a reason, because a false positive nobody can explain is worse in
+    /// a SOC than a rule that plainly did not load.
+    #[test]
+    fn rules_that_cannot_be_honoured_exactly_are_refused() {
+        // Baseline: a rule using only supported options loads.
+        let ok =
+            parse_rule("alert tcp any any -> any 80 (msg:\"probe\"; content:\"evil\"; sid:1;)")
+                .expect("a fully supported rule must load");
+        assert_eq!(ok.sid, 1);
+
+        // Narrowing options that would be silently dropped.
+        for opt in [
+            "depth:10;",
+            "offset:4;",
+            "nocase;",
+            "pcre:\"/evil/i\";",
+            "threshold:type limit, count 1, seconds 60;",
+            "http_uri;",
+        ] {
+            let line =
+                format!("alert tcp any any -> any 80 (msg:\"p\"; content:\"evil\"; {opt} sid:2;)");
+            let err = parse_rule(&line).expect_err(
+                "a rule netscope cannot evaluate exactly must not load as a broader one",
+            );
+            // `nocase;` and `http_uri;` are bare flags with no `:`; those are
+            // skipped by the key/value split, so only keyed options report.
+            if opt.contains(':') {
+                assert!(
+                    err.contains("unsupported option"),
+                    "the reason must name the option, got {err:?}",
+                );
+            }
+        }
+
+        // A protocol `matches` cannot evaluate used to skip the protocol test
+        // entirely and match on content alone.
+        let err = parse_rule("alert http any any -> any any (msg:\"x\"; content:\"a\"; sid:3;)")
+            .expect_err("http rules must be refused, not matched against every packet");
+        assert!(err.contains("cannot be evaluated"), "got {err:?}");
+    }
 
     /// A fresh install must have no indicators, and must not invent any.
     ///

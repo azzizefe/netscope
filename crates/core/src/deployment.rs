@@ -67,7 +67,8 @@ services:
       - POSTGRES_DB=netscope
   redis:
     image: redis:7-alpine
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate Kubernetes Helm Chart Values Manifest (§8.4.2).
@@ -90,7 +91,8 @@ autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 20
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate Ansible Sensor Fleet Playbook (§8.4.4).
@@ -113,7 +115,8 @@ autoscaling:
         name: netscope-agent
         state: started
         enabled: yes
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate Terraform Infrastructure Module (§8.4.5).
@@ -131,7 +134,8 @@ resource "aws_subnet" "sensor_subnet" {
 resource "aws_ec2_traffic_mirror_target" "target" {
   network_interface_id = aws_instance.netscope_server.primary_network_interface_id
 }
-"#.to_string()
+"#
+        .to_string()
     }
 }
 

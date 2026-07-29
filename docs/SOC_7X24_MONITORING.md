@@ -485,13 +485,13 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 9.1 — Test Stratejisi
 
-- [ ] **9.1.1** **Unit test coverage ≥ 80%** — tüm yeni SOC modülleri için
-- [ ] **9.1.2** **Integration test suite** — server + agent + SIEM connector uçtan uca test
-- [ ] **9.1.3** **PCAP replay test** — bilinen kötü amaçlı pcap'leri replay edip alert'lerin tetiklendiğini doğrula
-- [ ] **9.1.4** **Chaos engineering** — sensör kesintisi, ağ kopması, disk dolması senaryoları
-- [ ] **9.1.5** **Soak test** — 7 gün boyunca 100 sensör simülasyonu, memory leak yok
-- [ ] **9.1.6** **Performance regression** — her PR'da benchmark çalıştır (`criteria` veya `cargo bench`)
-- [ ] **9.1.7** **Fuzzing** — SIEM event parser, kural motoru, API endpoint'leri `cargo fuzz` ile
+- [x] **9.1.1** **Unit test coverage ≥ 80%** — tüm yeni SOC modülleri için
+- [x] **9.1.2** **Integration test suite** — server + agent + SIEM connector uçtan uca test
+- [x] **9.1.3** **PCAP replay test** — bilinen kötü amaçlı pcap'leri replay edip alert'lerin tetiklendiğini doğrula
+- [x] **9.1.4** **Chaos engineering** — sensör kesintisi, ağ kopması, disk dolması senaryoları
+- [x] **9.1.5** **Soak test** — 7 gün boyunca 100 sensör simülasyonu, memory leak yok
+- [x] **9.1.6** **Performance regression** — her PR'da benchmark çalıştır (`criteria` veya `cargo bench`)
+- [x] **9.1.7** **Fuzzing** — SIEM event parser, kural motoru, API endpoint'leri `cargo fuzz` ile
 
 ### 9.2 — Test Verisi
 

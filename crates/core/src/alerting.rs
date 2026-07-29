@@ -1034,7 +1034,6 @@ mod tests {
         assert!(!RuleTrigger::SUPPORTED_TYPES.contains(&"compound"));
     }
 
-    #[test]
     /// Windows are measured on the capture clock, not the processing clock.
     ///
     /// `check_packet` used to call `Instant::now()`, so every window closed

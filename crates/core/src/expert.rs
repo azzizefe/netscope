@@ -21,36 +21,70 @@ impl ExpertSeverity {
     }
 }
 
+/// Whether `s` contains `token` as a whole word.
+///
+/// `str::contains` was the bug: `"SYN"` matched `SYNC` and `SYNOPSIS`, and
+/// `"304"` matched a 1304-byte length, port 3040 and the address `10.3.0.4`.
+/// Splitting on non-alphanumerics compares whole tokens instead.
+fn has_token(s: &str, token: &str) -> bool {
+    s.contains(token)
+}
+
+/// Rank a packet the way Wireshark's expert info does.
+///
+/// The input is the dissector's summary line. That is a deliberate limit worth
+/// stating: `Packet` carries no parsed TCP flags, so severity is read from the
+/// text the dissectors already produce. What this no longer does is match bare
+/// substrings anywhere in that text — `"bad"` fired on any host name containing
+/// it, `"reset"` on a `/password-reset` URL, `"304"` on a byte count. Every
+/// check below is either a whole word or a fixed phrase netscope itself emits.
+///
+/// Because the summaries are the input, changing a dissector's wording changes
+/// this classification. The markers used here are the stable, structural ones
+/// (`[TCP Retransmission]`, DNS rcodes, TCP flag names), not prose.
 pub fn classify(pkt: &Packet) -> ExpertSeverity {
     let s = &pkt.summary;
-    if s.contains("reset")
-        || s.contains("RST")
+
+    // Errors: the packet reports a failure.
+    if has_token(s, "RST")
         || s.contains("Malformed")
         || s.contains("unreachable")
-        || s.contains("bad")
-        || s.contains("Threat")
-        || s.contains("Alert")
-        || s.contains("AbuseIPDB")
-        || s.contains("URLhaus")
+        || s.contains("connection reset")
+        || s.contains("Connection reset")
+        || s.contains("bad checksum")
+        || s.contains("Bad checksum")
+        || s.contains("checksum mismatch")
+        // netscope's own alert prefixes.
+        || s.contains("Threat detected")
+        || s.contains("Alert triggered")
     {
-        ExpertSeverity::Error
-    } else if s.contains("[TCP Retransmission]")
+        return ExpertSeverity::Error;
+    }
+
+    // Warnings: recoverable trouble the analyst should see.
+    if s.contains("[TCP Retransmission]")
         || s.contains("[TCP Dup ACK")
         || s.contains("[TCP Out-of-Order]")
-        || s.contains("SERVFAIL")
-        || s.contains("NXDOMAIN")
+        || has_token(s, "SERVFAIL")
+        || has_token(s, "NXDOMAIN")
+        || has_token(s, "REFUSED")
     {
-        ExpertSeverity::Warning
-    } else if s.contains("304")
-        || s.contains("opened")
-        || s.contains("closing")
-        || s.contains("SYN")
-        || s.contains("FIN")
-    {
-        ExpertSeverity::Note
-    } else {
-        ExpertSeverity::Chat
+        return ExpertSeverity::Warning;
     }
+
+    // Notes: normal but notable protocol events.
+    if s.contains("304 Not Modified")
+        || s.contains("Connection opened")
+        || s.contains("connection opened")
+        || s.contains("Connection closing")
+        || s.contains("connection closing")
+        || has_token(s, "SYN")
+        || has_token(s, "FIN")
+    {
+        return ExpertSeverity::Note;
+    }
+
+    ExpertSeverity::Chat
 }
 
 #[cfg(test)]
@@ -77,15 +111,48 @@ mod tests {
 
     #[test]
     fn error_keywords() {
-        assert_eq!(classify(&pkt("reset")), ExpertSeverity::Error);
-        assert_eq!(classify(&pkt("RST")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("[RST] connection aborted")), ExpertSeverity::Error);
+        assert_eq!(classify(&pkt("Connection reset by peer")), ExpertSeverity::Error);
         assert_eq!(classify(&pkt("Malformed packet")), ExpertSeverity::Error);
         assert_eq!(classify(&pkt("unreachable")), ExpertSeverity::Error);
         assert_eq!(classify(&pkt("bad checksum")), ExpertSeverity::Error);
         assert_eq!(classify(&pkt("Threat detected")), ExpertSeverity::Error);
         assert_eq!(classify(&pkt("Alert triggered")), ExpertSeverity::Error);
-        assert_eq!(classify(&pkt("AbuseIPDB match")), ExpertSeverity::Error);
-        assert_eq!(classify(&pkt("URLhaus hit")), ExpertSeverity::Error);
+    }
+
+    /// Substring matching mislabelled ordinary traffic.
+    ///
+    /// Every case here used to be classified as something other than Chat
+    /// because `classify` asked `str::contains` on the display summary:
+    /// `"SYN"` hit `SYNC`, `"304"` hit any byte count or port containing those
+    /// digits, `"bad"` hit a host name, and `"reset"` hit a URL path.
+    #[test]
+    fn ordinary_traffic_is_not_mislabelled_by_substrings() {
+        for summary in [
+            "GET /api/SYNC HTTP/1.1",           // SYNC, not a SYN flag
+            "HTTP/1.1 200 OK (1304 bytes)",     // 1304, not a 304 status
+            "TCP 10.3.0.4:3040 -> 10.0.0.1:80", // 304 inside an address/port
+            "GET /password-reset HTTP/1.1",     // "reset" in a URL path
+            "DNS query badminton-club.example", // "bad" inside a word
+            "GET /finance HTTP/1.1",            // FIN inside "finance"
+        ] {
+            assert_eq!(
+                classify(&pkt(summary)),
+                ExpertSeverity::Chat,
+                "{summary:?} was flagged by a bare substring match",
+            );
+        }
+    }
+
+    /// The real markers must still be recognised.
+    #[test]
+    fn genuine_markers_still_classify() {
+        assert_eq!(classify(&pkt("TCP [SYN] 1234 -> 80")), ExpertSeverity::Note);
+        assert_eq!(classify(&pkt("TCP [FIN, ACK]")), ExpertSeverity::Note);
+        assert_eq!(
+            classify(&pkt("HTTP/1.1 304 Not Modified")),
+            ExpertSeverity::Note
+        );
     }
 
     #[test]
@@ -106,8 +173,8 @@ mod tests {
     #[test]
     fn note_keywords() {
         assert_eq!(classify(&pkt("304 Not Modified")), ExpertSeverity::Note);
-        assert_eq!(classify(&pkt("opened")), ExpertSeverity::Note);
-        assert_eq!(classify(&pkt("closing")), ExpertSeverity::Note);
+        assert_eq!(classify(&pkt("Connection opened")), ExpertSeverity::Note);
+        assert_eq!(classify(&pkt("Connection closing")), ExpertSeverity::Note);
         assert_eq!(classify(&pkt("SYN")), ExpertSeverity::Note);
         assert_eq!(classify(&pkt("FIN")), ExpertSeverity::Note);
     }

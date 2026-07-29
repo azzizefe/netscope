@@ -83,6 +83,7 @@ pub mod siem;
 pub mod stats;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stream;
+pub mod test_strategy;
 pub mod threat;
 pub mod tls_keylog;
 pub mod triage;
