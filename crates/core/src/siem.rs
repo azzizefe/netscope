@@ -651,18 +651,7 @@ pub struct SiemExporter {
     pub splunk_udp_addr: Option<String>,
     pub gelf_tcp_addr: Option<String>,
     pub gelf_udp_addr: Option<String>,
-    pub sentinel_dcr_url: Option<String>,
-    pub sentinel_token: Option<String>,
-    pub aws_s3_url: Option<String>,
-    pub aws_s3_spool_dir: Option<String>,
     pub wazuh_file_path: Option<String>,
-    pub wazuh_socket_addr: Option<String>,
-    pub chronicle_url: Option<String>,
-    pub chronicle_api_key: Option<String>,
-    pub kafka_rest_url: Option<String>,
-    pub kafka_topic: Option<String>,
-    pub kafka_auth_header: Option<String>,
-    pub loki_url: Option<String>,
 }
 
 impl SiemExporter {
@@ -680,19 +669,50 @@ impl SiemExporter {
             splunk_udp_addr: None,
             gelf_tcp_addr: None,
             gelf_udp_addr: None,
-            sentinel_dcr_url: None,
-            sentinel_token: None,
-            aws_s3_url: None,
-            aws_s3_spool_dir: None,
             wazuh_file_path: None,
-            wazuh_socket_addr: None,
-            chronicle_url: None,
-            chronicle_api_key: None,
-            kafka_rest_url: None,
-            kafka_topic: None,
-            kafka_auth_header: None,
-            loki_url: None,
         }
+    }
+
+    // Builders for the sinks that can actually be reached.
+    //
+    // These fields used to sit alongside eleven more — Sentinel, AWS Security
+    // Lake, Chronicle, Kafka, Loki and a Wazuh socket — that `new` hardcoded to
+    // `None` with no way to set them. They read as configuration and were not:
+    // the only route was assigning a public field directly, which nothing did,
+    // so `flush_batch` carried five unreachable sinks. Worse, the S3 one PUT
+    // every event in a batch to one fixed URL with no signing, no credentials
+    // and no per-object key, so each write overwrote the last. Code that looks
+    // configurable but is not is worse than absent code, because eventually
+    // somebody believes it.
+
+    /// Splunk HEC over raw TCP.
+    pub fn with_splunk_tcp(mut self, addr: impl Into<String>) -> Self {
+        self.splunk_tcp_addr = Some(addr.into());
+        self
+    }
+
+    /// Splunk over UDP.
+    pub fn with_splunk_udp(mut self, addr: impl Into<String>) -> Self {
+        self.splunk_udp_addr = Some(addr.into());
+        self
+    }
+
+    /// Graylog GELF over TCP.
+    pub fn with_gelf_tcp(mut self, addr: impl Into<String>) -> Self {
+        self.gelf_tcp_addr = Some(addr.into());
+        self
+    }
+
+    /// Graylog GELF over UDP.
+    pub fn with_gelf_udp(mut self, addr: impl Into<String>) -> Self {
+        self.gelf_udp_addr = Some(addr.into());
+        self
+    }
+
+    /// Append NDJSON to a file a Wazuh agent tails.
+    pub fn with_wazuh_file(mut self, path: impl Into<String>) -> Self {
+        self.wazuh_file_path = Some(path.into());
+        self
     }
 
     pub fn start(&self, rx: Receiver<Packet>) -> thread::JoinHandle<()> {
@@ -969,10 +989,14 @@ mod tests {
         let udp_socket = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
         let udp_addr = udp_socket.local_addr().unwrap().to_string();
 
-        let mut exporter = SiemExporter::new(None, None, None);
-        exporter.splunk_tcp_addr = Some(tcp_addr);
-        exporter.splunk_udp_addr = Some(udp_addr.clone());
-        exporter.gelf_udp_addr = Some(udp_addr);
+        // Through the builders, not by poking the fields: the builders are the
+        // only configuration path a caller has, so exercising them here is what
+        // keeps a sink from going back to being unreachable. Eleven sinks used
+        // to exist with no setter at all, permanently `None`.
+        let exporter = SiemExporter::new(None, None, None)
+            .with_splunk_tcp(tcp_addr)
+            .with_splunk_udp(udp_addr.clone())
+            .with_gelf_udp(udp_addr);
 
         let event = SiemEvent {
             timestamp: "2026-07-28T21:16:26.123456Z".to_string(),

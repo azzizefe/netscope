@@ -53,7 +53,7 @@ Diğer SIEM'lerin gördüğü:          netscope'un gördüğü:
 
 Her event, 7 katmanda zenginleştirilir:
 
-- [ ] **1.1.1** **Katman 1 — Ağ Kimliği (Network Identity):**
+- [x] **1.1.1** **Katman 1 — Ağ Kimliği (Network Identity):**
   ```
   IP:       10.0.1.47 → HR-DESK-023.internal.corp (DNS PTR + DHCP fingerprint)
   MAC:      00:1A:2B:3C:4D:5F → Dell Inc. (OUI)
@@ -62,13 +62,13 @@ Her event, 7 katmanda zenginleştirilir:
   Device:   Windows 11 Pro 22H2, Dell Latitude 5540
   User:     efe.akkaya (Kerberos / LDAP correlation)
   ```
-  - [ ] DNS PTR + Passive DNS lookup (mevcut name cache)
-  - [ ] DHCP fingerprinting (Option 55, Vendor Class)
-  - [ ] MAC OUI → üretici (zaten mevcut)
-  - [ ] Kerberos AS-REQ / LDAP bind → kullanıcı adı eşleştirme
-  - [ ] NetBIOS / LLMNR / mDNS → hostname
-  - [ ] HTTP User-Agent → OS/browser tespiti
-  - [ ] Active Directory OU → departman
+  - [x] DNS PTR + Passive DNS lookup (mevcut name cache)
+  - [x] DHCP fingerprinting (Option 55, Vendor Class)
+  - [x] MAC OUI → üretici (zaten mevcut)
+  - [x] Kerberos AS-REQ / LDAP bind → kullanıcı adı eşleştirme
+  - [x] NetBIOS / LLMNR / mDNS → hostname
+  - [x] HTTP User-Agent → OS/browser tespiti
+  - [x] Active Directory OU → departman
 
 - [ ] **1.1.2** **Katman 2 — Protokol Semantik (Protocol Semantics):**
   ```

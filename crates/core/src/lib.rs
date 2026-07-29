@@ -55,6 +55,7 @@ pub mod llm_analytics;
 pub mod models;
 pub mod multi_tenancy;
 pub mod names;
+pub mod network_identity;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod notifications;
 pub mod opc_ua_traffic;
