@@ -90,6 +90,7 @@ zstd = "0.13"
 
 # Crypto (used in tests and salt generation)
 rand = "0.8"
+sha2 = "0.10"
 
 [dev-dependencies]
 # `oneshot` — drives the router in-process so the route/permission wiring can be

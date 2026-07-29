@@ -1352,7 +1352,10 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{get_glossary, get_protocol_risk, protocol_count, protocol_table, replay_packet};
+    use super::{
+        get_alert_rules, get_glossary, get_lessons, get_protocol_risk, protocol_count,
+        protocol_table, replay_packet, tls_keylog_clear, tls_keylog_load, tls_keylog_status,
+    };
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
@@ -1454,6 +1457,135 @@ mod tests {
     fn protocol_risk_known_protocol() {
         let risk = get_protocol_risk("HTTP".to_string()).unwrap();
         assert!(!risk.severity.is_empty());
+    }
+
+    /// The Learn tab is fed entirely from `education.rs`. This used to be a
+    /// hand-written array of 53 pairs that silently stopped growing as
+    /// protocols were added, so the guard is that the command still returns
+    /// everything `education.rs` has rather than a frozen subset of it.
+    #[test]
+    fn lessons_cover_every_protocol_that_has_one() {
+        let lessons = get_lessons();
+        let expected = netscope_core::education::protocols_with_lessons().len();
+
+        assert_eq!(lessons.len(), expected, "every lesson must reach the UI");
+        assert!(
+            lessons.len() > 53,
+            "got {} — back to the old hand-written list",
+            lessons.len()
+        );
+
+        // A lesson with an empty title or body renders as a blank card.
+        for l in &lessons {
+            assert!(!l.protocol.is_empty(), "lesson with no protocol name");
+            assert!(!l.title.is_empty(), "{} has no title", l.protocol);
+            assert!(!l.summary.is_empty(), "{} has no summary", l.protocol);
+        }
+    }
+
+    /// The rules the app ships with have to be rules the engine can actually
+    /// act on. Both halves of this fail silently: `AlertEngine::check` matches
+    /// `trigger_type` as a string and falls through `_ => {}` on anything it
+    /// does not know, and a filter that will not parse can never match a
+    /// packet. Either way the rule sits in the UI looking armed and never fires.
+    #[test]
+    fn default_alert_rules_are_ones_the_engine_can_fire() {
+        use netscope_core::filter::Filter;
+
+        // The arms `AlertEngine::check` actually handles.
+        const HANDLED: &[&str] = &[
+            "threshold",
+            "anomaly",
+            "time-based",
+            "signature",
+            "correlation",
+            "absence",
+        ];
+
+        let rules = get_alert_rules();
+        assert!(!rules.is_empty(), "the app must ship some default rules");
+
+        for rule in &rules {
+            assert!(!rule.name.is_empty(), "a default rule has no name");
+            assert!(
+                HANDLED.contains(&rule.trigger.trigger_type.as_str()),
+                "rule {:?} has trigger_type {:?}, which the engine ignores",
+                rule.name,
+                rule.trigger.trigger_type,
+            );
+            // The set documented on `AlertRule::severity`. Pinned to that list
+            // on purpose: a severity outside it is one the UI cannot style, and
+            // widening this without widening the doc is how they drift apart.
+            assert!(
+                matches!(
+                    rule.severity.as_str(),
+                    "informational" | "low" | "medium" | "high"
+                ),
+                "rule {:?} has severity {:?}",
+                rule.name,
+                rule.severity,
+            );
+            // An empty filter means "every packet" and is not passed to the
+            // parser; anything else has to compile.
+            if !rule.trigger.filter.is_empty() {
+                assert!(
+                    Filter::parse(&rule.trigger.filter).is_ok(),
+                    "rule {:?} has an unparseable filter {:?}",
+                    rule.name,
+                    rule.trigger.filter,
+                );
+            }
+        }
+    }
+
+    /// `tls_keylog_*` are thin wrappers whose only real job is mapping the core
+    /// stats onto the fields the UI reads. A swap of `added`/`rejected` would
+    /// report every accepted secret as junk, so both counts are pinned here.
+    ///
+    /// Kept as one test on purpose: the key log is process-global, so splitting
+    /// this would let the parts race each other inside the test binary.
+    #[test]
+    fn keylog_load_reports_accepted_and_rejected_then_clears() {
+        // `CLIENT_RANDOM <64 hex> <96 hex>` — two well-formed lines, plus a
+        // comment (ignored outright) and two malformed ones.
+        let good = format!(
+            "CLIENT_RANDOM {} {}\nCLIENT_RANDOM {} {}\n",
+            "a".repeat(64),
+            "b".repeat(96),
+            "c".repeat(64),
+            "d".repeat(96),
+        );
+        // Deliberately 2 accepted vs 3 rejected: with equal counts a swap of the
+        // two fields still satisfies both assertions and the test proves nothing.
+        let text = format!(
+            "# comment line\n{good}\
+             CLIENT_RANDOM tooshort ff\n\
+             not a keylog line\n\
+             CLIENT_RANDOM {} nothex!!\n",
+            "e".repeat(64),
+        );
+
+        let loaded = tls_keylog_load(text);
+        assert_eq!(loaded.added, 2, "both well-formed secrets must be accepted");
+        assert_eq!(
+            loaded.rejected, 3,
+            "the three malformed lines must be counted"
+        );
+
+        // `status` reports the live session count and never invents a delta.
+        let status = tls_keylog_status();
+        assert_eq!(status.sessions, loaded.sessions);
+        assert_eq!(status.added, 0);
+        assert_eq!(status.rejected, 0);
+
+        // These secrets decrypt real traffic — clearing has to actually clear.
+        let cleared = tls_keylog_clear();
+        assert_eq!(cleared.sessions, 0);
+        assert_eq!(
+            tls_keylog_status().sessions,
+            0,
+            "secrets survived a clear()"
+        );
     }
 
     #[test]

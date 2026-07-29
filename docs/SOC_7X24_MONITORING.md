@@ -292,7 +292,7 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 4.1 — Playbook Engine
 
-- [ ] **4.1.1** **Playbook formatı** — YAML tabanlı, step-by-step:
+- [x] **4.1.1** **Playbook formatı** — YAML tabanlı, step-by-step:
   ```yaml
   name: "Ransomware suspicion response"
   trigger:
@@ -309,31 +309,31 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
       channel: "#incident-response"
       template: "ransomware-alert"
   ```
-- [ ] **4.1.2** Built-in action'lar:
-  - [ ] `block_host` — Windows Firewall / iptables rule (mevcut `firewall.rs` üzerinden)
-  - [ ] `block_subnet` — /24 veya /16 block
-  - [ ] `quarantine_host` — 802.1X / NAC API ile port kapatma
-  - [ ] `snapshot_sensor` — o anki pcap buffer'ı diske yaz
-  - [ ] `start_full_capture` — sensörde full packet capture başlat
-  - [ ] `enrich_ip` / `enrich_domain` / `enrich_hash` — threat intel lookup
-  - [ ] `notify_slack` / `notify_teams` / `notify_email`
-  - [ ] `create_ticket` — Jira / ServiceNow / TheHive
-  - [ ] `run_script` — sensörde custom script çalıştır
-  - [ ] `send_syslog` / `send_snmp_trap`
-  - [ ] `isolate_host_via_edr` — CrowdStrike / SentinelOne API
-  - [ ] `dns_sinkhole` — Pi-hole / DNS server API ile domain block
-- [ ] **4.1.3** Condition engine — `{{.Field}} > X`, `contains`, `regex`, `in_list`
-- [ ] **4.1.4** Playbook debugger — kuru çalıştırma (dry run), step-by-step execution trace
-- [ ] **4.1.5** Playbook marketplace — topluluktan paylaşılan playbook'ları import et
+- [x] **4.1.2** Built-in action'lar:
+  - [x] `block_host` — Windows Firewall / iptables rule (mevcut `firewall.rs` üzerinden)
+  - [x] `block_subnet` — /24 veya /16 block
+  - [x] `quarantine_host` — 802.1X / NAC API ile port kapatma
+  - [x] `snapshot_sensor` — o anki pcap buffer'ı diske yaz
+  - [x] `start_full_capture` — sensörde full packet capture başlat
+  - [x] `enrich_ip` / `enrich_domain` / `enrich_hash` — threat intel lookup
+  - [x] `notify_slack` / `notify_teams` / `notify_email`
+  - [x] `create_ticket` — Jira / ServiceNow / TheHive
+  - [x] `run_script` — sensörde custom script çalıştır
+  - [x] `send_syslog` / `send_snmp_trap`
+  - [x] `isolate_host_via_edr` — CrowdStrike / SentinelOne API
+  - [x] `dns_sinkhole` — Pi-hole / DNS server API ile domain block
+- [x] **4.1.3** Condition engine — `{{.Field}} > X`, `contains`, `regex`, `in_list`
+- [x] **4.1.4** Playbook debugger — kuru çalıştırma (dry run), step-by-step execution trace
+- [x] **4.1.5** Playbook marketplace — topluluktan paylaşılan playbook'ları import et
 
 ### 4.2 — Incident Response
 
-- [ ] **4.2.1** **Case management** — alert → incident dönüştürme, case ID atama
-- [ ] **4.2.2** **Evidence locker** — incident'a bağlı tüm pcap, log, screenshot, not'ları bir arada tutma
-- [ ] **4.2.3** **Chain of custody** — her evidence parçası için timestamp + user damgası (adli bilişim uyumlu)
-- [ ] **4.2.4** **Incident timeline** — olayın başlangıcından kapanışına kadar tüm aksiyonların kronolojisi
-- [ ] **4.2.5** **Post-mortem template** — incident kapandığında otomatik post-mortem raporu oluştur
-- [ ] **4.2.6** **Lessons learned** — incident'tan öğrenilenleri kaydet, yeni kural öner
+- [x] **4.2.1** **Case management** — alert → incident dönüştürme, case ID atama
+- [x] **4.2.2** **Evidence locker** — incident'a bağlı tüm pcap, log, screenshot, not'ları bir arada tutma
+- [x] **4.2.3** **Chain of custody** — her evidence parçası için timestamp + user damgası (adli bilişim uyumlu)
+- [x] **4.2.4** **Incident timeline** — olayın başlangıcından kapanışına kadar tüm aksiyonların kronolojisi
+- [x] **4.2.5** **Post-mortem template** — incident kapandığında otomatik post-mortem raporu oluştur
+- [x] **4.2.6** **Lessons learned** — incident'tan öğrenilenleri kaydet, yeni kural öner
 
 ### 4.3 — Ticketing Entegrasyonu
 

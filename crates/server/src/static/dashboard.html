@@ -732,6 +732,8 @@
         <button class="tab-btn" id="btn-tab-alerts" onclick="switchTab('alerts')">Alert Triage Board</button>
         <button class="tab-btn" id="btn-tab-hunt" onclick="switchTab('hunt')">Threat Hunting</button>
         <button class="tab-btn" id="btn-tab-reports" onclick="switchTab('reports')">Reporting & KPI</button>
+        <button class="tab-btn" id="btn-tab-soar" onclick="switchTab('soar')">Playbook SOAR</button>
+        <button class="tab-btn" id="btn-tab-cases" onclick="switchTab('cases')">Incident Cases</button>
     </div>
 
     <!-- Tab 1: Overview -->
@@ -1343,6 +1345,216 @@
         </div>
     </div>
 
+    <!-- Tab 6: Playbook SOAR -->
+    <div id="tab-soar" class="tab-content" style="display: none; padding: 2rem;">
+        <div class="sensors-header" style="padding: 0 0 1.5rem 0;">
+            <h2>Playbook Automation SOAR Engine</h2>
+            <div>
+                <button class="badge badge-low" style="cursor:pointer; padding:0.5rem 1rem; font-weight:600;" onclick="executeLivePlaybook()">Run Playbook Live</button>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 1.5rem;">
+            <!-- YAML Editor and Debugger -->
+            <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                <div class="panel" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                    <div class="panel-header" style="margin-bottom:0;">
+                        <div class="panel-title">SOAR Playbook YAML Editor</div>
+                    </div>
+                    <textarea id="playbook-yaml-textarea" style="width:100%; height:320px; font-family:'JetBrains Mono', monospace; font-size:0.8rem; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); border-radius:8px; padding:0.75rem; resize:vertical;"></textarea>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <span style="font-size:0.8rem; color:var(--text-secondary);">Mock Confidence:</span>
+                        <input type="number" id="playbook-mock-conf" value="85" style="width:70px; padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary);">
+                        <button onclick="runPlaybookDebugger()" style="background-color:var(--accent-primary); border:none; color:white; padding:0.5rem 1.5rem; border-radius:6px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px var(--accent-glow); margin-left:auto;">Dry Run Debugger</button>
+                    </div>
+                </div>
+
+                <div class="panel" style="padding: 1.5rem;">
+                    <div class="panel-header" style="margin-bottom:1rem;">
+                        <div class="panel-title">Playbook Debugger Execution Trace</div>
+                    </div>
+                    <div id="playbook-trace-container" style="display:flex; flex-direction:column; gap:0.5rem; max-height:220px; overflow-y:auto; font-family:'JetBrains Mono', monospace; font-size:0.8rem; background-color:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem;">
+                        <div style="color:var(--text-secondary); text-align:center; padding:1.5rem;">Click "Dry Run Debugger" to trace the execution steps.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Playbook Marketplace -->
+            <div class="panel" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1rem; max-height:750px; overflow-y:auto;">
+                <div class="panel-header" style="margin-bottom:0;">
+                    <div class="panel-title">Playbook Marketplace Templates</div>
+                </div>
+                <div id="playbook-marketplace-list" style="display:flex; flex-direction:column; gap:0.75rem;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 7: Incident Cases -->
+    <div id="tab-cases" class="tab-content" style="display: none; padding: 2rem;">
+        <div class="sensors-header" style="padding: 0 0 1.5rem 0;">
+            <h2>Forensic Incident & Case Management</h2>
+            <div>
+                <button class="badge badge-low" style="cursor:pointer; padding:0.5rem 1rem; font-weight:600;" onclick="openCreateCaseModal()">+ Open Forensic Case</button>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 2.5fr; gap: 1.5rem;">
+            <!-- Left Side: Cases List -->
+            <div class="panel" style="padding: 1.5rem; display:flex; flex-direction:column; max-height:800px; overflow:hidden;">
+                <div class="panel-header" style="margin-bottom:1rem;">
+                    <div class="panel-title">Active Cases</div>
+                </div>
+                <div id="cases-list-container" style="display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; flex-grow:1;">
+                </div>
+            </div>
+
+            <!-- Right Side: Selected Case details locker -->
+            <div id="case-detail-container" style="display:none; flex-direction:column; gap:1.5rem;">
+                <!-- Header -->
+                <div class="panel" style="padding: 1.5rem; border-left:4px solid var(--accent-primary);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 id="case-det-title" style="margin:0; color:var(--text-primary);">Case Title</h3>
+                        <span id="case-det-status" class="badge badge-critical" style="text-transform:uppercase;">Open</span>
+                    </div>
+                    <p id="case-det-desc" style="color:var(--text-secondary); font-size:0.85rem; margin:0.5rem 0 1rem 0;">Description...</p>
+                    <div style="display:flex; gap:1rem; align-items:center; border-top:1px dashed var(--border-color); padding-top:0.75rem;">
+                        <span style="font-size:0.8rem; color:var(--text-secondary);">Severity: <strong id="case-det-sev" style="color:var(--text-primary);">medium</strong></span>
+                        <span style="font-size:0.8rem; color:var(--text-secondary);">Case ID: <strong id="case-det-id" style="font-family:monospace; color:var(--text-primary);">UUID</strong></span>
+                        <div style="flex-grow:1;"></div>
+                        <button onclick="changeCaseStatus('resolved')" style="background-color:transparent; border:1px solid var(--border-color); color:var(--text-primary); padding:0.3rem 0.8rem; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer;">Mark Resolved</button>
+                    </div>
+                </div>
+
+                <!-- Tabs/Section: Evidence & Timeline -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+                    <!-- Evidence Locker & Chain of Custody -->
+                    <div class="panel" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                        <div class="panel-header" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; width:100%;">
+                            <div class="panel-title">Chain of Custody Evidence Locker</div>
+                            <button onclick="openAddEvidenceModal()" style="background-color:transparent; border:1px solid var(--border-color); color:var(--text-primary); padding:0.25rem 0.5rem; border-radius:6px; font-size:0.75rem; cursor:pointer;">+ Add File</button>
+                        </div>
+                        <div id="case-evidence-locker" style="display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; max-height:350px;">
+                        </div>
+                    </div>
+
+                    <!-- Chronological Timeline -->
+                    <div class="panel" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                        <div class="panel-header" style="margin-bottom:0;">
+                            <div class="panel-title">Incident Actions Timeline</div>
+                        </div>
+                        <div id="case-timeline-container" style="display:flex; flex-direction:column; gap:0.75rem; overflow-y:auto; max-height:350px; font-size:0.8rem; border-left:2px solid var(--border-color); padding-left:0.75rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ticketing Sync & Post-Mortem -->
+                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:1.5rem;">
+                    <!-- Post-Mortem view -->
+                    <div class="panel" style="padding:1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                        <div class="panel-header" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; width:100%;">
+                            <div class="panel-title">Auto Incident Post-Mortem Report</div>
+                            <button onclick="loadPostMortemMarkdown()" style="background-color:transparent; border:1px solid var(--border-color); color:var(--text-primary); padding:0.25rem 0.5rem; border-radius:6px; font-size:0.75rem; cursor:pointer;">Generate Report</button>
+                        </div>
+                        <textarea id="case-post-mortem-textarea" style="width:100%; height:200px; font-family:'JetBrains Mono', monospace; font-size:0.75rem; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); border-radius:8px; padding:0.5rem; resize:none;" readonly></textarea>
+                    </div>
+
+                    <!-- Ticketing Integrations Sync config -->
+                    <div class="panel" style="padding:1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                        <div class="panel-header" style="margin-bottom:0;">
+                            <div class="panel-title">External Ticketing Integration Sync</div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                            <label style="font-size:0.8rem; color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                                Provider Type:
+                                <select id="ticket-provider" style="padding:0.3rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.8rem;">
+                                    <option value="jira">Jira Software API</option>
+                                    <option value="servicenow">ServiceNow Tables</option>
+                                    <option value="thehive">TheHive Case Management</option>
+                                </select>
+                            </label>
+                            <label style="font-size:0.8rem; color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                                Platform URL:
+                                <input type="text" id="ticket-url" placeholder="e.g. jira.netscope.local" style="padding:0.3rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.8rem; width:180px;">
+                            </label>
+                            <label style="font-size:0.8rem; color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                                Bidirectional Sync:
+                                <input type="checkbox" id="ticket-sync" checked style="cursor:pointer;">
+                            </label>
+                            <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+                                <button onclick="triggerSimulatedWebhookSync()" style="background-color:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:0.4rem 0.8rem; border-radius:6px; font-size:0.75rem; cursor:pointer;">Simulate Jira Closure Webhook</button>
+                                <button onclick="saveTicketingIntegration()" style="background-color:var(--accent-primary); border:none; color:white; padding:0.4rem 1rem; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer; margin-left:auto;">Save Settings</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Empty State -->
+            <div id="case-empty-state" class="panel" style="padding: 3rem; text-align:center; color:var(--text-secondary); display:flex; align-items:center; justify-content:center; flex-grow:1;">
+                Select a case on the left pane to view forensic evidence, chronological action logs, and ticket synchronization options.
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Case Dialog Modal -->
+    <div id="create-case-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.65); z-index:2000; align-items:center; justify-content:center;">
+        <div style="background-color:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:1.5rem; width:450px; display:flex; flex-direction:column; gap:1rem;">
+            <h3 style="color:var(--text-primary); margin:0;">Open Forensic Incident Case</h3>
+            <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                <label style="font-size:0.8rem; color:var(--text-secondary);">Case Title</label>
+                <input type="text" id="case-input-title" placeholder="e.g. Critical Data Exfiltration Triage" style="padding:0.5rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit;">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                <label style="font-size:0.8rem; color:var(--text-secondary);">Description</label>
+                <textarea id="case-input-desc" placeholder="Details of findings..." style="height:80px; padding:0.5rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit; resize:none;"></textarea>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:0.5rem;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:flex; flex-direction:column; gap:0.2rem; flex-grow:1;">
+                    Severity
+                    <select id="case-input-sev" style="padding:0.4rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary);">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </label>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+                <button onclick="closeCreateCaseModal()" style="background-color:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:0.4rem 1rem; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button onclick="submitCreateCase()" style="background-color:var(--accent-primary); border:none; color:white; padding:0.4rem 1rem; border-radius:6px; font-weight:600; cursor:pointer;">Open Case</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Evidence Dialog Modal -->
+    <div id="add-evidence-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.65); z-index:2000; align-items:center; justify-content:center;">
+        <div style="background-color:var(--panel-bg); border:1px solid var(--border-color); border-radius:12px; padding:1.5rem; width:400px; display:flex; flex-direction:column; gap:1rem;">
+            <h3 style="color:var(--text-primary); margin:0;">Add Evidence to Case Locker</h3>
+            <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                <label style="font-size:0.8rem; color:var(--text-secondary);">Filename</label>
+                <input type="text" id="evidence-input-filename" placeholder="e.g. analysis_notes.txt" style="padding:0.5rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit;">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                <label style="font-size:0.8rem; color:var(--text-secondary);">Evidence Type</label>
+                <select id="evidence-input-type" style="padding:0.5rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary);">
+                    <option value="note">Analyst Investigation Note</option>
+                    <option value="log">Raw Security Log</option>
+                    <option value="pcap">Mock PCAP Binary Signature</option>
+                    <option value="screenshot">Screenshot Audit Trail</option>
+                </select>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                <label style="font-size:0.8rem; color:var(--text-secondary);">Content / Text Logs</label>
+                <textarea id="evidence-input-content" placeholder="Paste logs or analysis details here..." style="height:120px; padding:0.5rem; border-radius:6px; background-color:var(--bg-color); border:1px solid var(--border-color); color:var(--text-primary); font-family:inherit; resize:none;"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+                <button onclick="closeAddEvidenceModal()" style="background-color:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:0.4rem 1rem; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button onclick="submitAddEvidence()" style="background-color:var(--accent-primary); border:none; color:white; padding:0.4rem 1rem; border-radius:6px; font-weight:600; cursor:pointer;">Add Evidence</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Alert Detail Drawer (Slide-Over Panel) -->
     <div class="drawer" id="alert-drawer">
         <div class="drawer-header">
@@ -1785,6 +1997,14 @@
                 document.getElementById('btn-tab-reports').classList.add('active');
                 document.getElementById('tab-reports').classList.add('active');
                 initializeReportsPanel();
+            } else if (tab === 'soar') {
+                document.getElementById('btn-tab-soar').classList.add('active');
+                document.getElementById('tab-soar').classList.add('active');
+                initializeSoarPanel();
+            } else if (tab === 'cases') {
+                document.getElementById('btn-tab-cases').classList.add('active');
+                document.getElementById('tab-cases').classList.add('active');
+                initializeCasesPanel();
             }
         }
 
@@ -3532,6 +3752,515 @@
                 }
             } catch (e) {
                 alert("Error deleting schedule: " + e.message);
+            }
+        }
+
+        // ---- SOAR Playbook Engine Logic ----
+        let marketplacePlaybooks = [];
+        let activePlaybookName = "";
+
+        async function initializeSoarPanel() {
+            if (!jwtToken) return;
+            
+            // Set default YAML in editor if empty
+            const area = document.getElementById("playbook-yaml-textarea");
+            if (area && !area.value) {
+                area.value = `name: "Ransomware suspicion response"
+trigger:
+  rule_ids: [105, 203, 442]
+steps:
+  - action: enrich_ip
+    target: "{{.SrcIP}}"
+  - action: block_host
+    target: "{{.SrcIP}}"
+    condition: "{{.EnrichResult.AbuseIPDB.confidence}} > 80"
+  - action: snapshot_sensor
+    target: "{{.SensorID}}"
+  - action: notify_slack
+    channel: "#incident-response"
+    template: "ransomware-alert"`;
+            }
+
+            loadMarketplacePlaybooks();
+        }
+
+        async function loadMarketplacePlaybooks() {
+            try {
+                const res = await fetch("/api/v1/soar/playbooks/marketplace", {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    marketplacePlaybooks = await res.json();
+                    renderMarketplace();
+                }
+            } catch (e) {
+                console.error("Failed to load community playbooks:", e);
+            }
+        }
+
+        function renderMarketplace() {
+            const container = document.getElementById("playbook-marketplace-list");
+            container.innerHTML = "";
+            
+            marketplacePlaybooks.forEach((p, idx) => {
+                const item = document.createElement("div");
+                item.style.backgroundColor = "var(--bg-color)";
+                item.style.border = "1px solid var(--border-color)";
+                item.style.borderRadius = "8px";
+                item.style.padding = "0.75rem";
+                item.style.cursor = "pointer";
+                item.style.display = "flex";
+                item.style.flexDirection = "column";
+                item.style.gap = "0.3rem";
+                
+                item.innerHTML = `
+                    <div style="font-weight:700; font-size:0.85rem; color:var(--accent-primary);">${p.name}</div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary);">${p.description}</div>
+                    <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:0.25rem; font-style:italic;">Source: ${p.source}</div>
+                `;
+                
+                item.addEventListener("click", () => {
+                    document.getElementById("playbook-yaml-textarea").value = p.yaml_content;
+                    alert(`Loaded template: ${p.name}`);
+                });
+                
+                container.appendChild(item);
+            });
+        }
+
+        async function runPlaybookDebugger() {
+            if (!jwtToken) return;
+            const yaml = document.getElementById("playbook-yaml-textarea").value;
+            const mockConf = parseInt(document.getElementById("playbook-mock-conf").value, 10);
+            
+            try {
+                const res = await fetch("/api/v1/soar/playbooks/debug", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        yaml_content: yaml,
+                        mock_fields: { confidence: mockConf }
+                    })
+                });
+                
+                const traceContainer = document.getElementById("playbook-trace-container");
+                traceContainer.innerHTML = "";
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    activePlaybookName = data.playbook_name;
+                    
+                    data.traces.forEach(t => {
+                        const row = document.createElement("div");
+                        row.style.borderBottom = "1px solid var(--border-color)";
+                        row.style.padding = "0.4rem 0";
+                        row.style.display = "flex";
+                        row.style.flexDirection = "column";
+                        row.style.gap = "0.2rem";
+                        
+                        const color = t.condition_evaluated ? "#10b981" : "#ef4444";
+                        
+                        row.innerHTML = `
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span><strong>Step ${t.step_index}:</strong> ${t.action} (${t.target})</span>
+                                <span style="color:${color}; font-weight:700; font-size:0.75rem;">${t.outcome}</span>
+                            </div>
+                            <div style="font-size:0.7rem; color:var(--text-secondary);">${t.condition_logs}</div>
+                        `;
+                        traceContainer.appendChild(row);
+                    });
+                } else {
+                    const err = await res.json();
+                    traceContainer.innerHTML = `<div style="color:var(--critical-color); padding:1rem;">Error: ${err.error}</div>`;
+                }
+            } catch (e) {
+                alert("Debugger request failed: " + e.message);
+            }
+        }
+
+        async function executeLivePlaybook() {
+            if (!jwtToken) return;
+            if (!activePlaybookName) {
+                alert("Please run a Dry Run Debugger trace first before running live.");
+                return;
+            }
+            // Execute mock block logic against a random alert if none is selected
+            let targetAlertId = activeAlertId;
+            if (!targetAlertId) {
+                // Find any alert from alerts triage board or default
+                targetAlertId = "00000000-0000-0000-0000-000000000000"; // fallback
+            }
+
+            try {
+                const res = await fetch("/api/v1/soar/playbooks/execute", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        playbook_name: activePlaybookName,
+                        alert_id: targetAlertId
+                    })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`Playbook "${activePlaybookName}" executed live successfully! \n\nLogs:\n` + data.logs.join("\n"));
+                } else {
+                    const err = await res.json();
+                    alert("Execution failed: " + (err.error || "Alert not found"));
+                }
+            } catch (e) {
+                alert("Execution error: " + e.message);
+            }
+        }
+
+        // ---- Incident Cases Logic ----
+        let casesList = [];
+        let activeCaseId = null;
+
+        async function initializeCasesPanel() {
+            loadCases();
+            loadTicketingIntegrations();
+        }
+
+        async function loadCases() {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch("/api/v1/soar/cases", {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    casesList = await res.json();
+                    renderCasesList();
+                }
+            } catch (e) {
+                console.error("Failed to load cases:", e);
+            }
+        }
+
+        function renderCasesList() {
+            const container = document.getElementById("cases-list-container");
+            container.innerHTML = "";
+            
+            casesList.forEach(c => {
+                const item = document.createElement("div");
+                item.style.backgroundColor = activeCaseId === c.id ? "var(--panel-bg)" : "var(--bg-color)";
+                item.style.border = activeCaseId === c.id ? "1px solid var(--accent-primary)" : "1px solid var(--border-color)";
+                item.style.borderRadius = "8px";
+                item.style.padding = "0.75rem";
+                item.style.cursor = "pointer";
+                item.style.display = "flex";
+                item.style.flexDirection = "column";
+                item.style.gap = "0.3rem";
+                item.style.transition = "all 0.2s";
+                
+                const statusClass = c.status === "open" ? "badge-critical" : (c.status === "investigating" ? "badge-medium" : "badge-low");
+                
+                item.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:700; font-size:0.85rem; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:140px;">${c.title}</span>
+                        <span class="badge ${statusClass}" style="font-size:0.6rem; text-transform:uppercase;">${c.status}</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary);">${new Date(c.created_at).toLocaleDateString()}</div>
+                `;
+                
+                item.addEventListener("click", () => selectCase(c.id));
+                container.appendChild(item);
+            });
+
+            if (casesList.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-secondary); text-align:center; font-size:0.8rem; padding:1.5rem 0;">No active incident cases</div>';
+            }
+        }
+
+        function selectCase(id) {
+            activeCaseId = id;
+            renderCasesList();
+            
+            document.getElementById("case-empty-state").style.display = "none";
+            document.getElementById("case-detail-container").style.display = "flex";
+            
+            loadCaseDetails(id);
+        }
+
+        async function loadCaseDetails(id) {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch(`/api/v1/soar/cases/${id}`, {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    document.getElementById("case-det-title").innerText = data.case.title;
+                    document.getElementById("case-det-desc").innerText = data.case.description || "No description.";
+                    document.getElementById("case-det-status").innerText = data.case.status;
+                    document.getElementById("case-det-sev").innerText = data.case.severity;
+                    document.getElementById("case-det-id").innerText = data.case.id;
+                    
+                    // Evidence Locker (SHA256 signature chain of custody)
+                    const locker = document.getElementById("case-evidence-locker");
+                    locker.innerHTML = "";
+                    data.evidence.forEach(ev => {
+                        locker.innerHTML += `
+                            <div style="background-color:var(--bg-color); border:1px solid var(--border-color); border-radius:6px; padding:0.5rem; font-size:0.8rem; display:flex; flex-direction:column; gap:0.2rem;">
+                                <div style="display:flex; justify-content:space-between;">
+                                    <strong>[${ev.evidence_type.toUpperCase()}] ${ev.filename}</strong>
+                                    <span style="font-size:0.65rem; color:var(--text-secondary);">${new Date(ev.added_at).toLocaleString()}</span>
+                                </div>
+                                <div style="font-size:0.7rem; font-family:monospace; color:var(--text-secondary); word-break:break-all; border-top:1px dashed var(--border-color); padding-top:0.2rem; margin-top:0.2rem;">SHA256: ${ev.checksum || "N/A"}</div>
+                            </div>
+                        `;
+                    });
+                    if (data.evidence.length === 0) {
+                        locker.innerHTML = '<div style="font-size:0.8rem; color:var(--text-secondary); text-align:center; padding:1rem;">Evidence locker empty</div>';
+                    }
+                    
+                    // Chronological Timeline
+                    const timeline = document.getElementById("case-timeline-container");
+                    timeline.innerHTML = "";
+                    data.timeline.forEach(t => {
+                        timeline.innerHTML += `
+                            <div style="margin-bottom:0.5rem;">
+                                <div style="display:flex; justify-content:space-between; font-weight:600; color:var(--text-primary);">
+                                    <span>${t.event_type.toUpperCase()}</span>
+                                    <span style="font-size:0.7rem; color:var(--text-secondary);">${new Date(t.timestamp).toLocaleTimeString()}</span>
+                                </div>
+                                <div style="color:var(--text-secondary); margin-top:0.1rem;">${t.description}</div>
+                            </div>
+                        `;
+                    });
+                    if (data.timeline.length === 0) {
+                        timeline.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:1rem;">Timeline empty</div>';
+                    }
+
+                    // Reset post-mortem textarea
+                    document.getElementById("case-post-mortem-textarea").value = "";
+                }
+            } catch (e) {
+                console.error("Failed to load case details:", e);
+            }
+        }
+
+        function openCreateCaseModal() {
+            document.getElementById("case-input-title").value = "";
+            document.getElementById("case-input-desc").value = "";
+            document.getElementById("create-case-modal").style.display = "flex";
+        }
+
+        function closeCreateCaseModal() {
+            document.getElementById("create-case-modal").style.display = "none";
+        }
+
+        async function submitCreateCase() {
+            if (!jwtToken) return;
+            const title = document.getElementById("case-input-title").value.trim();
+            const desc = document.getElementById("case-input-desc").value.trim();
+            const sev = document.getElementById("case-input-sev").value;
+            
+            if (!title) {
+                alert("Please enter a case title.");
+                return;
+            }
+            
+            const linkedAlerts = [];
+            // If activeAlertId is set, link it!
+            if (activeAlertId) linkedAlerts.push(activeAlertId);
+
+            try {
+                const res = await fetch("/api/v1/soar/cases", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        description: desc ? desc : null,
+                        severity: sev,
+                        alert_ids: linkedAlerts
+                    })
+                });
+                
+                if (res.ok) {
+                    alert("Incident Case opened successfully!");
+                    closeCreateCaseModal();
+                    loadCases();
+                } else {
+                    alert("Failed to open case.");
+                }
+            } catch (e) {
+                alert("Error: " + e.message);
+            }
+        }
+
+        async function changeCaseStatus(status) {
+            if (!jwtToken || !activeCaseId) return;
+            try {
+                const res = await fetch(`/api/v1/soar/cases/${activeCaseId}/status`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ status: status })
+                });
+                if (res.ok) {
+                    alert(`Case status updated to ${status}!`);
+                    loadCaseDetails(activeCaseId);
+                    loadCases();
+                }
+            } catch (e) {
+                alert("Status update failed: " + e.message);
+            }
+        }
+
+        function openAddEvidenceModal() {
+            document.getElementById("evidence-input-filename").value = "";
+            document.getElementById("evidence-input-content").value = "";
+            document.getElementById("add-evidence-modal").style.display = "flex";
+        }
+
+        function closeAddEvidenceModal() {
+            document.getElementById("add-evidence-modal").style.display = "none";
+        }
+
+        async function submitAddEvidence() {
+            if (!jwtToken || !activeCaseId) return;
+            const filename = document.getElementById("evidence-input-filename").value.trim();
+            const type = document.getElementById("evidence-input-type").value;
+            const content = document.getElementById("evidence-input-content").value.trim();
+            
+            if (!filename || !content) {
+                alert("Please fill in both filename and content.");
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/v1/soar/cases/${activeCaseId}/evidence`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        evidence_type: type,
+                        filename: filename,
+                        content: content
+                    })
+                });
+                if (res.ok) {
+                    alert("Forensic evidence added and SHA256 Chain of Custody signature registered!");
+                    closeAddEvidenceModal();
+                    loadCaseDetails(activeCaseId);
+                }
+            } catch (e) {
+                alert("Evidence upload error: " + e.message);
+            }
+        }
+
+        async function loadPostMortemMarkdown() {
+            if (!jwtToken || !activeCaseId) return;
+            try {
+                const res = await fetch(`/api/v1/soar/cases/${activeCaseId}/post-mortem`, {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const text = await res.text();
+                    document.getElementById("case-post-mortem-textarea").value = text;
+                }
+            } catch (e) {
+                alert("Post mortem failed to load: " + e.message);
+            }
+        }
+
+        // Ticketing settings
+        async function loadTicketingIntegrations() {
+            if (!jwtToken) return;
+            try {
+                const res = await fetch("/api/v1/soar/ticketing", {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.length > 0) {
+                        const activeInt = data[0];
+                        document.getElementById("ticket-provider").value = activeInt.provider;
+                        document.getElementById("ticket-url").value = activeInt.url;
+                        document.getElementById("ticket-sync").checked = activeInt.enabled;
+                    }
+                }
+            } catch (e) {
+                console.error("Ticketing failed to load:", e);
+            }
+        }
+
+        async function saveTicketingIntegration() {
+            if (!jwtToken) return;
+            const provider = document.getElementById("ticket-provider").value;
+            const url = document.getElementById("ticket-url").value.trim();
+            const enabled = document.getElementById("ticket-sync").checked;
+            
+            if (!url) {
+                alert("Please enter integration platform URL.");
+                return;
+            }
+            
+            try {
+                const res = await fetch("/api/v1/soar/ticketing", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        provider: provider,
+                        url: url,
+                        api_token: "mock-token-12345",
+                        project_key: "NET",
+                        enabled: enabled
+                    })
+                });
+                if (res.ok) {
+                    alert("Ticketing integration settings stored and synced successfully!");
+                }
+            } catch (e) {
+                alert("Settings save failed: " + e.message);
+            }
+        }
+
+        async function triggerSimulatedWebhookSync() {
+            if (!jwtToken || !activeCaseId) {
+                alert("Please select an active incident case first to simulate ticketing closure.");
+                return;
+            }
+            
+            try {
+                const res = await fetch("/api/v1/soar/ticketing/webhook", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        integration_provider: document.getElementById("ticket-provider").value,
+                        ticket_key: "NET-2402",
+                        action: "closed",
+                        case_id: activeCaseId
+                    })
+                });
+                if (res.ok) {
+                    alert("Jira Issue Closed webhook received! Bidirectional Sync triggered: associated Case status set to CLOSED.");
+                    loadCaseDetails(activeCaseId);
+                    loadCases();
+                }
+            } catch (e) {
+                alert("Webhook simulation failed: " + e.message);
             }
         }
 

@@ -435,3 +435,92 @@ pub struct ComplianceReport {
     pub nis2_details: String,
     pub generated_at: DateTime<Utc>,
 }
+
+// ── SOAR & Incident Response ──
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Case {
+    pub id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: String,
+    pub severity: String,
+    pub assigned_to: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateCase {
+    pub title: String,
+    pub description: Option<String>,
+    pub severity: String,
+    pub alert_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Evidence {
+    pub id: Uuid,
+    pub case_id: Uuid,
+    pub evidence_type: String,
+    pub filename: String,
+    pub filepath: String,
+    pub added_by: Option<Uuid>,
+    pub added_at: DateTime<Utc>,
+    pub checksum: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ChainOfCustody {
+    pub id: Uuid,
+    pub evidence_id: Uuid,
+    pub action: String,
+    pub performed_by: Option<Uuid>,
+    pub performed_at: DateTime<Utc>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct IncidentTimeline {
+    pub id: Uuid,
+    pub case_id: Uuid,
+    pub event_type: String,
+    pub description: String,
+    pub timestamp: DateTime<Utc>,
+    pub actor: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TicketingIntegration {
+    pub id: Uuid,
+    pub provider: String,
+    pub url: String,
+    pub api_token: Option<String>,
+    pub project_key: Option<String>,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateTicketingIntegration {
+    pub provider: String,
+    pub url: String,
+    pub api_token: Option<String>,
+    pub project_key: Option<String>,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DbPlaybook {
+    pub id: Uuid,
+    pub name: String,
+    pub yaml_content: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreatePlaybook {
+    pub name: String,
+    pub yaml_content: String,
+}

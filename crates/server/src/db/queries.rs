@@ -1205,3 +1205,231 @@ pub async fn delete_scheduled_report(pool: &PgPool, id: Uuid) -> Result<bool> {
     let res = sqlx::query("DELETE FROM scheduled_reports WHERE id = $1").bind(id).execute(pool).await?;
     Ok(res.rows_affected() > 0)
 }
+
+// ── SOAR & Incident Response Queries ──
+
+pub async fn list_cases(pool: &PgPool) -> Result<Vec<Case>> {
+    Ok(sqlx::query_as::<_, Case>(
+        "SELECT id, title, description, status, severity, assigned_to, created_at, updated_at FROM cases ORDER BY created_at DESC"
+    )
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn get_case_detail(pool: &PgPool, id: Uuid) -> Result<Option<Case>> {
+    Ok(sqlx::query_as::<_, Case>(
+        "SELECT id, title, description, status, severity, assigned_to, created_at, updated_at FROM cases WHERE id = $1"
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?)
+}
+
+pub async fn get_case_alerts(pool: &PgPool, case_id: Uuid) -> Result<Vec<Alert>> {
+    Ok(sqlx::query_as::<_, Alert>(
+        "SELECT a.id, a.rule_id, a.sensor_id, a.event_id, a.status, a.severity, a.title, a.description, \
+                a.source_ip::inet, a.dest_ip::inet, a.raw_data, \
+                a.acknowledged_by, a.acknowledged_at, a.resolved_by, a.resolved_at, \
+                a.created_at, a.updated_at \
+         FROM alerts a \
+         JOIN case_alerts ca ON ca.alert_id = a.id \
+         WHERE ca.case_id = $1"
+    )
+    .bind(case_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn insert_case(
+    pool: &PgPool,
+    title: &str,
+    description: Option<&str>,
+    severity: &str,
+    assigned_to: Option<Uuid>,
+) -> Result<Case> {
+    Ok(sqlx::query_as::<_, Case>(
+        "INSERT INTO cases (title, description, severity, assigned_to) \
+         VALUES ($1, $2, $3, $4) \
+         RETURNING id, title, description, status, severity, assigned_to, created_at, updated_at"
+    )
+    .bind(title)
+    .bind(description)
+    .bind(severity)
+    .bind(assigned_to)
+    .fetch_one(pool)
+    .await?)
+}
+
+pub async fn link_alert_to_case(pool: &PgPool, case_id: Uuid, alert_id: Uuid) -> Result<()> {
+    sqlx::query("INSERT INTO case_alerts (case_id, alert_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+        .bind(case_id)
+        .bind(alert_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn update_case_status(pool: &PgPool, id: Uuid, status: &str) -> Result<Option<Case>> {
+    Ok(sqlx::query_as::<_, Case>(
+        "UPDATE cases SET status = $1, updated_at = now() WHERE id = $2 RETURNING id, title, description, status, severity, assigned_to, created_at, updated_at"
+    )
+    .bind(status)
+    .bind(id)
+    .fetch_optional(pool)
+    .await?)
+}
+
+// ── Evidence Locker Queries ──
+
+pub async fn list_evidence(pool: &PgPool, case_id: Uuid) -> Result<Vec<Evidence>> {
+    Ok(sqlx::query_as::<_, Evidence>(
+        "SELECT id, case_id, evidence_type, filename, filepath, added_by, added_at, checksum FROM evidence_locker WHERE case_id = $1 ORDER BY added_at DESC"
+    )
+    .bind(case_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn insert_evidence(
+    pool: &PgPool,
+    case_id: Uuid,
+    evidence_type: &str,
+    filename: &str,
+    filepath: &str,
+    added_by: Option<Uuid>,
+    checksum: Option<&str>,
+) -> Result<Evidence> {
+    Ok(sqlx::query_as::<_, Evidence>(
+        "INSERT INTO evidence_locker (case_id, evidence_type, filename, filepath, added_by, checksum) \
+         VALUES ($1, $2, $3, $4, $5, $6) \
+         RETURNING id, case_id, evidence_type, filename, filepath, added_by, added_at, checksum"
+    )
+    .bind(case_id)
+    .bind(evidence_type)
+    .bind(filename)
+    .bind(filepath)
+    .bind(added_by)
+    .bind(checksum)
+    .fetch_one(pool)
+    .await?)
+}
+
+// ── Chain of Custody Queries ──
+
+pub async fn list_custody_logs(pool: &PgPool, case_id: Uuid) -> Result<Vec<ChainOfCustody>> {
+    Ok(sqlx::query_as::<_, ChainOfCustody>(
+        "SELECT coc.id, coc.evidence_id, coc.action, coc.performed_by, coc.performed_at, coc.notes \
+         FROM chain_of_custody coc \
+         JOIN evidence_locker el ON el.id = coc.evidence_id \
+         WHERE el.case_id = $1 ORDER BY coc.performed_at DESC"
+    )
+    .bind(case_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn insert_custody_log(
+    pool: &PgPool,
+    evidence_id: Uuid,
+    action: &str,
+    performed_by: Option<Uuid>,
+    notes: Option<&str>,
+) -> Result<ChainOfCustody> {
+    Ok(sqlx::query_as::<_, ChainOfCustody>(
+        "INSERT INTO chain_of_custody (evidence_id, action, performed_by, notes) \
+         VALUES ($1, $2, $3, $4) \
+         RETURNING id, evidence_id, action, performed_by, performed_at, notes"
+    )
+    .bind(evidence_id)
+    .bind(action)
+    .bind(performed_by)
+    .bind(notes)
+    .fetch_one(pool)
+    .await?)
+}
+
+// ── Incident Timeline Queries ──
+
+pub async fn list_timeline_events(pool: &PgPool, case_id: Uuid) -> Result<Vec<IncidentTimeline>> {
+    Ok(sqlx::query_as::<_, IncidentTimeline>(
+        "SELECT id, case_id, event_type, description, timestamp, actor FROM incident_timeline WHERE case_id = $1 ORDER BY timestamp ASC"
+    )
+    .bind(case_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn insert_timeline_event(
+    pool: &PgPool,
+    case_id: Uuid,
+    event_type: &str,
+    description: &str,
+    actor: Option<Uuid>,
+) -> Result<IncidentTimeline> {
+    Ok(sqlx::query_as::<_, IncidentTimeline>(
+        "INSERT INTO incident_timeline (case_id, event_type, description, actor) \
+         VALUES ($1, $2, $3, $4) \
+         RETURNING id, case_id, event_type, description, timestamp, actor"
+    )
+    .bind(case_id)
+    .bind(event_type)
+    .bind(description)
+    .bind(actor)
+    .fetch_one(pool)
+    .await?)
+}
+
+// ── Playbook CRUD Queries ──
+
+pub async fn list_playbooks(pool: &PgPool) -> Result<Vec<DbPlaybook>> {
+    Ok(sqlx::query_as::<_, DbPlaybook>(
+        "SELECT id, name, yaml_content, created_at, updated_at FROM playbooks ORDER BY created_at DESC"
+    )
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn insert_playbook(pool: &PgPool, name: &str, yaml_content: &str) -> Result<DbPlaybook> {
+    Ok(sqlx::query_as::<_, DbPlaybook>(
+        "INSERT INTO playbooks (name, yaml_content) VALUES ($1, $2) \
+         ON CONFLICT (name) DO UPDATE SET yaml_content = EXCLUDED.yaml_content, updated_at = now() \
+         RETURNING id, name, yaml_content, created_at, updated_at"
+    )
+    .bind(name)
+    .bind(yaml_content)
+    .fetch_one(pool)
+    .await?)
+}
+
+// ── Ticketing Integration Queries ──
+
+pub async fn list_ticketing_integrations(pool: &PgPool) -> Result<Vec<TicketingIntegration>> {
+    Ok(sqlx::query_as::<_, TicketingIntegration>(
+        "SELECT id, provider, url, api_token, project_key, enabled, created_at FROM ticketing_integrations ORDER BY provider"
+    )
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn insert_ticketing_integration(
+    pool: &PgPool,
+    provider: &str,
+    url: &str,
+    api_token: Option<&str>,
+    project_key: Option<&str>,
+    enabled: bool,
+) -> Result<TicketingIntegration> {
+    Ok(sqlx::query_as::<_, TicketingIntegration>(
+        "INSERT INTO ticketing_integrations (provider, url, api_token, project_key, enabled) \
+         VALUES ($1, $2, $3, $4, $5) \
+         ON CONFLICT (provider) DO UPDATE SET url = EXCLUDED.url, api_token = EXCLUDED.api_token, project_key = EXCLUDED.project_key, enabled = EXCLUDED.enabled \
+         RETURNING id, provider, url, api_token, project_key, enabled, created_at"
+    )
+    .bind(provider)
+    .bind(url)
+    .bind(api_token)
+    .bind(project_key)
+    .bind(enabled)
+    .fetch_one(pool)
+    .await?)
+}

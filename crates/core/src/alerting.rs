@@ -9,8 +9,15 @@ use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RuleTrigger {
+    /// One of [`RuleTrigger::SUPPORTED_TYPES`].
+    ///
+    /// `check` matches this as a plain string and falls through `_ => {}` on
+    /// anything else, so an unrecognised value is not an error — it is a rule
+    /// that sits in the UI looking armed and never fires. This list used to
+    /// advertise `"compound"`, which no arm ever handled; combining rules is
+    /// what `"correlation"` does, via `sub_rules`.
     #[serde(rename = "type")]
-    pub trigger_type: String, // "threshold", "anomaly", "signature", "correlation", "absence", "compound", "time-based"
+    pub trigger_type: String,
     pub filter: String,
     pub group_by: Option<Vec<String>>,
     pub threshold: Option<usize>,
@@ -18,6 +25,26 @@ pub struct RuleTrigger {
     pub sub_rules: Option<Vec<String>>,
     pub start_time: Option<String>,
     pub end_time: Option<String>,
+}
+
+impl RuleTrigger {
+    /// Every `trigger_type` [`AlertEngine::check`] actually acts on.
+    ///
+    /// Pinned by `supported_types_match_the_engine` so this cannot quietly
+    /// drift from the match arms the way `"compound"` did.
+    pub const SUPPORTED_TYPES: &'static [&'static str] = &[
+        "threshold",
+        "anomaly",
+        "time-based",
+        "signature",
+        "correlation",
+        "absence",
+    ];
+
+    /// Whether a rule carrying this trigger can ever fire.
+    pub fn is_supported(&self) -> bool {
+        Self::SUPPORTED_TYPES.contains(&self.trigger_type.as_str())
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -865,6 +892,57 @@ mod tests {
     use crate::models::Protocol;
     use bytes::Bytes;
     use chrono::Utc;
+
+    /// `SUPPORTED_TYPES` has to name exactly what `check` acts on.
+    ///
+    /// `check` dispatches on a plain string with a `_ => {}` fallback, so a type
+    /// that is advertised but unhandled produces no error anywhere — the rule
+    /// just never fires. That is not hypothetical: `"compound"` was documented
+    /// on `trigger_type` for a long time while no arm ever matched it.
+    ///
+    /// Scanning the source is what makes this a real check. Asserting against
+    /// the whole file would be satisfied by `SUPPORTED_TYPES` itself, so this
+    /// looks only at the dispatch region — `"absence"`, which is handled by its
+    /// own equality tests outside the `match`, is checked separately.
+    #[test]
+    fn supported_types_match_the_engine() {
+        let src = include_str!("alerting.rs");
+        let (_, after) = src
+            .split_once("match rule.trigger.trigger_type.as_str() {")
+            .expect("the dispatch moved — update this guard");
+        let dispatch = &after[..after.find("_ => {}").expect("no fallback arm")];
+
+        for t in RuleTrigger::SUPPORTED_TYPES {
+            if *t == "absence" {
+                assert!(
+                    src.contains("rule.trigger.trigger_type == \"absence\""),
+                    "absence is advertised but nothing compares against it",
+                );
+                continue;
+            }
+            assert!(
+                dispatch.contains(&format!("\"{t}\"")),
+                "{t:?} is in SUPPORTED_TYPES but no arm of `check` handles it",
+            );
+        }
+
+        // The inverse: an arm the list forgot would be a working trigger nobody
+        // can discover. Every quoted pattern in the dispatch must be listed.
+        for line in dispatch.lines().filter(|l| l.trim_start().starts_with('"')) {
+            for quoted in line.split('"').skip(1).step_by(2) {
+                assert!(
+                    RuleTrigger::SUPPORTED_TYPES.contains(&quoted),
+                    "`check` handles {quoted:?} but SUPPORTED_TYPES omits it",
+                );
+            }
+        }
+    }
+
+    /// The type that was documented for a long time while nothing handled it.
+    #[test]
+    fn compound_is_not_claimed_to_be_supported() {
+        assert!(!RuleTrigger::SUPPORTED_TYPES.contains(&"compound"));
+    }
 
     #[test]
     fn test_threshold_and_deduplication() {
