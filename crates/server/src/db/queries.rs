@@ -35,10 +35,10 @@ pub async fn create_user(pool: &PgPool, user: &CreateUser, hash: &str) -> Result
 
 pub async fn register_sensor(pool: &PgPool, sensor: &RegisterSensor) -> Result<Sensor> {
     Ok(sqlx::query_as::<_, Sensor>(
-        "INSERT INTO sensors (hostname, ip_address, os, version, interfaces, cpu_cores, ram_mb, status, last_heartbeat)
-         VALUES ($1, $2::inet, $3, $4, $5::jsonb, $6, $7, 'online', now())
+        "INSERT INTO sensors (hostname, ip_address, os, version, interfaces, cpu_cores, ram_mb, status, deployment_type, capture_mode, location, last_heartbeat)
+         VALUES ($1, $2::inet, $3, $4, $5::jsonb, $6, $7, 'online', $8, $9, $10, now())
          RETURNING id, hostname, ip_address::inet, os, version, interfaces, cpu_cores, ram_mb,
-                   status, tags, metadata, registered_at, last_heartbeat",
+                   status, tags, metadata, deployment_type, capture_mode, location, registered_at, last_heartbeat",
     )
     .bind(&sensor.hostname)
     .bind(sensor.ip_address.to_string())
@@ -47,6 +47,9 @@ pub async fn register_sensor(pool: &PgPool, sensor: &RegisterSensor) -> Result<S
     .bind(serde_json::to_value(&sensor.interfaces)?)
     .bind(sensor.cpu_cores)
     .bind(sensor.ram_mb)
+    .bind(&sensor.deployment_type)
+    .bind(&sensor.capture_mode)
+    .bind(&sensor.location)
     .fetch_one(pool)
     .await?)
 }

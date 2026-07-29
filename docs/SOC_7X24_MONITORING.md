@@ -350,13 +350,13 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 5.1 — Sensör Deployment Modelleri
 
-- [ ] **5.1.1** **Inline sensör** — köprü modunda (bridge), L2 seviyesinde tüm trafiği görür, block yapabilir
-- [ ] **5.1.2** **SPAN/Mirror sensör** — switch mirror port'una bağlı, passive-only
-- [ ] **5.1.3** **TAP sensör** — network TAP cihazı arkasında, tam duplex görünürlük
-- [ ] **5.1.4** **Endpoint sensör** — her sunucu/PC'ye kurulu lightweight agent (sadece o host'un trafiği)
-- [ ] **5.1.5** **Cloud sensör** — AWS VPC Traffic Mirror / Azure vTap / GCP Packet Mirroring
-- [ ] **5.1.6** **Container sensör** — Kubernetes DaemonSet, her node'da bir pod
-- [ ] **5.1.7** **Virtual sensör** — VMware/Hyper-V virtual switch port mirror
+- [x] **5.1.1** **Inline sensör** — köprü modunda (bridge), L2 seviyesinde tüm trafiği görür, block yapabilir
+- [x] **5.1.2** **SPAN/Mirror sensör** — switch mirror port'una bağlı, passive-only
+- [x] **5.1.3** **TAP sensör** — network TAP cihazı arkasında, tam duplex görünürlük
+- [x] **5.1.4** **Endpoint sensör** — her sunucu/PC'ye kurulu lightweight agent (sadece o host'un trafiği)
+- [x] **5.1.5** **Cloud sensör** — AWS VPC Traffic Mirror / Azure vTap / GCP Packet Mirroring
+- [x] **5.1.6** **Container sensör** — Kubernetes DaemonSet, her node'da bir pod
+- [x] **5.1.7** **Virtual sensör** — VMware/Hyper-V virtual switch port mirror
 
 ### 5.2 — Yüksek Performanslı Capture
 

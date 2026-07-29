@@ -43,6 +43,9 @@ impl SensorService for SensorGrpcService {
             interfaces: Vec::new(),
             cpu_cores: None,
             ram_mb: None,
+            deployment_type: "endpoint".to_string(),
+            capture_mode: "passive".to_string(),
+            location: None,
         };
 
         let sensor = queries::register_sensor(&self.pool, &sensor)

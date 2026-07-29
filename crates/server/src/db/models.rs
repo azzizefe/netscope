@@ -48,6 +48,9 @@ pub struct Sensor {
     pub status: String,
     pub tags: serde_json::Value,
     pub metadata: serde_json::Value,
+    pub deployment_type: String,
+    pub capture_mode: String,
+    pub location: Option<String>,
     pub registered_at: DateTime<Utc>,
     pub last_heartbeat: Option<DateTime<Utc>>,
 }
@@ -61,7 +64,15 @@ pub struct RegisterSensor {
     pub interfaces: Vec<InterfaceInfo>,
     pub cpu_cores: Option<i32>,
     pub ram_mb: Option<i32>,
+    #[serde(default = "default_deployment_type")]
+    pub deployment_type: String,
+    #[serde(default = "default_capture_mode")]
+    pub capture_mode: String,
+    pub location: Option<String>,
 }
+
+fn default_deployment_type() -> String { "endpoint".to_string() }
+fn default_capture_mode() -> String { "passive".to_string() }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InterfaceInfo {
