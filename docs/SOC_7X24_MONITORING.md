@@ -466,10 +466,10 @@ Kalan 244 kutu için belgenin kendi tahmini geçerli: **~20-30 adam-ay**.
 
 ### 8.3 — Multi-Tenancy
 
-- [ ] **8.3.1** Tenant isolation — her tenant'ın sensörleri, alert'leri, kullanıcıları tamamen izole
-- [ ] **8.3.2** Custom branding — tenant başına logo, renk, e-posta template
-- [ ] **8.3.3** Usage metering — tenant başına event/saniye, sensör sayısı, storage limit
-- [ ] **8.3.4** Tenant backup/restore — tek tenant'ın tüm verilerini export/import
+- [x] **8.3.1** Tenant isolation — her tenant'ın sensörleri, alert'leri, kullanıcıları tamamen izole
+- [x] **8.3.2** Custom branding — tenant başına logo, renk, e-posta template
+- [x] **8.3.3** Usage metering — tenant başına event/saniye, sensör sayısı, storage limit
+- [x] **8.3.4** Tenant backup/restore — tek tenant'ın tüm verilerini export/import
 
 ### 8.4 — Deployment
 

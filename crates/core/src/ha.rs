@@ -107,7 +107,12 @@ impl LoadBalancerConfigurator {
     pub fn generate_haproxy_config(&self, upstreams: &[IpAddr]) -> String {
         let mut cfg = String::from("backend netscope_sensors\n  balance roundrobin\n  cookie SERVERID insert indirect nocookie\n");
         for (idx, ip) in upstreams.iter().enumerate() {
-            cfg.push_str(&format!("  server sensor{} {}:8080 check cookie s{}\n", idx + 1, ip, idx + 1));
+            cfg.push_str(&format!(
+                "  server sensor{} {}:8080 check cookie s{}\n",
+                idx + 1,
+                ip,
+                idx + 1
+            ));
         }
         cfg
     }
@@ -198,9 +203,27 @@ mod tests {
         let ip2: IpAddr = "10.0.0.2".parse().unwrap();
         let ip3: IpAddr = "10.0.0.3".parse().unwrap();
 
-        cluster.register_node(ClusterNodeInfo { node_id: "node1".into(), ip_address: ip1, role: HaNodeRole::Active, is_healthy: true, last_heartbeat_secs: 0 });
-        cluster.register_node(ClusterNodeInfo { node_id: "node2".into(), ip_address: ip2, role: HaNodeRole::Active, is_healthy: true, last_heartbeat_secs: 0 });
-        cluster.register_node(ClusterNodeInfo { node_id: "node3".into(), ip_address: ip3, role: HaNodeRole::Active, is_healthy: false, last_heartbeat_secs: 10 });
+        cluster.register_node(ClusterNodeInfo {
+            node_id: "node1".into(),
+            ip_address: ip1,
+            role: HaNodeRole::Active,
+            is_healthy: true,
+            last_heartbeat_secs: 0,
+        });
+        cluster.register_node(ClusterNodeInfo {
+            node_id: "node2".into(),
+            ip_address: ip2,
+            role: HaNodeRole::Active,
+            is_healthy: true,
+            last_heartbeat_secs: 0,
+        });
+        cluster.register_node(ClusterNodeInfo {
+            node_id: "node3".into(),
+            ip_address: ip3,
+            role: HaNodeRole::Active,
+            is_healthy: false,
+            last_heartbeat_secs: 10,
+        });
 
         assert!(cluster.has_quorum());
     }

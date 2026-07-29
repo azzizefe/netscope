@@ -2,11 +2,11 @@
 // Copyright (c) 2026 netscope contributors
 use crate::filter::Filter;
 use crate::models::Packet;
+use chrono::Duration as ChronoDuration;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::net::IpAddr;
-use chrono::Duration as ChronoDuration;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RuleTrigger {

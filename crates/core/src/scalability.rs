@@ -16,8 +16,8 @@ use std::time::{Instant, SystemTime};
 /// Storage Tier Classification (§8.2.4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum StorageTier {
-    HotSsd,   // 0 - 7 days (SSD)
-    ColdS3,   // 7+ days (Object Storage / S3 / Blob)
+    HotSsd, // 0 - 7 days (SSD)
+    ColdS3, // 7+ days (Object Storage / S3 / Blob)
 }
 
 /// Kubernetes Horizontal Pod Autoscaler Generator (§8.2.1).
@@ -94,7 +94,9 @@ pub struct DataTieringManager {
 
 impl Default for DataTieringManager {
     fn default() -> Self {
-        Self { hot_retention_days: 7 }
+        Self {
+            hot_retention_days: 7,
+        }
     }
 }
 
@@ -124,7 +126,8 @@ impl DbShardRouter {
     }
 
     pub fn register_shard(&mut self, tenant_id: &str, shard_dsn: &str) {
-        self.shard_map.insert(tenant_id.to_string(), shard_dsn.to_string());
+        self.shard_map
+            .insert(tenant_id.to_string(), shard_dsn.to_string());
     }
 
     pub fn get_shard_dsn<'a>(&'a self, tenant_id: &'a str) -> &'a str {

@@ -1453,22 +1453,46 @@ fn ingest_batch(app: &AppHandle, batch: Vec<Packet>) {
     if batch.is_empty() {
         return;
     }
-    let infos: Vec<PacketInfo> = if let Ok(mut g) = app.state::<Mutex<CaptureState>>().lock() {
+    let (infos, alerts): (Vec<PacketInfo>, Vec<Alert>) = if let Ok(mut g) =
+        app.state::<Mutex<CaptureState>>().lock()
+    {
         for pkt in &batch {
             g.names.observe(pkt);
         }
-        let infos = batch.iter().map(|p| packet_to_info(p, &g.names)).collect();
+        let infos: Vec<PacketInfo> = batch.iter().map(|p| packet_to_info(p, &g.names)).collect();
+
+        // Opening a file used to produce no alerts at all: `run_open` never
+        // built an engine, and this function never asked one. The rules card
+        // said "Active Alert Rules" while every rule was inert for the whole
+        // offline path. Now the same detection runs, and because the engine
+        // measures its windows on packet timestamps, a replay yields the
+        // alerts the live capture would have.
+        let alerts: Vec<Alert> = match g.alert_engine.as_mut() {
+            Some(ae) => batch
+                .iter()
+                .flat_map(|p| ae.check_packet(p, None))
+                .collect(),
+            None => Vec::new(),
+        };
+
         g.packet_buffer.extend(batch);
         if g.packet_buffer.len() > 100_000 {
             let excess = g.packet_buffer.len() - 50_000;
             g.packet_buffer.drain(..excess);
         }
-        infos
+        (infos, alerts)
     } else {
         let names = NameCache::new();
-        batch.iter().map(|p| packet_to_info(p, &names)).collect()
+        (
+            batch.iter().map(|p| packet_to_info(p, &names)).collect(),
+            Vec::new(),
+        )
     };
+
     let _ = app.emit("packets-batch", infos);
+    for a in alerts {
+        let _ = app.emit("alert", alert_to_info(&a));
+    }
 }
 
 #[tauri::command]
@@ -1501,6 +1525,9 @@ fn run_open(
                 guard.engine = None;
                 guard.packet_buffer.clear();
                 guard.names.clear();
+                // A fresh detector for the file. Without this the offline path
+                // produced zero alerts however the rules were configured.
+                guard.alert_engine = Some(AlertEngine::new(default_alert_rules()));
             }
             let app_handle = app.clone();
             std::thread::spawn(move || {
@@ -1545,6 +1572,9 @@ fn run_open(
     guard.engine = Some(capture);
     guard.packet_buffer.clear();
     guard.names.clear();
+    // Same as the mmap path above: this fallback reader also has to arm the
+    // detector, or files the mapper rejects silently produce no alerts.
+    guard.alert_engine = Some(AlertEngine::new(default_alert_rules()));
 
     let app_handle = app.clone();
     std::thread::spawn(move || {
