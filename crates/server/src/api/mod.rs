@@ -1,4 +1,5 @@
 pub mod alerts;
+pub mod assets;
 pub mod auth_routes;
 pub mod dashboard;
 pub mod events;
@@ -56,6 +57,7 @@ pub fn build_router(
         .nest("/api/v1/reports", reports::routes(api_state.clone()))
         .nest("/api/v1/soar", soar::routes(api_state.clone()))
         .nest("/api/v1/dashboard", dashboard::routes(api_state.clone()))
+        .nest("/api/v1/assets", assets::routes(api_state.clone()))
         // Health carries no data and is what a load balancer polls, so it needs
         // authentication but no particular role.
         .nest("/api/v1", health::routes())

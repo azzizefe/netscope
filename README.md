@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="#install"><img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-blue" alt="Platforms"></a>
-  <img src="https://img.shields.io/badge/rust-1.95+-orange" alt="Rust">
+  <img src="https://img.shields.io/badge/rust-1.88+-orange" alt="Rust">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <a href="https://github.com/azzizefe/netscope/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/azzizefe/netscope/ci.yml?branch=main&label=ci" alt="CI"></a>
 </p>
@@ -184,8 +184,9 @@ Grab the prebuilt `netscope-tui` binary for your OS from
 
 ### Build from source
 
-Building from source requires **Rust 1.75+** and the platform-specific packet
-capture library headers.
+Building from source requires **Rust 1.88+** (the floor the dependency graph
+imposes — CI builds on stable) and the platform-specific packet capture library
+headers.
 
 #### Prerequisites
 
@@ -295,6 +296,9 @@ xcode-select --install
 git clone https://github.com/azzizefe/netscope.git
 cd netscope
 
+# Windows only — fetch the Npcap SDK the linker needs (not vendored, see above)
+.\tools\ensure-npcap-sdk.ps1
+
 # TUI only
 cargo build --release -p netscope-tui
 ./target/release/netscope-tui
@@ -314,8 +318,15 @@ sudo setcap cap_net_raw,cap_net_admin+eip ./target/release/netscope-tui
 #### Verify your build
 
 ```bash
-cargo test -p netscope-core -p netscope-tui   # run the engine + TUI tests (~630)
-cd desktop/frontend-tests && npm test  # run frontend tests (74 tests)
+cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
+```
+
+The frontend tests load the WASM display-filter module, which is a build output
+and therefore not committed — build it once first:
+
+```bash
+./tools/build-wasm.sh          # Windows: .\tools\build-wasm.ps1
+cd desktop/frontend-tests && npm test   # 173 tests
 ```
 
 ---
@@ -493,14 +504,15 @@ netscope/
 │   ├── core/           Capture engine, protocol dissectors, models, stats
 │   ├── tui/            Terminal UI (ratatui + crossterm + clap)
 │   ├── wasm/           WASM bindings (display filter engine for frontend)
-│   └── python/         Python bindings (PyO3)
+│   ├── server/         Central management server (fleet, telemetry, RBAC)
+│   └── agent/          Remote sensor agent that reports to the server
 ├── desktop/
 │   ├── frontend/       Desktop frontend (HTML/CSS/JS + ES modules)
 │   ├── frontend-tests/ Vitest unit tests for the frontend
 │   └── src-tauri/      Tauri 2 backend (Rust)
 ├── fixtures/           8 sample .pcap files for testing
 ├── docs/               Architecture, API, guides (10+ files)
-├── tools/gen-fixtures/ pcap generator (etherparse)
+├── tools/              Fixture generator + build helpers (npcap SDK, WASM)
 └── .github/workflows/  CI + Release pipelines
 ```
 
@@ -525,8 +537,27 @@ netscope/
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 - [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md) — please report vulnerabilities privately
 - [Bug reports](.github/ISSUE_TEMPLATE/bug_report.md)
 - [Feature requests](.github/ISSUE_TEMPLATE/feature_request.md)
+
+---
+
+## License
+
+netscope is [MIT licensed](LICENSE).
+
+It depends on components that are **not** covered by that license and are not
+redistributed with it — you install or download them yourself:
+
+| Component | Licensing |
+|---|---|
+| **Npcap** (Windows capture driver) and its SDK | Proprietary [Npcap license](https://npcap.com/#license) — free for personal use, redistribution restricted. Install from [npcap.com](https://npcap.com); the SDK is fetched by `tools/ensure-npcap-sdk.ps1` at build time. |
+| **libpcap** (Linux/macOS) | BSD-3-Clause, provided by your OS or package manager. |
+| **MaxMind GeoLite2** database (optional GeoIP) | Downloaded by you under MaxMind's own EULA; netscope only reads a local `.mmdb` you point it at. |
+
+Rust dependencies are fetched from crates.io by cargo and keep their own
+licenses; none are vendored into this repository.
 
 ---
 

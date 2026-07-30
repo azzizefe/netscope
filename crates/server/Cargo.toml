@@ -3,6 +3,7 @@ name = "netscope-server"
 description = "Netscope Central Management Server — sensor fleet management, telemetry, alerts, RBAC"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true

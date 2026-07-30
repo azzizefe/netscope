@@ -14,6 +14,12 @@ members = [
 [workspace.package]
 version = "0.2.0"
 edition = "2021"
+# Floor imposed by the dependency graph (darling, time, plist all declare
+# 1.88), so anything older cannot resolve at all — declaring it here turns that
+# into a clear cargo error instead of a confusing build failure deep in a
+# dependency. CI builds on stable; toolchains between this floor and stable are
+# not exercised, so treat 1.88 as "will resolve", not "is tested".
+rust-version = "1.88"
 license = "MIT"
 authors = ["azzizefe"]
 repository = "https://github.com/azzizefe/netscope"

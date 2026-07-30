@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+use chrono::{Datelike, Timelike};
 use crate::models::Packet;
 use crate::names::NameCache;
 use crossbeam_channel::Receiver;
@@ -203,6 +204,22 @@ pub struct SiemEvent {
     pub threat_intel_matched: Option<bool>,
     pub mac_vendor: Option<String>,
     pub resolved_dns_name: Option<String>,
+    // Behavioral Baseline & Anomaly (§1.1.4)
+    pub anomaly_score: Option<f64>,
+    pub anomaly_explanation: Option<String>,
+    pub anomaly_reasons: Option<Vec<String>>,
+    // Katman 5 — MITRE ATT&CK & Kill Chain (§1.1.5)
+    pub mitre_techniques: Option<Vec<crate::mitre_killchain::MitreTechniqueMapping>>,
+    pub kill_chain_phases: Option<Vec<crate::mitre_killchain::KillChainPhaseMapping>>,
+    pub kill_chain_chain_summary: Option<String>,
+    pub detection_coverage_summary: Option<String>,
+    // Katman 6 — İş Etkisi (Business Impact) (§1.1.6)
+    pub business_impact: Option<crate::business_impact::BusinessImpactEvaluation>,
+    pub business_impact_summary: Option<String>,
+    // Katman 7 — "Bunu Neden Önemsemeliyim?" Açıklaması (§1.1.7)
+    pub why_this_matters_paragraph: Option<String>,
+    pub recommended_actions: Option<Vec<crate::why_this_matters::ActionRecommendation>>,
+    pub katman7_full_summary: Option<String>,
 }
 
 impl SiemEvent {
@@ -300,6 +317,164 @@ impl SiemEvent {
                 || pkt.summary.contains("malicious"),
         );
 
+        Self::from_packet_with_sensor(pkt, "default_sensor")
+    }
+
+    /// Construct SiemEvent evaluating against a specific sensor's 7-day rolling baseline (§1.1.4).
+    pub fn from_packet_with_sensor(pkt: &Packet, sensor_id: &str) -> Self {
+        use crate::expert::{classify, ExpertSeverity};
+        let severity = classify(pkt);
+        let (severity_score, severity_label) = match severity {
+            ExpertSeverity::Chat => (0, "Chat".to_string()),
+            ExpertSeverity::Note => (3, "Note".to_string()),
+            ExpertSeverity::Warning => (6, "Warning".to_string()),
+            ExpertSeverity::Error => (9, "Error".to_string()),
+        };
+
+        let (mitre_tactic, mitre_technique, kill_chain_phase) =
+            map_threat_intel_mitre_and_killchain(&pkt.protocol.to_string(), &pkt.summary);
+
+        // Passive DNS
+        global_name_cache().lock().unwrap().observe(pkt);
+        let resolved_dns_name = if let Some(ip) = pkt.dst_addr {
+            global_name_cache()
+                .lock()
+                .unwrap()
+                .name_for(ip)
+                .map(|s| s.to_string())
+        } else if let Some(ip) = pkt.src_addr {
+            global_name_cache()
+                .lock()
+                .unwrap()
+                .name_for(ip)
+                .map(|s| s.to_string())
+        } else {
+            None
+        };
+
+        // MAC Vendor
+        let mac_vendor = if pkt.data.len() >= 12 {
+            let mac_src = &pkt.data[6..12];
+            mac_vendor_lookup(mac_src)
+        } else {
+            None
+        };
+
+        // TLS Fingerprints
+        let (ja3, ja4, ja3s) = if pkt.protocol == crate::registry::Protocol::Tls {
+            let payload = tls_payload(pkt);
+            let ja3 = payload
+                .and_then(crate::dissectors::tls::parse_client_hello)
+                .map(|h| crate::dissectors::tls::ja3_hash(&h));
+            let ja4 = payload
+                .and_then(crate::dissectors::tls::parse_client_hello)
+                .map(|h| crate::dissectors::tls::ja4(&h, 't'));
+            let ja3s = payload
+                .and_then(crate::dissectors::tls::parse_server_hello)
+                .map(|s| crate::dissectors::tls::ja3s_hash(&s));
+            (ja3, ja4, ja3s)
+        } else {
+            (None, None, None)
+        };
+
+        // GeoIP & ASN
+        let mut geoip_country = None;
+        let mut geoip_city = None;
+        let mut asn = None;
+        let mut isp = None;
+
+        if let Some(ref reader) = global_geoip_reader() {
+            let lookup_ip = pkt.dst_addr.or(pkt.src_addr);
+            if let Some(ip) = lookup_ip {
+                if let Ok(city) = reader.lookup::<maxminddb::geoip2::City>(ip) {
+                    geoip_country = city
+                        .country
+                        .and_then(|c| c.names)
+                        .and_then(|n| n.get("en").map(|s| s.to_string()));
+                    geoip_city = city
+                        .city
+                        .and_then(|c| c.names)
+                        .and_then(|n| n.get("en").map(|s| s.to_string()));
+                }
+                if let Ok(asn_info) = reader.lookup::<maxminddb::geoip2::Asn>(ip) {
+                    asn = asn_info
+                        .autonomous_system_number
+                        .map(|a| format!("AS{}", a));
+                    isp = asn_info
+                        .autonomous_system_organization
+                        .map(|s| s.to_string());
+                }
+            }
+        }
+
+        // Threat intel match status
+        let threat_intel_matched = Some(
+            pkt.summary.contains("AbuseIPDB")
+                || pkt.summary.contains("URLhaus")
+                || pkt.summary.contains("Threat")
+                || pkt.summary.contains("malicious"),
+        );
+
+        // Behavioral baseline evaluation (§1.1.4)
+        let day_of_week = pkt.timestamp.weekday().num_days_from_monday();
+        let hour = pkt.timestamp.hour();
+        let eval = crate::baseline::global_baseline_manager()
+            .lock()
+            .unwrap()
+            .evaluate_packet(
+                sensor_id,
+                pkt,
+                day_of_week,
+                hour,
+                1,
+                resolved_dns_name.as_deref(),
+            );
+
+        let (anomaly_score, anomaly_explanation, anomaly_reasons) = if eval.reasons.is_empty() {
+            (None, None, None)
+        } else {
+            (
+                Some(eval.anomaly_score),
+                Some(eval.explanation.clone()),
+                Some(eval.reasons),
+            )
+        };
+
+        // MITRE ATT&CK & Cyber Kill Chain evaluation (§1.1.5)
+        let mitre_eval = crate::mitre_killchain::map_event_mitre_and_killchain(
+            &pkt.protocol.to_string(),
+            &pkt.summary,
+            pkt.dst_port,
+            anomaly_score.is_some(),
+        );
+
+        let mitre_tactic = mitre_eval.techniques.first().map(|t| t.tactic.clone());
+        let mitre_technique = mitre_eval.techniques.first().map(|t| format!("{} - {}", t.id, t.name));
+        let kill_chain_phase = mitre_eval.kill_chain_phases.first().map(|p| p.phase_name.clone());
+
+        // Katman 6 — İş Etkisi (Business Impact) (§1.1.6)
+        let impact_eval = crate::business_impact::global_asset_registry()
+            .lock()
+            .unwrap()
+            .evaluate_impact(pkt.dst_addr.or(pkt.src_addr), resolved_dns_name.as_deref());
+
+        // Katman 7 — "Bunu Neden Önemsemeliyim?" Açıklaması (§1.1.7)
+        let template_ctx = crate::why_this_matters::TemplateContext {
+            src_ip: pkt.src_addr.map(|a| a.to_string()).unwrap_or_else(|| "10.0.1.47".to_string()),
+            dst_ip: pkt.dst_addr.map(|a| a.to_string()).unwrap_or_else(|| "10.0.5.18".to_string()),
+            dst_host: impact_eval.affected_asset_name.clone(),
+            department: "HR".to_string(),
+            protocol: pkt.protocol.to_string(),
+            severity: severity_label.clone(),
+            anomaly_reasons: anomaly_explanation.clone().unwrap_or_default(),
+            asset_type: "Production Database".to_string(),
+        };
+
+        let katman7_eval = crate::why_this_matters::global_why_this_matters_engine()
+            .lock()
+            .unwrap()
+            .evaluate(&template_ctx);
+
         SiemEvent {
             timestamp: pkt.timestamp.format("%Y-%m-%dT%H:%M:%S%.6fZ").to_string(),
             src: pkt.src_addr.map(|a| a.to_string()),
@@ -324,6 +499,18 @@ impl SiemEvent {
             threat_intel_matched,
             mac_vendor,
             resolved_dns_name,
+            anomaly_score,
+            anomaly_explanation,
+            anomaly_reasons,
+            mitre_techniques: Some(mitre_eval.techniques),
+            kill_chain_phases: Some(mitre_eval.kill_chain_phases),
+            kill_chain_chain_summary: Some(mitre_eval.kill_chain_summary),
+            detection_coverage_summary: Some(mitre_eval.detection_coverage_summary),
+            business_impact: Some(impact_eval.clone()),
+            business_impact_summary: Some(impact_eval.formatted_summary),
+            why_this_matters_paragraph: Some(katman7_eval.why_this_matters_paragraph),
+            recommended_actions: Some(katman7_eval.recommended_actions),
+            katman7_full_summary: Some(katman7_eval.formatted_full_block),
         }
     }
 
@@ -1057,6 +1244,18 @@ mod tests {
             threat_intel_matched: None,
             mac_vendor: None,
             resolved_dns_name: None,
+            anomaly_score: None,
+            anomaly_explanation: None,
+            anomaly_reasons: None,
+            mitre_techniques: None,
+            kill_chain_phases: None,
+            kill_chain_chain_summary: None,
+            detection_coverage_summary: None,
+            business_impact: None,
+            business_impact_summary: None,
+            why_this_matters_paragraph: None,
+            recommended_actions: None,
+            katman7_full_summary: None,
         };
 
         // TCP listener thread

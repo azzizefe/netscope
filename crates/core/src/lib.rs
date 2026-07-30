@@ -13,6 +13,7 @@
 // `db`, `pipeline` and `pcap`, which are correctly gated.
 pub mod ai_traffic;
 pub mod baseline;
+pub mod business_impact;
 // Gated because it exports alerts through `siem`, which is itself gated.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod alerting;
@@ -53,6 +54,7 @@ pub mod ha;
 pub mod industrial_edge;
 pub mod llm_analytics;
 pub mod models;
+pub mod mitre_killchain;
 pub mod multi_tenancy;
 pub mod names;
 pub mod network_identity;
@@ -92,3 +94,4 @@ pub mod threat;
 pub mod threat_intel;
 pub mod tls_keylog;
 pub mod triage;
+pub mod why_this_matters;

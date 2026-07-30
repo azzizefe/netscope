@@ -3,6 +3,7 @@ name = "netscope-tui"
 description = "netscope — a fast, human-readable terminal UI for live network capture and analysis. A friendly alternative to Wireshark."
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true

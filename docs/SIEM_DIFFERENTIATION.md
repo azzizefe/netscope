@@ -109,7 +109,7 @@ Her event, 7 katmanda zenginleştirilir:
   - [x] Shodan (açık port bilgisi)
   - [x] GeoIP + ASN (zaten var)
 
-- [ ] **1.1.4** **Katman 4 — Davranışsal Baseline (Behavioral Baseline):**
+- [x] **1.1.4** **Katman 4 — Davranışsal Baseline (Behavioral Baseline):**
   ```
   Bu event'in normalden sapma derecesi:
     - 10.0.1.47'nin 10.0.5.18'e bağlantı sayısı: 47 (7-günlük ortalama: 1.2)
@@ -121,12 +121,12 @@ Her event, 7 katmanda zenginleştirilir:
     - SMB veri transferi: 2.3 MB (bu host için 7-gün max: 145 KB)
       → Veri hacmi anomalisi: +15× baseline ❌
   ```
-  - [ ] 7-günlük rolling baseline her sensör için
-  - [ ] Z-skor hesaplama (her metrik için)
-  - [ ] Event'e "anomali skoru" alanı ekle
-  - [ ] Baseline'dan sapma nedenlerini insan dilinde açıkla
+  - [x] 7-günlük rolling baseline her sensör için
+  - [x] Z-skor hesaplama (her metrik için)
+  - [x] Event'e "anomali skoru" alanı ekle
+  - [x] Baseline'dan sapma nedenlerini insan dilinde açıkla
 
-- [ ] **1.1.5** **Katman 5 — MITRE ATT&CK & Kill Chain Mapping:**
+- [x] **1.1.5** **Katman 5 — MITRE ATT&CK & Kill Chain Mapping:**
   ```
   MITRE ATT&CK:
     T1046  Network Service Discovery     (confidence: HIGH)
@@ -137,11 +137,11 @@ Her event, 7 katmanda zenginleştirilir:
   
   Detection coverage: Bu event zinciri, 3 ATT&CK tekniğini kapsıyor.
   ```
-  - [ ] Her event tipi → ATT&CK teknik(ler)i mapping
-  - [ ] Confidence score (event tipinden gelen)
-  - [ ] Phase of Kill Chain
+  - [x] Her event tipi → ATT&CK teknik(ler)i mapping
+  - [x] Confidence score (event tipinden gelen)
+  - [x] Phase of Kill Chain
 
-- [ ] **1.1.6** **Katman 6 — İş Etkisi (Business Impact):**
+- [x] **1.1.6** **Katman 6 — İş Etkisi (Business Impact):**
   ```
   Etkilenen varlık: FIN-DB-01
     Kritiklik: CRITICAL (Production Database, Finance)
@@ -151,12 +151,12 @@ Her event, 7 katmanda zenginleştirilir:
                sızmasına ve PCI-DSS ihlaline yol açabilir.
     Tahmini maddi etki: YÜKSEK (regülasyon cezası + itibar kaybı)
   ```
-  - [ ] Asset inventory API'si (müşteri kendi CMDB'sini besleyebilir)
-  - [ ] Asset kritiklik seviyesi (Tier 1-4)
-  - [ ] İlgili compliance framework'leri
-  - [ ] Tahmini iş etkisi (düşük / orta / yüksek / kritik)
+  - [x] Asset inventory API'si (müşteri kendi CMDB'sini besleyebilir)
+  - [x] Asset kritiklik seviyesi (Tier 1-4)
+  - [x] İlgili compliance framework'leri
+  - [x] Tahmini iş etkisi (düşük / orta / yüksek / kritik)
 
-- [ ] **1.1.7** **Katman 7 — "Bunu Neden Önemsemeliyim?" Açıklaması:**
+- [x] **1.1.7** **Katman 7 — "Bunu Neden Önemsemeliyim?" Açıklaması:**
   ```
   🧠 Neden önemli?
   
@@ -171,10 +171,12 @@ Her event, 7 katmanda zenginleştirilir:
   Aksiyon: Bu host'u hemen izole edin, kullanıcının şifresini
   sıfırlayın, SMB signing'i tüm domain'de zorunlu hale getirin.
   ```
-  - [ ] Her alert için otomatik "why this matters" paragrafı
-  - [ ] Template-based üretim (Handlebars/Tera şablonları ile — LLM kullanmaz, token harcamaz)
-  - [ ] Her event tipi + severity kombinasyonu için önceden yazılmış şablon kütüphanesi
-  - [ ] Aksiyon önerisi (1-2-3 adım) — rule-based, önceden tanımlanmış aksiyon kataloğundan
+  - [x] Her alert için otomatik "why this matters" paragrafı
+  - [x] Template-based üretim (Handlebars/Tera şablonları ile — LLM kullanmaz, token harcamaz)
+  - [x] Her event tipi + severity kombinasyonu için önceden yazılmış şablon kütüphanesi
+  - [x] Aksiyon önerisi (1-2-3 adım) — rule-based, önceden tanımlanmış aksiyon kataloğundan
+
+masın
 
 ### 1.2 — Zenginleştirilmiş Event Schema (OCSF Uyumlu)
 
@@ -276,9 +278,7 @@ Her event, 7 katmanda zenginleştirilir:
   }
   ```
 - [ ] **1.2.2** OCSF 1.3.0 `security_finding` + `network_activity` class'larına tam uyum
-- [ ] **1.2.3** Her event'in `human_readable` alanı **her zaman dolu** olsun — hiçbir event "anlamsız IP-port çifti" olarak kalmasın
-
----
+- [ ] **1.2.3** Her event'in `human_readable` alanı **her zaman dolu** olsun — hiçbir event "anlamsız IP-port çifti" olarak kal---
 
 ## 🧠 Faz 2 — Narrative Correlation (Olay Örgüsü / Hikaye Motoru)
 

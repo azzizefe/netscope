@@ -2,7 +2,9 @@
 
 ## Prerequisites
 
-- **Rust** 1.85+ (install via [rustup](https://rustup.rs))
+- **Rust** 1.88+ (install via [rustup](https://rustup.rs)) — the floor the
+  dependency graph imposes, declared as `rust-version` in `Cargo.toml`. CI
+  builds on stable.
 - **C toolchain** (for pcap native dependencies)
 
 ## Platform Setup
@@ -22,9 +24,17 @@
    ```powershell
    $env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
    ```
-4. Set `LIBPCAP_LIBDIR` for compilation:
+4. Fetch the Npcap SDK the linker needs. Its license does not permit
+   redistribution, so it is not vendored in the repo — run the helper script
+   from the repo root and `.cargo/config.toml` resolves `LIBPCAP_LIBDIR` to it
+   automatically:
    ```powershell
-   $env:LIBPCAP_LIBDIR = "$env:TEMP\npcap-sdk\Lib\x64"
+   .\tools\ensure-npcap-sdk.ps1
+   ```
+   To keep the SDK elsewhere, export `LIBPCAP_LIBDIR` yourself — a value already
+   in the environment wins over `.cargo/config.toml`:
+   ```powershell
+   $env:LIBPCAP_LIBDIR = "C:\npcap-sdk\Lib\x64"
    ```
 5. Copy 64-bit `wpcap.dll` + `Packet.dll` to `target/debug/deps/` for test runtime, or add their directory to `PATH`.
 
@@ -66,7 +76,11 @@ cd desktop/src-tauri && cargo tauri dev
 
 ```bash
 # Run all tests
-cargo test -p netscope-core -p netscope-tui
+cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
+
+# Desktop frontend tests — need the WASM filter module built once first
+./tools/build-wasm.sh                    # Windows: .\tools\build-wasm.ps1
+cd desktop/frontend-tests && npm ci && npm test
 
 # Run with npcap DLLs on Windows
 $env:PATH = "C:\msys64\mingw64\bin;$env:TEMP\npcap-dll64;$env:PATH"

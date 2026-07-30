@@ -22,6 +22,17 @@ This project adheres to the [Contributor Covenant](CODE_OF_CONDUCT.md). By parti
 
 See [docs/setup.md](docs/setup.md) for platform-specific prerequisites (Npcap on Windows, capabilities on Linux).
 
+After cloning, two build inputs are fetched or generated rather than committed:
+
+```bash
+# Windows only — the Npcap SDK the linker needs (its license does not permit
+# redistribution, so it is downloaded instead of vendored)
+.\tools\ensure-npcap-sdk.ps1
+
+# Only needed to run the desktop frontend tests — builds the WASM filter module
+./tools/build-wasm.sh          # Windows: .\tools\build-wasm.ps1
+```
+
 ```bash
 # Build all crates
 cargo build
