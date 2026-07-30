@@ -3164,6 +3164,7 @@ dependencies = [
  "memchr",
  "memmap2",
  "mlua",
+ "parking_lot",
  "pcap",
  "rand 0.8.7",
  "rayon",
@@ -3178,6 +3179,7 @@ dependencies = [
  "tokio",
  "toml 0.8.2",
  "ureq",
+ "uuid",
 ]
 
 [[package]]

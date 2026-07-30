@@ -28,10 +28,12 @@ pub fn build_router(
     cache: Option<Arc<CacheLayer>>,
 ) -> Router {
     let commands = CommandStore::new();
+    let session_mgr = Arc::new(netscope_core::session_manager::SessionManager::new());
     let api_state = Arc::new(ApiState {
         pool,
         cache,
         commands,
+        session_mgr,
     });
 
     let public = Router::new()
@@ -76,6 +78,7 @@ pub struct ApiState {
     pub pool: PgPool,
     pub cache: Option<Arc<CacheLayer>>,
     pub commands: Arc<CommandStore>,
+    pub session_mgr: Arc<netscope_core::session_manager::SessionManager>,
 }
 
 #[cfg(test)]
