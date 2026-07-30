@@ -48,6 +48,8 @@ pub fn routes(api_state: Arc<ApiState>, jwt: Arc<JwtState>) -> Router {
         .route("/roles", get(list_roles).post(create_role))
         .route("/roles/{name}", delete(delete_role))
         .route("/permissions", get(list_permissions))
+        .route("/audit/chain", get(get_audit_chain))
+        .route("/audit/verify", get(verify_audit_chain))
         .with_state(api_state)
         .layer(axum::extract::Extension(jwt))
 }
@@ -115,6 +117,8 @@ async fn login(
         Ok(true) => {
             // Reset failure counter on successful login (§1.2.1)
             state.protector.record_success(&creds.username, client_ip);
+            // Log entry into tamper-proof audit hash chain (§3.1.1)
+            state.audit_chain.log_action(&user.id.to_string(), "USER_LOGIN", &user.username, client_ip);
         }
         Ok(false) => {
             let status = state.protector.record_failure(&creds.username, client_ip);
@@ -404,4 +408,16 @@ async fn delete_role(
 async fn list_permissions(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     let perms = state.rbac_engine.get_all_permissions();
     (StatusCode::OK, Json(json!(perms)))
+}
+
+/// Query cryptographic audit chain log records (§3.1.1).
+async fn get_audit_chain(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
+    let records = state.audit_chain.get_records(100, 0);
+    (StatusCode::OK, Json(json!(records)))
+}
+
+/// Verify audit chain integrity report (§3.1.2).
+async fn verify_audit_chain(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
+    let report = state.audit_chain.verify_integrity();
+    (StatusCode::OK, Json(json!(report)))
 }

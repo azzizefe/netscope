@@ -144,6 +144,7 @@ async fn main() -> Result<()> {
     let session_mgr = Arc::new(netscope_core::session_manager::SessionManager::new());
     let protector = Arc::new(netscope_core::brute_force_protection::BruteForceProtector::new());
     let rbac_engine = Arc::new(netscope_core::rbac_engine::RbacEngine::new());
+    let audit_chain = Arc::new(netscope_core::audit_chain::AuditChainManager::new());
     let api_state = Arc::new(ApiState {
         pool: pool.clone(),
         cache: cache.clone(),
@@ -151,6 +152,7 @@ async fn main() -> Result<()> {
         session_mgr,
         protector,
         rbac_engine,
+        audit_chain,
     });
 
     // ── Build router ──

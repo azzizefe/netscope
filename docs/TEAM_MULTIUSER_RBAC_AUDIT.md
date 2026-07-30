@@ -90,13 +90,13 @@
 
 ### 2.1 — Granüler İzin Matrisi (Granular Permissions)
 
-- [ ] **2.1.1** **Permission tanımları** — 50+ granüler yetki dizesi (örn: `pcap:read`, `pcap:export`, `rules:write`, `alert:ack`, `user:manage`, `audit:read`)
-- [ ] **2.1.2** **Ön tanımlı roller:**
+- [x] **2.1.1** **Permission tanımları** — 50+ granüler yetki dizesi (örn: `pcap:read`, `pcap:export`, `rules:write`, `alert:ack`, `user:manage`, `audit:read`)
+- [x] **2.1.2** **Ön tanımlı roller:**
   - `Admin`: Tüm yetkilere sahip sistem yöneticisi
   - `Analyst`: Paket inceleme, filtreleme, kural yazma ve uyarı onaylama
   - `Auditor`: Sadece read-only rapor ve denetim loglarını görme yetkisi
   - `Operator`: Sensör durumu izleme ve canlı yakalama başlatma/durdurma
-- [ ] **2.1.3** **Custom Role Builder** — Kullanıcının istediği yetkileri seçerek kendi özel rolünü oluşturabilmesi
+- [x] **2.1.3** **Custom Role Builder** — Kullanıcının istediği yetkileri seçerek kendi özel rolünü oluşturabilmesi
 
 ---
 
@@ -106,7 +106,7 @@
 
 ### 3.1 — Cryptographic Audit Hash Chain
 
-- [ ] **3.1.1** **Audit log tablosu & Hash Chain:**
+- [x] **3.1.1** **Audit log tablosu & Hash Chain:**
   ```sql
   CREATE TABLE IF NOT EXISTS audit_chain (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,7 +119,7 @@
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   ```
-- [ ] **3.1.2** **Audit Verification Tool** — Logların dışarıdan değiştirilip değiştirilmediğini doğrulayan `netscope-cli audit verify` komutu.
+- [x] **3.1.2** **Audit Verification Tool** — Logların dışarıdan değiştirilip değiştirilmediğini doğrulayan `netscope-cli audit verify` komutu.
 
 ---
 

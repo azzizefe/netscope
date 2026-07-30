@@ -13,6 +13,7 @@
 // `db`, `pipeline` and `pcap`, which are correctly gated.
 pub mod ai_traffic;
 pub mod analyst_command_center;
+pub mod audit_chain;
 pub mod baseline;
 pub mod brute_force_protection;
 pub mod business_impact;
