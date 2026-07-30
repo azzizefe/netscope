@@ -35,6 +35,7 @@ pub fn routes(_state: Arc<ApiState>) -> Router {
         .route("/pivot", get(get_pivot))
         .route("/education", get(get_education))
         .route("/gamification", get(get_gamification))
+        .route("/metrics", get(get_quality_metrics))
 }
 
 #[derive(Debug, Deserialize)]
@@ -120,4 +121,9 @@ async fn export_sigma() -> Json<serde_json::Value> {
 async fn export_asyncapi() -> Json<serde_json::Value> {
     let asyncapi = SiemConnectorManager::export_asyncapi_spec();
     Json(asyncapi)
+}
+
+async fn get_quality_metrics() -> Json<serde_json::Value> {
+    let metrics = netscope_core::siem_quality_metrics::SiemQualityMetricsEngine::get_quality_metrics();
+    Json(serde_json::to_value(&metrics).unwrap_or_default())
 }

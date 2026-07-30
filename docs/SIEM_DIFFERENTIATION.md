@@ -524,21 +524,21 @@ masın
 
 > SIEM'in kendi sağlığını ve etkinliğini ölçen metrikler.
 
-- [ ] **6.1** **Alert kalitesi:**
+- [x] **6.1** **Alert kalitesi:**
   - False positive oranı (günlük, kural başına)
   - True positive oranı
   - Alert → acknowledge süresi (MTTA — Mean Time to Acknowledge)
   - Alert → resolve süresi (MTTR — Mean Time to Resolve)
   - Gürültü skoru (1 saatte üretilen alert / manuel kapatılan)
-- [ ] **6.2** **Event zenginleştirme kalitesi:**
+- [x] **6.2** **Event zenginleştirme kalitesi:**
   - Zenginleştirme tamlık oranı (kaç event'in tüm 7 katmanı dolu?)
   - Threat intel hit rate (event'lerin % kaçında threat intel eşleşmesi var?)
   - Baseline sapma dağılımı (event'lerin % kaçı anormal?)
-- [ ] **6.3** **Analist productivity:**
+- [x] **6.3** **Analist productivity:**
   - Saat başına triage edilen alert
   - Pivot sayısı / alert
   - Narrative'ten sonra aksiyon alınma oranı
-- [ ] **6.4** **SIEM performansı:**
+- [x] **6.4** **SIEM performansı:**
   - Event ingestion latency (sensör → SIEM'de görünme süresi)
   - Search response time (P50, P95, P99)
   - Dashboard render time
