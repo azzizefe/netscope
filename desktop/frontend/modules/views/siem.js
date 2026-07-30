@@ -3,7 +3,24 @@
 
 //! Desktop Frontend — SIEM Differentiation & Analyst Command Center View Module.
 
-import { esc } from '../../app.js';
+import { esc, els, state, STATES } from '../../app.js';
+import { invoke } from '../api.js';
+
+/** Put a filter in the app's own filter box and show the result.
+ *
+ * Setting `.value` alone changes nothing — app.js applies the filter from the
+ * element's `input` event, so dispatch one rather than reaching into its
+ * internals. The tab is clicked for the same reason: `switchView` is not
+ * exported, but its button is right there and already wired.
+ */
+function applyFilter(text) {
+  const input = els.filterInput || document.querySelector('#filter-input');
+  if (!input) return;
+  input.value = text;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  const packetsTab = document.querySelector('.tab[data-view="packets"]');
+  if (packetsTab) packetsTab.click();
+}
 
 export function renderSiemView(container) {
   if (!container) return;
@@ -17,8 +34,15 @@ export function renderSiemView(container) {
           <p class="siem-subtitle">"Every SIEM can tell you what happened. netscope tells you why it matters."</p>
         </div>
         <div class="siem-header-actions">
-          <button id="siem-refresh-btn" class="btn btn-small btn-primary">↻ Refresh SIEM Engine</button>
+          <button id="siem-refresh-btn" class="btn btn-small btn-primary">↻ Reload</button>
         </div>
+      </div>
+
+      <div class="siem-notice">
+        <strong>What is live here:</strong> the saved filters, the pivot generator and the
+        protocol lessons run against netscope's own filter and education engines — clicking
+        one applies it to the packets you captured. The capability matrix and the value-prop
+        cards are product claims, not measurements of your network.
       </div>
 
       <!-- Tab Navigation inside SIEM View -->
@@ -38,7 +62,7 @@ export function renderSiemView(container) {
           <div class="siem-card">
             <h3>Unified Search & Query Bar</h3>
             <div class="siem-search-row">
-              <input type="text" id="siem-unified-input" class="siem-search-input" placeholder="e.g. smb && ip.dst in 10.0.5.0/24 && time > -24h" value="smb && ip.dst in 10.0.5.0/24">
+              <input type="text" id="siem-unified-input" class="siem-search-input" placeholder='e.g. smb && ip.addr == 10.0.5.18' value="">
               <button id="siem-search-btn" class="btn btn-primary">🔍 Search</button>
             </div>
             <div id="siem-autocomplete-list" class="siem-autocomplete-chips"></div>
@@ -53,7 +77,7 @@ export function renderSiemView(container) {
               <h3>🔍 Search Result Match Explanation</h3>
               <div id="siem-explain-box" class="siem-explain-card">
                 <div class="explain-title">Rule-based Match Verification</div>
-                <p id="siem-explain-text">Matched term 'smb' against event protocol field 'SMB' (100% rule-based confidence).</p>
+                <p id="siem-explain-text">Run a search to see how it was interpreted.</p>
               </div>
             </div>
           </div>
@@ -62,14 +86,14 @@ export function renderSiemView(container) {
             <h3>🔗 1-Click Pivot Generator</h3>
             <div class="siem-pivot-row">
               <select id="siem-pivot-type" class="siem-select">
-                <option value="IP">Pivot by Target IP</option>
-                <option value="USER">Pivot by Username</option>
-                <option value="JA4">Pivot by JA4 Fingerprint</option>
-                <option value="DNS">Pivot by Domain DNS History</option>
-                <option value="SMB">Pivot by SMB File Share</option>
+                <option value="IP">Pivot by IP (ip.addr)</option>
+                <option value="USER">Pivot by NTLM user (ntlm.user)</option>
+                <option value="JA4">Pivot by JA4 fingerprint (ja4)</option>
+                <option value="DNS">Pivot by queried domain (dns.qry.name)</option>
+                <option value="SNI">Pivot by TLS SNI host (tls.sni)</option>
               </select>
-              <input type="text" id="siem-pivot-val" class="siem-input" value="10.0.1.47" placeholder="Value...">
-              <button id="siem-pivot-btn" class="btn">Generate Pivot</button>
+              <input type="text" id="siem-pivot-val" class="siem-input" value="" placeholder="e.g. 192.168.1.10">
+              <button id="siem-pivot-btn" class="btn">Apply pivot</button>
             </div>
             <div id="siem-pivot-result" class="siem-code-box"></div>
           </div>
@@ -79,6 +103,11 @@ export function renderSiemView(container) {
         <div id="siem-panel-matrix" class="siem-panel">
           <div class="siem-card">
             <h3>Competitor Capability Matrix (§3.1)</h3>
+            <p class="siem-nodata">
+              netscope's column describes this codebase. The other columns are a
+              feature-presence reading of each product's public documentation, not a
+              benchmark run here — cells we cannot substantiate are left as “—”.
+            </p>
             <div class="siem-table-wrap">
               <table class="siem-table">
                 <thead>
@@ -167,18 +196,46 @@ function bindEvents(container) {
   if (pivotBtn) {
     pivotBtn.addEventListener('click', () => {
       const ptype = container.querySelector('#siem-pivot-type').value;
-      const pval = container.querySelector('#siem-pivot-val').value;
-      let filterStr = `ip.src == '${pval}' || ip.dst == '${pval}'`;
-      if (ptype === 'USER') filterStr = `user.name == '${pval}'`;
-      if (ptype === 'JA4') filterStr = `tls.ja4 == '${pval}'`;
-      if (ptype === 'DNS') filterStr = `dns.query == '${pval}'`;
-      if (ptype === 'SMB') filterStr = `smb.share == '${pval}'`;
+      const pval = container.querySelector('#siem-pivot-val').value.trim();
+      if (!pval) return;
+      // Field names and quoting must match the real filter grammar. This built
+      // `ip.src == '10.0.1.47'` with single quotes, which the lexer rejects
+      // outright, and referenced `user.name`, `dns.query` and `smb.share` —
+      // none of which exist as fields. Every pivot it produced failed to parse.
+      const q = `"${pval.replace(/"/g, '')}"`;
+      let filterStr = `ip.addr == ${pval}`;
+      if (ptype === 'USER') filterStr = `ntlm.user == ${q}`;
+      if (ptype === 'JA4') filterStr = `ja4 == ${q}`;
+      if (ptype === 'DNS') filterStr = `dns.qry.name contains ${q}`;
+      if (ptype === 'SNI') filterStr = `tls.sni contains ${q}`;
 
       container.querySelector('#siem-pivot-result').innerHTML = `
-        <div class="pivot-code"><strong>Generated Filter:</strong> <code>${esc(filterStr)}</code></div>
-        <div class="pivot-desc">1-Click pivot created. Applied to all historical PCAP records.</div>
+        <div class="pivot-code"><strong>Filter:</strong> <code>${esc(filterStr)}</code></div>
+        <div class="pivot-desc">Applied to the packets in this session.</div>
       `;
+      applyFilter(filterStr);
     });
+  }
+
+  // Search — this button had no listener at all, so it did nothing when
+  // clicked. It now runs the query through the same filter the packet list
+  // uses, and reports a syntax error instead of implying a match.
+  const searchBtn = container.querySelector('#siem-search-btn');
+  const searchInput = container.querySelector('#siem-unified-input');
+  const explain = container.querySelector('#siem-explain-text');
+  const runSearch = () => {
+    const q = (searchInput?.value || '').trim();
+    if (!q) return;
+    applyFilter(q);
+    if (explain) {
+      const matched = state.filteredPackets ? state.filteredPackets.length : 0;
+      explain.textContent = `Applied "${q}" to the packet list — ${matched} of ${state.packets.length} packets match. `
+        + 'Anything the filter grammar does not recognise falls back to a plain substring search.';
+    }
+  };
+  if (searchBtn) searchBtn.addEventListener('click', runSearch);
+  if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
   }
 
   // Load Edu button
@@ -211,38 +268,61 @@ function loadData() {
   renderExclusiveFeatures(container);
 }
 
+/// Every filter here must parse in netscope's display-filter language.
+///
+/// The list this replaced was written in a syntax the tool does not have —
+/// `ip.dst in 10.0.5.0/24`, `time between 22:00-06:00`, `protocol == 'RDP'`,
+/// `anomaly_score > 75.0`, `smb_signing == false`. None of it parses (single
+/// quotes are not string delimiters either), so every "saved filter" produced
+/// an error when a user tried it. These use real fields, and clicking one runs
+/// it. See `filter.rs` for the field list.
 function renderPresets(container) {
   const presets = [
-    { name: "Finance sunucusuna gece erişim", filter: "ip.dst in 10.0.5.0/24 && time between 22:00-06:00", cat: "Insider Threat" },
-    { name: "Off-hours RDP Access", filter: "protocol == 'RDP' && time between 20:00-06:00", cat: "Lateral Movement" },
-    { name: "High Anomaly Score Events", filter: "anomaly_score > 75.0", cat: "Behavioral Anomaly" },
-    { name: "Unsigned SMB Share Access", filter: "protocol == 'SMB' && smb_signing == false", cat: "Vulnerability" },
-    { name: "DNS Exfiltration / Tunneling", filter: "protocol == 'DNS' && (query_type == 'TXT' || query_len > 120)", cat: "Exfiltration" },
+    { name: "RDP — lateral movement", filter: 'rdp || tcp.port == 3389', cat: "Lateral Movement" },
+    { name: "SMB file share access", filter: 'smb', cat: "Lateral Movement" },
+    { name: "Kerberos authentication", filter: 'kerberos', cat: "Credential Access" },
+    { name: "Cleartext web traffic", filter: 'http', cat: "Exposure" },
+    { name: "Long DNS names (tunneling)", filter: 'dns && frame.len > 200', cat: "Exfiltration" },
+    { name: "Connection resets", filter: 'tcp.flags.rst == 1', cat: "Recon / Instability" },
+    { name: "Server errors", filter: 'http.response.code >= 500', cat: "Service Health" },
+    { name: "NTLM logons", filter: 'ntlm.user contains ""', cat: "Credential Access" },
   ];
 
   const grid = container.querySelector('#siem-presets-list');
-  if (grid) {
-    grid.innerHTML = presets.map(p => `
-      <div class="preset-card">
-        <div class="preset-cat">${esc(p.cat)}</div>
-        <div class="preset-name">${esc(p.name)}</div>
-        <code class="preset-filter">${esc(p.filter)}</code>
-      </div>
-    `).join('');
-  }
+  if (!grid) return;
+  grid.innerHTML = presets.map((p, i) => `
+    <button class="preset-card" data-preset="${i}" title="Apply this filter">
+      <div class="preset-cat">${esc(p.cat)}</div>
+      <div class="preset-name">${esc(p.name)}</div>
+      <code class="preset-filter">${esc(p.filter)}</code>
+    </button>
+  `).join('');
+  grid.querySelectorAll('.preset-card').forEach((btn) => {
+    btn.addEventListener('click', () => applyFilter(presets[Number(btn.dataset.preset)].filter));
+  });
 }
 
+/** Clickable example queries, in the syntax the filter box really accepts.
+ *
+ * These were chips reading `10.0.1.47`, `FIN-DB-01`, `T1021.002 (SMB Shares)` —
+ * invented hosts from an imaginary network, which look like findings from the
+ * reader's own capture.
+ */
 function renderAutocomplete(container) {
-  const chips = ["10.0.1.47", "10.0.5.18", "FIN-DB-01", "SMB", "Kerberos", "T1021.002 (SMB Shares)", "Security Finding"];
+  const examples = ['dns', 'tls', 'http.response.code >= 400', 'tcp.flags.rst == 1', 'ja4 contains "t13d"'];
   const list = container.querySelector('#siem-autocomplete-list');
-  if (list) {
-    list.innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join('');
-  }
+  if (!list) return;
+  list.innerHTML = examples
+    .map((c) => `<button class="chip" data-q="${esc(c)}" title="Apply this filter">${esc(c)}</button>`)
+    .join('');
+  list.querySelectorAll('.chip').forEach((chip) => {
+    chip.addEventListener('click', () => applyFilter(chip.dataset.q));
+  });
 }
 
 function renderMatrix(container) {
   const rows = [
-    { feature: "Protokol dissector sayısı", netscope: "✅ 250+", splunk: "❌ 0", elastic: "❌ 0", qradar: "❌ 0", sentinel: "❌ 0", graylog: "❌ 0", wazuh: "❌ 0" },
+    { feature: "Protokol dissector sayısı", netscope: "✅ 590", splunk: "—", elastic: "—", qradar: "—", sentinel: "—", graylog: "—", wazuh: "—" },
     { feature: "Application-layer parsing", netscope: "✅ DNS, HTTP/2, SMB, Kerberos, Modbus", splunk: "⚠️ HTTP", elastic: "⚠️ HTTP", qradar: "⚠️ HTTP", sentinel: "⚠️ HTTP", graylog: "❌", wazuh: "❌" },
     { feature: "TLS fingerprint (JA3/JA4)", netscope: "✅ Built-in", splunk: "❌ Plugin", elastic: "❌ Plugin", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
     { feature: "PQC protocol detection", netscope: "✅ 22 algos", splunk: "❌", elastic: "❌", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
@@ -250,8 +330,12 @@ function renderMatrix(container) {
     { feature: "LLM / AI traffic analysis", netscope: "✅ OpenAI, Anthropic, tokens & cost", splunk: "❌", elastic: "❌", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
     { feature: "Otomatik MITRE ATT&CK", netscope: "✅ Every event", splunk: "⚠️ Rule required", elastic: "⚠️ Manual", qradar: "⚠️ Manual", sentinel: "⚠️ Partial", graylog: "❌", wazuh: "⚠️ Partial" },
     { feature: "Narrative attack chain", netscope: "✅ Auto-generated", splunk: "❌", elastic: "❌", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
-    { feature: "Event/saniye (tek node)", netscope: "✅ 100k+", splunk: "⚠️ 50k", elastic: "⚠️ 25k", qradar: "⚠️ 20k", sentinel: "⚠️ Cloud", graylog: "⚠️ 30k", wazuh: "⚠️ 5k" },
-    { feature: "Binary boyutu", netscope: "✅ ~8 MB", splunk: "❌ 1GB+", elastic: "❌ 500MB+", qradar: "❌ 2GB+", sentinel: "❌ Cloud", graylog: "⚠️ 100MB", wazuh: "⚠️ 50MB" },
+    // Throughput and install-size rows for the other products were invented
+    // numbers ("Splunk 50k event/s", "QRadar 2GB+") that nobody here measured.
+    // netscope's own figures stay because they are measurable from this repo:
+    // the throughput bench and the shipped binary.
+    { feature: "Event/saniye (tek node)", netscope: "✅ 100k+ (bench)", splunk: "—", elastic: "—", qradar: "—", sentinel: "—", graylog: "—", wazuh: "—" },
+    { feature: "Binary boyutu", netscope: "✅ ~8 MB", splunk: "—", elastic: "—", qradar: "—", sentinel: "—", graylog: "—", wazuh: "—" },
   ];
 
   const tbody = container.querySelector('#siem-matrix-body');
@@ -292,94 +376,118 @@ function renderUsps(container) {
   }
 }
 
-function renderEduPackage(container, proto) {
+/** Real lessons from `education.rs`, not a template.
+ *
+ * This used to interpolate the protocol name into fixed paragraphs — "This
+ * protocol is used for core network operations", "Attackers exploit SMB/DNS/TLS
+ * for internal reconnaissance" — so every protocol produced the same advice and
+ * none of it came from the tool. netscope ships 446 written lessons behind the
+ * `get_lessons` command the Learn tab already uses; this reads those.
+ */
+async function renderEduPackage(container, proto) {
   const eduBox = container.querySelector('#siem-edu-content');
   if (!eduBox) return;
 
-  eduBox.innerHTML = `
-    <div class="edu-lesson">
-      <h4>${esc(proto)} — Protocol Lesson & Beginner Guide</h4>
-      <p class="edu-summary">This protocol is used for core network operations. Netscope parses payload attributes automatically.</p>
-
-      <div class="edu-section">
-        <strong>What does this alert mean?</strong>
-        <p>An anomalous call or unsigned payload was detected over ${esc(proto)}. Review source host and user credentials.</p>
+  try {
+    const lessons = await invoke('get_lessons');
+    const l = (lessons || []).find((x) => x.protocol === proto);
+    if (!l) {
+      eduBox.innerHTML = `<div class="edu-lesson"><p class="edu-summary">No lesson is written for ${esc(proto)} yet.</p></div>`;
+      return;
+    }
+    eduBox.innerHTML = `
+      <div class="edu-lesson">
+        <h4>${esc(l.title)}</h4>
+        <p class="edu-summary">${esc(l.summary)}</p>
+        <div class="edu-section">
+          <strong>How it works</strong>
+          <p>${esc(l.body)}</p>
+        </div>
+        <div class="edu-section">
+          <strong>What to look for in a capture</strong>
+          <p>${esc(l.look_for)}</p>
+        </div>
       </div>
-
-      <div class="edu-section">
-        <strong>How would an attacker use this?</strong>
-        <p>Attackers exploit ${esc(proto)} for internal reconnaissance, credential dumping, or file exfiltration without raising standard port-level alerts.</p>
-      </div>
-
-      <div class="edu-section">
-        <strong>Step-by-Step Triage Guide for Analysts:</strong>
-        <ol>
-          <li>Verify source host department and target server criticality.</li>
-          <li>Check user login time and whether SMB/DNS query matches business hours.</li>
-          <li>Inspect payload bytes in Netscope packet detail view for cleartext secrets.</li>
-          <li>If confirmed malicious, trigger automated SOAR containment.</li>
-        </ol>
-      </div>
-    </div>
-  `;
+    `;
+  } catch (e) {
+    // The backend is the only source for these; say so rather than inventing.
+    eduBox.innerHTML = `<div class="edu-lesson"><p class="edu-summary">Lessons unavailable — the backend did not answer.</p></div>`;
+    console.error('get_lessons failed', e);
+  }
 }
 
 function renderGamification(container) {
   const box = container.querySelector('#siem-gamification-box');
   if (!box) return;
 
+  // These read as measurements of the reader's own SOC, and were invented:
+  // "142 Resolved Alerts", "96.5% Accuracy", "4.2 min Avg Resolution Time".
+  // netscope has no alert lifecycle — nothing acknowledges, assigns or closes
+  // an alert — so these are not "not wired up yet", they are not measurable at
+  // all. Saying so is more useful than a number that cannot be true.
   box.innerHTML = `
     <div class="gami-card">
-      <div class="gami-rank">Rank: SOC Analyst Level 2 — Threat Hunting Master</div>
-      <div class="gami-stats">
-        <div class="gami-stat">
-          <span class="gami-num">142</span>
-          <span class="gami-label">Resolved Alerts</span>
-        </div>
-        <div class="gami-stat">
-          <span class="gami-num">96.5%</span>
-          <span class="gami-label">Accuracy Rate</span>
-        </div>
-        <div class="gami-stat">
-          <span class="gami-num">4.2 min</span>
-          <span class="gami-label">Avg Resolution Time</span>
-        </div>
-      </div>
+      <div class="gami-rank">Not tracked</div>
+      <p class="siem-nodata">
+        Analyst performance needs an alert lifecycle — acknowledge, assign, resolve —
+        and netscope does not have one: it analyses captures, it does not run a case
+        queue. Resolution times and accuracy rates would have to come from the SIEM or
+        ticketing system you forward alerts to.
+      </p>
     </div>
   `;
 }
 
+/** Numbers measured from the current session — nothing else.
+ *
+ * The grid this replaced reported "96.8% TP rate", "MTTA 2m 25s", "MTTR 6m 20s",
+ * "Enrichment Completeness 99.4%" and so on, all hardcoded, in a panel titled
+ * "Quality & Effectiveness Metrics". A reader would take those for their own
+ * SOC's figures. netscope measures packets, not an alert queue, so this shows
+ * what it actually knows and says plainly what it cannot know.
+ */
 function renderMetrics(container) {
+  const s = state.stats || {};
+  const protos = Object.keys(s.perProtocol || {});
+  const bytes = s.totalBytes || 0;
+  const mb = bytes / (1024 * 1024);
+  const errPct = s.totalPackets ? ((s.errorPackets || 0) / s.totalPackets) * 100 : 0;
+
   const metrics = [
-    { title: "Alert FP / TP Rate", val: "96.8% TP", desc: "False Positive: 3.2% (Daily Avg)" },
-    { title: "MTTA (Acknowledge)", val: "2m 25s", desc: "Mean Time to Acknowledge" },
-    { title: "MTTR (Resolve)", val: "6m 20s", desc: "Mean Time to Resolve" },
-    { title: "Noise Score", val: "0.12", desc: "Hourly Generated / Manual Closes" },
-    { title: "Enrichment Completeness", val: "99.4%", desc: "All 7 layers filled per event" },
-    { title: "Threat Intel Hit Rate", val: "4.8%", desc: "Events matching TI indicators" },
-    { title: "Analyst Triage Speed", val: "18.5 / hr", desc: "Triaged alerts per hour" },
-    { title: "Search Latency (P50)", val: "8.5 ms", desc: "Ingestion Latency: 12.4 ms" },
+    { title: "Packets in session", val: (s.totalPackets || 0).toLocaleString(), desc: state.status === STATES.CAPTURING ? "Capturing now" : "Capture idle" },
+    { title: "Bytes captured", val: mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`, desc: "Sum of frame lengths" },
+    { title: "Protocols seen", val: String(protos.length), desc: "Distinct protocols in this capture" },
+    { title: "Flagged packets", val: `${errPct.toFixed(1)}%`, desc: "Resets and malformed frames" },
   ];
 
   const grid = container.querySelector('#siem-metrics-grid');
-  if (grid) {
-    grid.innerHTML = metrics.map(m => `
-      <div class="metric-card">
-        <div class="metric-title">${esc(m.title)}</div>
-        <div class="metric-val">${esc(m.val)}</div>
-        <div class="metric-desc">${esc(m.desc)}</div>
-      </div>
-    `).join('');
-  }
+  if (!grid) return;
+  grid.innerHTML = metrics.map(m => `
+    <div class="metric-card">
+      <div class="metric-title">${esc(m.title)}</div>
+      <div class="metric-val">${esc(m.val)}</div>
+      <div class="metric-desc">${esc(m.desc)}</div>
+    </div>
+  `).join('') + `
+    <div class="metric-card metric-card-wide">
+      <div class="metric-title">Not measured here</div>
+      <p class="siem-nodata">
+        Mean time to acknowledge/resolve, false-positive rate and analyst throughput
+        describe an alert queue's lifecycle. netscope has no case queue, so it cannot
+        produce them — they belong to whatever SIEM or ticketing system you forward
+        findings to.
+      </p>
+    </div>
+  `;
 }
 
 function renderExclusiveFeatures(container) {
   const features = [
     { title: "7.1 JA4 / JA3 C2 Hunt Engine", desc: "Identifies Cobalt Strike and C2 beacon fingerprints directly from TLS ClientHello packets." },
-    { title: "7.2 Post-Quantum Migration Tracker", desc: "Live dashboard showing 37% PQC-ready servers and recommending hybrid Kyber-1024 ciphers." },
-    { title: "7.3 LLM Cost Leakage & Shadow AI", desc: "Tracks GPT-4 / Claude prompt tokens, costs ($31.45/user), and detects unauthorized AI tools." },
+    { title: "7.2 Post-Quantum Migration Tracker", desc: "Reports which observed TLS servers negotiated post-quantum key exchange, and flags the ones that did not." },
+    { title: "7.3 LLM Cost Leakage & Shadow AI", desc: "Identifies traffic to LLM APIs and estimates prompt/response token volume, to surface unsanctioned AI tool use." },
     { title: "7.4 Kerberos Attack Timeline", desc: "Parses TGT/ST tickets to detect Golden Ticket, Silver Ticket, and AS-REP Roasting attacks." },
-    { title: "7.5 SMB File Access Audit", desc: "Audits exact SMB file paths (e.g. \\\\FIN-DB-01\\payroll\\Q4_Salaries.xlsx) and actor accounts." },
+    { title: "7.5 SMB File Access Audit", desc: "Reads the SMB file paths and account names seen on the wire, so share access can be audited without an endpoint agent." },
     { title: "7.6 DNS Exfiltration Detection", desc: "Detects DNS tunneling via query length (>120B), frequency, and entropy analysis." },
     { title: "7.7 Industrial Sabotage Inspection", desc: "Audits Modbus Write Single Coil (Coil 47 Emergency Stop Motor 3) for unauthorized PLC control." },
     { title: "7.8 TLS Certificate Expiry Predictor", desc: "Proactively alerts 14 days before critical TLS certificates expire." },

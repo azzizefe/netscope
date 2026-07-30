@@ -1475,13 +1475,50 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
   gap: 10px;
 }
 
+/* Both of these were styled as clickable (cursor, hover) while being inert
+   divs/spans. They are <button>s now, so undo the control defaults that would
+   otherwise centre the text and drop the inherited font. */
+.preset-card,
+.chip {
+  font: inherit;
+  text-align: left;
+  appearance: none;
+}
+
 .preset-card {
+  display: block;
+  width: 100%;
   background: var(--bg-input, #0f172a);
   border: 1px solid var(--border, #334155);
   border-radius: 6px;
   padding: 10px 12px;
   cursor: pointer;
   transition: border-color 0.2s;
+}
+
+/* Says what the panel below is and is not. */
+.siem-notice {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-left-width: 3px;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 0 0 16px 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-dim, #94a3b8);
+}
+
+/* Explains an absent measurement instead of inventing one. */
+.siem-nodata {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-dim, #94a3b8);
+  margin: 6px 0 0 0;
+}
+
+.metric-card-wide {
+  grid-column: 1 / -1;
 }
 
 .preset-card:hover {

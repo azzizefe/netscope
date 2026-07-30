@@ -7,11 +7,11 @@ $zipPath = Join-Path $env:TEMP "npcap-sdk.zip"
 $libDir  = Join-Path $OutDir "Lib\x64"
 
 if (Test-Path (Join-Path $libDir "wpcap.lib")) {
-    Write-Host "✓ Npcap SDK already present at $OutDir"
+    Write-Host "[ok] Npcap SDK already present at $OutDir"
     exit 0
 }
 
-Write-Host "↓ Downloading Npcap SDK from $SdkUrl ..."
+Write-Host "-- Downloading Npcap SDK from $SdkUrl ..."
 try {
     Invoke-WebRequest -Uri $SdkUrl -OutFile $zipPath -UseBasicParsing
 } catch {
@@ -19,7 +19,7 @@ try {
     exit 1
 }
 
-Write-Host "↓ Extracting to $OutDir ..."
+Write-Host "-- Extracting to $OutDir ..."
 try {
     Expand-Archive -Path $zipPath -DestinationPath $OutDir -Force
 } catch {
@@ -30,7 +30,7 @@ try {
 Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
 
 if (Test-Path (Join-Path $libDir "wpcap.lib")) {
-    Write-Host "✓ Npcap SDK ready at $OutDir"
+    Write-Host "[ok] Npcap SDK ready at $OutDir"
     Write-Host "  (LIBPCAP_LIBDIR automatically resolved by .cargo/config.toml)"
     exit 0
 } else {
