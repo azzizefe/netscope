@@ -241,7 +241,7 @@ mod tests {
         assert!(!autocomplete.protocols.is_empty());
 
         let explain = AnalystCommandCenterEngine::explain_search_match("smb", "protocol", "SMB");
-        assert!(explain.explanation_text.contains("100% örtüştü"));
+        assert!(explain.explanation_text.contains("%100 örtüştü"));
 
         let pivot = AnalystCommandCenterEngine::generate_pivot("IP", "10.0.1.47");
         assert_eq!(pivot.pivot_type, "IP");

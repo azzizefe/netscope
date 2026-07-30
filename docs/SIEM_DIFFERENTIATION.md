@@ -496,14 +496,14 @@ masın
 
 ### 5.1 — "Analyst Command Center"
 
-- [ ] **5.1.1** **Unified search** — tüm event'ler, alert'ler, narrative'ler, threat intel tek bir search bar'da
+- [x] **5.1.1** **Unified search** — tüm event'ler, alert'ler, narrative'ler, threat intel tek bir search bar'da
   ```sql
   -- Display filter: smb && ip.dst in 10.0.5.0/24 && time > -24h
   ```
-- [ ] **5.1.2** **Search autocomplete** — IP, hostname, protocol, ATT&CK technique, event type
-- [ ] **5.1.3** **Search result "explain"** — her sonuç için "bu neden eşleşti?" açıklaması (rule-based: hangi filter kısmının hangi event alanıyla eşleştiğini göster)
-- [ ] **5.1.4** **Saved filter templates** — sık kullanılan sorgular için önceden tanımlanmış filtreler: "Finance sunucusuna gece erişim" → `ip.dst in finance_segment && time between 22:00-06:00` (LLM yerine kullanıcının kaydettiği preset'ler)
-- [ ] **5.1.5** **Pivot (ilişkili veriye atlama)** — tek tıkla:
+- [x] **5.1.2** **Search autocomplete** — IP, hostname, protocol, ATT&CK technique, event type
+- [x] **5.1.3** **Search result "explain"** — her sonuç için "bu neden eşleşti?" açıklaması (rule-based: hangi filter kısmının hangi event alanıyla eşleştiğini göster)
+- [x] **5.1.4** **Saved filter templates** — sık kullanılan sorgular için önceden tanımlanmış filtreler: "Finance sunucusuna gece erişim" → `ip.dst in finance_segment && time between 22:00-06:00` (LLM yerine kullanıcının kaydettiği preset'ler)
+- [x] **5.1.5** **Pivot (ilişkili veriye atlama)** — tek tıkla:
   - Bu IP'den başka event'ler
   - Bu kullanıcının diğer aktiviteleri
   - Bu JA4 fingerprint nerelerde görülmüş
@@ -512,11 +512,11 @@ masın
 
 ### 5.2 — SIEM İçinde Eğitim (Built-in Education)
 
-- [ ] **5.2.1** **Her event tipi için "Learn more"** — mevcut `education` modülüne bağla
-- [ ] **5.2.2** **"What does this alert mean?"** — pop-up açıklama, örnek senaryo, MITRE bağlantısı
-- [ ] **5.2.3** **"How would an attacker use this?"** — her event tipi için saldırı senaryosu
-- [ ] **5.2.4** **"How to investigate"** — adım adım triage rehberi (Jr. analistler için)
-- [ ] **5.2.5** **Gamification** — analistlerin çözdüğü alert sayısı, doğruluk oranı, hız
+- [x] **5.2.1** **Her event tipi için "Learn more"** — mevcut `education` modülüne bağla
+- [x] **5.2.2** **"What does this alert mean?"** — pop-up açıklama, örnek senaryo, MITRE bağlantısı
+- [x] **5.2.3** **"How would an attacker use this?"** — her event tipi için saldırı senaryosu
+- [x] **5.2.4** **"How to investigate"** — adım adım triage rehberi (Jr. analistler için)
+- [x] **5.2.5** **Gamification** — analistlerin çözdüğü alert sayısı, doğruluk oranı, hız
 
 ---
 
