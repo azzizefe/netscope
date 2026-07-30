@@ -341,7 +341,10 @@ function refreshAfterIngest() {
   else if (state.view === 'topology') { renderTopology(); renderServiceCalls(); renderTraces(); }
   else if (state.view === 'script') updateScriptCount();
   else if (state.view === 'wifi') renderWifi();
-  else if (state.view === 'siem') renderSiemView($('#view-siem'));
+  // Deliberately not re-rendering the SIEM view here: it rewrites its whole
+  // `innerHTML`, which on a live capture would wipe the search box mid-typing
+  // and snap the open subtab back to the first one on every packet. It reads
+  // no packet state, so there is nothing to refresh.
 }
 
 function onPacket(event) {
@@ -4768,6 +4771,10 @@ function renderAll() {
   else if (state.view === 'insights') renderInsights();
   else if (state.view === 'wifi') renderWifi();
   else if (state.view === 'soc') renderSoc();
+  // Was reachable only from `refreshAfterIngest`, so the SIEM tab stayed a
+  // blank section until a packet arrived — with capture stopped, forever.
+  // Switching to a view has to be able to draw it.
+  else if (state.view === 'siem') renderSiemView($('#view-siem'));
 }
 
 /** Render the notification channels from real config, each with a live test.
