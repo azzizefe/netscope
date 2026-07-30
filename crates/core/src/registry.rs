@@ -181,7 +181,7 @@ macro_rules! protocols {
                 }
             }
 
-            /// Extra display-filter tokens beyond the lowercased display name  — 
+            /// Extra display-filter tokens beyond the lowercased display name  —
             /// e.g. `mongo` for MongoDB, `ike` for ISAKMP.
             pub fn aliases(&self) -> &'static [&'static str] {
                 match self {
