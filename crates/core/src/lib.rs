@@ -87,6 +87,8 @@ pub mod scalability;
 pub mod security;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod siem;
+pub mod siem_comparison;
+pub mod siem_connectors;
 pub mod stats;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stream;

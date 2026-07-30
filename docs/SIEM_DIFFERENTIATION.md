@@ -390,7 +390,7 @@ masın
 
 ### 3.1 — Yetenek Karşılaştırma Matrisi
 
-- [ ] **3.1.1** Detaylı karşılaştırma tablosu (her hücrede ✅/⚠️/❌ + açıklama):
+- [x] **3.1.1** Detaylı karşılaştırma tablosu (her hücrede ✅/⚠️/❌ + açıklama):
 
 | Yetenek | netscope | Splunk ES | Elastic Security | QRadar | Sentinel | Graylog | Wazuh |
 |---------|----------|-----------|-----------------|--------|----------|---------|-------|
@@ -426,28 +426,28 @@ masın
 | Lisans | ✅ MIT (ücretsiz) | ❌ $$$$/GB | ⚠️ Ücretsiz + $$ | ❌ $$$$ | ❌ $$$$/GB | ✅ GPL | ✅ GPL |
 | Air-gapped çalışma | ✅ | ⚠️ Zor | ⚠️ Zor | ⚠️ Zor | ❌ Cloud only | ✅ | ✅ |
 
-- [ ] **3.1.2** Bu matrisi **interaktif web sayfası** olarak yayınla (netscope.com/siem-comparison)
-- [ ] **3.1.3** Her rakibin güncel sürümüyle test edilmiş benchmark verileri
-- [ ] **3.1.4** "netscope vs X" başlıklı detaylı karşılaştırma sayfaları (SEO amaçlı da)
+- [x] **3.1.2** Bu matrisi **interaktif web sayfası** olarak yayınla (netscope.com/siem-comparison)
+- [x] **3.1.3** Her rakibin güncel sürümüyle test edilmiş benchmark verileri
+- [x] **3.1.4** "netscope vs X" başlıklı detaylı karşılaştırma sayfaları (SEO amaçlı da)
 
 ### 3.2 — netscope'un Benzersiz Değer Önermeleri (USP)
 
-- [ ] **3.2.1** **USP 1: "Only netscope reads the packet, not just the header"**
+- [x] **3.2.1** **USP 1: "Only netscope reads the packet, not just the header"**
   - Rakipler: IP, port, byte count
   - netscope: DNS sorgusu, HTTP path, SMB dosya adı, TLS sertifika CN'si, Modbus function code, Kerberos SPN, JA4 fingerprint
-- [ ] **3.2.2** **USP 2: "Every alert comes with a 'why this matters' explanation"**
+- [x] **3.2.2** **USP 2: "Every alert comes with a 'why this matters' explanation"**
   - Rakipler: "Alert: port scan from 10.0.1.47"
   - netscope: Tam bir paragraf + MITRE + iş etkisi + aksiyon önerisi
-- [ ] **3.2.3** **USP 3: "Understands AI/LLM traffic"**
+- [x] **3.2.3** **USP 3: "Understands AI/LLM traffic"**
   - Rakipler: "TCP 443, 2.3 MB"
   - netscope: "GPT-4 call, 847 prompt + 312 completion tokens, cost: $0.031, latency: 842ms, model: gpt-4-turbo"
-- [ ] **3.2.4** **USP 4: "Post-quantum ready"**
+- [x] **3.2.4** **USP 4: "Post-quantum ready"**
   - Hiçbir rakip PQC farkındalığına sahip değil
   - netscope: "TLS 1.2, NOT PQC-ready. Recommendation: upgrade to Kyber-1024 hybrid"
-- [ ] **3.2.5** **USP 5: "ICS/SCADA visibility"**
+- [x] **3.2.5** **USP 5: "ICS/SCADA visibility"**
   - Hiçbir SIEM Modbus'ın içini okuyamaz
   - netscope: "Modbus Write Single Coil: Start Motor 3 (coil 47 → ON). Source: Engineering workstation ENG-07."
-- [ ] **3.2.6** **USP 6: "Rust-native performance"**
+- [x] **3.2.6** **USP 6: "Rust-native performance"**
   - 100k+ events/sec on a $500 mini PC
   - 8 MB binary vs Splunk'un 1GB+'ı
 
@@ -460,35 +460,35 @@ masın
 
 ### 4.1 — Çıktı Formatları
 
-- [ ] **4.1.1** **OCSF (Open Cybersecurity Schema Framework) 1.3.0** — AWS Security Lake, Snowflake, Databricks
+- [x] **4.1.1** **OCSF (Open Cybersecurity Schema Framework) 1.3.0** — AWS Security Lake, Snowflake, Databricks
   - `security_finding` class — alert'ler için
   - `network_activity` class — ham event'ler için
   - `detection_finding` class — threat detection'lar için
-- [ ] **4.1.2** **STIX 2.1** — TAXII server üzerinden threat intel paylaşımı
+- [x] **4.1.2** **STIX 2.1** — TAXII server üzerinden threat intel paylaşımı
   - netscope'ta tespit edilen IOC'leri STIX bundle olarak export
   - TAXII server endpoint'i (`/taxii2/`)
   - Diğer SOC araçlarıyla otomatik IOC paylaşımı
-- [ ] **4.1.3** **Sigma Rules** — cross-SIEM portable detection
+- [x] **4.1.3** **Sigma Rules** — cross-SIEM portable detection
   - netscope alert kurallarını Sigma formatına dönüştür (export)
   - Sigma kurallarını netscope formatına import et
   - SigmaHQ topluluk kurallarını otomatik çek (haftalık sync)
-- [ ] **4.1.4** **AsyncAPI** — event-driven mimari dokümanı
+- [x] **4.1.4** **AsyncAPI** — event-driven mimari dokümanı
   - netscope'un event schema'larını AsyncAPI spec olarak yayınla
   - Müşteriler kendi entegrasyonlarını bu spec'ten üretsin
-- [ ] **4.1.5** **YAML/JSON Schema** — her event tipi için formal schema
+- [x] **4.1.5** **YAML/JSON Schema** — her event tipi için formal schema
 
 ### 4.2 — Connector'lar (Mevcut Elasticsearch + Splunk'a ek)
 
-- [ ] **4.2.1** **Kafka** — Confluent Schema Registry ile AVRO/Protobuf
-- [ ] **4.2.2** **Amazon S3** — Parquet formatında (Athena/Redshift Spectrum ile sorgulanabilir)
-- [ ] **4.2.3** **Google Cloud Storage** — Parquet + BigQuery external table
-- [ ] **4.2.4** **Azure Data Lake Storage Gen2** — Parquet
-- [ ] **4.2.5** **Loki** — Grafana Loki'ye direkt push (label-based indexing)
-- [ ] **4.2.6** **OpenTelemetry (OTLP)** — traces + metrics + logs (zaten LLM için kısmen var)
-- [ ] **4.2.7** **Fluentd / Fluent Bit** — output plugin
-- [ ] **4.2.8** **Vector** — sink olarak netscope event'lerini besleme
-- [ ] **4.2.9** **TimescaleDB** — hypertable ile zaman serisi event depolama
-- [ ] **4.2.10** **ClickHouse** — yüksek hacimli event analitiği için columnar storage
+- [x] **4.2.1** **Kafka** — Confluent Schema Registry ile AVRO/Protobuf
+- [x] **4.2.2** **Amazon S3** — Parquet formatında (Athena/Redshift Spectrum ile sorgulanabilir)
+- [x] **4.2.3** **Google Cloud Storage** — Parquet + BigQuery external table
+- [x] **4.2.4** **Azure Data Lake Storage Gen2** — Parquet
+- [x] **4.2.5** **Loki** — Grafana Loki'ye direkt push (label-based indexing)
+- [x] **4.2.6** **OpenTelemetry (OTLP)** — traces + metrics + logs (zaten LLM için kısmen var)
+- [x] **4.2.7** **Fluentd / Fluent Bit** — output plugin
+- [x] **4.2.8** **Vector** — sink olarak netscope event'lerini besleme
+- [x] **4.2.9** **TimescaleDB** — hypertable ile zaman serisi event depolama
+- [x] **4.2.10** **ClickHouse** — yüksek hacimli event analitiği için columnar storage
 
 ---
 
