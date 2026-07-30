@@ -30,12 +30,14 @@ pub fn build_router(
     let commands = CommandStore::new();
     let session_mgr = Arc::new(netscope_core::session_manager::SessionManager::new());
     let protector = Arc::new(netscope_core::brute_force_protection::BruteForceProtector::new());
+    let rbac_engine = Arc::new(netscope_core::rbac_engine::RbacEngine::new());
     let api_state = Arc::new(ApiState {
         pool,
         cache,
         commands,
         session_mgr,
         protector,
+        rbac_engine,
     });
 
     let public = Router::new()
@@ -82,6 +84,7 @@ pub struct ApiState {
     pub commands: Arc<CommandStore>,
     pub session_mgr: Arc<netscope_core::session_manager::SessionManager>,
     pub protector: Arc<netscope_core::brute_force_protection::BruteForceProtector>,
+    pub rbac_engine: Arc<netscope_core::rbac_engine::RbacEngine>,
 }
 
 #[cfg(test)]

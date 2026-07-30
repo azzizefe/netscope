@@ -82,6 +82,7 @@ pub mod privacy;
 pub mod protocol_risk;
 pub mod protocol_semantics;
 pub mod registry;
+pub mod rbac_engine;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]

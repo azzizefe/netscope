@@ -143,12 +143,14 @@ async fn main() -> Result<()> {
     let commands = crate::api::sensors::CommandStore::new();
     let session_mgr = Arc::new(netscope_core::session_manager::SessionManager::new());
     let protector = Arc::new(netscope_core::brute_force_protection::BruteForceProtector::new());
+    let rbac_engine = Arc::new(netscope_core::rbac_engine::RbacEngine::new());
     let api_state = Arc::new(ApiState {
         pool: pool.clone(),
         cache: cache.clone(),
         commands,
         session_mgr,
         protector,
+        rbac_engine,
     });
 
     // ── Build router ──

@@ -25,6 +25,13 @@ pub struct CreateApiKeyRequest {
     pub ttl_days: Option<u64>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CreateCustomRoleRequest {
+    pub name: String,
+    pub description: String,
+    pub permissions: Vec<String>,
+}
+
 pub fn routes(api_state: Arc<ApiState>, jwt: Arc<JwtState>) -> Router {
     Router::new()
         .route("/auth/login", post(login))
@@ -38,6 +45,9 @@ pub fn routes(api_state: Arc<ApiState>, jwt: Arc<JwtState>) -> Router {
         .route("/auth/unlock/account/{username}", post(unlock_account))
         .route("/auth/unlock/ip/{ip}", post(unlock_ip))
         .route("/auth/lockout-events", get(list_lockout_events))
+        .route("/roles", get(list_roles).post(create_role))
+        .route("/roles/{name}", delete(delete_role))
+        .route("/permissions", get(list_permissions))
         .with_state(api_state)
         .layer(axum::extract::Extension(jwt))
 }
@@ -359,4 +369,39 @@ async fn unlock_ip(
 async fn list_lockout_events(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     let events = state.protector.get_audit_events();
     (StatusCode::OK, Json(json!(events)))
+}
+
+/// List all defined roles (§2.1.2, §2.1.3).
+async fn list_roles(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
+    let roles = state.rbac_engine.list_roles();
+    (StatusCode::OK, Json(json!(roles)))
+}
+
+/// Create or Update a custom role (§2.1.3).
+async fn create_role(
+    State(state): State<Arc<ApiState>>,
+    Json(req): Json<CreateCustomRoleRequest>,
+) -> impl IntoResponse {
+    match state.rbac_engine.create_custom_role(&req.name, &req.description, req.permissions) {
+        Ok(role) => (StatusCode::CREATED, Json(json!(role))).into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
+    }
+}
+
+/// Delete a custom role (§2.1.3).
+async fn delete_role(
+    State(state): State<Arc<ApiState>>,
+    Path(name): Path<String>,
+) -> impl IntoResponse {
+    match state.rbac_engine.delete_custom_role(&name) {
+        Ok(true) => (StatusCode::OK, Json(json!({"status": "role_deleted", "name": name}))).into_response(),
+        Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "role not found"}))).into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
+    }
+}
+
+/// List all 50+ available granular permission strings (§2.1.1).
+async fn list_permissions(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
+    let perms = state.rbac_engine.get_all_permissions();
+    (StatusCode::OK, Json(json!(perms)))
 }
