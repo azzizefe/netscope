@@ -50,11 +50,47 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Output is teed to a file so the failure step below can put it in the job
+      # summary. Downloading raw Actions logs needs *admin* rights on the repo
+      # (the REST endpoint answers 403 to everyone else), so on a public repo a
+      # red run is unreadable to exactly the people who would fix it —
+      # contributors, and anyone triaging from a fork's PR. The step summary is
+      # public, and readable over the API as `check-runs/{id}` → `output`.
       - name: Clippy (all workspace crates except desktop)
-        run: cargo clippy --workspace --exclude netscope-desktop -- -D warnings
+        id: clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --workspace --exclude netscope-desktop -- -D warnings 2>&1 | tee clippy.log
+
+      - name: Publish clippy failure to the job summary
+        if: failure() && steps.clippy.outcome == 'failure'
+        shell: bash
+        run: |
+          {
+            echo "## Clippy failed"
+            echo '```'
+            grep -E "^(error|warning)" -A 6 clippy.log | tail -120
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Rustfmt
-        run: cargo fmt --check
+        id: rustfmt
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo fmt --check 2>&1 | tee fmt.log
+
+      - name: Publish rustfmt failure to the job summary
+        if: failure() && steps.rustfmt.outcome == 'failure'
+        shell: bash
+        run: |
+          {
+            echo "## rustfmt failed"
+            echo '```diff'
+            tail -80 fmt.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ── 2. Rust tests (matrix: Linux, macOS, Windows) ─────────────────────────
   test:
@@ -108,8 +144,32 @@ jobs:
       - name: Build
         run: cargo build -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
 
+      # `--no-fail-fast` so one bad crate does not hide the state of the other
+      # three, and the log is teed so the failure step can surface it publicly —
+      # see the comment on the clippy step for why the raw log is not enough.
       - name: Test
-        run: cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
+        id: test
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --no-fail-fast -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent 2>&1 | tee test.log
+
+      - name: Publish test failure to the job summary
+        if: failure() && steps.test.outcome == 'failure'
+        shell: bash
+        run: |
+          {
+            echo "## Tests failed on ${{ matrix.os }}"
+            echo
+            echo '### Failing test names'
+            echo '```'
+            grep -E "^(test .* FAILED|failures:$|    [a-z_:]+::[a-z_0-9:]+$)" test.log | head -60
+            echo '```'
+            echo '### Assertion / compile output'
+            echo '```'
+            grep -E "^(error|thread .* panicked|assertion|  left|  right|test result)" -A 4 test.log | tail -150
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # The desktop crate's tests exercise `replay_packet`, which puts real
       # packets on the wire, so they are worth running. Linux is skipped
@@ -130,7 +190,11 @@ jobs:
   frontend:
     name: Frontend (vitest)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 15 minutes was not enough for what this job actually does on a cold cache:
+    # a *release* wasm32 build of netscope-core (400+ dissector modules, an
+    # 800 KB registry.rs) plus `cargo install wasm-bindgen-cli`, on a 2-core
+    # runner. The same build takes tens of minutes on a developer machine.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -152,7 +216,22 @@ jobs:
       # round, so the one real failure this job has caught so far only
       # surfaced after the slowest step in it had already run.
       - name: Build WASM filter module
-        run: cargo build -p netscope-wasm --release --target wasm32-unknown-unknown
+        id: wasm
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build -p netscope-wasm --release --target wasm32-unknown-unknown 2>&1 | tee wasm.log
+
+      - name: Publish WASM build failure to the job summary
+        if: failure() && steps.wasm.outcome == 'failure'
+        shell: bash
+        run: |
+          {
+            echo "## WASM build failed"
+            echo '```'
+            grep -E "^(error|warning)" -A 6 wasm.log | tail -120
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install wasm-bindgen-cli
         run: cargo install wasm-bindgen-cli --version 0.2.126

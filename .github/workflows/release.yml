@@ -24,6 +24,13 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: netscope-tui
+            # Intel Macs got nothing at all until 2026-07-30 — the matrix had
+            # Apple Silicon only, so "macOS supported" meant half of macOS. The
+            # runner is arm64 and Xcode links both arches, so this is a normal
+            # cross-build, not an experimental one.
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary: netscope-tui
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             binary: netscope-tui.exe
@@ -39,10 +46,18 @@ jobs:
     continue-on-error: ${{ matrix.experimental || false }}
     timeout-minutes: 30
     # Same opt-in Authenticode secrets the desktop job uses, so the standalone
-    # TUI .exe is signed with the same certificate as the installers.
+    # TUI .exe is signed with the same certificate as the installers. The Apple
+    # secrets are here rather than on the step because a step's `if:` cannot see
+    # that step's own `env:` — only workflow- and job-level entries.
     env:
       WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
       WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -104,13 +119,65 @@ jobs:
           & $signtool.FullName verify /pa /v $binary
           if ($LASTEXITCODE -ne 0) { throw "signature verification failed ($LASTEXITCODE)" }
 
-      # NOT IMPLEMENTED — macOS notarization is deferred along with the rest of
-      # the macOS/Linux release work. macOS binaries in a release are unsigned
-      # and Gatekeeper will warn on them. Left as a marker, not a working step.
-      - name: Notarize binary (macOS) — placeholder, does nothing
-        if: runner.os == 'macOS'
+      # Sign + notarize the macOS binary. Opt-in on secrets, exactly like the
+      # Windows signing above: unset -> skipped -> unsigned binary, build still
+      # succeeds; set but failing -> the job fails rather than publishing an
+      # unsigned binary under a release that claims to be signed.
+      #   APPLE_CERTIFICATE            = base64 of the Developer ID .p12
+      #   APPLE_CERTIFICATE_PASSWORD   = that .p12's password
+      #   APPLE_SIGNING_IDENTITY       = e.g. "Developer ID Application: Name (TEAMID)"
+      #   APPLE_ID / APPLE_PASSWORD    = Apple ID + app-specific password
+      #   APPLE_TEAM_ID                = 10-char team id
+      # Without this a downloaded binary is quarantined by Gatekeeper and the
+      # user is told the app "cannot be opened because the developer cannot be
+      # verified" — which reads as "this is malware", not "this is unsigned".
+      - name: Sign and notarize binary (macOS)
+        if: runner.os == 'macOS' && env.APPLE_CERTIFICATE != ''
         run: |
-          echo "macOS notarization is not implemented; this binary is unsigned."
+          set -euo pipefail
+          binary="target/${{ matrix.target }}/release/${{ matrix.binary }}"
+
+          # Import the certificate into a throwaway keychain so nothing is left
+          # behind on the runner and the default keychain is untouched.
+          keychain="$RUNNER_TEMP/netscope-signing.keychain-db"
+          keypass="$(uuidgen)"
+          security create-keychain -p "$keypass" "$keychain"
+          security set-keychain-settings -lut 900 "$keychain"
+          security unlock-keychain -p "$keypass" "$keychain"
+
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$keypass" "$keychain" >/dev/null
+          security list-keychain -d user -s "$keychain" login.keychain-db
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+          # A CLI tool still needs the hardened runtime and a timestamp, or
+          # notarization rejects it.
+          codesign --force --options runtime --timestamp \
+            --sign "$APPLE_SIGNING_IDENTITY" "$binary"
+          codesign --verify --strict --verbose=2 "$binary"
+
+          # notarytool only accepts archives, never a bare Mach-O.
+          ditto -c -k --keepParent "$binary" "$RUNNER_TEMP/notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          # A lone binary cannot be stapled (stapling needs a bundle/dmg), so
+          # prove the ticket exists online instead of silently skipping it.
+          spctl --assess --type execute --verbose=4 "$binary" || \
+            echo "note: spctl assessment is advisory for a bare CLI binary"
+
+          security delete-keychain "$keychain"
+
+      - name: Warn that the macOS binary is unsigned
+        if: runner.os == 'macOS' && env.APPLE_CERTIFICATE == ''
+        run: |
+          echo "::warning::APPLE_CERTIFICATE is not set — publishing an UNSIGNED, un-notarized macOS binary. Gatekeeper will block it on first launch."
 
       - name: Upload TUI binary
         uses: actions/upload-artifact@v4
@@ -131,6 +198,10 @@ jobs:
           - os: macos-latest
             name: macOS
             bundles: "dmg"
+            # The runner is Apple Silicon, so a plain build produced an arm64
+            # .dmg while the README advertised a universal one — Intel Macs got
+            # an installer they could not run, or nothing at all.
+            extra_args: "--target universal-apple-darwin"
           - os: windows-latest
             name: Windows
             bundles: "nsis,msi"
@@ -144,11 +215,16 @@ jobs:
     env:
       WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
       WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      # Job level, not step level: a step's `if:` cannot read its own `env:`.
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
     steps:
       - uses: actions/checkout@v4
+      # Both Darwin arches are needed for the universal bundle: `cargo tauri
+      # build --target universal-apple-darwin` builds each and lipos them, and
+      # fails outright if either target's std is missing.
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: ${{ runner.os == 'macOS' && 'wasm32-unknown-unknown,aarch64-apple-darwin,x86_64-apple-darwin' || 'wasm32-unknown-unknown' }}
       - uses: Swatinem/rust-cache@v2
 
       - name: Install system deps (Linux)
@@ -239,9 +315,25 @@ jobs:
           $cfg | ConvertTo-Json -Depth 10 | Set-Content version.conf.json
           Write-Host "Signing enabled with certificate thumbprint $($cert.Thumbprint)"
 
+      # Tauri reads the APPLE_* variables itself: with them set it codesigns the
+      # .app with the hardened runtime and submits the .dmg to notarytool;
+      # without them it builds an unsigned bundle and says so. Same opt-in shape
+      # as the Windows certificate above.
       - name: Build desktop
-        run: cargo tauri build --ci --bundles "${{ matrix.bundles }}" --config version.conf.json
+        run: cargo tauri build --ci --bundles "${{ matrix.bundles }}" ${{ matrix.extra_args }} --config version.conf.json
         working-directory: desktop/src-tauri
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Warn that the macOS bundle is unsigned
+        if: runner.os == 'macOS' && env.APPLE_CERTIFICATE == ''
+        run: |
+          echo "::warning::APPLE_CERTIFICATE is not set — the .dmg is UNSIGNED and un-notarized. Gatekeeper will refuse it until the user clears the quarantine attribute."
 
       # netscope-desktop is a member of the root Cargo workspace, so Tauri emits
       # the bundles under the workspace-root target dir, NOT desktop/src-tauri/target.
@@ -283,6 +375,7 @@ jobs:
             netscope-x86_64-unknown-linux-gnu/netscope-tui
             netscope-aarch64-unknown-linux-gnu/netscope-tui
             netscope-aarch64-apple-darwin/netscope-tui
+            netscope-x86_64-apple-darwin/netscope-tui
             netscope-x86_64-pc-windows-msvc/netscope-tui.exe
             netscope-aarch64-pc-windows-msvc/netscope-tui.exe
             netscope-desktop-Linux/**

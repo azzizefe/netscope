@@ -68,10 +68,11 @@ sudo chmod +r /dev/bpf*        # until the next reboot
 
 Two more macOS facts worth knowing before you file an issue:
 
-- Released binaries are built for **Apple Silicon only** (`aarch64-apple-darwin`).
-  On an Intel Mac, build from source.
-- Released binaries are **not signed or notarized**, so Gatekeeper blocks the
-  first launch. Right-click ▸ *Open*, or clear the quarantine attribute:
+- The desktop `.dmg` is universal (Apple Silicon + Intel); the standalone TUI
+  binary is published per-arch (`aarch64-apple-darwin`, `x86_64-apple-darwin`).
+- Signing and notarization are **opt-in on release secrets** (`APPLE_CERTIFICATE`
+  and friends). A build made without them is unsigned, and Gatekeeper blocks the
+  first launch: right-click ▸ *Open*, or clear the quarantine attribute:
   `xattr -dr com.apple.quarantine /Applications/netscope.app`.
 
 The desktop app cannot be `sudo`-launched the way the TUI can — use ChmodBPF for

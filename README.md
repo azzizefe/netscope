@@ -171,7 +171,7 @@ Then download the installer for your OS from [Releases](https://github.com/azziz
 | OS | File | Caveats |
 |----|------|---------|
 | **Windows** | `netscope_x.y.z_x64-setup.exe` (NSIS) or `.msi` | Signed only when the release was built with the signing secrets set |
-| **macOS** | `netscope_x.y.z_aarch64.dmg` | **Apple Silicon only** — there is no Intel (x86_64) build. **Unsigned and un-notarized**, so Gatekeeper blocks it on first launch: right-click ▸ *Open*, or `xattr -dr com.apple.quarantine /Applications/netscope.app` |
+| **macOS** | `netscope_x.y.z_universal.dmg` | Universal (Apple Silicon + Intel). Signed and notarized **only when the release was built with the `APPLE_*` secrets configured**; otherwise Gatekeeper blocks the first launch — right-click ▸ *Open*, or `xattr -dr com.apple.quarantine /Applications/netscope.app` |
 | **Linux** | `.AppImage` or `.deb` | x86_64 only |
 
 Full details in the [Desktop Guide](docs/desktop.md).
@@ -184,7 +184,7 @@ Grab the prebuilt `netscope-tui` binary for your OS from
 | Platform | Binary | Requirement for live capture |
 |----------|--------|------------------------------|
 | **Windows** | `x86_64` (an `aarch64` build is published best-effort) | [Npcap](https://npcap.com) (WinPcap-compatible mode), run as Administrator |
-| **macOS** | `aarch64` (Apple Silicon) only | libpcap ships with the OS, but reading `/dev/bpf*` needs root: run under `sudo`, or install Wireshark's ChmodBPF helper. The binary is unsigned — see the desktop table above |
+| **macOS** | `aarch64` (Apple Silicon) and `x86_64` (Intel), published separately | libpcap ships with the OS, but reading `/dev/bpf*` needs root: run under `sudo`, or install Wireshark's ChmodBPF helper. Signing is opt-in — see the desktop table above |
 | **Linux** | `x86_64` and `aarch64` | `sudo setcap cap_net_raw,cap_net_admin+eip $(which netscope-tui)`, or run as root |
 
 ### Build from source

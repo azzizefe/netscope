@@ -1,4 +1,20 @@
 [env]
+# Windows only in intent, but cargo's `[env]` cannot be scoped per target, so it
+# is also set on Linux and macOS — where the directory does not exist. That is
+# not fatal (the pcap build script falls back to `Version::max()` when it cannot
+# load a library from the path) but it has two effects worth knowing:
+#
+#   * pkg-config is skipped, because the crate only probes it when
+#     LIBPCAP_LIBDIR is unset. The real libpcap is still found through the
+#     linker's default paths.
+#   * the libpcap version is assumed to be 1.9.1 rather than detected. On a host
+#     with an older libpcap this can enable API that is not there, and the
+#     failure surfaces as a link error naming a pcap symbol.
+#
+# On such a host, export the real directory before building — a value already in
+# the environment wins over this file:
+#
+#   LIBPCAP_LIBDIR=/usr/lib/x86_64-linux-gnu cargo build
 LIBPCAP_LIBDIR = { value = "npcap-sdk/Lib/x64", relative = true }
 
 # rustc's LLVM optimize pass overflows its default 8 MB worker stack while

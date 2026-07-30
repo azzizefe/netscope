@@ -27,7 +27,7 @@ Download the installer for your OS from the [Releases page](https://github.com/a
 | OS | File | Notes |
 |----|------|-------|
 | Windows | `netscope_x.y.z_x64-setup.exe` (NSIS) | Install Npcap first (step 1 above). |
-| macOS | `netscope_x.y.z_aarch64.dmg` | **Apple Silicon only** — no Intel build is published. Unsigned/un-notarized: right-click ▸ *Open*, or `xattr -dr com.apple.quarantine /Applications/netscope.app`. Capture needs BPF access (ChmodBPF), and the app cannot be `sudo`-launched. |
+| macOS | `netscope_x.y.z_universal.dmg` | Universal (Apple Silicon + Intel). Signed and notarized only if the release was built with the `APPLE_*` secrets set; otherwise right-click ▸ *Open*, or `xattr -dr com.apple.quarantine /Applications/netscope.app`. Capture needs BPF access (ChmodBPF) — the app cannot be `sudo`-launched. |
 | Linux | `.AppImage` or `.deb` | AppImage: `chmod +x` then run. |
 
 ### First run
