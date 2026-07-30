@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! CIP — the object protocol inside EtherNet/IP.
 //!
 //! EtherNet/IP is only the envelope. What actually reads a tag from a

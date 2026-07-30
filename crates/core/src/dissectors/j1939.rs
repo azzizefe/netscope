@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! SAE J1939 — what a truck's ECUs say to each other over CAN.
 //!
 //! A 29-bit CAN identifier is not an opaque number: J1939 divides it into a

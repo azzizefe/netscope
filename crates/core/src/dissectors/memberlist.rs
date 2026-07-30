@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! memberlist — the gossip that decides a node is dead (UDP 7946).
 //!
 //! HashiCorp's memberlist library is the membership layer under Serf, Consul

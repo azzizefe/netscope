@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! LoRaWAN — battery-powered sensors on a kilometres-wide radio link.
 //!
 //! LoRaWAN carries a few bytes at a time from devices that must run for years

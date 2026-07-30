@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Active LAN host discovery.
 //!
 //! Finding the silent devices on your own subnet without crafting raw ARP

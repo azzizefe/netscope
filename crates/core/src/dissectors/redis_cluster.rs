@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! The Redis cluster bus — how nodes gossip about each other.
 //!
 //! Separate from the client protocol and on a separate port (the data port plus

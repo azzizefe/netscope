@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! RoCE — one machine reading and writing another's memory (EtherType 0x8915).
 //!
 //! RDMA over Converged Ethernet lets a host put data straight into a remote

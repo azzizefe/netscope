@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! VXLAN (RFC 7348) — Virtual eXtensible LAN encapsulation, UDP 4789.
 //!
 //! VXLAN wraps a complete Ethernet frame in UDP so layer-2 segments can span

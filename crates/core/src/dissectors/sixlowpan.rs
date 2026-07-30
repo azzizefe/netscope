@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! 6LoWPAN — IPv6 squeezed into an 802.15.4 radio frame (RFC 4944, RFC 6282).
 //!
 //! An IPv6 header is 40 bytes. An 802.15.4 frame carries at most 127 bytes in

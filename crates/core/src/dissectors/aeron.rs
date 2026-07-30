@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Aeron — reliable messaging for systems that cannot wait for TCP.
 //!
 //! Aeron carries messages between processes at latencies TCP cannot reach, and

@@ -6,10 +6,6 @@ labels: bug
 assignees: ''
 ---
 
-> Internal tracker for a private, proprietary repository. Keep contents
-> confidential and attach **synthetic** captures only — never a real one from a
-> production network.
-
 ## Describe the bug
 
 A clear and concise description of what the bug is.
@@ -39,9 +35,8 @@ If applicable, add screenshots to help explain your problem.
 
 ## Packet capture (if applicable)
 
-If the bug involves parsing, attach a minimal `.pcap` that triggers the issue —
-reduced or regenerated with `tools/gen-fixtures/`, not a raw capture of a real
-network.
+If the bug involves parsing, please attach or link to a minimal `.pcap` file
+that triggers the issue.
 
 ## Additional context
 

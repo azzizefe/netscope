@@ -18,7 +18,6 @@ Fixes # (issue)
 - [ ] `cargo test` passes
 - [ ] `cargo clippy -- -D warnings` passes
 - [ ] `cargo fmt --check` passes
-- [ ] Every new file carries the SPDX proprietary header (see STYLE_GUIDE.md)
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] I have updated the documentation accordingly
 - [ ] My changes generate no new warnings

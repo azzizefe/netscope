@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! The operations carried inside ONC RPC — NFS and the services around it.
 //!
 //! Knowing a packet is "an NFS call" says very little. Whether it is a LOOKUP,

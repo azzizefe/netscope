@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! ISO-TP — carrying messages longer than a CAN frame (ISO 15765-2).
 //!
 //! A CAN frame holds eight bytes. Vehicle diagnostics routinely need more, so

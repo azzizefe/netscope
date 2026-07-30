@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! ERPS — the ring that deliberately keeps one link switched off.
 //!
 //! A ring of Ethernet switches is a loop, and a loop floods itself to death.

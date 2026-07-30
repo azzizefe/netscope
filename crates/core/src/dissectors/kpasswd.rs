@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! kpasswd — changing a Kerberos password, or an administrator resetting one.
 //!
 //! Two different operations share this port, and the difference matters. A

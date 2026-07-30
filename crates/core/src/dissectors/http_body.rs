@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Finding the body of an HTTP message, so what rides inside it can be read.
 //!
 //! A great deal of what runs on a network is not a protocol on a port — it is a

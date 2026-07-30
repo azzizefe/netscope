@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Wireshark-style layered protocol tree for the TUI packet detail pane
 //! (ROADMAP §6.1). Given a [`Packet`], [`build_tree`] walks the raw frame
 //! bytes — Ethernet (+ VLAN tags) → IPv4/IPv6 → TCP/UDP — and returns the

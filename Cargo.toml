@@ -10,7 +10,7 @@ members = [
     "tools/gen-fixtures",
 ]
 
-# Shared metadata inherited by the crates (see `*.workspace = true`).
+# Shared metadata inherited by the publishable crates (see `*.workspace = true`).
 [workspace.package]
 version = "0.2.0"
 edition = "2021"
@@ -20,19 +20,13 @@ edition = "2021"
 # dependency. CI builds on stable; toolchains between this floor and stable are
 # not exercised, so treat 1.88 as "will resolve", not "is tested".
 rust-version = "1.88"
-license = "LicenseRef-Proprietary"
+license = "MIT"
 authors = ["azzizefe"]
 repository = "https://github.com/azzizefe/netscope"
 homepage = "https://github.com/azzizefe/netscope"
 readme = "README.md"
 keywords = ["network", "packet", "capture", "wireshark", "tui"]
 categories = ["network-programming", "command-line-utilities"]
-# Nothing here goes to a public registry: crates.io only accepts OSI-approved
-# licenses and makes every published source file world-readable, which is the
-# opposite of what LICENSE says. `publish = false` makes `cargo publish` refuse
-# rather than rely on nobody typing it. Distribution is via signed release
-# binaries (.github/workflows/release.yml), not the registry.
-publish = false
 
 # Workspace-wide lint configuration, opted into per crate with `[lints]
 # workspace = true`.

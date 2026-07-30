@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 // netscope — UI internationalisation.
 // A small data-i18n driven translator for the static interface chrome.
 // Dynamically-generated analysis prose (findings, lessons, feature cards) is

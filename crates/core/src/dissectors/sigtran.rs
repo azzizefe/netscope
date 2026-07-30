@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! The common header shared by the SIGTRAN adaptation layers — M3UA, M2UA,
 //! M2PA and SUA (RFC 4666 §1.3.1, and the same layout in RFC 3331 / RFC 4165 /
 //! RFC 3868).

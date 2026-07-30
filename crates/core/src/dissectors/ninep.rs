@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! 9P — the Plan 9 filesystem protocol (TCP 564).
 //!
 //! Worth decoding because of where it turns up now rather than where it came

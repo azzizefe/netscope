@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! TCAP, and the MAP operation inside it.
 //!
 //! TCAP (ITU-T Q.773) is the transaction layer of the SS7 stack: it pairs a

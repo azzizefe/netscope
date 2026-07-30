@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! ESMC — how a network distributes the quality of its clock (ITU-T G.8264).
 //!
 //! Synchronous Ethernet carries frequency in the physical layer, but a receiver

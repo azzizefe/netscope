@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Minimal radiotap header parser.
 //!
 //! Radiotap is the pseudo-header monitor-mode captures prepend to each 802.11

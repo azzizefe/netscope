@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! PCCC — the older Allen-Bradley command set, tunnelled inside CIP.
 //!
 //! Rockwell's newer controllers speak CIP natively, but the installed base of

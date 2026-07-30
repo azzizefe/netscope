@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! SAE J1708 / J1587 — the serial data bus under every heavy truck.
 //!
 //! J1708 is the physical/data-link layer (9600 baud RS-485) and J1587 is the

@@ -7,22 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-
-- **netscope is now proprietary software.** The MIT license is replaced by an
-  all-rights-reserved license (`LICENSE`); the SPDX header on all 426 source
-  files becomes `LicenseRef-Proprietary`. Every crate is `publish = false` and
-  the crates.io publish workflow is deleted — crates.io requires an
-  OSI-approved license and makes published sources world-readable. Community
-  scaffolding (Code of Conduct, contribution invitations) is replaced by an
-  internal development guide, and the packaging manifests (Homebrew, WinGet,
-  Snap) are corrected: a build-from-source Homebrew formula is no longer
-  possible, and public package channels need a public download host that a
-  private repository's release assets cannot provide.
-
-  Revisions published publicly before 2026-07-30 carried an MIT grant that
-  cannot be withdrawn; the new license governs this revision onwards.
-
 ### Fixed
 
 - **TUI selection vs. display filter**: keyboard navigation (`↑/↓`, `j/k`),

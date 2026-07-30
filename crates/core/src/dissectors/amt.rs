@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! AMT — multicast across networks that will not carry it (RFC 7450, UDP 2268).
 //!
 //! Most of the internet does not forward multicast. AMT gets it across anyway:

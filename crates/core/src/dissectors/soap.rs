@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! SOAP — the operation hiding inside `POST /`.
 //!
 //! An enormous amount of device management is SOAP over HTTP, and none of it is

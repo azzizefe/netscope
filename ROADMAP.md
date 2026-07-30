@@ -12,7 +12,7 @@
 | TUI (`crates/tui`) | ✅ Hazır | Terminal tabanlı arayüz (ratatui), 7 farklı görünüm |
 | WASM (`crates/wasm`) | ✅ Hazır | Tarayıcıda paket filtresi, önceden derlenmiş (`desktop/frontend/wasm/`) |
 | Tauri masaüstü (`desktop/`) | ✅ Hazır | Windows/macOS/Linux (Tauri v2), NSIS/MSI/DMG/DEB/AppImage |
-| CI/CD (GitHub Actions) | ✅ Var | `ci.yml` (lint+test+bench), `release.yml` (TUI binary + desktop installer). crates.io yayını yok — lisans tescilli |
+| CI/CD (GitHub Actions) | ✅ Var | `ci.yml` (lint+test+bench), `release.yml` (TUI binary + desktop installer), `publish.yml` |
 | Mevcut dokümanlar | ✅ Var | `docs/` altında 14 dosya (mimari, kurulum, SSS, KULLANIM.md, filtreler...) |
 | Paketleme şablonları | ✅ Var | `dist/packaging/` (Homebrew Cask, Snap, WinGet) |
 | Pre-built binary | ✅ Var | `dist/netscope-windows-v0.1.0-x64.zip` (17 MB) |
@@ -65,8 +65,7 @@ netscope-site/
 - **Özellikler:** Protokol analizi, gerçek zamanlı yakalama, 2480+ protokol, şifreleme tespiti
 - **Canlı demo:** WASM modülü ile tarayıcıda örnek `.pcap` analizi
 - **İndirme CTA:** Platform seçimi (Windows/macOS/Linux)
-- **Trust badges:** İmzalı installer, platform desteği, sürüm/changelog şeffaflığı
-  *(kaynak kapalı — "açık kaynak / MIT" rozeti kullanılamaz)*
+- **Trust badges:** Açık kaynak (GitHub), MIT lisans, topluluk
 
 ### 1.3 Vercel İlk Deploy
 
@@ -203,15 +202,12 @@ Mevcut `.github/workflows/release.yml` üzerinde yapılacak iyileştirmeler:
 
 ## 🗺️ Faz 5 — Topluluk ve Büyüme (Sürekli)
 
-### 5.1 Kullanıcı Destek Altyapısı
+### 5.1 Topluluk Altyapısı
 
-> Depo tescilli ve özel; "topluluk katkısı" kanalları geçersiz. Yerine
-> kullanıcıya (katkıcıya değil) dönük destek kanalları.
-
-- [ ] Destek e-postası / özel destek formu
-- [ ] Genel kullanıcı SSS ve sürüm notları sayfası
-- [x] ~~Issue template'leri~~ → dâhilî kullanımda (`.github/ISSUE_TEMPLATE/`)
-- [x] ~~CONTRIBUTING.md~~ → dâhilî geliştirme rehberine dönüştürüldü
+- [ ] GitHub Discussions aktif kullanımı
+- [ ] Discord sunucusu
+- [ ] Issue template'leri (bug report, feature request, protocol request)
+- [ ] CONTRIBUTING.md
 
 ### 5.2 SEO ve Keşfedilebilirlik
 

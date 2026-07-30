@@ -10,29 +10,14 @@ released version and `main`. Older tags are not maintained.
 | latest release / `main` | ✅ |
 | older | ❌ |
 
-## Confidentiality
-
-netscope is proprietary software (see [LICENSE](LICENSE)) and the repository is
-private. Source code, fixtures, capture samples and anything derived from them
-are confidential:
-
-- do not paste code or stack traces into public issue trackers, forums,
-  pastebins, model playgrounds, or any third-party service;
-- do not push branches, mirrors or backups to any remote other than `origin`;
-- do not attach real captures to a ticket — they contain the network they were
-  taken on. Reduce to a minimal synthetic `.pcap` first
-  (`tools/gen-fixtures/`);
-- release binaries are the only artifact meant to leave this repository.
-
 ## Reporting a vulnerability
 
-**Do not open a public issue, advisory, or blog post for security problems.**
+**Please do not open a public issue for security problems.**
 
-If you have repository access, report privately through GitHub's
+Report vulnerabilities privately through GitHub's
 [private vulnerability reporting](https://github.com/azzizefe/netscope/security/advisories/new)
-("Report a vulnerability" under the repository's **Security** tab). Otherwise
-contact the repository owner directly. Either way the details stay confidential
-until a fix ships.
+("Report a vulnerability" under the repository's **Security** tab). This keeps
+the details confidential until a fix is available.
 
 Please include:
 
@@ -41,10 +26,9 @@ Please include:
   (a small `.pcap`/`.pcapng` or crafted input is ideal)
 - the version or commit you tested
 
-You can expect an initial acknowledgement within a few days. Because the source
-is not public, disclosure is coordinated directly with affected licensees
-rather than published as an open advisory; reporters are credited in the
-release notes unless they prefer to remain anonymous.
+You can expect an initial acknowledgement within a few days. Once a fix is
+ready, a coordinated disclosure will be arranged and reporters will be
+credited unless they prefer to remain anonymous.
 
 ## Scope and threat model
 

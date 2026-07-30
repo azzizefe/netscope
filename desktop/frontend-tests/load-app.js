@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 // Load the real, shipped frontend source (../frontend/app.js) inside a Node vm
 // sandbox and expose its top-level functions for unit testing — no duplication,
 // no build step, and no changes to the shipped app.

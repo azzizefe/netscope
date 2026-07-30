@@ -15,7 +15,7 @@ Everything you need to use, understand, and extend netscope.
 | [SIEM Differentiation Spec](SIEM_DIFFERENTIATION.md) | 7-phase Explanatory SIEM differentiation specification |
 | [SIEM Integration Guide](SIEM_INTEGRATION_GUIDE.md) | Technical & API guide for SIEM connectors, OCSF, STIX, Analyst Command Center |
 
-## For Developers (internal)
+## For Contributors
 
 | Document | What it covers |
 |----------|---------------|

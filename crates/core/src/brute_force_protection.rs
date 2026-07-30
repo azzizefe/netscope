@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 
 //! Brute-Force & IP Rate-Limiting Protection Engine (§1.2.1 - §1.2.4).
 //!

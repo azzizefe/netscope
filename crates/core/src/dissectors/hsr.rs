@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! HSR — sending everything twice so nothing is ever lost (IEC 62439-3).
 //!
 //! MRP heals a broken ring in tens of milliseconds. For a substation protection

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! OCSP — asking whether a certificate has been revoked (RFC 6960).
 //!
 //! When a client is handed a certificate it can ask the issuing CA whether that

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! SMB — Windows file and printer sharing (MS-SMB2, MS-CIFS).
 //!
 //! SMB is the busiest protocol on most corporate networks, and knowing only

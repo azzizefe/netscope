@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! `PKIStatusInfo` — how every PKIX protocol reports a refusal.
 //!
 //! CMP and the RFC 3161 timestamp protocol both answer with the same

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! LIN — the cheap bus behind every door mirror and seat motor (DLT 212).
 //!
 //! CAN is expensive per node, so carmakers put the things that only need a few

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! OPC UA PubSub — UADP (UDP Multicast Datagram Protocol) over UDP 4840.
 //!
 //! OPC UA Part 14 defines a publish/subscribe model for low-latency industrial

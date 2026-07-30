@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! SDP — the description of a media session (RFC 4566).
 //!
 //! SDP is never sent on its own. It is the body inside a SIP invite, a

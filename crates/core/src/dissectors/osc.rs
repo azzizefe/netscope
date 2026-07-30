@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! OSC — Open Sound Control, the control bus of a modern studio.
 //!
 //! OSC replaced MIDI for anything that needed more than seven bits of

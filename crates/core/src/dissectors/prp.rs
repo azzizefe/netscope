@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! PRP — the other way of surviving a cut cable (IEC 62439-3).
 //!
 //! HSR and PRP solve the same problem from opposite ends. HSR wraps a frame in

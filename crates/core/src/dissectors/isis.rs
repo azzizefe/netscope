@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! IS-IS — the link-state routing protocol that carries much of the internet's
 //! interior routing (ISO/IEC 10589, extended for IP by RFC 1195).
 //!

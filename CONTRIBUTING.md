@@ -1,24 +1,22 @@
-# Working on netscope
+# Contributing to netscope
 
-netscope is **proprietary, closed-source software** (see [LICENSE](LICENSE)).
-This document is the internal development guide for people who have been
-granted access to the repository — it is not an invitation to contribute.
+Thanks for considering contributing! netscope is a community project and we welcome all contributions — bug reports, feature requests, documentation improvements, and code changes.
 
-**Before you write code, read [SECURITY.md](SECURITY.md) §Confidentiality.**
-The source, the fixtures, and anything derived from them are confidential.
-Do not paste code into public issue trackers, forums, pastebins, or third-party
-services, and do not push branches to any remote other than `origin`.
+## Code of Conduct
+
+This project adheres to the [Contributor Covenant](CODE_OF_CONDUCT.md). By participating, you agree to uphold this code. Please report unacceptable behavior to the maintainers.
 
 ## Getting Started
 
-1. Clone the repository: `git clone https://github.com/azzizefe/netscope.git`
-2. Create a branch: `git checkout -b feature/my-feature`
-3. Make your changes
-4. Run tests: `cargo test`
-5. Run lints: `cargo clippy -- -D warnings`
-6. Format code: `cargo fmt`
-7. Commit and push to `origin`
-8. Open a Pull Request for review
+1. Fork the repository
+2. Clone your fork: `git clone https://github.com/YOUR-USERNAME/netscope.git`
+3. Create a branch: `git checkout -b feature/my-feature`
+4. Make your changes
+5. Run tests: `cargo test`
+6. Run lints: `cargo clippy -- -D warnings`
+7. Format code: `cargo fmt`
+8. Commit and push
+9. Open a Pull Request
 
 ## Development Setup
 
@@ -141,19 +139,6 @@ docs/                 — Documentation
 tools/                — Utility crates (fixture generator)
 ```
 
-## New files need a license header
-
-Every source file starts with the two-line header from
-[STYLE_GUIDE.md](STYLE_GUIDE.md) — SPDX identifier plus copyright — in the
-comment syntax of that file type. A file without it ships without a notice of
-who owns it, which is the one thing a proprietary codebase cannot afford:
-
-```rust
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
-```
-
 ## Questions?
 
-Ask the repository owner directly. Do not use public channels — see the
-confidentiality note at the top.
+Open a [Discussion](https://github.com/azzizefe/netscope/discussions) or join our community chat.

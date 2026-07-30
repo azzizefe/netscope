@@ -1,5 +1,5 @@
--- SPDX-License-Identifier: LicenseRef-Proprietary
--- Copyright (c) 2026 azzizefe. All rights reserved.
+-- SPDX-License-Identifier: MIT
+-- Copyright (c) 2026 netscope contributors
 
 -- Config Store: Active configuration override for each sensor
 CREATE TABLE IF NOT EXISTS sensor_configs (

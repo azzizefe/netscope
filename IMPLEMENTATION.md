@@ -60,8 +60,8 @@
         │                             │
         ▼                             ▼
 ┌──────────────────┐    ┌──────────────────────────────┐
-│ Signed installer │    │ Vercel (netscope.vercel.app) │
-│ (GitHub Release) │    │                              │
+│ crates.io        │    │ Vercel (netscope.vercel.app) │
+│ cargo install    │    │                              │
 │ netscope-tui     │    │ /         → Landing page     │
 └──────────────────┘    │ /download → İndirme sayfası  │
                         │ /docs/*   → Dokümantasyon     │
@@ -293,13 +293,8 @@ function classifyAsset(name: string): Pick<ReleaseAsset, 'platform' | 'arch' | '
 }
 
 export async function getLatestRelease(): Promise<LatestRelease> {
-  // Build-time fetch. Depo PRIVATE olduğu için GITHUB_TOKEN artık opsiyonel
-  // değil, ZORUNLU: kimliksiz istek 404 döner ve sayfa sessizce
-  // FALLBACK_RELEASE'e düşer — yani site kalıcı olarak eski sürümü gösterir.
-  // Token'ı Vercel ortam değişkeni olarak ver (repo: read izni yeter).
-  // Aynı şey release asset indirme URL'leri için de geçerli: private repo'nun
-  // asset'leri kimliksiz indirilemez, indirme bağlantıları imzalı bir proxy
-  // ya da ayrı bir public dağıtım kovası üzerinden verilmeli.
+  // Build-time fetch. CI ortamında GITHUB_TOKEN env var ise
+  // authenticated istek atarak rate limit'i aş.
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
     'User-Agent': 'netscope-website/1.0',
@@ -453,7 +448,7 @@ import DownloadCTA from '../components/DownloadCTA.astro';
 
 <Base
   title="NetScope — Network Analyzer for Humans"
-  description="A modern, fast network packet analyzer. 2500+ protocol dissectors, real-time capture, TLS decryption. Free download for personal use."
+  description="A modern, fast network packet analyzer. 2500+ protocol dissectors, real-time capture, TLS decryption. Open source. Free forever."
 >
   <Hero />
   <FeatureGrid />
@@ -462,11 +457,13 @@ import DownloadCTA from '../components/DownloadCTA.astro';
   <!-- Trust section -->
   <section class="py-16 border-t border-zinc-800">
     <div class="mx-auto max-w-7xl px-6 text-center">
-      <p class="text-zinc-500 text-sm uppercase tracking-widest mb-8">Signed Builds · No Telemetry</p>
+      <p class="text-zinc-500 text-sm uppercase tracking-widest mb-8">Open Source & Free Forever</p>
       <div class="flex justify-center gap-12 opacity-50">
+        <span class="text-zinc-400">MIT Licensed</span>
+        <a href="https://github.com/azzizefe/netscope" class="text-zinc-400 hover:text-white transition-colors">
+          <span id="star-count">★</span> GitHub
+        </a>
         <span class="text-zinc-400">Windows · macOS · Linux</span>
-        <span class="text-zinc-400">Signed installers</span>
-        <span class="text-zinc-400">Captures never leave your machine</span>
       </div>
     </div>
   </section>
@@ -495,7 +492,7 @@ const byPlatform = {
 
 <Base
   title={`Download NetScope v${release.version}`}
-  description={`Download the latest NetScope desktop app for Windows, macOS, and Linux. Network analyzer with 2500+ protocol dissectors.`}
+  description={`Download the latest NetScope desktop app for Windows, macOS, and Linux. Open source network analyzer with 2500+ protocol dissectors.`}
 >
   <main class="mx-auto max-w-7xl px-6 py-16">
     <h1 class="text-4xl font-bold text-white mb-2">Download NetScope</h1>

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! RTP-MIDI — MIDI over a network, and the session that carries it (RFC 6295).
 //!
 //! Musical instruments and lighting desks speak MIDI over a five-pin cable with

@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 import { describe, it, expect } from 'vitest';
 import { loadFilter, tcpFrame, udpFrame, bytes } from './load-app.js';
 

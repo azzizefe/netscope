@@ -9,7 +9,7 @@
 <p align="center">
   <a href="#install"><img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-blue" alt="Platforms"></a>
   <img src="https://img.shields.io/badge/rust-1.88+-orange" alt="Rust">
-  <img src="https://img.shields.io/badge/license-proprietary-red" alt="License">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <a href="https://github.com/azzizefe/netscope/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/azzizefe/netscope/ci.yml?branch=main&label=ci" alt="CI"></a>
 </p>
 
@@ -20,7 +20,7 @@
   <a href="#quick-start">Quick Start</a> •
   <a href="#keyboard-shortcuts">Keys</a> •
   <a href="#docs">Docs</a> •
-  <a href="#license">License</a>
+  <a href="#contributing">Contributing</a>
 </p>
 
 <br>
@@ -60,7 +60,7 @@ decryption or forensic depth, Wireshark is still the reference.
   > The registry declares a further ~1,900 protocol names that no dissector produces
   > yet. They are marked `Declared` and deliberately kept out of the filter, the Learn
   > tab and the protocol count, so nothing is listed that a capture cannot contain.
-  > Wiring one up is tracked internally — see [CONTRIBUTING.md](CONTRIBUTING.md).
+  > Wiring one up is a good first contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **🧠 Human-readable summaries** — DNS domains, TLS SNI hostnames, HTTP paths. Not hex.
 - **🌐 Passive hostname resolution** — Watches DNS responses and shows `github.com:443` instead of a bare IP. No lookups of its own, zero added traffic.
 - **⛔ Block traffic, live** — See a connection you don't like? Select it and press `b`. netscope installs a real OS firewall rule to cut it off. Wireshark can't do that.
@@ -537,31 +537,23 @@ netscope/
 
 ---
 
-## Development
+## Contributing
 
-netscope is developed privately; the repository is not open to outside
-contributions. If you have been granted access, see
-[CONTRIBUTING.md](CONTRIBUTING.md) for the build, test and review workflow, and
-[SECURITY.md](SECURITY.md) for the confidentiality rules and how to report a
-vulnerability.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md) — please report vulnerabilities privately
+- [Bug reports](.github/ISSUE_TEMPLATE/bug_report.md)
+- [Feature requests](.github/ISSUE_TEMPLATE/feature_request.md)
 
 ---
 
 ## License
 
-netscope is **proprietary software** — see [LICENSE](LICENSE).
-Copyright (c) 2026 azzizefe. All rights reserved.
+netscope is [MIT licensed](LICENSE).
 
-No right to use, copy, modify or redistribute the source or the binaries is
-granted without a separate written agreement. Having a copy of this repository
-is not such an agreement.
-
-> Revisions published publicly before 2026-07-30 carried an MIT header. That
-> grant cannot be withdrawn for those specific revisions; it does not extend to
-> this one or anything after it.
-
-It also depends on components that are **not** covered by that license and are
-not redistributed with it — you install or download them yourself:
+It depends on components that are **not** covered by that license and are not
+redistributed with it — you install or download them yourself:
 
 | Component | Licensing |
 |---|---|

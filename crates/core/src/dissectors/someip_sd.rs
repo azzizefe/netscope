@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! SOME/IP service discovery — how a car's ECUs find each other.
 //!
 //! Before any SOME/IP call can happen, the ECU providing a service has to

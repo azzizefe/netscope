@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Capture-file format detection & import — read formats beyond libpcap's
 //! pcap/pcapng, the way Wireshark's Wiretap library does.
 //!

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Modbus ASCII carried over TCP — the other serial framing that never left.
 //!
 //! The sibling of [`super::modbus_rtu`], and it arrives the same way: a gateway

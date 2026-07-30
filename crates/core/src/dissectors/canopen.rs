@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! CANopen (CiA 301) — the identifier *is* the protocol.
 //!
 //! A CANopen frame carries no protocol field. The 11-bit identifier splits into

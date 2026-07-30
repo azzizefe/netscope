@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! PROFINET DCP — how a device gets its name and address (IEC 61158-6-10 §4.3).
 //!
 //! PROFINET does not identify devices by IP address but by *name of station*.

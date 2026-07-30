@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! DRBD — block devices mirrored between two machines.
 //!
 //! DRBD replicates a disk over the network: every write to the primary is sent

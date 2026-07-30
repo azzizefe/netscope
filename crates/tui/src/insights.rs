@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: LicenseRef-Proprietary
-// Copyright (c) 2026 azzizefe. All rights reserved.
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 netscope contributors
 //! Automatic plain-language security/privacy analysis for the TUI Insights
 //! view (ROADMAP §6.1) — a focused port of the desktop's `analyzeCapture`
 //! (app.js). It works only from data the TUI already has (the packet ring,
