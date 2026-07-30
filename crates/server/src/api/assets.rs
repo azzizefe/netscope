@@ -32,7 +32,7 @@ pub fn routes(state: Arc<ApiState>) -> Router {
             post(batch_sync_cmdb_assets).route_layer(from_fn(require("events:write"))),
         )
         .route(
-            "/:ip",
+            "/{ip}",
             get(get_asset_by_ip)
                 .delete(delete_asset)
                 .route_layer(from_fn(require("events:read"))),
