@@ -35,7 +35,7 @@
 | **Setup** | ✅ One binary, sensible defaults, no profile to configure | ⚪ Powerful but heavy — lots of dialogs before you're productive |
 | **Size** | ✅ ~8 MB TUI binary · ~7-10 MB desktop installer | ⚪ ~85 MB installer (Windows) |
 | **Interprets your capture** | ✅ Automatic security & privacy findings, JA3/JA4, per-site X-ray | ❌ Shows everything, interprets nothing |
-| **Acts on traffic** | ✅ Block a host live via a real OS firewall rule | ❌ Passive only, by design |
+| **Acts on traffic** | ✅ Block a host live via a real OS firewall rule — **Windows only** today | ❌ Passive only, by design |
 | **Protocol coverage** | ⚪ **590 protocols** — broad coverage, but decode depth varies: some are fully parsed, others recognised and labelled | ✅ **~3000** — unmatched breadth and decode depth |
 | **TLS decryption** | ✅ TLS 1.3 + 1.2 AEAD (ECDHE, GCM & ChaCha20) via `SSLKEYLOGFILE` | ✅ Broader — also legacy CBC suites and QUIC |
 | **Deep analysis** | ⚪ Summaries, Follow Stream, protocol tree | ✅ Decode-as, VoIP playback, IO graphs, Lua/C plugins |
@@ -63,7 +63,7 @@ decryption or forensic depth, Wireshark is still the reference.
   > Wiring one up is a good first contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **🧠 Human-readable summaries** — DNS domains, TLS SNI hostnames, HTTP paths. Not hex.
 - **🌐 Passive hostname resolution** — Watches DNS responses and shows `github.com:443` instead of a bare IP. No lookups of its own, zero added traffic.
-- **⛔ Block traffic, live** — See a connection you don't like? Select it and press `b`. netscope installs a real OS firewall rule to cut it off. Wireshark can't do that.
+- **⛔ Block traffic, live** *(Windows only)* — See a connection you don't like? Select it and press `b`. netscope installs a real `netsh advfirewall` rule to cut it off. Wireshark can't do that. On macOS and Linux there is no backend yet (`pf`/`nftables` are not wired up), so `b` reports that blocking is unavailable instead of pretending to work.
 - **🎓 Built-in Learn mode** — Never used a packet analyzer? A dedicated view explains every protocol in plain language, and each selected packet gets a one-line "what is this?". No prior networking knowledge needed.
 - **🎯 Zero-config interface pick** — Skips loopback and virtual adapters (WAN Miniport, Hyper-V) and lands on your real Wi-Fi/Ethernet automatically.
 - **🌐 Multi-interface capture** — Capture on several interfaces at once, merged into one stream (Wireshark-style). Pick **🌐 All interfaces** in the desktop, or pass a comma-separated list to the TUI (`-i "Wi-Fi,Ethernet"`). Each interface is dissected on its own core, so mixed link types (Ethernet + Wi-Fi) just work.
@@ -168,11 +168,11 @@ and a **terminal UI** (TUI). Both share the same engine.
 
 Then download the installer for your OS from [Releases](https://github.com/azzizefe/netscope/releases):
 
-| OS | File |
-|----|------|
-| **Windows** | `netscope_x.y.z_x64-setup.exe` |
-| **macOS** | `netscope_x.y.z_universal.dmg` |
-| **Linux** | `.AppImage` or `.deb` |
+| OS | File | Caveats |
+|----|------|---------|
+| **Windows** | `netscope_x.y.z_x64-setup.exe` (NSIS) or `.msi` | Signed only when the release was built with the signing secrets set |
+| **macOS** | `netscope_x.y.z_aarch64.dmg` | **Apple Silicon only** — there is no Intel (x86_64) build. **Unsigned and un-notarized**, so Gatekeeper blocks it on first launch: right-click ▸ *Open*, or `xattr -dr com.apple.quarantine /Applications/netscope.app` |
+| **Linux** | `.AppImage` or `.deb` | x86_64 only |
 
 Full details in the [Desktop Guide](docs/desktop.md).
 
@@ -181,11 +181,11 @@ Full details in the [Desktop Guide](docs/desktop.md).
 Grab the prebuilt `netscope-tui` binary for your OS from
 [Releases](https://github.com/azzizefe/netscope/releases), or build from source (below).
 
-| Platform | Requirement |
-|----------|-------------|
-| **Windows** | [Npcap](https://npcap.com) (WinPcap-compatible mode) |
-| **macOS** | No setup needed |
-| **Linux** | `sudo setcap cap_net_raw,cap_net_admin+eip $(which netscope-tui)` (capture without root) |
+| Platform | Binary | Requirement for live capture |
+|----------|--------|------------------------------|
+| **Windows** | `x86_64` (an `aarch64` build is published best-effort) | [Npcap](https://npcap.com) (WinPcap-compatible mode), run as Administrator |
+| **macOS** | `aarch64` (Apple Silicon) only | libpcap ships with the OS, but reading `/dev/bpf*` needs root: run under `sudo`, or install Wireshark's ChmodBPF helper. The binary is unsigned — see the desktop table above |
+| **Linux** | `x86_64` and `aarch64` | `sudo setcap cap_net_raw,cap_net_admin+eip $(which netscope-tui)`, or run as root |
 
 ### Build from source
 

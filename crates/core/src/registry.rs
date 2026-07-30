@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-//! The protocol registry â€” the single source of truth for every protocol
+//! The protocol registry  —  the single source of truth for every protocol
 //! netscope knows about.
 //!
 //! Before this module existed, adding one protocol meant hand-editing eight
 //! files: the enum and its `Display`, the TUI colour table, the display-filter
 //! keyword list, two classification lists in `flows`, and the education
-//! blurbs. Forgetting one was silent â€” the protocol simply rendered grey, or
+//! blurbs. Forgetting one was silent  —  the protocol simply rendered grey, or
 //! was unfilterable, or grouped into the wrong flow.
 //!
 //! Now each protocol is one row in the [`protocols!`] table below and every
@@ -19,7 +19,7 @@
 //! 2. Add a row here.
 //! 3. Bind it to a port in [`crate::dissectors::bindings`].
 //! 4. Write its lesson in [`crate::education::lesson`] (the compiler will tell
-//!    you â€” that match is exhaustive).
+//!    you  —  that match is exhaustive).
 
 use crate::models::{PluginProto, PluginTransport};
 
@@ -181,7 +181,7 @@ macro_rules! protocols {
                 }
             }
 
-            /// Extra display-filter tokens beyond the lowercased display name â€”
+            /// Extra display-filter tokens beyond the lowercased display name  — 
             /// e.g. `mongo` for MongoDB, `ike` for ISAKMP.
             pub fn aliases(&self) -> &'static [&'static str] {
                 match self {
@@ -195,7 +195,7 @@ macro_rules! protocols {
                 match self {
                     $(Protocol::$variant => $blurb,)*
                     Protocol::Plugin(_) | Protocol::Unknown(_) => {
-                        "Traffic netscope doesn't decode in detail â€” shown safely anyway."
+                        "Traffic netscope doesn't decode in detail  —  shown safely anyway."
                     }
                 }
             }
@@ -216,7 +216,7 @@ macro_rules! protocols {
         /// predicate. Derived from the table, so a new row is filterable for free.
         ///
         /// Display names the lexer cannot produce as a single word (`OPC UA`,
-        /// `EtherNet/IP`) are skipped â€” those protocols carry an alias instead,
+        /// `EtherNet/IP`) are skipped  —  those protocols carry an alias instead,
         /// which [`aliases_cover_unlexable_display_names`] enforces.
         pub fn filter_tokens() -> Vec<String> {
             let mut out = Vec::new();
@@ -6396,7 +6396,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "Encrypted web traffic â€” the content can't be read, by design.",
+        blurb:     "Encrypted web traffic  —  the content can't be read, by design.",
     }
     Icmp {
         doc:       "ICMP traffic.",
@@ -6956,7 +6956,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A clock-sync message â€” your device checking the time with a time server.",
+        blurb:     "A clock-sync message  —  your device checking the time with a time server.",
     }
     Mdns {
         doc:       "Multicast DNS service discovery (UDP 5353).",
@@ -6966,7 +6966,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "Local service discovery (mDNS/Bonjour) â€” devices finding printers, speakers, etc. on the LAN.",
+        blurb:     "Local service discovery (mDNS/Bonjour)  —  devices finding printers, speakers, etc. on the LAN.",
     }
     Snmp {
         doc:       "Simple Network Management Protocol (UDP 161/162).",
@@ -6986,9 +6986,9 @@ protocols! {
         rank:      3,
         status:    Dissected,
         // `http3`/`qpack` were filter keywords that resolved to no protocol at
-        // all â€” QUIC is what actually carries both, so they belong here.
+        // all  —  QUIC is what actually carries both, so they belong here.
         aliases:   ["http3", "qpack"],
-        blurb:     "Encrypted QUIC traffic â€” the modern transport behind HTTP/3, carried over UDP.",
+        blurb:     "Encrypted QUIC traffic  —  the modern transport behind HTTP/3, carried over UDP.",
     }
     Sip {
         doc:       "Session Initiation Protocol for VoIP signalling (UDP/TCP 5060/5061).",
@@ -6998,7 +6998,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "VoIP call signalling (SIP) â€” setting up, ringing, or ending a voice call.",
+        blurb:     "VoIP call signalling (SIP)  —  setting up, ringing, or ending a voice call.",
     }
     Ssh {
         doc:       "Secure Shell (TCP 22).",
@@ -7008,7 +7008,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An encrypted remote-shell session (SSH) â€” you can see it happens, not what's typed.",
+        blurb:     "An encrypted remote-shell session (SSH)  —  you can see it happens, not what's typed.",
     }
     Ftp {
         doc:       "File Transfer Protocol control channel (TCP 21).",
@@ -7018,7 +7018,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An old-style file transfer (FTP) â€” commands and passwords travel in plain text.",
+        blurb:     "An old-style file transfer (FTP)  —  commands and passwords travel in plain text.",
     }
     Smtp {
         doc:       "Simple Mail Transfer Protocol (TCP 25/587).",
@@ -7058,7 +7058,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An unencrypted remote terminal (Telnet) â€” everything, including passwords, is visible.",
+        blurb:     "An unencrypted remote terminal (Telnet)  —  everything, including passwords, is visible.",
     }
     Rdp {
         doc:       "Remote Desktop Protocol (TCP 3389).",
@@ -7071,44 +7071,44 @@ protocols! {
         blurb:     "A Windows Remote Desktop session (RDP).",
     }
     WebSocket {
-        doc:       "WebSocket data frames (RFC 6455) â€” any TCP port, after an HTTP Upgrade.",
+        doc:       "WebSocket data frames (RFC 6455)  —  any TCP port, after an HTTP Upgrade.",
         display:   "WebSocket",
         color:     0xA3E635,
         transport: Tcp,
         rank:      5,
         status:    Dissected,
         aliases:   ["ws"],
-        blurb:     "A live two-way message on an upgraded web connection (WebSocket) â€” used by chat, live feeds and dev tools.",
+        blurb:     "A live two-way message on an upgraded web connection (WebSocket)  —  used by chat, live feeds and dev tools.",
     }
     Http2 {
-        doc:       "HTTP/2 cleartext frames (RFC 9113, h2c) â€” any TCP port.",
+        doc:       "HTTP/2 cleartext frames (RFC 9113, h2c)  —  any TCP port.",
         display:   "HTTP/2",
         color:     0x4ADE80,
         transport: Tcp,
         rank:      4,
         status:    Dissected,
         aliases:   ["http2"],
-        blurb:     "Binary web traffic (HTTP/2) â€” many requests multiplexed as frames on one connection.",
+        blurb:     "Binary web traffic (HTTP/2)  —  many requests multiplexed as frames on one connection.",
     }
     Grpc {
-        doc:       "gRPC calls riding on HTTP/2 â€” usually TCP 50051, but any port.",
+        doc:       "gRPC calls riding on HTTP/2  —  usually TCP 50051, but any port.",
         display:   "gRPC",
         color:     0xF9A8D4,
         transport: Tcp,
         rank:      5,
         status:    Dissected,
         aliases:   [],
-        blurb:     "One service calling another (gRPC) â€” a binary remote-procedure call riding on HTTP/2.",
+        blurb:     "One service calling another (gRPC)  —  a binary remote-procedure call riding on HTTP/2.",
     }
     Vxlan {
-        doc:       "VXLAN overlay encapsulation (RFC 7348, UDP 4789) â€” carries an inner Ethernet frame.",
+        doc:       "VXLAN overlay encapsulation (RFC 7348, UDP 4789)  —  carries an inner Ethernet frame.",
         display:   "VXLAN",
         color:     0x7DD3FC,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "Tunnelled overlay-network traffic (VXLAN) â€” another network's frames carried inside UDP; the summary shows what's inside.",
+        blurb:     "Tunnelled overlay-network traffic (VXLAN)  —  another network's frames carried inside UDP; the summary shows what's inside.",
     }
     Postgres {
         doc:       "PostgreSQL frontend/backend protocol (TCP 5432).",
@@ -7118,7 +7118,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["postgres", "psql", "pgsql"],
-        blurb:     "A PostgreSQL database conversation â€” SQL queries and their results over TCP 5432.",
+        blurb:     "A PostgreSQL database conversation  —  SQL queries and their results over TCP 5432.",
     }
     Mysql {
         doc:       "MySQL / MariaDB client-server protocol (TCP 3306).",
@@ -7128,7 +7128,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A MySQL/MariaDB database conversation â€” queries and results over TCP 3306.",
+        blurb:     "A MySQL/MariaDB database conversation  —  queries and results over TCP 3306.",
     }
     Mongodb {
         doc:       "MongoDB wire protocol (TCP 27017).",
@@ -7138,7 +7138,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["mongo"],
-        blurb:     "A MongoDB database conversation â€” document commands (find/insert/update) over TCP 27017.",
+        blurb:     "A MongoDB database conversation  —  document commands (find/insert/update) over TCP 27017.",
     }
     Redis {
         doc:       "Redis serialization protocol, RESP (TCP 6379).",
@@ -7148,17 +7148,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Redis command or reply â€” the in-memory key-value store on TCP 6379.",
+        blurb:     "A Redis command or reply  —  the in-memory key-value store on TCP 6379.",
     }
     RedisCluster {
-        doc:       "Redis cluster bus â€” node gossip on the data port plus 10000.",
+        doc:       "Redis cluster bus  —  node gossip on the data port plus 10000.",
         display:   "Redis cluster",
         color:     0xDC382D,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   ["redis-cluster", "rediscluster", "clusterbus"],
-        blurb:     "Redis nodes gossiping about each other â€” how a cluster decides which of its members are alive.",
+        blurb:     "Redis nodes gossiping about each other  —  how a cluster decides which of its members are alive.",
     }
     Cassandra {
         doc:       "Cassandra CQL native binary protocol (TCP 9042).",
@@ -7168,7 +7168,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Cassandra CQL conversation â€” distributed-database queries over TCP 9042.",
+        blurb:     "A Cassandra CQL conversation  —  distributed-database queries over TCP 9042.",
     }
     Modbus {
         doc:       "Modbus/TCP industrial control protocol (TCP 502).",
@@ -7178,7 +7178,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An industrial-control command (Modbus) â€” reading or writing PLC registers over TCP 502.",
+        blurb:     "An industrial-control command (Modbus)  —  reading or writing PLC registers over TCP 502.",
     }
     MBus {
         doc:       "M-Bus meter reading (EN 13757), carried over TCP.",
@@ -7188,7 +7188,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["m-bus", "mbus"],
-        blurb:     "A utility meter being read (M-Bus) â€” the water, gas, heat or electricity meters in a building reporting to a gateway.",
+        blurb:     "A utility meter being read (M-Bus)  —  the water, gas, heat or electricity meters in a building reporting to a gateway.",
     }
     Dnp3 {
         doc:       "DNP3 SCADA protocol for utilities (TCP/UDP 20000).",
@@ -7198,7 +7198,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A utility SCADA message (DNP3) â€” grid/water control between a master and remote stations.",
+        blurb:     "A utility SCADA message (DNP3)  —  grid/water control between a master and remote stations.",
     }
     Bacnet {
         doc:       "BACnet/IP building automation (UDP 47808).",
@@ -7208,7 +7208,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A building-automation message (BACnet) â€” HVAC, lighting or access control on UDP 47808.",
+        blurb:     "A building-automation message (BACnet)  —  HVAC, lighting or access control on UDP 47808.",
     }
     Enip {
         doc:       "EtherNet/IP + CIP industrial protocol (TCP/UDP 44818).",
@@ -7218,9 +7218,9 @@ protocols! {
         rank:      3,
         status:    Dissected,
         // The display name has a slash, which the filter lexer cannot produce
-        // as a bare word â€” without these it would be unfilterable.
+        // as a bare word  —  without these it would be unfilterable.
         aliases:   ["enip", "ethernetip"],
-        blurb:     "An industrial-control message (EtherNet/IP) â€” CIP commands to a PLC over TCP/UDP 44818.",
+        blurb:     "An industrial-control message (EtherNet/IP)  —  CIP commands to a PLC over TCP/UDP 44818.",
     }
     OpcUa {
         doc:       "OPC UA binary industrial protocol (TCP 4840).",
@@ -7231,10 +7231,10 @@ protocols! {
         status:    Dissected,
         // "OPC UA" has a space; `opcua` is the token users actually type.
         aliases:   ["opcua"],
-        blurb:     "An Industry 4.0 data-exchange message (OPC UA) â€” factory equipment talking to IT systems.",
+        blurb:     "An Industry 4.0 data-exchange message (OPC UA)  —  factory equipment talking to IT systems.",
     }
     OpcUaPubSub {
-        doc:       "OPC UA PubSub â€” UADP NetworkMessage over UDP 4840 (IEC 62541-14).",
+        doc:       "OPC UA PubSub  —  UADP NetworkMessage over UDP 4840 (IEC 62541-14).",
         display:   "OPC UA PubSub",
         color:     0x26A69A,
         transport: Udp,
@@ -7242,10 +7242,10 @@ protocols! {
         status:    Dissected,
         // Display name has a space; provide typed aliases.
         aliases:   ["uadp", "opcuapubsub"],
-        blurb:     "An OPC UA publish/subscribe datagram (UADP) â€” publisher ID and group ID show which data stream this belongs to.",
+        blurb:     "An OPC UA publish/subscribe datagram (UADP)  —  publisher ID and group ID show which data stream this belongs to.",
     }
     CcLinkIeFieldBasic {
-        doc:       "CC-Link IE Field Network Basic â€” Mitsubishi's industrial Ethernet protocol running on UDP 61450.",
+        doc:       "CC-Link IE Field Network Basic  —  Mitsubishi's industrial Ethernet protocol running on UDP 61450.",
         display:   "CC-Link IE Field Basic",
         color:     0xD97706,
         transport: Udp,
@@ -7255,7 +7255,7 @@ protocols! {
         blurb:     "An industrial cyclic/transient controller exchange over UDP 61450 based on SLMP framing.",
     }
     CcLinkIeControl {
-        doc:       "CC-Link IE Control Network â€” Mitsubishi's high-speed controller-to-controller Ethernet protocol on EtherType 0x890F.",
+        doc:       "CC-Link IE Control Network  —  Mitsubishi's high-speed controller-to-controller Ethernet protocol on EtherType 0x890F.",
         display:   "CC-Link IE Control",
         color:     0xEA580C,
         transport: Other,
@@ -7272,7 +7272,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["codesys"],
-        blurb:     "A CODESYS V3 PLC communication â€” programming, monitoring or data exchange with a controller on TCP 11740.",
+        blurb:     "A CODESYS V3 PLC communication  —  programming, monitoring or data exchange with a controller on TCP 11740.",
     }
     RocPlus {
         doc:       "Emerson ROC Plus SCADA protocol over TCP/UDP 4000.",
@@ -7292,7 +7292,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["bsap", "bristol_bsap"],
-        blurb:     "A Bristol BSAP datagram â€” SCADA RTU polling, data transfer or control command.",
+        blurb:     "A Bristol BSAP datagram  —  SCADA RTU polling, data transfer or control command.",
     }
     Focas {
         doc:       "Fanuc Open CNC API Specifications (FOCAS) protocol on TCP 8193.",
@@ -7302,7 +7302,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["focas", "fanuc_focas"],
-        blurb:     "A Fanuc FOCAS CNC communication message â€” reading status, G-code, axis parameters or PMC data.",
+        blurb:     "A Fanuc FOCAS CNC communication message  —  reading status, G-code, axis parameters or PMC data.",
     }
     Toyopuc {
         doc:       "JTEKT Toyopuc Computer Link PLC protocol on TCP/UDP 4096.",
@@ -7312,7 +7312,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["toyopuc", "jtekt_toyopuc"],
-        blurb:     "A Toyopuc PLC Computer Link packet â€” reading or writing CPU memory registers.",
+        blurb:     "A Toyopuc PLC Computer Link packet  —  reading or writing CPU memory registers.",
     }
     VnetIp {
         doc:       "Yokogawa Vnet/IP DCS real-time control protocol over UDP 13000-13002.",
@@ -7322,7 +7322,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["vnet_ip", "vnetip", "vnet"],
-        blurb:     "A Yokogawa Vnet/IP DCS control message â€” cyclic process data, transient command or time sync.",
+        blurb:     "A Yokogawa Vnet/IP DCS control message  —  cyclic process data, transient command or time sync.",
     }
     CanXl {
         doc:       "CAN XL (CiA 610-1) eXtra Long CAN frame protocol supporting payloads up to 2048 bytes.",
@@ -7332,7 +7332,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["can_xl", "canxl"],
-        blurb:     "A CAN XL eXtra Long frame â€” carrying Ethernet, IP or UDS payload up to 2048 bytes over CAN.",
+        blurb:     "A CAN XL eXtra Long frame  —  carrying Ethernet, IP or UDS payload up to 2048 bytes over CAN.",
     }
     Most {
         doc:       "Media Oriented Systems Transport (MOST) automotive infotainment control and data network.",
@@ -7342,7 +7342,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["most", "most_bus"],
-        blurb:     "A MOST automotive infotainment control packet â€” directing audio, navigation or display function blocks.",
+        blurb:     "A MOST automotive infotainment control packet  —  directing audio, navigation or display function blocks.",
     }
     Tarantool {
         doc:       "Tarantool iproto binary protocol (TCP 3301).",
@@ -7352,7 +7352,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["tarantool"],
-        blurb:     "A Tarantool iproto binary protocol message â€” query, mutation or greeting frame.",
+        blurb:     "A Tarantool iproto binary protocol message  —  query, mutation or greeting frame.",
     }
     Hbase {
         doc:       "Apache HBase RPC protocol (TCP 16000/16020).",
@@ -7362,7 +7362,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["hbase"],
-        blurb:     "An Apache HBase RPC protocol packet â€” table scan, get, put or region server message.",
+        blurb:     "An Apache HBase RPC protocol packet  —  table scan, get, put or region server message.",
     }
     Impala {
         doc:       "Apache Impala query service / Beeswax protocol (TCP 21000/21050).",
@@ -8286,7 +8286,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ccp", "can_calibration"],
-        blurb:     "A CCP automotive ECU calibration message â€” memory transfer, DAQ setup or flash programming.",
+        blurb:     "A CCP automotive ECU calibration message  —  memory transfer, DAQ setup or flash programming.",
     }
     Nmea2000 {
         doc:       "NMEA 2000 (N2K) marine and vehicle CAN network protocol based on SAE J1939.",
@@ -8296,7 +8296,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nmea2000", "n2k", "nmea_2000"],
-        blurb:     "An NMEA 2000 vessel telemetry message â€” position, depth, wind or engine parameters.",
+        blurb:     "An NMEA 2000 vessel telemetry message  —  position, depth, wind or engine parameters.",
     }
     AutosarSecOc {
         doc:       "AUTOSAR SecOC (Secure On-Board Communication / ISO 23132) I-PDU security payload with Freshness Counter and MAC.",
@@ -8326,7 +8326,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["avdecc", "ieee1722_1", "adp", "aecp"],
-        blurb:     "An IEEE 1722.1 AVDECC control packet â€” ADP entity discovery, AECP control command, or ACMP connection management.",
+        blurb:     "An IEEE 1722.1 AVDECC control packet  —  ADP entity discovery, AECP control command, or ACMP connection management.",
     }
     DoCan {
         doc:       "DoCAN (ISO 15765-2 / ISO 14229-2 UDS over CAN) diagnostic communication protocol.",
@@ -8336,7 +8336,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["docan", "uds_can", "can_docan"],
-        blurb:     "A DoCAN diagnostic message â€” Single Frame, First Frame, Consecutive Frame or Flow Control carrying UDS commands.",
+        blurb:     "A DoCAN diagnostic message  —  Single Frame, First Frame, Consecutive Frame or Flow Control carrying UDS commands.",
     }
     X2ap {
         doc:       "LTE X2 Application Protocol (3GPP TS 36.423) eNB-to-eNB interface over SCTP PPID 27.",
@@ -8346,7 +8346,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["x2ap", "x2_ap"],
-        blurb:     "An LTE X2AP inter-eNB message â€” handover request, load information or SN status transfer.",
+        blurb:     "An LTE X2AP inter-eNB message  —  handover request, load information or SN status transfer.",
     }
     E2ap {
         doc:       "O-RAN Near-RT RIC E2 Application Protocol (O-RAN WG3.E2GAP) over SCTP PPID 70.",
@@ -8356,7 +8356,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["e2ap", "oran_e2ap", "ric_e2ap"],
-        blurb:     "An O-RAN E2AP RIC control message â€” E2 setup, RIC subscription or RIC indication.",
+        blurb:     "An O-RAN E2AP RIC control message  —  E2 setup, RIC subscription or RIC indication.",
     }
     OranE1 {
         doc:       "O-RAN E1/M-Plane interface protocol (3GPP TS 38.463) gNB-CU-CP to gNB-CU-UP.",
@@ -8366,7 +8366,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["oran_e1", "oran_mplane"],
-        blurb:     "An O-RAN E1 bearer context message â€” setting up CP/UP user plane bearer contexts.",
+        blurb:     "An O-RAN E1 bearer context message  —  setting up CP/UP user plane bearer contexts.",
     }
     Cpri {
         doc:       "Common Public Radio Interface (CPRI) fronthaul frame for radio units.",
@@ -8376,7 +8376,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["cpri", "cpri_fronthaul"],
-        blurb:     "A CPRI radio fronthaul frame â€” C&M HDLC, L1 inband signaling or IQ data stream.",
+        blurb:     "A CPRI radio fronthaul frame  —  C&M HDLC, L1 inband signaling or IQ data stream.",
     }
     NasEps {
         doc:       "3GPP TS 24.301 LTE EPS Non-Access Stratum (NAS-EPS) signaling protocol.",
@@ -8386,7 +8386,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["nas_eps", "eps_nas", "lte_nas"],
-        blurb:     "An LTE EPS NAS mobility or session management message â€” Attach, TAU, or Security Mode Command.",
+        blurb:     "An LTE EPS NAS mobility or session management message  —  Attach, TAU, or Security Mode Command.",
     }
     Nas5gs {
         doc:       "3GPP TS 24.501 5GS Non-Access Stratum (NAS-5GS) signaling protocol.",
@@ -8396,7 +8396,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["nas_5gs", "5gs_nas", "5g_nas"],
-        blurb:     "A 5G NAS mobility or session management message â€” Registration Request, PDU Session Establishment.",
+        blurb:     "A 5G NAS mobility or session management message  —  Registration Request, PDU Session Establishment.",
     }
     Nrppa {
         doc:       "NR Positioning Protocol A (3GPP TS 38.455) for gNB positioning over SCTP PPID 66.",
@@ -8406,7 +8406,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["nrppa", "nr_positioning"],
-        blurb:     "An NRPPa positioning message â€” OTDOA information exchange or E-CID measurement report.",
+        blurb:     "An NRPPa positioning message  —  OTDOA information exchange or E-CID measurement report.",
     }
     Xwap {
         doc:       "LTE-WLAN Aggregation Application Protocol (3GPP TS 36.463) over SCTP PPID 59.",
@@ -8416,7 +8416,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["xwap", "xw_ap"],
-        blurb:     "An XwAP LTE-WLAN aggregation message â€” Xw setup, WT association or WLAN status reporting.",
+        blurb:     "An XwAP LTE-WLAN aggregation message  —  Xw setup, WT association or WLAN status reporting.",
     }
     W1ap {
         doc:       "3GPP TS 37.473 W1 Application Protocol ng-eNB-CU to ng-eNB-DU over SCTP PPID 63.",
@@ -8426,7 +8426,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["w1ap", "w1_ap"],
-        blurb:     "A W1AP CU-DU control message â€” W1 setup, gNB-DU configuration update, or UE context setup.",
+        blurb:     "A W1AP CU-DU control message  —  W1 setup, gNB-DU configuration update, or UE context setup.",
     }
     GprsLlc {
         doc:       "GPRS Logical Link Control (3GPP TS 44.064) over Gb interface.",
@@ -8436,7 +8436,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["gprs_llc", "llc_gprs"],
-        blurb:     "A GPRS LLC frame â€” GMM mobility management, TOM tunneling, or SNDCP user data.",
+        blurb:     "A GPRS LLC frame  —  GMM mobility management, TOM tunneling, or SNDCP user data.",
     }
     Sndcp {
         doc:       "Subnetwork Dependent Convergence Protocol (3GPP TS 44.065) over GPRS LLC.",
@@ -8446,7 +8446,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sndcp", "gprs_sndcp"],
-        blurb:     "An SNDCP packet â€” multiplexing packet data network IP traffic over GPRS LLC SAPIs.",
+        blurb:     "An SNDCP packet  —  multiplexing packet data network IP traffic over GPRS LLC SAPIs.",
     }
     Inap {
         doc:       "Intelligent Network Application Part (ITU-T Q.1218 / 3GPP TS 29.078) over SS7/TCAP.",
@@ -8456,7 +8456,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["inap", "inap_ss7"],
-        blurb:     "An SS7 INAP message â€” InitialDP, Connect, ReleaseCall, or ApplyCharging.",
+        blurb:     "An SS7 INAP message  —  InitialDP, Connect, ReleaseCall, or ApplyCharging.",
     }
     Camel {
         doc:       "Customised Applications for Mobile network Enhanced Logic (3GPP TS 29.078 CAP) over TCAP.",
@@ -8466,7 +8466,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["camel", "cap_ss7"],
-        blurb:     "A CAMEL/CAP SS7 message â€” InitialDPSMS, ApplyChargingReport, or FurnishChargingInformation.",
+        blurb:     "A CAMEL/CAP SS7 message  —  InitialDPSMS, ApplyChargingReport, or FurnishChargingInformation.",
     }
     Mtp2 {
         doc:       "SS7 Message Transfer Part Level 2 (ITU-T Q.703) signaling link layer.",
@@ -8476,7 +8476,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["mtp2", "ss7_mtp2"],
-        blurb:     "An SS7 MTP2 link signal unit â€” FISU fill-in, LSSU link status, or MSU message unit.",
+        blurb:     "An SS7 MTP2 link signal unit  —  FISU fill-in, LSSU link status, or MSU message unit.",
     }
     Sgsap {
         doc:       "3GPP TS 29.118 SGs Application Protocol for MME to VLR CS Fallback.",
@@ -8486,7 +8486,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sgsap", "sgs_ap"],
-        blurb:     "An SGsAP CS fallback message â€” Location Update Request, Paging Request, or Alert Request.",
+        blurb:     "An SGsAP CS fallback message  —  Location Update Request, Paging Request, or Alert Request.",
     }
     GtpSv {
         doc:       "3GPP TS 29.280 Sv Interface for SRVCC voice handover between MME and MSC.",
@@ -8496,7 +8496,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["gtp_sv", "gtp_sv_interface"],
-        blurb:     "A GTP Sv interface message â€” PS to CS Handover Request, Response, or Cancel.",
+        blurb:     "A GTP Sv interface message  —  PS to CS Handover Request, Response, or Cancel.",
     }
     Gtpv1U {
         doc:       "GPRS Tunnelling Protocol User Plane (3GPP TS 29.281 GTPv1-U) over UDP port 2152.",
@@ -8506,7 +8506,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["gtpv1u", "gtp_u", "gtpv1_u"],
-        blurb:     "A GTPv1-U user plane tunnel packet â€” carrying mobile subscriber IP payload inside TEIDs.",
+        blurb:     "A GTPv1-U user plane tunnel packet  —  carrying mobile subscriber IP payload inside TEIDs.",
     }
     RrcLte {
         doc:       "3GPP TS 36.331 LTE Radio Resource Control (RRC) protocol.",
@@ -8516,7 +8516,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["rrc_lte", "lte_rrc"],
-        blurb:     "An LTE RRC radio message â€” RRCConnectionRequest, Setup, or SecurityModeCommand.",
+        blurb:     "An LTE RRC radio message  —  RRCConnectionRequest, Setup, or SecurityModeCommand.",
     }
     RrcNr {
         doc:       "3GPP TS 38.331 5G NR Radio Resource Control (RRC) protocol.",
@@ -8526,7 +8526,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["rrc_nr", "nr_rrc", "5g_rrc"],
-        blurb:     "A 5G NR RRC radio message â€” RRCSetupRequest, RRCReconfiguration, or RRCResumeRequest.",
+        blurb:     "A 5G NR RRC radio message  —  RRCSetupRequest, RRCReconfiguration, or RRCResumeRequest.",
     }
     Pdcp {
         doc:       "3GPP TS 36.323 / TS 38.323 Packet Data Convergence Protocol (PDCP).",
@@ -8536,7 +8536,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["pdcp", "3gpp_pdcp"],
-        blurb:     "A PDCP radio layer PDU â€” Data PDU sequence number or Control Status Report.",
+        blurb:     "A PDCP radio layer PDU  —  Data PDU sequence number or Control Status Report.",
     }
     Rlc {
         doc:       "3GPP TS 36.322 / TS 38.322 Radio Link Control (RLC) protocol.",
@@ -8546,7 +8546,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["rlc", "3gpp_rlc"],
-        blurb:     "An RLC radio layer PDU â€” Acknowledged Mode (AM) Data PDU or Status Control PDU.",
+        blurb:     "An RLC radio layer PDU  —  Acknowledged Mode (AM) Data PDU or Status Control PDU.",
     }
     Shim6 {
         doc:       "RFC 5533 Level 3 Multihoming Shim Protocol for IPv6 (SHIM6).",
@@ -8556,7 +8556,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["shim6", "ipv6_shim6"],
-        blurb:     "A SHIM6 IPv6 multihoming control message â€” I1, R1, I2, R2 or keepalive.",
+        blurb:     "A SHIM6 IPv6 multihoming control message  —  I1, R1, I2, R2 or keepalive.",
     }
     Openr {
         doc:       "Facebook OpenR Routing Protocol over ZeroMQ / UDP 6683.",
@@ -8566,7 +8566,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["openr", "fb_openr"],
-        blurb:     "An OpenR routing message â€” Spark hello, KvStore synchronization or LinkMonitor update.",
+        blurb:     "An OpenR routing message  —  Spark hello, KvStore synchronization or LinkMonitor update.",
     }
     Gue {
         doc:       "Generic UDP Encapsulation (RFC 8154) over UDP port 6080.",
@@ -8576,7 +8576,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["gue", "generic_udp_encap"],
-        blurb:     "A Generic UDP Encapsulation packet â€” carrying IPv4, IPv6 or GRE payloads inside UDP.",
+        blurb:     "A Generic UDP Encapsulation packet  —  carrying IPv4, IPv6 or GRE payloads inside UDP.",
     }
     Fou {
         doc:       "Foo over UDP (Linux kernel FOU direct IP encapsulation) over UDP 5556.",
@@ -8586,7 +8586,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["fou", "foo_over_udp"],
-        blurb:     "A Foo over UDP (FOU) packet â€” carrying direct IP protocols (IPv4/IPv6/ESP) inside UDP.",
+        blurb:     "A Foo over UDP (FOU) packet  —  carrying direct IP protocols (IPv4/IPv6/ESP) inside UDP.",
     }
     SixToFour {
         doc:       "6to4 IPv6 in IPv4 encapsulation (RFC 3056 / IP Proto 41).",
@@ -8596,7 +8596,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["6to4", "six_to_four"],
-        blurb:     "A 6to4 IPv6 in IPv4 tunnel packet â€” carrying 2002::/16 addresses across IPv4 backbones.",
+        blurb:     "A 6to4 IPv6 in IPv4 tunnel packet  —  carrying 2002::/16 addresses across IPv4 backbones.",
     }
     Isatap {
         doc:       "Intra-Site Automatic Tunnel Addressing Protocol (RFC 5214 ISATAP).",
@@ -8606,7 +8606,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["isatap", "isatap_tunnel"],
-        blurb:     "An ISATAP IPv6 tunnel packet â€” carrying fe80::5efe:a.b.c.d intra-site tunnel traffic.",
+        blurb:     "An ISATAP IPv6 tunnel packet  —  carrying fe80::5efe:a.b.c.d intra-site tunnel traffic.",
     }
     Ikev2 {
         doc:       "Internet Key Exchange version 2 (RFC 7296 IKEv2) over UDP 500 / 4500.",
@@ -8616,7 +8616,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ikev2", "ike_v2"],
-        blurb:     "An IKEv2 VPN key exchange message â€” IKE_SA_INIT, IKE_AUTH or CREATE_CHILD_SA.",
+        blurb:     "An IKEv2 VPN key exchange message  —  IKE_SA_INIT, IKE_AUTH or CREATE_CHILD_SA.",
     }
     Sstp {
         doc:       "Secure Socket Tunneling Protocol (Microsoft SSTP) over TCP 443 / HTTPS.",
@@ -8626,7 +8626,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["sstp", "ms_sstp"],
-        blurb:     "An SSTP VPN control or data packet â€” CALL_CONNECT_REQUEST, ACK or ECHO.",
+        blurb:     "An SSTP VPN control or data packet  —  CALL_CONNECT_REQUEST, ACK or ECHO.",
     }
     SoftEther {
         doc:       "SoftEther VPN Protocol over TCP 443 / UDP 1194 / 5555.",
@@ -8646,7 +8646,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["stt", "stt_tunnel"],
-        blurb:     "An STT stateless transport tunnel frame â€” carrying virtual network traffic with Context IDs.",
+        blurb:     "An STT stateless transport tunnel frame  —  carrying virtual network traffic with Context IDs.",
     }
     Nvgre {
         doc:       "Network Virtualization using Generic Routing Encapsulation (RFC 7637 NVGRE).",
@@ -8656,7 +8656,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nvgre", "nvgre_tunnel"],
-        blurb:     "An NVGRE network virtualization frame â€” carrying 24-bit Virtual Subnet IDs (VSID).",
+        blurb:     "An NVGRE network virtualization frame  —  carrying 24-bit Virtual Subnet IDs (VSID).",
     }
     MplsInUdp {
         doc:       "RFC 7510 Encapsulating MPLS in UDP over UDP port 6635.",
@@ -8666,7 +8666,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["mpls_in_udp", "mpls_udp"],
-        blurb:     "An MPLS-in-UDP tunnel packet â€” carrying MPLS label stacks over UDP transport.",
+        blurb:     "An MPLS-in-UDP tunnel packet  —  carrying MPLS label stacks over UDP transport.",
     }
     Openconnect {
         doc:       "OpenConnect / Cisco AnyConnect SSL VPN CSTP protocol.",
@@ -8686,7 +8686,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["scep", "pki_scep"],
-        blurb:     "A SCEP PKI certificate enrollment message â€” PKIOperation, GetCACert or GetCACaps.",
+        blurb:     "A SCEP PKI certificate enrollment message  —  PKIOperation, GetCACert or GetCACaps.",
     }
     Est {
         doc:       "Enrollment over Secure Transport (RFC 7030 EST) over HTTPS.",
@@ -8696,7 +8696,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["est", "pki_est"],
-        blurb:     "An EST certificate enrollment message â€” simpleenroll, simplereenroll or cacerts.",
+        blurb:     "An EST certificate enrollment message  —  simpleenroll, simplereenroll or cacerts.",
     }
     TspTimestamp {
         doc:       "RFC 3161 Time-Stamp Protocol (TSP) over HTTP / TCP 318.",
@@ -8706,7 +8706,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["tsp_timestamp", "rfc3161_tsp"],
-        blurb:     "A TSP PKI time-stamp message â€” TimeStampReq or TimeStampResp.",
+        blurb:     "A TSP PKI time-stamp message  —  TimeStampReq or TimeStampResp.",
     }
     Sasl {
         doc:       "Simple Authentication and Security Layer (RFC 4422 SASL).",
@@ -8716,7 +8716,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sasl", "sasl_auth"],
-        blurb:     "A SASL authentication exchange â€” PLAIN, GSSAPI, DIGEST-MD5 or EXTERNAL.",
+        blurb:     "A SASL authentication exchange  —  PLAIN, GSSAPI, DIGEST-MD5 or EXTERNAL.",
     }
     Gssapi {
         doc:       "Generic Security Services Application Program Interface (RFC 2743 GSSAPI / SPNEGO).",
@@ -8746,7 +8746,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["dtls_srtp", "srtp_dtls"],
-        blurb:     "A DTLS-SRTP key exchange packet â€” establishing SRTP media encryption keys.",
+        blurb:     "A DTLS-SRTP key exchange packet  —  establishing SRTP media encryption keys.",
     }
     TacacsLegacy {
         doc:       "Legacy TACACS / XTACACS authentication protocol on Port 49.",
@@ -8756,7 +8756,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["tacacs_legacy", "xtacacs"],
-        blurb:     "A legacy TACACS / XTACACS authentication packet â€” LOGIN, RESPONSE or CHANGE_PASSWORD.",
+        blurb:     "A legacy TACACS / XTACACS authentication packet  —  LOGIN, RESPONSE or CHANGE_PASSWORD.",
     }
     Shadowsocks {
         doc:       "Shadowsocks encrypted socks5 proxy protocol.",
@@ -8789,24 +8789,24 @@ protocols! {
         blurb:     "An obfs4 obfuscated proxy stream.",
     }
     Rtp {
-        doc:       "Real-time Transport Protocol media stream (RFC 3550) â€” dynamic UDP ports.",
+        doc:       "Real-time Transport Protocol media stream (RFC 3550)  —  dynamic UDP ports.",
         display:   "RTP",
         color:     0xF09E54,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "The live audio/video of a call (RTP) â€” the media stream SIP set up, carried over UDP.",
+        blurb:     "The live audio/video of a call (RTP)  —  the media stream SIP set up, carried over UDP.",
     }
     Rtcp {
-        doc:       "RTP Control Protocol â€” sender/receiver reports alongside an RTP stream.",
+        doc:       "RTP Control Protocol  —  sender/receiver reports alongside an RTP stream.",
         display:   "RTCP",
         color:     0xD4843E,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A call-quality report (RTCP) â€” loss and jitter statistics riding alongside an RTP stream.",
+        blurb:     "A call-quality report (RTCP)  —  loss and jitter statistics riding alongside an RTP stream.",
     }
     Kerberos {
         doc:       "Kerberos authentication (TCP/UDP 88).",
@@ -8816,7 +8816,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An enterprise authentication message (Kerberos) â€” requesting or presenting a login ticket.",
+        blurb:     "An enterprise authentication message (Kerberos)  —  requesting or presenting a login ticket.",
     }
     Ldap {
         doc:       "Lightweight Directory Access Protocol (TCP 389).",
@@ -8826,7 +8826,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A directory query or login (LDAP) â€” looking up users/groups, or binding with credentials.",
+        blurb:     "A directory query or login (LDAP)  —  looking up users/groups, or binding with credentials.",
     }
     Radius {
         doc:       "RADIUS network access authentication (UDP 1812/1813).",
@@ -8836,7 +8836,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A network-access authentication message (RADIUS) â€” allowing or denying Wi-Fi/VPN logins.",
+        blurb:     "A network-access authentication message (RADIUS)  —  allowing or denying Wi-Fi/VPN logins.",
     }
     OpenVpn {
         doc:       "OpenVPN tunnel (UDP/TCP 1194).",
@@ -8846,7 +8846,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An OpenVPN tunnel packet â€” encrypted VPN traffic; the type shows handshake vs. data.",
+        blurb:     "An OpenVPN tunnel packet  —  encrypted VPN traffic; the type shows handshake vs. data.",
     }
     WireGuard {
         doc:       "WireGuard tunnel (UDP 51820).",
@@ -8856,7 +8856,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A WireGuard tunnel packet â€” a modern encrypted VPN; the type shows handshake vs. data.",
+        blurb:     "A WireGuard tunnel packet  —  a modern encrypted VPN; the type shows handshake vs. data.",
     }
     Esp {
         doc:       "IPsec Encapsulating Security Payload (IP protocol 50).",
@@ -8866,7 +8866,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "Encrypted IPsec traffic (ESP) â€” a VPN payload identified only by its SPI tunnel number.",
+        blurb:     "Encrypted IPsec traffic (ESP)  —  a VPN payload identified only by its SPI tunnel number.",
     }
     Ah {
         doc:       "IPsec Authentication Header (IP protocol 51).",
@@ -8876,7 +8876,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An authenticated IPsec packet (AH) â€” integrity-protected but not encrypted.",
+        blurb:     "An authenticated IPsec packet (AH)  —  integrity-protected but not encrypted.",
     }
     Mqtt {
         doc:       "MQTT IoT messaging protocol (TCP 1883).",
@@ -8886,7 +8886,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An IoT messaging packet (MQTT) â€” a device publishing to or subscribing on a broker topic.",
+        blurb:     "An IoT messaging packet (MQTT)  —  a device publishing to or subscribing on a broker topic.",
     }
     Coap {
         doc:       "CoAP constrained-device protocol (UDP 5683).",
@@ -8896,37 +8896,37 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A constrained-device request/response (CoAP) â€” HTTP-like IoT traffic over UDP.",
+        blurb:     "A constrained-device request/response (CoAP)  —  HTTP-like IoT traffic over UDP.",
     }
     Bgp {
-        doc:       "Border Gateway Protocol â€” internet inter-domain routing (TCP 179).",
+        doc:       "Border Gateway Protocol  —  internet inter-domain routing (TCP 179).",
         display:   "BGP",
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An internet routing message (BGP) â€” networks telling each other which addresses they reach.",
+        blurb:     "An internet routing message (BGP)  —  networks telling each other which addresses they reach.",
     }
     Ospf {
-        doc:       "Open Shortest Path First â€” interior routing (IP protocol 89).",
+        doc:       "Open Shortest Path First  —  interior routing (IP protocol 89).",
         display:   "OSPF",
         color:     0x2DD4BF,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An interior routing message (OSPF) â€” routers inside one network sharing link-state maps.",
+        blurb:     "An interior routing message (OSPF)  —  routers inside one network sharing link-state maps.",
     }
     Lldp {
-        doc:       "Link Layer Discovery Protocol â€” neighbour/topology (EtherType 0x88CC).",
+        doc:       "Link Layer Discovery Protocol  —  neighbour/topology (EtherType 0x88CC).",
         display:   "LLDP",
         color:     0x93C5FD,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A neighbour announcement (LLDP) â€” a switch advertising its identity and port for topology maps.",
+        blurb:     "A neighbour announcement (LLDP)  —  a switch advertising its identity and port for topology maps.",
     }
     Lacp {
         doc:       "Link Aggregation Control Protocol / 802.3 slow protocols (EtherType 0x8809).",
@@ -8936,7 +8936,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A link-aggregation message (LACP) â€” two switches bonding several cables into one link.",
+        blurb:     "A link-aggregation message (LACP)  —  two switches bonding several cables into one link.",
     }
     Mka {
         doc:       "MACsec Key Agreement (IEEE 802.1X-2010), carried in EAPOL.",
@@ -8946,7 +8946,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["mka"],
-        blurb:     "The key agreement MACsec needs before it encrypts anything â€” and where that agreement quietly fails.",
+        blurb:     "The key agreement MACsec needs before it encrypts anything  —  and where that agreement quietly fails.",
     }
     Kpasswd {
         doc:       "Kerberos password change and administrative set (RFC 3244, port 464).",
@@ -8966,7 +8966,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["milter"],
-        blurb:     "A mail filter's verdict on a message â€” including the silent discard that makes mail vanish without a bounce.",
+        blurb:     "A mail filter's verdict on a message  —  including the silent discard that makes mail vanish without a bounce.",
     }
     Lmtp {
         doc:       "LMTP local mail delivery (RFC 2033, TCP 24).",
@@ -8976,19 +8976,19 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["lmtp"],
-        blurb:     "Mail being filed into mailboxes (LMTP) â€” with one delivery status per recipient, so partial failures are visible.",
+        blurb:     "Mail being filed into mailboxes (LMTP)  —  with one delivery status per recipient, so partial failures are visible.",
     }
     LinkOam {
-        doc:       "IEEE 802.3ah link OAM â€” link health, and a device's dying gasp.",
+        doc:       "IEEE 802.3ah link OAM  —  link health, and a device's dying gasp.",
         display:   "Link OAM",
         color:     0x7C8CA6,
         transport: Other,
         rank:      3,
         status:    Dissected,
         // "oam" alone belongs to CFM (802.1ag), which is also called OAM and
-        // claimed it first â€” matching Wireshark, where `oam` is the CFM filter.
+        // claimed it first  —  matching Wireshark, where `oam` is the CFM filter.
         aliases:   ["link-oam", "efm"],
-        blurb:     "A link reporting its own health (802.3ah OAM) â€” including the dying gasp a device sends as its power fails.",
+        blurb:     "A link reporting its own health (802.3ah OAM)  —  including the dying gasp a device sends as its power fails.",
     }
     Esmc {
         doc:       "ESMC synchronous Ethernet clock quality (ITU-T G.8264).",
@@ -8998,17 +8998,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["esmc", "synce"],
-        blurb:     "A clock quality announcement (ESMC/SyncE) â€” what grade of timing reference this hop is locked to.",
+        blurb:     "A clock quality announcement (ESMC/SyncE)  —  what grade of timing reference this hop is locked to.",
     }
     Memberlist {
-        doc:       "HashiCorp memberlist gossip â€” the membership layer under Serf, Consul and Nomad (UDP 7946).",
+        doc:       "HashiCorp memberlist gossip  —  the membership layer under Serf, Consul and Nomad (UDP 7946).",
         display:   "memberlist",
         color:     0xC77DBB,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   ["memberlist", "serf"],
-        blurb:     "Cluster nodes gossiping about each other â€” including which node declared which other node dead.",
+        blurb:     "Cluster nodes gossiping about each other  —  including which node declared which other node dead.",
     }
     ConsulRpc {
         doc:       "Consul server RPC, which multiplexes Raft onto the same port (TCP 8300).",
@@ -9018,7 +9018,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["consul", "consul-rpc"],
-        blurb:     "Consul servers talking to each other â€” and the Raft elections that show a cluster losing its leader.",
+        blurb:     "Consul servers talking to each other  —  and the Raft elections that show a cluster losing its leader.",
     }
     Drbd {
         doc:       "DRBD replicated block device (Linux kernel drbd_protocol.h).",
@@ -9028,7 +9028,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["drbd"],
-        blurb:     "A disk being mirrored to another machine â€” and the peer-side failures that stall writes locally.",
+        blurb:     "A disk being mirrored to another machine  —  and the peer-side failures that stall writes locally.",
     }
     Artnet {
         doc:       "Art-Net stage lighting control (UDP 6454).",
@@ -9038,7 +9038,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["artnet", "art-net"],
-        blurb:     "DMX lighting universes over Ethernet â€” and the sequence gaps a rig shows as a stutter.",
+        blurb:     "DMX lighting universes over Ethernet  —  and the sequence gaps a rig shows as a stutter.",
     }
     Sacn {
         doc:       "sACN streaming ACN lighting control (ANSI E1.31, UDP 5568).",
@@ -9048,7 +9048,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sacn", "e131"],
-        blurb:     "Standardised DMX over IP â€” where two consoles fighting over one universe becomes visible.",
+        blurb:     "Standardised DMX over IP  —  where two consoles fighting over one universe becomes visible.",
     }
     Osc {
         doc:       "Open Sound Control (no fixed port; recognised structurally).",
@@ -9058,7 +9058,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["osc"],
-        blurb:     "Studio and show control as plain-text addresses â€” on whichever port the application chose.",
+        blurb:     "Studio and show control as plain-text addresses  —  on whichever port the application chose.",
     }
     RtpMidi {
         doc:       "RTP-MIDI session control (RFC 6295, UDP 5004/5005).",
@@ -9068,7 +9068,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["rtpmidi", "applemidi"],
-        blurb:     "MIDI over a network â€” and whether the session was refused or simply never answered.",
+        blurb:     "MIDI over a network  —  and whether the session was refused or simply never answered.",
     }
     Igrp {
         doc:       "IGRP interior routing (Cisco, IP protocol 9).",
@@ -9078,7 +9078,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["igrp"],
-        blurb:     "Cisco routing that predates its own replacement â€” advertised with no authentication at all.",
+        blurb:     "Cisco routing that predates its own replacement  —  advertised with no authentication at all.",
     }
     Etherip {
         doc:       "EtherIP layer-2 tunnelling (RFC 3378, IP protocol 97).",
@@ -9088,7 +9088,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["etherip"],
-        blurb:     "A whole Ethernet segment inside IP â€” so the far site's broadcasts arrive here too.",
+        blurb:     "A whole Ethernet segment inside IP  —  so the far site's broadcasts arrive here too.",
     }
     Cmp {
         doc:       "Certificate Management Protocol (RFC 4210, TCP 829 or an HTTP body).",
@@ -9098,7 +9098,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["cmp", "pkixcmp"],
-        blurb:     "Automated certificate enrolment and renewal â€” and the reason a device failed to get an identity.",
+        blurb:     "Automated certificate enrolment and renewal  —  and the reason a device failed to get an identity.",
     }
     Nsip {
         doc:       "GPRS Network Service over IP (UDP 2157, 19999 by convention).",
@@ -9108,7 +9108,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nsip"],
-        blurb:     "The link many cells share â€” and the heartbeat that takes all of them down at once.",
+        blurb:     "The link many cells share  —  and the heartbeat that takes all of them down at once.",
     }
     Bssgp {
         doc:       "BSS GPRS Protocol, carried inside an NS data PDU.",
@@ -9118,7 +9118,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["bssgp"],
-        blurb:     "Where a cell tells the core how much it can take â€” and what it threw away.",
+        blurb:     "Where a cell tells the core how much it can take  —  and what it threw away.",
     }
     Mtp3 {
         doc:       "SS7 Message Transfer Part level 3 (DLT 141), the routing layer under SCCP and ISUP.",
@@ -9128,7 +9128,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["mtp3"],
-        blurb:     "Which signalling point a message is for â€” and which destination stopped being reachable.",
+        blurb:     "Which signalling point a message is for  —  and which destination stopped being reachable.",
     }
     SomeIpTp {
         doc:       "SOME/IP-TP segmentation (a segmented SOME/IP message, message type bit 0x20).",
@@ -9148,7 +9148,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["rgoose", "rsv"],
-        blurb:     "A breaker trip made routable â€” and whether anyone authenticated it.",
+        blurb:     "A breaker trip made routable  —  and whether anyone authenticated it.",
     }
     Opensafety {
         doc:       "openSAFETY functional safety frames (UDP 9877, or 8755 over SERCOS III).",
@@ -9158,7 +9158,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["opensafety"],
-        blurb:     "Safety data that trusts no network underneath it â€” and the fault that stops a machine.",
+        blurb:     "Safety data that trusts no network underneath it  —  and the fault that stops a machine.",
     }
     Cnip {
         doc:       "CN/IP tunnel for LonWorks control networks, ANSI/CEA-852 (UDP 1628 normal, 1629 urgent).",
@@ -9168,7 +9168,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["cnip"],
-        blurb:     "Building control segments joined over IP â€” and the routers that keep re-registering.",
+        blurb:     "Building control segments joined over IP  —  and the routers that keep re-registering.",
     }
     Lontalk {
         doc:       "LonTalk building control, ANSI/CEA-709.1 (inside a CN/IP tunnel).",
@@ -9178,7 +9178,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["lontalk", "lonworks"],
-        blurb:     "The language a thermostat speaks to an air handler â€” and whether anyone confirmed it arrived.",
+        blurb:     "The language a thermostat speaks to an air handler  —  and whether anyone confirmed it arrived.",
     }
     FfHse {
         doc:       "Foundation Fieldbus High Speed Ethernet (TCP/UDP 1089-1091, 3622).",
@@ -9188,7 +9188,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["ffhse", "fieldbus"],
-        blurb:     "A process plant's instruments over Ethernet â€” and the refused write the operator's screen will not show.",
+        blurb:     "A process plant's instruments over Ethernet  —  and the refused write the operator's screen will not show.",
     }
     Flexray {
         doc:       "FlexRay automotive bus (DLT 210), the time-triggered network under brake- and steer-by-wire.",
@@ -9198,7 +9198,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["flexray"],
-        blurb:     "A bus where every ECU has a scheduled slot â€” and a null frame means one stopped producing.",
+        blurb:     "A bus where every ECU has a scheduled slot  —  and a null frame means one stopped producing.",
     }
     Dlr {
         doc:       "Device Level Ring, ODVA ring protection for EtherNet/IP (EtherType 0x80E1).",
@@ -9208,7 +9208,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["dlr"],
-        blurb:     "A machine's network wired as a loop â€” and the beacon that says whether the loop is still closed.",
+        blurb:     "A machine's network wired as a loop  —  and the beacon that says whether the loop is still closed.",
     }
     Erps {
         doc:       "Ethernet ring protection, ITU-T G.8032 R-APS (EtherType 0x8902, opcode 0x28).",
@@ -9218,7 +9218,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["erps", "raps", "g8032"],
-        blurb:     "A ring that blocks one link on purpose â€” and the message that says whether it still is.",
+        blurb:     "A ring that blocks one link on purpose  —  and the message that says whether it still is.",
     }
     Tsp {
         doc:       "RFC 3161 timestamping (an HTTP body, application/timestamp-query or -reply).",
@@ -9228,7 +9228,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["tsp", "timestamp"],
-        blurb:     "A trusted third party attesting when something existed â€” and why a signature outlives its certificate.",
+        blurb:     "A trusted third party attesting when something existed  —  and why a signature outlives its certificate.",
     }
     Aeron {
         doc:       "Aeron low-latency messaging over UDP (no fixed port; recognised structurally).",
@@ -9248,17 +9248,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["lorawan", "lora"],
-        blurb:     "Battery sensors on a kilometres-wide link â€” and the frame counter a network silently discards them on.",
+        blurb:     "Battery sensors on a kilometres-wide link  —  and the frame counter a network silently discards them on.",
     }
     Lin {
-        doc:       "LIN bus (DLT 212) â€” the low-cost automotive bus under CAN.",
+        doc:       "LIN bus (DLT 212)  —  the low-cost automotive bus under CAN.",
         display:   "LIN",
         color:     0xB59F6E,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   ["lin"],
-        blurb:     "The cheap bus behind mirrors and seat motors â€” where \"nobody answered\" is the whole diagnosis.",
+        blurb:     "The cheap bus behind mirrors and seat motors  —  where \"nobody answered\" is the whole diagnosis.",
     }
     Iec101 {
         doc:       "IEC 60870-5-101 serial telecontrol (FT1.2 framing), as gateways forward it.",
@@ -9268,17 +9268,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["iec101"],
-        blurb:     "Serial telecontrol on an IP capture â€” and the link layer that says why a poll stalled.",
+        blurb:     "Serial telecontrol on an IP capture  —  and the link layer that says why a poll stalled.",
     }
     Iser {
-        doc:       "iSER â€” iSCSI Extensions for RDMA (RFC 7145), carried on RDMA SEND.",
+        doc:       "iSER  —  iSCSI Extensions for RDMA (RFC 7145), carried on RDMA SEND.",
         display:   "iSER",
         color:     0x8FB5C4,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   ["iser"],
-        blurb:     "iSCSI with the blocks moved onto RDMA â€” so the commands are visible and the data never is.",
+        blurb:     "iSCSI with the blocks moved onto RDMA  —  so the commands are visible and the data never is.",
     }
     ModbusRtu {
         doc:       "Modbus RTU framing carried over TCP, as serial gateways forward it.",
@@ -9288,7 +9288,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["modbus-rtu", "modbusrtu"],
-        blurb:     "Serial Modbus forwarded onto TCP unchanged â€” which does not parse as Modbus TCP and so goes unseen.",
+        blurb:     "Serial Modbus forwarded onto TCP unchanged  —  which does not parse as Modbus TCP and so goes unseen.",
     }
     ModbusAscii {
         doc:       "Modbus ASCII framing carried over TCP, as serial-to-ethernet converters forward it.",
@@ -9298,17 +9298,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["modbus-ascii", "modbusascii"],
-        blurb:     "Serial Modbus ASCII forwarded onto TCP â€” identified by colon prefix and LRC checksum.",
+        blurb:     "Serial Modbus ASCII forwarded onto TCP  —  identified by colon prefix and LRC checksum.",
     }
     IsoTp {
-        doc:       "ISO-TP transport for CAN (ISO 15765-2) â€” the layer UDS rides on.",
+        doc:       "ISO-TP transport for CAN (ISO 15765-2)  —  the layer UDS rides on.",
         display:   "ISO-TP",
         color:     0xD1A05F,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   ["isotp", "iso15765"],
-        blurb:     "Diagnostic messages split across CAN frames â€” and the flow control that explains a stalled session.",
+        blurb:     "Diagnostic messages split across CAN frames  —  and the flow control that explains a stalled session.",
     }
     Ocsp {
         doc:       "OCSP certificate revocation checking (RFC 6960), carried in HTTP bodies.",
@@ -9318,17 +9318,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ocsp"],
-        blurb:     "Whether a certificate has been revoked â€” the verdict, not the transport status that hides it.",
+        blurb:     "Whether a certificate has been revoked  —  the verdict, not the transport status that hides it.",
     }
     Soap {
-        doc:       "SOAP envelopes carried in HTTP bodies â€” ONVIF and TR-069 among them.",
+        doc:       "SOAP envelopes carried in HTTP bodies  —  ONVIF and TR-069 among them.",
         display:   "SOAP",
         color:     0xB58F6E,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   ["soap"],
-        blurb:     "The operation hiding inside POST / â€” which camera setting or router config was actually changed.",
+        blurb:     "The operation hiding inside POST /  —  which camera setting or router config was actually changed.",
     }
     Bier {
         doc:       "BIER stateless multicast (RFC 8296), carried under an MPLS label stack.",
@@ -9338,7 +9338,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["bier"],
-        blurb:     "Multicast with the delivery list inside the packet â€” and how many receivers this copy is still for.",
+        blurb:     "Multicast with the delivery list inside the packet  —  and how many receivers this copy is still for.",
     }
     Srv6 {
         doc:       "IPv6 Segment Routing Header (RFC 8754).",
@@ -9348,7 +9348,7 @@ protocols! {
         rank:      2,
         status:    Dissected,
         aliases:   ["srv6", "srh"],
-        blurb:     "A packet carrying its own list of waypoints â€” and how far along that path it has got.",
+        blurb:     "A packet carrying its own list of waypoints  —  and how far along that path it has got.",
     }
     Isns {
         doc:       "iSNS storage name service (RFC 4171, TCP/UDP 3205).",
@@ -9358,7 +9358,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["isns"],
-        blurb:     "How an iSCSI initiator finds its targets â€” and the refusal that explains storage that vanished.",
+        blurb:     "How an iSCSI initiator finds its targets  —  and the refusal that explains storage that vanished.",
     }
     Hip {
         doc:       "Host Identity Protocol (RFC 7401, IP protocol 139).",
@@ -9368,7 +9368,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["hip"],
-        blurb:     "Separating who a host is from where it is â€” and the NOTIFY that says why the exchange was refused.",
+        blurb:     "Separating who a host is from where it is  —  and the NOTIFY that says why the exchange was refused.",
     }
     Dvmrp {
         doc:       "DVMRP multicast routing, carried as IGMP type 0x13.",
@@ -9378,7 +9378,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["dvmrp"],
-        blurb:     "The oldest multicast routing protocol â€” and the Prune that explains a stream nobody is receiving.",
+        blurb:     "The oldest multicast routing protocol  —  and the Prune that explains a stream nobody is receiving.",
     }
     PnPtcp {
         doc:       "PROFINET PTCP clock synchronisation (FrameIDs 0xFF00-0xFF43).",
@@ -9388,67 +9388,67 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["pn-ptcp", "ptcp"],
-        blurb:     "The clock every isochronous PROFINET cycle depends on â€” whose drift shows up as process faults.",
+        blurb:     "The clock every isochronous PROFINET cycle depends on  —  whose drift shows up as process faults.",
     }
     Echo {
-        doc:       "Echo service (RFC 862, port 7) â€” reflects whatever it is sent.",
+        doc:       "Echo service (RFC 862, port 7)  —  reflects whatever it is sent.",
         display:   "Echo",
         color:     0x9AA0A6,
         transport: Udp,
         rank:      4,
         status:    Declared,
         aliases:   ["echo"],
-        blurb:     "A 1983 debugging service that reflects whatever it receives â€” and can be aimed at someone else.",
+        blurb:     "A 1983 debugging service that reflects whatever it receives  —  and can be aimed at someone else.",
     }
     Discard {
-        doc:       "Discard service (RFC 863, port 9) â€” swallows everything, answers nothing.",
+        doc:       "Discard service (RFC 863, port 9)  —  swallows everything, answers nothing.",
         display:   "Discard",
         color:     0x8A8F94,
         transport: Udp,
         rank:      4,
         status:    Declared,
         aliases:   ["discard"],
-        blurb:     "A service that throws away everything sent to it â€” so anything coming back is worth a look.",
+        blurb:     "A service that throws away everything sent to it  —  so anything coming back is worth a look.",
     }
     Daytime {
-        doc:       "Daytime service (RFC 867, port 13) â€” the time as human-readable text.",
+        doc:       "Daytime service (RFC 867, port 13)  —  the time as human-readable text.",
         display:   "Daytime",
         color:     0xA8AEB4,
         transport: Udp,
         rank:      4,
         status:    Declared,
         aliases:   ["daytime"],
-        blurb:     "The date and time as plain text â€” small, ancient, and reachable from anywhere it is left on.",
+        blurb:     "The date and time as plain text  —  small, ancient, and reachable from anywhere it is left on.",
     }
     Qotd {
-        doc:       "Quote of the Day (RFC 865, port 17) â€” a reflection vector.",
+        doc:       "Quote of the Day (RFC 865, port 17)  —  a reflection vector.",
         display:   "QOTD",
         color:     0xB4A0C4,
         transport: Udp,
         rank:      4,
         status:    Declared,
         aliases:   ["qotd"],
-        blurb:     "A quotation returned to whoever asked â€” or to whoever an attacker claimed to be.",
+        blurb:     "A quotation returned to whoever asked  —  or to whoever an attacker claimed to be.",
     }
     Chargen {
-        doc:       "Character Generator (RFC 864, port 19) â€” the classic UDP amplifier.",
+        doc:       "Character Generator (RFC 864, port 19)  —  the classic UDP amplifier.",
         display:   "Chargen",
         color:     0xD1707A,
         transport: Udp,
         rank:      4,
         status:    Declared,
         aliases:   ["chargen"],
-        blurb:     "Up to 512 bytes returned for a datagram it does not even read â€” a DDoS reflector by design.",
+        blurb:     "Up to 512 bytes returned for a datagram it does not even read  —  a DDoS reflector by design.",
     }
     Time {
-        doc:       "Time protocol (RFC 868, port 37) â€” seconds since 1900 as a 32-bit value.",
+        doc:       "Time protocol (RFC 868, port 37)  —  seconds since 1900 as a 32-bit value.",
         display:   "Time",
         color:     0x7FA8C4,
         transport: Udp,
         rank:      4,
         status:    Declared,
         aliases:   ["timeproto"],
-        blurb:     "The time as one 32-bit number counted from 1900 â€” which runs out in 2036.",
+        blurb:     "The time as one 32-bit number counted from 1900  —  which runs out in 2036.",
     }
     Tcpmux {
         doc:       "TCP Port Service Multiplexer (RFC 1078, TCP 1).",
@@ -9458,7 +9458,7 @@ protocols! {
         rank:      4,
         status:    Declared,
         aliases:   ["tcpmux"],
-        blurb:     "Asking a host to connect you to a service by name â€” a port-1 listener worth explaining.",
+        blurb:     "Asking a host to connect you to a service by name  —  a port-1 listener worth explaining.",
     }
     Ripng {
         doc:       "RIPng distance-vector routing for IPv6 (RFC 2080, UDP 521).",
@@ -9468,7 +9468,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ripng"],
-        blurb:     "IPv6 routes being advertised â€” and metric 16, which is how RIP says a destination is gone.",
+        blurb:     "IPv6 routes being advertised  —  and metric 16, which is how RIP says a destination is gone.",
     }
     Mip6 {
         doc:       "Mobile IPv6 mobility header (RFC 6275, IP protocol 135).",
@@ -9478,7 +9478,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["mip6", "mipv6"],
-        blurb:     "A node keeping its address while it moves â€” and the home agent's reason for refusing to let it.",
+        blurb:     "A node keeping its address while it moves  —  and the home agent's reason for refusing to let it.",
     }
     Amt {
         doc:       "AMT multicast tunnelling over unicast (RFC 7450, UDP 2268).",
@@ -9488,17 +9488,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["amt"],
-        blurb:     "Multicast tunnelled across networks that will not carry it â€” and where the setup stopped.",
+        blurb:     "Multicast tunnelled across networks that will not carry it  —  and where the setup stopped.",
     }
     Prp {
-        doc:       "PRP parallel redundancy (IEC 62439-3) â€” supervision frames and the redundancy control trailer.",
+        doc:       "PRP parallel redundancy (IEC 62439-3)  —  supervision frames and the redundancy control trailer.",
         display:   "PRP",
         color:     0xE8A33D,
         transport: Other,
         rank:      2,
         status:    Dissected,
         aliases:   ["prp"],
-        blurb:     "A frame duplicated onto two separate networks (PRP) â€” and which of the two this copy crossed.",
+        blurb:     "A frame duplicated onto two separate networks (PRP)  —  and which of the two this copy crossed.",
     }
     PnDcp {
         doc:       "PROFINET DCP discovery and configuration (IEC 61158-6-10 Â§4.3).",
@@ -9508,7 +9508,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["pn-dcp", "dcp"],
-        blurb:     "How a PROFINET device gets its name and address â€” including the unauthenticated Set that breaks a controller.",
+        blurb:     "How a PROFINET device gets its name and address  —  including the unauthenticated Set that breaks a controller.",
     }
     Ecpri {
         doc:       "eCPRI radio fronthaul (EtherType 0xAEFE).",
@@ -9518,7 +9518,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ecpri"],
-        blurb:     "The link between a radio and its baseband â€” and the fault codes that name late fronthaul data.",
+        blurb:     "The link between a radio and its baseband  —  and the fault codes that name late fronthaul data.",
     }
     Mrp {
         doc:       "MRP media redundancy ring (IEC 62439-2).",
@@ -9538,7 +9538,7 @@ protocols! {
         rank:      2,
         status:    Dissected,
         aliases:   ["hsr"],
-        blurb:     "A frame sent both ways round a redundancy ring at once (HSR) â€” so a cut cable loses nothing.",
+        blurb:     "A frame sent both ways round a redundancy ring at once (HSR)  —  so a cut cable loses nothing.",
     }
     Mvrp {
         doc:       "MVRP VLAN registration (IEEE 802.1ak).",
@@ -9548,7 +9548,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["mvrp"],
-        blurb:     "Switches agreeing which VLANs to carry (MVRP) â€” a Leave here explains traffic that stopped.",
+        blurb:     "Switches agreeing which VLANs to carry (MVRP)  —  a Leave here explains traffic that stopped.",
     }
     Mmrp {
         doc:       "MMRP multicast registration (IEEE 802.1ak).",
@@ -9561,14 +9561,14 @@ protocols! {
         blurb:     "Switches registering multicast groups (MMRP) so traffic is not flooded where nothing wants it.",
     }
     Stp {
-        doc:       "Spanning Tree Protocol BPDU â€” L2 loop prevention (802.3 LLC).",
+        doc:       "Spanning Tree Protocol BPDU  —  L2 loop prevention (802.3 LLC).",
         display:   "STP",
         color:     0xA8A29E,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Spanning Tree message (STP) â€” switches electing a root bridge to keep the network loop-free.",
+        blurb:     "A Spanning Tree message (STP)  —  switches electing a root bridge to keep the network loop-free.",
     }
     Mpls {
         doc:       "MPLS label-switched packet (EtherType 0x8847/0x8848).",
@@ -9578,17 +9578,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A label-switched packet (MPLS) â€” carrier/backbone forwarding; the inner packet is shown after the label.",
+        blurb:     "A label-switched packet (MPLS)  —  carrier/backbone forwarding; the inner packet is shown after the label.",
     }
     Wlan {
-        doc:       "IEEE 802.11 (Wi-Fi) link-layer frame â€” management/control/data.",
+        doc:       "IEEE 802.11 (Wi-Fi) link-layer frame  —  management/control/data.",
         display:   "802.11",
         color:     0x22D3EE,
         transport: Other,
         rank:      1,
         status:    Dissected,
         aliases:   ["wlan", "wifi"],
-        blurb:     "A raw Wi-Fi (802.11) frame â€” the radio layer beneath your network traffic.",
+        blurb:     "A raw Wi-Fi (802.11) frame  —  the radio layer beneath your network traffic.",
     }
     Usb {
         doc:       "USB traffic captured on the bus (usbmon on Linux, USBPcap on Windows).",
@@ -9598,7 +9598,7 @@ protocols! {
         rank:      1,
         status:    Dissected,
         aliases:   ["usb"],
-        blurb:     "USB bus traffic â€” a request or data moving between your PC and a USB device.",
+        blurb:     "USB bus traffic  —  a request or data moving between your PC and a USB device.",
     }
     Bluetooth {
         doc:       "Bluetooth HCI packet (command/event/ACL/SCO between host and controller).",
@@ -9608,57 +9608,57 @@ protocols! {
         rank:      1,
         status:    Dissected,
         aliases:   ["bluetooth", "hci"],
-        blurb:     "A Bluetooth HCI packet â€” your OS talking to the Bluetooth radio (commands, events, data).",
+        blurb:     "A Bluetooth HCI packet  —  your OS talking to the Bluetooth radio (commands, events, data).",
     }
     Can {
-        doc:       "CAN bus frame (SocketCAN capture â€” vehicle/industrial buses).",
+        doc:       "CAN bus frame (SocketCAN capture  —  vehicle/industrial buses).",
         display:   "CAN",
         color:     0xD9A442,
         transport: Other,
         rank:      1,
         status:    Dissected,
         aliases:   ["can"],
-        blurb:     "A CAN bus frame â€” broadcast data on a vehicle or industrial controller network.",
+        blurb:     "A CAN bus frame  —  broadcast data on a vehicle or industrial controller network.",
     }
     J1939 {
-        doc:       "SAE J1939 â€” the message layer heavy vehicles run over CAN.",
+        doc:       "SAE J1939  —  the message layer heavy vehicles run over CAN.",
         display:   "J1939",
         color:     0xC2874A,
         transport: Other,
         rank:      2,
         status:    Dissected,
         aliases:   ["j1939"],
-        blurb:     "A truck or bus ECU message (SAE J1939) â€” the identifier names both the message and the box that sent it.",
+        blurb:     "A truck or bus ECU message (SAE J1939)  —  the identifier names both the message and the box that sent it.",
     }
     DeviceNet {
-        doc:       "DeviceNet â€” ODVA CIP over 11-bit CAN (CIP Vol 3, Ed 1.14).",
+        doc:       "DeviceNet  —  ODVA CIP over 11-bit CAN (CIP Vol 3, Ed 1.14).",
         display:   "DeviceNet",
         color:     0xD4643A,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   ["devicenet"],
-        blurb:     "An industrial controller message (DeviceNet) â€” the CAN identifier names both the message group and the node address.",
+        blurb:     "An industrial controller message (DeviceNet)  —  the CAN identifier names both the message group and the node address.",
     }
     J1708 {
-        doc:       "SAE J1708 / J1587 â€” the serial data bus under heavy trucks (RS-485, 9600 baud).",
+        doc:       "SAE J1708 / J1587  —  the serial data bus under heavy trucks (RS-485, 9600 baud).",
         display:   "J1708",
         color:     0xA07840,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   ["j1708", "j1587"],
-        blurb:     "A truck ECU frame (SAE J1708) â€” the MID names the subsystem that sent it; without it, the capture is undifferentiated hex.",
+        blurb:     "A truck ECU frame (SAE J1708)  —  the MID names the subsystem that sent it; without it, the capture is undifferentiated hex.",
     }
     Obd2 {
-        doc:       "OBD-II over CAN â€” diagnostic requests and replies on the identifiers the standard reserves.",
+        doc:       "OBD-II over CAN  —  diagnostic requests and replies on the identifiers the standard reserves.",
         display:   "OBD-II",
         color:     0xE0A33A,
         transport: Other,
         rank:      2,
         status:    Dissected,
         aliases:   ["obd2", "obdii", "obd"],
-        blurb:     "A diagnostic scan-tool exchange (OBD-II) â€” asking a car for engine speed, coolant temperature or fault codes.",
+        blurb:     "A diagnostic scan-tool exchange (OBD-II)  —  asking a car for engine speed, coolant temperature or fault codes.",
     }
     Ntlm {
         doc:       "NT LAN Manager Security Support Provider (NTLMSSP).",
@@ -9681,14 +9681,14 @@ protocols! {
         blurb:     "An SMB file-sharing transaction over TCP 445.",
     }
     SmbDirect {
-        doc:       "SMB Direct â€” SMB3 over RDMA transport (MS-SMBD), carried on RDMA SEND.",
+        doc:       "SMB Direct  —  SMB3 over RDMA transport (MS-SMBD), carried on RDMA SEND.",
         display:   "SMB Direct",
         color:     0x5C7E8E,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   ["smb_direct", "smbd"],
-        blurb:     "SMB3 file sharing over RDMA â€” bypasses TCP/IP to transfer data directly into memory.",
+        blurb:     "SMB3 file sharing over RDMA  —  bypasses TCP/IP to transfer data directly into memory.",
     }
     SrpRdma {
         doc:       "SCSI RDMA Protocol (SRP) carried over RDMA.",
@@ -10031,14 +10031,14 @@ protocols! {
         blurb:     "An Advanced Message Queuing Protocol (AMQP) message on TCP 5672.",
     }
     Amqp1 {
-        doc:       "AMQP 1.0 â€” the OASIS standard, a different protocol from 0-9-1 on the same port.",
+        doc:       "AMQP 1.0  —  the OASIS standard, a different protocol from 0-9-1 on the same port.",
         display:   "AMQP 1.0",
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   ["amqp1", "amqp10"],
-        blurb:     "An AMQP 1.0 frame (TCP 5672) â€” the OASIS standard behind Azure Service Bus and Qpid, unrelated to AMQP 0-9-1 beyond the name.",
+        blurb:     "An AMQP 1.0 frame (TCP 5672)  —  the OASIS standard behind Azure Service Bus and Qpid, unrelated to AMQP 0-9-1 beyond the name.",
     }
     Kafka {
         doc:       "Kafka traffic.",
@@ -10058,7 +10058,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A system log message shipped to a central collector (UDP 514) â€” usually plaintext.",
+        blurb:     "A system log message shipped to a central collector (UDP 514)  —  usually plaintext.",
     }
     Tftp {
         doc:       "Trivial File Transfer Protocol (UDP 69).",
@@ -10068,7 +10068,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A trivial file transfer (UDP 69) â€” often a device pulling firmware or config at boot.",
+        blurb:     "A trivial file transfer (UDP 69)  —  often a device pulling firmware or config at boot.",
     }
     Ssdp {
         doc:       "SSDP / UPnP device discovery (UDP 1900).",
@@ -10078,7 +10078,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "UPnP device-discovery chatter (UDP 1900) â€” gadgets finding each other on the LAN.",
+        blurb:     "UPnP device-discovery chatter (UDP 1900)  —  gadgets finding each other on the LAN.",
     }
     Stun {
         doc:       "STUN NAT-traversal for WebRTC/VoIP (UDP 3478).",
@@ -10091,14 +10091,14 @@ protocols! {
         blurb:     "A NAT-traversal probe (UDP 3478) used by voice/video calls to find a public path.",
     }
     Llmnr {
-        doc:       "Link-Local Multicast Name Resolution (UDP 5355) â€” DNS wire format.",
+        doc:       "Link-Local Multicast Name Resolution (UDP 5355)  —  DNS wire format.",
         display:   "LLMNR",
         color:     0xA78BFA,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A link-local name lookup (UDP 5355) â€” like DNS, but for the local network only.",
+        blurb:     "A link-local name lookup (UDP 5355)  —  like DNS, but for the local network only.",
     }
     Rtsp {
         doc:       "Real Time Streaming Protocol media control (TCP 554).",
@@ -10108,7 +10108,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "Streaming-media control (TCP 554) â€” play/pause signalling for an IP camera or stream.",
+        blurb:     "Streaming-media control (TCP 554)  —  play/pause signalling for an IP camera or stream.",
     }
     Irc {
         doc:       "Internet Relay Chat (TCP 6667).",
@@ -10118,7 +10118,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An Internet Relay Chat message (TCP 6667) â€” plain-text group chat.",
+        blurb:     "An Internet Relay Chat message (TCP 6667)  —  plain-text group chat.",
     }
     Rfb {
         doc:       "Remote Framebuffer / VNC remote desktop (TCP 5900).",
@@ -10128,7 +10128,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["rfb", "vnc"],
-        blurb:     "A VNC / remote-framebuffer session (TCP 5900) â€” one screen shared to another.",
+        blurb:     "A VNC / remote-framebuffer session (TCP 5900)  —  one screen shared to another.",
     }
     Whois {
         doc:       "WHOIS registration lookups (TCP 43).",
@@ -10138,7 +10138,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A WHOIS registration lookup (TCP 43) â€” who owns a domain or IP.",
+        blurb:     "A WHOIS registration lookup (TCP 43)  —  who owns a domain or IP.",
     }
     Nntp {
         doc:       "Network News Transfer Protocol / Usenet (TCP 119).",
@@ -10148,7 +10148,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Usenet news transfer (TCP 119) â€” fetching or moving newsgroup articles.",
+        blurb:     "A Usenet news transfer (TCP 119)  —  fetching or moving newsgroup articles.",
     }
     Sctp {
         doc:       "SCTP transport with multi-streaming (IP protocol 132).",
@@ -10158,7 +10158,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An SCTP transport packet (IP proto 132) â€” reliable multi-stream, common in telecom signalling.",
+        blurb:     "An SCTP transport packet (IP proto 132)  —  reliable multi-stream, common in telecom signalling.",
     }
     Gre {
         doc:       "Generic Routing Encapsulation tunnel (IP protocol 47).",
@@ -10168,7 +10168,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A GRE tunnel (IP proto 47) â€” one packet wrapped inside another to cross a network.",
+        blurb:     "A GRE tunnel (IP proto 47)  —  one packet wrapped inside another to cross a network.",
     }
     Igmp {
         doc:       "IGMP IPv4 multicast group management (IP protocol 2).",
@@ -10178,7 +10178,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An IGMP message (IP proto 2) â€” a host joining or leaving an IPv4 multicast group.",
+        blurb:     "An IGMP message (IP proto 2)  —  a host joining or leaving an IPv4 multicast group.",
     }
     Dhcpv6 {
         doc:       "DHCPv6 address assignment (UDP 546/547).",
@@ -10188,7 +10188,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A DHCPv6 message (UDP 546/547) â€” IPv6 address assignment, like DHCP for IPv4.",
+        blurb:     "A DHCPv6 message (UDP 546/547)  —  IPv6 address assignment, like DHCP for IPv4.",
     }
     Rip {
         doc:       "Routing Information Protocol (UDP 520).",
@@ -10198,7 +10198,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A RIP routing update (UDP 520) â€” routers telling each other which networks they can reach.",
+        blurb:     "A RIP routing update (UDP 520)  —  routers telling each other which networks they can reach.",
     }
     Nbns {
         doc:       "NetBIOS Name Service (UDP 137).",
@@ -10208,7 +10208,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A NetBIOS name lookup (UDP 137) â€” the old Windows way of resolving names locally.",
+        blurb:     "A NetBIOS name lookup (UDP 137)  —  the old Windows way of resolving names locally.",
     }
     Socks {
         doc:       "SOCKS proxy (TCP 1080).",
@@ -10218,7 +10218,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A SOCKS proxy negotiation (TCP 1080) â€” relaying a connection through a proxy.",
+        blurb:     "A SOCKS proxy negotiation (TCP 1080)  —  relaying a connection through a proxy.",
     }
     Memcached {
         doc:       "Memcached key-value cache (TCP 11211).",
@@ -10228,7 +10228,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Memcached cache operation (TCP 11211) â€” reading or writing an in-memory key.",
+        blurb:     "A Memcached cache operation (TCP 11211)  —  reading or writing an in-memory key.",
     }
     MemcachedBin {
         doc:       "Memcached's binary protocol, sharing TCP 11211 with the text one.",
@@ -10238,7 +10238,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["memcached-bin", "memcachedbin"],
-        blurb:     "A Memcached operation in the binary protocol (TCP 11211) â€” what client libraries use, as opposed to the text form typed by hand.",
+        blurb:     "A Memcached operation in the binary protocol (TCP 11211)  —  what client libraries use, as opposed to the text form typed by hand.",
     }
     BitTorrent {
         doc:       "BitTorrent peer-to-peer file sharing (TCP 6881-6889).",
@@ -10248,7 +10248,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A BitTorrent peer connection (TCP 6881+) â€” peer-to-peer file sharing.",
+        blurb:     "A BitTorrent peer connection (TCP 6881+)  —  peer-to-peer file sharing.",
     }
     Git {
         doc:       "Git native transport (TCP 9418).",
@@ -10258,7 +10258,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A native Git transfer (TCP 9418) â€” cloning, fetching or pushing a repository.",
+        blurb:     "A native Git transfer (TCP 9418)  —  cloning, fetching or pushing a repository.",
     }
     Xmpp {
         doc:       "XMPP / Jabber instant messaging (TCP 5222).",
@@ -10268,7 +10268,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An XMPP / Jabber message (TCP 5222) â€” open-standard instant messaging.",
+        blurb:     "An XMPP / Jabber message (TCP 5222)  —  open-standard instant messaging.",
     }
     Finger {
         doc:       "Finger user lookup (TCP 79).",
@@ -10278,7 +10278,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Finger lookup (TCP 79) â€” an old service reporting who is logged in.",
+        blurb:     "A Finger lookup (TCP 79)  —  an old service reporting who is logged in.",
     }
     Vrrp {
         doc:       "VRRP gateway redundancy (IP protocol 112).",
@@ -10288,7 +10288,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A VRRP advertisement (IP proto 112) â€” routers sharing a virtual gateway IP for failover.",
+        blurb:     "A VRRP advertisement (IP proto 112)  —  routers sharing a virtual gateway IP for failover.",
     }
     Pim {
         doc:       "PIM multicast routing (IP protocol 103).",
@@ -10298,7 +10298,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A PIM message (IP proto 103) â€” routers building paths to deliver multicast.",
+        blurb:     "A PIM message (IP proto 103)  —  routers building paths to deliver multicast.",
     }
     Eigrp {
         doc:       "EIGRP interior routing (IP protocol 88).",
@@ -10308,17 +10308,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An EIGRP routing message (IP proto 88) â€” Cisco routers exchanging routes.",
+        blurb:     "An EIGRP routing message (IP proto 88)  —  Cisco routers exchanging routes.",
     }
     Pppoe {
-        doc:       "PPPoE â€” PPP over Ethernet (EtherType 0x8863/0x8864).",
+        doc:       "PPPoE  —  PPP over Ethernet (EtherType 0x8863/0x8864).",
         display:   "PPPoE",
         color:     0xF472B6,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A PPPoE frame â€” a DSL-style login/session carried over Ethernet.",
+        blurb:     "A PPPoE frame  —  a DSL-style login/session carried over Ethernet.",
     }
     Eapol {
         doc:       "EAPOL / 802.1X port authentication (EtherType 0x888E).",
@@ -10328,7 +10328,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An 802.1X / EAPOL frame â€” port authentication, or the Wi-Fi WPA key handshake.",
+        blurb:     "An 802.1X / EAPOL frame  —  port authentication, or the Wi-Fi WPA key handshake.",
     }
     L2tp {
         doc:       "L2TP tunnelling (UDP 1701).",
@@ -10338,7 +10338,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An L2TP tunnel message (UDP 1701) â€” usually the L2TP/IPsec VPN transport.",
+        blurb:     "An L2TP tunnel message (UDP 1701)  —  usually the L2TP/IPsec VPN transport.",
     }
     Gtp {
         doc:       "GTP GPRS tunnelling for mobile networks (UDP 2123/2152).",
@@ -10348,7 +10348,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A GTP message (UDP 2123/2152) â€” carrying mobile data through the 4G/5G core.",
+        blurb:     "A GTP message (UDP 2123/2152)  —  carrying mobile data through the 4G/5G core.",
     }
     Rmcp {
         doc:       "RMCP / IPMI out-of-band server management (UDP 623).",
@@ -10358,7 +10358,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["rmcp"],
-        blurb:     "An RMCP/IPMI message (UDP 623) â€” out-of-band management of a server's BMC.",
+        blurb:     "An RMCP/IPMI message (UDP 623)  —  out-of-band management of a server's BMC.",
     }
     WsDiscovery {
         doc:       "WS-Discovery device discovery (UDP 3702).",
@@ -10368,7 +10368,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["wsd", "wsdiscovery"],
-        blurb:     "A WS-Discovery message (UDP 3702) â€” devices like printers/cameras finding each other.",
+        blurb:     "A WS-Discovery message (UDP 3702)  —  devices like printers/cameras finding each other.",
     }
     Tacacs {
         doc:       "TACACS+ device administration AAA (TCP 49).",
@@ -10378,7 +10378,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["tacacs", "tacacs+"],
-        blurb:     "A TACACS+ message (TCP 49) â€” admin login/authorization for network gear.",
+        blurb:     "A TACACS+ message (TCP 49)  —  admin login/authorization for network gear.",
     }
     Diameter {
         doc:       "Diameter AAA protocol (TCP/SCTP 3868).",
@@ -10388,7 +10388,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Diameter message (TCP/SCTP 3868) â€” carrier AAA and billing.",
+        blurb:     "A Diameter message (TCP/SCTP 3868)  —  carrier AAA and billing.",
     }
     Rlogin {
         doc:       "rlogin legacy remote login (TCP 513).",
@@ -10398,7 +10398,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An rlogin session (TCP 513) â€” a legacy cleartext remote login; prefer SSH.",
+        blurb:     "An rlogin session (TCP 513)  —  a legacy cleartext remote login; prefer SSH.",
     }
     Dccp {
         doc:       "DCCP congestion-controlled datagram transport (IP protocol 33).",
@@ -10408,17 +10408,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A DCCP packet (IP proto 33) â€” congestion-controlled but unreliable transport for streaming.",
+        blurb:     "A DCCP packet (IP proto 33)  —  congestion-controlled but unreliable transport for streaming.",
     }
     Dtls {
-        doc:       "Datagram TLS â€” encryption over UDP (WebRTC/VPN media).",
+        doc:       "Datagram TLS  —  encryption over UDP (WebRTC/VPN media).",
         display:   "DTLS",
         color:     0x6EE7B7,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A DTLS record â€” TLS encryption over UDP, as used by WebRTC media and some VPNs.",
+        blurb:     "A DTLS record  —  TLS encryption over UDP, as used by WebRTC media and some VPNs.",
     }
     Netflow {
         doc:       "NetFlow / IPFIX flow export (UDP 2055/4739).",
@@ -10428,7 +10428,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ipfix"],
-        blurb:     "A NetFlow/IPFIX export (UDP 2055/4739) â€” a router reporting traffic-flow summaries.",
+        blurb:     "A NetFlow/IPFIX export (UDP 2055/4739)  —  a router reporting traffic-flow summaries.",
     }
     Sflow {
         doc:       "sFlow sampled-traffic export (UDP 6343).",
@@ -10438,7 +10438,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An sFlow datagram (UDP 6343) â€” a switch exporting sampled packets and counters.",
+        blurb:     "An sFlow datagram (UDP 6343)  —  a switch exporting sampled packets and counters.",
     }
     Bfd {
         doc:       "Bidirectional Forwarding Detection (UDP 3784).",
@@ -10448,7 +10448,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A BFD heartbeat (UDP 3784) â€” a fast liveness check between routers for quick failover.",
+        blurb:     "A BFD heartbeat (UDP 3784)  —  a fast liveness check between routers for quick failover.",
     }
     Hsrp {
         doc:       "HSRP Cisco gateway redundancy (UDP 1985).",
@@ -10458,7 +10458,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An HSRP message (UDP 1985) â€” Cisco routers sharing a virtual gateway IP.",
+        blurb:     "An HSRP message (UDP 1985)  —  Cisco routers sharing a virtual gateway IP.",
     }
     Iscsi {
         doc:       "iSCSI SCSI-over-TCP storage (TCP 3260).",
@@ -10468,7 +10468,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An iSCSI PDU (TCP 3260) â€” SCSI storage commands carried over the network.",
+        blurb:     "An iSCSI PDU (TCP 3260)  —  SCSI storage commands carried over the network.",
     }
     Rtmp {
         doc:       "RTMP Flash/live streaming (TCP 1935).",
@@ -10478,7 +10478,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An RTMP message (TCP 1935) â€” the streaming protocol used to ingest live video.",
+        blurb:     "An RTMP message (TCP 1935)  —  the streaming protocol used to ingest live video.",
     }
     Smpp {
         doc:       "SMPP SMS gateway protocol (TCP 2775).",
@@ -10488,7 +10488,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An SMPP PDU (TCP 2775) â€” an app or gateway sending/receiving SMS text messages.",
+        blurb:     "An SMPP PDU (TCP 2775)  —  an app or gateway sending/receiving SMS text messages.",
     }
     OpenFlow {
         doc:       "OpenFlow SDN switch control (TCP 6653).",
@@ -10498,7 +10498,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An OpenFlow message (TCP 6653) â€” an SDN controller programming a switch.",
+        blurb:     "An OpenFlow message (TCP 6653)  —  an SDN controller programming a switch.",
     }
     Nats {
         doc:       "NATS cloud messaging (TCP 4222).",
@@ -10508,7 +10508,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A NATS message (TCP 4222) â€” publish/subscribe messaging between services.",
+        blurb:     "A NATS message (TCP 4222)  —  publish/subscribe messaging between services.",
     }
     Stomp {
         doc:       "STOMP simple text messaging (TCP 61613).",
@@ -10518,7 +10518,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A STOMP frame (TCP 61613) â€” simple text messaging with a broker.",
+        blurb:     "A STOMP frame (TCP 61613)  —  simple text messaging with a broker.",
     }
     Profinet {
         doc:       "PROFINET real-time industrial automation (EtherType 0x8892).",
@@ -10528,10 +10528,10 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A PROFINET frame (EtherType 0x8892) â€” real-time industrial automation data.",
+        blurb:     "A PROFINET frame (EtherType 0x8892)  —  real-time industrial automation data.",
     }
     Profisafe {
-        doc:       "PROFIsafe â€” functional safety profile (IEC 61784-3-3) running on top of PROFINET IO.",
+        doc:       "PROFIsafe  —  functional safety profile (IEC 61784-3-3) running on top of PROFINET IO.",
         display:   "PROFIsafe",
         color:     0xEA580C,
         transport: Other,
@@ -10548,7 +10548,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["wol", "wakeonlan"],
-        blurb:     "A Wake-on-LAN magic packet â€” a broadcast that powers a sleeping machine on.",
+        blurb:     "A Wake-on-LAN magic packet  —  a broadcast that powers a sleeping machine on.",
     }
     Glbp {
         doc:       "GLBP Cisco gateway load balancing (UDP 3222).",
@@ -10558,7 +10558,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A GLBP message (UDP 3222) â€” Cisco routers load-sharing a virtual gateway.",
+        blurb:     "A GLBP message (UDP 3222)  —  Cisco routers load-sharing a virtual gateway.",
     }
     Wccp {
         doc:       "WCCP web-cache redirection (UDP 2048).",
@@ -10568,7 +10568,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A WCCP message (UDP 2048) â€” a router redirecting traffic to a cache/proxy.",
+        blurb:     "A WCCP message (UDP 2048)  —  a router redirecting traffic to a cache/proxy.",
     }
     Mgcp {
         doc:       "MGCP VoIP media gateway control (UDP 2427/2727).",
@@ -10578,7 +10578,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An MGCP message (UDP 2427) â€” a call agent controlling a VoIP media gateway.",
+        blurb:     "An MGCP message (UDP 2427)  —  a call agent controlling a VoIP media gateway.",
     }
     Nbds {
         doc:       "NetBIOS Datagram Service (UDP 138).",
@@ -10588,7 +10588,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nbds"],
-        blurb:     "A NetBIOS datagram (UDP 138) â€” legacy Windows broadcast/browsing traffic.",
+        blurb:     "A NetBIOS datagram (UDP 138)  —  legacy Windows broadcast/browsing traffic.",
     }
     Dicom {
         doc:       "DICOM medical imaging (TCP 104/11112).",
@@ -10598,7 +10598,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A DICOM message (TCP 104/11112) â€” medical imaging devices exchanging studies (patient data).",
+        blurb:     "A DICOM message (TCP 104/11112)  —  medical imaging devices exchanging studies (patient data).",
     }
     Hl7 {
         doc:       "HL7 v2 healthcare messaging (TCP 2575, MLLP).",
@@ -10608,7 +10608,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An HL7 v2 message (TCP 2575) â€” hospital systems exchanging patient/lab data.",
+        blurb:     "An HL7 v2 message (TCP 2575)  —  hospital systems exchanging patient/lab data.",
     }
     Fix {
         doc:       "FIX financial trading protocol (negotiated TCP ports).",
@@ -10618,7 +10618,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A FIX message â€” a trading system sending orders or market data; tag 35 is the type.",
+        blurb:     "A FIX message  —  a trading system sending orders or market data; tag 35 is the type.",
     }
     S7comm {
         doc:       "S7comm Siemens PLC protocol (TCP 102).",
@@ -10628,17 +10628,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An S7comm message (TCP 102) â€” reading/writing a Siemens PLC's memory.",
+        blurb:     "An S7comm message (TCP 102)  —  reading/writing a Siemens PLC's memory.",
     }
     S7commPlus {
-        doc:       "S7comm-plus â€” Siemens' newer S7-1200/1500 industrial protocol on TCP 102.",
+        doc:       "S7comm-plus  —  Siemens' newer S7-1200/1500 industrial protocol on TCP 102.",
         display:   "S7comm-plus",
         color:     0x1D4ED8,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   ["s7comm-plus", "s7commplus"],
-        blurb:     "The newer Generation Siemens PLC protocol over COTP/TPKT â€” with protocol ID 0x72.",
+        blurb:     "The newer Generation Siemens PLC protocol over COTP/TPKT  —  with protocol ID 0x72.",
     }
     Iec104 {
         doc:       "IEC 60870-5-104 SCADA telecontrol (TCP 2404).",
@@ -10648,7 +10648,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["iec104"],
-        blurb:     "An IEC 60870-5-104 message (TCP 2404) â€” power-grid SCADA telecontrol.",
+        blurb:     "An IEC 60870-5-104 message (TCP 2404)  —  power-grid SCADA telecontrol.",
     }
     Ldp {
         doc:       "LDP MPLS label distribution (TCP/UDP 646).",
@@ -10658,7 +10658,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An LDP message (TCP/UDP 646) â€” MPLS routers distributing forwarding labels.",
+        blurb:     "An LDP message (TCP/UDP 646)  —  MPLS routers distributing forwarding labels.",
     }
     Goose {
         doc:       "GOOSE IEC 61850 substation events (EtherType 0x88B8).",
@@ -10668,7 +10668,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A GOOSE frame (EtherType 0x88B8) â€” fast IEC 61850 substation protection signalling.",
+        blurb:     "A GOOSE frame (EtherType 0x88B8)  —  fast IEC 61850 substation protection signalling.",
     }
     Ptp {
         doc:       "PTP IEEE 1588 precision time sync (EtherType 0x88F7 / UDP 319/320).",
@@ -10678,7 +10678,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A PTP message (IEEE 1588) â€” sub-microsecond clock synchronisation.",
+        blurb:     "A PTP message (IEEE 1588)  —  sub-microsecond clock synchronisation.",
     }
     Rsvp {
         doc:       "RSVP QoS / MPLS-TE signalling (IP protocol 46).",
@@ -10688,7 +10688,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An RSVP message (IP proto 46) â€” reserving bandwidth / signalling an MPLS-TE tunnel.",
+        blurb:     "An RSVP message (IP proto 46)  —  reserving bandwidth / signalling an MPLS-TE tunnel.",
     }
     Isakmp {
         doc:       "ISAKMP / IKE VPN key exchange (UDP 500/4500).",
@@ -10698,7 +10698,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ike"],
-        blurb:     "An ISAKMP/IKE message (UDP 500/4500) â€” negotiating the keys for an IPsec VPN.",
+        blurb:     "An ISAKMP/IKE message (UDP 500/4500)  —  negotiating the keys for an IPsec VPN.",
     }
     Geneve {
         doc:       "Geneve network-virtualisation overlay (UDP 6081).",
@@ -10708,7 +10708,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Geneve packet (UDP 6081) â€” a network-virtualisation overlay carrying an inner frame.",
+        blurb:     "A Geneve packet (UDP 6081)  —  a network-virtualisation overlay carrying an inner frame.",
     }
     Capwap {
         doc:       "CAPWAP wireless AP control (UDP 5246/5247).",
@@ -10718,7 +10718,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A CAPWAP message (UDP 5246/5247) â€” a wireless controller managing access points.",
+        blurb:     "A CAPWAP message (UDP 5246/5247)  —  a wireless controller managing access points.",
     }
     Teredo {
         doc:       "Teredo IPv6-over-UDP tunnelling (UDP 3544).",
@@ -10728,7 +10728,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Teredo packet (UDP 3544) â€” IPv6 tunnelled through IPv4/NAT.",
+        blurb:     "A Teredo packet (UDP 3544)  —  IPv6 tunnelled through IPv4/NAT.",
     }
     Gvcp {
         doc:       "GVCP GigE Vision camera control (UDP 3956).",
@@ -10738,17 +10738,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A GVCP message (UDP 3956) â€” controlling an industrial GigE Vision camera.",
+        blurb:     "A GVCP message (UDP 3956)  —  controlling an industrial GigE Vision camera.",
     }
     Rpc {
-        doc:       "ONC RPC â€” Portmap/NFS/Mount/NLM (TCP/UDP 111, 2049).",
+        doc:       "ONC RPC  —  Portmap/NFS/Mount/NLM (TCP/UDP 111, 2049).",
         display:   "RPC",
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   ["oncrpc", "sunrpc"],
-        blurb:     "An ONC RPC message (TCP/UDP 111/2049) â€” the plumbing behind NFS file sharing.",
+        blurb:     "An ONC RPC message (TCP/UDP 111/2049)  —  the plumbing behind NFS file sharing.",
     }
     Graphite {
         doc:       "Graphite/Carbon plaintext metrics (TCP 2003).",
@@ -10758,7 +10758,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Graphite metric (TCP 2003) â€” an app pushing a time-series data point.",
+        blurb:     "A Graphite metric (TCP 2003)  —  an app pushing a time-series data point.",
     }
     Gearman {
         doc:       "Gearman job queue (TCP 4730).",
@@ -10768,7 +10768,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Gearman message (TCP 4730) â€” handing a background job to a worker.",
+        blurb:     "A Gearman message (TCP 4730)  —  handing a background job to a worker.",
     }
     Beanstalk {
         doc:       "beanstalkd work queue (TCP 11300).",
@@ -10778,7 +10778,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A beanstalkd command (TCP 11300) â€” a simple background-job work queue.",
+        blurb:     "A beanstalkd command (TCP 11300)  —  a simple background-job work queue.",
     }
     Ethercat {
         doc:       "EtherCAT real-time industrial fieldbus (EtherType 0x88A4).",
@@ -10788,7 +10788,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An EtherCAT frame (EtherType 0x88A4) â€” real-time industrial fieldbus control.",
+        blurb:     "An EtherCAT frame (EtherType 0x88A4)  —  real-time industrial fieldbus control.",
     }
     Fcoe {
         doc:       "Fibre Channel over Ethernet storage (EtherType 0x8906).",
@@ -10798,7 +10798,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An FCoE frame (EtherType 0x8906) â€” Fibre Channel storage carried over Ethernet.",
+        blurb:     "An FCoE frame (EtherType 0x8906)  —  Fibre Channel storage carried over Ethernet.",
     }
     Macsec {
         doc:       "MACsec 802.1AE link-layer encryption (EtherType 0x88E5).",
@@ -10808,7 +10808,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A MACsec frame (EtherType 0x88E5) â€” 802.1AE hop-by-hop link encryption.",
+        blurb:     "A MACsec frame (EtherType 0x88E5)  —  802.1AE hop-by-hop link encryption.",
     }
     Rarp {
         doc:       "Reverse ARP (EtherType 0x8035).",
@@ -10818,7 +10818,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A RARP packet (EtherType 0x8035) â€” a host asking for its IP given its MAC.",
+        blurb:     "A RARP packet (EtherType 0x8035)  —  a host asking for its IP given its MAC.",
     }
     Rtps {
         doc:       "RTPS / DDS real-time pub-sub middleware (dynamic UDP).",
@@ -10828,7 +10828,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["rtps", "dds"],
-        blurb:     "An RTPS/DDS message â€” real-time pub/sub middleware (ROS 2, vehicles, industrial).",
+        blurb:     "An RTPS/DDS message  —  real-time pub/sub middleware (ROS 2, vehicles, industrial).",
     }
     Influxdb {
         doc:       "InfluxDB line-protocol metrics (UDP 8089).",
@@ -10838,7 +10838,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An InfluxDB metric (UDP 8089) â€” a time-series data point written in line protocol.",
+        blurb:     "An InfluxDB metric (UDP 8089)  —  a time-series data point written in line protocol.",
     }
     MqttSn {
         doc:       "MQTT-SN sensor-network messaging (UDP 1883).",
@@ -10848,7 +10848,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["mqttsn"],
-        blurb:     "An MQTT-SN message (UDP 1883) â€” MQTT for constrained sensor devices over UDP.",
+        blurb:     "An MQTT-SN message (UDP 1883)  —  MQTT for constrained sensor devices over UDP.",
     }
     Babel {
         doc:       "Babel mesh routing protocol (UDP 6696).",
@@ -10858,7 +10858,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Babel routing update (UDP 6696) â€” mesh-friendly distance-vector routing.",
+        blurb:     "A Babel routing update (UDP 6696)  —  mesh-friendly distance-vector routing.",
     }
     X11 {
         doc:       "X11 display protocol (TCP 6000+).",
@@ -10868,7 +10868,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An X11 message (TCP 6000+) â€” the Unix display protocol drawing a GUI.",
+        blurb:     "An X11 message (TCP 6000+)  —  the Unix display protocol drawing a GUI.",
     }
     Rsync {
         doc:       "rsync daemon file sync (TCP 873).",
@@ -10878,7 +10878,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An rsync transfer (TCP 873) â€” efficient file synchronisation.",
+        blurb:     "An rsync transfer (TCP 873)  —  efficient file synchronisation.",
     }
     Svn {
         doc:       "Subversion svnserve (TCP 3690).",
@@ -10888,7 +10888,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Subversion message (TCP 3690) â€” centralised version-control traffic.",
+        blurb:     "A Subversion message (TCP 3690)  —  centralised version-control traffic.",
     }
     Rethinkdb {
         doc:       "RethinkDB document database (TCP 28015).",
@@ -10898,7 +10898,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A RethinkDB message (TCP 28015) â€” a realtime JSON document database.",
+        blurb:     "A RethinkDB message (TCP 28015)  —  a realtime JSON document database.",
     }
     Sv {
         doc:       "IEC 61850-9-2 Sampled Values (EtherType 0x88BA).",
@@ -10908,7 +10908,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sv"],
-        blurb:     "A Sampled Values frame (EtherType 0x88BA) â€” digitised substation measurements.",
+        blurb:     "A Sampled Values frame (EtherType 0x88BA)  —  digitised substation measurements.",
     }
     Powerlink {
         doc:       "Ethernet POWERLINK real-time industrial (EtherType 0x88AB).",
@@ -10918,7 +10918,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An Ethernet POWERLINK frame (0x88AB) â€” deterministic real-time industrial control.",
+        blurb:     "An Ethernet POWERLINK frame (0x88AB)  —  deterministic real-time industrial control.",
     }
     Sercos {
         doc:       "SERCOS III motion control (EtherType 0x88CD).",
@@ -10928,7 +10928,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sercos"],
-        blurb:     "A SERCOS III frame (EtherType 0x88CD) â€” real-time servo motion control.",
+        blurb:     "A SERCOS III frame (EtherType 0x88CD)  —  real-time servo motion control.",
     }
     Knxip {
         doc:       "KNXnet/IP building automation (UDP 3671).",
@@ -10938,7 +10938,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["knx", "knxip"],
-        blurb:     "A KNXnet/IP message (UDP 3671) â€” building automation (lights/HVAC) over IP.",
+        blurb:     "A KNXnet/IP message (UDP 3671)  —  building automation (lights/HVAC) over IP.",
     }
     Statsd {
         doc:       "StatsD metrics (UDP 8125).",
@@ -10948,7 +10948,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A StatsD metric (UDP 8125) â€” a fire-and-forget counter/gauge/timer.",
+        blurb:     "A StatsD metric (UDP 8125)  —  a fire-and-forget counter/gauge/timer.",
     }
     Gelf {
         doc:       "GELF Graylog structured logging (UDP 12201).",
@@ -10958,7 +10958,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A GELF message (UDP 12201) â€” a structured application log, often to Graylog.",
+        blurb:     "A GELF message (UDP 12201)  —  a structured application log, often to Graylog.",
     }
     Hartip {
         doc:       "HART-IP industrial process instruments (UDP/TCP 5094).",
@@ -10968,7 +10968,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["hart", "hartip"],
-        blurb:     "A HART-IP message (UDP/TCP 5094) â€” smart process-instrument data over IP.",
+        blurb:     "A HART-IP message (UDP/TCP 5094)  —  smart process-instrument data over IP.",
     }
     Elasticsearch {
         doc:       "Elasticsearch transport protocol (TCP 9300).",
@@ -10978,7 +10978,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["es"],
-        blurb:     "An Elasticsearch transport message (TCP 9300) â€” internal cluster traffic.",
+        blurb:     "An Elasticsearch transport message (TCP 9300)  —  internal cluster traffic.",
     }
     Zabbix {
         doc:       "Zabbix monitoring (TCP 10050/10051).",
@@ -10988,7 +10988,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Zabbix message (TCP 10050/10051) â€” infrastructure monitoring data.",
+        blurb:     "A Zabbix message (TCP 10050/10051)  —  infrastructure monitoring data.",
     }
     Nsq {
         doc:       "NSQ realtime messaging (TCP 4150).",
@@ -10998,7 +10998,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An NSQ message (TCP 4150) â€” a realtime distributed message queue.",
+        blurb:     "An NSQ message (TCP 4150)  —  a realtime distributed message queue.",
     }
     Zmtp {
         doc:       "ZMTP / ZeroMQ messaging (dynamic TCP).",
@@ -11008,7 +11008,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["zeromq", "zmq"],
-        blurb:     "A ZMTP/ZeroMQ message â€” brokerless messaging between applications.",
+        blurb:     "A ZMTP/ZeroMQ message  —  brokerless messaging between applications.",
     }
     Aerospike {
         doc:       "Aerospike key-value database (TCP 3000).",
@@ -11018,7 +11018,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An Aerospike message (TCP 3000) â€” a low-latency key-value database.",
+        blurb:     "An Aerospike message (TCP 3000)  —  a low-latency key-value database.",
     }
     Avtp {
         doc:       "AVTP / IEEE 1722 audio-video transport (EtherType 0x22F0).",
@@ -11028,7 +11028,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An AVTP frame (EtherType 0x22F0) â€” time-synced audio/video (automotive Ethernet / pro AV).",
+        blurb:     "An AVTP frame (EtherType 0x22F0)  —  time-synced audio/video (automotive Ethernet / pro AV).",
     }
     SomeIp {
         doc:       "SOME/IP automotive service middleware (UDP/TCP 30490+).",
@@ -11038,17 +11038,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["someip"],
-        blurb:     "A SOME/IP message (UDP/TCP 30490+) â€” service-oriented communication between car ECUs.",
+        blurb:     "A SOME/IP message (UDP/TCP 30490+)  —  service-oriented communication between car ECUs.",
     }
     SomeIpSd {
-        doc:       "SOME/IP service discovery â€” offers, subscriptions and their withdrawal.",
+        doc:       "SOME/IP service discovery  —  offers, subscriptions and their withdrawal.",
         display:   "SOME/IP-SD",
         color:     0x8B95A8,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   ["someip-sd", "someipsd", "sd"],
-        blurb:     "Car ECUs finding each other (SOME/IP-SD) â€” announcing a service, subscribing to one, or withdrawing it.",
+        blurb:     "Car ECUs finding each other (SOME/IP-SD)  —  announcing a service, subscribing to one, or withdrawing it.",
     }
     Doip {
         doc:       "DoIP diagnostics over IP (UDP/TCP 13400).",
@@ -11058,7 +11058,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A DoIP message (UDP/TCP 13400) â€” vehicle diagnostics carried over Ethernet.",
+        blurb:     "A DoIP message (UDP/TCP 13400)  —  vehicle diagnostics carried over Ethernet.",
     }
     Uds {
         doc:       "UDS diagnostic services (ISO 14229), carried inside a DoIP message.",
@@ -11068,7 +11068,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["uds", "iso14229"],
-        blurb:     "A vehicle diagnostic command (UDS) â€” reading a fault code, unlocking an ECU, or writing new firmware to one.",
+        blurb:     "A vehicle diagnostic command (UDS)  —  reading a fault code, unlocking an ECU, or writing new firmware to one.",
     }
     Xcp {
         doc:       "XCP ECU measurement/calibration (UDP/TCP 5555).",
@@ -11078,7 +11078,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An XCP message (UDP/TCP 5555) â€” live ECU measurement and calibration.",
+        blurb:     "An XCP message (UDP/TCP 5555)  —  live ECU measurement and calibration.",
     }
     Matter {
         doc:       "Matter smart-home protocol (UDP 5540).",
@@ -11088,7 +11088,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Matter message (UDP 5540) â€” the cross-vendor smart-home standard.",
+        blurb:     "A Matter message (UDP 5540)  —  the cross-vendor smart-home standard.",
     }
     Afp {
         doc:       "AFP Apple Filing Protocol (TCP 548).",
@@ -11098,7 +11098,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An AFP message (TCP 548) â€” Apple Filing Protocol for Mac file sharing.",
+        blurb:     "An AFP message (TCP 548)  —  Apple Filing Protocol for Mac file sharing.",
     }
     Dht {
         doc:       "BitTorrent DHT / KRPC peer discovery (dynamic UDP).",
@@ -11108,7 +11108,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["dht"],
-        blurb:     "A BitTorrent DHT message â€” trackerless peer discovery over UDP.",
+        blurb:     "A BitTorrent DHT message  —  trackerless peer discovery over UDP.",
     }
     Gnutella {
         doc:       "Gnutella peer-to-peer file sharing (TCP 6346).",
@@ -11118,7 +11118,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Gnutella message (TCP 6346) â€” decentralised peer-to-peer file sharing.",
+        blurb:     "A Gnutella message (TCP 6346)  —  decentralised peer-to-peer file sharing.",
     }
     Edonkey {
         doc:       "eDonkey/eMule peer-to-peer file sharing (TCP 4662).",
@@ -11128,7 +11128,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["emule"],
-        blurb:     "An eDonkey/eMule message (TCP 4662) â€” peer-to-peer file sharing.",
+        blurb:     "An eDonkey/eMule message (TCP 4662)  —  peer-to-peer file sharing.",
     }
     SourceQuery {
         doc:       "Source engine game-server query (A2S, UDP).",
@@ -11138,7 +11138,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sourcequery", "a2s"],
-        blurb:     "A Source A2S query â€” a game client/browser asking a server for its info.",
+        blurb:     "A Source A2S query  —  a game client/browser asking a server for its info.",
     }
     Minecraft {
         doc:       "Minecraft Java Edition protocol (TCP 25565).",
@@ -11148,7 +11148,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Minecraft message (TCP 25565) â€” the Java Edition client/server protocol.",
+        blurb:     "A Minecraft message (TCP 25565)  —  the Java Edition client/server protocol.",
     }
     Mumble {
         doc:       "Mumble voice-chat control (TCP 64738).",
@@ -11158,7 +11158,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Mumble control message (TCP 64738) â€” low-latency voice-chat signalling.",
+        blurb:     "A Mumble control message (TCP 64738)  —  low-latency voice-chat signalling.",
     }
     Pfcp {
         doc:       "PFCP 4G/5G user-plane control, the N4 interface (UDP 8805).",
@@ -11168,7 +11168,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A PFCP message (UDP 8805) â€” the 5G/4G control plane programming user-plane forwarding.",
+        blurb:     "A PFCP message (UDP 8805)  —  the 5G/4G control plane programming user-plane forwarding.",
     }
     GtpPrime {
         doc:       "GTP' charging / CDR transfer (UDP 3386).",
@@ -11178,7 +11178,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["gtpprime"],
-        blurb:     "A GTP' message (UDP 3386) â€” mobile Call Detail Records heading to billing.",
+        blurb:     "A GTP' message (UDP 3386)  —  mobile Call Detail Records heading to billing.",
     }
     Megaco {
         doc:       "Megaco / H.248 media gateway control (UDP/TCP 2944).",
@@ -11188,7 +11188,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["h248"],
-        blurb:     "A Megaco/H.248 message (UDP/TCP 2944) â€” a call agent controlling a media gateway.",
+        blurb:     "A Megaco/H.248 message (UDP/TCP 2944)  —  a call agent controlling a media gateway.",
     }
     Msrp {
         doc:       "MSRP instant messaging in SIP/IMS sessions (TCP 2855).",
@@ -11198,7 +11198,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An MSRP message (TCP 2855) â€” instant messaging/file transfer inside a SIP session.",
+        blurb:     "An MSRP message (TCP 2855)  —  instant messaging/file transfer inside a SIP session.",
     }
     Pcoip {
         doc:       "PCoIP remote display (UDP/TCP 4172).",
@@ -11208,7 +11208,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "PCoIP traffic (UDP/TCP 4172) â€” an encrypted remote-desktop display stream.",
+        blurb:     "PCoIP traffic (UDP/TCP 4172)  —  an encrypted remote-desktop display stream.",
     }
     Spice {
         doc:       "SPICE virtual-machine console (TCP, \"REDQ\" magic).",
@@ -11218,7 +11218,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A SPICE message â€” the remote console of a virtual machine.",
+        blurb:     "A SPICE message  —  the remote console of a virtual machine.",
     }
     Ica {
         doc:       "Citrix ICA thin-client session (TCP 1494).",
@@ -11228,7 +11228,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "Citrix ICA traffic (TCP 1494) â€” a published app or virtual desktop session.",
+        blurb:     "Citrix ICA traffic (TCP 1494)  —  a published app or virtual desktop session.",
     }
     Ndmp {
         doc:       "NDMP network backup management (TCP 10000).",
@@ -11238,17 +11238,17 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An NDMP message (TCP 10000) â€” backup software driving a NAS backup.",
+        blurb:     "An NDMP message (TCP 10000)  —  backup software driving a NAS backup.",
     }
     Dcerpc {
-        doc:       "DCE/RPC â€” Windows MSRPC (TCP 135 and dynamic ports).",
+        doc:       "DCE/RPC  —  Windows MSRPC (TCP 135 and dynamic ports).",
         display:   "DCERPC",
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
         status:    Declared,
         aliases:   ["msrpc"],
-        blurb:     "A DCE/RPC message (TCP 135) â€” Windows remote procedure calls (WMI, AD, services).",
+        blurb:     "A DCE/RPC message (TCP 135)  —  Windows remote procedure calls (WMI, AD, services).",
     }
     Pptp {
         doc:       "PPTP VPN control channel (TCP 1723).",
@@ -11258,7 +11258,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A PPTP control message (TCP 1723) â€” the legacy Microsoft VPN; weak crypto.",
+        blurb:     "A PPTP control message (TCP 1723)  —  the legacy Microsoft VPN; weak crypto.",
     }
     Radmin {
         doc:       "Radmin remote control (TCP 4899).",
@@ -11268,7 +11268,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "Radmin traffic (TCP 4899) â€” an encrypted Windows remote-control session.",
+        blurb:     "Radmin traffic (TCP 4899)  —  an encrypted Windows remote-control session.",
     }
     Skinny {
         doc:       "Skinny / SCCP Cisco IP-phone signalling (TCP 2000).",
@@ -11281,57 +11281,57 @@ protocols! {
         // Signalling Connection Control Part, which is what `sccp` means
         // everywhere else (Wireshark included). Cisco's keeps `skinny`.
         aliases:   ["ciscosccp"],
-        blurb:     "A Skinny/SCCP message (TCP 2000) â€” Cisco IP-phone call signalling.",
+        blurb:     "A Skinny/SCCP message (TCP 2000)  —  Cisco IP-phone call signalling.",
     }
     Cldap {
-        doc:       "CLDAP â€” connectionless LDAP for AD discovery (UDP 389).",
+        doc:       "CLDAP  —  connectionless LDAP for AD discovery (UDP 389).",
         display:   "CLDAP",
         color:     0x8B7AD6,
         transport: Udp,
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A CLDAP query (UDP 389) â€” a Windows client locating a domain controller.",
+        blurb:     "A CLDAP query (UDP 389)  —  a Windows client locating a domain controller.",
     }
     Bmp {
-        doc:       "BMP â€” BGP Monitoring Protocol (TCP 11019).",
+        doc:       "BMP  —  BGP Monitoring Protocol (TCP 11019).",
         display:   "BMP",
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A BMP message (TCP 11019) â€” a router streaming its BGP state to a collector.",
+        blurb:     "A BMP message (TCP 11019)  —  a router streaming its BGP state to a collector.",
     }
     RpkiRtr {
-        doc:       "RPKI-RTR â€” validated route origins for BGP security (TCP 323).",
+        doc:       "RPKI-RTR  —  validated route origins for BGP security (TCP 323).",
         display:   "RPKI-RTR",
         color:     0x16A34A,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   ["rpkirtr"],
-        blurb:     "An RPKI-RTR message (TCP 323) â€” validated route origins feeding BGP security.",
+        blurb:     "An RPKI-RTR message (TCP 323)  —  validated route origins feeding BGP security.",
     }
     Mms {
-        doc:       "MMS â€” IEC 61850 substation client/server messaging (TCP 102).",
+        doc:       "MMS  —  IEC 61850 substation client/server messaging (TCP 102).",
         display:   "MMS",
         color:     0x0EA5E9,
         transport: Tcp,
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An MMS message (TCP 102) â€” IEC 61850 substation data-model access.",
+        blurb:     "An MMS message (TCP 102)  —  IEC 61850 substation data-model access.",
     }
     Nrpe {
-        doc:       "NRPE â€” Nagios remote plugin executor (TCP 5666).",
+        doc:       "NRPE  —  Nagios remote plugin executor (TCP 5666).",
         display:   "NRPE",
         color:     0x94A3B8,
         transport: Tcp,
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An NRPE message (TCP 5666) â€” a monitoring server running a check on a host.",
+        blurb:     "An NRPE message (TCP 5666)  —  a monitoring server running a check on a host.",
     }
     Collectd {
         doc:       "collectd binary metric protocol (UDP 25826).",
@@ -11341,7 +11341,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A collectd packet (UDP 25826) â€” system metrics being shipped to a server.",
+        blurb:     "A collectd packet (UDP 25826)  —  system metrics being shipped to a server.",
     }
     Jaeger {
         doc:       "Jaeger distributed-tracing spans (UDP 6831).",
@@ -11351,7 +11351,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "Jaeger tracing spans (UDP 6831) â€” a service reporting request timings.",
+        blurb:     "Jaeger tracing spans (UDP 6831)  —  a service reporting request timings.",
     }
     Ganglia {
         doc:       "Ganglia gmond cluster metrics (UDP 8649).",
@@ -11361,7 +11361,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Ganglia gmond packet (UDP 8649) â€” cluster monitoring metrics.",
+        blurb:     "A Ganglia gmond packet (UDP 8649)  —  cluster monitoring metrics.",
     }
     Bolt {
         doc:       "Neo4j Bolt graph-database protocol (TCP 7687).",
@@ -11371,7 +11371,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["neo4j"],
-        blurb:     "A Bolt message (TCP 7687) â€” a Cypher query to a Neo4j graph database.",
+        blurb:     "A Bolt message (TCP 7687)  —  a Cypher query to a Neo4j graph database.",
     }
     Clickhouse {
         doc:       "ClickHouse native protocol (TCP 9000).",
@@ -11381,7 +11381,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A ClickHouse native message (TCP 9000) â€” columnar analytics query or data.",
+        blurb:     "A ClickHouse native message (TCP 9000)  —  columnar analytics query or data.",
     }
     Pulsar {
         doc:       "Apache Pulsar broker protocol (TCP 6650).",
@@ -11391,17 +11391,17 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An Apache Pulsar command (TCP 6650) â€” distributed pub/sub messaging.",
+        blurb:     "An Apache Pulsar command (TCP 6650)  —  distributed pub/sub messaging.",
     }
     Openwire {
-        doc:       "OpenWire â€” Apache ActiveMQ native protocol (TCP 61616).",
+        doc:       "OpenWire  —  Apache ActiveMQ native protocol (TCP 61616).",
         display:   "OpenWire",
         color:     0xEF4444,
         transport: Tcp,
         rank:      3,
         status:    Declared,
         aliases:   ["activemq"],
-        blurb:     "An OpenWire message (TCP 61616) â€” Apache ActiveMQ's native protocol.",
+        blurb:     "An OpenWire message (TCP 61616)  —  Apache ActiveMQ's native protocol.",
     }
     Zookeeper {
         doc:       "ZooKeeper coordination service (TCP 2181).",
@@ -11411,7 +11411,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["zk"],
-        blurb:     "A ZooKeeper message (TCP 2181) â€” cluster coordination and leader election.",
+        blurb:     "A ZooKeeper message (TCP 2181)  —  cluster coordination and leader election.",
     }
     HadoopRpc {
         doc:       "Hadoop RPC / HDFS NameNode (TCP 8020).",
@@ -11421,7 +11421,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["hadooprpc", "hdfs"],
-        blurb:     "A Hadoop RPC call (TCP 8020) â€” a client talking to the HDFS NameNode.",
+        blurb:     "A Hadoop RPC call (TCP 8020)  —  a client talking to the HDFS NameNode.",
     }
     Fluentd {
         doc:       "Fluentd forward log collection (TCP 24224).",
@@ -11431,7 +11431,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Fluentd forward message (TCP 24224) â€” structured logs heading to a collector.",
+        blurb:     "A Fluentd forward message (TCP 24224)  —  structured logs heading to a collector.",
     }
     Beats {
         doc:       "Elastic Beats log shipping (TCP 5044).",
@@ -11441,7 +11441,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An Elastic Beats frame (TCP 5044) â€” Filebeat shipping events to Logstash.",
+        blurb:     "An Elastic Beats frame (TCP 5044)  —  Filebeat shipping events to Logstash.",
     }
     Clamav {
         doc:       "ClamAV antivirus daemon (TCP 3310).",
@@ -11451,7 +11451,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A ClamAV daemon message (TCP 3310) â€” content being scanned for malware.",
+        blurb:     "A ClamAV daemon message (TCP 3310)  —  content being scanned for malware.",
     }
     Spamd {
         doc:       "SpamAssassin spamd (TCP 783).",
@@ -11461,7 +11461,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A spamd message (TCP 783) â€” SpamAssassin scoring a mail message.",
+        blurb:     "A spamd message (TCP 783)  —  SpamAssassin scoring a mail message.",
     }
     ManageSieve {
         doc:       "ManageSieve mail-filter management (TCP 4190).",
@@ -11471,7 +11471,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["sieve"],
-        blurb:     "A ManageSieve message (TCP 4190) â€” managing server-side mail filters.",
+        blurb:     "A ManageSieve message (TCP 4190)  —  managing server-side mail filters.",
     }
     Relp {
         doc:       "RELP reliable syslog transport (TCP 2514).",
@@ -11481,7 +11481,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A RELP frame (TCP 2514) â€” reliable, acknowledged syslog delivery.",
+        blurb:     "A RELP frame (TCP 2514)  —  reliable, acknowledged syslog delivery.",
     }
     Lpd {
         doc:       "LPD line printer daemon (TCP 515).",
@@ -11491,7 +11491,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An LPD message (TCP 515) â€” a print job or queue query.",
+        blurb:     "An LPD message (TCP 515)  —  a print job or queue query.",
     }
     Ident {
         doc:       "Ident user lookup (TCP 113).",
@@ -11501,7 +11501,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An Ident message (TCP 113) â€” a legacy lookup of the user behind a connection.",
+        blurb:     "An Ident message (TCP 113)  —  a legacy lookup of the user behind a connection.",
     }
     Gopher {
         doc:       "Gopher document protocol (TCP 70).",
@@ -11511,7 +11511,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Gopher message (TCP 70) â€” the pre-web menu/document protocol.",
+        blurb:     "A Gopher message (TCP 70)  —  the pre-web menu/document protocol.",
     }
     Rsh {
         doc:       "rsh BSD remote shell (TCP 514).",
@@ -11521,77 +11521,77 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An rsh session (TCP 514) â€” a cleartext remote command; prefer SSH.",
+        blurb:     "An rsh session (TCP 514)  —  a cleartext remote command; prefer SSH.",
     }
     Cdp {
-        doc:       "CDP â€” Cisco Discovery Protocol (LLC/SNAP).",
+        doc:       "CDP  —  Cisco Discovery Protocol (LLC/SNAP).",
         display:   "CDP",
         color:     0x1BA1E2,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A CDP announcement â€” a Cisco device naming itself to its neighbour.",
+        blurb:     "A CDP announcement  —  a Cisco device naming itself to its neighbour.",
     }
     Vtp {
-        doc:       "VTP â€” Cisco VLAN Trunking Protocol (LLC/SNAP).",
+        doc:       "VTP  —  Cisco VLAN Trunking Protocol (LLC/SNAP).",
         display:   "VTP",
         color:     0x38BDF8,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A VTP message â€” switches syncing the VLAN database.",
+        blurb:     "A VTP message  —  switches syncing the VLAN database.",
     }
     Dtp {
-        doc:       "DTP â€” Cisco Dynamic Trunking Protocol (LLC/SNAP).",
+        doc:       "DTP  —  Cisco Dynamic Trunking Protocol (LLC/SNAP).",
         display:   "DTP",
         color:     0xF97316,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A DTP message â€” ports negotiating a trunk; a VLAN-hopping risk on access ports.",
+        blurb:     "A DTP message  —  ports negotiating a trunk; a VLAN-hopping risk on access ports.",
     }
     Pagp {
-        doc:       "PAgP â€” Cisco Port Aggregation Protocol (LLC/SNAP).",
+        doc:       "PAgP  —  Cisco Port Aggregation Protocol (LLC/SNAP).",
         display:   "PAgP",
         color:     0x2DD4BF,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A PAgP message â€” Cisco negotiating an EtherChannel link bundle.",
+        blurb:     "A PAgP message  —  Cisco negotiating an EtherChannel link bundle.",
     }
     Udld {
-        doc:       "UDLD â€” Cisco UniDirectional Link Detection (LLC/SNAP).",
+        doc:       "UDLD  —  Cisco UniDirectional Link Detection (LLC/SNAP).",
         display:   "UDLD",
         color:     0xFBBF24,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A UDLD message â€” checking a link isn't passing traffic one way only.",
+        blurb:     "A UDLD message  —  checking a link isn't passing traffic one way only.",
     }
     Eap {
-        doc:       "EAP â€” the authentication method inside 802.1X / EAPOL.",
+        doc:       "EAP  —  the authentication method inside 802.1X / EAPOL.",
         display:   "EAP",
         color:     0xA855F7,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An EAP packet â€” the authentication method being negotiated for 802.1X/Wi-Fi.",
+        blurb:     "An EAP packet  —  the authentication method being negotiated for 802.1X/Wi-Fi.",
     }
     Ipx {
-        doc:       "IPX â€” Novell NetWare network layer (EtherType 0x8137).",
+        doc:       "IPX  —  Novell NetWare network layer (EtherType 0x8137).",
         display:   "IPX",
         color:     0xC08A2B,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An IPX packet (EtherType 0x8137) â€” legacy Novell NetWare networking.",
+        blurb:     "An IPX packet (EtherType 0x8137)  —  legacy Novell NetWare networking.",
     }
     Atalk {
         doc:       "AppleTalk DDP (EtherType 0x809B).",
@@ -11601,27 +11601,27 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["appletalk", "atalk"],
-        blurb:     "An AppleTalk DDP packet (EtherType 0x809B) â€” classic Mac networking.",
+        blurb:     "An AppleTalk DDP packet (EtherType 0x809B)  —  classic Mac networking.",
     }
     Aarp {
-        doc:       "AARP â€” AppleTalk address resolution (EtherType 0x80F3).",
+        doc:       "AARP  —  AppleTalk address resolution (EtherType 0x80F3).",
         display:   "AARP",
         color:     0x94A3B8,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An AARP packet (EtherType 0x80F3) â€” AppleTalk address resolution.",
+        blurb:     "An AARP packet (EtherType 0x80F3)  —  AppleTalk address resolution.",
     }
     Ipp {
-        doc:       "IPP â€” Internet Printing Protocol / CUPS (TCP 631).",
+        doc:       "IPP  —  Internet Printing Protocol / CUPS (TCP 631).",
         display:   "IPP",
         color:     0x84CC16,
         transport: Tcp,
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An IPP message (TCP 631) â€” a print job or printer query.",
+        blurb:     "An IPP message (TCP 631)  —  a print job or printer query.",
     }
     Rexec {
         doc:       "rexec BSD remote execution, cleartext password (TCP 512).",
@@ -11631,7 +11631,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An rexec session (TCP 512) â€” remote execution with a cleartext password.",
+        blurb:     "An rexec session (TCP 512)  —  remote execution with a cleartext password.",
     }
     Sane {
         doc:       "SANE network scanner access (TCP 6566).",
@@ -11641,7 +11641,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A SANE message (TCP 6566) â€” controlling a scanner shared over the network.",
+        blurb:     "A SANE message (TCP 6566)  —  controlling a scanner shared over the network.",
     }
     Tns {
         doc:       "Oracle TNS database transport (TCP 1521).",
@@ -11651,17 +11651,17 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["tns", "oracle"],
-        blurb:     "An Oracle TNS packet (TCP 1521) â€” a client talking to an Oracle database.",
+        blurb:     "An Oracle TNS packet (TCP 1521)  —  a client talking to an Oracle database.",
     }
     Drda {
-        doc:       "DRDA â€” IBM Db2 database protocol (TCP 50000).",
+        doc:       "DRDA  —  IBM Db2 database protocol (TCP 50000).",
         display:   "DRDA",
         color:     0x059669,
         transport: Tcp,
         rank:      3,
         status:    Declared,
         aliases:   ["drda", "db2"],
-        blurb:     "A DRDA message (TCP 50000) â€” SQL heading to an IBM Db2 database.",
+        blurb:     "A DRDA message (TCP 50000)  —  SQL heading to an IBM Db2 database.",
     }
     Firebird {
         doc:       "Firebird / InterBase database protocol (TCP 3050).",
@@ -11671,7 +11671,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Firebird message (TCP 3050) â€” a query to a Firebird/InterBase database.",
+        blurb:     "A Firebird message (TCP 3050)  —  a query to a Firebird/InterBase database.",
     }
     MysqlX {
         doc:       "MySQL X Protocol / document store (TCP 33060).",
@@ -11681,7 +11681,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["mysqlx"],
-        blurb:     "A MySQL X message (TCP 33060) â€” the document-store/X DevAPI protocol.",
+        blurb:     "A MySQL X message (TCP 33060)  —  the document-store/X DevAPI protocol.",
     }
     Riak {
         doc:       "Riak protocol-buffers client interface (TCP 8087).",
@@ -11691,7 +11691,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A Riak message (TCP 8087) â€” a read or write to a distributed key-value store.",
+        blurb:     "A Riak message (TCP 8087)  —  a read or write to a distributed key-value store.",
     }
     Nmea {
         doc:       "NMEA 0183 navigation sentences (TCP 10110).",
@@ -11701,7 +11701,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An NMEA 0183 sentence (TCP 10110) â€” GPS or marine instrument data.",
+        blurb:     "An NMEA 0183 sentence (TCP 10110)  —  GPS or marine instrument data.",
     }
     Adsb {
         doc:       "ADS-B Beast aircraft telemetry (TCP 30005).",
@@ -11711,7 +11711,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An ADS-B Beast frame (TCP 30005) â€” decoded aircraft transponder data.",
+        blurb:     "An ADS-B Beast frame (TCP 30005)  —  decoded aircraft transponder data.",
     }
     Aprs {
         doc:       "APRS-IS amateur-radio packet reporting (TCP 14580).",
@@ -11721,7 +11721,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An APRS-IS packet (TCP 14580) â€” an amateur-radio position or telemetry beacon.",
+        blurb:     "An APRS-IS packet (TCP 14580)  —  an amateur-radio position or telemetry beacon.",
     }
     Turn {
         doc:       "TURN relayed media (RFC 8656 ChannelData).",
@@ -11731,7 +11731,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "A TURN ChannelData message â€” call media being relayed because NAT blocked a direct path.",
+        blurb:     "A TURN ChannelData message  —  call media being relayed because NAT blocked a direct path.",
     }
     Decnet {
         doc:       "DECnet Phase IV (EtherType 0x6003).",
@@ -11741,7 +11741,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A DECnet Phase IV packet (EtherType 0x6003) â€” legacy DEC VAX/VMS networking.",
+        blurb:     "A DECnet Phase IV packet (EtherType 0x6003)  —  legacy DEC VAX/VMS networking.",
     }
     Vines {
         doc:       "Banyan VINES (EtherType 0x0BAD).",
@@ -11751,7 +11751,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A Banyan VINES packet (EtherType 0x0BAD) â€” a long-obsolete network OS.",
+        blurb:     "A Banyan VINES packet (EtherType 0x0BAD)  —  a long-obsolete network OS.",
     }
     Erspan {
         doc:       "ERSPAN mirrored traffic tunnelled in GRE.",
@@ -11761,7 +11761,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An ERSPAN header inside GRE â€” mirrored traffic tunnelled to a remote analyser.",
+        blurb:     "An ERSPAN header inside GRE  —  mirrored traffic tunnelled to a remote analyser.",
     }
     Ppp {
         doc:       "PPP inside a PPPoE session (LCP/IPCP/auth).",
@@ -11771,57 +11771,57 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A PPP frame â€” the link layer inside a PPPoE broadband session.",
+        blurb:     "A PPP frame  —  the link layer inside a PPPoE broadband session.",
     }
     Pap {
-        doc:       "PAP â€” PPP authentication with a cleartext password.",
+        doc:       "PAP  —  PPP authentication with a cleartext password.",
         display:   "PAP",
         color:     0xEF4444,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A PAP exchange â€” PPP authentication with the password in the clear.",
+        blurb:     "A PAP exchange  —  PPP authentication with the password in the clear.",
     }
     Chap {
-        doc:       "CHAP â€” PPP challenge-handshake authentication.",
+        doc:       "CHAP  —  PPP challenge-handshake authentication.",
         display:   "CHAP",
         color:     0x22C55E,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A CHAP exchange â€” PPP authentication by hashed challenge, no password sent.",
+        blurb:     "A CHAP exchange  —  PPP authentication by hashed challenge, no password sent.",
     }
     L2cap {
-        doc:       "L2CAP â€” the Bluetooth multiplexing layer.",
+        doc:       "L2CAP  —  the Bluetooth multiplexing layer.",
         display:   "L2CAP",
         color:     0x3B82F6,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An L2CAP frame â€” Bluetooth's channel multiplexing layer.",
+        blurb:     "An L2CAP frame  —  Bluetooth's channel multiplexing layer.",
     }
     Att {
-        doc:       "ATT â€” the Bluetooth attribute protocol (BLE data).",
+        doc:       "ATT  —  the Bluetooth attribute protocol (BLE data).",
         display:   "ATT",
         color:     0x60A5FA,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An ATT PDU â€” a Bluetooth LE device's data being read, written or notified.",
+        blurb:     "An ATT PDU  —  a Bluetooth LE device's data being read, written or notified.",
     }
     Smp {
-        doc:       "SMP â€” Bluetooth LE pairing and bonding.",
+        doc:       "SMP  —  Bluetooth LE pairing and bonding.",
         display:   "SMP",
         color:     0xA855F7,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An SMP PDU â€” two Bluetooth LE devices pairing and agreeing on security.",
+        blurb:     "An SMP PDU  —  two Bluetooth LE devices pairing and agreeing on security.",
     }
     NvmeOf {
         doc:       "NVMe over Fabrics on TCP (TCP 4420).",
@@ -11831,7 +11831,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["nvmeof", "nvme"],
-        blurb:     "An NVMe/TCP PDU (TCP 4420) â€” remote flash storage at near-local speed.",
+        blurb:     "An NVMe/TCP PDU (TCP 4420)  —  remote flash storage at near-local speed.",
     }
     Nbd {
         doc:       "Network Block Device (TCP 10809).",
@@ -11841,17 +11841,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An NBD message (TCP 10809) â€” a remote block device being read or written.",
+        blurb:     "An NBD message (TCP 10809)  —  a remote block device being read or written.",
     }
     Fcip {
-        doc:       "FCIP â€” Fibre Channel over IP (TCP 3225).",
+        doc:       "FCIP  —  Fibre Channel over IP (TCP 3225).",
         display:   "FCIP",
         color:     0x14B8A6,
         transport: Tcp,
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An FCIP frame (TCP 3225) â€” Fibre Channel storage tunnelled between sites.",
+        blurb:     "An FCIP frame (TCP 3225)  —  Fibre Channel storage tunnelled between sites.",
     }
     Aoe {
         doc:       "ATA over Ethernet (EtherType 0x88A2).",
@@ -11861,47 +11861,47 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An AoE frame (EtherType 0x88A2) â€” a disk exported directly onto the LAN.",
+        blurb:     "An AoE frame (EtherType 0x88A2)  —  a disk exported directly onto the LAN.",
     }
     Roce {
-        doc:       "RoCE â€” RDMA over Converged Ethernet (EtherType 0x8915).",
+        doc:       "RoCE  —  RDMA over Converged Ethernet (EtherType 0x8915).",
         display:   "RoCE",
         color:     0xFBBF24,
         transport: Other,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A RoCE frame (EtherType 0x8915) â€” RDMA writing straight into remote memory.",
+        blurb:     "A RoCE frame (EtherType 0x8915)  —  RDMA writing straight into remote memory.",
     }
     Xdmcp {
-        doc:       "XDMCP â€” X Display Manager Control Protocol (UDP 177).",
+        doc:       "XDMCP  —  X Display Manager Control Protocol (UDP 177).",
         display:   "XDMCP",
         color:     0x94A3B8,
         transport: Udp,
         rank:      3,
         status:    Declared,
         aliases:   [],
-        blurb:     "An XDMCP message (UDP 177) â€” an X terminal asking for a remote login session.",
+        blurb:     "An XDMCP message (UDP 177)  —  an X terminal asking for a remote login session.",
     }
     Iax2 {
-        doc:       "IAX2 â€” Asterisk inter-exchange VoIP trunking (UDP 4569).",
+        doc:       "IAX2  —  Asterisk inter-exchange VoIP trunking (UDP 4569).",
         display:   "IAX2",
         color:     0xF9A8D4,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   ["iax"],
-        blurb:     "An IAX2 message (UDP 4569) â€” Asterisk PBXs trunking calls over a single port.",
+        blurb:     "An IAX2 message (UDP 4569)  —  Asterisk PBXs trunking calls over a single port.",
     }
     Zrtp {
-        doc:       "ZRTP â€” in-band key agreement for encrypted voice.",
+        doc:       "ZRTP  —  in-band key agreement for encrypted voice.",
         display:   "ZRTP",
         color:     0x22C55E,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A ZRTP handshake â€” endpoints agreeing on an SRTP key inside the media stream.",
+        blurb:     "A ZRTP handshake  —  endpoints agreeing on an SRTP key inside the media stream.",
     }
     MssqlBrowser {
         doc:       "SQL Server Browser instance discovery (UDP 1434).",
@@ -11911,17 +11911,17 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sqlbrowser"],
-        blurb:     "A SQL Server Browser exchange (UDP 1434) â€” a client asking which port an instance uses.",
+        blurb:     "A SQL Server Browser exchange (UDP 1434)  —  a client asking which port an instance uses.",
     }
     H225Ras {
-        doc:       "H.225 RAS â€” H.323 gatekeeper registration/admission (UDP 1719).",
+        doc:       "H.225 RAS  —  H.323 gatekeeper registration/admission (UDP 1719).",
         display:   "H225RAS",
         color:     0x818CF8,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   ["h225ras"],
-        blurb:     "An H.225 RAS message (UDP 1719) â€” an H.323 endpoint registering with its gatekeeper.",
+        blurb:     "An H.225 RAS message (UDP 1719)  —  an H.323 endpoint registering with its gatekeeper.",
     }
     Q931 {
         doc:       "H.225 / Q.931 call signalling (TCP 1720).",
@@ -11931,27 +11931,27 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["h323", "q931"],
-        blurb:     "A Q.931 message (TCP 1720) â€” H.323 call signalling: setup, ringing, answer or release.",
+        blurb:     "A Q.931 message (TCP 1720)  —  H.323 call signalling: setup, ringing, answer or release.",
     }
     Bfcp {
-        doc:       "BFCP â€” conference floor control (TCP 3238).",
+        doc:       "BFCP  —  conference floor control (TCP 3238).",
         display:   "BFCP",
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A BFCP message (TCP 3238) â€” conference floor control deciding who may share.",
+        blurb:     "A BFCP message (TCP 3238)  —  conference floor control deciding who may share.",
     }
     Lisp {
-        doc:       "LISP â€” Locator/ID Separation Protocol (UDP 4341/4342).",
+        doc:       "LISP  —  Locator/ID Separation Protocol (UDP 4341/4342).",
         display:   "LISP",
         color:     0x2DD4BF,
         transport: Udp,
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "A LISP packet â€” overlay traffic separating an endpoint's identity from its location.",
+        blurb:     "A LISP packet  —  overlay traffic separating an endpoint's identity from its location.",
     }
     L2tpv3 {
         doc:       "L2TPv3 pseudowire carried on IP (protocol 115).",
@@ -11961,7 +11961,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An L2TPv3 pseudowire packet (IP protocol 115) â€” layer-2 frames tunnelled over IP.",
+        blurb:     "An L2TPv3 pseudowire packet (IP protocol 115)  —  layer-2 frames tunnelled over IP.",
     }
     VxlanGpe {
         doc:       "VXLAN-GPE overlay with a next-protocol field (UDP 4790).",
@@ -11971,7 +11971,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["vxlangpe"],
-        blurb:     "A VXLAN-GPE packet (UDP 4790) â€” an overlay that names the protocol it carries.",
+        blurb:     "A VXLAN-GPE packet (UDP 4790)  —  an overlay that names the protocol it carries.",
     }
     Pcp {
         doc:       "PCP / NAT-PMP port mapping (UDP 5351).",
@@ -11981,7 +11981,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["natpmp"],
-        blurb:     "A PCP / NAT-PMP message (UDP 5351) â€” a client asking the NAT to open an inbound port.",
+        blurb:     "A PCP / NAT-PMP message (UDP 5351)  —  a client asking the NAT to open an inbound port.",
     }
     Rwho {
         doc:       "rwho host broadcasts (UDP 513).",
@@ -11991,7 +11991,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   [],
-        blurb:     "An rwho broadcast (UDP 513) â€” a legacy BSD host announcing its users and load.",
+        blurb:     "An rwho broadcast (UDP 513)  —  a legacy BSD host announcing its users and load.",
     }
     DhcpFailover {
         doc:       "DHCP failover peer synchronisation (TCP 647).",
@@ -12001,7 +12001,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["dhcpfailover"],
-        blurb:     "A DHCP failover message (TCP 647) â€” two DHCP servers synchronising lease state.",
+        blurb:     "A DHCP failover message (TCP 647)  —  two DHCP servers synchronising lease state.",
     }
     Ngap {
         doc:       "5G control plane between a gNB and the AMF (SCTP PPID 60).",
@@ -12011,7 +12011,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ngap"],
-        blurb:     "A 5G core signalling message (NGAP) â€” the radio network and the AMF setting up, moving or releasing a phone's session.",
+        blurb:     "A 5G core signalling message (NGAP)  —  the radio network and the AMF setting up, moving or releasing a phone's session.",
     }
     S1ap {
         doc:       "LTE control plane between an eNB and the MME (SCTP PPID 18).",
@@ -12021,7 +12021,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["s1ap"],
-        blurb:     "An LTE core signalling message (S1AP) â€” the radio network and the MME attaching or handing over a phone.",
+        blurb:     "An LTE core signalling message (S1AP)  —  the radio network and the MME attaching or handing over a phone.",
     }
     Xnap {
         doc:       "gNB-to-gNB signalling across the Xn interface (SCTP PPID 61).",
@@ -12031,7 +12031,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["xnap"],
-        blurb:     "A 5G inter-cell signalling message (XnAP) â€” two base stations handing a phone between them directly.",
+        blurb:     "A 5G inter-cell signalling message (XnAP)  —  two base stations handing a phone between them directly.",
     }
     F1ap {
         doc:       "gNB-CU to gNB-DU signalling across the F1 interface (SCTP PPID 62).",
@@ -12041,7 +12041,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["f1ap"],
-        blurb:     "A 5G base-station-internal message (F1AP) â€” the central unit steering its distributed radio units.",
+        blurb:     "A 5G base-station-internal message (F1AP)  —  the central unit steering its distributed radio units.",
     }
     E1ap {
         doc:       "gNB-CU-CP to gNB-CU-UP signalling across the E1 interface (SCTP PPID 64).",
@@ -12051,7 +12051,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["e1ap"],
-        blurb:     "A 5G base-station-internal message (E1AP) â€” the control half of the central unit steering the user-plane half.",
+        blurb:     "A 5G base-station-internal message (E1AP)  —  the control half of the central unit steering the user-plane half.",
     }
     M3ua {
         doc:       "SS7 MTP3 signalling over SCTP (PPID 3, RFC 4666).",
@@ -12061,7 +12061,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["m3ua"],
-        blurb:     "An SS7-over-IP routing message (M3UA) â€” how call setup, SMS and roaming queries cross an operator's signalling network.",
+        blurb:     "An SS7-over-IP routing message (M3UA)  —  how call setup, SMS and roaming queries cross an operator's signalling network.",
     }
     M2ua {
         doc:       "SS7 MTP2 link state over SCTP (PPID 2, RFC 3331).",
@@ -12071,7 +12071,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["m2ua"],
-        blurb:     "An SS7-over-IP link message (M2UA) â€” a gateway presenting a remote SS7 link as if it were local.",
+        blurb:     "An SS7-over-IP link message (M2UA)  —  a gateway presenting a remote SS7 link as if it were local.",
     }
     M2pa {
         doc:       "SS7 MTP2 peer link over SCTP (PPID 5, RFC 4165).",
@@ -12081,7 +12081,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["m2pa"],
-        blurb:     "An SS7-over-IP peer link message (M2PA) â€” two signalling points talking directly over IP.",
+        blurb:     "An SS7-over-IP peer link message (M2PA)  —  two signalling points talking directly over IP.",
     }
     Sua {
         doc:       "SS7 SCCP user adaptation over SCTP (PPID 4, RFC 3868).",
@@ -12091,7 +12091,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sua"],
-        blurb:     "An SS7-over-IP message (SUA) â€” an application reaching a telephony network without an SS7 stack beneath it.",
+        blurb:     "An SS7-over-IP message (SUA)  —  an application reaching a telephony network without an SS7 stack beneath it.",
     }
     Gtpv2 {
         doc:       "LTE/5G session control on UDP 2123 (3GPP TS 29.274).",
@@ -12101,7 +12101,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["gtpv2", "gtpv2c"],
-        blurb:     "A mobile-core session message (GTPv2-C) â€” creating, moving or tearing down the data path for a phone.",
+        blurb:     "A mobile-core session message (GTPv2-C)  —  creating, moving or tearing down the data path for a phone.",
     }
     Rua {
         doc:       "RANAP user adaptation for femtocells over SCTP (PPID 19, 3GPP TS 25.468).",
@@ -12111,7 +12111,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["rua"],
-        blurb:     "A femtocell signalling message (RUA) â€” a home base station carrying 3G control traffic to its gateway.",
+        blurb:     "A femtocell signalling message (RUA)  —  a home base station carrying 3G control traffic to its gateway.",
     }
     Hnbap {
         doc:       "Home NodeB registration over SCTP (PPID 20, 3GPP TS 25.469).",
@@ -12121,7 +12121,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["hnbap"],
-        blurb:     "A femtocell registration message (HNBAP) â€” a home base station and its phones checking in with the operator.",
+        blurb:     "A femtocell registration message (HNBAP)  —  a home base station and its phones checking in with the operator.",
     }
     Nbap {
         doc:       "3G Iub interface between a NodeB and its RNC (SCTP PPID 25, 3GPP TS 25.433).",
@@ -12131,7 +12131,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nbap"],
-        blurb:     "A 3G radio-network message (NBAP) â€” a controller setting up cells and radio links on a NodeB.",
+        blurb:     "A 3G radio-network message (NBAP)  —  a controller setting up cells and radio links on a NodeB.",
     }
     SbcAp {
         doc:       "Public warning delivery to LTE cells (SCTP PPID 24, 3GPP TS 29.168).",
@@ -12141,7 +12141,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sbcap"],
-        blurb:     "A public-warning message (SBc-AP) â€” an emergency alert being pushed out to LTE cells.",
+        blurb:     "A public-warning message (SBc-AP)  —  an emergency alert being pushed out to LTE cells.",
     }
     Sabp {
         doc:       "Cell broadcast to 3G cells (SCTP PPID 31, 3GPP TS 25.419).",
@@ -12151,7 +12151,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sabp"],
-        blurb:     "A cell-broadcast message (SABP) â€” the 3G path for emergency and area-wide alerts.",
+        blurb:     "A cell-broadcast message (SABP)  —  the 3G path for emergency and area-wide alerts.",
     }
     LcsAp {
         doc:       "Location services over SCTP (PPID 29, 3GPP TS 29.171).",
@@ -12161,7 +12161,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["lcsap"],
-        blurb:     "A location-services message (LCS-AP) â€” the network working out where a phone physically is.",
+        blurb:     "A location-services message (LCS-AP)  —  the network working out where a phone physically is.",
     }
     M2ap {
         doc:       "eMBMS coordination between an eNB and the MCE (SCTP PPID 43, 3GPP TS 36.443).",
@@ -12171,7 +12171,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["m2ap"],
-        blurb:     "A mobile-broadcast message (M2AP) â€” setting up a multicast session shared by many phones at once.",
+        blurb:     "A mobile-broadcast message (M2AP)  —  setting up a multicast session shared by many phones at once.",
     }
     M3ap {
         doc:       "eMBMS coordination between the MCE and the MBMS gateway (SCTP PPID 44, 3GPP TS 36.444).",
@@ -12181,7 +12181,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["m3ap"],
-        blurb:     "A mobile-broadcast message (M3AP) â€” the core side of setting up a multicast session.",
+        blurb:     "A mobile-broadcast message (M3AP)  —  the core side of setting up a multicast session.",
     }
     Sccp {
         doc:       "SS7 transport and addressing, carried inside M3UA (ITU-T Q.713).",
@@ -12191,7 +12191,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["sccp"],
-        blurb:     "An SS7 addressing message (SCCP) â€” routing a query to a specific network element such as a subscriber database.",
+        blurb:     "An SS7 addressing message (SCCP)  —  routing a query to a specific network element such as a subscriber database.",
     }
     Tcap {
         doc:       "SS7 transaction layer carrying MAP operations (ITU-T Q.773).",
@@ -12201,7 +12201,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["tcap", "map"],
-        blurb:     "An SS7 transaction (TCAP) â€” the request/answer pairing that carries mobile operations like SMS routing and location lookups.",
+        blurb:     "An SS7 transaction (TCAP)  —  the request/answer pairing that carries mobile operations like SMS routing and location lookups.",
     }
     Isup {
         doc:       "SS7 telephone call setup and release, carried inside M3UA (ITU-T Q.763).",
@@ -12211,7 +12211,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["isup"],
-        blurb:     "A telephone call-control message (ISUP) â€” a call being set up, answered or hung up between switches.",
+        blurb:     "A telephone call-control message (ISUP)  —  a call being set up, answered or hung up between switches.",
     }
     Ranap {
         doc:       "3G Iu interface, carried inside SCCP at subsystem 142 (3GPP TS 25.413).",
@@ -12221,7 +12221,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["ranap"],
-        blurb:     "A 3G core signalling message (RANAP) â€” the radio network and the core setting up or releasing a phone's connection.",
+        blurb:     "A 3G core signalling message (RANAP)  —  the radio network and the core setting up or releasing a phone's connection.",
     }
     Rnsap {
         doc:       "3G Iur interface between two RNCs, SCCP subsystem 143 (3GPP TS 25.423).",
@@ -12231,7 +12231,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["rnsap"],
-        blurb:     "A 3G inter-controller message (RNSAP) â€” two radio controllers coordinating a phone that spans both.",
+        blurb:     "A 3G inter-controller message (RNSAP)  —  two radio controllers coordinating a phone that spans both.",
     }
     Bssap {
         doc:       "2G interface between a base station controller and the switch, SCCP subsystem 254/255 (3GPP TS 48.006).",
@@ -12241,7 +12241,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["bssap", "bssmap"],
-        blurb:     "A 2G signalling message (BSSAP) â€” a base station and the switch handling a call, or relaying a message to the phone.",
+        blurb:     "A 2G signalling message (BSSAP)  —  a base station and the switch handling a call, or relaying a message to the phone.",
     }
     Fins {
         doc:       "Omron PLC protocol on UDP/TCP 9600 (Omron W227).",
@@ -12251,7 +12251,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["fins", "omron"],
-        blurb:     "An Omron PLC message (FINS) â€” a factory controller being read, written or started and stopped.",
+        blurb:     "An Omron PLC message (FINS)  —  a factory controller being read, written or started and stopped.",
     }
     Slmp {
         doc:       "Mitsubishi PLC protocol on TCP/UDP 5007 (Mitsubishi SH-080956).",
@@ -12261,7 +12261,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["slmp", "melsec"],
-        blurb:     "A Mitsubishi PLC message (SLMP/MELSEC) â€” reading or writing a factory controller's memory, or resetting it.",
+        blurb:     "A Mitsubishi PLC message (SLMP/MELSEC)  —  reading or writing a factory controller's memory, or resetting it.",
     }
     Ads {
         doc:       "Beckhoff TwinCAT automation protocol on TCP 48898.",
@@ -12271,7 +12271,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["ads", "twincat", "ams"],
-        blurb:     "A Beckhoff TwinCAT message (ADS) â€” a PC-based controller being read, written or commanded.",
+        blurb:     "A Beckhoff TwinCAT message (ADS)  —  a PC-based controller being read, written or commanded.",
     }
     Hsms {
         doc:       "SECS-II transport for semiconductor equipment on TCP 5000 (SEMI E37).",
@@ -12281,7 +12281,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["hsms", "secs"],
-        blurb:     "A semiconductor fab message (HSMS/SECS) â€” a chip-making tool reporting events and alarms to its host.",
+        blurb:     "A semiconductor fab message (HSMS/SECS)  —  a chip-making tool reporting events and alarms to its host.",
     }
     Cip {
         doc:       "Common Industrial Protocol, carried inside EtherNet/IP (CIP Volume 1).",
@@ -12291,7 +12291,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["cip"],
-        blurb:     "An industrial-control command (CIP) â€” reading or writing a PLC tag, or starting and stopping the controller.",
+        blurb:     "An industrial-control command (CIP)  —  reading or writing a PLC tag, or starting and stopping the controller.",
     }
     Dlms {
         doc:       "Smart-meter reading and configuration on TCP 4059 (DLMS/COSEM Green Book).",
@@ -12301,7 +12301,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["dlms", "cosem"],
-        blurb:     "A utility-meter message (DLMS/COSEM) â€” an electricity, gas or water meter being read or reconfigured.",
+        blurb:     "A utility-meter message (DLMS/COSEM)  —  an electricity, gas or water meter being read or reconfigured.",
     }
     Fox {
         doc:       "Tridium Niagara building-automation protocol on TCP 1911.",
@@ -12311,7 +12311,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["fox", "niagara"],
-        blurb:     "A building-automation message (Niagara Fox) â€” the system that runs a building's heating, lighting and access control.",
+        blurb:     "A building-automation message (Niagara Fox)  —  the system that runs a building's heating, lighting and access control.",
     }
     SrtpGe {
         doc:       "GE Fanuc / Emerson PLC protocol on TCP 18245 (no published specification).",
@@ -12321,7 +12321,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["gesrtp", "srtp"],
-        blurb:     "A GE Fanuc PLC message (SRTP) â€” a factory controller being read, written or having its privilege level changed.",
+        blurb:     "A GE Fanuc PLC message (SRTP)  —  a factory controller being read, written or having its privilege level changed.",
     }
     Pccc {
         doc:       "Allen-Bradley PCCC command set, tunnelled inside CIP (1770-6.5.16).",
@@ -12331,7 +12331,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["pccc"],
-        blurb:     "A legacy Allen-Bradley PLC command (PCCC) â€” reading or writing an older controller through a modern EtherNet/IP connection.",
+        blurb:     "A legacy Allen-Bradley PLC command (PCCC)  —  reading or writing an older controller through a modern EtherNet/IP connection.",
     }
     Isis {
         doc:       "Link-state interior routing, carried directly on the link layer (ISO/IEC 10589).",
@@ -12341,7 +12341,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["isis"],
-        blurb:     "A carrier routing message (IS-IS) â€” routers telling each other the shape of the network.",
+        blurb:     "A carrier routing message (IS-IS)  —  routers telling each other the shape of the network.",
     }
     Msdp {
         doc:       "Multicast source announcements between routing domains, TCP 639 (RFC 3618).",
@@ -12351,7 +12351,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["msdp"],
-        blurb:     "A multicast interconnect message (MSDP) â€” one network telling another which multicast sources exist.",
+        blurb:     "A multicast interconnect message (MSDP)  —  one network telling another which multicast sources exist.",
     }
     Pgm {
         doc:       "Reliable multicast on IP protocol 113 (RFC 3208).",
@@ -12361,7 +12361,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["pgm"],
-        blurb:     "A reliable-multicast packet (PGM) â€” bulk data sent to many receivers at once, with lost pieces requested again.",
+        blurb:     "A reliable-multicast packet (PGM)  —  bulk data sent to many receivers at once, with lost pieces requested again.",
     }
     Srt {
         doc:       "Secure Reliable Transport for live video over UDP (draft-sharabayko-srt).",
@@ -12371,7 +12371,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["srt"],
-        blurb:     "A live-video transport packet (SRT) â€” broadcast contribution carried over the public internet with loss recovery.",
+        blurb:     "A live-video transport packet (SRT)  —  broadcast contribution carried over the public internet with loss recovery.",
     }
     MpegTs {
         doc:       "MPEG transport stream, 188-byte packets (ISO/IEC 13818-1).",
@@ -12381,7 +12381,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["mpegts", "ts"],
-        blurb:     "A broadcast video packet (MPEG-TS) â€” the container television and IPTV travel in.",
+        blurb:     "A broadcast video packet (MPEG-TS)  —  the container television and IPTV travel in.",
     }
     Thrift {
         doc:       "Apache Thrift RPC framing, on assorted service ports.",
@@ -12391,7 +12391,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["thrift"],
-        blurb:     "A service-to-service call (Thrift) â€” one system asking another to run a named method.",
+        blurb:     "A service-to-service call (Thrift)  —  one system asking another to run a named method.",
     }
     Pcep {
         doc:       "Path computation between a router and a controller, TCP 4189 (RFC 5440).",
@@ -12401,7 +12401,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["pcep"],
-        blurb:     "A traffic-engineering message (PCEP) â€” a router asking a controller which path to use across the network.",
+        blurb:     "A traffic-engineering message (PCEP)  —  a router asking a controller which path to use across the network.",
     }
     Dlsw {
         doc:       "IBM SNA and NetBIOS tunnelled over TCP 2065 (RFC 1795).",
@@ -12411,7 +12411,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["dlsw"],
-        blurb:     "A legacy mainframe message (DLSw) â€” SNA or NetBIOS traffic tunnelled across an IP network.",
+        blurb:     "A legacy mainframe message (DLSw)  —  SNA or NetBIOS traffic tunnelled across an IP network.",
     }
     Ceph {
         doc:       "Ceph messenger protocol on TCP 6789 and the 6800-7300 range.",
@@ -12421,7 +12421,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["ceph"],
-        blurb:     "A distributed-storage message (Ceph) â€” cluster daemons and clients moving objects and cluster state.",
+        blurb:     "A distributed-storage message (Ceph)  —  cluster daemons and clients moving objects and cluster state.",
     }
     Trill {
         doc:       "Routed Ethernet replacing spanning tree, EtherType 0x22F3 (RFC 6325).",
@@ -12431,7 +12431,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["trill"],
-        blurb:     "A routed Ethernet frame (TRILL) â€” a data-centre fabric using every link instead of switching some off.",
+        blurb:     "A routed Ethernet frame (TRILL)  —  a data-centre fabric using every link instead of switching some off.",
     }
     Cfm {
         doc:       "Carrier Ethernet fault management, EtherType 0x8902 (IEEE 802.1ag / Y.1731).",
@@ -12441,7 +12441,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["cfm", "oam", "y1731"],
-        blurb:     "A carrier Ethernet maintenance message (CFM) â€” proving a circuit is up and measuring its delay and loss.",
+        blurb:     "A carrier Ethernet maintenance message (CFM)  —  proving a circuit is up and measuring its delay and loss.",
     }
     Rpl {
         doc:       "Routing for low-power mesh networks, ICMPv6 type 155 (RFC 6550).",
@@ -12451,7 +12451,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["rpl"],
-        blurb:     "A sensor-network routing message (RPL) â€” battery-powered devices agreeing how to reach the network's root.",
+        blurb:     "A sensor-network routing message (RPL)  —  battery-powered devices agreeing how to reach the network's root.",
     }
     SixLowpan {
         doc:       "IPv6 compressed to fit an 802.15.4 radio frame (RFC 4944, RFC 6282).",
@@ -12461,7 +12461,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["6lowpan", "sixlowpan"],
-        blurb:     "A compressed IPv6 frame (6LoWPAN) â€” internet addressing squeezed into a low-power radio packet.",
+        blurb:     "A compressed IPv6 frame (6LoWPAN)  —  internet addressing squeezed into a low-power radio packet.",
     }
     Roughtime {
         doc:       "Cryptographically verifiable time on UDP 2002.",
@@ -12471,7 +12471,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["roughtime"],
-        blurb:     "A verifiable time message (Roughtime) â€” a clock check whose answer is signed, so a lying server can be proved wrong.",
+        blurb:     "A verifiable time message (Roughtime)  —  a clock check whose answer is signed, so a lying server can be proved wrong.",
     }
     Mle {
         doc:       "Thread mesh link establishment on UDP 19788.",
@@ -12481,7 +12481,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["mle", "thread"],
-        blurb:     "A Thread mesh message (MLE) â€” smart-home devices finding a parent and keeping the mesh together.",
+        blurb:     "A Thread mesh message (MLE)  —  smart-home devices finding a parent and keeping the mesh together.",
     }
     Olsr {
         doc:       "Optimised Link State Routing for wireless meshes, UDP 698 (RFC 3626).",
@@ -12491,7 +12491,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["olsr"],
-        blurb:     "A mesh routing message (OLSR) â€” rooftop radios in a community network agreeing how to reach each other.",
+        blurb:     "A mesh routing message (OLSR)  —  rooftop radios in a community network agreeing how to reach each other.",
     }
     Batman {
         doc:       "Mesh routing at the Ethernet layer, EtherType 0x4305.",
@@ -12501,7 +12501,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["batman", "batadv"],
-        blurb:     "A mesh routing frame (batman-adv) â€” a wireless mesh presenting itself as one flat Ethernet network.",
+        blurb:     "A mesh routing frame (batman-adv)  —  a wireless mesh presenting itself as one flat Ethernet network.",
     }
     Aodv {
         doc:       "On-demand mesh routing on UDP 654 (RFC 3561).",
@@ -12511,7 +12511,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["aodv"],
-        blurb:     "A mesh routing message (AODV) â€” a node searching for a route only at the moment it needs one.",
+        blurb:     "A mesh routing message (AODV)  —  a node searching for a route only at the moment it needs one.",
     }
     Nsh {
         doc:       "Service function chaining header, EtherType 0x894F (RFC 8300).",
@@ -12521,7 +12521,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nsh"],
-        blurb:     "A service-chaining header (NSH) â€” a packet carrying its own itinerary through a series of firewalls and inspection boxes.",
+        blurb:     "A service-chaining header (NSH)  —  a packet carrying its own itinerary through a series of firewalls and inspection boxes.",
     }
     Nhrp {
         doc:       "Next hop resolution for DMVPN, IP protocol 54 (RFC 2332).",
@@ -12531,7 +12531,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nhrp", "dmvpn"],
-        blurb:     "A VPN shortcut message (NHRP) â€” two branch offices learning each other's address so they can talk directly.",
+        blurb:     "A VPN shortcut message (NHRP)  —  two branch offices learning each other's address so they can talk directly.",
     }
     Ovsdb {
         doc:       "Open vSwitch management protocol on TCP 6640 (RFC 7047).",
@@ -12541,7 +12541,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["ovsdb"],
-        blurb:     "A virtual-switch management message (OVSDB) â€” the software switch inside a cloud host being read or reconfigured.",
+        blurb:     "A virtual-switch management message (OVSDB)  —  the software switch inside a cloud host being read or reconfigured.",
     }
     IbmMq {
         doc:       "IBM MQ channel protocol on TCP 1414.",
@@ -12551,7 +12551,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["ibmmq", "mq", "wmq"],
-        blurb:     "A message-queue operation (IBM MQ) â€” a back-office system handing over or collecting a transaction.",
+        blurb:     "A message-queue operation (IBM MQ)  —  a back-office system handing over or collecting a transaction.",
     }
     Lustre {
         doc:       "Lustre LNet parallel filesystem transport on TCP 988.",
@@ -12561,7 +12561,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["lustre", "lnet"],
-        blurb:     "A supercomputer storage message (Lustre) â€” a compute node reading or writing the shared parallel filesystem.",
+        blurb:     "A supercomputer storage message (Lustre)  —  a compute node reading or writing the shared parallel filesystem.",
     }
     SapAnnounce {
         doc:       "Session Announcement Protocol on UDP 9875 (RFC 2974).",
@@ -12571,7 +12571,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["sapannounce", "sdpannounce"],
-        blurb:     "A multicast session announcement (SAP) â€” a broadcast source advertising where its stream can be found.",
+        blurb:     "A multicast session announcement (SAP)  —  a broadcast source advertising where its stream can be found.",
     }
     Nfs {
         doc:       "Network File System and its companion services, over ONC RPC.",
@@ -12581,27 +12581,27 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nfs"],
-        blurb:     "A network filesystem operation (NFS) â€” a machine reading, writing or listing files that live on another machine.",
+        blurb:     "A network filesystem operation (NFS)  —  a machine reading, writing or listing files that live on another machine.",
     }
     NineP {
-        doc:       "9P â€” the Plan 9 filesystem protocol (TCP 564), now carrying WSL2 and QEMU file shares.",
+        doc:       "9P  —  the Plan 9 filesystem protocol (TCP 564), now carrying WSL2 and QEMU file shares.",
         display:   "9P",
         color:     0x38BDF8,
         transport: Tcp,
         rank:      3,
         status:    Dissected,
         aliases:   ["9p", "ninep", "plan9"],
-        blurb:     "A 9P file operation (TCP 564) â€” the Plan 9 filesystem protocol, which is how WSL2 and QEMU share directories with a guest.",
+        blurb:     "A 9P file operation (TCP 564)  —  the Plan 9 filesystem protocol, which is how WSL2 and QEMU share directories with a guest.",
     }
     Rx {
-        doc:       "RX â€” the RPC transport underneath AFS (UDP 7000-7009).",
+        doc:       "RX  —  the RPC transport underneath AFS (UDP 7000-7009).",
         display:   "RX/AFS",
         color:     0x0EA5A5,
         transport: Udp,
         rank:      3,
         status:    Declared,
         aliases:   ["rx", "afs"],
-        blurb:     "An AFS remote procedure call (RX, UDP 7000-7009) â€” the distributed filesystem many universities still run home directories on.",
+        blurb:     "An AFS remote procedure call (RX, UDP 7000-7009)  —  the distributed filesystem many universities still run home directories on.",
     }
     GlusterFs {
         doc:       "GlusterFS distributed filesystem, over ONC RPC on TCP 24007.",
@@ -12611,7 +12611,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["glusterfs", "gluster"],
-        blurb:     "A distributed-filesystem message (GlusterFS) â€” storage spread across several servers being read or written.",
+        blurb:     "A distributed-filesystem message (GlusterFS)  —  storage spread across several servers being read or written.",
     }
     Lwapp {
         doc:       "Cisco lightweight access point control on UDP 12222/12223 (RFC 5412).",
@@ -12621,7 +12621,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["lwapp"],
-        blurb:     "A wireless access-point control message (LWAPP) â€” a thin access point being steered by its central controller.",
+        blurb:     "A wireless access-point control message (LWAPP)  —  a thin access point being steered by its central controller.",
     }
     Twamp {
         doc:       "Two-way delay and loss measurement control on TCP 862 (RFC 5357).",
@@ -12631,7 +12631,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["twamp", "owamp"],
-        blurb:     "A network measurement message (TWAMP) â€” an operator setting up a test to prove a link meets its latency commitment.",
+        blurb:     "A network measurement message (TWAMP)  —  an operator setting up a test to prove a link meets its latency commitment.",
     }
     Slp {
         doc:       "Service Location Protocol on port 427 (RFC 2608).",
@@ -12641,7 +12641,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["slp"],
-        blurb:     "A service discovery message (SLP) â€” a machine asking which hosts on the network offer a service.",
+        blurb:     "A service discovery message (SLP)  —  a machine asking which hosts on the network offer a service.",
     }
     CoapTcp {
         doc:       "CoAP over TCP, a different framing from the UDP form (RFC 8323).",
@@ -12651,7 +12651,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["coaptcp"],
-        blurb:     "An IoT device message (CoAP over TCP) â€” a sensor or actuator being read or commanded over a reliable connection.",
+        blurb:     "An IoT device message (CoAP over TCP)  —  a sensor or actuator being read or commanded over a reliable connection.",
     }
     Utp {
         doc:       "BitTorrent's delay-based transport over UDP (BEP 29).",
@@ -12661,7 +12661,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["utp", "microtransport"],
-        blurb:     "A BitTorrent transfer (ÂµTP) â€” file sharing over a transport designed to get out of the way of other traffic.",
+        blurb:     "A BitTorrent transfer (ÂµTP)  —  file sharing over a transport designed to get out of the way of other traffic.",
     }
     Nflog {
         doc:       "Linux netfilter log stream (DLT_NFLOG).",
@@ -12671,7 +12671,7 @@ protocols! {
         rank:      1,
         status:    Dissected,
         aliases:   ["nflog"],
-        blurb:     "A firewall log entry (NFLOG) â€” a packet a Linux firewall rule matched, with the name of the rule that matched it.",
+        blurb:     "A firewall log entry (NFLOG)  —  a packet a Linux firewall rule matched, with the name of the rule that matched it.",
     }
     ZeroTier {
         doc:       "ZeroTier virtual network on UDP 9993.",
@@ -12681,7 +12681,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["zerotier", "zt"],
-        blurb:     "A mesh VPN packet (ZeroTier) â€” machines in different places behaving as though they share one network.",
+        blurb:     "A mesh VPN packet (ZeroTier)  —  machines in different places behaving as though they share one network.",
     }
     Nebula {
         doc:       "Nebula mesh VPN on UDP 4242.",
@@ -12691,7 +12691,7 @@ protocols! {
         rank:      3,
         status:    Dissected,
         aliases:   ["nebula"],
-        blurb:     "A mesh VPN packet (Nebula) â€” hosts finding each other through a lighthouse and then talking directly.",
+        blurb:     "A mesh VPN packet (Nebula)  —  hosts finding each other through a lighthouse and then talking directly.",
     }
     Bitcoin {
         doc:       "Bitcoin peer-to-peer protocol on TCP 8333 and the test networks.",
@@ -12701,7 +12701,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["bitcoin", "btc"],
-        blurb:     "A Bitcoin network message â€” nodes announcing, requesting and relaying transactions and blocks.",
+        blurb:     "A Bitcoin network message  —  nodes announcing, requesting and relaying transactions and blocks.",
     }
     MacControl {
         doc:       "Ethernet flow control, EtherType 0x8808 (IEEE 802.3 Annex 31B).",
@@ -12711,7 +12711,7 @@ protocols! {
         rank:      2,
         status:    Declared,
         aliases:   ["macctrl", "pause", "pfc"],
-        blurb:     "A flow-control frame (Ethernet PAUSE) â€” one end telling the other to stop sending because its buffers are filling.",
+        blurb:     "A flow-control frame (Ethernet PAUSE)  —  one end telling the other to stop sending because its buffers are filling.",
     }
     Wmbus {
         doc:       "Wireless M-Bus smart-meter radio frames (EN 13757-4), as forwarded by a concentrator onto TCP.",
@@ -12721,7 +12721,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["wmbus", "w-mbus"],
-        blurb:     "A wireless meter reading (wM-Bus) â€” water, gas, heat or electricity data collected over the air and forwarded by a gateway.",
+        blurb:     "A wireless meter reading (wM-Bus)  —  water, gas, heat or electricity data collected over the air and forwarded by a gateway.",
     }
     Lwm2m {
         doc:       "OMA Lightweight M2M over CoAP.",
@@ -25403,7 +25403,7 @@ mod tests {
     }
 
     /// A display name the lexer cannot produce as one word (`OPC UA`,
-    /// `EtherNet/IP`) is only filterable through an alias â€” so require one.
+    /// `EtherNet/IP`) is only filterable through an alias  —  so require one.
     #[test]
     fn aliases_cover_unlexable_display_names() {
         for p in Protocol::ALL {
@@ -25419,13 +25419,13 @@ mod tests {
         }
     }
 
-    /// Every filter token resolves to exactly one protocol â€” no token may be
+    /// Every filter token resolves to exactly one protocol  —  no token may be
     /// claimed by two rows, or a filter would silently match the wrong traffic.
     /// Strip `#[cfg(test)]` modules from a source file by matching braces.
     ///
     /// Splitting on the attribute instead would drop everything after the
     /// first test module, and several dissectors have production code below
-    /// theirs â€” that shortcut made this check report four false positives when
+    /// theirs  —  that shortcut made this check report four false positives when
     /// it was first written.
     fn production_code(text: &str) -> String {
         let mut out = String::new();
@@ -25463,20 +25463,20 @@ mod tests {
     ///
     /// A variant no dissector ever assigns is a protocol that exists in the
     /// filter, the colour table and the education browser but can never appear
-    /// in a capture â€” a promise the tool cannot keep. One was found this way:
+    /// in a capture  —  a promise the tool cannot keep. One was found this way:
     /// `Pccc` had a registry row and a lesson while CIP, which tunnels it, was
     /// still labelling those packets as its own.
     ///
     /// This used to demand that *every* protocol be produced, which 1941 rows
     /// failed, so it was `#[ignore]`d and stopped protecting anything. Marking
-    /// a row `Declared` is now the supported way to say "not wired yet" â€” the
-    /// user-facing surfaces skip those â€” and this check enforces the field in
+    /// a row `Declared` is now the supported way to say "not wired yet"  —  the
+    /// user-facing surfaces skip those  —  and this check enforces the field in
     /// both directions: a `Dissected` row nothing produces is a lie, and a
     /// `Declared` row that something *does* produce hides a working protocol
     /// from the filter and the Learn tab.
     ///
     /// The sources are read from disk rather than embedded, so the check needs
-    /// no list of files to keep in step â€” which is the same kind of drift it
+    /// no list of files to keep in step  —  which is the same kind of drift it
     /// exists to catch. Test modules are excluded deliberately: a variant only
     /// a test can produce is exactly what is being looked for.
     #[test]

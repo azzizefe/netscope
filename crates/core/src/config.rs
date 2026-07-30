@@ -56,6 +56,12 @@
 //! `general.profile` key in `config.toml`. [`Config::load_profile`] applies
 //! one explicitly, and [`Config::profiles`] lists what is available.
 
+// Only `shift_rotations` uses this, and that is `cfg(not(target_arch =
+// "wasm32"))` because the escalation module it returns types from is not built
+// for wasm32 — so on that target the import is unused and warns. The host
+// clippy job never sees it (it lints the host target only); the wasm32 build
+// does.
+#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 

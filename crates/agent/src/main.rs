@@ -20,6 +20,20 @@ fn main() -> anyhow::Result<()> {
         return handle_windows_service(action);
     }
 
+    // `--service` is a Windows SCM wrapper, but clap accepts the flag on every
+    // platform. Without this branch, `--service install` on Linux or macOS fell
+    // through to the line below and started a foreground agent: the command
+    // appeared to succeed, no service was installed, and the operator only
+    // found out when the host rebooted and nothing came back.
+    #[cfg(not(windows))]
+    if args.service.is_some() {
+        anyhow::bail!(
+            "--service is Windows-only (it drives the Windows Service Manager).\n  \
+             On Linux use the systemd unit and on macOS a launchd plist — see \
+             docs/ENTERPRISE_DEPLOYMENT.md."
+        );
+    }
+
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(service::run_agent(args))
 }

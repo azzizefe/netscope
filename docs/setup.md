@@ -46,8 +46,36 @@ sudo dnf install libpcap-devel   # Fedora
 sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev
 ```
 
+Live capture needs `CAP_NET_RAW`; grant it once instead of running everything as
+root:
+
+```bash
+sudo setcap cap_net_raw,cap_net_admin+eip ./target/release/netscope-tui
+```
+
+Blocking a host (`b` in the TUI) is **Windows-only** — there is no `nftables`/`pf`
+backend yet, so on Linux it reports that blocking is unavailable rather than
+silently doing nothing.
+
 ### macOS
-libpcap is built-in. Run with `sudo` for live capture. No additional setup needed.
+libpcap is built-in, so building needs nothing extra. **Live capture does**: the
+BPF devices are root-owned, so either run under `sudo`, or install Wireshark's
+ChmodBPF helper once so your user can read them:
+
+```bash
+sudo chmod +r /dev/bpf*        # until the next reboot
+```
+
+Two more macOS facts worth knowing before you file an issue:
+
+- Released binaries are built for **Apple Silicon only** (`aarch64-apple-darwin`).
+  On an Intel Mac, build from source.
+- Released binaries are **not signed or notarized**, so Gatekeeper blocks the
+  first launch. Right-click ▸ *Open*, or clear the quarantine attribute:
+  `xattr -dr com.apple.quarantine /Applications/netscope.app`.
+
+The desktop app cannot be `sudo`-launched the way the TUI can — use ChmodBPF for
+it, or it will start and find no interfaces.
 
 ## Build
 

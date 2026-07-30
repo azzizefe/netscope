@@ -363,29 +363,44 @@ impl StopTracker {
     }
 }
 
-/// Precision and hardware timestamping configuration (§5.2.4).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TimestampPrecision {
-    #[default]
-    Microsecond,
-    Nanosecond,
-    Hardware,
-}
-
 /// The underlying technology to use for live capturing.
+///
+/// Only [`CaptureBackend::Pcap`] is implemented. The kernel-bypass variants are
+/// declared because the roadmap plans them (§5.2.1–§5.2.2), and selecting one is
+/// a hard error — see [`CaptureEngine::start_live_multi`].
+///
+/// They used to be accepted: each had a loop that printed
+/// `"AF_XDP: Initializing eBPF redirect program…"` (or the PF_RING / DPDK /
+/// AF_PACKET equivalent) and then ran the ordinary libpcap loop. The capture
+/// worked, so nothing looked broken, while the operator had been told their
+/// traffic was going through a zero-copy path that does not exist — and any
+/// throughput number measured that way was a measurement of plain libpcap.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CaptureBackend {
-    /// Standard libpcap/Npcap capturing (default).
+    /// Standard libpcap/Npcap capturing — the only implemented backend.
     #[default]
     Pcap,
-    /// High-performance AF_PACKET socket with TPACKET_V3 ring buffer (Linux).
+    /// **Not implemented.** AF_PACKET socket with TPACKET_V3 ring buffer (Linux).
     AfPacket,
-    /// High-performance zero-copy AF_XDP socket (Linux only).
+    /// **Not implemented.** Zero-copy AF_XDP socket (Linux only).
     AfXdp,
-    /// High-performance PF_RING ring-buffer capture (Linux).
+    /// **Not implemented.** PF_RING ring-buffer capture (Linux).
     PfRing,
-    /// High-performance zero-copy DPDK PMD driver.
+    /// **Not implemented.** Zero-copy DPDK PMD driver.
     Dpdk,
+}
+
+impl CaptureBackend {
+    /// The name to show a user who asked for a backend that does not exist yet.
+    fn label(self) -> &'static str {
+        match self {
+            CaptureBackend::Pcap => "pcap",
+            CaptureBackend::AfPacket => "AF_PACKET",
+            CaptureBackend::AfXdp => "AF_XDP",
+            CaptureBackend::PfRing => "PF_RING",
+            CaptureBackend::Dpdk => "DPDK",
+        }
+    }
 }
 
 /// Everything configurable about a capture start, so new options don't keep
@@ -402,17 +417,15 @@ pub struct CaptureOptions {
     pub stop: StopConditions,
     /// Ring-buffer rotation for `output_path` (Wireshark `-b`).
     pub ring: Option<RingBufferOptions>,
-    /// Capture backend selection (standard pcap, AF_PACKET, AF_XDP, PF_RING, DPDK).
+    /// Capture backend selection. Only [`CaptureBackend::Pcap`] starts; the
+    /// others are refused with a "not implemented" error.
     pub backend: CaptureBackend,
-    /// Fanout group ID for multi-socket AF_PACKET / PF_RING load balancing (§5.2.1, §5.2.2).
-    pub fanout_group_id: Option<u16>,
-    /// Hardware timestamp mode (§5.2.4).
-    pub timestamp_precision: TimestampPrecision,
-    /// Pin capture threads and dissector workers to specific CPU cores (§5.2.5).
-    pub cpu_affinity: Option<Vec<usize>>,
-    /// Enable dynamic adaptive sampling under heavy CPU load (§5.2.6).
-    pub adaptive_sampling: bool,
 }
+// Removed alongside the fake backends: `fanout_group_id`, `timestamp_precision`,
+// `cpu_affinity` and `adaptive_sampling`. Nothing in the workspace ever read
+// them — not this module, not the TUI, not the desktop app — so setting one
+// configured nothing while reading like a tuning knob. They come back with the
+// code that honours them, not before.
 
 /// Capture engine built on the parallel pipeline (ROADMAP §2.1): each capture
 /// thread feeds raw frames into a lock-free ring, a rayon-backed dissector
@@ -510,6 +523,18 @@ impl CaptureEngine {
             anyhow::bail!("No capture interface specified.");
         }
 
+        // Refuse an unimplemented backend before opening a single handle. The
+        // alternative — capturing anyway on the pcap path — is what this code
+        // used to do, and it is worse than failing: the capture succeeds, so
+        // the operator has no reason to doubt the backend they asked for.
+        if opts.backend != CaptureBackend::Pcap {
+            anyhow::bail!(
+                "Capture backend {} is not implemented — only pcap/Npcap capture exists today.\n  \
+                 Leave `CaptureOptions::backend` at its default to capture.",
+                opts.backend.label()
+            );
+        }
+
         let running = self.running.clone();
         running.store(true, Ordering::SeqCst);
 
@@ -554,25 +579,11 @@ impl CaptureEngine {
             let run = running.clone();
             let trk = tracker.clone();
             let wtr = writer.take(); // only the first interface writes
-            let backend = opts.backend;
             let handle = thread::Builder::new()
                 .name(format!("capture:{iface}"))
-                .spawn(move || match backend {
-                    CaptureBackend::AfPacket => {
-                        af_packet_capture_loop(cap, &iface, producer, run, trk, wtr);
-                    }
-                    CaptureBackend::AfXdp => {
-                        af_xdp_capture_loop(cap, &iface, producer, run, trk, wtr);
-                    }
-                    CaptureBackend::PfRing => {
-                        pf_ring_capture_loop(cap, &iface, producer, run, trk, wtr);
-                    }
-                    CaptureBackend::Dpdk => {
-                        dpdk_capture_loop(cap, &iface, producer, run, trk, wtr);
-                    }
-                    CaptureBackend::Pcap => {
-                        capture_loop(cap, &iface, producer, run, trk, wtr);
-                    }
+                .spawn(move || {
+                    // Backend was checked above; pcap is the only way in here.
+                    capture_loop(cap, &iface, producer, run, trk, wtr);
                 })
                 .context("Failed to spawn capture thread")?;
             self.handles.push(handle);
@@ -936,82 +947,6 @@ impl Drop for CaptureEngine {
     fn drop(&mut self) {
         self.stop();
     }
-}
-
-/// High-performance zero-copy capture loop using Linux AF_PACKET sockets with TPACKET_V3 ring buffer (§5.2.1).
-fn af_packet_capture_loop(
-    cap: pcap::Capture<pcap::Active>,
-    iface: &str,
-    producer: Producer,
-    running: Arc<AtomicBool>,
-    tracker: Option<Arc<StopTracker>>,
-    writer: Option<RingWriter>,
-) {
-    println!(
-        "AF_PACKET: Initializing TPACKET_V3 kernel-bypass ring buffer on interface {}",
-        iface
-    );
-    capture_loop(cap, iface, producer, running, tracker, writer);
-}
-
-/// High-performance zero-copy capture loop using PF_RING (§5.2.2).
-fn pf_ring_capture_loop(
-    cap: pcap::Capture<pcap::Active>,
-    iface: &str,
-    producer: Producer,
-    running: Arc<AtomicBool>,
-    tracker: Option<Arc<StopTracker>>,
-    writer: Option<RingWriter>,
-) {
-    println!(
-        "PF_RING: Initializing ZC/DNA ring buffer driver on interface {}",
-        iface
-    );
-    capture_loop(cap, iface, producer, running, tracker, writer);
-}
-
-/// High-performance zero-copy capture loop using AF_XDP sockets.
-/// Conditionally targets Linux environments for maximum line-rate capture,
-/// and falls back gracefully to a standard libpcap loop with clear warnings
-/// on other operating systems.
-fn af_xdp_capture_loop(
-    cap: pcap::Capture<pcap::Active>,
-    iface: &str,
-    producer: Producer,
-    running: Arc<AtomicBool>,
-    tracker: Option<Arc<StopTracker>>,
-    writer: Option<RingWriter>,
-) {
-    #[cfg(target_os = "linux")]
-    {
-        println!("AF_XDP: Initializing eBPF redirect program and user-space ring buffer for zero-copy on {}", iface);
-        // Under Linux, we would bind an AF_XDP (XSK) socket.
-        // We run standard capture_loop as a zero-copy optimized fallback.
-        capture_loop(cap, iface, producer, running, tracker, writer);
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        eprintln!("Warning: AF_XDP high-performance capture backend is only natively supported on Linux. Falling back to standard pcap loop.");
-        capture_loop(cap, iface, producer, running, tracker, writer);
-    }
-}
-
-/// High-performance zero-copy capture loop using DPDK user-space PMD drivers.
-fn dpdk_capture_loop(
-    cap: pcap::Capture<pcap::Active>,
-    iface: &str,
-    producer: Producer,
-    running: Arc<AtomicBool>,
-    tracker: Option<Arc<StopTracker>>,
-    writer: Option<RingWriter>,
-) {
-    println!(
-        "DPDK PMD: Initializing user-space rx_burst poll ring for zero-copy on {}",
-        iface
-    );
-    // DPDK bypasses the kernel entirely by polling ring descriptors in user-space.
-    // Falls back to regular pcap capture loop.
-    capture_loop(cap, iface, producer, running, tracker, writer);
 }
 
 /// The live-capture wire loop: read packets until stopped, feed the

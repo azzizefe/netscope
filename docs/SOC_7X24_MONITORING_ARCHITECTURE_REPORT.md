@@ -14,8 +14,9 @@
 ### Değişmez Temel Tasarım Direktifleri
 1. **%100 Çevrimdışı, Sıfır-Jeton (Zero-Token), Sıfır-LLM Mimarisi**:
    Tüm telemetri çözümlemeleri, Suricata kural motoru, 7 günlük kayan pencere baseline anomali tespiti, deterministik risk puanlaması (0-100), olay örgüsü korelasyonu ve uyumluluk raporlaması **tamamen yerel Pure Rust** algoritmaları ile çalışır. Dış LLM API çağrısı yapılmaz, jeton (token) maliyeti oluşmaz ve sıfır ağ gecikmesi garantilenir.
-2. **Sıfır-Kopyalama (Zero-Copy) ve Yüksek Başarım (High-Throughput)**:
-   DPDK, eBPF/XDP ve ring buffer mimarisi ile enterprise hat hızında (wire-speed) paket işleme ve kilitlenme riski olmayan bellekte işleme yeteneği sağlandı.
+2. **Yüksek Başarım (High-Throughput)**:
+   Kilitsiz ring buffer üzerinden çok çekirdekli dissector hattı ile yüksek başarımlı, tahsis maliyeti düşük bellek içi işleme sağlandı.
+   ⚠️ **Düzeltme (2026-07-30):** Bu madde daha önce "DPDK, eBPF/XDP … ile hat hızında paket işleme **sağlandı**" diyordu. **Sağlanmadı.** Tek gerçek yakalama arka ucu libpcap/Npcap'tir; `CaptureBackend::{AfPacket, AfXdp, PfRing, Dpdk}` seçenekleri yalnızca birer ad olarak duruyordu ve seçildiklerinde "AF_XDP: Initializing eBPF redirect program…" gibi bir satır basıp sıradan pcap döngüsünü çalıştırıyorlardı. Artık seçilmeleri açık bir hata döndürüyor (`capture.rs`). Kernel bypass roadmap'te duruyor, üründe değil.
 3. **Eksiksiz Test Doğrulaması**:
    Bileşenler **2.272 adet otomatik test (unit, integration, doc test)** ile sıfır hata ve sıfır bellek sızıntısı (soak test) garantisiyle doğrulandı.
 
@@ -38,7 +39,7 @@ graph TD
 ### Faz 5 — Yüksek Başarımlı Paket Yakalama & Protokol Motoru
 
 #### 5.2 Yüksek Başarımlı Yakalama & İşleme ([`capture.rs`](../crates/core/src/capture.rs))
-- **Kernel Bypass & Donanım Hızlandırma (§5.2.1)**: DPDK, eBPF/XDP ve AF_PACKET ring buffer sürücülerini destekleyen soyutlama katmanı.
+- **Kernel Bypass & Donanım Hızlandırma (§5.2.1)**: ❌ **Uygulanmadı.** `CaptureBackend` enum'u DPDK / AF_XDP / PF_RING / AF_PACKET adlarını taşıyor ama arkalarında sürücü yok; seçilirlerse yakalama "not implemented" hatasıyla reddediliyor. Roadmap maddesi olarak duruyor.
 - **Sıfır-Kopyalama Bellek Mimarisi (§5.2.2)**: Cache miss oranını ve bellek tahsis maliyetlerini en aza indiren kilitsiz `RingBufferIngestionEngine`.
 - **Multi-Queue RSS Yük Dağıtımı (§5.2.3)**: 5-tuple hash hesaplaması ile ağ akışlarını multi-core CPU iş parçacığı kuyruklarına dağıtan `RssLoadBalancer`.
 - **Donanım Zaman Damgası & Düşen Paket Sayacı (§5.2.4, §5.2.5)**: Donanım seviyesinde nanosaniye senkronizasyonu ve paket düşme muhasebesi.
