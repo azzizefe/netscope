@@ -36,7 +36,7 @@
 | **Size** | ✅ ~8 MB TUI binary · ~7-10 MB desktop installer | ⚪ ~85 MB installer (Windows) |
 | **Interprets your capture** | ✅ Automatic security & privacy findings, JA3/JA4, per-site X-ray | ❌ Shows everything, interprets nothing |
 | **Acts on traffic** | ✅ Block a host live via a real OS firewall rule | ❌ Passive only, by design |
-| **Protocol coverage** | ⚪ **250 protocols** — broad coverage, but decode depth varies: some are fully parsed, others recognised and labelled | ✅ **~3000** — unmatched breadth and decode depth |
+| **Protocol coverage** | ⚪ **590 protocols** — broad coverage, but decode depth varies: some are fully parsed, others recognised and labelled | ✅ **~3000** — unmatched breadth and decode depth |
 | **TLS decryption** | ✅ TLS 1.3 + 1.2 AEAD (ECDHE, GCM & ChaCha20) via `SSLKEYLOGFILE` | ✅ Broader — also legacy CBC suites and QUIC |
 | **Deep analysis** | ⚪ Summaries, Follow Stream, protocol tree | ✅ Decode-as, VoIP playback, IO graphs, Lua/C plugins |
 | **Speed** | ✅ 100k+ pkt/s dissect throughput | ⚪ Can slow down on very large captures |
@@ -50,12 +50,17 @@ decryption or forensic depth, Wireshark is still the reference.
 
 ## Features
 
-- **🗂 250 protocols out of the box** — from everyday (DNS, HTTP/2, TLS, QUIC, SMB) to
-  industrial (Modbus, S7comm, PROFINET, EtherCAT, IEC 61850 GOOSE/SV, KNX, HART-IP),
-  automotive (SOME/IP, DoIP, XCP, AVTP), telecom (PFCP, GTP, Diameter, Megaco, Skinny),
-  healthcare/finance (DICOM, HL7, FIX) and cloud infra (Kafka, NATS, gRPC, ZeroMQ,
-  Elasticsearch). Protocols on dynamic ports — DTLS, DDS/RTPS, FIX, SPICE, BitTorrent
-  DHT — are recognised by their wire signature, not just a port number.
+- **🗂 590 protocols out of the box** — from everyday (DNS, HTTP/2, TLS, QUIC, SMB, RDP)
+  to industrial (Modbus, S7comm, PROFINET, EtherCAT, IEC 61850 GOOSE, DNP3, BACnet,
+  OPC UA), automotive (SOME/IP, DoIP, XCP, AVTP, CAN), telecom (PFCP, GTP, SIP, RTP),
+  healthcare/finance (DICOM, HL7, FIX) and infrastructure (gRPC, MQTT, AMQP, Redis,
+  MongoDB, PostgreSQL, Kerberos, WireGuard, BGP). Protocols on dynamic ports — DTLS,
+  FIX, BitTorrent DHT — are recognised by their wire signature, not just a port number.
+
+  > The registry declares a further ~1,900 protocol names that no dissector produces
+  > yet. They are marked `Declared` and deliberately kept out of the filter, the Learn
+  > tab and the protocol count, so nothing is listed that a capture cannot contain.
+  > Wiring one up is a good first contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **🧠 Human-readable summaries** — DNS domains, TLS SNI hostnames, HTTP paths. Not hex.
 - **🌐 Passive hostname resolution** — Watches DNS responses and shows `github.com:443` instead of a bare IP. No lookups of its own, zero added traffic.
 - **⛔ Block traffic, live** — See a connection you don't like? Select it and press `b`. netscope installs a real OS firewall rule to cut it off. Wireshark can't do that.
@@ -427,10 +432,10 @@ ip.addr == 1.2.3.4            # either endpoint is this IP
 ip.src == 10.0.0.5            # source only (also ip.dst)
 tcp.port == 443              # TCP on port 443 (also udp.port, port)
 frame.len > 1000             # packets larger than 1000 bytes (also len)
-dns                          # bare protocol name — any of the 250 supported protocols
+dns                          # bare protocol name — any of the 590 supported protocols
                              # (tcp, udp, http, tls, quic, dns, ssh, smb, rdp, sip, rtp,
-                             #  modbus, s7comm, profinet, ethercat, goose, knx, dicom, hl7,
-                             #  fix, someip, doip, pfcp, gtp, diameter, kafka, nats, dds…)
+                             #  modbus, s7comm, profinet, ethercat, goose, dnp3, bacnet,
+                             #  dicom, hl7, fix, someip, doip, pfcp, gtp, mqtt, grpc…)
 http && ip.dst == 8.8.8.8    # combine with &&, ||, !  (and / or / not)
 tcp && (tls || dns)          # parentheses group
 ip.dst contains "142.250"    # substring match on a field

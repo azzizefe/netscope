@@ -35,14 +35,39 @@ pub enum TransportClass {
     Other,
 }
 
+/// Whether a protocol row describes traffic netscope can actually recognise.
+///
+/// The registry grew far past the dispatch: rows were added for protocols
+/// nobody had written a dissector for, and because the filter list, the colour
+/// table and the education browser are all *derived* from this table, every one
+/// of those rows became a protocol the user could see, read a lesson about, and
+/// filter on — but never observe. This field is what keeps a row from making a
+/// promise the dispatch cannot keep.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Support {
+    /// Some dissector assigns this protocol to real packets.
+    Dissected,
+    /// Declared in the table, but nothing produces it yet. Wire a dissector,
+    /// then change this to `Dissected` — the test will tell you if you forget
+    /// either half.
+    Declared,
+}
+
 /// Whether the display-filter lexer can produce `token` as a single bare word.
 /// Names with spaces or slashes (`OPC UA`, `EtherNet/IP`) cannot be typed as a
 /// predicate, so those protocols reach the filter through an alias.
+/// This must agree with the display-filter lexer's identifier charset in
+/// `filter.rs`, or the registry promises a predicate the parser rejects. It
+/// listed `+` and omitted `:`, which the lexer does the other way round: five
+/// names (`TACACS+`, `SPHINCS+`, `S7Comm+ Detail`…) counted as typeable while
+/// `Filter::parse("tacacs+")` failed. Those protocols were still filterable
+/// through an alias, so nothing broke visibly — the alias requirement simply
+/// stopped being enforced for them.
 pub fn is_lexable_token(token: &str) -> bool {
     !token.is_empty()
         && token
             .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-' | '+'))
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-' | ':'))
 }
 
 /// Declares every protocol, generating the [`Protocol`] enum and the lookup
@@ -55,6 +80,7 @@ macro_rules! protocols {
             color:     $color:literal,
             transport: $transport:ident,
             rank:      $rank:literal,
+            status:    $status:ident,
             aliases:   [$($alias:literal),* $(,)?],
             blurb:     $blurb:literal,
         }
@@ -76,7 +102,40 @@ macro_rules! protocols {
         impl Protocol {
             /// Every registry protocol, in declaration order. Excludes the
             /// `Plugin` and `Unknown` variants, which carry data.
+            ///
+            /// **This includes protocols no dissector can produce.** Use it to
+            /// *resolve* a protocol (a lookup must answer for anything that can
+            /// reach it); use [`Protocol::PRODUCED`] to *list* protocols to a
+            /// user, or the list becomes a promise the tool cannot keep.
             pub const ALL: &'static [Protocol] = &[$(Protocol::$variant,)*];
+
+            /// The protocols a capture can actually contain — every row whose
+            /// [`Support`] is `Dissected`.
+            ///
+            /// This is the honest answer to "how many protocols does netscope
+            /// support?", and the only list that belongs in a UI.
+            pub fn produced() -> Vec<&'static Protocol> {
+                Protocol::ALL.iter().filter(|p| p.is_produced()).collect()
+            }
+
+            /// Whether some dissector assigns this protocol to real packets.
+            ///
+            /// Enforced against the source tree by
+            /// [`declared_status_matches_the_dispatch`] — the field cannot
+            /// drift away from what the code actually does.
+            pub fn support(&self) -> Support {
+                match self {
+                    $(Protocol::$variant => Support::$status,)*
+                    // A plugin only exists because it matched a packet, and
+                    // `Unknown` is produced by the fallback path itself.
+                    Protocol::Plugin(_) | Protocol::Unknown(_) => Support::Dissected,
+                }
+            }
+
+            /// Shorthand for `self.support() == Support::Dissected`.
+            pub fn is_produced(&self) -> bool {
+                self.support() == Support::Dissected
+            }
 
             /// The name shown in the protocol column, e.g. `"HTTP/2"`.
             pub fn display_name(&self) -> &'static str {
@@ -172,6 +231,29 @@ macro_rules! protocols {
             out.dedup();
             out
         }
+
+        /// The subset of [`filter_tokens`] that can actually match a packet.
+        ///
+        /// A token for a `Declared` protocol parses fine and then matches
+        /// nothing, which reads as "no such traffic here" when the truth is
+        /// "netscope cannot see this protocol at all". Keeping those tokens out
+        /// of the lexer lets them fall through to the substring search instead,
+        /// which at least looks at the packet.
+        pub fn produced_filter_tokens() -> Vec<String> {
+            let mut out = Vec::new();
+            $(
+                if matches!(Support::$status, Support::Dissected) {
+                    let display = $display.to_ascii_lowercase();
+                    if is_lexable_token(&display) {
+                        out.push(display);
+                    }
+                    $(out.push($alias.to_string());)*
+                }
+            )*
+            out.sort();
+            out.dedup();
+            out
+        }
     };
 }
 
@@ -182,6 +264,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nwp"],
         blurb:     "NWP Protocol",
     }
@@ -191,6 +274,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nxp_802154_sniffer"],
         blurb:     "NXP 802.15.4 Packet Sniffer Header",
     }
@@ -200,6 +284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["oampdu"],
         blurb:     "IEEE 802.3ah OAM PDU",
     }
@@ -209,6 +294,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["obex"],
         blurb:     "Object Exchange Protocol",
     }
@@ -218,6 +304,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ocfs2"],
         blurb:     "Oracle Cluster File System 2",
     }
@@ -227,6 +314,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ocp1"],
         blurb:     "Open Control Protocol v1",
     }
@@ -236,6 +324,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["oer"],
         blurb:     "OCTET Encoding Rules",
     }
@@ -245,6 +334,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["oicq"],
         blurb:     "QQ Instant Messenger Protocol",
     }
@@ -254,6 +344,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["oipf"],
         blurb:     "Open IPTV Forum Protocol",
     }
@@ -263,6 +354,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["omapi"],
         blurb:     "Object Management API Protocol",
     }
@@ -272,6 +364,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Dissected,
         aliases:   ["omron_fins"],
         blurb:     "Omron FINS PLC Protocol",
     }
@@ -281,6 +374,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["opa"],
         blurb:     "Omni-Path Architecture Protocol",
     }
@@ -290,6 +384,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["opa_fe"],
         blurb:     "Omni-Path Fabric Executive Protocol",
     }
@@ -299,6 +394,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["opa_mad"],
         blurb:     "Omni-Path Management Datagram",
     }
@@ -308,6 +404,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["opa_snc"],
         blurb:     "Omni-Path Subnet Controller Protocol",
     }
@@ -317,6 +414,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["openflow_v1"],
         blurb:     "OpenFlow Switch Protocol v1.0",
     }
@@ -326,6 +424,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["openflow_v4"],
         blurb:     "OpenFlow Switch Protocol v1.3",
     }
@@ -335,6 +434,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["openflow_v5"],
         blurb:     "OpenFlow Switch Protocol v1.4",
     }
@@ -344,6 +444,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["openflow_v6"],
         blurb:     "OpenFlow Switch Protocol v1.5",
     }
@@ -353,6 +454,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["openthread"],
         blurb:     "OpenThread Mesh Protocol",
     }
@@ -362,6 +464,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["opsi"],
         blurb:     "Open Payment System Interface",
     }
@@ -371,6 +474,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["optommp"],
         blurb:     "Opto 22 Memory-Mapped Protocol",
     }
@@ -380,6 +484,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["opus"],
         blurb:     "Opus Interactive Audio Codec Payload",
     }
@@ -389,6 +494,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["oran"],
         blurb:     "O-RAN Open FrontHaul C/U-Plane Protocol",
     }
@@ -398,6 +504,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["oscore"],
         blurb:     "Object Security for Constrained RESTful Environments",
     }
@@ -407,6 +514,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["osi"],
         blurb:     "OSI Network Layer Protocol",
     }
@@ -416,6 +524,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["osi_options"],
         blurb:     "OSI Options Header",
     }
@@ -425,6 +534,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ositp"],
         blurb:     "OSI Transport Protocol",
     }
@@ -434,6 +544,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["osmo_trx"],
         blurb:     "Osmocom TRX Control Protocol",
     }
@@ -443,6 +554,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ossp"],
         blurb:     "OSSP Protocol",
     }
@@ -452,6 +564,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["otp"],
         blurb:     "Open Tree Protocol",
     }
@@ -461,6 +574,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ouch"],
         blurb:     "Nasdaq OUCH Order Entry Protocol",
     }
@@ -470,6 +584,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["p_mul"],
         blurb:     "ACP142 Reliable Multicast Protocol",
     }
@@ -479,6 +594,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["p1"],
         blurb:     "X.400 Message Transfer Protocol (P1)",
     }
@@ -488,6 +604,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["p22"],
         blurb:     "X.400 Interpersonal Messaging Protocol (P22)",
     }
@@ -497,6 +614,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["p4rpc"],
         blurb:     "Perforce SCM RPC Protocol",
     }
@@ -506,6 +624,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["p7"],
         blurb:     "X.400 Message Store Protocol (P7)",
     }
@@ -515,6 +634,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["p772"],
         blurb:     "Military Messaging Protocol STANAG 4406 P772",
     }
@@ -524,6 +644,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pa_hbbackup"],
         blurb:     "Palo Alto Heartbeat Backup Protocol",
     }
@@ -533,6 +654,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["packetbb"],
         blurb:     "Generalized MANET Packet Format (RFC 5444)",
     }
@@ -542,6 +664,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["packetlogger"],
         blurb:     "Apple PacketLogger Bluetooth Capture Format",
     }
@@ -551,6 +674,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["paltalk"],
         blurb:     "Paltalk Instant Messenger Protocol",
     }
@@ -560,6 +684,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["pana"],
         blurb:     "Protocol for Carrying Authentication for Network Access",
     }
@@ -569,6 +694,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["pathport"],
         blurb:     "Pathway Connectivity Pathport DMX Protocol",
     }
@@ -578,6 +704,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pcap"],
         blurb:     "PCAP Link Layer Enclosure Header",
     }
@@ -587,6 +714,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pcap_pktdata"],
         blurb:     "PCAP Wrapped Packet Data Header",
     }
@@ -596,6 +724,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pcaplog"],
         blurb:     "PCAP Log Format",
     }
@@ -605,6 +734,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pcapng_block"],
         blurb:     "PCAPNG Custom Block Record",
     }
@@ -614,6 +744,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["pcli"],
         blurb:     "Packet Cable Lawful Intercept Protocol",
     }
@@ -623,6 +754,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["pcomtcp"],
         blurb:     "Unitronics PCOM Protocol over TCP",
     }
@@ -632,6 +764,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["pdc"],
         blurb:     "Personal Digital Cellular Protocol",
     }
@@ -641,6 +774,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pdu_transport"],
         blurb:     "Generic PDU Transport Header",
     }
@@ -650,6 +784,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["peap"],
         blurb:     "Protected Extensible Authentication Protocol",
     }
@@ -659,6 +794,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["peekremote"],
         blurb:     "WildPackets EtherPeek Remote Engine Protocol",
     }
@@ -668,6 +804,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["per"],
         blurb:     "Packed Encoding Rules Encapsulation",
     }
@@ -677,6 +814,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pflog"],
         blurb:     "OpenBSD Packet Filter Logging Header",
     }
@@ -686,6 +824,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["pingpongprotocol"],
         blurb:     "PingPong Test Protocol",
     }
@@ -695,6 +834,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pktc"],
         blurb:     "PacketCable Security Protocol",
     }
@@ -704,6 +844,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pktgen"],
         blurb:     "Linux Kernel Pktgen Packet Generator Header",
     }
@@ -713,6 +854,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pldm"],
         blurb:     "Platform Level Data Model Protocol",
     }
@@ -722,6 +864,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ple"],
         blurb:     "Private Line Emulation Protocol",
     }
@@ -731,6 +874,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["pmproxy"],
         blurb:     "Performance Co-Pilot PMProxy Protocol",
     }
@@ -740,6 +884,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["pnrp"],
         blurb:     "Peer Name Resolution Protocol",
     }
@@ -749,6 +894,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ppcap"],
         blurb:     "Parallel PCAP Encapsulation Header",
     }
@@ -758,6 +904,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ppi"],
         blurb:     "Packet Processing Information Header",
     }
@@ -767,6 +914,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ppi_antenna"],
         blurb:     "PPI Antenna Header Extension",
     }
@@ -776,6 +924,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ppi_geolocation_common"],
         blurb:     "PPI Geolocation Common Header Extension",
     }
@@ -785,6 +934,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ppi_gps"],
         blurb:     "PPI GPS Header Extension",
     }
@@ -794,6 +944,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ppi_sensor"],
         blurb:     "PPI Sensor Header Extension",
     }
@@ -803,6 +954,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ppi_vector"],
         blurb:     "PPI Vector Header Extension",
     }
@@ -812,6 +964,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["procmon"],
         blurb:     "Sysinternals Process Monitor Log Frame",
     }
@@ -821,6 +974,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["proxy"],
         blurb:     "HAProxy Proxy Protocol Header",
     }
@@ -830,6 +984,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["psn"],
         blurb:     "Packet Switched Network Protocol",
     }
@@ -839,6 +994,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ptpip"],
         blurb:     "Picture Transfer Protocol over IP",
     }
@@ -848,6 +1004,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["pulse"],
         blurb:     "PulseAudio Native Streaming Protocol",
     }
@@ -857,6 +1014,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pw_atm"],
         blurb:     "Pseudowire ATM Encapsulation",
     }
@@ -866,6 +1024,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pw_cesopsn"],
         blurb:     "Pseudowire Circuit Emulation Services over PSN",
     }
@@ -875,6 +1034,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pw_common"],
         blurb:     "Pseudowire Common Control Word",
     }
@@ -884,6 +1044,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pw_eth"],
         blurb:     "Pseudowire Ethernet Encapsulation",
     }
@@ -893,6 +1054,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pw_fr"],
         blurb:     "Pseudowire Frame Relay Encapsulation",
     }
@@ -902,6 +1064,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pw_hdlc"],
         blurb:     "Pseudowire HDLC Encapsulation",
     }
@@ -911,6 +1074,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pw_oam"],
         blurb:     "Pseudowire OAM Protocol",
     }
@@ -920,6 +1084,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pw_satop"],
         blurb:     "Pseudowire Structure-Agnostic TDM over Packet",
     }
@@ -929,6 +1094,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["q2931"],
         blurb:     "ITU-T Q.2931 B-ISDN Signaling Protocol",
     }
@@ -938,6 +1104,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["q708"],
         blurb:     "ITU-T Q.708 ISPC Numbering Protocol",
     }
@@ -947,6 +1114,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["q932"],
         blurb:     "ITU-T Q.932 Supplementary Services Protocol",
     }
@@ -956,6 +1124,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["q932_ros"],
         blurb:     "ITU-T Q.932 Remote Operations Service",
     }
@@ -965,6 +1134,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["q933"],
         blurb:     "ITU-T Q.933 Frame Relay Signaling Protocol",
     }
@@ -974,6 +1144,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["qcdiag"],
         blurb:     "Qualcomm Diagnostics Log Protocol",
     }
@@ -983,6 +1154,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["qcdiag_log"],
         blurb:     "Qualcomm Diagnostics Subsystem Log Frame",
     }
@@ -992,6 +1164,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["qllc"],
         blurb:     "Qualified Logical Link Control Protocol",
     }
@@ -1001,6 +1174,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["qnet6"],
         blurb:     "QNX Neutrino QNET v6 Protocol",
     }
@@ -1010,6 +1184,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["qsig"],
         blurb:     "QSIG ISDN Supplementary Signaling Protocol",
     }
@@ -1019,6 +1194,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["r09"],
         blurb:     "VDV R09.16 Telematics Protocol",
     }
@@ -1028,6 +1204,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["radius_packetcable"],
         blurb:     "RADIUS PacketCable Extension Protocol",
     }
@@ -1037,6 +1214,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["raknet"],
         blurb:     "RakNet Game Networking Engine Protocol",
     }
@@ -1046,6 +1224,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["raw"],
         blurb:     "Raw Unparsed Packet Payload",
     }
@@ -1055,6 +1234,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rc_v3"],
         blurb:     "RoboCup SSL Vision Protocol v3",
     }
@@ -1064,6 +1244,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdm"],
         blurb:     "ANSI E1.20 Remote Device Management Protocol",
     }
@@ -1073,6 +1254,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdm_etc"],
         blurb:     "ETC Vendor Extension for RDM",
     }
@@ -1082,6 +1264,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_cliprdr"],
         blurb:     "RDP Clipboard Virtual Channel Extension",
     }
@@ -1091,6 +1274,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_conctrl"],
         blurb:     "RDP Connection Control Channel",
     }
@@ -1100,6 +1284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_dr"],
         blurb:     "RDP File System & Device Redirection Channel",
     }
@@ -1109,6 +1294,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_drdynvc"],
         blurb:     "RDP Dynamic Virtual Channel Manager",
     }
@@ -1118,6 +1304,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_ear"],
         blurb:     "RDP Audio Output Redirection Channel",
     }
@@ -1127,6 +1314,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_ecam"],
         blurb:     "RDP Video Capture Device Redirection",
     }
@@ -1136,6 +1324,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_egfx"],
         blurb:     "RDP RemoteFX Graphics Pipeline Extension",
     }
@@ -1145,6 +1334,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_multitransport"],
         blurb:     "RDP Multi-Transport Bootstrap Channel",
     }
@@ -1154,6 +1344,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_rail"],
         blurb:     "RDP RemoteApp (RAIL) Virtual Channel",
     }
@@ -1163,6 +1354,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdp_snd"],
         blurb:     "RDP Sound Virtual Channel",
     }
@@ -1172,6 +1364,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdpudp"],
         blurb:     "RDP UDP Transport Protocol",
     }
@@ -1181,6 +1374,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["rdt"],
         blurb:     "RealNetworks RealData Transport Protocol",
     }
@@ -1190,6 +1384,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["realtek"],
         blurb:     "Realtek Switch Tag/Header Protocol",
     }
@@ -1199,6 +1394,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["redback"],
         blurb:     "Redback SmartEdge Circuit Protocol",
     }
@@ -1208,6 +1404,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mrcpv2"],
         blurb:     "Media Resource Control Protocol v2",
     }
@@ -1217,6 +1414,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mrd"],
         blurb:     "Multicast Reachability Detection Protocol",
     }
@@ -1226,6 +1424,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mrp_mmrp"],
         blurb:     "Multiple MAC Registration Protocol",
     }
@@ -1235,6 +1434,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mrp_msrp"],
         blurb:     "Multiple Stream Reservation Protocol",
     }
@@ -1244,6 +1444,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mrp_mvrp"],
         blurb:     "Multiple VLAN Registration Protocol",
     }
@@ -1253,6 +1454,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ms_do"],
         blurb:     "Microsoft Delivery Optimization Protocol",
     }
@@ -1262,6 +1464,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ms_mms"],
         blurb:     "Microsoft Media Server Protocol",
     }
@@ -1271,6 +1474,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ms_nns"],
         blurb:     "Microsoft Network News Protocol",
     }
@@ -1280,6 +1484,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["msgpack"],
         blurb:     "MessagePack Binary Data Serialization",
     }
@@ -1289,6 +1494,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["msn_messenger"],
         blurb:     "MSN Instant Messenger Protocol",
     }
@@ -1298,6 +1504,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["msnip"],
         blurb:     "Multicast Source Notification Protocol",
     }
@@ -1307,6 +1514,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["msnlb"],
         blurb:     "Microsoft Network Load Balancing Protocol",
     }
@@ -1316,6 +1524,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["msproxy"],
         blurb:     "Microsoft Proxy Client Protocol",
     }
@@ -1325,6 +1534,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["msrcp"],
         blurb:     "MSRCP Protocol",
     }
@@ -1334,6 +1544,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mstp"],
         blurb:     "BACnet Master-Slave/Token-Passing Protocol",
     }
@@ -1343,6 +1554,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mswsp"],
         blurb:     "Microsoft Windows Search Protocol",
     }
@@ -1352,6 +1564,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mtp3mg"],
         blurb:     "MTP3 Management Protocol",
     }
@@ -1361,6 +1574,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mudurl"],
         blurb:     "Manufacturer Usage Description URL Extension",
     }
@@ -1370,6 +1584,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["multipart"],
         blurb:     "MIME Multipart Encapsulation",
     }
@@ -1379,6 +1594,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mux27010"],
         blurb:     "3GPP TS 27.010 Multiplexer Protocol",
     }
@@ -1388,6 +1604,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["nano"],
         blurb:     "Nano Cryptocurrency P2P Protocol",
     }
@@ -1397,6 +1614,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["nasdaq_itch"],
         blurb:     "Nasdaq ITCH Financial Market Data Protocol",
     }
@@ -1406,6 +1624,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["nasdaq_soup"],
         blurb:     "Nasdaq SoupBinTCP Financial Messaging Protocol",
     }
@@ -1415,6 +1634,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["nat_pmp"],
         blurb:     "NAT Port Mapping Protocol",
     }
@@ -1424,6 +1644,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["navitrol"],
         blurb:     "Navitrol Protocol",
     }
@@ -1433,6 +1654,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["nb_rtpmux"],
         blurb:     "3GPP Nb Interface RTP Multiplexing",
     }
@@ -1442,6 +1664,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nbipx"],
         blurb:     "NetBIOS Encapsulation over IPX",
     }
@@ -1451,6 +1674,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["nbt"],
         blurb:     "NetBIOS Datagram Service Protocol",
     }
@@ -1460,6 +1684,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ncp_nmas"],
         blurb:     "Novell NCP NMAS Authentication Protocol",
     }
@@ -1469,6 +1694,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ncp_sss"],
         blurb:     "Novell NCP Secret Store Service Protocol",
     }
@@ -1478,6 +1704,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ncp2222"],
         blurb:     "Novell Core Protocol Command 2222",
     }
@@ -1487,6 +1714,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ncs"],
         blurb:     "Network Computing System Protocol",
     }
@@ -1496,6 +1724,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ncsi"],
         blurb:     "Network Controller Sideband Interface Protocol",
     }
@@ -1505,6 +1734,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Icmp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ndp"],
         blurb:     "IPv6 Neighbor Discovery Protocol",
     }
@@ -1514,6 +1744,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ndps"],
         blurb:     "Novell Distributed Print Services Protocol",
     }
@@ -1523,6 +1754,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["negoex"],
         blurb:     "Extended SPNEGO Negotiation Mechanism",
     }
@@ -1532,6 +1764,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["netanalyzer"],
         blurb:     "Hilscher netANALYZER Frame Header",
     }
@@ -1541,6 +1774,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["netbios"],
         blurb:     "Network Basic Input/Output System Protocol",
     }
@@ -1550,6 +1784,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["netdump"],
         blurb:     "Linux Kernel Netdump Protocol",
     }
@@ -1559,6 +1794,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["netgear_ensemble"],
         blurb:     "NETGEAR Ensemble Stacking Protocol",
     }
@@ -1568,6 +1804,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["netmon"],
         blurb:     "Microsoft Network Monitor Frame Header",
     }
@@ -1577,6 +1814,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["netperfmeter"],
         blurb:     "NetPerfMeter Performance Measurement Protocol",
     }
@@ -1586,6 +1824,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["netrom"],
         blurb:     "Amateur Radio NET/ROM Network Protocol",
     }
@@ -1595,6 +1834,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["netsync"],
         blurb:     "NetSync Network Synchronization Protocol",
     }
@@ -1604,6 +1844,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nettl"],
         blurb:     "HP NETTL Trace File Record Header",
     }
@@ -1613,6 +1854,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["newmail"],
         blurb:     "Microsoft NewMail Notification Protocol",
     }
@@ -1622,6 +1864,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nlsp"],
         blurb:     "Novell NetWare Link Services Protocol",
     }
@@ -1631,6 +1874,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nmea0183"],
         blurb:     "NMEA 0183 Marine Electronics Serial Protocol",
     }
@@ -1640,6 +1884,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nmf"],
         blurb:     ".NET Message Framing Protocol",
     }
@@ -1649,6 +1894,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["noe"],
         blurb:     "Alcatel-Lucent New Office Environment Protocol",
     }
@@ -1658,6 +1904,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nordic_ble"],
         blurb:     "Nordic Semiconductor BLE Sniffer Protocol",
     }
@@ -1667,6 +1914,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ns_ha"],
         blurb:     "Citrix NetScaler High Availability Protocol",
     }
@@ -1676,6 +1924,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ns_mep"],
         blurb:     "Citrix NetScaler Metric Exchange Protocol",
     }
@@ -1685,6 +1934,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ns_rpc"],
         blurb:     "Citrix NetScaler RPC Protocol",
     }
@@ -1694,6 +1944,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nsrp"],
         blurb:     "Juniper Netscreen Redundancy Protocol",
     }
@@ -1703,6 +1954,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nstrace"],
         blurb:     "Citrix NetScaler Packet Trace Header",
     }
@@ -1712,6 +1964,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nt_oui"],
         blurb:     "Nortel OUI Header Protocol",
     }
@@ -1721,6 +1974,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nt_tpcp"],
         blurb:     "Nortel Trunk Pack Control Protocol",
     }
@@ -1730,6 +1984,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ntlmssp"],
         blurb:     "NTLM Security Support Provider Protocol",
     }
@@ -1739,6 +1994,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["nts_ke"],
         blurb:     "Network Time Security Key Establishment",
     }
@@ -1748,6 +2004,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["null"],
         blurb:     "BSD Null/Loopback Link Layer Header",
     }
@@ -1757,6 +2014,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nvme_mi"],
         blurb:     "NVM Express Management Interface",
     }
@@ -1766,6 +2024,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nvme_mi_admin"],
         blurb:     "NVMe-MI Admin Command Protocol",
     }
@@ -1775,6 +2034,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nvme_mi_control"],
         blurb:     "NVMe-MI Control Message Protocol",
     }
@@ -1784,6 +2044,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nvme_mi_mi"],
         blurb:     "NVMe-MI Management Command Protocol",
     }
@@ -1793,6 +2054,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nvme_rdma"],
         blurb:     "NVMe over Fabrics RDMA Protocol",
     }
@@ -1802,6 +2064,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nwmtp"],
         blurb:     "NWMTP Protocol",
     }
@@ -1811,6 +2074,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "LTE Positioning Protocol Extensions",
     }
@@ -1820,6 +2084,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "LSC Protocol",
     }
@@ -1829,6 +2094,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Label Distribution Protocol Discovery",
     }
@@ -1838,6 +2104,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Link State Distribution Protocol",
     }
@@ -1847,6 +2114,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Licklider Transmission Protocol",
     }
@@ -1856,6 +2124,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Light Weight Multicast Protocol",
     }
@@ -1865,6 +2134,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lwm2mtlv"],
         blurb:     "Lightweight M2M TLV Payload",
     }
@@ -1874,6 +2144,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Lightweight Resolver Protocol",
     }
@@ -1883,6 +2154,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "M2UA Transport Protocol",
     }
@@ -1892,6 +2164,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Multicast Address Allocation Protocol",
     }
@@ -1901,6 +2174,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mactelnet"],
         blurb:     "MikroTik MAC-Telnet Protocol",
     }
@@ -1910,6 +2184,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Manolito P2P Protocol",
     }
@@ -1919,6 +2194,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["marker"],
         blurb:     "LACP/LAMP Marker Protocol",
     }
@@ -1928,6 +2204,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mausb"],
         blurb:     "Media Agnostic USB Protocol",
     }
@@ -1937,6 +2214,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Mobile Broadband Interface Model",
     }
@@ -1946,6 +2224,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mbtcp"],
         blurb:     "Modbus TCP Frame Encapsulation",
     }
@@ -1955,6 +2234,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mc_nmf"],
         blurb:     ".NET Message Framing Protocol",
     }
@@ -1964,6 +2244,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Management Component Transport Protocol",
     }
@@ -1973,6 +2254,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mctp_control"],
         blurb:     "MCTP Control Protocol",
     }
@@ -1982,6 +2264,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mctp_smbus"],
         blurb:     "MCTP over SMBus Binding",
     }
@@ -1991,6 +2274,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Multi-Drop Bus Vending Protocol",
     }
@@ -2000,6 +2284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Multicast Dissemination Protocol",
     }
@@ -2009,6 +2294,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mdshdr"],
         blurb:     "Cisco MDS Header Protocol",
     }
@@ -2018,6 +2304,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["media"],
         blurb:     "Generic Media Stream Data",
     }
@@ -2027,6 +2314,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["media_type"],
         blurb:     "MIME Media Type Payload",
     }
@@ -2036,6 +2324,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mesh"],
         blurb:     "IEEE 802.11s Wireless Mesh Networking",
     }
@@ -2045,6 +2334,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["messageanalyzer"],
         blurb:     "Microsoft Message Analyzer Header",
     }
@@ -2054,6 +2344,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["meta"],
         blurb:     "Generic Metadata Container Header",
     }
@@ -2063,6 +2354,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["metamako"],
         blurb:     "Metamako Switch Trailer Protocol",
     }
@@ -2072,6 +2364,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Musical Instrument Digital Interface",
     }
@@ -2081,6 +2374,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["midi_sysex_digitech"],
         blurb:     "MIDI System Exclusive DigiTech Format",
     }
@@ -2090,6 +2384,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "IEEE 802.21 Media Independent Handover",
     }
@@ -2099,6 +2394,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Multimedia Internet KEYing Protocol",
     }
@@ -2108,6 +2404,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mime_encap"],
         blurb:     "MIME Encapsulated Payload Protocol",
     }
@@ -2117,6 +2414,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "MiNT Mesh Network Protocol",
     }
@@ -2126,6 +2424,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Multicast Uncompressed Interactive Video",
     }
@@ -2135,6 +2434,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["mip"],
         blurb:     "Mobile IP Network Protocol",
     }
@@ -2144,6 +2444,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["miwi_p2pstar"],
         blurb:     "Microchip MiWi P2P and Star Protocol",
     }
@@ -2153,6 +2454,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["mmse"],
         blurb:     "Multimedia Messaging Service Encapsulation",
     }
@@ -2162,6 +2464,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "MikroTik Neighbor Discovery Protocol",
     }
@@ -2171,6 +2474,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mojito"],
         blurb:     "LimeWire Mojito DHT Protocol",
     }
@@ -2180,6 +2484,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Nasdaq MoldUDP Multicast Protocol",
     }
@@ -2189,6 +2494,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Nasdaq MoldUDP64 Multicast Protocol",
     }
@@ -2198,6 +2504,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["monero"],
         blurb:     "Monero Cryptocurrency P2P Protocol",
     }
@@ -2207,6 +2514,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mq_base"],
         blurb:     "MQ Base Message Header",
     }
@@ -2216,6 +2524,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["mq_pcf"],
         blurb:     "MQ Programmable Command Formats",
     }
@@ -2225,6 +2534,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["iwarp_mpa"],
         blurb:     "iWARP Marker PDU Aligned Framing",
     }
@@ -2234,6 +2544,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ixiatrailer"],
         blurb:     "Ixia Packet Trailer Protocol",
     }
@@ -2243,6 +2554,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ixveriwave"],
         blurb:     "Ixia VeriWave Test Protocol",
     }
@@ -2252,6 +2564,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Java Debug Wire Protocol",
     }
@@ -2261,6 +2574,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["jmirror"],
         blurb:     "Juniper Packet Mirroring Protocol",
     }
@@ -2270,6 +2584,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["jpeg"],
         blurb:     "JPEG Image Stream Payload",
     }
@@ -2279,6 +2594,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "JavaScript Object Notation Data",
     }
@@ -2288,6 +2604,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["json_3gpp"],
         blurb:     "3GPP JSON Data Protocol",
     }
@@ -2297,6 +2614,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["juniper"],
         blurb:     "Juniper Networks Packet Header",
     }
@@ -2306,6 +2624,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "JXTA P2P Networking Protocol",
     }
@@ -2315,6 +2634,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["k12"],
         blurb:     "Tektronix K12 Text Capture Format",
     }
@@ -2324,6 +2644,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["kadm5"],
         blurb:     "Kerberos Administration Protocol v5",
     }
@@ -2333,6 +2654,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "KDP Protocol",
     }
@@ -2342,6 +2664,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "KDSP Protocol",
     }
@@ -2351,6 +2674,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["kerberos4"],
         blurb:     "Kerberos Authentication Protocol v4",
     }
@@ -2360,6 +2684,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["kingfisher"],
         blurb:     "Kingfisher SCADA Protocol",
     }
@@ -2369,6 +2694,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Kerberized Internet Negotiation of Keys",
     }
@@ -2378,6 +2704,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Kismet Wireless Monitoring Protocol",
     }
@@ -2387,6 +2714,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["knet"],
         blurb:     "Kronos KNET Communications Protocol",
     }
@@ -2396,6 +2724,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["knxip_decrypt"],
         blurb:     "KNX/IP Secure Decrypted Frame",
     }
@@ -2405,6 +2734,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["kpm_v2"],
         blurb:     "O-RAN E2 KPM Service Model v2",
     }
@@ -2414,6 +2744,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "KT Protocol",
     }
@@ -2423,6 +2754,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["l1_events"],
         blurb:     "Physical Layer L1 Event Logging",
     }
@@ -2432,6 +2764,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Candela LANforge Traffic Protocol",
     }
@@ -2441,6 +2774,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Link Access Procedure Balanced",
     }
@@ -2450,6 +2784,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lapbether"],
         blurb:     "LAPB Encapsulation over Ethernet",
     }
@@ -2459,6 +2794,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Link Access Procedure on D-Channel",
     }
@@ -2468,6 +2804,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Link Access Procedure on Mobile D-Channel",
     }
@@ -2477,6 +2814,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "LapLink File Transfer Protocol",
     }
@@ -2486,6 +2824,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "LAPSAT Satellite Link Protocol",
     }
@@ -2495,6 +2834,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbm"],
         blurb:     "29West Ultra Messaging LBM",
     }
@@ -2504,6 +2844,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbmc"],
         blurb:     "29West Ultra Messaging LBMC",
     }
@@ -2513,6 +2854,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbmpdm"],
         blurb:     "29West Ultra Messaging LBMPDM Payload",
     }
@@ -2522,6 +2864,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbmpdmtcp"],
         blurb:     "29West Ultra Messaging LBMPDM TCP Payload",
     }
@@ -2531,6 +2874,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbmr"],
         blurb:     "29West Ultra Messaging LBMR Router",
     }
@@ -2540,6 +2884,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbmsrs"],
         blurb:     "29West Ultra Messaging State Store",
     }
@@ -2549,6 +2894,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbtrm"],
         blurb:     "29West Ultra Messaging Reliable Multicast",
     }
@@ -2558,6 +2904,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbtru"],
         blurb:     "29West Ultra Messaging Reliable Unicast",
     }
@@ -2567,6 +2914,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lbttcp"],
         blurb:     "29West Ultra Messaging Unicast TCP",
     }
@@ -2576,6 +2924,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lda_neo_trailer"],
         blurb:     "LDA NEO Timestamp Trailer",
     }
@@ -2585,6 +2934,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "LDSS Protocol",
     }
@@ -2594,6 +2944,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lg8979"],
         blurb:     "Landis & Gyr 8979 SCADA Protocol",
     }
@@ -2603,6 +2954,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lge_monitor"],
         blurb:     "LGE Monitor Protocol",
     }
@@ -2612,6 +2964,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["link16"],
         blurb:     "Link 16 Tactical Data Information Exchange",
     }
@@ -2621,6 +2974,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["linx"],
         blurb:     "Enea LINX IPC Protocol",
     }
@@ -2630,6 +2984,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lisp_data"],
         blurb:     "LISP Data Encapsulated Frame",
     }
@@ -2639,6 +2994,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["lisp_tcp"],
         blurb:     "LISP Control Message over TCP",
     }
@@ -2648,6 +3004,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lithionics"],
         blurb:     "Lithionics Battery Management System",
     }
@@ -2657,6 +3014,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["livewire"],
         blurb:     "Axia Livewire Audio-over-IP Protocol",
     }
@@ -2666,6 +3024,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "LIX2 Protocol",
     }
@@ -2675,6 +3034,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["llc"],
         blurb:     "IEEE 802.2 Logical Link Control",
     }
@@ -2684,6 +3044,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["llc_v1"],
         blurb:     "Logical Link Control Version 1",
     }
@@ -2693,6 +3054,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Low Level Reader Protocol",
     }
@@ -2702,6 +3064,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Low Level Signaling Protocol",
     }
@@ -2711,6 +3074,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lls_slt"],
         blurb:     "LLS Service Layer Table",
     }
@@ -2720,6 +3084,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["llt"],
         blurb:     "Veritas Low Latency Transport",
     }
@@ -2729,6 +3094,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Link Layer Topology Discovery",
     }
@@ -2738,6 +3104,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Local Management Interface Protocol",
     }
@@ -2747,6 +3114,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Link Management Protocol",
     }
@@ -2756,6 +3124,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "LNPDQP Protocol",
     }
@@ -2765,6 +3134,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["locamation_im"],
         blurb:     "Locamation Interface Module Protocol",
     }
@@ -2774,6 +3144,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["logcat"],
         blurb:     "Android Logcat Binary Log Frame",
     }
@@ -2783,6 +3154,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["logcat_text"],
         blurb:     "Android Logcat Text Log Frame",
     }
@@ -2792,6 +3164,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lon"],
         blurb:     "Echelon LonWorks LonTalk Protocol",
     }
@@ -2801,6 +3174,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["loop"],
         blurb:     "Local Loopback Interface Frame",
     }
@@ -2810,6 +3184,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["loratap"],
         blurb:     "LoRa TAP Header Protocol",
     }
@@ -2819,6 +3194,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lpp"],
         blurb:     "3GPP LTE Positioning Protocol",
     }
@@ -2828,6 +3204,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "LTE Positioning Protocol Annex",
     }
@@ -2837,6 +3214,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Inter-Domain Routing Protocol",
     }
@@ -2846,6 +3224,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "IGMP Authentication Protocol",
     }
@@ -2855,6 +3234,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Identifier-Locator Network Protocol",
     }
@@ -2864,6 +3244,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Internal Location Protocol",
     }
@@ -2873,6 +3254,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Internet Message Format",
     }
@@ -2882,6 +3264,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["indigocare_icall"],
         blurb:     "IndigoCare iCALL Protocol",
     }
@@ -2891,6 +3274,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["indigocare_netrix"],
         blurb:     "IndigoCare Netrix Protocol",
     }
@@ -2900,6 +3284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["infiniband"],
         blurb:     "InfiniBand Architecture Link Protocol",
     }
@@ -2909,6 +3294,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["infiniband_sdp"],
         blurb:     "InfiniBand Sockets Direct Protocol",
     }
@@ -2918,6 +3304,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Interlink Protocol",
     }
@@ -2927,6 +3314,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "International Airline Reservations System Protocol",
     }
@@ -2936,6 +3324,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "IP Device Control Protocol",
     }
@@ -2945,6 +3334,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "IP Detail Record Protocol",
     }
@@ -2954,6 +3344,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "iperf Network Testing Protocol",
     }
@@ -2963,6 +3354,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "iperf3 Bandwidth Measurement Protocol",
     }
@@ -2972,6 +3364,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "IP over Fibre Channel Protocol",
     }
@@ -2981,6 +3374,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Solaris IPNET Packet Header",
     }
@@ -2990,6 +3384,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ipoib"],
         blurb:     "IP over InfiniBand Protocol",
     }
@@ -2999,6 +3394,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "IPOS Protocol",
     }
@@ -3008,6 +3404,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ippusb"],
         blurb:     "Internet Printing Protocol over USB",
     }
@@ -3017,6 +3414,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ipsec_tcp"],
         blurb:     "IPsec Encapsulation over TCP",
     }
@@ -3026,6 +3424,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ipsec_udp"],
         blurb:     "IPsec Encapsulation over UDP",
     }
@@ -3035,6 +3434,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ipsi_ctl"],
         blurb:     "IPSI Control Protocol",
     }
@@ -3044,6 +3444,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ipv6"],
         blurb:     "Internet Protocol Version 6 Header",
     }
@@ -3053,6 +3454,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ipvs_syncd"],
         blurb:     "IP Virtual Server Connection Sync Protocol",
     }
@@ -3062,6 +3464,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ipxwan"],
         blurb:     "IPX Wide Area Network Protocol",
     }
@@ -3071,6 +3474,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Intel Ethernet RDMA Protocol",
     }
@@ -3080,6 +3484,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Integrated Services Digital Network Protocol",
     }
@@ -3089,6 +3494,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["isdn_sup"],
         blurb:     "ISDN Supplementary Services Protocol",
     }
@@ -3098,6 +3504,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Intelligent System Interface Protocol",
     }
@@ -3107,6 +3514,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["isis_clv"],
         blurb:     "IS-IS Code-Length-Value Data",
     }
@@ -3116,6 +3524,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["isis_hello"],
         blurb:     "IS-IS Hello PDU",
     }
@@ -3125,6 +3534,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["isis_lsp"],
         blurb:     "IS-IS Link State PDU",
     }
@@ -3134,6 +3544,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["isis_snp"],
         blurb:     "IS-IS Sequence Numbers PDU",
     }
@@ -3143,6 +3554,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["isl"],
         blurb:     "Cisco Inter-Switch Link Protocol",
     }
@@ -3152,6 +3564,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ISMA Encryption Protocol",
     }
@@ -3161,6 +3574,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Inter-Switch Message Protocol",
     }
@@ -3170,6 +3584,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["iso10681"],
         blurb:     "ISO 10681 Communication on FlexRay",
     }
@@ -3179,6 +3594,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["iso14443"],
         blurb:     "ISO 14443 RFID Contactless Smart Card",
     }
@@ -3188,6 +3604,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["iso7816"],
         blurb:     "ISO 7816 Contact Smart Card Protocol",
     }
@@ -3197,6 +3614,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["iso8583"],
         blurb:     "ISO 8583 Financial Transaction Card Originated Messages",
     }
@@ -3206,6 +3624,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ISO 11783 Agricultural Tractor & Machinery Bus",
     }
@@ -3215,6 +3634,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["isobus_vt"],
         blurb:     "ISOBUS Virtual Terminal Messages",
     }
@@ -3224,6 +3644,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Internal Time Division Multiplexing Protocol",
     }
@@ -3233,6 +3654,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["its"],
         blurb:     "ETSI Intelligent Transport Systems",
     }
@@ -3242,6 +3664,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ISDN Q.921 User Adaptation Layer",
     }
@@ -3251,6 +3674,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Iu User Plane Protocol",
     }
@@ -3260,6 +3684,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["iwarp_ddp_rdmap"],
         blurb:     "iWARP Direct Data Placement and Remote Direct Memory Access",
     }
@@ -3269,6 +3694,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Gigabit Media Header Protocol",
     }
@@ -3278,6 +3704,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["gmr1_bcch"],
         blurb:     "GEO-Mobile Radio GMR-1 BCCH Channel",
     }
@@ -3287,6 +3714,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["gmr1_common"],
         blurb:     "GEO-Mobile Radio GMR-1 Common Protocol",
     }
@@ -3296,6 +3724,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["gmr1_dtap"],
         blurb:     "GEO-Mobile Radio GMR-1 DTAP Protocol",
     }
@@ -3305,6 +3734,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["gmr1_rach"],
         blurb:     "GEO-Mobile Radio GMR-1 RACH Channel",
     }
@@ -3314,6 +3744,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["gmr1_rr"],
         blurb:     "GEO-Mobile Radio GMR-1 Radio Resource",
     }
@@ -3323,6 +3754,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "GARP Multicast Registration Protocol",
     }
@@ -3332,6 +3764,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "GPEF Protocol",
     }
@@ -3341,6 +3774,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Google QUIC Protocol",
     }
@@ -3350,6 +3784,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["grebonding"],
         blurb:     "GRE Tunnel Bonding Protocol",
     }
@@ -3359,6 +3794,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "GARP VLAN Registration Protocol",
     }
@@ -3368,6 +3804,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "GigE Vision Streaming Protocol",
     }
@@ -3377,6 +3814,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Hazelcast In-Memory Data Grid Protocol",
     }
@@ -3386,6 +3824,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "HCRT Protocol",
     }
@@ -3395,6 +3834,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "High-bandwidth Digital Content Protection",
     }
@@ -3404,6 +3844,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "HDCP 2.x Content Protection Protocol",
     }
@@ -3413,6 +3854,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["hdmi"],
         blurb:     "HDMI Consumer Electronics Control",
     }
@@ -3422,6 +3864,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["hi2operations"],
         blurb:     "Handover Interface 2 Lawful Interception Operations",
     }
@@ -3431,6 +3874,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Hitachi IP Configuration Protocol",
     }
@@ -3440,6 +3884,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Hipercontracer Measurement Protocol",
     }
@@ -3449,6 +3894,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Harman HiQnet Audio Protocol",
     }
@@ -3458,6 +3904,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "High-Speed LAN Instrument Protocol",
     }
@@ -3467,6 +3914,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "HomePlug Powerline Networking Protocol",
     }
@@ -3476,6 +3924,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["homeplug_av_vendor_vertexcom"],
         blurb:     "HomePlug AV VertexCom Vendor Extension",
     }
@@ -3485,6 +3934,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Home Phoneline Networking Alliance Protocol",
     }
@@ -3494,6 +3944,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["hp_erm"],
         blurb:     "HP Encapsulated Remote Mirroring Protocol",
     }
@@ -3503,6 +3954,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["hpext"],
         blurb:     "HP Extension Protocol",
     }
@@ -3512,6 +3964,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Honeynet Project Data Feed Protocol",
     }
@@ -3521,6 +3974,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["hpsw"],
         blurb:     "HP Switch Management Protocol",
     }
@@ -3530,6 +3984,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["hpteam"],
         blurb:     "HP NIC Teaming Protocol",
     }
@@ -3539,6 +3994,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "HSFZ Protocol",
     }
@@ -3548,6 +4004,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["hsr_prp_supervision"],
         blurb:     "HSR/PRP Network Redundancy Supervision",
     }
@@ -3557,6 +4014,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["http_urlencoded"],
         blurb:     "HTTP URL-encoded Form Data",
     }
@@ -3566,6 +4024,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "HyperSCSI Protocol",
     }
@@ -3575,6 +4034,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Inter-Integrated Circuit Serial Protocol",
     }
@@ -3584,6 +4044,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["iana_oui"],
         blurb:     "IANA Organizationally Unique Identifier Frame",
     }
@@ -3593,6 +4054,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Inter-Access Point Protocol",
     }
@@ -3602,6 +4064,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Internet Content Adaptation Protocol",
     }
@@ -3611,6 +4074,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Internet Communications Engine Protocol",
     }
@@ -3620,6 +4084,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Icmp,
         rank:      2,
+        status:    Declared,
         aliases:   ["icmpv6"],
         blurb:     "Internet Control Message Protocol for IPv6",
     }
@@ -3629,6 +4094,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Internet Cache Protocol",
     }
@@ -3638,6 +4104,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ICQ Instant Messaging Protocol",
     }
@@ -3647,6 +4114,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ID3v2 Audio Metadata Tag Protocol",
     }
@@ -3656,6 +4124,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Internal Data Management Protocol",
     }
@@ -3665,6 +4134,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Internationalized Domain Name Protocol",
     }
@@ -3674,6 +4144,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Xerox Internet Datagram Protocol",
     }
@@ -3683,6 +4154,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Ethernet Type Protocol",
     }
@@ -3692,6 +4164,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Extreme Networks Protocol",
     }
@@ -3701,6 +4174,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "FOUNDATION Fieldbus Protocol",
     }
@@ -3710,6 +4184,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Foundry Networks Protocol",
     }
@@ -3719,6 +4194,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Physical Frame Layer",
     }
@@ -3728,6 +4204,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "General Inter-ORB Protocol",
     }
@@ -3737,6 +4214,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Directory System Protocol",
     }
@@ -3746,6 +4224,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Dynamic Source Routing",
     }
@@ -3755,6 +4234,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["dtcp_ip"],
         blurb:     "Digital Transmission Content Protection over IP",
     }
@@ -3764,6 +4244,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "DTPT Protocol",
     }
@@ -3773,6 +4254,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "DUA Protocol",
     }
@@ -3782,6 +4264,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Data Exchange Layer",
     }
@@ -3791,6 +4274,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "E100 Framing Protocol",
     }
@@ -3800,6 +4284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["e164"],
         blurb:     "E.164 Telecommunication Numbering Plan",
     }
@@ -3809,6 +4294,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["e212"],
         blurb:     "E.212 Mobile Identification Plan",
     }
@@ -3818,6 +4304,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "EBHSCR Protocol",
     }
@@ -3827,6 +4314,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Explicit Congestion Notification Protocol",
     }
@@ -3836,6 +4324,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Edge Control Protocol",
     }
@@ -3845,6 +4334,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ecp_oui"],
         blurb:     "Edge Control Protocol OUI",
     }
@@ -3854,6 +4344,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Ephemeral Diffie-Hellman Over COSE",
     }
@@ -3863,6 +4354,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "eero Mesh Network Protocol",
     }
@@ -3872,6 +4364,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Ethernet Global Data Protocol",
     }
@@ -3881,6 +4374,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["egnos_ems"],
         blurb:     "EGNOS Message Server Protocol",
     }
@@ -3890,6 +4384,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Enhanced HDLC Protocol",
     }
@@ -3899,6 +4394,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "EHS Protocol",
     }
@@ -3908,6 +4404,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "EISS Protocol",
     }
@@ -3917,6 +4414,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ELCOM Protocol",
     }
@@ -3926,6 +4424,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["elmi"],
         blurb:     "Ethernet Local Management Interface",
     }
@@ -3935,6 +4434,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Encapsulation Protocol",
     }
@@ -3944,6 +4444,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Endpoint Name Resolution Protocol",
     }
@@ -3953,6 +4454,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ENTTEC DMX Protocol",
     }
@@ -3962,6 +4464,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Enhanced Order Book Interface",
     }
@@ -3971,6 +4474,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Ethernet POWERLINK",
     }
@@ -3980,6 +4484,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["epl_profile_parser"],
         blurb:     "EPL Profile Parser Protocol",
     }
@@ -3989,6 +4494,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["epl_v1"],
         blurb:     "Ethernet POWERLINK v1",
     }
@@ -3998,6 +4504,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["epmd"],
         blurb:     "Erlang Port Mapper Daemon",
     }
@@ -4007,6 +4514,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Ethernet Passive Optical Network Protocol",
     }
@@ -4016,6 +4524,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Extensible Record Format",
     }
@@ -4025,6 +4534,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Explicit Route Label Distribution Protocol",
     }
@@ -4034,6 +4544,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ESIO Protocol",
     }
@@ -4043,6 +4554,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["esis"],
         blurb:     "End System to Intermediate System",
     }
@@ -4052,6 +4564,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "ESUN Protocol",
     }
@@ -4061,6 +4574,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["etag"],
         blurb:     "IEEE 802.1BR Port Extender Tag",
     }
@@ -4070,6 +4584,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Apache Etch RPC Protocol",
     }
@@ -4079,6 +4594,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Ethernet Frame",
     }
@@ -4088,6 +4604,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Ensemble Transport Interface Protocol",
     }
@@ -4097,6 +4614,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Enhanced TV Protocol",
     }
@@ -4106,6 +4624,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Event Tracing for Windows Frame",
     }
@@ -4115,6 +4634,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Enhanced Variable Rate Codec Protocol",
     }
@@ -4124,6 +4644,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Enhanced Voice Services Protocol",
     }
@@ -4133,6 +4654,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["exablaze"],
         blurb:     "Exablaze Trailer Protocol",
     }
@@ -4142,6 +4664,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Remote Execution Protocol",
     }
@@ -4151,6 +4674,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["exported_pdu"],
         blurb:     "Wireshark Exported PDU Protocol",
     }
@@ -4160,6 +4684,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["extreme_exeh"],
         blurb:     "Extreme EXEH Header",
     }
@@ -4169,6 +4694,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["extrememesh"],
         blurb:     "Extreme Mesh Protocol",
     }
@@ -4178,6 +4704,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["f5ethtrailer"],
         blurb:     "F5 Ethernet Trailer Protocol",
     }
@@ -4187,6 +4714,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "FBZERO Protocol",
     }
@@ -4196,6 +4724,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "FC00 Protocol",
     }
@@ -4205,6 +4734,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Fiber Distributed Data Interface",
     }
@@ -4214,6 +4744,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Far End Fault Indication Protocol",
     }
@@ -4223,6 +4754,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Factory Instrumentation Protocol",
     }
@@ -4232,6 +4764,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "FlexNet License Protocol",
     }
@@ -4241,6 +4774,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Fast Local Internet Protocol",
     }
@@ -4250,6 +4784,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Flexible Management Protocol",
     }
@@ -4259,6 +4794,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["fmp_notify"],
         blurb:     "FMP Notification Protocol",
     }
@@ -4268,6 +4804,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Flight Message Transfer Protocol",
     }
@@ -4277,6 +4814,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["force10_oui"],
         blurb:     "Force10 OUI Protocol",
     }
@@ -4286,6 +4824,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Forwarding and Control Element Separation",
     }
@@ -4295,6 +4834,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fortinet_fgcp"],
         blurb:     "Fortinet Cluster Protocol",
     }
@@ -4304,6 +4844,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fortinet_sso"],
         blurb:     "Fortinet Single Sign-On Protocol",
     }
@@ -4313,6 +4854,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fp_hint"],
         blurb:     "FP Hint Protocol",
     }
@@ -4322,6 +4864,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fp_mux"],
         blurb:     "FP Mux Protocol",
     }
@@ -4331,6 +4874,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "FPP Protocol",
     }
@@ -4340,6 +4884,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fr"],
         blurb:     "Frame Relay Data Link Protocol",
     }
@@ -4349,6 +4894,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fractalgeneratorprotocol"],
         blurb:     "Fractal Generator Protocol",
     }
@@ -4358,6 +4904,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "File Transfer Access and Management",
     }
@@ -4367,6 +4914,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ftdi_ft"],
         blurb:     "FTDI FT Protocol",
     }
@@ -4376,6 +4924,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ftdi_mpsse"],
         blurb:     "FTDI MPSSE Protocol",
     }
@@ -4385,6 +4934,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fw1"],
         blurb:     "Check Point FW-1 Protocol",
     }
@@ -4394,6 +4944,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["g723"],
         blurb:     "ITU-T G.723 Speech Codec",
     }
@@ -4403,6 +4954,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["gadu_gadu"],
         blurb:     "Gadu-Gadu Instant Messaging Protocol",
     }
@@ -4412,6 +4964,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Great Britain Companion Specification",
     }
@@ -4421,6 +4974,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "GCSNA Protocol",
     }
@@ -4430,6 +4984,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["gdb"],
         blurb:     "GDB Remote Serial Protocol",
     }
@@ -4439,6 +4994,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "GDSDB Protocol",
     }
@@ -4448,6 +5004,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Generic Transport Protocol",
     }
@@ -4457,6 +5014,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["ged125"],
         blurb:     "GED-125 Protocol",
     }
@@ -4466,6 +5024,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["geonw"],
         blurb:     "ETSI GeoNetworking Protocol",
     }
@@ -4475,6 +5034,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Generic Framing Procedure",
     }
@@ -4484,6 +5044,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "GIAS Protocol",
     }
@@ -4493,6 +5054,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "giFT Peer-to-Peer Protocol",
     }
@@ -4502,6 +5064,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["glow"],
         blurb:     "Ember Glow Protocol",
     }
@@ -4511,6 +5074,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["gluster_cli"],
         blurb:     "Gluster CLI Protocol",
     }
@@ -4520,6 +5084,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["gluster_pmap"],
         blurb:     "Gluster Portmap Protocol",
     }
@@ -4529,6 +5094,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Gluster Daemon Protocol",
     }
@@ -4538,6 +5104,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["glusterfs_hndsk"],
         blurb:     "GlusterFS Handshake Protocol",
     }
@@ -4547,6 +5114,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CBOR Object Signing and Encryption",
     }
@@ -4556,6 +5124,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Cassandra Query Language Protocol",
     }
@@ -4565,6 +5134,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Common UNIX Printing System Protocol",
     }
@@ -4574,6 +5144,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Generic Data Payload",
     }
@@ -4583,6 +5154,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Diagnostic Log and Trace Protocol",
     }
@@ -4592,6 +5164,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Common Management Information Protocol",
     }
@@ -4601,6 +5174,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "China Mobile Peer to Peer Protocol",
     }
@@ -4610,6 +5184,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["coap_eap"],
         blurb:     "CoAP EAP Authentication Protocol",
     }
@@ -4619,6 +5194,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "COLA Protocol",
     }
@@ -4628,6 +5204,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["communityid"],
         blurb:     "Community ID Flow Hashing",
     }
@@ -4637,6 +5214,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["componentstatus"],
         blurb:     "Component Status Protocol",
     }
@@ -4646,6 +5224,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Common Open Policy Service",
     }
@@ -4655,6 +5234,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["corosync_totemnet"],
         blurb:     "Corosync TotemNET Protocol",
     }
@@ -4664,6 +5244,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["corosync_totemsrp"],
         blurb:     "Corosync TotemSRP Protocol",
     }
@@ -4673,6 +5254,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "COS Event Communication Protocol",
     }
@@ -4682,6 +5264,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CoSine Router Frame Protocol",
     }
@@ -4691,6 +5274,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CORBA CosNaming Protocol",
     }
@@ -4700,6 +5284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CP2179 Telecontrol Protocol",
     }
@@ -4709,6 +5294,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Cross Point Frame Interface",
     }
@@ -4718,6 +5304,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Check Point High Availability Protocol",
     }
@@ -4727,6 +5314,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["csm_encaps"],
         blurb:     "CSM Encapsulation Protocol",
     }
@@ -4736,6 +5324,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["csn1"],
         blurb:     "Concrete Syntax Notation One",
     }
@@ -4745,6 +5334,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Clustered Trivial Database Protocol",
     }
@@ -4754,6 +5344,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["cvspserver"],
         blurb:     "CVS pserver Protocol",
     }
@@ -4763,6 +5354,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Digital Audio Access Protocol",
     }
@@ -4772,6 +5364,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Directory Access Protocol",
     }
@@ -4781,6 +5374,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["darwin"],
         blurb:     "Darwin Streaming Server Protocol",
     }
@@ -4790,6 +5384,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["db_lsp"],
         blurb:     "Dropbox LAN Sync Protocol",
     }
@@ -4799,6 +5394,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["dbus"],
         blurb:     "D-Bus Message Bus Protocol",
     }
@@ -4808,6 +5404,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Direct Client-to-Client Protocol",
     }
@@ -4817,6 +5414,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "DCM Protocol",
     }
@@ -4826,6 +5424,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dcp_etsi"],
         blurb:     "DCP ETSI Protocol",
     }
@@ -4835,6 +5434,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Dynamic DNS Update Protocol",
     }
@@ -4844,6 +5444,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dec_bpdu"],
         blurb:     "DEC Bridge Protocol Data Unit",
     }
@@ -4853,6 +5454,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dec_dnart"],
         blurb:     "DECnet Digital Network Architecture Routing",
     }
@@ -4862,6 +5464,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Digital Enhanced Cordless Telecommunications",
     }
@@ -4871,6 +5474,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dect_dlc"],
         blurb:     "DECT Data Link Control Layer",
     }
@@ -4880,6 +5484,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dect_mitel_eth"],
         blurb:     "DECT Mitel Ethernet Protocol",
     }
@@ -4889,6 +5494,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dect_mitel_rfp"],
         blurb:     "DECT Mitel Radio Fixed Part Protocol",
     }
@@ -4898,6 +5504,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dect_nr"],
         blurb:     "DECT New Radio Protocol",
     }
@@ -4907,6 +5514,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dect_nwk"],
         blurb:     "DECT Network Layer Protocol",
     }
@@ -4916,6 +5524,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["diameter_3gpp"],
         blurb:     "Diameter 3GPP Extension",
     }
@@ -4925,6 +5534,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["diffserv_mpls_common"],
         blurb:     "Diffserv MPLS Common Protocol",
     }
@@ -4934,6 +5544,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Distributed Interactive Simulation",
     }
@@ -4943,6 +5554,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Directory Information Shadowing Protocol",
     }
@@ -4952,6 +5564,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Distributed C/C++ Compilation Protocol",
     }
@@ -4961,6 +5574,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["dji_uav"],
         blurb:     "DJI Drone Communication Protocol",
     }
@@ -4970,6 +5584,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Dynamic Link Exchange Protocol",
     }
@@ -4979,6 +5594,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Distributed Lock Manager v3",
     }
@@ -4988,6 +5604,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Direct Messaging Protocol",
     }
@@ -4997,6 +5614,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Distributed Network Protocol",
     }
@@ -5006,6 +5624,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["do_irp"],
         blurb:     "DO IRP Protocol",
     }
@@ -5015,6 +5634,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Data Over Cable Service Interface Specification",
     }
@@ -5024,6 +5644,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["docsis_macmgmt"],
         blurb:     "DOCSIS MAC Management Frames",
     }
@@ -5033,6 +5654,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["docsis_tlv"],
         blurb:     "DOCSIS TLV Data",
     }
@@ -5042,6 +5664,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["docsis_vendor"],
         blurb:     "DOCSIS Vendor Specific Frames",
     }
@@ -5051,6 +5674,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "OpenDOF Protocol",
     }
@@ -5060,6 +5684,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Directory Operational Binding Management Protocol",
     }
@@ -5069,6 +5694,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dpaux"],
         blurb:     "DisplayPort AUX Channel",
     }
@@ -5078,6 +5704,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dpauxmon"],
         blurb:     "DisplayPort AUX Monitor",
     }
@@ -5087,6 +5714,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["dplay"],
         blurb:     "DirectPlay Gaming Protocol",
     }
@@ -5096,6 +5724,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["dpnet"],
         blurb:     "DirectPlay Network Service",
     }
@@ -5105,6 +5734,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Digital Private Network Signalling System",
     }
@@ -5114,6 +5744,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dpnss_link"],
         blurb:     "DPNSS Link Layer",
     }
@@ -5123,6 +5754,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Data Radio Bearer Protocol",
     }
@@ -5132,6 +5764,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Data Stream Interface",
     }
@@ -5141,6 +5774,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Bridge Protocol Data Unit",
     }
@@ -5150,6 +5784,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "AX.25 BPQ Protocol",
     }
@@ -5159,6 +5794,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Bundle Protocol Security",
     }
@@ -5168,6 +5804,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["bpsec_cose"],
         blurb:     "BPSec COSE Context",
     }
@@ -5177,6 +5814,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["bpsec_defaultsc"],
         blurb:     "BPSec Default Security Context",
     }
@@ -5186,6 +5824,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["bpv6"],
         blurb:     "Bundle Protocol Version 6",
     }
@@ -5195,6 +5834,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["bpv7"],
         blurb:     "Bundle Protocol Version 7",
     }
@@ -5204,6 +5844,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["brcm_tag"],
         blurb:     "Broadcom Ethernet Tag",
     }
@@ -5213,6 +5854,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Boardwalk Protocol",
     }
@@ -5222,6 +5864,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Broadband Remote Protocol",
     }
@@ -5231,6 +5874,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["bt_tracker"],
         blurb:     "BitTorrent Tracker HTTP/UDP Protocol",
     }
@@ -5240,6 +5884,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["bt_utp"],
         blurb:     "Micro Transport Protocol",
     }
@@ -5249,6 +5894,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["bt3ds"],
         blurb:     "Bluetooth 3D Synchronization",
     }
@@ -5258,6 +5904,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["busmirroring"],
         blurb:     "Bus Mirroring Protocol",
     }
@@ -5267,6 +5914,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "BACnet Virtual Link Control",
     }
@@ -5276,6 +5924,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Bazaar Control Version Protocol",
     }
@@ -5285,6 +5934,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["c1222"],
         blurb:     "ANSI C12.22 Smart Grid Protocol",
     }
@@ -5294,6 +5944,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "C15CH Protocol",
     }
@@ -5303,6 +5954,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "C2P Protocol",
     }
@@ -5312,6 +5964,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["calcappprotocol"],
         blurb:     "CalcApp Application Protocol",
     }
@@ -5321,6 +5974,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CAN over Ethernet",
     }
@@ -5330,6 +5984,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   [],
         blurb:     "CANopen Industrial Automation Protocol",
     }
@@ -5339,6 +5994,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Common Address Redundancy Protocol",
     }
@@ -5348,6 +6004,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CAST Protocol",
     }
@@ -5357,6 +6014,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["catapult_dct2000"],
         blurb:     "Catapult DCT2000 Log Protocol",
     }
@@ -5366,6 +6024,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CATTP Protocol",
     }
@@ -5375,6 +6034,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Concise Binary Object Representation",
     }
@@ -5384,6 +6044,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Consultative Committee for Space Data Systems",
     }
@@ -5393,6 +6054,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CDMA2000 Cellular Protocol",
     }
@@ -5402,6 +6064,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cell_broadcast"],
         blurb:     "Cell Broadcast Service",
     }
@@ -5411,6 +6074,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Common External Message Interface",
     }
@@ -5420,6 +6084,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Circuit Emulation Service over Ethernet",
     }
@@ -5429,6 +6094,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CCSDS File Delivery Protocol",
     }
@@ -5438,6 +6104,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Cisco Group Management Protocol",
     }
@@ -5447,6 +6114,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["charging_ase"],
         blurb:     "Charging Application Service Element",
     }
@@ -5456,6 +6124,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["chdlc"],
         blurb:     "Cisco High-Level Data Link Control",
     }
@@ -5465,6 +6134,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Common Image Generator Interface",
     }
@@ -5474,6 +6144,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Computer Interface to Message Distribution",
     }
@@ -5483,6 +6154,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Cimetrics Protocol",
     }
@@ -5492,6 +6164,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["cipmotion"],
         blurb:     "Common Industrial Protocol Motion Extension",
     }
@@ -5501,6 +6174,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Dissected,
         aliases:   ["cipsafety"],
         blurb:     "Common Industrial Protocol Safety Extension",
     }
@@ -5510,6 +6184,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_erspan"],
         blurb:     "Cisco Encapsulated Remote Switched Port Analyzer",
     }
@@ -5519,6 +6194,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_fp_mim"],
         blurb:     "Cisco FabricPath MAC-in-MAC",
     }
@@ -5528,6 +6204,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_marker"],
         blurb:     "Cisco Marker Protocol",
     }
@@ -5537,6 +6214,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_mcp"],
         blurb:     "Cisco Misconfiguration Compression Protocol",
     }
@@ -5546,6 +6224,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_metadata"],
         blurb:     "Cisco Metadata Protocol",
     }
@@ -5555,6 +6234,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_oui"],
         blurb:     "Cisco OUI Protocol",
     }
@@ -5564,6 +6244,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_sm"],
         blurb:     "Cisco Session Management Protocol",
     }
@@ -5573,6 +6254,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_ttag"],
         blurb:     "Cisco TTAG Protocol",
     }
@@ -5582,6 +6264,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cisco_wids"],
         blurb:     "Cisco Wireless IDS",
     }
@@ -5591,6 +6274,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Controller Interface Transfer Protocol",
     }
@@ -5600,6 +6284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CL3 Protocol",
     }
@@ -5609,6 +6294,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "CL3DCW Protocol",
     }
@@ -5618,6 +6304,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["classicstun"],
         blurb:     "Classic STUN Protocol",
     }
@@ -5627,6 +6314,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Rational ClearCase Protocol",
     }
@@ -5636,6 +6324,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Classical IP over ATM",
     }
@@ -5645,6 +6334,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["clique_rm"],
         blurb:     "Clique Reliable Multicast Protocol",
     }
@@ -5654,6 +6344,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   [],
         blurb:     "Connectionless Network Protocol",
     }
@@ -5663,6 +6354,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Tcp,
         rank:      1,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Reliable data transfer over a TCP connection.",
     }
@@ -5672,6 +6364,7 @@ protocols! {
         color:     0x45D1C5,
         transport: Udp,
         rank:      1,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A fast, connectionless UDP message (no delivery guarantee).",
     }
@@ -5681,6 +6374,7 @@ protocols! {
         color:     0xA78BFA,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A name-lookup message (DNS).",
     }
@@ -5690,6 +6384,7 @@ protocols! {
         color:     0x34D399,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Unencrypted web traffic (HTTP).",
     }
@@ -5699,6 +6394,7 @@ protocols! {
         color:     0x6EE7B7,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Encrypted web traffic â€” the content can't be read, by design.",
     }
@@ -5708,6 +6404,7 @@ protocols! {
         color:     0xFBB224,
         transport: Icmp,
         rank:      1,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A network status/diagnostic message (ICMP).",
     }
@@ -5717,6 +6414,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Arp,
         rank:      1,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A local-network lookup matching an IP to a hardware address.",
     }
@@ -5726,6 +6424,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["2dparityfec"],
         blurb:     "2D Parity Forward Error Correction protocol.",
     }
@@ -5735,6 +6434,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["3com_njack"],
         blurb:     "3Com Network Jack protocol.",
     }
@@ -5744,6 +6444,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["3com_xns"],
         blurb:     "3Com XNS protocol.",
     }
@@ -5753,6 +6454,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["3g_a11"],
         blurb:     "3GPP2 A11 interface protocol.",
     }
@@ -5762,6 +6464,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["5co_legacy"],
         blurb:     "5Co Legacy protocol.",
     }
@@ -5771,6 +6474,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["5co_rap"],
         blurb:     "5Co RAP protocol.",
     }
@@ -5780,6 +6484,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["a21"],
         blurb:     "3GPP2 A21 interface protocol.",
     }
@@ -5789,6 +6494,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["aastra_aasp"],
         blurb:     "Aastra Application Service Protocol.",
     }
@@ -5798,6 +6504,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["acap"],
         blurb:     "Application Configuration Access Protocol.",
     }
@@ -5807,6 +6514,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["acdr"],
         blurb:     "AudioCodes Call Detail Record protocol.",
     }
@@ -5816,6 +6524,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["acn"],
         blurb:     "Architecture for Control Networks (ANSI E1.17).",
     }
@@ -5825,6 +6534,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["acp133"],
         blurb:     "ACP 133 directory service protocol.",
     }
@@ -5834,6 +6544,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["acr122"],
         blurb:     "ACR122 NFC Reader protocol.",
     }
@@ -5843,6 +6554,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["actrace"],
         blurb:     "AudioCodes Trace protocol.",
     }
@@ -5852,6 +6564,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["adb"],
         blurb:     "Android Debug Bridge protocol.",
     }
@@ -5861,6 +6574,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["adb_cs"],
         blurb:     "Android Debug Bridge Connection Service.",
     }
@@ -5870,6 +6584,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["adb_service"],
         blurb:     "Android Debug Bridge Service protocol.",
     }
@@ -5879,6 +6594,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["adwin"],
         blurb:     "ADwin data acquisition protocol.",
     }
@@ -5888,6 +6604,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["adwin_config"],
         blurb:     "ADwin Configuration protocol.",
     }
@@ -5897,6 +6614,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["afs_fs"],
         blurb:     "Andrew File System protocol.",
     }
@@ -5906,6 +6624,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["agentx"],
         blurb:     "Agent Extensibility Protocol (RFC 2741).",
     }
@@ -5915,6 +6634,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["aim"],
         blurb:     "AOL Instant Messenger protocol.",
     }
@@ -5924,6 +6644,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ain"],
         blurb:     "Advanced Intelligent Network protocol.",
     }
@@ -5933,6 +6654,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ajp13"],
         blurb:     "Apache JServ Protocol version 1.3.",
     }
@@ -5942,6 +6664,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["akp"],
         blurb:     "AudioCodes AKP protocol.",
     }
@@ -5951,6 +6674,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["alcap"],
         blurb:     "Access Link Control Application Part.",
     }
@@ -5960,6 +6684,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["alljoyn"],
         blurb:     "AllJoyn IoT communication protocol.",
     }
@@ -5969,6 +6694,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["alp"],
         blurb:     "Application Layer Protocol.",
     }
@@ -5978,6 +6704,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["amp"],
         blurb:     "Asynchronous Message Protocol.",
     }
@@ -5987,6 +6714,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["amr"],
         blurb:     "Adaptive Multi-Rate audio framing.",
     }
@@ -5996,6 +6724,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ancp"],
         blurb:     "Access Node Control Protocol (RFC 6320).",
     }
@@ -6005,6 +6734,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ans"],
         blurb:     "ANSI / ANS protocol.",
     }
@@ -6014,6 +6744,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ansi_637"],
         blurb:     "ANSI IS-637 Short Message Service.",
     }
@@ -6023,6 +6754,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ansi_683"],
         blurb:     "ANSI IS-683 Over-the-Air Provisioning.",
     }
@@ -6032,6 +6764,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ansi_801"],
         blurb:     "ANSI IS-801 Position Determination.",
     }
@@ -6041,6 +6774,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ansi_a"],
         blurb:     "ANSI A-Interface protocol.",
     }
@@ -6050,6 +6784,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ansi_map"],
         blurb:     "ANSI Mobile Application Part.",
     }
@@ -6059,6 +6794,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ansi_tcap"],
         blurb:     "ANSI Transaction Capabilities Application Part.",
     }
@@ -6068,6 +6804,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["aol"],
         blurb:     "America Online proprietary protocol.",
     }
@@ -6077,6 +6814,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ap1394"],
         blurb:     "Apple IEEE 1394 FireWire protocol.",
     }
@@ -6086,6 +6824,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      2,
+        status:    Declared,
         aliases:   ["app_pkix_cert"],
         blurb:     "Application PKIX Certificate framing.",
     }
@@ -6095,6 +6834,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["apple_midi"],
         blurb:     "AppleMIDI / RTP-MIDI session protocol.",
     }
@@ -6104,6 +6844,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ar_drone"],
         blurb:     "Parrot AR.Drone control protocol.",
     }
@@ -6113,6 +6854,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["arcnet"],
         blurb:     "Attached Resource Computer Network protocol.",
     }
@@ -6122,6 +6864,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      2,
+        status:    Declared,
         aliases:   ["arinc615a"],
         blurb:     "ARINC 615A software data loader protocol.",
     }
@@ -6131,6 +6874,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["armagetronad"],
         blurb:     "Armagetron Advanced game protocol.",
     }
@@ -6140,65 +6884,67 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["artemis_amqp"],
         blurb:     "Apache ActiveMQ Artemis protocol.",
     }
-    ArubaAdp { doc: "Aruba ADP protocol.", display: "ARUBA-ADP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_adp"], blurb: "Aruba Aruba Discovery Protocol.", }
-    ArubaErm { doc: "Aruba ERM protocol.", display: "ARUBA-ERM", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_erm"], blurb: "Aruba Encapsulated Remote Mirroring.", }
-    ArubaIap { doc: "Aruba IAP protocol.", display: "ARUBA-IAP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_iap"], blurb: "Aruba Instant Access Point protocol.", }
-    ArubaPapi { doc: "Aruba PAPI protocol.", display: "ARUBA-PAPI", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_papi"], blurb: "Aruba Process Application Programming Interface.", }
-    ArubaUbt { doc: "Aruba UBT protocol.", display: "ARUBA-UBT", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["aruba_ubt"], blurb: "Aruba User-Based Tunneling protocol.", }
-    AsamCmp { doc: "ASAM CMP protocol.", display: "ASAM-CMP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["asam_cmp"], blurb: "ASAM Capture Module Protocol.", }
-    Asap { doc: "ASAP protocol.", display: "ASAP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["asap"], blurb: "Aggregate Server Access Protocol (RFC 5352).", }
-    Ascend { doc: "Ascend protocol.", display: "ASCEND", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ascend"], blurb: "Lucent/Ascend Router proprietary framing.", }
-    Asf { doc: "ASF protocol.", display: "ASF", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["asf"], blurb: "Alert Standard Format / RMCP encapsulation.", }
-    Asphodel { doc: "Asphodel protocol.", display: "ASPHODEL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["asphodel"], blurb: "Asphodel Protocol.", }
-    AssaR3 { doc: "ASSA R3 protocol.", display: "ASSA-R3", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["assa_r3"], blurb: "ASSA R3 protocol.", }
-    Asterix { doc: "ASTERIX protocol.", display: "ASTERIX", color: 0x9CA3AF, transport: Udp, rank: 3, aliases: ["asterix"], blurb: "EUROCONTROL All Purpose Structured EUROCONTROL Surveillance Information Exchange.", }
-    At { doc: "AT protocol.", display: "AT", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["at_command"], blurb: "Hayes AT command set framing.", }
-    AtLdf { doc: "AT-LDF protocol.", display: "AT-LDF", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["at_ldf"], blurb: "Air Traffic Local Data Format.", }
-    AtRl { doc: "AT-RL protocol.", display: "AT-RL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["at_rl"], blurb: "Air Traffic Radar Link protocol.", }
-    Ath { doc: "ATH protocol.", display: "ATH", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ath"], blurb: "Atheros proprietary wireless framing.", }
-    Atm { doc: "ATM protocol.", display: "ATM", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atm"], blurb: "Asynchronous Transfer Mode cell header.", }
-    Atmtcp { doc: "ATMTCP protocol.", display: "ATMTCP", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["atmtcp"], blurb: "ATM over TCP tunnel.", }
-    AtnCm { doc: "ATN-CM protocol.", display: "ATN-CM", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atn_cm"], blurb: "Aeronautical Telecommunication Network Context Management.", }
-    AtnCpdlc { doc: "ATN-CPDLC protocol.", display: "ATN-CPDLC", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atn_cpdlc"], blurb: "Aeronautical Telecommunication Network Controller-Pilot Data Link Communications.", }
-    AtnSl { doc: "ATN-SL protocol.", display: "ATN-SL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atn_sl"], blurb: "Aeronautical Telecommunication Network Sublayer.", }
-    AtnUlcs { doc: "ATN-ULCS protocol.", display: "ATN-ULCS", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["atn_ulcs"], blurb: "Aeronautical Telecommunication Network Upper Layer Communications Services.", }
-    AutoRp { doc: "AUTO-RP protocol.", display: "AUTO-RP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["auto_rp"], blurb: "Cisco Auto-RP PIM Rendezvous Point announcement.", }
-    AutosarIpduMultiplexer { doc: "AUTOSAR-IPDU-MUX protocol.", display: "AUTOSAR-IPDU-MUX", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["autosar_ipdu_multiplexer"], blurb: "AUTOSAR I-PDU Multiplexer protocol.", }
-    AutosarNm { doc: "AUTOSAR-NM protocol.", display: "AUTOSAR-NM", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["autosar_nm"], blurb: "AUTOSAR Network Management protocol.", }
-    Avsp { doc: "AVSP protocol.", display: "AVSP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["avsp"], blurb: "Aruba Video Streaming Protocol.", }
-    Awdl { doc: "AWDL protocol.", display: "AWDL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["awdl"], blurb: "Apple Wireless Direct Link protocol.", }
-    Ax25 { doc: "AX25 protocol.", display: "AX25", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ax25"], blurb: "Amateur Radio AX.25 Link Layer protocol.", }
-    Ax25Kiss { doc: "AX25-KISS protocol.", display: "AX25-KISS", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ax25_kiss"], blurb: "KISS TNC protocol for AX.25.", }
-    Ax25Nol3 { doc: "AX25-NOL3 protocol.", display: "AX25-NOL3", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ax25_nol3"], blurb: "AX.25 frame without Layer 3.", }
-    Ax4000 { doc: "AX4000 protocol.", display: "AX4000", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ax4000"], blurb: "Spirent AX/4000 test equipment framing.", }
-    Ayiya { doc: "AYIYA protocol.", display: "AYIYA", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["ayiya"], blurb: "Anything in Anything IPv6 Tunneling Protocol.", }
-    Bacapp { doc: "BACAPP protocol.", display: "BACAPP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["bacapp"], blurb: "BACnet Application Layer Protocol.", }
-    Banana { doc: "BANANA protocol.", display: "BANANA", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["banana"], blurb: "Twisted Banana serialization protocol.", }
-    Bat { doc: "BAT protocol.", display: "BAT", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bat_proto"], blurb: "B.A.T.M.A.N. mesh protocol header.", }
-    Batadv { doc: "BATADV protocol.", display: "BATADV-Link", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["batadv_link"], blurb: "B.A.T.M.A.N. Advanced link layer protocol.", }
-    Bblog { doc: "BBLOG protocol.", display: "BBLOG", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bblog"], blurb: "BlackBerry Log framing.", }
-    Bctp { doc: "BCTP protocol.", display: "BCTP", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bctp"], blurb: "BCTP Telecommunications Protocol.", }
-    Beep { doc: "BEEP protocol.", display: "BEEP", color: 0x9CA3AF, transport: Tcp, rank: 3, aliases: ["beep"], blurb: "Blocks Extensible Exchange Protocol (RFC 3080).", }
-    Bencode { doc: "BENCODE protocol.", display: "BENCODE", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["bencode"], blurb: "BitTorrent Bencode serialization.", }
-    Ber { doc: "BER protocol.", display: "BER", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["ber"], blurb: "ASN.1 Basic Encoding Rules framing.", }
-    Bhttp { doc: "BHTTP protocol.", display: "BHTTP", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["bhttp"], blurb: "Binary HTTP (RFC 9292).", }
-    BiccMst { doc: "BICC-MST protocol.", display: "BICC-MST", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bicc_mst"], blurb: "BICC Bearer Control Application Part.", }
-    BistItch { doc: "BIST-ITCH protocol.", display: "BIST-ITCH", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["bist_itch"], blurb: "Borsa Istanbul ITCH market data protocol.", }
-    BistOuch { doc: "BIST-OUCH protocol.", display: "BIST-OUCH", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["bist_ouch"], blurb: "Borsa Istanbul OUCH order entry protocol.", }
-    Bjnp { doc: "BJNP protocol.", display: "BJNP", color: 0x9CA3AF, transport: Udp, rank: 2, aliases: ["bjnp"], blurb: "Canon BJNP Network Printer Protocol.", }
-    Blip { doc: "BLIP protocol.", display: "BLIP", color: 0x9CA3AF, transport: Tcp, rank: 2, aliases: ["blip"], blurb: "Couchbase BLIP multiplexed WebSocket protocol.", }
-    Bluecom { doc: "BLUECOM protocol.", display: "BLUECOM", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bluecom"], blurb: "BlueCom industrial communication protocol.", }
-    Bmc { doc: "BMC protocol.", display: "BMC", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bmc"], blurb: "Baseboard Management Controller protocol.", }
-    Bofl { doc: "BOFL protocol.", display: "BOFL", color: 0x9CA3AF, transport: Other, rank: 2, aliases: ["bofl"], blurb: "Build On Fault Link protocol.", }
+    ArubaAdp { doc: "Aruba ADP protocol.", display: "ARUBA-ADP", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["aruba_adp"], blurb: "Aruba Aruba Discovery Protocol.", }
+    ArubaErm { doc: "Aruba ERM protocol.", display: "ARUBA-ERM", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["aruba_erm"], blurb: "Aruba Encapsulated Remote Mirroring.", }
+    ArubaIap { doc: "Aruba IAP protocol.", display: "ARUBA-IAP", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["aruba_iap"], blurb: "Aruba Instant Access Point protocol.", }
+    ArubaPapi { doc: "Aruba PAPI protocol.", display: "ARUBA-PAPI", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["aruba_papi"], blurb: "Aruba Process Application Programming Interface.", }
+    ArubaUbt { doc: "Aruba UBT protocol.", display: "ARUBA-UBT", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["aruba_ubt"], blurb: "Aruba User-Based Tunneling protocol.", }
+    AsamCmp { doc: "ASAM CMP protocol.", display: "ASAM-CMP", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["asam_cmp"], blurb: "ASAM Capture Module Protocol.", }
+    Asap { doc: "ASAP protocol.", display: "ASAP", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["asap"], blurb: "Aggregate Server Access Protocol (RFC 5352).", }
+    Ascend { doc: "Ascend protocol.", display: "ASCEND", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["ascend"], blurb: "Lucent/Ascend Router proprietary framing.", }
+    Asf { doc: "ASF protocol.", display: "ASF", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["asf"], blurb: "Alert Standard Format / RMCP encapsulation.", }
+    Asphodel { doc: "Asphodel protocol.", display: "ASPHODEL", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["asphodel"], blurb: "Asphodel Protocol.", }
+    AssaR3 { doc: "ASSA R3 protocol.", display: "ASSA-R3", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["assa_r3"], blurb: "ASSA R3 protocol.", }
+    Asterix { doc: "ASTERIX protocol.", display: "ASTERIX", color: 0x9CA3AF, transport: Udp, rank: 3, status: Declared, aliases: ["asterix"], blurb: "EUROCONTROL All Purpose Structured EUROCONTROL Surveillance Information Exchange.", }
+    At { doc: "AT protocol.", display: "AT", color: 0x9CA3AF, transport: Other, rank: 2, status: Dissected, aliases: ["at_command"], blurb: "Hayes AT command set framing.", }
+    AtLdf { doc: "AT-LDF protocol.", display: "AT-LDF", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["at_ldf"], blurb: "Air Traffic Local Data Format.", }
+    AtRl { doc: "AT-RL protocol.", display: "AT-RL", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["at_rl"], blurb: "Air Traffic Radar Link protocol.", }
+    Ath { doc: "ATH protocol.", display: "ATH", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["ath"], blurb: "Atheros proprietary wireless framing.", }
+    Atm { doc: "ATM protocol.", display: "ATM", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["atm"], blurb: "Asynchronous Transfer Mode cell header.", }
+    Atmtcp { doc: "ATMTCP protocol.", display: "ATMTCP", color: 0x9CA3AF, transport: Tcp, rank: 2, status: Declared, aliases: ["atmtcp"], blurb: "ATM over TCP tunnel.", }
+    AtnCm { doc: "ATN-CM protocol.", display: "ATN-CM", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["atn_cm"], blurb: "Aeronautical Telecommunication Network Context Management.", }
+    AtnCpdlc { doc: "ATN-CPDLC protocol.", display: "ATN-CPDLC", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["atn_cpdlc"], blurb: "Aeronautical Telecommunication Network Controller-Pilot Data Link Communications.", }
+    AtnSl { doc: "ATN-SL protocol.", display: "ATN-SL", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["atn_sl"], blurb: "Aeronautical Telecommunication Network Sublayer.", }
+    AtnUlcs { doc: "ATN-ULCS protocol.", display: "ATN-ULCS", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["atn_ulcs"], blurb: "Aeronautical Telecommunication Network Upper Layer Communications Services.", }
+    AutoRp { doc: "AUTO-RP protocol.", display: "AUTO-RP", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["auto_rp"], blurb: "Cisco Auto-RP PIM Rendezvous Point announcement.", }
+    AutosarIpduMultiplexer { doc: "AUTOSAR-IPDU-MUX protocol.", display: "AUTOSAR-IPDU-MUX", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["autosar_ipdu_multiplexer"], blurb: "AUTOSAR I-PDU Multiplexer protocol.", }
+    AutosarNm { doc: "AUTOSAR-NM protocol.", display: "AUTOSAR-NM", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["autosar_nm"], blurb: "AUTOSAR Network Management protocol.", }
+    Avsp { doc: "AVSP protocol.", display: "AVSP", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["avsp"], blurb: "Aruba Video Streaming Protocol.", }
+    Awdl { doc: "AWDL protocol.", display: "AWDL", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["awdl"], blurb: "Apple Wireless Direct Link protocol.", }
+    Ax25 { doc: "AX25 protocol.", display: "AX25", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["ax25"], blurb: "Amateur Radio AX.25 Link Layer protocol.", }
+    Ax25Kiss { doc: "AX25-KISS protocol.", display: "AX25-KISS", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["ax25_kiss"], blurb: "KISS TNC protocol for AX.25.", }
+    Ax25Nol3 { doc: "AX25-NOL3 protocol.", display: "AX25-NOL3", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["ax25_nol3"], blurb: "AX.25 frame without Layer 3.", }
+    Ax4000 { doc: "AX4000 protocol.", display: "AX4000", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["ax4000"], blurb: "Spirent AX/4000 test equipment framing.", }
+    Ayiya { doc: "AYIYA protocol.", display: "AYIYA", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["ayiya"], blurb: "Anything in Anything IPv6 Tunneling Protocol.", }
+    Bacapp { doc: "BACAPP protocol.", display: "BACAPP", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["bacapp"], blurb: "BACnet Application Layer Protocol.", }
+    Banana { doc: "BANANA protocol.", display: "BANANA", color: 0x9CA3AF, transport: Tcp, rank: 2, status: Declared, aliases: ["banana"], blurb: "Twisted Banana serialization protocol.", }
+    Bat { doc: "BAT protocol.", display: "BAT", color: 0x9CA3AF, transport: Other, rank: 2, status: Dissected, aliases: ["bat_proto"], blurb: "B.A.T.M.A.N. mesh protocol header.", }
+    Batadv { doc: "BATADV protocol.", display: "BATADV-Link", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["batadv_link"], blurb: "B.A.T.M.A.N. Advanced link layer protocol.", }
+    Bblog { doc: "BBLOG protocol.", display: "BBLOG", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bblog"], blurb: "BlackBerry Log framing.", }
+    Bctp { doc: "BCTP protocol.", display: "BCTP", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bctp"], blurb: "BCTP Telecommunications Protocol.", }
+    Beep { doc: "BEEP protocol.", display: "BEEP", color: 0x9CA3AF, transport: Tcp, rank: 3, status: Declared, aliases: ["beep"], blurb: "Blocks Extensible Exchange Protocol (RFC 3080).", }
+    Bencode { doc: "BENCODE protocol.", display: "BENCODE", color: 0x9CA3AF, transport: Tcp, rank: 2, status: Declared, aliases: ["bencode"], blurb: "BitTorrent Bencode serialization.", }
+    Ber { doc: "BER protocol.", display: "BER", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["ber"], blurb: "ASN.1 Basic Encoding Rules framing.", }
+    Bhttp { doc: "BHTTP protocol.", display: "BHTTP", color: 0x9CA3AF, transport: Tcp, rank: 2, status: Declared, aliases: ["bhttp"], blurb: "Binary HTTP (RFC 9292).", }
+    BiccMst { doc: "BICC-MST protocol.", display: "BICC-MST", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bicc_mst"], blurb: "BICC Bearer Control Application Part.", }
+    BistItch { doc: "BIST-ITCH protocol.", display: "BIST-ITCH", color: 0x9CA3AF, transport: Tcp, rank: 2, status: Declared, aliases: ["bist_itch"], blurb: "Borsa Istanbul ITCH market data protocol.", }
+    BistOuch { doc: "BIST-OUCH protocol.", display: "BIST-OUCH", color: 0x9CA3AF, transport: Tcp, rank: 2, status: Declared, aliases: ["bist_ouch"], blurb: "Borsa Istanbul OUCH order entry protocol.", }
+    Bjnp { doc: "BJNP protocol.", display: "BJNP", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["bjnp"], blurb: "Canon BJNP Network Printer Protocol.", }
+    Blip { doc: "BLIP protocol.", display: "BLIP", color: 0x9CA3AF, transport: Tcp, rank: 2, status: Declared, aliases: ["blip"], blurb: "Couchbase BLIP multiplexed WebSocket protocol.", }
+    Bluecom { doc: "BLUECOM protocol.", display: "BLUECOM", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bluecom"], blurb: "BlueCom industrial communication protocol.", }
+    Bmc { doc: "BMC protocol.", display: "BMC", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bmc"], blurb: "Baseboard Management Controller protocol.", }
+    Bofl { doc: "BOFL protocol.", display: "BOFL", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bofl"], blurb: "Build On Fault Link protocol.", }
     Dhcp {
         doc:       "DHCP / BOOTP address assignment (UDP 67/68).",
         display:   "DHCP",
         color:     0xF9A825,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Your device is getting (or renewing) its IP address from the network's DHCP server.",
     }
@@ -6208,6 +6954,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A clock-sync message â€” your device checking the time with a time server.",
     }
@@ -6217,6 +6964,7 @@ protocols! {
         color:     0xC084FC,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Local service discovery (mDNS/Bonjour) â€” devices finding printers, speakers, etc. on the LAN.",
     }
@@ -6226,6 +6974,7 @@ protocols! {
         color:     0xFACC15,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A network-management query/response (SNMP) used to monitor devices.",
     }
@@ -6235,6 +6984,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         // `http3`/`qpack` were filter keywords that resolved to no protocol at
         // all â€” QUIC is what actually carries both, so they belong here.
         aliases:   ["http3", "qpack"],
@@ -6246,6 +6996,7 @@ protocols! {
         color:     0x818CF8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "VoIP call signalling (SIP) â€” setting up, ringing, or ending a voice call.",
     }
@@ -6255,6 +7006,7 @@ protocols! {
         color:     0x5EEAD4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An encrypted remote-shell session (SSH) â€” you can see it happens, not what's typed.",
     }
@@ -6264,6 +7016,7 @@ protocols! {
         color:     0xFB923C,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An old-style file transfer (FTP) â€” commands and passwords travel in plain text.",
     }
@@ -6273,6 +7026,7 @@ protocols! {
         color:     0xF472B6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Email being handed between mail servers (SMTP).",
     }
@@ -6282,6 +7036,7 @@ protocols! {
         color:     0xE879F9,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A mail client reading a mailbox on the server (IMAP).",
     }
@@ -6291,6 +7046,7 @@ protocols! {
         color:     0xD98AE8,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A mail client downloading messages from the server (POP3).",
     }
@@ -6300,6 +7056,7 @@ protocols! {
         color:     0xF87171,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An unencrypted remote terminal (Telnet) â€” everything, including passwords, is visible.",
     }
@@ -6309,6 +7066,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Windows Remote Desktop session (RDP).",
     }
@@ -6318,6 +7076,7 @@ protocols! {
         color:     0xA3E635,
         transport: Tcp,
         rank:      5,
+        status:    Dissected,
         aliases:   ["ws"],
         blurb:     "A live two-way message on an upgraded web connection (WebSocket) â€” used by chat, live feeds and dev tools.",
     }
@@ -6327,6 +7086,7 @@ protocols! {
         color:     0x4ADE80,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["http2"],
         blurb:     "Binary web traffic (HTTP/2) â€” many requests multiplexed as frames on one connection.",
     }
@@ -6336,6 +7096,7 @@ protocols! {
         color:     0xF9A8D4,
         transport: Tcp,
         rank:      5,
+        status:    Dissected,
         aliases:   [],
         blurb:     "One service calling another (gRPC) â€” a binary remote-procedure call riding on HTTP/2.",
     }
@@ -6345,6 +7106,7 @@ protocols! {
         color:     0x7DD3FC,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Tunnelled overlay-network traffic (VXLAN) â€” another network's frames carried inside UDP; the summary shows what's inside.",
     }
@@ -6354,6 +7116,7 @@ protocols! {
         color:     0x336791,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["postgres", "psql", "pgsql"],
         blurb:     "A PostgreSQL database conversation â€” SQL queries and their results over TCP 5432.",
     }
@@ -6363,6 +7126,7 @@ protocols! {
         color:     0x00758F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A MySQL/MariaDB database conversation â€” queries and results over TCP 3306.",
     }
@@ -6372,6 +7136,7 @@ protocols! {
         color:     0x4DB33D,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mongo"],
         blurb:     "A MongoDB database conversation â€” document commands (find/insert/update) over TCP 27017.",
     }
@@ -6381,6 +7146,7 @@ protocols! {
         color:     0xDC382D,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Redis command or reply â€” the in-memory key-value store on TCP 6379.",
     }
@@ -6390,6 +7156,7 @@ protocols! {
         color:     0xDC382D,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["redis-cluster", "rediscluster", "clusterbus"],
         blurb:     "Redis nodes gossiping about each other â€” how a cluster decides which of its members are alive.",
     }
@@ -6399,6 +7166,7 @@ protocols! {
         color:     0x1BA1E2,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Cassandra CQL conversation â€” distributed-database queries over TCP 9042.",
     }
@@ -6408,6 +7176,7 @@ protocols! {
         color:     0xF27A1A,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An industrial-control command (Modbus) â€” reading or writing PLC registers over TCP 502.",
     }
@@ -6417,6 +7186,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["m-bus", "mbus"],
         blurb:     "A utility meter being read (M-Bus) â€” the water, gas, heat or electricity meters in a building reporting to a gateway.",
     }
@@ -6426,6 +7196,7 @@ protocols! {
         color:     0xEAB308,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A utility SCADA message (DNP3) â€” grid/water control between a master and remote stations.",
     }
@@ -6435,6 +7206,7 @@ protocols! {
         color:     0xC08A2B,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A building-automation message (BACnet) â€” HVAC, lighting or access control on UDP 47808.",
     }
@@ -6444,6 +7216,7 @@ protocols! {
         color:     0xE15A3B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         // The display name has a slash, which the filter lexer cannot produce
         // as a bare word â€” without these it would be unfilterable.
         aliases:   ["enip", "ethernetip"],
@@ -6455,6 +7228,7 @@ protocols! {
         color:     0x339999,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         // "OPC UA" has a space; `opcua` is the token users actually type.
         aliases:   ["opcua"],
         blurb:     "An Industry 4.0 data-exchange message (OPC UA) â€” factory equipment talking to IT systems.",
@@ -6465,6 +7239,7 @@ protocols! {
         color:     0x26A69A,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         // Display name has a space; provide typed aliases.
         aliases:   ["uadp", "opcuapubsub"],
         blurb:     "An OPC UA publish/subscribe datagram (UADP) â€” publisher ID and group ID show which data stream this belongs to.",
@@ -6475,6 +7250,7 @@ protocols! {
         color:     0xD97706,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cclink_ie_field_basic", "cclief_basic", "cclink"],
         blurb:     "An industrial cyclic/transient controller exchange over UDP 61450 based on SLMP framing.",
     }
@@ -6484,6 +7260,7 @@ protocols! {
         color:     0xEA580C,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["cclink_ie_control", "cc-link-control"],
         blurb:     "A high-speed industrial control-layer frame over EtherType 0x890F (direct Ethernet).",
     }
@@ -6493,6 +7270,7 @@ protocols! {
         color:     0xFF6A00,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["codesys"],
         blurb:     "A CODESYS V3 PLC communication â€” programming, monitoring or data exchange with a controller on TCP 11740.",
     }
@@ -6502,6 +7280,7 @@ protocols! {
         color:     0xD97706,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["roc_plus", "rocplus", "roc"],
         blurb:     "An Emerson ROC Plus SCADA telemetry or control communication frame.",
     }
@@ -6511,6 +7290,7 @@ protocols! {
         color:     0xB45309,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bsap", "bristol_bsap"],
         blurb:     "A Bristol BSAP datagram â€” SCADA RTU polling, data transfer or control command.",
     }
@@ -6520,6 +7300,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["focas", "fanuc_focas"],
         blurb:     "A Fanuc FOCAS CNC communication message â€” reading status, G-code, axis parameters or PMC data.",
     }
@@ -6529,6 +7310,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["toyopuc", "jtekt_toyopuc"],
         blurb:     "A Toyopuc PLC Computer Link packet â€” reading or writing CPU memory registers.",
     }
@@ -6538,6 +7320,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["vnet_ip", "vnetip", "vnet"],
         blurb:     "A Yokogawa Vnet/IP DCS control message â€” cyclic process data, transient command or time sync.",
     }
@@ -6547,6 +7330,7 @@ protocols! {
         color:     0x059669,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["can_xl", "canxl"],
         blurb:     "A CAN XL eXtra Long frame â€” carrying Ethernet, IP or UDS payload up to 2048 bytes over CAN.",
     }
@@ -6556,6 +7340,7 @@ protocols! {
         color:     0xD97706,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["most", "most_bus"],
         blurb:     "A MOST automotive infotainment control packet â€” directing audio, navigation or display function blocks.",
     }
@@ -6565,6 +7350,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tarantool"],
         blurb:     "A Tarantool iproto binary protocol message â€” query, mutation or greeting frame.",
     }
@@ -6574,6 +7360,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hbase"],
         blurb:     "An Apache HBase RPC protocol packet â€” table scan, get, put or region server message.",
     }
@@ -6583,6 +7370,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["impala"],
         blurb:     "An Apache Impala SQL query or result fetch packet via Beeswax/HS2 Thrift.",
     }
@@ -6592,6 +7380,7 @@ protocols! {
         color:     0x0D9488,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["vertica"],
         blurb:     "An HP Vertica analytical database query or result stream packet.",
     }
@@ -6601,6 +7390,7 @@ protocols! {
         color:     0xEA580C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["teradata"],
         blurb:     "A Teradata DBC database communication packet.",
     }
@@ -6610,6 +7400,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["saphana", "sap_hana", "sqldbc"],
         blurb:     "An SAP HANA SQLDBC binary protocol packet.",
     }
@@ -6619,6 +7410,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["informix", "sqli"],
         blurb:     "An IBM Informix SQLI database client message.",
     }
@@ -6628,6 +7420,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netezza"],
         blurb:     "An IBM Netezza data warehouse query or system message.",
     }
@@ -6637,6 +7430,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ingres", "gca"],
         blurb:     "An Actian Ingres Generic Communication Architecture (GCA) packet.",
     }
@@ -6646,6 +7440,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["maxdb"],
         blurb:     "An SAP MaxDB database query or session management packet.",
     }
@@ -6655,6 +7450,7 @@ protocols! {
         color:     0xDC2626,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["voldemort"],
         blurb:     "A Project Voldemort distributed key-value store protocol message.",
     }
@@ -6664,6 +7460,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["opentsdb"],
         blurb:     "An OpenTSDB time-series metric push packet.",
     }
@@ -6673,6 +7470,7 @@ protocols! {
         color:     0x0891B2,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tdengine"],
         blurb:     "A TDengine time-series database RPC message.",
     }
@@ -6682,6 +7480,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["questdb"],
         blurb:     "A QuestDB InfluxDB Line Protocol (ILP) data ingestion message.",
     }
@@ -6691,6 +7490,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["orientdb"],
         blurb:     "An OrientDB multi-model graph database binary protocol message.",
     }
@@ -6700,6 +7500,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["etcd"],
         blurb:     "An etcd key-value store gRPC request or watch notification.",
     }
@@ -6709,6 +7510,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tikv"],
         blurb:     "A TiKV distributed transactional key-value store packet.",
     }
@@ -6718,6 +7520,7 @@ protocols! {
         color:     0xEA580C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["couchbase"],
         blurb:     "A Couchbase binary protocol or DCP stream packet.",
     }
@@ -6727,6 +7530,7 @@ protocols! {
         color:     0xDC2626,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["couchdb"],
         blurb:     "A CouchDB NoSQL document database REST API request or response.",
     }
@@ -6736,6 +7540,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["arangodb"],
         blurb:     "An ArangoDB multi-model database REST or VelocyStream packet.",
     }
@@ -6745,6 +7550,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["trino", "presto"],
         blurb:     "A Trino / Presto distributed SQL query engine REST request.",
     }
@@ -6754,6 +7560,7 @@ protocols! {
         color:     0x0891B2,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["druid"],
         blurb:     "An Apache Druid analytical query or ingestion request.",
     }
@@ -6763,6 +7570,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["prometheus_rw", "prometheus_remote_write"],
         blurb:     "A Prometheus remote-write metric push payload.",
     }
@@ -6772,6 +7580,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["victoriametrics"],
         blurb:     "A VictoriaMetrics time-series ingestion or query API message.",
     }
@@ -6781,6 +7590,7 @@ protocols! {
         color:     0xEA580C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rabbitmq_stream", "rabbitmqstream"],
         blurb:     "A RabbitMQ Stream Protocol binary frame.",
     }
@@ -6790,6 +7600,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["artemis_core"],
         blurb:     "An ActiveMQ Artemis Core messaging packet.",
     }
@@ -6799,6 +7610,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["solace_smf", "solace", "smf"],
         blurb:     "A Solace SolCache SMF binary protocol message.",
     }
@@ -6808,6 +7620,7 @@ protocols! {
         color:     0x2563EB,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tibco_rv", "tibrv", "rendezvous"],
         blurb:     "A TIBCO Rendezvous reliable multicast messaging packet.",
     }
@@ -6817,6 +7630,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tibco_ems", "tibems"],
         blurb:     "A TIBCO Enterprise Message Service (EMS) packet.",
     }
@@ -6826,6 +7640,7 @@ protocols! {
         color:     0x0D9488,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nanomsg_sp", "nanomsg", "nng"],
         blurb:     "A nanomsg / NNG Scalability Protocol frame.",
     }
@@ -6835,6 +7650,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["otlp_grpc", "otlp"],
         blurb:     "An OpenTelemetry OTLP gRPC telemetry export message.",
     }
@@ -6844,6 +7660,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["otlp_http"],
         blurb:     "An OpenTelemetry OTLP HTTP REST export request.",
     }
@@ -6853,6 +7670,7 @@ protocols! {
         color:     0x0891B2,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zipkin"],
         blurb:     "A Zipkin distributed tracing span report.",
     }
@@ -6862,6 +7680,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["riemann"],
         blurb:     "A Riemann event stream monitoring packet.",
     }
@@ -6871,6 +7690,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["munin"],
         blurb:     "A Munin system monitoring node command or response.",
     }
@@ -6880,6 +7700,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sensu"],
         blurb:     "A Sensu Go monitoring agent payload.",
     }
@@ -6889,6 +7710,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netdata"],
         blurb:     "A Netdata real-time metrics streaming frame.",
     }
@@ -6898,6 +7720,7 @@ protocols! {
         color:     0xDC2626,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["splunk_s2s", "splunk"],
         blurb:     "A Splunk forwarder Server-to-Server log stream packet.",
     }
@@ -6907,6 +7730,7 @@ protocols! {
         color:     0xEA580C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["loki_push", "loki"],
         blurb:     "A Grafana Loki log entry push request.",
     }
@@ -6916,6 +7740,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["vector_native", "vector"],
         blurb:     "A Vector observability data pipeline native stream packet.",
     }
@@ -6925,6 +7750,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["graphite_pickle"],
         blurb:     "A Graphite metrics pickle batch stream frame.",
     }
@@ -6934,6 +7760,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["icinga2"],
         blurb:     "An Icinga2 monitoring cluster node sync packet.",
     }
@@ -6943,6 +7770,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nagios_nsca", "nsca"],
         blurb:     "A Nagios NSCA passive service check result packet.",
     }
@@ -6952,6 +7780,7 @@ protocols! {
         color:     0x0891B2,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nagios_ndo", "ndo"],
         blurb:     "A Nagios NDO event sink data stream packet.",
     }
@@ -6961,6 +7790,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["collectd_v5"],
         blurb:     "A collectd binary v5 telemetry metric packet.",
     }
@@ -6970,6 +7800,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ganglia_gmetad", "gmetad"],
         blurb:     "A Ganglia gmetad XML cluster metrics stream.",
     }
@@ -6979,6 +7810,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zabbix_active"],
         blurb:     "A Zabbix active agent metric check request or reply.",
     }
@@ -6988,6 +7820,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["telegraf_influxv2", "influxv2"],
         blurb:     "A Telegraf / InfluxDB v2 metrics write API payload.",
     }
@@ -6997,6 +7830,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netconf"],
         blurb:     "A NETCONF network device configuration RPC XML message.",
     }
@@ -7006,6 +7840,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["restconf"],
         blurb:     "A RESTCONF HTTP REST request for YANG network data models.",
     }
@@ -7015,6 +7850,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gnmi"],
         blurb:     "A gNMI network management telemetry get, set or subscribe gRPC stream.",
     }
@@ -7024,6 +7860,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nis", "yp", "nis_yp"],
         blurb:     "A Network Information Service (NIS/YP) ONC RPC directory request.",
     }
@@ -7033,6 +7870,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["upnp_soap", "upnp_control"],
         blurb:     "A UPnP SOAP action message for router or device control.",
     }
@@ -7042,6 +7880,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wpad"],
         blurb:     "A Web Proxy Auto-Discovery (WPAD) proxy.pac request.",
     }
@@ -7051,6 +7890,7 @@ protocols! {
         color:     0xEA580C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["guacamole", "guac"],
         blurb:     "An Apache Guacamole client-to-guacd remote desktop instruction stream.",
     }
@@ -7060,6 +7900,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nomachine_nx", "nomachine", "nx"],
         blurb:     "A NoMachine NX remote desktop session handshake or data frame.",
     }
@@ -7069,6 +7910,7 @@ protocols! {
         color:     0xDC2626,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mosh", "mobile_shell"],
         blurb:     "A Mosh roaming encrypted terminal datagram.",
     }
@@ -7078,6 +7920,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["spdy"],
         blurb:     "A SPDY multiplexed web control or data frame.",
     }
@@ -7087,6 +7930,7 @@ protocols! {
         color:     0x0891B2,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wap_wsp_wtp", "wsp", "wtp"],
         blurb:     "A Wireless Application Protocol (WAP) WSP/WTP session datagram.",
     }
@@ -7096,6 +7940,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wbxml"],
         blurb:     "A WAP Binary XML compact document frame.",
     }
@@ -7105,6 +7950,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["webdav"],
         blurb:     "A WebDAV HTTP file management request (PROPFIND, MKCOL, LOCK).",
     }
@@ -7114,6 +7960,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["caldav", "carddav", "caldav_carddav"],
         blurb:     "A CalDAV/CardDAV calendar or address book sync query.",
     }
@@ -7123,6 +7970,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dnscrypt"],
         blurb:     "A DNSCrypt encrypted DNS request or response envelope.",
     }
@@ -7132,6 +7980,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dns_over_quic", "doq"],
         blurb:     "A DNS over QUIC (DoQ) encrypted DNS query stream.",
     }
@@ -7141,6 +7990,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["matrix_federation", "matrix"],
         blurb:     "A Matrix server-to-server federation sync or transaction API call.",
     }
@@ -7150,6 +8000,7 @@ protocols! {
         color:     0xEA580C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["activitypub", "mastodon"],
         blurb:     "An ActivityPub decentralized social networking inbox/outbox event.",
     }
@@ -7159,6 +8010,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["as2_edi", "as2"],
         blurb:     "An AS2 B2B Electronic Data Interchange (EDI) message.",
     }
@@ -7168,6 +8020,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gemini_proto", "gemini"],
         blurb:     "A Gemini lightweight hypertext request or response stream.",
     }
@@ -7177,6 +8030,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["epics_ca", "epics"],
         blurb:     "An EPICS Channel Access particle accelerator or lab control command.",
     }
@@ -7186,6 +8040,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["epics_pva", "pva"],
         blurb:     "An EPICS pvAccess high-speed structured control data frame.",
     }
@@ -7195,6 +8050,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["slurm_rpc", "slurm"],
         blurb:     "A Slurm HPC supercomputer workload manager job or node control RPC.",
     }
@@ -7204,6 +8060,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pmix"],
         blurb:     "A PMIx parallel process management orchestration message.",
     }
@@ -7213,6 +8070,7 @@ protocols! {
         color:     0xEA580C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tango_controls", "tango"],
         blurb:     "A TANGO Controls GIOP/IIOP device server transaction message.",
     }
@@ -7222,6 +8080,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gbt26982", "gbt_26982"],
         blurb:     "A GB/T 26982 regional industrial automation telemetry or command frame.",
     }
@@ -7231,6 +8090,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["of_config", "ofconfig"],
         blurb:     "An OF-CONFIG SDN switch datapath configuration XML payload.",
     }
@@ -7240,6 +8100,7 @@ protocols! {
         color:     0xDC2626,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ethercat_mailbox", "coe", "foe"],
         blurb:     "An EtherCAT CANopen over EtherCAT (CoE) or File over EtherCAT (FoE) mailbox frame.",
     }
@@ -7249,6 +8110,7 @@ protocols! {
         color:     0x2563EB,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["knx_rf"],
         blurb:     "A KNX RF wireless building automation frame.",
     }
@@ -7258,6 +8120,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["knx_tp"],
         blurb:     "A KNX TP twisted pair building automation telegram.",
     }
@@ -7268,6 +8131,7 @@ protocols! {
         color:     0xDC2626,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cip_safety_ext"],
         blurb:     "An ODVA CIP Safety functional safety PDU.",
     }
@@ -7277,6 +8141,7 @@ protocols! {
         color:     0xEA580C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gbt_20414", "gbt20414"],
         blurb:     "A GB/T 20414 substation automation control frame.",
     }
@@ -7286,6 +8151,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gbt_19582", "gbt19582"],
         blurb:     "A GB/T 19582 industrial Modbus standard PDU.",
     }
@@ -7295,6 +8161,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n2", "n2_ngap"],
         blurb:     "A 5G N2 NGAP control plane message between gNB and AMF.",
     }
@@ -7304,6 +8171,7 @@ protocols! {
         color:     0x0284C7,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n4", "n4_pfcp"],
         blurb:     "A 5G N4 PFCP session control message between SMF and UPF.",
     }
@@ -7313,6 +8181,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n11", "n11_sbi"],
         blurb:     "A 5G N11 Service Based Interface HTTP/2 API request.",
     }
@@ -7322,6 +8191,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpi_wire", "mpi"],
         blurb:     "An MPI high-performance computing wire message.",
     }
@@ -7331,6 +8201,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ucx_hpc", "ucx"],
         blurb:     "A UCX high-speed interconnect protocol message.",
     }
@@ -7340,6 +8211,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["varan"],
         blurb:     "A VARAN real-time industrial Ethernet bus telegram.",
     }
@@ -7349,6 +8221,7 @@ protocols! {
         color:     0xDC2626,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["safetynet_p", "safetynet"],
         blurb:     "A SafetyNET p industrial safety telegram.",
     }
@@ -7358,6 +8231,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ethernet_powerlink_v2"],
         blurb:     "A POWERLINK v2 real-time Ethernet frame.",
     }
@@ -7367,6 +8241,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         // Not "mechatrolink": that token belongs to the general MECHATROLINK
         // row, which covers I/II/III/IV. This one is specifically the -III
         // EtherType.
@@ -7379,6 +8254,7 @@ protocols! {
         color:     0x059669,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hart_wireless", "wirelesshart"],
         blurb:     "A WirelessHART industrial sensor mesh packet.",
     }
@@ -7388,6 +8264,7 @@ protocols! {
         color:     0x2563EB,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["isa100_11a", "isa100"],
         blurb:     "An ISA100.11a industrial wireless automation PDU.",
     }
@@ -7397,6 +8274,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wibree", "ble_phy"],
         blurb:     "A Wibree / BLE low-energy physical layer frame.",
     }
@@ -7406,6 +8284,7 @@ protocols! {
         color:     0x2563EB,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ccp", "can_calibration"],
         blurb:     "A CCP automotive ECU calibration message â€” memory transfer, DAQ setup or flash programming.",
     }
@@ -7415,6 +8294,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nmea2000", "n2k", "nmea_2000"],
         blurb:     "An NMEA 2000 vessel telemetry message â€” position, depth, wind or engine parameters.",
     }
@@ -7424,6 +8304,7 @@ protocols! {
         color:     0xDC2626,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["secoc", "autosar_secoc", "sec_oc"],
         blurb:     "An AUTOSAR SecOC secured I-PDU packet carrying payload, Freshness Counter and Message Authentication Code (MAC).",
     }
@@ -7433,6 +8314,7 @@ protocols! {
         color:     0xEA580C,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["autosar_pdu", "ipdu", "pdu_router"],
         blurb:     "An AUTOSAR Container I-PDU multiplexed frame carrying structured signals over automotive buses.",
     }
@@ -7442,6 +8324,7 @@ protocols! {
         color:     0x9333EA,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["avdecc", "ieee1722_1", "adp", "aecp"],
         blurb:     "An IEEE 1722.1 AVDECC control packet â€” ADP entity discovery, AECP control command, or ACMP connection management.",
     }
@@ -7451,6 +8334,7 @@ protocols! {
         color:     0x0284C7,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["docan", "uds_can", "can_docan"],
         blurb:     "A DoCAN diagnostic message â€” Single Frame, First Frame, Consecutive Frame or Flow Control carrying UDS commands.",
     }
@@ -7460,6 +8344,7 @@ protocols! {
         color:     0x0284C7,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["x2ap", "x2_ap"],
         blurb:     "An LTE X2AP inter-eNB message â€” handover request, load information or SN status transfer.",
     }
@@ -7469,6 +8354,7 @@ protocols! {
         color:     0x059669,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["e2ap", "oran_e2ap", "ric_e2ap"],
         blurb:     "An O-RAN E2AP RIC control message â€” E2 setup, RIC subscription or RIC indication.",
     }
@@ -7478,6 +8364,7 @@ protocols! {
         color:     0x10B981,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["oran_e1", "oran_mplane"],
         blurb:     "An O-RAN E1 bearer context message â€” setting up CP/UP user plane bearer contexts.",
     }
@@ -7487,6 +8374,7 @@ protocols! {
         color:     0x6366F1,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["cpri", "cpri_fronthaul"],
         blurb:     "A CPRI radio fronthaul frame â€” C&M HDLC, L1 inband signaling or IQ data stream.",
     }
@@ -7496,6 +8384,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["nas_eps", "eps_nas", "lte_nas"],
         blurb:     "An LTE EPS NAS mobility or session management message â€” Attach, TAU, or Security Mode Command.",
     }
@@ -7505,6 +8394,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["nas_5gs", "5gs_nas", "5g_nas"],
         blurb:     "A 5G NAS mobility or session management message â€” Registration Request, PDU Session Establishment.",
     }
@@ -7514,6 +8404,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["nrppa", "nr_positioning"],
         blurb:     "An NRPPa positioning message â€” OTDOA information exchange or E-CID measurement report.",
     }
@@ -7523,6 +8414,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["xwap", "xw_ap"],
         blurb:     "An XwAP LTE-WLAN aggregation message â€” Xw setup, WT association or WLAN status reporting.",
     }
@@ -7532,6 +8424,7 @@ protocols! {
         color:     0x0D9488,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["w1ap", "w1_ap"],
         blurb:     "A W1AP CU-DU control message â€” W1 setup, gNB-DU configuration update, or UE context setup.",
     }
@@ -7541,6 +8434,7 @@ protocols! {
         color:     0xD97706,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["gprs_llc", "llc_gprs"],
         blurb:     "A GPRS LLC frame â€” GMM mobility management, TOM tunneling, or SNDCP user data.",
     }
@@ -7550,6 +8444,7 @@ protocols! {
         color:     0xB45309,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sndcp", "gprs_sndcp"],
         blurb:     "An SNDCP packet â€” multiplexing packet data network IP traffic over GPRS LLC SAPIs.",
     }
@@ -7559,6 +8454,7 @@ protocols! {
         color:     0xC026D3,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["inap", "inap_ss7"],
         blurb:     "An SS7 INAP message â€” InitialDP, Connect, ReleaseCall, or ApplyCharging.",
     }
@@ -7568,6 +8464,7 @@ protocols! {
         color:     0xDB2777,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["camel", "cap_ss7"],
         blurb:     "A CAMEL/CAP SS7 message â€” InitialDPSMS, ApplyChargingReport, or FurnishChargingInformation.",
     }
@@ -7577,6 +8474,7 @@ protocols! {
         color:     0xE11D48,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["mtp2", "ss7_mtp2"],
         blurb:     "An SS7 MTP2 link signal unit â€” FISU fill-in, LSSU link status, or MSU message unit.",
     }
@@ -7586,6 +8484,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sgsap", "sgs_ap"],
         blurb:     "An SGsAP CS fallback message â€” Location Update Request, Paging Request, or Alert Request.",
     }
@@ -7595,6 +8494,7 @@ protocols! {
         color:     0x6D28D9,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gtp_sv", "gtp_sv_interface"],
         blurb:     "A GTP Sv interface message â€” PS to CS Handover Request, Response, or Cancel.",
     }
@@ -7604,6 +8504,7 @@ protocols! {
         color:     0x0369A1,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gtpv1u", "gtp_u", "gtpv1_u"],
         blurb:     "A GTPv1-U user plane tunnel packet â€” carrying mobile subscriber IP payload inside TEIDs.",
     }
@@ -7613,6 +8514,7 @@ protocols! {
         color:     0x15803D,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rrc_lte", "lte_rrc"],
         blurb:     "An LTE RRC radio message â€” RRCConnectionRequest, Setup, or SecurityModeCommand.",
     }
@@ -7622,6 +8524,7 @@ protocols! {
         color:     0x047857,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rrc_nr", "nr_rrc", "5g_rrc"],
         blurb:     "A 5G NR RRC radio message â€” RRCSetupRequest, RRCReconfiguration, or RRCResumeRequest.",
     }
@@ -7631,6 +8534,7 @@ protocols! {
         color:     0x0F766E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pdcp", "3gpp_pdcp"],
         blurb:     "A PDCP radio layer PDU â€” Data PDU sequence number or Control Status Report.",
     }
@@ -7640,6 +8544,7 @@ protocols! {
         color:     0x374151,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rlc", "3gpp_rlc"],
         blurb:     "An RLC radio layer PDU â€” Acknowledged Mode (AM) Data PDU or Status Control PDU.",
     }
@@ -7649,6 +8554,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["shim6", "ipv6_shim6"],
         blurb:     "A SHIM6 IPv6 multihoming control message â€” I1, R1, I2, R2 or keepalive.",
     }
@@ -7658,6 +8564,7 @@ protocols! {
         color:     0x059669,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openr", "fb_openr"],
         blurb:     "An OpenR routing message â€” Spark hello, KvStore synchronization or LinkMonitor update.",
     }
@@ -7667,6 +8574,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gue", "generic_udp_encap"],
         blurb:     "A Generic UDP Encapsulation packet â€” carrying IPv4, IPv6 or GRE payloads inside UDP.",
     }
@@ -7676,6 +8584,7 @@ protocols! {
         color:     0x0891B2,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fou", "foo_over_udp"],
         blurb:     "A Foo over UDP (FOU) packet â€” carrying direct IP protocols (IPv4/IPv6/ESP) inside UDP.",
     }
@@ -7685,6 +8594,7 @@ protocols! {
         color:     0xD97706,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["6to4", "six_to_four"],
         blurb:     "A 6to4 IPv6 in IPv4 tunnel packet â€” carrying 2002::/16 addresses across IPv4 backbones.",
     }
@@ -7694,6 +8604,7 @@ protocols! {
         color:     0x0D9488,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["isatap", "isatap_tunnel"],
         blurb:     "An ISATAP IPv6 tunnel packet â€” carrying fe80::5efe:a.b.c.d intra-site tunnel traffic.",
     }
@@ -7703,6 +8614,7 @@ protocols! {
         color:     0x6366F1,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ikev2", "ike_v2"],
         blurb:     "An IKEv2 VPN key exchange message â€” IKE_SA_INIT, IKE_AUTH or CREATE_CHILD_SA.",
     }
@@ -7712,6 +8624,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sstp", "ms_sstp"],
         blurb:     "An SSTP VPN control or data packet â€” CALL_CONNECT_REQUEST, ACK or ECHO.",
     }
@@ -7721,6 +8634,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["softether", "softether_vpn"],
         blurb:     "A SoftEther VPN session or HTTPS tunnel packet.",
     }
@@ -7730,6 +8644,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["stt", "stt_tunnel"],
         blurb:     "An STT stateless transport tunnel frame â€” carrying virtual network traffic with Context IDs.",
     }
@@ -7739,6 +8654,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nvgre", "nvgre_tunnel"],
         blurb:     "An NVGRE network virtualization frame â€” carrying 24-bit Virtual Subnet IDs (VSID).",
     }
@@ -7748,6 +8664,7 @@ protocols! {
         color:     0xD97706,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpls_in_udp", "mpls_udp"],
         blurb:     "An MPLS-in-UDP tunnel packet â€” carrying MPLS label stacks over UDP transport.",
     }
@@ -7757,6 +8674,7 @@ protocols! {
         color:     0x0D9488,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["openconnect", "anyconnect"],
         blurb:     "An OpenConnect / AnyConnect SSL VPN CSTP handshake or data frame.",
     }
@@ -7766,6 +8684,7 @@ protocols! {
         color:     0xD946EF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["scep", "pki_scep"],
         blurb:     "A SCEP PKI certificate enrollment message â€” PKIOperation, GetCACert or GetCACaps.",
     }
@@ -7775,6 +8694,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["est", "pki_est"],
         blurb:     "An EST certificate enrollment message â€” simpleenroll, simplereenroll or cacerts.",
     }
@@ -7784,6 +8704,7 @@ protocols! {
         color:     0xF43F5E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tsp_timestamp", "rfc3161_tsp"],
         blurb:     "A TSP PKI time-stamp message â€” TimeStampReq or TimeStampResp.",
     }
@@ -7793,6 +8714,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sasl", "sasl_auth"],
         blurb:     "A SASL authentication exchange â€” PLAIN, GSSAPI, DIGEST-MD5 or EXTERNAL.",
     }
@@ -7802,6 +8724,7 @@ protocols! {
         color:     0x6D28D9,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["gssapi", "spnego"],
         blurb:     "A GSSAPI / SPNEGO negotiation token for Kerberos and NTLM security contexts.",
     }
@@ -7811,6 +8734,7 @@ protocols! {
         color:     0x0369A1,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["srp", "srp_auth"],
         blurb:     "An SRP zero-knowledge password authentication handshake.",
     }
@@ -7820,6 +8744,7 @@ protocols! {
         color:     0x15803D,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dtls_srtp", "srtp_dtls"],
         blurb:     "A DTLS-SRTP key exchange packet â€” establishing SRTP media encryption keys.",
     }
@@ -7829,6 +8754,7 @@ protocols! {
         color:     0x047857,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["tacacs_legacy", "xtacacs"],
         blurb:     "A legacy TACACS / XTACACS authentication packet â€” LOGIN, RESPONSE or CHANGE_PASSWORD.",
     }
@@ -7838,6 +8764,7 @@ protocols! {
         color:     0x0F766E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["shadowsocks", "ss_proxy"],
         blurb:     "A Shadowsocks encrypted proxy packet carrying AEAD chunks.",
     }
@@ -7847,6 +8774,7 @@ protocols! {
         color:     0x374151,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["vmess", "vless", "v2ray"],
         blurb:     "A VMess / VLESS encrypted proxy protocol frame.",
     }
@@ -7856,6 +8784,7 @@ protocols! {
         color:     0x1F2937,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["obfs4", "tor_obfs4"],
         blurb:     "An obfs4 obfuscated proxy stream.",
     }
@@ -7865,6 +8794,7 @@ protocols! {
         color:     0xF09E54,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "The live audio/video of a call (RTP) â€” the media stream SIP set up, carried over UDP.",
     }
@@ -7874,6 +8804,7 @@ protocols! {
         color:     0xD4843E,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A call-quality report (RTCP) â€” loss and jitter statistics riding alongside an RTP stream.",
     }
@@ -7883,6 +8814,7 @@ protocols! {
         color:     0xB45CF5,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An enterprise authentication message (Kerberos) â€” requesting or presenting a login ticket.",
     }
@@ -7892,6 +8824,7 @@ protocols! {
         color:     0x8B7AD6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A directory query or login (LDAP) â€” looking up users/groups, or binding with credentials.",
     }
@@ -7901,6 +8834,7 @@ protocols! {
         color:     0xF47B9C,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A network-access authentication message (RADIUS) â€” allowing or denying Wi-Fi/VPN logins.",
     }
@@ -7910,6 +8844,7 @@ protocols! {
         color:     0xEA7A3C,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An OpenVPN tunnel packet â€” encrypted VPN traffic; the type shows handshake vs. data.",
     }
@@ -7919,6 +8854,7 @@ protocols! {
         color:     0x88171A,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A WireGuard tunnel packet â€” a modern encrypted VPN; the type shows handshake vs. data.",
     }
@@ -7928,6 +8864,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Encrypted IPsec traffic (ESP) â€” a VPN payload identified only by its SPI tunnel number.",
     }
@@ -7937,6 +8874,7 @@ protocols! {
         color:     0x848B98,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An authenticated IPsec packet (AH) â€” integrity-protected but not encrypted.",
     }
@@ -7946,6 +8884,7 @@ protocols! {
         color:     0x660066,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An IoT messaging packet (MQTT) â€” a device publishing to or subscribing on a broker topic.",
     }
@@ -7955,6 +8894,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A constrained-device request/response (CoAP) â€” HTTP-like IoT traffic over UDP.",
     }
@@ -7964,6 +8904,7 @@ protocols! {
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An internet routing message (BGP) â€” networks telling each other which addresses they reach.",
     }
@@ -7973,6 +8914,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An interior routing message (OSPF) â€” routers inside one network sharing link-state maps.",
     }
@@ -7982,6 +8924,7 @@ protocols! {
         color:     0x93C5FD,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A neighbour announcement (LLDP) â€” a switch advertising its identity and port for topology maps.",
     }
@@ -7991,6 +8934,7 @@ protocols! {
         color:     0x64748B,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A link-aggregation message (LACP) â€” two switches bonding several cables into one link.",
     }
@@ -8000,6 +8944,7 @@ protocols! {
         color:     0x6EA8C4,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mka"],
         blurb:     "The key agreement MACsec needs before it encrypts anything â€” and where that agreement quietly fails.",
     }
@@ -8009,6 +8954,7 @@ protocols! {
         color:     0xC4956E,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["kpasswd"],
         blurb:     "A Kerberos password being changed by its owner, or reset by an administrator.",
     }
@@ -8018,6 +8964,7 @@ protocols! {
         color:     0x9E7BB5,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["milter"],
         blurb:     "A mail filter's verdict on a message â€” including the silent discard that makes mail vanish without a bounce.",
     }
@@ -8027,6 +8974,7 @@ protocols! {
         color:     0x7BB58E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["lmtp"],
         blurb:     "Mail being filed into mailboxes (LMTP) â€” with one delivery status per recipient, so partial failures are visible.",
     }
@@ -8036,6 +8984,7 @@ protocols! {
         color:     0x7C8CA6,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         // "oam" alone belongs to CFM (802.1ag), which is also called OAM and
         // claimed it first â€” matching Wireshark, where `oam` is the CFM filter.
         aliases:   ["link-oam", "efm"],
@@ -8047,6 +8996,7 @@ protocols! {
         color:     0x5EAAD6,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["esmc", "synce"],
         blurb:     "A clock quality announcement (ESMC/SyncE) â€” what grade of timing reference this hop is locked to.",
     }
@@ -8056,6 +9006,7 @@ protocols! {
         color:     0xC77DBB,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["memberlist", "serf"],
         blurb:     "Cluster nodes gossiping about each other â€” including which node declared which other node dead.",
     }
@@ -8065,6 +9016,7 @@ protocols! {
         color:     0xD4739B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["consul", "consul-rpc"],
         blurb:     "Consul servers talking to each other â€” and the Raft elections that show a cluster losing its leader.",
     }
@@ -8074,6 +9026,7 @@ protocols! {
         color:     0x7BA05B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["drbd"],
         blurb:     "A disk being mirrored to another machine â€” and the peer-side failures that stall writes locally.",
     }
@@ -8083,6 +9036,7 @@ protocols! {
         color:     0xD9A441,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["artnet", "art-net"],
         blurb:     "DMX lighting universes over Ethernet â€” and the sequence gaps a rig shows as a stutter.",
     }
@@ -8092,6 +9046,7 @@ protocols! {
         color:     0xE0B85C,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sacn", "e131"],
         blurb:     "Standardised DMX over IP â€” where two consoles fighting over one universe becomes visible.",
     }
@@ -8101,6 +9056,7 @@ protocols! {
         color:     0x9FD1A8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["osc"],
         blurb:     "Studio and show control as plain-text addresses â€” on whichever port the application chose.",
     }
@@ -8110,6 +9066,7 @@ protocols! {
         color:     0xC49AD1,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rtpmidi", "applemidi"],
         blurb:     "MIDI over a network â€” and whether the session was refused or simply never answered.",
     }
@@ -8119,6 +9076,7 @@ protocols! {
         color:     0x9E9E7A,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["igrp"],
         blurb:     "Cisco routing that predates its own replacement â€” advertised with no authentication at all.",
     }
@@ -8128,6 +9086,7 @@ protocols! {
         color:     0x7FA3B5,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["etherip"],
         blurb:     "A whole Ethernet segment inside IP â€” so the far site's broadcasts arrive here too.",
     }
@@ -8137,6 +9096,7 @@ protocols! {
         color:     0xC48FA8,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cmp", "pkixcmp"],
         blurb:     "Automated certificate enrolment and renewal â€” and the reason a device failed to get an identity.",
     }
@@ -8146,6 +9106,7 @@ protocols! {
         color:     0x7FA0C4,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nsip"],
         blurb:     "The link many cells share â€” and the heartbeat that takes all of them down at once.",
     }
@@ -8155,6 +9116,7 @@ protocols! {
         color:     0x6F90B4,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["bssgp"],
         blurb:     "Where a cell tells the core how much it can take â€” and what it threw away.",
     }
@@ -8164,6 +9126,7 @@ protocols! {
         color:     0xC8A05A,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mtp3"],
         blurb:     "Which signalling point a message is for â€” and which destination stopped being reachable.",
     }
@@ -8173,6 +9136,7 @@ protocols! {
         color:     0x9AA8D8,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["someiptp"],
         blurb:     "Large messages cut into segments with nothing to retransmit a lost one.",
     }
@@ -8182,6 +9146,7 @@ protocols! {
         color:     0xE08A5A,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rgoose", "rsv"],
         blurb:     "A breaker trip made routable â€” and whether anyone authenticated it.",
     }
@@ -8191,6 +9156,7 @@ protocols! {
         color:     0xD4736A,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["opensafety"],
         blurb:     "Safety data that trusts no network underneath it â€” and the fault that stops a machine.",
     }
@@ -8200,6 +9166,7 @@ protocols! {
         color:     0xA0C48F,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cnip"],
         blurb:     "Building control segments joined over IP â€” and the routers that keep re-registering.",
     }
@@ -8209,6 +9176,7 @@ protocols! {
         color:     0x8FC4A0,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["lontalk", "lonworks"],
         blurb:     "The language a thermostat speaks to an air handler â€” and whether anyone confirmed it arrived.",
     }
@@ -8218,6 +9186,7 @@ protocols! {
         color:     0x8FB0D0,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ffhse", "fieldbus"],
         blurb:     "A process plant's instruments over Ethernet â€” and the refused write the operator's screen will not show.",
     }
@@ -8227,6 +9196,7 @@ protocols! {
         color:     0xD08A6A,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["flexray"],
         blurb:     "A bus where every ECU has a scheduled slot â€” and a null frame means one stopped producing.",
     }
@@ -8236,6 +9206,7 @@ protocols! {
         color:     0x6FA890,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["dlr"],
         blurb:     "A machine's network wired as a loop â€” and the beacon that says whether the loop is still closed.",
     }
@@ -8245,6 +9216,7 @@ protocols! {
         color:     0x7FB8A4,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["erps", "raps", "g8032"],
         blurb:     "A ring that blocks one link on purpose â€” and the message that says whether it still is.",
     }
@@ -8254,6 +9226,7 @@ protocols! {
         color:     0xB98FC4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["tsp", "timestamp"],
         blurb:     "A trusted third party attesting when something existed â€” and why a signature outlives its certificate.",
     }
@@ -8263,6 +9236,7 @@ protocols! {
         color:     0x9EC46E,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["aeron"],
         blurb:     "Low-latency messaging where the NAKs and the shrinking window are the early warning.",
     }
@@ -8272,6 +9246,7 @@ protocols! {
         color:     0x7FC49A,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["lorawan", "lora"],
         blurb:     "Battery sensors on a kilometres-wide link â€” and the frame counter a network silently discards them on.",
     }
@@ -8281,6 +9256,7 @@ protocols! {
         color:     0xB59F6E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["lin"],
         blurb:     "The cheap bus behind mirrors and seat motors â€” where \"nobody answered\" is the whole diagnosis.",
     }
@@ -8290,6 +9266,7 @@ protocols! {
         color:     0xC4A05F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["iec101"],
         blurb:     "Serial telecontrol on an IP capture â€” and the link layer that says why a poll stalled.",
     }
@@ -8299,6 +9276,7 @@ protocols! {
         color:     0x8FB5C4,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["iser"],
         blurb:     "iSCSI with the blocks moved onto RDMA â€” so the commands are visible and the data never is.",
     }
@@ -8308,6 +9286,7 @@ protocols! {
         color:     0xA8794F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["modbus-rtu", "modbusrtu"],
         blurb:     "Serial Modbus forwarded onto TCP unchanged â€” which does not parse as Modbus TCP and so goes unseen.",
     }
@@ -8317,6 +9296,7 @@ protocols! {
         color:     0xB07850,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["modbus-ascii", "modbusascii"],
         blurb:     "Serial Modbus ASCII forwarded onto TCP â€” identified by colon prefix and LRC checksum.",
     }
@@ -8326,6 +9306,7 @@ protocols! {
         color:     0xD1A05F,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["isotp", "iso15765"],
         blurb:     "Diagnostic messages split across CAN frames â€” and the flow control that explains a stalled session.",
     }
@@ -8335,6 +9316,7 @@ protocols! {
         color:     0xC46E7B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ocsp"],
         blurb:     "Whether a certificate has been revoked â€” the verdict, not the transport status that hides it.",
     }
@@ -8344,6 +9326,7 @@ protocols! {
         color:     0xB58F6E,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["soap"],
         blurb:     "The operation hiding inside POST / â€” which camera setting or router config was actually changed.",
     }
@@ -8353,6 +9336,7 @@ protocols! {
         color:     0x6FBF9E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["bier"],
         blurb:     "Multicast with the delivery list inside the packet â€” and how many receivers this copy is still for.",
     }
@@ -8362,6 +9346,7 @@ protocols! {
         color:     0x5FA8D3,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["srv6", "srh"],
         blurb:     "A packet carrying its own list of waypoints â€” and how far along that path it has got.",
     }
@@ -8371,6 +9356,7 @@ protocols! {
         color:     0x7C9EC4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["isns"],
         blurb:     "How an iSCSI initiator finds its targets â€” and the refusal that explains storage that vanished.",
     }
@@ -8380,6 +9366,7 @@ protocols! {
         color:     0xA88FC4,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["hip"],
         blurb:     "Separating who a host is from where it is â€” and the NOTIFY that says why the exchange was refused.",
     }
@@ -8389,6 +9376,7 @@ protocols! {
         color:     0x6FA8A0,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["dvmrp"],
         blurb:     "The oldest multicast routing protocol â€” and the Prune that explains a stream nobody is receiving.",
     }
@@ -8398,6 +9386,7 @@ protocols! {
         color:     0xCFA05A,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pn-ptcp", "ptcp"],
         blurb:     "The clock every isochronous PROFINET cycle depends on â€” whose drift shows up as process faults.",
     }
@@ -8407,6 +9396,7 @@ protocols! {
         color:     0x9AA0A6,
         transport: Udp,
         rank:      4,
+        status:    Declared,
         aliases:   ["echo"],
         blurb:     "A 1983 debugging service that reflects whatever it receives â€” and can be aimed at someone else.",
     }
@@ -8416,6 +9406,7 @@ protocols! {
         color:     0x8A8F94,
         transport: Udp,
         rank:      4,
+        status:    Declared,
         aliases:   ["discard"],
         blurb:     "A service that throws away everything sent to it â€” so anything coming back is worth a look.",
     }
@@ -8425,6 +9416,7 @@ protocols! {
         color:     0xA8AEB4,
         transport: Udp,
         rank:      4,
+        status:    Declared,
         aliases:   ["daytime"],
         blurb:     "The date and time as plain text â€” small, ancient, and reachable from anywhere it is left on.",
     }
@@ -8434,6 +9426,7 @@ protocols! {
         color:     0xB4A0C4,
         transport: Udp,
         rank:      4,
+        status:    Declared,
         aliases:   ["qotd"],
         blurb:     "A quotation returned to whoever asked â€” or to whoever an attacker claimed to be.",
     }
@@ -8443,6 +9436,7 @@ protocols! {
         color:     0xD1707A,
         transport: Udp,
         rank:      4,
+        status:    Declared,
         aliases:   ["chargen"],
         blurb:     "Up to 512 bytes returned for a datagram it does not even read â€” a DDoS reflector by design.",
     }
@@ -8452,6 +9446,7 @@ protocols! {
         color:     0x7FA8C4,
         transport: Udp,
         rank:      4,
+        status:    Declared,
         aliases:   ["timeproto"],
         blurb:     "The time as one 32-bit number counted from 1900 â€” which runs out in 2036.",
     }
@@ -8461,6 +9456,7 @@ protocols! {
         color:     0x8FA88F,
         transport: Tcp,
         rank:      4,
+        status:    Declared,
         aliases:   ["tcpmux"],
         blurb:     "Asking a host to connect you to a service by name â€” a port-1 listener worth explaining.",
     }
@@ -8470,6 +9466,7 @@ protocols! {
         color:     0x8FBF6B,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ripng"],
         blurb:     "IPv6 routes being advertised â€” and metric 16, which is how RIP says a destination is gone.",
     }
@@ -8479,6 +9476,7 @@ protocols! {
         color:     0xB58FD1,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mip6", "mipv6"],
         blurb:     "A node keeping its address while it moves â€” and the home agent's reason for refusing to let it.",
     }
@@ -8488,6 +9486,7 @@ protocols! {
         color:     0x6BB8BF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["amt"],
         blurb:     "Multicast tunnelled across networks that will not carry it â€” and where the setup stopped.",
     }
@@ -8497,6 +9496,7 @@ protocols! {
         color:     0xE8A33D,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["prp"],
         blurb:     "A frame duplicated onto two separate networks (PRP) â€” and which of the two this copy crossed.",
     }
@@ -8506,6 +9506,7 @@ protocols! {
         color:     0xC48A3F,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pn-dcp", "dcp"],
         blurb:     "How a PROFINET device gets its name and address â€” including the unauthenticated Set that breaks a controller.",
     }
@@ -8515,6 +9516,7 @@ protocols! {
         color:     0x5FB3B3,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ecpri"],
         blurb:     "The link between a radio and its baseband â€” and the fault codes that name late fronthaul data.",
     }
@@ -8524,6 +9526,7 @@ protocols! {
         color:     0xD97757,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mrp"],
         blurb:     "An industrial redundancy ring (MRP) testing itself, or reconverging after a break.",
     }
@@ -8533,6 +9536,7 @@ protocols! {
         color:     0xE0885F,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["hsr"],
         blurb:     "A frame sent both ways round a redundancy ring at once (HSR) â€” so a cut cable loses nothing.",
     }
@@ -8542,6 +9546,7 @@ protocols! {
         color:     0x8B9DC3,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mvrp"],
         blurb:     "Switches agreeing which VLANs to carry (MVRP) â€” a Leave here explains traffic that stopped.",
     }
@@ -8551,6 +9556,7 @@ protocols! {
         color:     0x9DAFD3,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mmrp"],
         blurb:     "Switches registering multicast groups (MMRP) so traffic is not flooded where nothing wants it.",
     }
@@ -8560,6 +9566,7 @@ protocols! {
         color:     0xA8A29E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Spanning Tree message (STP) â€” switches electing a root bridge to keep the network loop-free.",
     }
@@ -8569,6 +9576,7 @@ protocols! {
         color:     0xCBD5E1,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A label-switched packet (MPLS) â€” carrier/backbone forwarding; the inner packet is shown after the label.",
     }
@@ -8578,6 +9586,7 @@ protocols! {
         color:     0x22D3EE,
         transport: Other,
         rank:      1,
+        status:    Dissected,
         aliases:   ["wlan", "wifi"],
         blurb:     "A raw Wi-Fi (802.11) frame â€” the radio layer beneath your network traffic.",
     }
@@ -8587,6 +9596,7 @@ protocols! {
         color:     0x94A3E8,
         transport: Other,
         rank:      1,
+        status:    Dissected,
         aliases:   ["usb"],
         blurb:     "USB bus traffic â€” a request or data moving between your PC and a USB device.",
     }
@@ -8596,6 +9606,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Other,
         rank:      1,
+        status:    Dissected,
         aliases:   ["bluetooth", "hci"],
         blurb:     "A Bluetooth HCI packet â€” your OS talking to the Bluetooth radio (commands, events, data).",
     }
@@ -8605,6 +9616,7 @@ protocols! {
         color:     0xD9A442,
         transport: Other,
         rank:      1,
+        status:    Dissected,
         aliases:   ["can"],
         blurb:     "A CAN bus frame â€” broadcast data on a vehicle or industrial controller network.",
     }
@@ -8614,6 +9626,7 @@ protocols! {
         color:     0xC2874A,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["j1939"],
         blurb:     "A truck or bus ECU message (SAE J1939) â€” the identifier names both the message and the box that sent it.",
     }
@@ -8623,6 +9636,7 @@ protocols! {
         color:     0xD4643A,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["devicenet"],
         blurb:     "An industrial controller message (DeviceNet) â€” the CAN identifier names both the message group and the node address.",
     }
@@ -8632,6 +9646,7 @@ protocols! {
         color:     0xA07840,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["j1708", "j1587"],
         blurb:     "A truck ECU frame (SAE J1708) â€” the MID names the subsystem that sent it; without it, the capture is undifferentiated hex.",
     }
@@ -8641,6 +9656,7 @@ protocols! {
         color:     0xE0A33A,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["obd2", "obdii", "obd"],
         blurb:     "A diagnostic scan-tool exchange (OBD-II) â€” asking a car for engine speed, coolant temperature or fault codes.",
     }
@@ -8650,6 +9666,7 @@ protocols! {
         color:     0xA855F7,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "NTLM authentication handshake message.",
     }
@@ -8659,6 +9676,7 @@ protocols! {
         color:     0x4B5563,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An SMB file-sharing transaction over TCP 445.",
     }
@@ -8668,6 +9686,7 @@ protocols! {
         color:     0x5C7E8E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["smb_direct", "smbd"],
         blurb:     "SMB3 file sharing over RDMA â€” bypasses TCP/IP to transfer data directly into memory.",
     }
@@ -8677,6 +9696,7 @@ protocols! {
         color:     0x5C7E8E,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["srp_rdma", "srp-rdma"],
         blurb:     "SCSI RDMA Protocol message over RDMA transport.",
     }
@@ -8686,6 +9706,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["fc2", "fc-2"],
         blurb:     "Native Fibre Channel FC-2 frame.",
     }
@@ -8695,6 +9716,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcp"],
         blurb:     "Fibre Channel Protocol SCSI command/response.",
     }
@@ -8704,6 +9726,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pnfs"],
         blurb:     "Parallel NFS layout transaction over TCP 2049.",
     }
@@ -8713,6 +9736,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nfs_cb", "nfs-cb"],
         blurb:     "NFSv4 Callback backchannel RPC operation.",
     }
@@ -8722,6 +9746,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hdfs_data", "hdfs-data"],
         blurb:     "HDFS DataNode block read/write operation.",
     }
@@ -8731,6 +9756,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["moosefs", "mfs"],
         blurb:     "MooseFS master/chunkserver command.",
     }
@@ -8740,6 +9766,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["beegfs", "fhgfs"],
         blurb:     "BeeGFS storage or metadata operation.",
     }
@@ -8749,6 +9776,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["orangefs", "pvfs2"],
         blurb:     "OrangeFS parallel storage request.",
     }
@@ -8758,6 +9786,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sheepdog"],
         blurb:     "Sheepdog VDI read/write block storage command.",
     }
@@ -8767,6 +9796,7 @@ protocols! {
         color:     0x0284C7,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["coda", "rpc2"],
         blurb:     "Coda distributed filesystem RPC2 packet.",
     }
@@ -8776,6 +9806,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["syncthing", "bep"],
         blurb:     "Syncthing BEP file index/block exchange.",
     }
@@ -8785,6 +9816,7 @@ protocols! {
         color:     0x6366F1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["perforce", "p4"],
         blurb:     "Perforce version control sync/command request.",
     }
@@ -8794,6 +9826,7 @@ protocols! {
         color:     0x6366F1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mercurial", "hg"],
         blurb:     "Mercurial repository wire command.",
     }
@@ -8803,6 +9836,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["oftp", "oftp2"],
         blurb:     "Odette FTP file transfer session message.",
     }
@@ -8812,6 +9846,7 @@ protocols! {
         color:     0x6B7280,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["systat"],
         blurb:     "Systat system status response.",
     }
@@ -8821,6 +9856,7 @@ protocols! {
         color:     0x6B7280,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netstat"],
         blurb:     "Netstat network status response.",
     }
@@ -8830,6 +9866,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["sna", "appn"],
         blurb:     "IBM SNA / APPN path control frame.",
     }
@@ -8839,6 +9876,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["netbeui", "nbf"],
         blurb:     "NetBEUI frame session or name request.",
     }
@@ -8848,6 +9886,7 @@ protocols! {
         color:     0xDC2626,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ncp"],
         blurb:     "Novell NetWare file/session request.",
     }
@@ -8857,6 +9896,7 @@ protocols! {
         color:     0xDC2626,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["spx"],
         blurb:     "IPX SPX connection packet.",
     }
@@ -8866,6 +9906,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["dec_lat", "lat"],
         blurb:     "DEC Local Area Transport terminal session frame.",
     }
@@ -8875,6 +9916,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["dec_mop", "mop"],
         blurb:     "DEC MOP system dump or load frame.",
     }
@@ -8884,6 +9926,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["chaosnet"],
         blurb:     "Chaosnet LISP machine network packet.",
     }
@@ -8893,6 +9936,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["xns"],
         blurb:     "Xerox Network Systems internet datagram.",
     }
@@ -8902,6 +9946,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["uucp"],
         blurb:     "UUCP file transfer or command execution session.",
     }
@@ -8911,6 +9956,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["kermit"],
         blurb:     "Kermit file transfer frame.",
     }
@@ -8920,6 +9966,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zmodem"],
         blurb:     "ZMODEM file transfer frame.",
     }
@@ -8929,6 +9976,7 @@ protocols! {
         color:     0x0284C7,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["edp"],
         blurb:     "Extreme Networks device discovery announcement.",
     }
@@ -8938,6 +9986,7 @@ protocols! {
         color:     0x0284C7,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fdp"],
         blurb:     "Foundry/Brocade device discovery frame.",
     }
@@ -8947,6 +9996,7 @@ protocols! {
         color:     0x0284C7,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["sonmp", "ndp_nortel"],
         blurb:     "Nortel SONMP device discovery frame.",
     }
@@ -8956,6 +10006,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["spb", "8021aq"],
         blurb:     "IEEE 802.1aq Shortest Path Bridging frame.",
     }
@@ -8965,6 +10016,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Tabular Data Stream (TDS) database message over TCP 1433.",
     }
@@ -8974,6 +10026,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An Advanced Message Queuing Protocol (AMQP) message on TCP 5672.",
     }
@@ -8983,6 +10036,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["amqp1", "amqp10"],
         blurb:     "An AMQP 1.0 frame (TCP 5672) â€” the OASIS standard behind Azure Service Bus and Qpid, unrelated to AMQP 0-9-1 beyond the name.",
     }
@@ -8992,6 +10046,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An Apache Kafka message queuing request/response on TCP 9092.",
     }
@@ -9001,6 +10056,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A system log message shipped to a central collector (UDP 514) â€” usually plaintext.",
     }
@@ -9010,6 +10066,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A trivial file transfer (UDP 69) â€” often a device pulling firmware or config at boot.",
     }
@@ -9019,6 +10076,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "UPnP device-discovery chatter (UDP 1900) â€” gadgets finding each other on the LAN.",
     }
@@ -9028,6 +10086,7 @@ protocols! {
         color:     0x22D3EE,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A NAT-traversal probe (UDP 3478) used by voice/video calls to find a public path.",
     }
@@ -9037,6 +10096,7 @@ protocols! {
         color:     0xA78BFA,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A link-local name lookup (UDP 5355) â€” like DNS, but for the local network only.",
     }
@@ -9046,6 +10106,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "Streaming-media control (TCP 554) â€” play/pause signalling for an IP camera or stream.",
     }
@@ -9055,6 +10116,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An Internet Relay Chat message (TCP 6667) â€” plain-text group chat.",
     }
@@ -9064,6 +10126,7 @@ protocols! {
         color:     0xFB923C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rfb", "vnc"],
         blurb:     "A VNC / remote-framebuffer session (TCP 5900) â€” one screen shared to another.",
     }
@@ -9073,6 +10136,7 @@ protocols! {
         color:     0x94A3B8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A WHOIS registration lookup (TCP 43) â€” who owns a domain or IP.",
     }
@@ -9082,6 +10146,7 @@ protocols! {
         color:     0xA3E635,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Usenet news transfer (TCP 119) â€” fetching or moving newsgroup articles.",
     }
@@ -9091,6 +10156,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An SCTP transport packet (IP proto 132) â€” reliable multi-stream, common in telecom signalling.",
     }
@@ -9100,6 +10166,7 @@ protocols! {
         color:     0x93C5FD,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A GRE tunnel (IP proto 47) â€” one packet wrapped inside another to cross a network.",
     }
@@ -9109,6 +10176,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An IGMP message (IP proto 2) â€” a host joining or leaving an IPv4 multicast group.",
     }
@@ -9118,6 +10186,7 @@ protocols! {
         color:     0xF9A825,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A DHCPv6 message (UDP 546/547) â€” IPv6 address assignment, like DHCP for IPv4.",
     }
@@ -9127,6 +10196,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A RIP routing update (UDP 520) â€” routers telling each other which networks they can reach.",
     }
@@ -9136,6 +10206,7 @@ protocols! {
         color:     0xC084FC,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A NetBIOS name lookup (UDP 137) â€” the old Windows way of resolving names locally.",
     }
@@ -9145,6 +10216,7 @@ protocols! {
         color:     0x64748B,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A SOCKS proxy negotiation (TCP 1080) â€” relaying a connection through a proxy.",
     }
@@ -9154,6 +10226,7 @@ protocols! {
         color:     0x339999,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Memcached cache operation (TCP 11211) â€” reading or writing an in-memory key.",
     }
@@ -9163,6 +10236,7 @@ protocols! {
         color:     0x2A8E8E,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["memcached-bin", "memcachedbin"],
         blurb:     "A Memcached operation in the binary protocol (TCP 11211) â€” what client libraries use, as opposed to the text form typed by hand.",
     }
@@ -9172,6 +10246,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A BitTorrent peer connection (TCP 6881+) â€” peer-to-peer file sharing.",
     }
@@ -9181,6 +10256,7 @@ protocols! {
         color:     0xF05033,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A native Git transfer (TCP 9418) â€” cloning, fetching or pushing a repository.",
     }
@@ -9190,6 +10266,7 @@ protocols! {
         color:     0x26A69A,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An XMPP / Jabber message (TCP 5222) â€” open-standard instant messaging.",
     }
@@ -9199,6 +10276,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Finger lookup (TCP 79) â€” an old service reporting who is logged in.",
     }
@@ -9208,6 +10286,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A VRRP advertisement (IP proto 112) â€” routers sharing a virtual gateway IP for failover.",
     }
@@ -9217,6 +10296,7 @@ protocols! {
         color:     0x34D399,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A PIM message (IP proto 103) â€” routers building paths to deliver multicast.",
     }
@@ -9226,6 +10306,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An EIGRP routing message (IP proto 88) â€” Cisco routers exchanging routes.",
     }
@@ -9235,6 +10316,7 @@ protocols! {
         color:     0xF472B6,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A PPPoE frame â€” a DSL-style login/session carried over Ethernet.",
     }
@@ -9244,6 +10326,7 @@ protocols! {
         color:     0xA855F7,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An 802.1X / EAPOL frame â€” port authentication, or the Wi-Fi WPA key handshake.",
     }
@@ -9253,6 +10336,7 @@ protocols! {
         color:     0xEA7A3C,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An L2TP tunnel message (UDP 1701) â€” usually the L2TP/IPsec VPN transport.",
     }
@@ -9262,6 +10346,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A GTP message (UDP 2123/2152) â€” carrying mobile data through the 4G/5G core.",
     }
@@ -9271,6 +10356,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rmcp"],
         blurb:     "An RMCP/IPMI message (UDP 623) â€” out-of-band management of a server's BMC.",
     }
@@ -9280,6 +10366,7 @@ protocols! {
         color:     0xC084FC,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["wsd", "wsdiscovery"],
         blurb:     "A WS-Discovery message (UDP 3702) â€” devices like printers/cameras finding each other.",
     }
@@ -9289,6 +10376,7 @@ protocols! {
         color:     0xF47B9C,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["tacacs", "tacacs+"],
         blurb:     "A TACACS+ message (TCP 49) â€” admin login/authorization for network gear.",
     }
@@ -9298,6 +10386,7 @@ protocols! {
         color:     0x818CF8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Diameter message (TCP/SCTP 3868) â€” carrier AAA and billing.",
     }
@@ -9307,6 +10396,7 @@ protocols! {
         color:     0x848B98,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An rlogin session (TCP 513) â€” a legacy cleartext remote login; prefer SSH.",
     }
@@ -9316,6 +10406,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A DCCP packet (IP proto 33) â€” congestion-controlled but unreliable transport for streaming.",
     }
@@ -9325,6 +10416,7 @@ protocols! {
         color:     0x6EE7B7,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A DTLS record â€” TLS encryption over UDP, as used by WebRTC media and some VPNs.",
     }
@@ -9334,6 +10426,7 @@ protocols! {
         color:     0xF97316,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ipfix"],
         blurb:     "A NetFlow/IPFIX export (UDP 2055/4739) â€” a router reporting traffic-flow summaries.",
     }
@@ -9343,6 +10436,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An sFlow datagram (UDP 6343) â€” a switch exporting sampled packets and counters.",
     }
@@ -9352,6 +10446,7 @@ protocols! {
         color:     0x94A3B8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A BFD heartbeat (UDP 3784) â€” a fast liveness check between routers for quick failover.",
     }
@@ -9361,6 +10456,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An HSRP message (UDP 1985) â€” Cisco routers sharing a virtual gateway IP.",
     }
@@ -9370,6 +10466,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An iSCSI PDU (TCP 3260) â€” SCSI storage commands carried over the network.",
     }
@@ -9379,6 +10476,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An RTMP message (TCP 1935) â€” the streaming protocol used to ingest live video.",
     }
@@ -9388,6 +10486,7 @@ protocols! {
         color:     0xF472B6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An SMPP PDU (TCP 2775) â€” an app or gateway sending/receiving SMS text messages.",
     }
@@ -9397,6 +10496,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An OpenFlow message (TCP 6653) â€” an SDN controller programming a switch.",
     }
@@ -9406,6 +10506,7 @@ protocols! {
         color:     0x27AAE1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A NATS message (TCP 4222) â€” publish/subscribe messaging between services.",
     }
@@ -9415,6 +10516,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A STOMP frame (TCP 61613) â€” simple text messaging with a broker.",
     }
@@ -9424,6 +10526,7 @@ protocols! {
         color:     0x16A34A,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A PROFINET frame (EtherType 0x8892) â€” real-time industrial automation data.",
     }
@@ -9433,6 +10536,7 @@ protocols! {
         color:     0xEA580C,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["profisafe"],
         blurb:     "The safety layer over PROFINET IO (F-IO cyclic data, Status/Control Byte, and Safety CRC).",
     }
@@ -9442,6 +10546,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["wol", "wakeonlan"],
         blurb:     "A Wake-on-LAN magic packet â€” a broadcast that powers a sleeping machine on.",
     }
@@ -9451,6 +10556,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A GLBP message (UDP 3222) â€” Cisco routers load-sharing a virtual gateway.",
     }
@@ -9460,6 +10566,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A WCCP message (UDP 2048) â€” a router redirecting traffic to a cache/proxy.",
     }
@@ -9469,6 +10576,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An MGCP message (UDP 2427) â€” a call agent controlling a VoIP media gateway.",
     }
@@ -9478,6 +10586,7 @@ protocols! {
         color:     0xC084FC,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nbds"],
         blurb:     "A NetBIOS datagram (UDP 138) â€” legacy Windows broadcast/browsing traffic.",
     }
@@ -9487,6 +10596,7 @@ protocols! {
         color:     0xF472B6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A DICOM message (TCP 104/11112) â€” medical imaging devices exchanging studies (patient data).",
     }
@@ -9496,6 +10606,7 @@ protocols! {
         color:     0xEF4444,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An HL7 v2 message (TCP 2575) â€” hospital systems exchanging patient/lab data.",
     }
@@ -9505,6 +10616,7 @@ protocols! {
         color:     0x22C55E,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A FIX message â€” a trading system sending orders or market data; tag 35 is the type.",
     }
@@ -9514,6 +10626,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An S7comm message (TCP 102) â€” reading/writing a Siemens PLC's memory.",
     }
@@ -9523,6 +10636,7 @@ protocols! {
         color:     0x1D4ED8,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["s7comm-plus", "s7commplus"],
         blurb:     "The newer Generation Siemens PLC protocol over COTP/TPKT â€” with protocol ID 0x72.",
     }
@@ -9532,6 +10646,7 @@ protocols! {
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec104"],
         blurb:     "An IEC 60870-5-104 message (TCP 2404) â€” power-grid SCADA telecontrol.",
     }
@@ -9541,6 +10656,7 @@ protocols! {
         color:     0xA855F7,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An LDP message (TCP/UDP 646) â€” MPLS routers distributing forwarding labels.",
     }
@@ -9550,6 +10666,7 @@ protocols! {
         color:     0x16A34A,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A GOOSE frame (EtherType 0x88B8) â€” fast IEC 61850 substation protection signalling.",
     }
@@ -9559,6 +10676,7 @@ protocols! {
         color:     0x22D3EE,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A PTP message (IEEE 1588) â€” sub-microsecond clock synchronisation.",
     }
@@ -9568,6 +10686,7 @@ protocols! {
         color:     0x818CF8,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An RSVP message (IP proto 46) â€” reserving bandwidth / signalling an MPLS-TE tunnel.",
     }
@@ -9577,6 +10696,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ike"],
         blurb:     "An ISAKMP/IKE message (UDP 500/4500) â€” negotiating the keys for an IPsec VPN.",
     }
@@ -9586,6 +10706,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Geneve packet (UDP 6081) â€” a network-virtualisation overlay carrying an inner frame.",
     }
@@ -9595,6 +10716,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A CAPWAP message (UDP 5246/5247) â€” a wireless controller managing access points.",
     }
@@ -9604,6 +10726,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Teredo packet (UDP 3544) â€” IPv6 tunnelled through IPv4/NAT.",
     }
@@ -9613,6 +10736,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A GVCP message (UDP 3956) â€” controlling an industrial GigE Vision camera.",
     }
@@ -9622,6 +10746,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["oncrpc", "sunrpc"],
         blurb:     "An ONC RPC message (TCP/UDP 111/2049) â€” the plumbing behind NFS file sharing.",
     }
@@ -9631,6 +10756,7 @@ protocols! {
         color:     0x64748B,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Graphite metric (TCP 2003) â€” an app pushing a time-series data point.",
     }
@@ -9640,6 +10766,7 @@ protocols! {
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Gearman message (TCP 4730) â€” handing a background job to a worker.",
     }
@@ -9649,6 +10776,7 @@ protocols! {
         color:     0x84CC16,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A beanstalkd command (TCP 11300) â€” a simple background-job work queue.",
     }
@@ -9658,6 +10786,7 @@ protocols! {
         color:     0xEF4444,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An EtherCAT frame (EtherType 0x88A4) â€” real-time industrial fieldbus control.",
     }
@@ -9667,6 +10796,7 @@ protocols! {
         color:     0x059669,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An FCoE frame (EtherType 0x8906) â€” Fibre Channel storage carried over Ethernet.",
     }
@@ -9676,6 +10806,7 @@ protocols! {
         color:     0x9C27B0,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A MACsec frame (EtherType 0x88E5) â€” 802.1AE hop-by-hop link encryption.",
     }
@@ -9685,6 +10816,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A RARP packet (EtherType 0x8035) â€” a host asking for its IP given its MAC.",
     }
@@ -9694,6 +10826,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rtps", "dds"],
         blurb:     "An RTPS/DDS message â€” real-time pub/sub middleware (ROS 2, vehicles, industrial).",
     }
@@ -9703,6 +10836,7 @@ protocols! {
         color:     0x22ADF2,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An InfluxDB metric (UDP 8089) â€” a time-series data point written in line protocol.",
     }
@@ -9712,6 +10846,7 @@ protocols! {
         color:     0xA3E635,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mqttsn"],
         blurb:     "An MQTT-SN message (UDP 1883) â€” MQTT for constrained sensor devices over UDP.",
     }
@@ -9721,6 +10856,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Babel routing update (UDP 6696) â€” mesh-friendly distance-vector routing.",
     }
@@ -9730,6 +10866,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An X11 message (TCP 6000+) â€” the Unix display protocol drawing a GUI.",
     }
@@ -9739,6 +10876,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An rsync transfer (TCP 873) â€” efficient file synchronisation.",
     }
@@ -9748,6 +10886,7 @@ protocols! {
         color:     0xF05033,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Subversion message (TCP 3690) â€” centralised version-control traffic.",
     }
@@ -9757,6 +10896,7 @@ protocols! {
         color:     0x64748B,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A RethinkDB message (TCP 28015) â€” a realtime JSON document database.",
     }
@@ -9766,6 +10906,7 @@ protocols! {
         color:     0xDC2626,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sv"],
         blurb:     "A Sampled Values frame (EtherType 0x88BA) â€” digitised substation measurements.",
     }
@@ -9775,6 +10916,7 @@ protocols! {
         color:     0xEA580C,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An Ethernet POWERLINK frame (0x88AB) â€” deterministic real-time industrial control.",
     }
@@ -9784,6 +10926,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sercos"],
         blurb:     "A SERCOS III frame (EtherType 0x88CD) â€” real-time servo motion control.",
     }
@@ -9793,6 +10936,7 @@ protocols! {
         color:     0x16A34A,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["knx", "knxip"],
         blurb:     "A KNXnet/IP message (UDP 3671) â€” building automation (lights/HVAC) over IP.",
     }
@@ -9802,6 +10946,7 @@ protocols! {
         color:     0x22ADF2,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A StatsD metric (UDP 8125) â€” a fire-and-forget counter/gauge/timer.",
     }
@@ -9811,6 +10956,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A GELF message (UDP 12201) â€” a structured application log, often to Graylog.",
     }
@@ -9820,6 +10966,7 @@ protocols! {
         color:     0xB45309,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hart", "hartip"],
         blurb:     "A HART-IP message (UDP/TCP 5094) â€” smart process-instrument data over IP.",
     }
@@ -9829,6 +10976,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["es"],
         blurb:     "An Elasticsearch transport message (TCP 9300) â€” internal cluster traffic.",
     }
@@ -9838,6 +10986,7 @@ protocols! {
         color:     0xDC2626,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Zabbix message (TCP 10050/10051) â€” infrastructure monitoring data.",
     }
@@ -9847,6 +10996,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An NSQ message (TCP 4150) â€” a realtime distributed message queue.",
     }
@@ -9856,6 +11006,7 @@ protocols! {
         color:     0x9C27B0,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["zeromq", "zmq"],
         blurb:     "A ZMTP/ZeroMQ message â€” brokerless messaging between applications.",
     }
@@ -9865,6 +11016,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An Aerospike message (TCP 3000) â€” a low-latency key-value database.",
     }
@@ -9874,6 +11026,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An AVTP frame (EtherType 0x22F0) â€” time-synced audio/video (automotive Ethernet / pro AV).",
     }
@@ -9883,6 +11036,7 @@ protocols! {
         color:     0x64748B,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["someip"],
         blurb:     "A SOME/IP message (UDP/TCP 30490+) â€” service-oriented communication between car ECUs.",
     }
@@ -9892,6 +11046,7 @@ protocols! {
         color:     0x8B95A8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["someip-sd", "someipsd", "sd"],
         blurb:     "Car ECUs finding each other (SOME/IP-SD) â€” announcing a service, subscribing to one, or withdrawing it.",
     }
@@ -9901,6 +11056,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A DoIP message (UDP/TCP 13400) â€” vehicle diagnostics carried over Ethernet.",
     }
@@ -9910,6 +11066,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["uds", "iso14229"],
         blurb:     "A vehicle diagnostic command (UDS) â€” reading a fault code, unlocking an ECU, or writing new firmware to one.",
     }
@@ -9919,6 +11076,7 @@ protocols! {
         color:     0xEA580C,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An XCP message (UDP/TCP 5555) â€” live ECU measurement and calibration.",
     }
@@ -9928,6 +11086,7 @@ protocols! {
         color:     0x16A34A,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Matter message (UDP 5540) â€” the cross-vendor smart-home standard.",
     }
@@ -9937,6 +11096,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An AFP message (TCP 548) â€” Apple Filing Protocol for Mac file sharing.",
     }
@@ -9946,6 +11106,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["dht"],
         blurb:     "A BitTorrent DHT message â€” trackerless peer discovery over UDP.",
     }
@@ -9955,6 +11116,7 @@ protocols! {
         color:     0x84CC16,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Gnutella message (TCP 6346) â€” decentralised peer-to-peer file sharing.",
     }
@@ -9964,6 +11126,7 @@ protocols! {
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["emule"],
         blurb:     "An eDonkey/eMule message (TCP 4662) â€” peer-to-peer file sharing.",
     }
@@ -9973,6 +11136,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sourcequery", "a2s"],
         blurb:     "A Source A2S query â€” a game client/browser asking a server for its info.",
     }
@@ -9982,6 +11146,7 @@ protocols! {
         color:     0x22C55E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Minecraft message (TCP 25565) â€” the Java Edition client/server protocol.",
     }
@@ -9991,6 +11156,7 @@ protocols! {
         color:     0xA855F7,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Mumble control message (TCP 64738) â€” low-latency voice-chat signalling.",
     }
@@ -10000,6 +11166,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A PFCP message (UDP 8805) â€” the 5G/4G control plane programming user-plane forwarding.",
     }
@@ -10009,6 +11176,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gtpprime"],
         blurb:     "A GTP' message (UDP 3386) â€” mobile Call Detail Records heading to billing.",
     }
@@ -10018,6 +11186,7 @@ protocols! {
         color:     0xF472B6,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h248"],
         blurb:     "A Megaco/H.248 message (UDP/TCP 2944) â€” a call agent controlling a media gateway.",
     }
@@ -10027,6 +11196,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An MSRP message (TCP 2855) â€” instant messaging/file transfer inside a SIP session.",
     }
@@ -10036,6 +11206,7 @@ protocols! {
         color:     0x818CF8,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "PCoIP traffic (UDP/TCP 4172) â€” an encrypted remote-desktop display stream.",
     }
@@ -10045,6 +11216,7 @@ protocols! {
         color:     0xEF4444,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A SPICE message â€” the remote console of a virtual machine.",
     }
@@ -10054,6 +11226,7 @@ protocols! {
         color:     0x22D3EE,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "Citrix ICA traffic (TCP 1494) â€” a published app or virtual desktop session.",
     }
@@ -10063,6 +11236,7 @@ protocols! {
         color:     0x848B98,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An NDMP message (TCP 10000) â€” backup software driving a NAS backup.",
     }
@@ -10072,6 +11246,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["msrpc"],
         blurb:     "A DCE/RPC message (TCP 135) â€” Windows remote procedure calls (WMI, AD, services).",
     }
@@ -10081,6 +11256,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A PPTP control message (TCP 1723) â€” the legacy Microsoft VPN; weak crypto.",
     }
@@ -10090,6 +11266,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "Radmin traffic (TCP 4899) â€” an encrypted Windows remote-control session.",
     }
@@ -10099,6 +11276,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         // Cisco abbreviates this SCCP too, but that token belongs to SS7's
         // Signalling Connection Control Part, which is what `sccp` means
         // everywhere else (Wireshark included). Cisco's keeps `skinny`.
@@ -10111,6 +11289,7 @@ protocols! {
         color:     0x8B7AD6,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A CLDAP query (UDP 389) â€” a Windows client locating a domain controller.",
     }
@@ -10120,6 +11299,7 @@ protocols! {
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A BMP message (TCP 11019) â€” a router streaming its BGP state to a collector.",
     }
@@ -10129,6 +11309,7 @@ protocols! {
         color:     0x16A34A,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rpkirtr"],
         blurb:     "An RPKI-RTR message (TCP 323) â€” validated route origins feeding BGP security.",
     }
@@ -10138,6 +11319,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An MMS message (TCP 102) â€” IEC 61850 substation data-model access.",
     }
@@ -10147,6 +11329,7 @@ protocols! {
         color:     0x94A3B8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An NRPE message (TCP 5666) â€” a monitoring server running a check on a host.",
     }
@@ -10156,6 +11339,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A collectd packet (UDP 25826) â€” system metrics being shipped to a server.",
     }
@@ -10165,6 +11349,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "Jaeger tracing spans (UDP 6831) â€” a service reporting request timings.",
     }
@@ -10174,6 +11359,7 @@ protocols! {
         color:     0xA3E635,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Ganglia gmond packet (UDP 8649) â€” cluster monitoring metrics.",
     }
@@ -10183,6 +11369,7 @@ protocols! {
         color:     0x22C55E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["neo4j"],
         blurb:     "A Bolt message (TCP 7687) â€” a Cypher query to a Neo4j graph database.",
     }
@@ -10192,6 +11379,7 @@ protocols! {
         color:     0xFACC15,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A ClickHouse native message (TCP 9000) â€” columnar analytics query or data.",
     }
@@ -10201,6 +11389,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An Apache Pulsar command (TCP 6650) â€” distributed pub/sub messaging.",
     }
@@ -10210,6 +11399,7 @@ protocols! {
         color:     0xEF4444,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["activemq"],
         blurb:     "An OpenWire message (TCP 61616) â€” Apache ActiveMQ's native protocol.",
     }
@@ -10219,6 +11409,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zk"],
         blurb:     "A ZooKeeper message (TCP 2181) â€” cluster coordination and leader election.",
     }
@@ -10228,6 +11419,7 @@ protocols! {
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hadooprpc", "hdfs"],
         blurb:     "A Hadoop RPC call (TCP 8020) â€” a client talking to the HDFS NameNode.",
     }
@@ -10237,6 +11429,7 @@ protocols! {
         color:     0x22D3EE,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Fluentd forward message (TCP 24224) â€” structured logs heading to a collector.",
     }
@@ -10246,6 +11439,7 @@ protocols! {
         color:     0x00BFB3,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An Elastic Beats frame (TCP 5044) â€” Filebeat shipping events to Logstash.",
     }
@@ -10255,6 +11449,7 @@ protocols! {
         color:     0xDC382D,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A ClamAV daemon message (TCP 3310) â€” content being scanned for malware.",
     }
@@ -10264,6 +11459,7 @@ protocols! {
         color:     0xF472B6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A spamd message (TCP 783) â€” SpamAssassin scoring a mail message.",
     }
@@ -10273,6 +11469,7 @@ protocols! {
         color:     0xC084FC,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sieve"],
         blurb:     "A ManageSieve message (TCP 4190) â€” managing server-side mail filters.",
     }
@@ -10282,6 +11479,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A RELP frame (TCP 2514) â€” reliable, acknowledged syslog delivery.",
     }
@@ -10291,6 +11489,7 @@ protocols! {
         color:     0x94A3B8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An LPD message (TCP 515) â€” a print job or queue query.",
     }
@@ -10300,6 +11499,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An Ident message (TCP 113) â€” a legacy lookup of the user behind a connection.",
     }
@@ -10309,6 +11509,7 @@ protocols! {
         color:     0x84CC16,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Gopher message (TCP 70) â€” the pre-web menu/document protocol.",
     }
@@ -10318,6 +11519,7 @@ protocols! {
         color:     0x848B98,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An rsh session (TCP 514) â€” a cleartext remote command; prefer SSH.",
     }
@@ -10327,6 +11529,7 @@ protocols! {
         color:     0x1BA1E2,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A CDP announcement â€” a Cisco device naming itself to its neighbour.",
     }
@@ -10336,6 +11539,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A VTP message â€” switches syncing the VLAN database.",
     }
@@ -10345,6 +11549,7 @@ protocols! {
         color:     0xF97316,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A DTP message â€” ports negotiating a trunk; a VLAN-hopping risk on access ports.",
     }
@@ -10354,6 +11559,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A PAgP message â€” Cisco negotiating an EtherChannel link bundle.",
     }
@@ -10363,6 +11569,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A UDLD message â€” checking a link isn't passing traffic one way only.",
     }
@@ -10372,6 +11579,7 @@ protocols! {
         color:     0xA855F7,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An EAP packet â€” the authentication method being negotiated for 802.1X/Wi-Fi.",
     }
@@ -10381,6 +11589,7 @@ protocols! {
         color:     0xC08A2B,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An IPX packet (EtherType 0x8137) â€” legacy Novell NetWare networking.",
     }
@@ -10390,6 +11599,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["appletalk", "atalk"],
         blurb:     "An AppleTalk DDP packet (EtherType 0x809B) â€” classic Mac networking.",
     }
@@ -10399,6 +11609,7 @@ protocols! {
         color:     0x94A3B8,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An AARP packet (EtherType 0x80F3) â€” AppleTalk address resolution.",
     }
@@ -10408,6 +11619,7 @@ protocols! {
         color:     0x84CC16,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An IPP message (TCP 631) â€” a print job or printer query.",
     }
@@ -10417,6 +11629,7 @@ protocols! {
         color:     0xEF4444,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An rexec session (TCP 512) â€” remote execution with a cleartext password.",
     }
@@ -10426,6 +11639,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A SANE message (TCP 6566) â€” controlling a scanner shared over the network.",
     }
@@ -10435,6 +11649,7 @@ protocols! {
         color:     0xF80000,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tns", "oracle"],
         blurb:     "An Oracle TNS packet (TCP 1521) â€” a client talking to an Oracle database.",
     }
@@ -10444,6 +11659,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["drda", "db2"],
         blurb:     "A DRDA message (TCP 50000) â€” SQL heading to an IBM Db2 database.",
     }
@@ -10453,6 +11669,7 @@ protocols! {
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Firebird message (TCP 3050) â€” a query to a Firebird/InterBase database.",
     }
@@ -10462,6 +11679,7 @@ protocols! {
         color:     0x00758F,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mysqlx"],
         blurb:     "A MySQL X message (TCP 33060) â€” the document-store/X DevAPI protocol.",
     }
@@ -10471,6 +11689,7 @@ protocols! {
         color:     0xDC382D,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A Riak message (TCP 8087) â€” a read or write to a distributed key-value store.",
     }
@@ -10480,6 +11699,7 @@ protocols! {
         color:     0x22D3EE,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An NMEA 0183 sentence (TCP 10110) â€” GPS or marine instrument data.",
     }
@@ -10489,6 +11709,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An ADS-B Beast frame (TCP 30005) â€” decoded aircraft transponder data.",
     }
@@ -10498,6 +11719,7 @@ protocols! {
         color:     0x84CC16,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An APRS-IS packet (TCP 14580) â€” an amateur-radio position or telemetry beacon.",
     }
@@ -10507,6 +11729,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "A TURN ChannelData message â€” call media being relayed because NAT blocked a direct path.",
     }
@@ -10516,6 +11739,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A DECnet Phase IV packet (EtherType 0x6003) â€” legacy DEC VAX/VMS networking.",
     }
@@ -10525,6 +11749,7 @@ protocols! {
         color:     0x94A3B8,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A Banyan VINES packet (EtherType 0x0BAD) â€” a long-obsolete network OS.",
     }
@@ -10534,6 +11759,7 @@ protocols! {
         color:     0xA855F7,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An ERSPAN header inside GRE â€” mirrored traffic tunnelled to a remote analyser.",
     }
@@ -10543,6 +11769,7 @@ protocols! {
         color:     0xF472B6,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A PPP frame â€” the link layer inside a PPPoE broadband session.",
     }
@@ -10552,6 +11779,7 @@ protocols! {
         color:     0xEF4444,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A PAP exchange â€” PPP authentication with the password in the clear.",
     }
@@ -10561,6 +11789,7 @@ protocols! {
         color:     0x22C55E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A CHAP exchange â€” PPP authentication by hashed challenge, no password sent.",
     }
@@ -10570,6 +11799,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An L2CAP frame â€” Bluetooth's channel multiplexing layer.",
     }
@@ -10579,6 +11809,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An ATT PDU â€” a Bluetooth LE device's data being read, written or notified.",
     }
@@ -10588,6 +11819,7 @@ protocols! {
         color:     0xA855F7,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An SMP PDU â€” two Bluetooth LE devices pairing and agreeing on security.",
     }
@@ -10597,6 +11829,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nvmeof", "nvme"],
         blurb:     "An NVMe/TCP PDU (TCP 4420) â€” remote flash storage at near-local speed.",
     }
@@ -10606,6 +11839,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An NBD message (TCP 10809) â€” a remote block device being read or written.",
     }
@@ -10615,6 +11849,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An FCIP frame (TCP 3225) â€” Fibre Channel storage tunnelled between sites.",
     }
@@ -10624,6 +11859,7 @@ protocols! {
         color:     0xF97316,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An AoE frame (EtherType 0x88A2) â€” a disk exported directly onto the LAN.",
     }
@@ -10633,6 +11869,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A RoCE frame (EtherType 0x8915) â€” RDMA writing straight into remote memory.",
     }
@@ -10642,6 +11879,7 @@ protocols! {
         color:     0x94A3B8,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   [],
         blurb:     "An XDMCP message (UDP 177) â€” an X terminal asking for a remote login session.",
     }
@@ -10651,6 +11889,7 @@ protocols! {
         color:     0xF9A8D4,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["iax"],
         blurb:     "An IAX2 message (UDP 4569) â€” Asterisk PBXs trunking calls over a single port.",
     }
@@ -10660,6 +11899,7 @@ protocols! {
         color:     0x22C55E,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A ZRTP handshake â€” endpoints agreeing on an SRTP key inside the media stream.",
     }
@@ -10669,6 +11909,7 @@ protocols! {
         color:     0x059669,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sqlbrowser"],
         blurb:     "A SQL Server Browser exchange (UDP 1434) â€” a client asking which port an instance uses.",
     }
@@ -10678,6 +11919,7 @@ protocols! {
         color:     0x818CF8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["h225ras"],
         blurb:     "An H.225 RAS message (UDP 1719) â€” an H.323 endpoint registering with its gatekeeper.",
     }
@@ -10687,6 +11929,7 @@ protocols! {
         color:     0xA855F7,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["h323", "q931"],
         blurb:     "A Q.931 message (TCP 1720) â€” H.323 call signalling: setup, ringing, answer or release.",
     }
@@ -10696,6 +11939,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A BFCP message (TCP 3238) â€” conference floor control deciding who may share.",
     }
@@ -10705,6 +11949,7 @@ protocols! {
         color:     0x2DD4BF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "A LISP packet â€” overlay traffic separating an endpoint's identity from its location.",
     }
@@ -10714,6 +11959,7 @@ protocols! {
         color:     0xEA7A3C,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An L2TPv3 pseudowire packet (IP protocol 115) â€” layer-2 frames tunnelled over IP.",
     }
@@ -10723,6 +11969,7 @@ protocols! {
         color:     0x7DD3FC,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["vxlangpe"],
         blurb:     "A VXLAN-GPE packet (UDP 4790) â€” an overlay that names the protocol it carries.",
     }
@@ -10732,6 +11979,7 @@ protocols! {
         color:     0x60A5FA,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["natpmp"],
         blurb:     "A PCP / NAT-PMP message (UDP 5351) â€” a client asking the NAT to open an inbound port.",
     }
@@ -10741,6 +11989,7 @@ protocols! {
         color:     0x9CA3AF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   [],
         blurb:     "An rwho broadcast (UDP 513) â€” a legacy BSD host announcing its users and load.",
     }
@@ -10750,6 +11999,7 @@ protocols! {
         color:     0xF9A825,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["dhcpfailover"],
         blurb:     "A DHCP failover message (TCP 647) â€” two DHCP servers synchronising lease state.",
     }
@@ -10759,6 +12009,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ngap"],
         blurb:     "A 5G core signalling message (NGAP) â€” the radio network and the AMF setting up, moving or releasing a phone's session.",
     }
@@ -10768,6 +12019,7 @@ protocols! {
         color:     0x6D28D9,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["s1ap"],
         blurb:     "An LTE core signalling message (S1AP) â€” the radio network and the MME attaching or handing over a phone.",
     }
@@ -10777,6 +12029,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["xnap"],
         blurb:     "A 5G inter-cell signalling message (XnAP) â€” two base stations handing a phone between them directly.",
     }
@@ -10786,6 +12039,7 @@ protocols! {
         color:     0xA78BFA,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["f1ap"],
         blurb:     "A 5G base-station-internal message (F1AP) â€” the central unit steering its distributed radio units.",
     }
@@ -10795,6 +12049,7 @@ protocols! {
         color:     0xC4B5FD,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["e1ap"],
         blurb:     "A 5G base-station-internal message (E1AP) â€” the control half of the central unit steering the user-plane half.",
     }
@@ -10804,6 +12059,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["m3ua"],
         blurb:     "An SS7-over-IP routing message (M3UA) â€” how call setup, SMS and roaming queries cross an operator's signalling network.",
     }
@@ -10813,6 +12069,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["m2ua"],
         blurb:     "An SS7-over-IP link message (M2UA) â€” a gateway presenting a remote SS7 link as if it were local.",
     }
@@ -10822,6 +12079,7 @@ protocols! {
         color:     0x7DD3FC,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["m2pa"],
         blurb:     "An SS7-over-IP peer link message (M2PA) â€” two signalling points talking directly over IP.",
     }
@@ -10831,6 +12089,7 @@ protocols! {
         color:     0x0284C7,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sua"],
         blurb:     "An SS7-over-IP message (SUA) â€” an application reaching a telephony network without an SS7 stack beneath it.",
     }
@@ -10840,6 +12099,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gtpv2", "gtpv2c"],
         blurb:     "A mobile-core session message (GTPv2-C) â€” creating, moving or tearing down the data path for a phone.",
     }
@@ -10849,6 +12109,7 @@ protocols! {
         color:     0x818CF8,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rua"],
         blurb:     "A femtocell signalling message (RUA) â€” a home base station carrying 3G control traffic to its gateway.",
     }
@@ -10858,6 +12119,7 @@ protocols! {
         color:     0x6366F1,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["hnbap"],
         blurb:     "A femtocell registration message (HNBAP) â€” a home base station and its phones checking in with the operator.",
     }
@@ -10867,6 +12129,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nbap"],
         blurb:     "A 3G radio-network message (NBAP) â€” a controller setting up cells and radio links on a NodeB.",
     }
@@ -10876,6 +12139,7 @@ protocols! {
         color:     0xDC2626,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sbcap"],
         blurb:     "A public-warning message (SBc-AP) â€” an emergency alert being pushed out to LTE cells.",
     }
@@ -10885,6 +12149,7 @@ protocols! {
         color:     0xEF4444,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sabp"],
         blurb:     "A cell-broadcast message (SABP) â€” the 3G path for emergency and area-wide alerts.",
     }
@@ -10894,6 +12159,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["lcsap"],
         blurb:     "A location-services message (LCS-AP) â€” the network working out where a phone physically is.",
     }
@@ -10903,6 +12169,7 @@ protocols! {
         color:     0x84CC16,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["m2ap"],
         blurb:     "A mobile-broadcast message (M2AP) â€” setting up a multicast session shared by many phones at once.",
     }
@@ -10912,6 +12179,7 @@ protocols! {
         color:     0x65A30D,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["m3ap"],
         blurb:     "A mobile-broadcast message (M3AP) â€” the core side of setting up a multicast session.",
     }
@@ -10921,6 +12189,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sccp"],
         blurb:     "An SS7 addressing message (SCCP) â€” routing a query to a specific network element such as a subscriber database.",
     }
@@ -10930,6 +12199,7 @@ protocols! {
         color:     0xF43F5E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["tcap", "map"],
         blurb:     "An SS7 transaction (TCAP) â€” the request/answer pairing that carries mobile operations like SMS routing and location lookups.",
     }
@@ -10939,6 +12209,7 @@ protocols! {
         color:     0xFB923C,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["isup"],
         blurb:     "A telephone call-control message (ISUP) â€” a call being set up, answered or hung up between switches.",
     }
@@ -10948,6 +12219,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ranap"],
         blurb:     "A 3G core signalling message (RANAP) â€” the radio network and the core setting up or releasing a phone's connection.",
     }
@@ -10957,6 +12229,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rnsap"],
         blurb:     "A 3G inter-controller message (RNSAP) â€” two radio controllers coordinating a phone that spans both.",
     }
@@ -10966,6 +12239,7 @@ protocols! {
         color:     0x0D9488,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["bssap", "bssmap"],
         blurb:     "A 2G signalling message (BSSAP) â€” a base station and the switch handling a call, or relaying a message to the phone.",
     }
@@ -10975,6 +12249,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fins", "omron"],
         blurb:     "An Omron PLC message (FINS) â€” a factory controller being read, written or started and stopped.",
     }
@@ -10984,6 +12259,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["slmp", "melsec"],
         blurb:     "A Mitsubishi PLC message (SLMP/MELSEC) â€” reading or writing a factory controller's memory, or resetting it.",
     }
@@ -10993,6 +12269,7 @@ protocols! {
         color:     0xF97316,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ads", "twincat", "ams"],
         blurb:     "A Beckhoff TwinCAT message (ADS) â€” a PC-based controller being read, written or commanded.",
     }
@@ -11002,6 +12279,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hsms", "secs"],
         blurb:     "A semiconductor fab message (HSMS/SECS) â€” a chip-making tool reporting events and alarms to its host.",
     }
@@ -11011,6 +12289,7 @@ protocols! {
         color:     0xDC2626,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cip"],
         blurb:     "An industrial-control command (CIP) â€” reading or writing a PLC tag, or starting and stopping the controller.",
     }
@@ -11020,6 +12299,7 @@ protocols! {
         color:     0x16A34A,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dlms", "cosem"],
         blurb:     "A utility-meter message (DLMS/COSEM) â€” an electricity, gas or water meter being read or reconfigured.",
     }
@@ -11029,6 +12309,7 @@ protocols! {
         color:     0x0891B2,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fox", "niagara"],
         blurb:     "A building-automation message (Niagara Fox) â€” the system that runs a building's heating, lighting and access control.",
     }
@@ -11038,6 +12319,7 @@ protocols! {
         color:     0xCA8A04,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gesrtp", "srtp"],
         blurb:     "A GE Fanuc PLC message (SRTP) â€” a factory controller being read, written or having its privilege level changed.",
     }
@@ -11047,6 +12329,7 @@ protocols! {
         color:     0xB45309,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pccc"],
         blurb:     "A legacy Allen-Bradley PLC command (PCCC) â€” reading or writing an older controller through a modern EtherNet/IP connection.",
     }
@@ -11056,6 +12339,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["isis"],
         blurb:     "A carrier routing message (IS-IS) â€” routers telling each other the shape of the network.",
     }
@@ -11065,6 +12349,7 @@ protocols! {
         color:     0x0891B2,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["msdp"],
         blurb:     "A multicast interconnect message (MSDP) â€” one network telling another which multicast sources exist.",
     }
@@ -11074,6 +12359,7 @@ protocols! {
         color:     0x059669,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pgm"],
         blurb:     "A reliable-multicast packet (PGM) â€” bulk data sent to many receivers at once, with lost pieces requested again.",
     }
@@ -11083,6 +12369,7 @@ protocols! {
         color:     0xEA580C,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["srt"],
         blurb:     "A live-video transport packet (SRT) â€” broadcast contribution carried over the public internet with loss recovery.",
     }
@@ -11092,6 +12379,7 @@ protocols! {
         color:     0xBE185D,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpegts", "ts"],
         blurb:     "A broadcast video packet (MPEG-TS) â€” the container television and IPTV travel in.",
     }
@@ -11101,6 +12389,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["thrift"],
         blurb:     "A service-to-service call (Thrift) â€” one system asking another to run a named method.",
     }
@@ -11110,6 +12399,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pcep"],
         blurb:     "A traffic-engineering message (PCEP) â€” a router asking a controller which path to use across the network.",
     }
@@ -11119,6 +12409,7 @@ protocols! {
         color:     0x92400E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dlsw"],
         blurb:     "A legacy mainframe message (DLSw) â€” SNA or NetBIOS traffic tunnelled across an IP network.",
     }
@@ -11128,6 +12419,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ceph"],
         blurb:     "A distributed-storage message (Ceph) â€” cluster daemons and clients moving objects and cluster state.",
     }
@@ -11137,6 +12429,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["trill"],
         blurb:     "A routed Ethernet frame (TRILL) â€” a data-centre fabric using every link instead of switching some off.",
     }
@@ -11146,6 +12439,7 @@ protocols! {
         color:     0x0D9488,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cfm", "oam", "y1731"],
         blurb:     "A carrier Ethernet maintenance message (CFM) â€” proving a circuit is up and measuring its delay and loss.",
     }
@@ -11155,6 +12449,7 @@ protocols! {
         color:     0x16A34A,
         transport: Icmp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["rpl"],
         blurb:     "A sensor-network routing message (RPL) â€” battery-powered devices agreeing how to reach the network's root.",
     }
@@ -11164,6 +12459,7 @@ protocols! {
         color:     0x22C55E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["6lowpan", "sixlowpan"],
         blurb:     "A compressed IPv6 frame (6LoWPAN) â€” internet addressing squeezed into a low-power radio packet.",
     }
@@ -11173,6 +12469,7 @@ protocols! {
         color:     0x0EA5E9,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["roughtime"],
         blurb:     "A verifiable time message (Roughtime) â€” a clock check whose answer is signed, so a lying server can be proved wrong.",
     }
@@ -11182,6 +12479,7 @@ protocols! {
         color:     0x15803D,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mle", "thread"],
         blurb:     "A Thread mesh message (MLE) â€” smart-home devices finding a parent and keeping the mesh together.",
     }
@@ -11191,6 +12489,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["olsr"],
         blurb:     "A mesh routing message (OLSR) â€” rooftop radios in a community network agreeing how to reach each other.",
     }
@@ -11200,6 +12499,7 @@ protocols! {
         color:     0xF97316,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["batman", "batadv"],
         blurb:     "A mesh routing frame (batman-adv) â€” a wireless mesh presenting itself as one flat Ethernet network.",
     }
@@ -11209,6 +12509,7 @@ protocols! {
         color:     0x0891B2,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["aodv"],
         blurb:     "A mesh routing message (AODV) â€” a node searching for a route only at the moment it needs one.",
     }
@@ -11218,6 +12519,7 @@ protocols! {
         color:     0xC026D3,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nsh"],
         blurb:     "A service-chaining header (NSH) â€” a packet carrying its own itinerary through a series of firewalls and inspection boxes.",
     }
@@ -11227,6 +12529,7 @@ protocols! {
         color:     0x2563EB,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nhrp", "dmvpn"],
         blurb:     "A VPN shortcut message (NHRP) â€” two branch offices learning each other's address so they can talk directly.",
     }
@@ -11236,6 +12539,7 @@ protocols! {
         color:     0x0D9488,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ovsdb"],
         blurb:     "A virtual-switch management message (OVSDB) â€” the software switch inside a cloud host being read or reconfigured.",
     }
@@ -11245,6 +12549,7 @@ protocols! {
         color:     0x1F2937,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ibmmq", "mq", "wmq"],
         blurb:     "A message-queue operation (IBM MQ) â€” a back-office system handing over or collecting a transaction.",
     }
@@ -11254,6 +12559,7 @@ protocols! {
         color:     0x0369A3,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["lustre", "lnet"],
         blurb:     "A supercomputer storage message (Lustre) â€” a compute node reading or writing the shared parallel filesystem.",
     }
@@ -11263,6 +12569,7 @@ protocols! {
         color:     0xBE123C,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sapannounce", "sdpannounce"],
         blurb:     "A multicast session announcement (SAP) â€” a broadcast source advertising where its stream can be found.",
     }
@@ -11272,6 +12579,7 @@ protocols! {
         color:     0x0369A3,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nfs"],
         blurb:     "A network filesystem operation (NFS) â€” a machine reading, writing or listing files that live on another machine.",
     }
@@ -11281,6 +12589,7 @@ protocols! {
         color:     0x38BDF8,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["9p", "ninep", "plan9"],
         blurb:     "A 9P file operation (TCP 564) â€” the Plan 9 filesystem protocol, which is how WSL2 and QEMU share directories with a guest.",
     }
@@ -11290,6 +12599,7 @@ protocols! {
         color:     0x0EA5A5,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rx", "afs"],
         blurb:     "An AFS remote procedure call (RX, UDP 7000-7009) â€” the distributed filesystem many universities still run home directories on.",
     }
@@ -11299,6 +12609,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["glusterfs", "gluster"],
         blurb:     "A distributed-filesystem message (GlusterFS) â€” storage spread across several servers being read or written.",
     }
@@ -11308,6 +12619,7 @@ protocols! {
         color:     0x0891B2,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["lwapp"],
         blurb:     "A wireless access-point control message (LWAPP) â€” a thin access point being steered by its central controller.",
     }
@@ -11317,6 +12629,7 @@ protocols! {
         color:     0x65A30D,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["twamp", "owamp"],
         blurb:     "A network measurement message (TWAMP) â€” an operator setting up a test to prove a link meets its latency commitment.",
     }
@@ -11326,6 +12639,7 @@ protocols! {
         color:     0xCA8A04,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["slp"],
         blurb:     "A service discovery message (SLP) â€” a machine asking which hosts on the network offer a service.",
     }
@@ -11335,6 +12649,7 @@ protocols! {
         color:     0x059669,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["coaptcp"],
         blurb:     "An IoT device message (CoAP over TCP) â€” a sensor or actuator being read or commanded over a reliable connection.",
     }
@@ -11344,6 +12659,7 @@ protocols! {
         color:     0xEA580C,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["utp", "microtransport"],
         blurb:     "A BitTorrent transfer (ÂµTP) â€” file sharing over a transport designed to get out of the way of other traffic.",
     }
@@ -11353,6 +12669,7 @@ protocols! {
         color:     0xB91C1C,
         transport: Other,
         rank:      1,
+        status:    Dissected,
         aliases:   ["nflog"],
         blurb:     "A firewall log entry (NFLOG) â€” a packet a Linux firewall rule matched, with the name of the rule that matched it.",
     }
@@ -11362,6 +12679,7 @@ protocols! {
         color:     0xFFB000,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zerotier", "zt"],
         blurb:     "A mesh VPN packet (ZeroTier) â€” machines in different places behaving as though they share one network.",
     }
@@ -11371,6 +12689,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nebula"],
         blurb:     "A mesh VPN packet (Nebula) â€” hosts finding each other through a lighthouse and then talking directly.",
     }
@@ -11380,6 +12699,7 @@ protocols! {
         color:     0xF7931A,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bitcoin", "btc"],
         blurb:     "A Bitcoin network message â€” nodes announcing, requesting and relaying transactions and blocks.",
     }
@@ -11389,6 +12709,7 @@ protocols! {
         color:     0xDC2626,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["macctrl", "pause", "pfc"],
         blurb:     "A flow-control frame (Ethernet PAUSE) â€” one end telling the other to stop sending because its buffers are filling.",
     }
@@ -11398,6 +12719,7 @@ protocols! {
         color:     0x0F766E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wmbus", "w-mbus"],
         blurb:     "A wireless meter reading (wM-Bus) â€” water, gas, heat or electricity data collected over the air and forwarded by a gateway.",
     }
@@ -11407,6 +12729,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Udp,
         rank:      4,
+        status:    Declared,
         aliases:   ["lwm2m", "oma-lwm2m"],
         blurb:     "An OMA LwM2M IoT device management message (CoAP payload).",
     }
@@ -11416,6 +12739,7 @@ protocols! {
         color:     0x10B981,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["semtech", "semtech-lora"],
         blurb:     "A LoRaWAN gateway packet forwarder message.",
     }
@@ -11425,6 +12749,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zwave", "z-wave", "zipgateway"],
         blurb:     "A Z-Wave smart home command (Z-IP Gateway).",
     }
@@ -11434,6 +12759,7 @@ protocols! {
         color:     0xEC4899,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["enocean", "esp3"],
         blurb:     "An EnOcean energy-harvesting wireless sensor frame.",
     }
@@ -11443,6 +12769,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["wisun", "wi-sun"],
         blurb:     "A Wi-SUN sub-GHz wireless mesh frame for smart utility networks.",
     }
@@ -11452,6 +12779,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["zigbeegp", "zgp", "zigbee-green-power"],
         blurb:     "A Zigbee Green Power ultra-low power energy-harvesting frame.",
     }
@@ -11461,6 +12789,7 @@ protocols! {
         color:     0xF43F5E,
         transport: Tcp,
         rank:      4,
+        status:    Declared,
         aliases:   ["homekit", "hap", "homekit-hap"],
         blurb:     "An Apple HomeKit accessory control or pairing request.",
     }
@@ -11470,6 +12799,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["esphome", "esphome-api"],
         blurb:     "An ESPHome smart device native API message.",
     }
@@ -11479,6 +12809,7 @@ protocols! {
         color:     0xA855F7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["insteon"],
         blurb:     "An Insteon smart home PLM or Hub gateway command.",
     }
@@ -11488,6 +12819,7 @@ protocols! {
         color:     0x64748B,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["x10"],
         blurb:     "An X10 powerline / RF smart home IP gateway command.",
     }
@@ -11497,6 +12829,7 @@ protocols! {
         color:     0xEAB308,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dali", "dali-ip"],
         blurb:     "A DALI digital lighting control frame over IP.",
     }
@@ -11506,6 +12839,7 @@ protocols! {
         color:     0x0284C7,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cobranet"],
         blurb:     "A CobraNet uncompressed digital audio Ethernet frame.",
     }
@@ -11515,6 +12849,7 @@ protocols! {
         color:     0x2563EB,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["aes67"],
         blurb:     "An AES67 high-performance audio over IP stream.",
     }
@@ -11524,6 +12859,7 @@ protocols! {
         color:     0x7E22CE,
         transport: Udp,
         rank:      4,
+        status:    Declared,
         aliases:   ["st2110", "smpte2110", "smpte-st-2110"],
         blurb:     "A SMPTE ST 2110 broadcast video/audio/ancillary stream over IP.",
     }
@@ -11533,6 +12869,7 @@ protocols! {
         color:     0x059669,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rist"],
         blurb:     "A RIST reliable media transport stream or ARQ feedback message.",
     }
@@ -11542,6 +12879,7 @@ protocols! {
         color:     0xD97706,
         transport: Tcp,
         rank:      4,
+        status:    Declared,
         aliases:   ["onvif"],
         blurb:     "An ONVIF IP camera or security device SOAP control message.",
     }
@@ -11551,6 +12889,7 @@ protocols! {
         color:     0x475569,
         transport: Tcp,
         rank:      4,
+        status:    Declared,
         aliases:   ["mtconnect"],
         blurb:     "An MTConnect industrial CNC machine tool telemetry response.",
     }
@@ -11560,6 +12899,7 @@ protocols! {
         color:     0xDC2626,
         transport: Tcp,
         rank:      4,
+        status:    Declared,
         aliases:   ["cwmp", "tr069", "tr-069"],
         blurb:     "A TR-069 CWMP broadband CPE remote management SOAP message.",
     }
@@ -11569,6 +12909,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      4,
+        status:    Declared,
         aliases:   ["usp", "tr369", "tr-369"],
         blurb:     "A TR-369 USP smart gateway management message.",
     }
@@ -11578,6 +12919,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["profibus_dp"],
         blurb:     "A ProfibusDp protocol frame.",
     }
@@ -11587,6 +12929,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["profibus_pa"],
         blurb:     "A ProfibusPa protocol frame.",
     }
@@ -11596,6 +12939,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["profinet_cba"],
         blurb:     "A ProfinetCba protocol frame.",
     }
@@ -11605,6 +12949,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["canopen_fd"],
         blurb:     "A CanopenFd protocol frame.",
     }
@@ -11615,6 +12960,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hart_ip_v2"],
         blurb:     "A HartIpV2 protocol frame.",
     }
@@ -11624,6 +12970,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["foundation_fieldbus_h1"],
         blurb:     "A FoundationFieldbusH1 protocol frame.",
     }
@@ -11633,6 +12980,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bacnet_mstp"],
         blurb:     "A BacnetMstp protocol frame.",
     }
@@ -11642,6 +12990,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bacnet_sc"],
         blurb:     "A BacnetSc protocol frame.",
     }
@@ -11651,6 +13000,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["lonworks_ip"],
         blurb:     "A LonworksIp protocol frame.",
     }
@@ -11660,6 +13010,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dnp3_tcp"],
         blurb:     "A Dnp3Tcp protocol frame.",
     }
@@ -11669,6 +13020,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec60870_5_103"],
         blurb:     "A Iec608705103 protocol frame.",
     }
@@ -11678,6 +13030,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec61850_9_2"],
         blurb:     "A Iec6185092 protocol frame.",
     }
@@ -11687,6 +13040,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec61850_8_1"],
         blurb:     "A Iec6185081 protocol frame.",
     }
@@ -11696,6 +13050,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ethercat_coe"],
         blurb:     "A EthercatCoe protocol frame.",
     }
@@ -11705,6 +13060,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ethercat_soe"],
         blurb:     "A EthercatSoe protocol frame.",
     }
@@ -11714,6 +13070,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ethercat_foe"],
         blurb:     "A EthercatFoe protocol frame.",
     }
@@ -11723,6 +13080,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n1"],
         blurb:     "A FivegN1 protocol frame.",
     }
@@ -11732,6 +13090,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n3"],
         blurb:     "A FivegN3 protocol frame.",
     }
@@ -11741,6 +13100,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n7"],
         blurb:     "A FivegN7 protocol frame.",
     }
@@ -11750,6 +13110,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n8"],
         blurb:     "A FivegN8 protocol frame.",
     }
@@ -11759,6 +13120,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n10"],
         blurb:     "A FivegN10 protocol frame.",
     }
@@ -11768,6 +13130,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n12"],
         blurb:     "A FivegN12 protocol frame.",
     }
@@ -11777,6 +13140,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n13"],
         blurb:     "A FivegN13 protocol frame.",
     }
@@ -11786,6 +13150,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n15"],
         blurb:     "A FivegN15 protocol frame.",
     }
@@ -11795,6 +13160,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fiveg_n22"],
         blurb:     "A FivegN22 protocol frame.",
     }
@@ -11804,6 +13170,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["x2ap_ext"],
         blurb:     "A X2apExt protocol frame.",
     }
@@ -11813,6 +13180,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["xnap_ext"],
         blurb:     "A XnapExt protocol frame.",
     }
@@ -11823,6 +13191,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["diameter_cx"],
         blurb:     "A DiameterCx protocol frame.",
     }
@@ -11832,6 +13201,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["diameter_sh"],
         blurb:     "A DiameterSh protocol frame.",
     }
@@ -11841,6 +13211,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["diameter_gx"],
         blurb:     "A DiameterGx protocol frame.",
     }
@@ -11850,6 +13221,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["diameter_gy"],
         blurb:     "A DiameterGy protocol frame.",
     }
@@ -11859,6 +13231,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["map_gsm"],
         blurb:     "A MapGsm protocol frame.",
     }
@@ -11868,6 +13241,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cap_gsm"],
         blurb:     "A CapGsm protocol frame.",
     }
@@ -11877,6 +13251,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["geneve_ext"],
         blurb:     "A GeneveExt protocol frame.",
     }
@@ -11886,6 +13261,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["vxlan_gpe_nsh"],
         blurb:     "A VxlanGpeNsh protocol frame.",
     }
@@ -11895,6 +13271,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["stt_ext"],
         blurb:     "A SttExt protocol frame.",
     }
@@ -11904,6 +13281,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sr_mpls"],
         blurb:     "A SrMpls protocol frame.",
     }
@@ -11913,6 +13291,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["openflow_v15"],
         blurb:     "A OpenflowV15 protocol frame.",
     }
@@ -11922,6 +13301,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ovsdb_json"],
         blurb:     "A OvsdbJson protocol frame.",
     }
@@ -11931,6 +13311,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ceph_msgr2"],
         blurb:     "A CephMsgr2 protocol frame.",
     }
@@ -11940,6 +13321,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gluster_rpc"],
         blurb:     "A GlusterRpc protocol frame.",
     }
@@ -11949,6 +13331,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["lustre_lnet"],
         blurb:     "A LustreLnet protocol frame.",
     }
@@ -11958,6 +13341,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gpfs_nsd"],
         blurb:     "A GpfsNsd protocol frame.",
     }
@@ -11967,6 +13351,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["beegfs_rdma"],
         blurb:     "A BeegfsRdma protocol frame.",
     }
@@ -11976,6 +13361,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iscsi_login"],
         blurb:     "A IscsiLogin protocol frame.",
     }
@@ -11986,6 +13372,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcoe_initialization"],
         blurb:     "A FcoeInitialization protocol frame.",
     }
@@ -11995,6 +13382,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["roce_v2"],
         blurb:     "A RoceV2 protocol frame.",
     }
@@ -12004,6 +13392,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iwarp"],
         blurb:     "A Iwarp protocol frame.",
     }
@@ -12013,6 +13402,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["matter_ip"],
         blurb:     "A MatterIp protocol frame.",
     }
@@ -12022,6 +13412,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["thread_mesh"],
         blurb:     "A ThreadMesh protocol frame.",
     }
@@ -12031,6 +13422,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zigbee_zcl"],
         blurb:     "A ZigbeeZcl protocol frame.",
     }
@@ -12040,6 +13432,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zigbee_nwk"],
         blurb:     "A ZigbeeNwk protocol frame.",
     }
@@ -12049,6 +13442,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zwave_command"],
         blurb:     "A ZwaveCommand protocol frame.",
     }
@@ -12058,6 +13452,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ble_att"],
         blurb:     "A BleAtt protocol frame.",
     }
@@ -12067,6 +13462,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ble_gatt"],
         blurb:     "A BleGatt protocol frame.",
     }
@@ -12076,6 +13472,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ble_smp"],
         blurb:     "A BleSmp protocol frame.",
     }
@@ -12085,6 +13482,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["lorawan_mac"],
         blurb:     "A LorawanMac protocol frame.",
     }
@@ -12094,6 +13492,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sigfox_uplink"],
         blurb:     "A SigfoxUplink protocol frame.",
     }
@@ -12103,6 +13502,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nb_iot_nas"],
         blurb:     "A NbIotNas protocol frame.",
     }
@@ -12112,6 +13512,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["homeplug_av"],
         blurb:     "A HomeplugAv protocol frame.",
     }
@@ -12121,6 +13522,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["homeplug_green_phy"],
         blurb:     "A HomeplugGreenPhy protocol frame.",
     }
@@ -12130,6 +13532,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["g3_plc"],
         blurb:     "A G3Plc protocol frame.",
     }
@@ -12139,6 +13542,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["prime_plc"],
         blurb:     "A PrimePlc protocol frame.",
     }
@@ -12148,6 +13552,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["m_bus_wireless"],
         blurb:     "A MBusWireless protocol frame.",
     }
@@ -12157,6 +13562,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wmbus_s_mode"],
         blurb:     "A WmbusSMode protocol frame.",
     }
@@ -12166,6 +13572,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wmbus_t_mode"],
         blurb:     "A WmbusTMode protocol frame.",
     }
@@ -12175,6 +13582,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wmbus_c_mode"],
         blurb:     "A WmbusCMode protocol frame.",
     }
@@ -12184,6 +13592,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dsrc_v2x"],
         blurb:     "A DsrcV2x protocol frame.",
     }
@@ -12193,6 +13602,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rtsp_interleaved"],
         blurb:     "A RtspInterleaved protocol frame.",
     }
@@ -12202,6 +13612,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rtp_midi_ext"],
         blurb:     "A RtpMidiExt protocol frame.",
     }
@@ -12211,6 +13622,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["srt_control"],
         blurb:     "A SrtControl protocol frame.",
     }
@@ -12220,6 +13632,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rist_main_profile"],
         blurb:     "A RistMainProfile protocol frame.",
     }
@@ -12229,6 +13642,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ndi_video"],
         blurb:     "A NdiVideo protocol frame.",
     }
@@ -12238,6 +13652,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dante_audio"],
         blurb:     "A DanteAudio protocol frame.",
     }
@@ -12247,6 +13662,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["q_sys_control"],
         blurb:     "A QSysControl protocol frame.",
     }
@@ -12256,6 +13672,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["crestron_cip"],
         blurb:     "A CrestronCip protocol frame.",
     }
@@ -12265,6 +13682,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["amx_icsp"],
         blurb:     "A AmxIcsp protocol frame.",
     }
@@ -12274,6 +13692,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["extron_sis"],
         blurb:     "A ExtronSis protocol frame.",
     }
@@ -12283,6 +13702,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["openvpn_tcp"],
         blurb:     "A OpenvpnTcp protocol frame.",
     }
@@ -12292,6 +13712,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wireguard_handshake"],
         blurb:     "A WireguardHandshake protocol frame.",
     }
@@ -12301,6 +13722,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipsec_ikev1"],
         blurb:     "A IpsecIkev1 protocol frame.",
     }
@@ -12310,6 +13732,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ipsec_ikev2"],
         blurb:     "A IpsecIkev2 protocol frame.",
     }
@@ -12319,6 +13742,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sstp_vpn"],
         blurb:     "A SstpVpn protocol frame.",
     }
@@ -12329,6 +13753,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zerotier_control"],
         blurb:     "A ZerotierControl protocol frame.",
     }
@@ -12338,6 +13763,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tailscale_derp"],
         blurb:     "A TailscaleDerp protocol frame.",
     }
@@ -12347,6 +13773,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fastd_vpn"],
         blurb:     "A FastdVpn protocol frame.",
     }
@@ -12356,6 +13783,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["yggdrasil_mesh"],
         blurb:     "A YggdrasilMesh protocol frame.",
     }
@@ -12365,6 +13793,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["modbus_ascii_ext"],
         blurb:     "A ModbusAsciiExt protocol frame.",
     }
@@ -12374,6 +13803,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nvgre_ext"],
         blurb:     "A NvgreExt protocol frame.",
     }
@@ -12383,6 +13813,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["srv6_ext"],
         blurb:     "A Srv6Ext protocol frame.",
     }
@@ -12392,6 +13823,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["f1ap_ext"],
         blurb:     "A F1apExt protocol frame.",
     }
@@ -12401,6 +13833,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["e1ap_ext"],
         blurb:     "A E1apExt protocol frame.",
     }
@@ -12410,6 +13843,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nsh_ext"],
         blurb:     "A NshExt protocol frame.",
     }
@@ -12419,6 +13853,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["evpn_ext"],
         blurb:     "A EvpnExt protocol frame.",
     }
@@ -12428,6 +13863,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gprscdr"],
         blurb:     "GPRSCDR telecommunications protocol.",
     }
@@ -12437,6 +13873,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-a-bssmap"],
         blurb:     "GSM_A_BSSMAP telecommunications protocol.",
     }
@@ -12446,6 +13883,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-a-common"],
         blurb:     "GSM_A_COMMON telecommunications protocol.",
     }
@@ -12455,6 +13893,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-a-dtap"],
         blurb:     "GSM_A_DTAP telecommunications protocol.",
     }
@@ -12464,6 +13903,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-a-gm"],
         blurb:     "GSM_A_GM telecommunications protocol.",
     }
@@ -12473,6 +13913,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-a-rp"],
         blurb:     "GSM_A_RP telecommunications protocol.",
     }
@@ -12482,6 +13923,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-a-rr"],
         blurb:     "GSM_A_RR telecommunications protocol.",
     }
@@ -12491,6 +13933,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-abis-om2000"],
         blurb:     "GSM_ABIS_OM2000 telecommunications protocol.",
     }
@@ -12500,6 +13943,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-abis-oml"],
         blurb:     "GSM_ABIS_OML telecommunications protocol.",
     }
@@ -12509,6 +13953,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-abis-pgsl"],
         blurb:     "GSM_ABIS_PGSL telecommunications protocol.",
     }
@@ -12518,6 +13963,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-abis-tfp"],
         blurb:     "GSM_ABIS_TFP telecommunications protocol.",
     }
@@ -12527,6 +13973,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-bsslap"],
         blurb:     "GSM_BSSLAP telecommunications protocol.",
     }
@@ -12536,6 +13983,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-bssmap-le"],
         blurb:     "GSM_BSSMAP_LE telecommunications protocol.",
     }
@@ -12545,6 +13993,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-cbch"],
         blurb:     "GSM_CBCH telecommunications protocol.",
     }
@@ -12554,6 +14003,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-cbsp"],
         blurb:     "GSM_CBSP telecommunications protocol.",
     }
@@ -12563,6 +14013,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-gsup"],
         blurb:     "GSM_GSUP telecommunications protocol.",
     }
@@ -12572,6 +14023,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-ipa"],
         blurb:     "GSM_IPA telecommunications protocol.",
     }
@@ -12581,6 +14033,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-l2rcop"],
         blurb:     "GSM_L2RCOP telecommunications protocol.",
     }
@@ -12590,6 +14043,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-map"],
         blurb:     "GSM_MAP telecommunications protocol.",
     }
@@ -12599,6 +14053,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-osmux"],
         blurb:     "GSM_OSMUX telecommunications protocol.",
     }
@@ -12608,6 +14063,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-r-uus1"],
         blurb:     "GSM_R_UUS1 telecommunications protocol.",
     }
@@ -12617,6 +14073,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-rlcmac"],
         blurb:     "GSM_RLCMAC telecommunications protocol.",
     }
@@ -12626,6 +14083,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-rlp"],
         blurb:     "GSM_RLP telecommunications protocol.",
     }
@@ -12635,6 +14093,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-sim"],
         blurb:     "GSM_SIM telecommunications protocol.",
     }
@@ -12644,6 +14103,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-sms"],
         blurb:     "GSM_SMS telecommunications protocol.",
     }
@@ -12653,6 +14113,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-sms-ud"],
         blurb:     "GSM_SMS_UD telecommunications protocol.",
     }
@@ -12662,6 +14123,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsm-um"],
         blurb:     "GSM_UM telecommunications protocol.",
     }
@@ -12671,6 +14133,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsmtap"],
         blurb:     "GSMTAP telecommunications protocol.",
     }
@@ -12680,6 +14143,7 @@ protocols! {
         color:     0x808080,
         transport: Other,
         rank:      100,
+        status:    Dissected,
         aliases:   ["gsmtap-log"],
         blurb:     "GSMTAP_LOG telecommunications protocol.",
     }
@@ -12690,6 +14154,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_ait"],
         blurb:     "A DVB Application Information Table (AIT) section.",
     }
@@ -12699,6 +14164,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_bat"],
         blurb:     "A DVB Bouquet Association Table (BAT) section.",
     }
@@ -12708,6 +14174,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_data_mpe", "dvb_mpe"],
         blurb:     "A DVB Multi-Protocol Encapsulation (MPE) frame.",
     }
@@ -12717,6 +14184,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_eit"],
         blurb:     "A DVB Event Information Table (EIT) section.",
     }
@@ -12726,6 +14194,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_ipdc"],
         blurb:     "A DVB IP Datacast (IPDC) packet.",
     }
@@ -12735,6 +14204,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_nit"],
         blurb:     "A DVB Network Information Table (NIT) section.",
     }
@@ -12744,6 +14214,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_s2_bb"],
         blurb:     "A DVB-S2 Baseband Header (BBHEADER) frame.",
     }
@@ -12753,6 +14224,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_s2_table"],
         blurb:     "A DVB-S2 Table Section frame.",
     }
@@ -12762,6 +14234,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_sdt"],
         blurb:     "A DVB Service Description Table (SDT) section.",
     }
@@ -12771,6 +14244,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_sit"],
         blurb:     "A DVB Selection Information Table (SIT) section.",
     }
@@ -12780,6 +14254,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_tdt"],
         blurb:     "A DVB Time and Date Table (TDT) section.",
     }
@@ -12789,6 +14264,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvb_tot"],
         blurb:     "A DVB Time Offset Table (TOT) section.",
     }
@@ -12798,6 +14274,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dvbci"],
         blurb:     "A DVB Common Interface (DVB-CI) transport packet.",
     }
@@ -12807,6 +14284,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["etsi_card_app_toolkit", "etsi_cat"],
         blurb:     "An ETSI Card Application Toolkit (CAT) frame.",
     }
@@ -12816,6 +14294,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mp2t"],
         blurb:     "An MPEG-2 Transport Stream (MP2T) 188-byte packet.",
     }
@@ -12825,6 +14304,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mp4ves"],
         blurb:     "An MPEG-4 Visual Elementary Stream (MP4VES) packet.",
     }
@@ -12834,6 +14314,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg_audio"],
         blurb:     "An MPEG Audio stream frame.",
     }
@@ -12843,6 +14324,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg_ca"],
         blurb:     "An MPEG Conditional Access Table (CAT) section.",
     }
@@ -12852,6 +14334,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg_descriptor"],
         blurb:     "An MPEG PSI descriptor field.",
     }
@@ -12861,6 +14344,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg_dsmcc"],
         blurb:     "An MPEG DSM-CC message.",
     }
@@ -12870,6 +14354,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg_pat"],
         blurb:     "An MPEG Program Association Table (PAT) section.",
     }
@@ -12879,6 +14364,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg_pes"],
         blurb:     "An MPEG Packetized Elementary Stream (PES) packet.",
     }
@@ -12888,6 +14374,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg_pmt"],
         blurb:     "An MPEG Program Map Table (PMT) section.",
     }
@@ -12897,6 +14384,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg_sect"],
         blurb:     "An MPEG PSI Section Syntax header.",
     }
@@ -12906,6 +14394,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpeg1"],
         blurb:     "An MPEG-1 System / Video stream packet.",
     }
@@ -12915,6 +14404,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["scte35", "scte_35"],
         blurb:     "An SCTE-35 Digital Program Insertion (DPI) Splice Information section.",
     }
@@ -12925,6 +14415,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h1"],
         blurb:     "An H1 protocol frame.",
     }
@@ -12934,6 +14425,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h221_nonstd"],
         blurb:     "An H.221 non-standard structure.",
     }
@@ -12943,6 +14435,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h223"],
         blurb:     "An H.223 multiplexed stream frame.",
     }
@@ -12952,6 +14445,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h224"],
         blurb:     "An H.224 remote control frame.",
     }
@@ -12961,6 +14455,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["h225"],
         blurb:     "An H.225 call signaling message.",
     }
@@ -12970,6 +14465,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h235"],
         blurb:     "An H.235 security extension frame.",
     }
@@ -12979,6 +14475,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h245"],
         blurb:     "An H.245 control message.",
     }
@@ -12988,6 +14485,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h248_10"],
         blurb:     "An H.248.10 media gateway package.",
     }
@@ -12997,6 +14495,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h248_2"],
         blurb:     "An H.248.2 media gateway package.",
     }
@@ -13006,6 +14505,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h248_3gpp"],
         blurb:     "An H.248 3GPP circuit-switched extension.",
     }
@@ -13015,6 +14515,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h248_7"],
         blurb:     "An H.248.7 media gateway package.",
     }
@@ -13024,6 +14525,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h248_annex_c"],
         blurb:     "An H.248 Annex C message.",
     }
@@ -13033,6 +14535,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h248_annex_e"],
         blurb:     "An H.248 Annex E message.",
     }
@@ -13042,6 +14545,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h248_q1950"],
         blurb:     "An H.248 Q.1950 bearer control package.",
     }
@@ -13051,6 +14555,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h261"],
         blurb:     "An H.261 video stream payload.",
     }
@@ -13060,6 +14565,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h263"],
         blurb:     "An H.263 video stream payload.",
     }
@@ -13069,6 +14575,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h263p", "h263_plus"],
         blurb:     "An H.263+ video stream payload.",
     }
@@ -13078,6 +14585,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h264"],
         blurb:     "An H.264 / AVC video stream NAL unit.",
     }
@@ -13087,6 +14595,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h265"],
         blurb:     "An H.265 / HEVC video stream NAL unit.",
     }
@@ -13096,6 +14605,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h282"],
         blurb:     "An H.282 remote control structure.",
     }
@@ -13105,6 +14615,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h283"],
         blurb:     "An H.283 channel transport frame.",
     }
@@ -13114,6 +14625,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h450"],
         blurb:     "An H.450 supplementary service message.",
     }
@@ -13123,6 +14635,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h450_ros"],
         blurb:     "An H.450 ROS APDU.",
     }
@@ -13132,6 +14645,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h460"],
         blurb:     "An H.460 extension message.",
     }
@@ -13141,6 +14655,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["h501"],
         blurb:     "An H.501 mobility management message.",
     }
@@ -13150,6 +14665,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_atsvc"],
         blurb:     "A DCERPC-ATSVC protocol PDU.",
     }
@@ -13159,6 +14675,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_bossvr"],
         blurb:     "A DCERPC-BOSSVR protocol PDU.",
     }
@@ -13168,6 +14685,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_browser"],
         blurb:     "A DCERPC-BROWSER protocol PDU.",
     }
@@ -13177,6 +14695,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_budb"],
         blurb:     "A DCERPC-BUDB protocol PDU.",
     }
@@ -13186,6 +14705,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_butc"],
         blurb:     "A DCERPC-BUTC protocol PDU.",
     }
@@ -13195,6 +14715,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_cds_clerkserver"],
         blurb:     "A DCERPC-CDS-CLERKSERVER protocol PDU.",
     }
@@ -13204,6 +14725,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_cds_solicit"],
         blurb:     "A DCERPC-CDS-SOLICIT protocol PDU.",
     }
@@ -13213,6 +14735,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_clusapi"],
         blurb:     "A DCERPC-CLUSAPI protocol PDU.",
     }
@@ -13222,6 +14745,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_conv"],
         blurb:     "A DCERPC-CONV protocol PDU.",
     }
@@ -13231,6 +14755,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_cprpc_server"],
         blurb:     "A DCERPC-CPRPC-SERVER protocol PDU.",
     }
@@ -13240,6 +14765,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_dce122"],
         blurb:     "A DCERPC-DCE122 protocol PDU.",
     }
@@ -13249,6 +14775,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_dfs"],
         blurb:     "A DCERPC-DFS protocol PDU.",
     }
@@ -13258,6 +14785,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_dnsserver"],
         blurb:     "A DCERPC-DNSSERVER protocol PDU.",
     }
@@ -13267,6 +14795,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_drsuapi"],
         blurb:     "A DCERPC-DRSUAPI protocol PDU.",
     }
@@ -13276,6 +14805,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_dssetup"],
         blurb:     "A DCERPC-DSSETUP protocol PDU.",
     }
@@ -13285,6 +14815,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_dtsprovider"],
         blurb:     "A DCERPC-DTSPROVIDER protocol PDU.",
     }
@@ -13294,6 +14825,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_dtsstime_req"],
         blurb:     "A DCERPC-DTSSTIME-REQ protocol PDU.",
     }
@@ -13303,6 +14835,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_efs"],
         blurb:     "A DCERPC-EFS protocol PDU.",
     }
@@ -13312,6 +14845,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_epm"],
         blurb:     "A DCERPC-EPM protocol PDU.",
     }
@@ -13321,6 +14855,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_eventlog"],
         blurb:     "A DCERPC-EVENTLOG protocol PDU.",
     }
@@ -13330,6 +14865,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_fileexp"],
         blurb:     "A DCERPC-FILEEXP protocol PDU.",
     }
@@ -13339,6 +14875,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_fldb"],
         blurb:     "A DCERPC-FLDB protocol PDU.",
     }
@@ -13348,6 +14885,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_frsapi"],
         blurb:     "A DCERPC-FRSAPI protocol PDU.",
     }
@@ -13357,6 +14895,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_frsrpc"],
         blurb:     "A DCERPC-FRSRPC protocol PDU.",
     }
@@ -13366,6 +14905,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_frstrans"],
         blurb:     "A DCERPC-FRSTRANS protocol PDU.",
     }
@@ -13375,6 +14915,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_fsrvp"],
         blurb:     "A DCERPC-FSRVP protocol PDU.",
     }
@@ -13384,6 +14925,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_ftserver"],
         blurb:     "A DCERPC-FTSERVER protocol PDU.",
     }
@@ -13393,6 +14935,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_icl_rpc"],
         blurb:     "A DCERPC-ICL-RPC protocol PDU.",
     }
@@ -13402,6 +14945,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_initshutdown"],
         blurb:     "A DCERPC-INITSHUTDOWN protocol PDU.",
     }
@@ -13411,6 +14955,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_iwbemlevel1login"],
         blurb:     "A DCERPC-IWBEMLEVEL1LOGIN protocol PDU.",
     }
@@ -13420,6 +14965,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_iwbemloginclientid"],
         blurb:     "A DCERPC-IWBEMLOGINCLIENTID protocol PDU.",
     }
@@ -13429,6 +14975,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_iwbemloginclientidex"],
         blurb:     "A DCERPC-IWBEMLOGINCLIENTIDEX protocol PDU.",
     }
@@ -13438,6 +14985,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_iwbemservices"],
         blurb:     "A DCERPC-IWBEMSERVICES protocol PDU.",
     }
@@ -13447,6 +14995,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_krb5rpc"],
         blurb:     "A DCERPC-KRB5RPC protocol PDU.",
     }
@@ -13456,6 +15005,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_llb"],
         blurb:     "A DCERPC-LLB protocol PDU.",
     }
@@ -13465,6 +15015,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_lsa"],
         blurb:     "A DCERPC-LSA protocol PDU.",
     }
@@ -13474,6 +15025,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_mapi"],
         blurb:     "A DCERPC-MAPI protocol PDU.",
     }
@@ -13483,6 +15035,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_mdssvc"],
         blurb:     "A DCERPC-MDSSVC protocol PDU.",
     }
@@ -13492,6 +15045,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_messenger"],
         blurb:     "A DCERPC-MESSENGER protocol PDU.",
     }
@@ -13501,6 +15055,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_mgmt"],
         blurb:     "A DCERPC-MGMT protocol PDU.",
     }
@@ -13510,6 +15065,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_misc"],
         blurb:     "A DCERPC-MISC protocol PDU.",
     }
@@ -13519,6 +15075,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_ndr"],
         blurb:     "A DCERPC-NDR protocol PDU.",
     }
@@ -13528,6 +15085,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_netlogon"],
         blurb:     "A DCERPC-NETLOGON protocol PDU.",
     }
@@ -13537,6 +15095,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_nspi"],
         blurb:     "A DCERPC-NSPI protocol PDU.",
     }
@@ -13546,6 +15105,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_nt"],
         blurb:     "A DCERPC-NT protocol PDU.",
     }
@@ -13555,6 +15115,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_pnp"],
         blurb:     "A DCERPC-PNP protocol PDU.",
     }
@@ -13564,6 +15125,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rcg"],
         blurb:     "A DCERPC-RCG protocol PDU.",
     }
@@ -13573,6 +15135,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rdaclif"],
         blurb:     "A DCERPC-RDACLIF protocol PDU.",
     }
@@ -13582,6 +15145,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rdpdr_smartcard"],
         blurb:     "A DCERPC-RDPDR-SMARTCARD protocol PDU.",
     }
@@ -13591,6 +15155,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rep_proc"],
         blurb:     "A DCERPC-REP-PROC protocol PDU.",
     }
@@ -13600,6 +15165,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rfr"],
         blurb:     "A DCERPC-RFR protocol PDU.",
     }
@@ -13609,6 +15175,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_roverride"],
         blurb:     "A DCERPC-ROVERRIDE protocol PDU.",
     }
@@ -13618,6 +15185,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rpriv"],
         blurb:     "A DCERPC-RPRIV protocol PDU.",
     }
@@ -13627,6 +15195,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rras"],
         blurb:     "A DCERPC-RRAS protocol PDU.",
     }
@@ -13636,6 +15205,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_acct"],
         blurb:     "A DCERPC-RS-ACCT protocol PDU.",
     }
@@ -13645,6 +15215,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_attr"],
         blurb:     "A DCERPC-RS-ATTR protocol PDU.",
     }
@@ -13654,6 +15225,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_attr_schema"],
         blurb:     "A DCERPC-RS-ATTR-SCHEMA protocol PDU.",
     }
@@ -13663,6 +15235,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_bind"],
         blurb:     "A DCERPC-RS-BIND protocol PDU.",
     }
@@ -13672,6 +15245,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_misc"],
         blurb:     "A DCERPC-RS-MISC protocol PDU.",
     }
@@ -13681,6 +15255,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_pgo"],
         blurb:     "A DCERPC-RS-PGO protocol PDU.",
     }
@@ -13690,6 +15265,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_plcy"],
         blurb:     "A DCERPC-RS-PLCY protocol PDU.",
     }
@@ -13699,6 +15275,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_prop_acct"],
         blurb:     "A DCERPC-RS-PROP-ACCT protocol PDU.",
     }
@@ -13708,6 +15285,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_prop_acl"],
         blurb:     "A DCERPC-RS-PROP-ACL protocol PDU.",
     }
@@ -13717,6 +15295,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_prop_attr"],
         blurb:     "A DCERPC-RS-PROP-ATTR protocol PDU.",
     }
@@ -13726,6 +15305,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_prop_pgo"],
         blurb:     "A DCERPC-RS-PROP-PGO protocol PDU.",
     }
@@ -13735,6 +15315,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_prop_plcy"],
         blurb:     "A DCERPC-RS-PROP-PLCY protocol PDU.",
     }
@@ -13744,6 +15325,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_pwd_mgmt"],
         blurb:     "A DCERPC-RS-PWD-MGMT protocol PDU.",
     }
@@ -13753,6 +15335,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_repadm"],
         blurb:     "A DCERPC-RS-REPADM protocol PDU.",
     }
@@ -13762,6 +15345,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_replist"],
         blurb:     "A DCERPC-RS-REPLIST protocol PDU.",
     }
@@ -13771,6 +15355,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_repmgr"],
         blurb:     "A DCERPC-RS-REPMGR protocol PDU.",
     }
@@ -13780,6 +15365,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rs_unix"],
         blurb:     "A DCERPC-RS-UNIX protocol PDU.",
     }
@@ -13789,6 +15375,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_rsec_login"],
         blurb:     "A DCERPC-RSEC-LOGIN protocol PDU.",
     }
@@ -13798,6 +15385,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_samr"],
         blurb:     "A DCERPC-SAMR protocol PDU.",
     }
@@ -13807,6 +15395,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_secidmap"],
         blurb:     "A DCERPC-SECIDMAP protocol PDU.",
     }
@@ -13816,6 +15405,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_spoolss"],
         blurb:     "A DCERPC-SPOOLSS protocol PDU.",
     }
@@ -13825,6 +15415,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_srvsvc"],
         blurb:     "A DCERPC-SRVSVC protocol PDU.",
     }
@@ -13834,6 +15425,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_svcctl"],
         blurb:     "A DCERPC-SVCCTL protocol PDU.",
     }
@@ -13843,6 +15435,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_tapi"],
         blurb:     "A DCERPC-TAPI protocol PDU.",
     }
@@ -13852,6 +15445,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_taskschedulerservice"],
         blurb:     "A DCERPC-TASKSCHEDULERSERVICE protocol PDU.",
     }
@@ -13861,6 +15455,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_tkn4int"],
         blurb:     "A DCERPC-TKN4INT protocol PDU.",
     }
@@ -13870,6 +15465,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_trksvr"],
         blurb:     "A DCERPC-TRKSVR protocol PDU.",
     }
@@ -13879,6 +15475,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_ubikdisk"],
         blurb:     "A DCERPC-UBIKDISK protocol PDU.",
     }
@@ -13888,6 +15485,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_ubikvote"],
         blurb:     "A DCERPC-UBIKVOTE protocol PDU.",
     }
@@ -13897,6 +15495,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_update"],
         blurb:     "A DCERPC-UPDATE protocol PDU.",
     }
@@ -13906,6 +15505,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_winreg"],
         blurb:     "A DCERPC-WINREG protocol PDU.",
     }
@@ -13915,6 +15515,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_winspool"],
         blurb:     "A DCERPC-WINSPOOL protocol PDU.",
     }
@@ -13924,6 +15525,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_witness"],
         blurb:     "A DCERPC-WITNESS protocol PDU.",
     }
@@ -13933,6 +15535,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_wkssvc"],
         blurb:     "A DCERPC-WKSSVC protocol PDU.",
     }
@@ -13942,6 +15545,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcerpc_wzcsvc"],
         blurb:     "A DCERPC-WZCSVC protocol PDU.",
     }
@@ -13951,6 +15555,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcom"],
         blurb:     "A DCOM protocol PDU.",
     }
@@ -13960,6 +15565,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcom_dispatch"],
         blurb:     "A DCOM-DISPATCH protocol PDU.",
     }
@@ -13969,6 +15575,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcom_oxid"],
         blurb:     "A DCOM-OXID protocol PDU.",
     }
@@ -13978,6 +15585,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcom_provideclassinfo"],
         blurb:     "A DCOM-PROVIDECLASSINFO protocol PDU.",
     }
@@ -13987,6 +15595,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcom_remact"],
         blurb:     "A DCOM-REMACT protocol PDU.",
     }
@@ -13996,6 +15605,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcom_remunkn"],
         blurb:     "A DCOM-REMUNKN protocol PDU.",
     }
@@ -14005,6 +15615,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcom_sysact"],
         blurb:     "A DCOM-SYSACT protocol PDU.",
     }
@@ -14014,6 +15625,7 @@ protocols! {
         color:     0xFBBF24,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dcom_typeinfo"],
         blurb:     "A DCOM-TYPEINFO protocol PDU.",
     }
@@ -14023,6 +15635,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btamp"],
         blurb:     "A BTAMP protocol PDU.",
     }
@@ -14032,6 +15645,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btatt"],
         blurb:     "A BTATT protocol PDU.",
     }
@@ -14041,6 +15655,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btavctp"],
         blurb:     "A BTAVCTP protocol PDU.",
     }
@@ -14050,6 +15665,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btavdtp"],
         blurb:     "A BTAVDTP protocol PDU.",
     }
@@ -14059,6 +15675,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btavrcp"],
         blurb:     "A BTAVRCP protocol PDU.",
     }
@@ -14068,6 +15685,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btbnep"],
         blurb:     "A BTBNEP protocol PDU.",
     }
@@ -14077,6 +15695,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btbredr_rf"],
         blurb:     "A BTBREDR-RF protocol PDU.",
     }
@@ -14086,6 +15705,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthci_acl"],
         blurb:     "A BTHCI-ACL protocol PDU.",
     }
@@ -14095,6 +15715,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthci_cmd"],
         blurb:     "A BTHCI-CMD protocol PDU.",
     }
@@ -14104,6 +15725,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthci_evt"],
         blurb:     "A BTHCI-EVT protocol PDU.",
     }
@@ -14113,6 +15735,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthci_iso"],
         blurb:     "A BTHCI-ISO protocol PDU.",
     }
@@ -14122,6 +15745,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthci_sco"],
         blurb:     "A BTHCI-SCO protocol PDU.",
     }
@@ -14131,6 +15755,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthci_vendor_android"],
         blurb:     "A BTHCI-VENDOR-ANDROID protocol PDU.",
     }
@@ -14140,6 +15765,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthci_vendor_broadcom"],
         blurb:     "A BTHCI-VENDOR-BROADCOM protocol PDU.",
     }
@@ -14149,6 +15775,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthci_vendor_intel"],
         blurb:     "A BTHCI-VENDOR-INTEL protocol PDU.",
     }
@@ -14158,6 +15785,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthcrp"],
         blurb:     "A BTHCRP protocol PDU.",
     }
@@ -14167,6 +15795,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthfp"],
         blurb:     "A BTHFP protocol PDU.",
     }
@@ -14176,6 +15805,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthid"],
         blurb:     "A BTHID protocol PDU.",
     }
@@ -14185,6 +15815,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bthsp"],
         blurb:     "A BTHSP protocol PDU.",
     }
@@ -14194,6 +15825,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btl2cap"],
         blurb:     "A BTL2CAP protocol PDU.",
     }
@@ -14203,6 +15835,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btle"],
         blurb:     "A BTLE protocol PDU.",
     }
@@ -14212,6 +15845,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btle_rf"],
         blurb:     "A BTLE-RF protocol PDU.",
     }
@@ -14221,6 +15855,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btlmp"],
         blurb:     "A BTLMP protocol PDU.",
     }
@@ -14230,6 +15865,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btmcap"],
         blurb:     "A BTMCAP protocol PDU.",
     }
@@ -14239,6 +15875,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btmesh"],
         blurb:     "A BTMESH protocol PDU.",
     }
@@ -14248,6 +15885,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btmesh_beacon"],
         blurb:     "A BTMESH-BEACON protocol PDU.",
     }
@@ -14257,6 +15895,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btmesh_pbadv"],
         blurb:     "A BTMESH-PBADV protocol PDU.",
     }
@@ -14266,6 +15905,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btmesh_provisioning"],
         blurb:     "A BTMESH-PROVISIONING protocol PDU.",
     }
@@ -14275,6 +15915,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btmesh_proxy"],
         blurb:     "A BTMESH-PROXY protocol PDU.",
     }
@@ -14284,6 +15925,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btp_matter"],
         blurb:     "A BTP-MATTER protocol PDU.",
     }
@@ -14293,6 +15935,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btrfcomm"],
         blurb:     "A BTRFCOMM protocol PDU.",
     }
@@ -14302,6 +15945,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btsap"],
         blurb:     "A BTSAP protocol PDU.",
     }
@@ -14311,6 +15955,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btsdp"],
         blurb:     "A BTSDP protocol PDU.",
     }
@@ -14320,6 +15965,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["btsmp"],
         blurb:     "A BTSMP protocol PDU.",
     }
@@ -14329,6 +15975,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hci_h1"],
         blurb:     "A HCI-H1 protocol PDU.",
     }
@@ -14338,6 +15985,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hci_h4"],
         blurb:     "A HCI-H4 protocol PDU.",
     }
@@ -14347,6 +15995,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hci_mon"],
         blurb:     "A HCI-MON protocol PDU.",
     }
@@ -14356,6 +16005,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hci_usb"],
         blurb:     "A HCI-USB protocol PDU.",
     }
@@ -14365,6 +16015,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee1609dot2"],
         blurb:     "An IEEE1609DOT2 protocol frame.",
     }
@@ -14374,6 +16025,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee1722"],
         blurb:     "An IEEE1722 protocol frame.",
     }
@@ -14383,6 +16035,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee17221"],
         blurb:     "An IEEE17221 protocol frame.",
     }
@@ -14392,6 +16045,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee1905"],
         blurb:     "An IEEE1905 protocol frame.",
     }
@@ -14401,6 +16055,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee80211"],
         blurb:     "An IEEE80211 protocol frame.",
     }
@@ -14410,6 +16065,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee80211_netmon"],
         blurb:     "An IEEE80211-NETMON protocol frame.",
     }
@@ -14419,6 +16075,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee80211_prism"],
         blurb:     "An IEEE80211-PRISM protocol frame.",
     }
@@ -14428,6 +16085,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee80211_radio"],
         blurb:     "An IEEE80211-RADIO protocol frame.",
     }
@@ -14437,6 +16095,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee80211_radiotap"],
         blurb:     "An IEEE80211-RADIOTAP protocol frame.",
     }
@@ -14446,6 +16105,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee80211_radiotap_iter"],
         blurb:     "An IEEE80211-RADIOTAP-ITER protocol frame.",
     }
@@ -14455,6 +16115,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee80211_wlancap"],
         blurb:     "An IEEE80211-WLANCAP protocol frame.",
     }
@@ -14464,6 +16125,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee802154"],
         blurb:     "An IEEE802154 protocol frame.",
     }
@@ -14473,6 +16135,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee8021ah"],
         blurb:     "An IEEE8021AH protocol frame.",
     }
@@ -14482,6 +16145,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee8021cb"],
         blurb:     "An IEEE8021CB protocol frame.",
     }
@@ -14491,6 +16155,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee8023"],
         blurb:     "An IEEE8023 protocol frame.",
     }
@@ -14500,6 +16165,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee802a"],
         blurb:     "An IEEE802A protocol frame.",
     }
@@ -14509,6 +16175,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["acse"],
         blurb:     "An ACSE protocol structure.",
     }
@@ -14518,6 +16185,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cbrs_oids"],
         blurb:     "An CBRS-OIDS protocol structure.",
     }
@@ -14527,6 +16195,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cdt"],
         blurb:     "An CDT protocol structure.",
     }
@@ -14536,6 +16205,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cms"],
         blurb:     "An CMS protocol structure.",
     }
@@ -14545,6 +16215,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["credssp"],
         blurb:     "An CREDSSP protocol structure.",
     }
@@ -14554,6 +16225,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["crmf"],
         blurb:     "An CRMF protocol structure.",
     }
@@ -14563,6 +16235,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ess"],
         blurb:     "An ESS protocol structure.",
     }
@@ -14572,6 +16245,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["logotypecertextn"],
         blurb:     "An LOGOTYPECERTEXTN protocol structure.",
     }
@@ -14581,6 +16255,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nist_csor"],
         blurb:     "An NIST-CSOR protocol structure.",
     }
@@ -14590,6 +16265,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["novell_pkis"],
         blurb:     "An NOVELL-PKIS protocol structure.",
     }
@@ -14599,6 +16275,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ns_cert_exts"],
         blurb:     "An NS-CERT-EXTS protocol structure.",
     }
@@ -14608,6 +16285,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkcs10"],
         blurb:     "An PKCS10 protocol structure.",
     }
@@ -14617,6 +16295,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkcs12"],
         blurb:     "An PKCS12 protocol structure.",
     }
@@ -14626,6 +16305,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkinit"],
         blurb:     "An PKINIT protocol structure.",
     }
@@ -14635,6 +16315,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkix1explicit"],
         blurb:     "An PKIX1EXPLICIT protocol structure.",
     }
@@ -14644,6 +16325,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkix1implicit"],
         blurb:     "An PKIX1IMPLICIT protocol structure.",
     }
@@ -14653,6 +16335,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkixac"],
         blurb:     "An PKIXAC protocol structure.",
     }
@@ -14662,6 +16345,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkixalgs"],
         blurb:     "An PKIXALGS protocol structure.",
     }
@@ -14671,6 +16355,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkixproxy"],
         blurb:     "An PKIXPROXY protocol structure.",
     }
@@ -14680,6 +16365,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkixqualified"],
         blurb:     "An PKIXQUALIFIED protocol structure.",
     }
@@ -14689,6 +16375,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkixtsp"],
         blurb:     "An PKIXTSP protocol structure.",
     }
@@ -14698,6 +16385,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pres"],
         blurb:     "An PRES protocol structure.",
     }
@@ -14707,6 +16395,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tcg_cp_oids"],
         blurb:     "An TCG-CP-OIDS protocol structure.",
     }
@@ -14716,6 +16405,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wlancertextn"],
         blurb:     "An WLANCERTEXTN protocol structure.",
     }
@@ -14725,6 +16415,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["x509af"],
         blurb:     "An X509AF protocol structure.",
     }
@@ -14734,6 +16425,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["x509ce"],
         blurb:     "An X509CE protocol structure.",
     }
@@ -14743,6 +16435,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["x509if"],
         blurb:     "An X509IF protocol structure.",
     }
@@ -14752,6 +16445,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["x509sat"],
         blurb:     "An X509SAT protocol structure.",
     }
@@ -14761,6 +16455,7 @@ protocols! {
         color:     0x6366F1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["scsi"],
         blurb:     "A SCSI protocol command/data frame.",
     }
@@ -14770,6 +16465,7 @@ protocols! {
         color:     0x6366F1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["scsi_mmc"],
         blurb:     "A SCSI-MMC protocol command/data frame.",
     }
@@ -14779,6 +16475,7 @@ protocols! {
         color:     0x6366F1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["scsi_osd"],
         blurb:     "A SCSI-OSD protocol command/data frame.",
     }
@@ -14788,6 +16485,7 @@ protocols! {
         color:     0x6366F1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["scsi_sbc"],
         blurb:     "A SCSI-SBC protocol command/data frame.",
     }
@@ -14797,6 +16495,7 @@ protocols! {
         color:     0x6366F1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["scsi_smc"],
         blurb:     "A SCSI-SMC protocol command/data frame.",
     }
@@ -14806,6 +16505,7 @@ protocols! {
         color:     0x6366F1,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["scsi_ssc"],
         blurb:     "A SCSI-SSC protocol command/data frame.",
     }
@@ -14815,6 +16515,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["fc"],
         blurb:     "A FC protocol frame.",
     }
@@ -14824,6 +16525,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcct"],
         blurb:     "A FCCT protocol frame.",
     }
@@ -14833,6 +16535,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcdns"],
         blurb:     "A FCDNS protocol frame.",
     }
@@ -14842,6 +16545,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcels"],
         blurb:     "A FCELS protocol frame.",
     }
@@ -14851,6 +16555,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcfcs"],
         blurb:     "A FCFCS protocol frame.",
     }
@@ -14860,6 +16565,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcfzs"],
         blurb:     "A FCFZS protocol frame.",
     }
@@ -14869,6 +16575,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcgi"],
         blurb:     "A FCGI protocol frame.",
     }
@@ -14878,6 +16585,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fclctl"],
         blurb:     "A FCLCTL protocol frame.",
     }
@@ -14887,6 +16595,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcoib"],
         blurb:     "A FCOIB protocol frame.",
     }
@@ -14896,6 +16605,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcsb3"],
         blurb:     "A FCSB3 protocol frame.",
     }
@@ -14905,6 +16615,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcsp"],
         blurb:     "A FCSP protocol frame.",
     }
@@ -14914,6 +16625,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fcswils"],
         blurb:     "A FCSWILS protocol frame.",
     }
@@ -14923,6 +16635,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ifcp"],
         blurb:     "A IFCP protocol frame.",
     }
@@ -14932,6 +16645,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_audio"],
         blurb:     "An USB-AUDIO protocol frame.",
     }
@@ -14941,6 +16655,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_ccid"],
         blurb:     "An USB-CCID protocol frame.",
     }
@@ -14950,6 +16665,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_com"],
         blurb:     "An USB-COM protocol frame.",
     }
@@ -14959,6 +16675,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_dfu"],
         blurb:     "An USB-DFU protocol frame.",
     }
@@ -14968,6 +16685,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_hid"],
         blurb:     "An USB-HID protocol frame.",
     }
@@ -14977,6 +16695,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_hub"],
         blurb:     "An USB-HUB protocol frame.",
     }
@@ -14986,6 +16705,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_i1d3"],
         blurb:     "An USB-I1D3 protocol frame.",
     }
@@ -14995,6 +16715,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_masstorage"],
         blurb:     "An USB-MASSTORAGE protocol frame.",
     }
@@ -15004,6 +16725,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_printer"],
         blurb:     "An USB-PRINTER protocol frame.",
     }
@@ -15013,6 +16735,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_ptp"],
         blurb:     "An USB-PTP protocol frame.",
     }
@@ -15022,6 +16745,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usb_video"],
         blurb:     "An USB-VIDEO protocol frame.",
     }
@@ -15031,6 +16755,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usbip"],
         blurb:     "An USBIP protocol frame.",
     }
@@ -15040,6 +16765,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usbll"],
         blurb:     "An USBLL protocol frame.",
     }
@@ -15049,6 +16775,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usbms_bot"],
         blurb:     "An USBMS-BOT protocol frame.",
     }
@@ -15058,6 +16785,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["usbms_uasp"],
         blurb:     "An USBMS-UASP protocol frame.",
     }
@@ -15067,6 +16795,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpls_echo"],
         blurb:     "An MPLS-ECHO protocol frame.",
     }
@@ -15076,6 +16805,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpls_mac"],
         blurb:     "An MPLS-MAC protocol frame.",
     }
@@ -15085,6 +16815,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpls_pm"],
         blurb:     "An MPLS-PM protocol frame.",
     }
@@ -15094,6 +16825,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpls_psc"],
         blurb:     "An MPLS-PSC protocol frame.",
     }
@@ -15103,6 +16835,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mpls_y1711"],
         blurb:     "An MPLS-Y1711 protocol frame.",
     }
@@ -15112,6 +16845,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mplstp_oam"],
         blurb:     "An MPLSTP-OAM protocol frame.",
     }
@@ -15121,6 +16855,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rf4ce_nwk"],
         blurb:     "A RF4CE-NWK protocol frame.",
     }
@@ -15130,6 +16865,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rf4ce_profile"],
         blurb:     "A RF4CE-PROFILE protocol frame.",
     }
@@ -15139,6 +16875,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rf4ce_secur"],
         blurb:     "A RF4CE-SECUR protocol frame.",
     }
@@ -15148,6 +16885,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_aps"],
         blurb:     "A ZBEE-APS protocol frame.",
     }
@@ -15157,6 +16895,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_direct"],
         blurb:     "A ZBEE-DIRECT protocol frame.",
     }
@@ -15166,6 +16905,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_nwk"],
         blurb:     "A ZBEE-NWK protocol frame.",
     }
@@ -15175,6 +16915,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_nwk_gp"],
         blurb:     "A ZBEE-NWK-GP protocol frame.",
     }
@@ -15184,6 +16925,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_security"],
         blurb:     "A ZBEE-SECURITY protocol frame.",
     }
@@ -15193,6 +16935,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_tlv"],
         blurb:     "A ZBEE-TLV protocol frame.",
     }
@@ -15202,6 +16945,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl"],
         blurb:     "A ZBEE-ZCL protocol frame.",
     }
@@ -15211,6 +16955,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_closures"],
         blurb:     "A ZBEE-ZCL-CLOSURES protocol frame.",
     }
@@ -15220,6 +16965,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_general"],
         blurb:     "A ZBEE-ZCL-GENERAL protocol frame.",
     }
@@ -15229,6 +16975,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_ha"],
         blurb:     "A ZBEE-ZCL-HA protocol frame.",
     }
@@ -15238,6 +16985,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_hvac"],
         blurb:     "A ZBEE-ZCL-HVAC protocol frame.",
     }
@@ -15247,6 +16995,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_lighting"],
         blurb:     "A ZBEE-ZCL-LIGHTING protocol frame.",
     }
@@ -15256,6 +17005,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_meas_sensing"],
         blurb:     "A ZBEE-ZCL-MEAS-SENSING protocol frame.",
     }
@@ -15265,6 +17015,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_misc"],
         blurb:     "A ZBEE-ZCL-MISC protocol frame.",
     }
@@ -15274,6 +17025,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_proto_iface"],
         blurb:     "A ZBEE-ZCL-PROTO-IFACE protocol frame.",
     }
@@ -15283,6 +17035,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_sas"],
         blurb:     "A ZBEE-ZCL-SAS protocol frame.",
     }
@@ -15292,6 +17045,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zcl_se"],
         blurb:     "A ZBEE-ZCL-SE protocol frame.",
     }
@@ -15301,6 +17055,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zdp"],
         blurb:     "A ZBEE-ZDP protocol frame.",
     }
@@ -15310,6 +17065,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zdp_binding"],
         blurb:     "A ZBEE-ZDP-BINDING protocol frame.",
     }
@@ -15319,6 +17075,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zdp_discovery"],
         blurb:     "A ZBEE-ZDP-DISCOVERY protocol frame.",
     }
@@ -15328,6 +17085,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbee_zdp_management"],
         blurb:     "A ZBEE-ZDP-MANAGEMENT protocol frame.",
     }
@@ -15337,6 +17095,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zbncp"],
         blurb:     "A ZBNCP protocol frame.",
     }
@@ -15346,6 +17105,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink"],
         blurb:     "A NETLINK protocol frame.",
     }
@@ -15355,6 +17115,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_generic"],
         blurb:     "A NETLINK-GENERIC protocol frame.",
     }
@@ -15364,6 +17125,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_mac80211_hwsim"],
         blurb:     "A NETLINK-MAC80211-HWSIM protocol frame.",
     }
@@ -15373,6 +17135,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_net_dm"],
         blurb:     "A NETLINK-NET-DM protocol frame.",
     }
@@ -15382,6 +17145,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_netfilter"],
         blurb:     "A NETLINK-NETFILTER protocol frame.",
     }
@@ -15391,6 +17155,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_nl80211"],
         blurb:     "A NETLINK-NL80211 protocol frame.",
     }
@@ -15400,6 +17165,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_ovs_ct_limit"],
         blurb:     "A NETLINK-OVS-CT-LIMIT protocol frame.",
     }
@@ -15409,6 +17175,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_ovs_datapath"],
         blurb:     "A NETLINK-OVS-DATAPATH protocol frame.",
     }
@@ -15418,6 +17185,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_ovs_flow"],
         blurb:     "A NETLINK-OVS-FLOW protocol frame.",
     }
@@ -15427,6 +17195,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_ovs_meter"],
         blurb:     "A NETLINK-OVS-METER protocol frame.",
     }
@@ -15436,6 +17205,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_ovs_packet"],
         blurb:     "A NETLINK-OVS-PACKET protocol frame.",
     }
@@ -15445,6 +17215,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_ovs_vport"],
         blurb:     "A NETLINK-OVS-VPORT protocol frame.",
     }
@@ -15454,6 +17225,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_psample"],
         blurb:     "A NETLINK-PSAMPLE protocol frame.",
     }
@@ -15463,6 +17235,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_route"],
         blurb:     "A NETLINK-ROUTE protocol frame.",
     }
@@ -15472,6 +17245,7 @@ protocols! {
         color:     0x0284C7,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["netlink_sock_diag"],
         blurb:     "A NETLINK-SOCK-DIAG protocol frame.",
     }
@@ -15481,6 +17255,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sapdiag"],
         blurb:     "A SAPDIAG protocol frame.",
     }
@@ -15490,6 +17265,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sapenqueue"],
         blurb:     "A SAPENQUEUE protocol frame.",
     }
@@ -15499,6 +17275,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["saphdb"],
         blurb:     "A SAPHDB protocol frame.",
     }
@@ -15508,6 +17285,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sapigs"],
         blurb:     "A SAPIGS protocol frame.",
     }
@@ -15517,6 +17295,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sapms"],
         blurb:     "A SAPMS protocol frame.",
     }
@@ -15526,6 +17305,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sapni"],
         blurb:     "A SAPNI protocol frame.",
     }
@@ -15535,6 +17315,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["saprfc"],
         blurb:     "A SAPRFC protocol frame.",
     }
@@ -15544,6 +17325,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["saprouter"],
         blurb:     "A SAPROUTER protocol frame.",
     }
@@ -15553,6 +17335,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sapsnc"],
         blurb:     "A SAPSNC protocol frame.",
     }
@@ -15562,6 +17345,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi"],
         blurb:     "An IPMI protocol message.",
     }
@@ -15571,6 +17355,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_app"],
         blurb:     "An IPMI-APP protocol message.",
     }
@@ -15580,6 +17365,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_bridge"],
         blurb:     "An IPMI-BRIDGE protocol message.",
     }
@@ -15589,6 +17375,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_chassis"],
         blurb:     "An IPMI-CHASSIS protocol message.",
     }
@@ -15598,6 +17385,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_picmg"],
         blurb:     "An IPMI-PICMG protocol message.",
     }
@@ -15607,6 +17395,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_pps"],
         blurb:     "An IPMI-PPS protocol message.",
     }
@@ -15616,6 +17405,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_se"],
         blurb:     "An IPMI-SE protocol message.",
     }
@@ -15625,6 +17415,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_session"],
         blurb:     "An IPMI-SESSION protocol message.",
     }
@@ -15634,6 +17425,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_storage"],
         blurb:     "An IPMI-STORAGE protocol message.",
     }
@@ -15643,6 +17435,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_trace"],
         blurb:     "An IPMI-TRACE protocol message.",
     }
@@ -15652,6 +17445,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_transport"],
         blurb:     "An IPMI-TRANSPORT protocol message.",
     }
@@ -15661,6 +17455,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_update"],
         blurb:     "An IPMI-UPDATE protocol message.",
     }
@@ -15670,6 +17465,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ipmi_vita"],
         blurb:     "An IPMI-VITA protocol message.",
     }
@@ -15679,6 +17475,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bootparams"],
         blurb:     "An BOOTPARAMS protocol message.",
     }
@@ -15688,6 +17485,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hclnfsd"],
         blurb:     "An HCLNFSD protocol message.",
     }
@@ -15697,6 +17495,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["klm"],
         blurb:     "An KLM protocol message.",
     }
@@ -15706,6 +17505,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mount"],
         blurb:     "An MOUNT protocol message.",
     }
@@ -15715,6 +17515,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nfsacl"],
         blurb:     "An NFSACL protocol message.",
     }
@@ -15724,6 +17525,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nfsauth"],
         blurb:     "An NFSAUTH protocol message.",
     }
@@ -15733,6 +17535,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nisplus"],
         blurb:     "An NISPLUS protocol message.",
     }
@@ -15742,6 +17545,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nlm"],
         blurb:     "An NLM protocol message.",
     }
@@ -15751,6 +17555,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pcnfsd"],
         blurb:     "An PCNFSD protocol message.",
     }
@@ -15760,6 +17565,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["portmap"],
         blurb:     "An PORTMAP protocol message.",
     }
@@ -15769,6 +17575,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rpcap"],
         blurb:     "An RPCAP protocol message.",
     }
@@ -15778,6 +17585,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rpcrdma"],
         blurb:     "An RPCRDMA protocol message.",
     }
@@ -15787,6 +17595,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rquota"],
         blurb:     "An RQUOTA protocol message.",
     }
@@ -15796,6 +17605,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rstat"],
         blurb:     "An RSTAT protocol message.",
     }
@@ -15805,6 +17615,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rwall"],
         blurb:     "An RWALL protocol message.",
     }
@@ -15814,6 +17625,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sadmind"],
         blurb:     "An SADMIND protocol message.",
     }
@@ -15823,6 +17635,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["spray"],
         blurb:     "An SPRAY protocol message.",
     }
@@ -15832,6 +17645,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["stat"],
         blurb:     "An STAT protocol message.",
     }
@@ -15841,6 +17655,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["stat_notify"],
         blurb:     "An STAT-NOTIFY protocol message.",
     }
@@ -15850,6 +17665,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ypbind"],
         blurb:     "An YPBIND protocol message.",
     }
@@ -15859,6 +17675,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["yppasswd"],
         blurb:     "An YPPASSWD protocol message.",
     }
@@ -15868,6 +17685,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ypserv"],
         blurb:     "An YPSERV protocol message.",
     }
@@ -15877,6 +17695,7 @@ protocols! {
         color:     0xE11D48,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ypxfr"],
         blurb:     "An YPXFR protocol message.",
     }
@@ -15886,6 +17705,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mcpe"],
         blurb:     "A MCPE game protocol packet.",
     }
@@ -15895,6 +17715,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["quake"],
         blurb:     "A QUAKE game protocol packet.",
     }
@@ -15904,6 +17725,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["quake2"],
         blurb:     "A QUAKE2 game protocol packet.",
     }
@@ -15913,6 +17735,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["quake3"],
         blurb:     "A QUAKE3 game protocol packet.",
     }
@@ -15922,6 +17745,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["quakeworld"],
         blurb:     "A QUAKEWORLD game protocol packet.",
     }
@@ -15931,6 +17755,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["steam_ihs_discovery"],
         blurb:     "A STEAM-IHS-DISCOVERY game protocol packet.",
     }
@@ -15940,6 +17765,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tibia"],
         blurb:     "A TIBIA game protocol packet.",
     }
@@ -15949,6 +17775,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["wow"],
         blurb:     "A WOW game protocol packet.",
     }
@@ -15958,6 +17785,7 @@ protocols! {
         color:     0x84CC16,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["woww"],
         blurb:     "A WOWW game protocol packet.",
     }
@@ -15967,6 +17795,7 @@ protocols! {
         color:     0x00BFFF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["unreal_iris", "ue5_iris"],
         blurb:     "Unreal Engine 5 Iris replication system \u{2014} object state replication and prioritization.",
     }
@@ -15976,6 +17805,7 @@ protocols! {
         color:     0x00A8E8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["unreal_iris_fast_array"],
         blurb:     "Unreal Engine Iris fast array serializer \u{2014} delta-compressed array replication.",
     }
@@ -15985,6 +17815,7 @@ protocols! {
         color:     0x0090D0,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["unreal_replication_graph", "repgraph"],
         blurb:     "Unreal Engine ReplicationGraph \u{2014} spatial cell-based actor replication routing.",
     }
@@ -15994,6 +17825,7 @@ protocols! {
         color:     0x0078B8,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["unreal_net_driver_v2"],
         blurb:     "Unreal Engine 5 extended net driver \u{2014} custom channel and packet sequencing.",
     }
@@ -16003,6 +17835,7 @@ protocols! {
         color:     0xFF6A00,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["unity_transport"],
         blurb:     "Unity Transport Package (UTP 2.x) \u{2014} reliable/unreliable UDP transport layer.",
     }
@@ -16012,6 +17845,7 @@ protocols! {
         color:     0xE55E00,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["unity_ngo"],
         blurb:     "Unity Netcode for GameObjects \u{2014} network variables, RPCs, and object spawning.",
     }
@@ -16021,6 +17855,7 @@ protocols! {
         color:     0xCC5200,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["unity_entities_netcode", "dots_netcode"],
         blurb:     "Unity Netcode for Entities (DOTS) \u{2014} component-based entity replication over UDP.",
     }
@@ -16030,6 +17865,7 @@ protocols! {
         color:     0xFF4444,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["unity_relay"],
         blurb:     "Unity Relay service \u{2014} NAT traversal and signalling for peer-to-peer connectivity.",
     }
@@ -16039,6 +17875,7 @@ protocols! {
         color:     0x22C55E,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["godot_enet"],
         blurb:     "Godot Engine ENet multiplayer peer \u{2014} ENet-based reliable UDP transport.",
     }
@@ -16048,6 +17885,7 @@ protocols! {
         color:     0x1DA853,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["godot_websocket_mp"],
         blurb:     "Godot Engine WebSocket multiplayer peer \u{2014} WebSocket-based peer-to-peer transport.",
     }
@@ -16057,6 +17895,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["godot_rpc_mp"],
         blurb:     "Godot Engine high-level multiplayer RPC \u{2014} remote procedure call serialization.",
     }
@@ -16066,6 +17905,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["o3de_aznetworking", "aznetworking"],
         blurb:     "Open 3D Engine AzNetworking \u{2014} packet header, compression, and encryption.",
     }
@@ -16075,6 +17915,7 @@ protocols! {
         color:     0xEAB308,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cryengine_net_channel"],
         blurb:     "CRYENGINE NetChannel \u{2014} channel-based streaming and RPC transport.",
     }
@@ -16084,6 +17925,7 @@ protocols! {
         color:     0xF97316,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["source2_netmessage"],
         blurb:     "Source 2 engine NetMessage \u{2014} serialized network message framing.",
     }
@@ -16093,6 +17935,7 @@ protocols! {
         color:     0xE8630F,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["source2_svcmsg"],
         blurb:     "Source 2 SVC_Messages \u{2014} server-to-client system messages (SVC_ServerInfo, SVC_PacketEntities, etc.).",
     }
@@ -16102,6 +17945,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["redbackli"],
         blurb:     "REDBACKLI Protocol",
     }
@@ -16111,6 +17955,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["reload"],
         blurb:     "RELOAD Protocol",
     }
@@ -16120,6 +17965,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["reload_framing"],
         blurb:     "RELOAD-FRAMING Protocol",
     }
@@ -16129,6 +17975,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["resp"],
         blurb:     "RESP Protocol",
     }
@@ -16138,6 +17985,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["retix_bpdu"],
         blurb:     "RETIX-BPDU Protocol",
     }
@@ -16147,6 +17995,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rfc2190"],
         blurb:     "RFC2190 Protocol",
     }
@@ -16156,6 +18005,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rfid_felica"],
         blurb:     "RFID-FELICA Protocol",
     }
@@ -16165,6 +18015,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rfid_mifare"],
         blurb:     "RFID-MIFARE Protocol",
     }
@@ -16174,6 +18025,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rfid_pn532"],
         blurb:     "RFID-PN532 Protocol",
     }
@@ -16183,6 +18035,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rfid_pn532_hci"],
         blurb:     "RFID-PN532-HCI Protocol",
     }
@@ -16192,6 +18045,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rftap"],
         blurb:     "RFTAP Protocol",
     }
@@ -16201,6 +18055,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rgmp"],
         blurb:     "RGMP Protocol",
     }
@@ -16210,6 +18065,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rk512"],
         blurb:     "RK512 Protocol",
     }
@@ -16219,6 +18075,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rlm"],
         blurb:     "RLM Protocol",
     }
@@ -16228,6 +18085,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rmi"],
         blurb:     "RMI Protocol",
     }
@@ -16237,6 +18095,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rmp"],
         blurb:     "RMP Protocol",
     }
@@ -16246,6 +18105,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rmt_alc"],
         blurb:     "RMT-ALC Protocol",
     }
@@ -16255,6 +18115,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rmt_fec"],
         blurb:     "RMT-FEC Protocol",
     }
@@ -16264,6 +18125,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rmt_lct"],
         blurb:     "RMT-LCT Protocol",
     }
@@ -16273,6 +18135,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rmt_norm"],
         blurb:     "RMT-NORM Protocol",
     }
@@ -16282,6 +18145,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rohc"],
         blurb:     "ROHC Protocol",
     }
@@ -16291,6 +18155,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["romon"],
         blurb:     "ROMON Protocol",
     }
@@ -16300,6 +18165,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["roofnet"],
         blurb:     "ROOFNET Protocol",
     }
@@ -16309,6 +18175,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["roon_discovery"],
         blurb:     "ROON-DISCOVERY Protocol",
     }
@@ -16318,6 +18185,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ros"],
         blurb:     "ROS Protocol",
     }
@@ -16327,6 +18195,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["rrc"],
         blurb:     "RRC Protocol",
     }
@@ -16336,6 +18205,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rrlp"],
         blurb:     "RRLP Protocol",
     }
@@ -16345,6 +18215,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rsip"],
         blurb:     "RSIP Protocol",
     }
@@ -16354,6 +18225,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rsl"],
         blurb:     "RSL Protocol",
     }
@@ -16363,6 +18235,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rsvd"],
         blurb:     "RSVD Protocol",
     }
@@ -16372,6 +18245,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtacser"],
         blurb:     "RTACSER Protocol",
     }
@@ -16381,6 +18255,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtag"],
         blurb:     "RTAG Protocol",
     }
@@ -16390,6 +18265,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtcdc"],
         blurb:     "RTCDC Protocol",
     }
@@ -16399,6 +18275,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtitcp"],
         blurb:     "RTITCP Protocol",
     }
@@ -16408,6 +18285,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtls"],
         blurb:     "RTLS Protocol",
     }
@@ -16417,6 +18295,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtmpt"],
         blurb:     "RTMPT Protocol",
     }
@@ -16426,6 +18305,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtnet"],
         blurb:     "RTNET Protocol",
     }
@@ -16435,6 +18315,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtp_ed137"],
         blurb:     "RTP-ED137 Protocol",
     }
@@ -16444,6 +18325,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtp_events"],
         blurb:     "RTP-EVENTS Protocol",
     }
@@ -16453,6 +18335,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtpproxy"],
         blurb:     "RTPPROXY Protocol",
     }
@@ -16462,6 +18345,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtps_processed"],
         blurb:     "RTPS-PROCESSED Protocol",
     }
@@ -16471,6 +18355,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtps_virtual_transport"],
         blurb:     "RTPS-VIRTUAL-TRANSPORT Protocol",
     }
@@ -16480,6 +18365,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rtse"],
         blurb:     "RTSE Protocol",
     }
@@ -16489,6 +18375,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rttrp"],
         blurb:     "RTTRP Protocol",
     }
@@ -16498,6 +18385,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rudp"],
         blurb:     "RUDP Protocol",
     }
@@ -16507,6 +18395,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["s101"],
         blurb:     "S101 Protocol",
     }
@@ -16516,6 +18405,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["s5066dts"],
         blurb:     "S5066DTS Protocol",
     }
@@ -16525,6 +18415,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["s5066sis"],
         blurb:     "S5066SIS Protocol",
     }
@@ -16534,6 +18425,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["s7comm_szl_ids"],
         blurb:     "S7COMM-SZL-IDS Protocol",
     }
@@ -16543,6 +18435,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sametime"],
         blurb:     "SAMETIME Protocol",
     }
@@ -16552,6 +18445,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sap_proto"],
         blurb:     "SAP Protocol",
     }
@@ -16561,6 +18455,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sasp"],
         blurb:     "SASP Protocol",
     }
@@ -16570,6 +18465,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sbas_l1"],
         blurb:     "SBAS-L1 Protocol",
     }
@@ -16579,6 +18475,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sbas_l5"],
         blurb:     "SBAS-L5 Protocol",
     }
@@ -16588,6 +18485,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["sbc"],
         blurb:     "SBC Protocol",
     }
@@ -16597,6 +18495,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sbus"],
         blurb:     "SBUS Protocol",
     }
@@ -16606,6 +18505,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sccpmg"],
         blurb:     "SCCPMG Protocol",
     }
@@ -16615,6 +18515,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["scop"],
         blurb:     "SCOP Protocol",
     }
@@ -16624,6 +18525,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["scriptingservice"],
         blurb:     "SCRIPTINGSERVICE Protocol",
     }
@@ -16633,6 +18535,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["scylla"],
         blurb:     "SCYLLA Protocol",
     }
@@ -16642,6 +18545,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sdh"],
         blurb:     "SDH Protocol",
     }
@@ -16651,6 +18555,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sdlc"],
         blurb:     "SDLC Protocol",
     }
@@ -16660,6 +18565,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sebek"],
         blurb:     "SEBEK Protocol",
     }
@@ -16669,6 +18575,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["selfm"],
         blurb:     "SELFM Protocol",
     }
@@ -16678,6 +18585,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sercosiii"],
         blurb:     "SERCOSIII Protocol",
     }
@@ -16687,6 +18595,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ses"],
         blurb:     "SES Protocol",
     }
@@ -16696,6 +18605,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sftp"],
         blurb:     "SFTP Protocol",
     }
@@ -16705,6 +18615,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sgp22"],
         blurb:     "SGP22 Protocol",
     }
@@ -16714,6 +18625,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sgp32"],
         blurb:     "SGP32 Protocol",
     }
@@ -16723,6 +18635,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["shicp"],
         blurb:     "SHICP Protocol",
     }
@@ -16732,6 +18645,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sigcomp"],
         blurb:     "SIGCOMP Protocol",
     }
@@ -16741,6 +18655,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["signal_pdu"],
         blurb:     "SIGNAL-PDU Protocol",
     }
@@ -16750,6 +18665,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["silabs_dch"],
         blurb:     "SILABS-DCH Protocol",
     }
@@ -16759,6 +18675,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["simple"],
         blurb:     "SIMPLE Protocol",
     }
@@ -16768,6 +18685,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["simulcrypt"],
         blurb:     "SIMULCRYPT Protocol",
     }
@@ -16777,6 +18695,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sinecap"],
         blurb:     "SINECAP Protocol",
     }
@@ -16786,6 +18705,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sipfrag"],
         blurb:     "SIPFRAG Protocol",
     }
@@ -16795,6 +18715,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sita"],
         blurb:     "SITA Protocol",
     }
@@ -16804,6 +18725,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["skype"],
         blurb:     "SKYPE Protocol",
     }
@@ -16813,6 +18735,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["slimp3"],
         blurb:     "SLIMP3 Protocol",
     }
@@ -16822,6 +18745,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["slowprotocols"],
         blurb:     "SLOWPROTOCOLS Protocol",
     }
@@ -16831,6 +18755,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["slsk"],
         blurb:     "SLSK Protocol",
     }
@@ -16840,6 +18765,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smb_browse"],
         blurb:     "SMB-BROWSE Protocol",
     }
@@ -16849,6 +18775,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smb_common"],
         blurb:     "SMB-COMMON Protocol",
     }
@@ -16858,6 +18785,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smb_logon"],
         blurb:     "SMB-LOGON Protocol",
     }
@@ -16867,6 +18795,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smb_mailslot"],
         blurb:     "SMB-MAILSLOT Protocol",
     }
@@ -16876,6 +18805,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smb_pipe"],
         blurb:     "SMB-PIPE Protocol",
     }
@@ -16885,6 +18815,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smb_sidsnooping"],
         blurb:     "SMB-SIDSNOOPING Protocol",
     }
@@ -16894,6 +18825,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smb2"],
         blurb:     "SMB2 Protocol",
     }
@@ -16903,6 +18835,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smc"],
         blurb:     "SMC Protocol",
     }
@@ -16912,6 +18845,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sml"],
         blurb:     "SML Protocol",
     }
@@ -16921,6 +18855,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smpte_2110_20"],
         blurb:     "SMPTE-2110-20 Protocol",
     }
@@ -16930,6 +18865,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["smrse"],
         blurb:     "SMRSE Protocol",
     }
@@ -16939,6 +18875,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["snaeth"],
         blurb:     "SNAETH Protocol",
     }
@@ -16948,6 +18885,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sndcp_xid"],
         blurb:     "SNDCP-XID Protocol",
     }
@@ -16957,6 +18895,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["snort"],
         blurb:     "SNORT Protocol",
     }
@@ -16966,6 +18905,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["snort_config"],
         blurb:     "SNORT-CONFIG Protocol",
     }
@@ -16975,6 +18915,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["socketcan"],
         blurb:     "SOCKETCAN Protocol",
     }
@@ -16984,6 +18925,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["solaredge"],
         blurb:     "SOLAREDGE Protocol",
     }
@@ -16993,6 +18935,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["soupbintcp"],
         blurb:     "SOUPBINTCP Protocol",
     }
@@ -17002,6 +18945,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sparkplug"],
         blurb:     "SPARKPLUG Protocol",
     }
@@ -17011,6 +18955,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["spnego_proto"],
         blurb:     "SPNEGO Protocol",
     }
@@ -17020,6 +18965,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["spp"],
         blurb:     "SPP Protocol",
     }
@@ -17029,6 +18975,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sprt"],
         blurb:     "SPRT Protocol",
     }
@@ -17038,6 +18985,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["srvloc"],
         blurb:     "SRVLOC Protocol",
     }
@@ -17047,6 +18995,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sscf_nni"],
         blurb:     "SSCF-NNI Protocol",
     }
@@ -17056,6 +19005,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sscop"],
         blurb:     "SSCOP Protocol",
     }
@@ -17065,6 +19015,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ssyncp"],
         blurb:     "SSYNCP Protocol",
     }
@@ -17074,6 +19025,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["stanag4607"],
         blurb:     "STANAG4607 Protocol",
     }
@@ -17083,6 +19035,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["starteam"],
         blurb:     "STARTEAM Protocol",
     }
@@ -17092,6 +19045,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["stcsig"],
         blurb:     "STCSIG Protocol",
     }
@@ -17101,6 +19055,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["swipe"],
         blurb:     "SWIPE Protocol",
     }
@@ -17110,6 +19065,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["symantec"],
         blurb:     "SYMANTEC Protocol",
     }
@@ -17119,6 +19075,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sync"],
         blurb:     "SYNC Protocol",
     }
@@ -17128,6 +19085,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["synergy"],
         blurb:     "SYNERGY Protocol",
     }
@@ -17137,6 +19095,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["synphasor"],
         blurb:     "SYNPHASOR Protocol",
     }
@@ -17147,6 +19106,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sysdig_event"],
         blurb:     "SYSDIG-EVENT Protocol",
     }
@@ -17156,6 +19116,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["systemd_journal"],
         blurb:     "SYSTEMD-JOURNAL Protocol",
     }
@@ -17165,6 +19126,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["t124"],
         blurb:     "T124 Protocol",
     }
@@ -17174,6 +19136,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["t125"],
         blurb:     "T125 Protocol",
     }
@@ -17183,6 +19146,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["t30"],
         blurb:     "T30 Protocol",
     }
@@ -17192,6 +19156,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["t38"],
         blurb:     "T38 Protocol",
     }
@@ -17201,6 +19166,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tali"],
         blurb:     "TALI Protocol",
     }
@@ -17210,6 +19176,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tango_proto"],
         blurb:     "TANGO-PROTO Protocol",
     }
@@ -17219,6 +19186,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tapa"],
         blurb:     "TAPA Protocol",
     }
@@ -17228,6 +19196,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tcpcl"],
         blurb:     "TCPCL Protocol",
     }
@@ -17237,6 +19206,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tcpros"],
         blurb:     "TCPROS Protocol",
     }
@@ -17246,6 +19216,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tdmoe"],
         blurb:     "TDMOE Protocol",
     }
@@ -17255,6 +19226,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tdmop"],
         blurb:     "TDMOP Protocol",
     }
@@ -17264,6 +19236,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["teamspeak2"],
         blurb:     "TEAMSPEAK2 Protocol",
     }
@@ -17273,6 +19246,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["teap"],
         blurb:     "TEAP Protocol",
     }
@@ -17282,6 +19256,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tecmp"],
         blurb:     "TECMP Protocol",
     }
@@ -17291,6 +19266,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["teimanagement"],
         blurb:     "TEIMANAGEMENT Protocol",
     }
@@ -17300,6 +19276,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["teklink"],
         blurb:     "TEKLINK Protocol",
     }
@@ -17309,6 +19286,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["telkonet"],
         blurb:     "TELKONET Protocol",
     }
@@ -17318,6 +19296,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tetra"],
         blurb:     "TETRA Protocol",
     }
@@ -17327,6 +19306,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["text_media"],
         blurb:     "TEXT-MEDIA Protocol",
     }
@@ -17336,6 +19316,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tfp"],
         blurb:     "TFP Protocol",
     }
@@ -17345,6 +19326,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["thread_proto"],
         blurb:     "THREAD Protocol",
     }
@@ -17354,6 +19336,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tipc"],
         blurb:     "TIPC Protocol",
     }
@@ -17363,6 +19346,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tivoconnect"],
         blurb:     "TIVOCONNECT Protocol",
     }
@@ -17372,6 +19356,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tls_utils"],
         blurb:     "TLS-UTILS Protocol",
     }
@@ -17381,6 +19366,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tn3270"],
         blurb:     "TN3270 Protocol",
     }
@@ -17390,6 +19376,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tn5250"],
         blurb:     "TN5250 Protocol",
     }
@@ -17399,6 +19386,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tnef"],
         blurb:     "TNEF Protocol",
     }
@@ -17408,6 +19396,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tpkt"],
         blurb:     "TPKT Protocol",
     }
@@ -17417,6 +19406,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tplink_smarthome"],
         blurb:     "TPLINK-SMARTHOME Protocol",
     }
@@ -17426,6 +19416,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tpm20"],
         blurb:     "TPM20 Protocol",
     }
@@ -17435,6 +19426,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tpncp"],
         blurb:     "TPNCP Protocol",
     }
@@ -17444,6 +19436,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Dissected,
         aliases:   ["tr"],
         blurb:     "TR Protocol",
     }
@@ -17453,6 +19446,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["trdp"],
         blurb:     "TRDP Protocol",
     }
@@ -17462,6 +19456,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["trel"],
         blurb:     "TREL Protocol",
     }
@@ -17471,6 +19466,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["trmac"],
         blurb:     "TRMAC Protocol",
     }
@@ -17480,6 +19476,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["trueconf"],
         blurb:     "TRUECONF Protocol",
     }
@@ -17489,6 +19486,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tsdns"],
         blurb:     "TSDNS Protocol",
     }
@@ -17498,6 +19496,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tte"],
         blurb:     "TTE Protocol",
     }
@@ -17507,6 +19506,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tte_pcf"],
         blurb:     "TTE-PCF Protocol",
     }
@@ -17516,6 +19516,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ttl"],
         blurb:     "TTL Protocol",
     }
@@ -17525,6 +19526,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["turbocell"],
         blurb:     "TURBOCELL Protocol",
     }
@@ -17534,6 +19536,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["turnchannel"],
         blurb:     "TURNCHANNEL Protocol",
     }
@@ -17543,6 +19546,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tuxedo"],
         blurb:     "TUXEDO Protocol",
     }
@@ -17552,6 +19556,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tzsp"],
         blurb:     "TZSP Protocol",
     }
@@ -17561,6 +19566,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["u3v"],
         blurb:     "U3V Protocol",
     }
@@ -17570,6 +19576,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ua"],
         blurb:     "UA Protocol",
     }
@@ -17579,6 +19586,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ua3g"],
         blurb:     "UA3G Protocol",
     }
@@ -17588,6 +19596,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uasip"],
         blurb:     "UASIP Protocol",
     }
@@ -17597,6 +19606,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uaudp"],
         blurb:     "UAUDP Protocol",
     }
@@ -17606,6 +19616,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uavcan_can"],
         blurb:     "UAVCAN-CAN Protocol",
     }
@@ -17615,6 +19626,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uavcan_dsdl"],
         blurb:     "UAVCAN-DSDL Protocol",
     }
@@ -17624,6 +19636,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ubdp"],
         blurb:     "UBDP Protocol",
     }
@@ -17633,6 +19646,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ubertooth"],
         blurb:     "UBERTOOTH Protocol",
     }
@@ -17642,6 +19656,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ubx"],
         blurb:     "UBX Protocol",
     }
@@ -17651,6 +19666,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ubx_galileo_e1b_inav"],
         blurb:     "UBX-GALILEO-E1B-INAV Protocol",
     }
@@ -17660,6 +19676,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ubx_gps_l1_lnav"],
         blurb:     "UBX-GPS-L1-LNAV Protocol",
     }
@@ -17669,6 +19686,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uci"],
         blurb:     "UCI Protocol",
     }
@@ -17678,6 +19696,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ucp"],
         blurb:     "UCP Protocol",
     }
@@ -17687,6 +19706,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["udpcp"],
         blurb:     "UDPCP Protocol",
     }
@@ -17696,6 +19716,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["udt"],
         blurb:     "UDT Protocol",
     }
@@ -17705,6 +19726,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uet"],
         blurb:     "UET Protocol",
     }
@@ -17714,6 +19736,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uftp"],
         blurb:     "UFTP Protocol",
     }
@@ -17723,6 +19746,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uftp4"],
         blurb:     "UFTP4 Protocol",
     }
@@ -17732,6 +19756,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uftp5"],
         blurb:     "UFTP5 Protocol",
     }
@@ -17741,6 +19766,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uhd"],
         blurb:     "UHD Protocol",
     }
@@ -17750,6 +19776,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ulp"],
         blurb:     "ULP Protocol",
     }
@@ -17759,6 +19786,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uma"],
         blurb:     "UMA Protocol",
     }
@@ -17769,6 +19797,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["user_encap"],
         blurb:     "USER-ENCAP Protocol",
     }
@@ -17778,6 +19807,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["userlog"],
         blurb:     "USERLOG Protocol",
     }
@@ -17787,6 +19817,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["uts"],
         blurb:     "UTS Protocol",
     }
@@ -17796,6 +19827,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["v120"],
         blurb:     "V120 Protocol",
     }
@@ -17805,6 +19837,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["v150fw"],
         blurb:     "V150FW Protocol",
     }
@@ -17814,6 +19847,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["v52"],
         blurb:     "V52 Protocol",
     }
@@ -17823,6 +19857,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["v5dl"],
         blurb:     "V5DL Protocol",
     }
@@ -17832,6 +19867,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["v5ef"],
         blurb:     "V5EF Protocol",
     }
@@ -17841,6 +19877,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["v5ua"],
         blurb:     "V5UA Protocol",
     }
@@ -17850,6 +19887,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vcdu"],
         blurb:     "VCDU Protocol",
     }
@@ -17859,6 +19897,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vicp"],
         blurb:     "VICP Protocol",
     }
@@ -17868,6 +19907,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vj_comp"],
         blurb:     "VJ-COMP Protocol",
     }
@@ -17877,6 +19917,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vlan"],
         blurb:     "VLAN Protocol",
     }
@@ -17886,6 +19927,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vlp16"],
         blurb:     "VLP16 Protocol",
     }
@@ -17895,6 +19937,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vmlab"],
         blurb:     "VMLAB Protocol",
     }
@@ -17904,6 +19947,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vmware_hb"],
         blurb:     "VMWARE-HB Protocol",
     }
@@ -17913,6 +19957,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vnc_proto"],
         blurb:     "VNC Protocol",
     }
@@ -17922,6 +19967,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vntag"],
         blurb:     "VNTAG Protocol",
     }
@@ -17931,6 +19977,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vp8"],
         blurb:     "VP8 Protocol",
     }
@@ -17940,6 +19987,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vp9"],
         blurb:     "VP9 Protocol",
     }
@@ -17949,6 +19997,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vpp"],
         blurb:     "VPP Protocol",
     }
@@ -17958,6 +20007,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vrt"],
         blurb:     "VRT Protocol",
     }
@@ -17967,6 +20017,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vsip"],
         blurb:     "VSIP Protocol",
     }
@@ -17976,6 +20027,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vsock"],
         blurb:     "VSOCK Protocol",
     }
@@ -17985,6 +20037,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vsomeip"],
         blurb:     "VSOMEIP Protocol",
     }
@@ -17994,6 +20047,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vssmonitoring"],
         blurb:     "VSSMONITORING Protocol",
     }
@@ -18003,6 +20057,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vuze_dht"],
         blurb:     "VUZE-DHT Protocol",
     }
@@ -18012,6 +20067,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vxi11"],
         blurb:     "VXI11 Protocol",
     }
@@ -18021,6 +20077,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wai"],
         blurb:     "WAI Protocol",
     }
@@ -18030,6 +20087,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wap"],
         blurb:     "WAP Protocol",
     }
@@ -18039,6 +20097,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wassp"],
         blurb:     "WASSP Protocol",
     }
@@ -18048,6 +20107,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["waveagent"],
         blurb:     "WAVEAGENT Protocol",
     }
@@ -18057,6 +20117,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wcp"],
         blurb:     "WCP Protocol",
     }
@@ -18066,6 +20127,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wfleet_hdlc"],
         blurb:     "WFLEET-HDLC Protocol",
     }
@@ -18075,6 +20137,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["who"],
         blurb:     "WHO Protocol",
     }
@@ -18084,6 +20147,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wifi_display"],
         blurb:     "WIFI-DISPLAY Protocol",
     }
@@ -18093,6 +20157,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wifi_dpp"],
         blurb:     "WIFI-DPP Protocol",
     }
@@ -18102,6 +20167,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wifi_nan"],
         blurb:     "WIFI-NAN Protocol",
     }
@@ -18111,6 +20177,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wifi_p2p"],
         blurb:     "WIFI-P2P Protocol",
     }
@@ -18120,6 +20187,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["windows_common"],
         blurb:     "WINDOWS-COMMON Protocol",
     }
@@ -18129,6 +20197,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["winsrepl"],
         blurb:     "WINSREPL Protocol",
     }
@@ -18138,6 +20207,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wlccp"],
         blurb:     "WLCCP Protocol",
     }
@@ -18147,6 +20217,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wmio"],
         blurb:     "WMIO Protocol",
     }
@@ -18156,6 +20227,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wps"],
         blurb:     "WPS Protocol",
     }
@@ -18165,6 +20237,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wreth"],
         blurb:     "WRETH Protocol",
     }
@@ -18174,6 +20247,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wsmp"],
         blurb:     "WSMP Protocol",
     }
@@ -18183,6 +20257,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wsp_proto"],
         blurb:     "WSP Protocol",
     }
@@ -18192,6 +20267,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wtls"],
         blurb:     "WTLS Protocol",
     }
@@ -18201,6 +20277,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wtp_proto"],
         blurb:     "WTP Protocol",
     }
@@ -18210,6 +20287,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["x25"],
         blurb:     "X25 Protocol",
     }
@@ -18219,6 +20297,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["x29"],
         blurb:     "X29 Protocol",
     }
@@ -18228,6 +20307,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["x75"],
         blurb:     "X75 Protocol",
     }
@@ -18237,6 +20317,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xcsl"],
         blurb:     "XCSL Protocol",
     }
@@ -18246,6 +20327,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xdlc"],
         blurb:     "XDLC Protocol",
     }
@@ -18255,6 +20337,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xgt"],
         blurb:     "XGT Protocol",
     }
@@ -18264,6 +20347,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xip"],
         blurb:     "XIP Protocol",
     }
@@ -18273,6 +20357,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xip_serval"],
         blurb:     "XIP-SERVAL Protocol",
     }
@@ -18282,6 +20367,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xmcp"],
         blurb:     "XMCP Protocol",
     }
@@ -18291,6 +20377,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xml"],
         blurb:     "XML Protocol",
     }
@@ -18300,6 +20387,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xmpp_conference"],
         blurb:     "XMPP-CONFERENCE Protocol",
     }
@@ -18309,6 +20397,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xmpp_core"],
         blurb:     "XMPP-CORE Protocol",
     }
@@ -18318,6 +20407,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xmpp_gtalk"],
         blurb:     "XMPP-GTALK Protocol",
     }
@@ -18327,6 +20417,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xmpp_jingle"],
         blurb:     "XMPP-JINGLE Protocol",
     }
@@ -18336,6 +20427,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xmpp_other"],
         blurb:     "XMPP-OTHER Protocol",
     }
@@ -18345,6 +20437,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xmpp_utils"],
         blurb:     "XMPP-UTILS Protocol",
     }
@@ -18354,6 +20447,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xot"],
         blurb:     "XOT Protocol",
     }
@@ -18363,6 +20457,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xra"],
         blurb:     "XRA Protocol",
     }
@@ -18372,6 +20467,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xti"],
         blurb:     "XTI Protocol",
     }
@@ -18381,6 +20477,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xtp"],
         blurb:     "XTP Protocol",
     }
@@ -18390,6 +20487,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["xyplex"],
         blurb:     "XYPLEX Protocol",
     }
@@ -18399,6 +20497,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["yami"],
         blurb:     "YAMI Protocol",
     }
@@ -18408,6 +20507,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["yhoo"],
         blurb:     "YHOO Protocol",
     }
@@ -18417,6 +20517,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ymsg"],
         blurb:     "YMSG Protocol",
     }
@@ -18426,6 +20527,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["z21"],
         blurb:     "Z21 Protocol",
     }
@@ -18435,6 +20537,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["z3950"],
         blurb:     "Z3950 Protocol",
     }
@@ -18444,6 +20547,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["zebra"],
         blurb:     "ZEBRA Protocol",
     }
@@ -18453,6 +20557,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["zep"],
         blurb:     "ZEP Protocol",
     }
@@ -18462,6 +20567,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ziop"],
         blurb:     "ZIOP Protocol",
     }
@@ -18471,6 +20577,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["zvt"],
         blurb:     "ZVT Protocol",
     }
@@ -18481,6 +20588,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["stubby"],
         blurb:     "Google Internal RPC Framework",
     }
@@ -18490,6 +20598,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["stubby_v3"],
         blurb:     "Stubby v3 Wire Format",
     }
@@ -18499,6 +20608,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["borg_task"],
         blurb:     "Borg Cluster Manager Task Communication",
     }
@@ -18508,6 +20618,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["borgmaster_api"],
         blurb:     "Borg Master Scheduling API",
     }
@@ -18517,6 +20628,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["boq_metro"],
         blurb:     "Google Boq Metro Batching Protocol",
     }
@@ -18526,6 +20638,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["loom_proto"],
         blurb:     "Google Loom Cross-Datacenter Isolation Protocol",
     }
@@ -18535,6 +20648,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["balsa"],
         blurb:     "Google Balsa Low-Latency Search RPC",
     }
@@ -18544,6 +20658,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["aquila"],
         blurb:     "Google Aquila In-Memory Storage RPC",
     }
@@ -18553,6 +20668,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tango_core"],
         blurb:     "Google Tango Core Messaging Kernel",
     }
@@ -18562,6 +20678,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["gmock_rpc"],
         blurb:     "Google Mock RPC Wire Format",
     }
@@ -18571,6 +20688,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["gws_http"],
         blurb:     "Google Web Server Internal HTTP Extensions",
     }
@@ -18580,6 +20698,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cfs_rpc"],
         blurb:     "Google Colossus File System RPC",
     }
@@ -18590,6 +20709,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["aws_sigv4"],
         blurb:     "AWS Signature v4 Signing Protocol Extension",
     }
@@ -18599,6 +20719,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["s3_select_rpc"],
         blurb:     "Amazon S3 Select Internal RPC",
     }
@@ -18608,6 +20729,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dynamodb_internal"],
         blurb:     "DynamoDB Partition-Level Internal Gossip",
     }
@@ -18617,6 +20739,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lambda_invoke"],
         blurb:     "AWS Lambda Invoke Wire Protocol",
     }
@@ -18626,6 +20749,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["aws_tls"],
         blurb:     "AWS TLS Termination Internal Next-Hop Protocol",
     }
@@ -18635,6 +20759,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nitro_enclave"],
         blurb:     "AWS Nitro Enclave Vsock Protocol",
     }
@@ -18644,6 +20769,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["aws_kms_rpc"],
         blurb:     "AWS KMS Internal HSM-to-Frontend RPC",
     }
@@ -18653,6 +20779,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["ec2_nitro_vsock"],
         blurb:     "EC2 Nitro Hypervisor Vsock Extensions",
     }
@@ -18662,6 +20789,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["aws_sqs_internal"],
         blurb:     "SQS Internal Broker Replication Log Protocol",
     }
@@ -18671,6 +20799,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["aws_aurora_storage"],
         blurb:     "Aurora Storage Layer RPC Log Replication",
     }
@@ -18681,6 +20810,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["azure_fabric_rpc"],
         blurb:     "Azure Service Fabric Internal RPC",
     }
@@ -18690,6 +20820,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["azure_hcsshim"],
         blurb:     "Azure Host Compute Service Shim Protocol",
     }
@@ -18699,6 +20830,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["azure_rdma_smb"],
         blurb:     "Azure RDMA-Capable SMB Direct",
     }
@@ -18708,6 +20840,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["azure_sdn_policy"],
         blurb:     "Azure SDN Policy Distribution Protocol",
     }
@@ -18717,6 +20850,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cosmos_db_transport"],
         blurb:     "Cosmos DB Internal Transport",
     }
@@ -18726,6 +20860,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["azure_akv_rpc"],
         blurb:     "Azure Key Vault Internal HSM RPC",
     }
@@ -18736,6 +20871,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["connect_rpc"],
         blurb:     "Buf Connect Protocol (gRPC-compatible HTTP/1.1 + HTTP/2)",
     }
@@ -18745,6 +20881,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["twirp_v7"],
         blurb:     "Twirp Protobuf over HTTP/1.1 v7",
     }
@@ -18754,6 +20891,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["twirp_v8"],
         blurb:     "Twirp v8 with Streaming Support",
     }
@@ -18763,6 +20901,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["rpcx"],
         blurb:     "rpcx Go Microservice RPC Framework Wire Format",
     }
@@ -18772,6 +20911,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tars_jce"],
         blurb:     "Tencent Tars JCE Encoding Protocol",
     }
@@ -18781,6 +20921,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tars_wup"],
         blurb:     "Tencent Tars WUP (UniPacket) Protocol",
     }
@@ -18790,6 +20931,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dubbo3_triple"],
         blurb:     "Apache Dubbo3 Triple Protocol",
     }
@@ -18799,6 +20941,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["brpc_thrift"],
         blurb:     "Baidu brpc Thrift Protocol",
     }
@@ -18808,6 +20951,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["brpc_nshead"],
         blurb:     "Baidu brpc nshead Protocol",
     }
@@ -18817,6 +20961,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["motan2"],
         blurb:     "Weibo Motan2 RPC Binary Protocol",
     }
@@ -18826,6 +20971,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["sofa_rpc_bolt"],
         blurb:     "Ant Group SOFARPC Bolt Protocol",
     }
@@ -18835,6 +20981,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["kitex_ttheader"],
         blurb:     "ByteDance Kitex TTHeader Protocol",
     }
@@ -18845,6 +20992,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["envoy_xds_v3"],
         blurb:     "Envoy xDS v3 Discovery Protocol",
     }
@@ -18854,6 +21002,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["envoy_hcm"],
         blurb:     "Envoy HTTP Connection Manager Internal",
     }
@@ -18863,6 +21012,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["istio_mcp"],
         blurb:     "Istio Mesh Configuration Protocol",
     }
@@ -18872,6 +21022,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["linkerd_h2"],
         blurb:     "Linkerd2-Proxy Internal HTTP/2 Mesh Protocol",
     }
@@ -18881,6 +21032,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["linkerd_dst"],
         blurb:     "Linkerd Destination Service Discovery",
     }
@@ -18890,6 +21042,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["consul_connect_mesh"],
         blurb:     "Consul Connect Sidecar Mesh Wire",
     }
@@ -18899,6 +21052,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["kuma_dp"],
         blurb:     "Kuma Data Plane Protocol",
     }
@@ -18908,6 +21062,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["traefik_hub"],
         blurb:     "Traefik Hub Mesh Control Plane",
     }
@@ -18917,6 +21072,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cilium_hubble"],
         blurb:     "Cilium Hubble Observability eBPF Export",
     }
@@ -18926,6 +21082,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["dapr_sidecar"],
         blurb:     "Dapr Sidecar-to-Sidecar Internal gRPC",
     }
@@ -18936,6 +21093,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["redpanda_rpc"],
         blurb:     "Redpanda (Kafka-compatible) Internal RPC",
     }
@@ -18945,6 +21103,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pulsar_bookkeeper"],
         blurb:     "Apache Pulsar BookKeeper Replication Protocol",
     }
@@ -18954,6 +21113,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["pulsar_binary_v2"],
         blurb:     "Apache Pulsar Binary Protocol v2",
     }
@@ -18963,6 +21123,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nats_leaf"],
         blurb:     "NATS Leaf Node Hub-Spoke Protocol",
     }
@@ -18972,6 +21133,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["nats_jetstream_internal"],
         blurb:     "JetStream Internal Stream Replication",
     }
@@ -18981,6 +21143,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["amqp_1_0_management"],
         blurb:     "AMQP 1.0 Management Extension",
     }
@@ -18990,6 +21153,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["kafka_kraft"],
         blurb:     "Apache Kafka KRaft Consensus Metadata Protocol",
     }
@@ -18999,6 +21163,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["kafka_zk_migration"],
         blurb:     "Kafka ZooKeeper-to-KRaft Migration Bridge",
     }
@@ -19009,6 +21174,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cloudflare_warp"],
         blurb:     "Cloudflare WARP Tunneling Protocol",
     }
@@ -19018,6 +21184,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cloudflare_quiche"],
         blurb:     "Cloudflare QUICHE Internal Extensions",
     }
@@ -19027,6 +21194,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fastly_edge_rpc"],
         blurb:     "Fastly Compute@Edge Internal Edge RPC",
     }
@@ -19036,6 +21204,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["fly_io_proxy"],
         blurb:     "Fly.io Fly Proxy TCP Routing Protocol",
     }
@@ -19045,6 +21214,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vercel_edge_runtime"],
         blurb:     "Vercel Edge Runtime Sandbox IPC",
     }
@@ -19054,6 +21224,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["deno_deploy_isolate"],
         blurb:     "Deno Deploy Isolate Message Passing",
     }
@@ -19063,6 +21234,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cloudflare_durable_object"],
         blurb:     "Cloudflare Durable Object Global Coordination",
     }
@@ -19072,6 +21244,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wasmtime_wasi_nn"],
         blurb:     "Wasmtime WASI-NN Inference RPC",
     }
@@ -19081,6 +21254,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["wagi"],
         blurb:     "WebAssembly Gateway Interface Protocol",
     }
@@ -19090,6 +21264,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["spin_trigger_http"],
         blurb:     "Fermyon Spin Trigger-to-Wasm ABI",
     }
@@ -19099,6 +21274,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["akamai_ghost_rpc"],
         blurb:     "Akamai Ghost Internal Edge Server RPC",
     }
@@ -19108,6 +21284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["lambda_at_edge_rpc"],
         blurb:     "CloudFront Lambda@Edge Internal Invoke",
     }
@@ -19118,6 +21295,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["spanner_true_time"],
         blurb:     "Google Spanner TrueTime API Protocol",
     }
@@ -19127,6 +21305,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["spanner_split_mgr"],
         blurb:     "Spanner Split Management RPC",
     }
@@ -19136,6 +21315,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cassandra_gossip_v4"],
         blurb:     "Apache Cassandra Internode Gossip v4",
     }
@@ -19145,6 +21325,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cassandra_murmur3_partition"],
         blurb:     "Cassandra Consistent Hash-Aware Proxy Layer",
     }
@@ -19154,6 +21335,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cockroachdb_kv_rpc"],
         blurb:     "CockroachDB KV Layer RPC",
     }
@@ -19163,6 +21345,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["cockroachdb_dist_sql"],
         blurb:     "CockroachDB Distributed SQL Data Exchange",
     }
@@ -19172,6 +21355,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["yugabyte_docdb_rpc"],
         blurb:     "YugabyteDB DocDB Tablet RPC",
     }
@@ -19181,6 +21365,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["foundationdb_native"],
         blurb:     "Apple FoundationDB Native Wire Protocol",
     }
@@ -19190,6 +21375,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tikv_raft"],
         blurb:     "TiKV Raft Consensus Transport",
     }
@@ -19199,6 +21385,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["tikv_titan"],
         blurb:     "TiKV Titan Blob Storage Layer",
     }
@@ -19208,6 +21395,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["vitess_vtgate"],
         blurb:     "Vitess VtGate Query Routing Internal",
     }
@@ -19217,6 +21405,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["planetscale_db_rpc"],
         blurb:     "PlanetScale Database RPC",
     }
@@ -19226,6 +21415,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
+        status:    Declared,
         aliases:   ["scylladb_rpc"],
         blurb:     "ScyllaDB Internode RPC",
     }
@@ -19235,6 +21425,7 @@ protocols! {
         color:     0x1B2838,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["steam_datagram_relay", "sdr"],
         blurb:     "Steam Datagram Relay (SDR) \u{2014} Valve\u{2019}s UDP relay and NAT traversal protocol for Steam.",
     }
@@ -19244,6 +21435,7 @@ protocols! {
         color:     0x2A4759,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["steam_sdr_relay_v3", "sdr_v3"],
         blurb:     "Steam SDR Relay v3 \u{2014} Valve\u{2019}s TURN-like relay routing for Steam Datagram Relay.",
     }
@@ -19253,6 +21445,7 @@ protocols! {
         color:     0x66C0F4,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["steam_game_networking_s2", "steamnet_s2"],
         blurb:     "Steam GameNetworkingSockets v2 \u{2014} Valve\u{2019}s encrypted UDP transport with connection management.",
     }
@@ -19262,6 +21455,7 @@ protocols! {
         color:     0x313131,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["epic_online_eos_p2p", "eos_p2p"],
         blurb:     "Epic Online Services P2P \u{2014} peer-to-peer transport layer for Epic games.",
     }
@@ -19271,6 +21465,7 @@ protocols! {
         color:     0x555555,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["epic_online_voice", "eos_voice"],
         blurb:     "EOS Voice \u{2014} Epic Online Services voice chat protocol.",
     }
@@ -19280,6 +21475,7 @@ protocols! {
         color:     0x7F7F7F,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["epic_dtls_p2p", "epic_dtls"],
         blurb:     "Epic DTLS P2P \u{2014} Epic\u{2019}s custom DTLS-based peer-to-peer transport.",
     }
@@ -19289,6 +21485,7 @@ protocols! {
         color:     0x107C10,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["xbox_live_sdv2", "xbox_sdv2"],
         blurb:     "Xbox Live SDv2 \u{2014} Microsoft\u{2019}s Secure Device Association protocol.",
     }
@@ -19298,6 +21495,7 @@ protocols! {
         color:     0x2F8E2F,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["xbox_live_mpsd", "xbox_mpsd"],
         blurb:     "Xbox Live MPSD \u{2014} Multiplayer Session Directory for Xbox Live sessions.",
     }
@@ -19307,6 +21505,7 @@ protocols! {
         color:     0x50B450,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["xbox_reliable_udp", "xbox_ru"],
         blurb:     "Xbox Reliable UDP \u{2014} Microsoft\u{2019}s reliable UDP transport for Xbox game traffic.",
     }
@@ -19316,6 +21515,7 @@ protocols! {
         color:     0x003791,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["psn_matchmaking_v3", "psn_mm_v3"],
         blurb:     "PSN Matchmaking v3 \u{2014} PlayStation Network matchmaking and session management protocol.",
     }
@@ -19325,6 +21525,7 @@ protocols! {
         color:     0x0070D1,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["psn_rtc_signaling", "psn_rtc"],
         blurb:     "PSN RTC Signaling \u{2014} PlayStation Network Real-Time Communication signaling (offer/answer/ICE).",
     }
@@ -19334,6 +21535,7 @@ protocols! {
         color:     0xE60012,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nintendo_npln_p2p", "npln_p2p"],
         blurb:     "Nintendo NPLN P2P \u{2014} Nintendo\u{2019}s NPLN matchmaking and P2P transport protocol.",
     }
@@ -19343,6 +21545,7 @@ protocols! {
         color:     0x9C27B0,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["fortnite_replay", "fn_replay"],
         blurb:     "Fortnite replay stream wire format \u{2014} recorded game state playback chunks over the network.",
     }
@@ -19352,6 +21555,7 @@ protocols! {
         color:     0x7B1FA2,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fortnite_replicator", "fn_replicator"],
         blurb:     "Fortnite server-side replicator actor \u{2014} actor property replication and RPC dispatch on Unreal Engine servers.",
     }
@@ -19361,6 +21565,7 @@ protocols! {
         color:     0xE67E22,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pubg_net_field", "pubg_fast_array"],
         blurb:     "PUBG net field fast-array delta compression \u{2014} PUBG\u{2019}s custom delta-compressed array replication over Unreal Engine.",
     }
@@ -19370,6 +21575,7 @@ protocols! {
         color:     0xD4A017,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["warzone_rigid", "cod_rigid_body"],
         blurb:     "Call of Duty Warzone rigid body net sync \u{2014} physics object state synchronisation for vehicles and debris.",
     }
@@ -19379,6 +21585,7 @@ protocols! {
         color:     0xFD4556,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["valorant_fow", "vct_fow"],
         blurb:     "Valorant Fog of War \u{2014} Riot\u{2019}s anti-cheat visibility system that controls what each player can see.",
     }
@@ -19388,6 +21595,7 @@ protocols! {
         color:     0xBD3944,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["valorant_netvar", "vct_netvar"],
         blurb:     "Valorant network variable replication \u{2014} replicated game state variables in Riot\u{2019}s custom netcode.",
     }
@@ -19397,6 +21605,7 @@ protocols! {
         color:     0xC62828,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["apex_netprop", "apex_legends_netprop"],
         blurb:     "Apex Legends Source-based netprop extension \u{2014} modified Source engine networked property system.",
     }
@@ -19406,6 +21615,7 @@ protocols! {
         color:     0xFF8C00,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ow2_state_sync", "overwatch2_sync"],
         blurb:     "Overwatch 2 state synchronization \u{2014} Blizzard\u{2019}s entity and world state synchronisation for high-tickrate gameplay.",
     }
@@ -19415,6 +21625,7 @@ protocols! {
         color:     0xE8A317,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cs2_subtick", "cs2_subtick_system"],
         blurb:     "Counter-Strike 2 sub-tick system \u{2014} sub-frame precision input and state processing for Source 2.",
     }
@@ -19424,6 +21635,7 @@ protocols! {
         color:     0x38B2CE,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["r6s_netvoice", "rainbow6_voice"],
         blurb:     "Rainbow Six Siege in-game voice + netcode hybrid \u{2014} voice chat multiplexed with game netcode over UDP.",
     }
@@ -19433,6 +21645,7 @@ protocols! {
         color:     0x76B900,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gfn_stream", "nvidia_gfn_stream"],
         blurb:     "NVIDIA GeForce NOW streaming protocol \u{2014} low-latency video and audio transport for cloud gaming.",
     }
@@ -19442,6 +21655,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gfn_ctrl", "nvidia_gfn_ctrl"],
         blurb:     "NVIDIA GFN control channel \u{2014} keyboard, mouse, gamepad input upstream and haptic feedback downstream.",
     }
@@ -19451,6 +21665,7 @@ protocols! {
         color:     0x107C10,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["xcloud_fragment", "xcloud_frag"],
         blurb:     "Xbox Cloud Gaming fragment protocol \u{2014} fragmented video/audio transport over QUIC-like datagrams.",
     }
@@ -19460,6 +21675,7 @@ protocols! {
         color:     0x0E6B0E,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["xcloud_input", "xcloud_pipe"],
         blurb:     "xCloud low-latency input pipeline \u{2014} controller input multiplexed with game telemetry on a dedicated reliable channel.",
     }
@@ -19469,6 +21685,7 @@ protocols! {
         color:     0x4285F4,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["stadia_ctrl_wifi", "stadia_wifi"],
         blurb:     "Google Stadia WiFi controller protocol \u{2014} direct controller-to-datacenter input over WiFi with custom transport.",
     }
@@ -19478,6 +21695,7 @@ protocols! {
         color:     0xFF9900,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["luna_stream", "amazon_luna"],
         blurb:     "Amazon Luna streaming transport \u{2014} video/audio frame delivery with adaptive bitrate chunks.",
     }
@@ -19487,6 +21705,7 @@ protocols! {
         color:     0x003791,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ps_remote_play_v3", "ps_remote_play"],
         blurb:     "PlayStation Remote Play v3 \u{2014} console-to-client video/audio streaming and input feedback for PS4/PS5.",
     }
@@ -19496,6 +21715,7 @@ protocols! {
         color:     0x171A21,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["steam_rpt", "remote_play_together"],
         blurb:     "Steam Remote Play Together relay \u{2014} peer-to-peer game streaming relay with multiplexed controller inputs.",
     }
@@ -19505,6 +21725,7 @@ protocols! {
         color:     0x2A475E,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["steam_link", "steam_link_transport"],
         blurb:     "Steam Link transport protocol \u{2014} in-home game streaming audio/video capture and rendering pipeline.",
     }
@@ -19514,6 +21735,7 @@ protocols! {
         color:     0x7F3FBF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["moonlight_rtsp", "sunshine_rtsp"],
         blurb:     "Moonlight/Sunshine game stream RTSP extension \u{2014} custom RTSP methods for session negotiation, codec config, and stream control.",
     }
@@ -19523,6 +21745,7 @@ protocols! {
         color:     0xCC6677,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["udon_net", "vrchat_udon"],
         blurb:     "VRChat Udon networking layer \u{2014} event-driven synchronisation for user-created world logic and inter-object messages.",
     }
@@ -19532,6 +21755,7 @@ protocols! {
         color:     0xBB5566,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["vrchat_ik", "vrchat_fullbody"],
         blurb:     "VRChat IK sync protocol \u{2014} low-latency full-body tracking data including hip, feet, and elbow transforms.",
     }
@@ -19541,6 +21765,7 @@ protocols! {
         color:     0xE2231A,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["roblox_physics", "rbx_physics"],
         blurb:     "Roblox physics custom replication \u{2014} authoritative physics state deltas for rigid bodies, collisions, and constraints.",
     }
@@ -19550,6 +21775,7 @@ protocols! {
         color:     0xC41E1A,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["roblox_voice", "rbx_voice"],
         blurb:     "Roblox spatial voice internal transport \u{2014} Opus-encoded audio with 3D positional metadata and talker-state signalling.",
     }
@@ -19559,6 +21785,7 @@ protocols! {
         color:     0x7766AA,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["recroom_room", "rec_room_server"],
         blurb:     "Rec Room room-server protocol \u{2014} authoritative room-state replication, player position, and custom game logic events.",
     }
@@ -19568,6 +21795,7 @@ protocols! {
         color:     0x0066FF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["horizon_worlds", "meta_horizon"],
         blurb:     "Meta Horizon Worlds entity sync \u{2014} real-time transform, animation, and scene-object state replication.",
     }
@@ -19577,6 +21805,7 @@ protocols! {
         color:     0x22CC88,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["spatial_io_webxr", "spatial_webxr"],
         blurb:     "Spatial.io WebXR object sync \u{2014} synchronised 3D object transforms, avatar poses, and spatial audio metadata.",
     }
@@ -19586,6 +21815,7 @@ protocols! {
         color:     0xCC8822,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["secondlife_lludp", "sl_lludp"],
         blurb:     "Second Life LLUDP message template protocol \u{2014} packetised message system with zero-encoding, ACK, and sequence-numbered templates for world-state replication.",
     }
@@ -19595,6 +21825,7 @@ protocols! {
         color:     0x0055CC,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["playfab_party", "pf_party"],
         blurb:     "Microsoft PlayFab Party voice/chat transport \u{2014} Opus-encoded voice chat with peer-to-peer relay and lobby management.",
     }
@@ -19604,6 +21835,7 @@ protocols! {
         color:     0x0044AA,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["playfab_multiplayer_v2", "pf_multiplayer_v2"],
         blurb:     "PlayFab multiplayer server allocation v2 \u{2014} dedicated server lifecycle management over datagram control channel.",
     }
@@ -19613,6 +21845,7 @@ protocols! {
         color:     0x00CC88,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["phaser_heroiclabs", "nakama_binary", "heroiclabs"],
         blurb:     "HeroicLabs Nakama binary protocol \u{2014} game server backend socket messages for real-time multiplayer, chat, and leaderboards.",
     }
@@ -19622,6 +21855,7 @@ protocols! {
         color:     0x663399,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["darkrift2", "dr2_netcode"],
         blurb:     "DarkRift 2 networking binary protocol \u{2014} reliable UDP-over-TCP plugin architecture for Unity multiplayer.",
     }
@@ -19631,6 +21865,7 @@ protocols! {
         color:     0x0088FF,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["photon_realtime_v5", "photon_v5"],
         blurb:     "Photon Realtime protocol v5 \u{2014} binary datagram protocol for matchmaking, room management, and reliable/ unreliable event channels.",
     }
@@ -19640,6 +21875,7 @@ protocols! {
         color:     0x00AA44,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["photon_bolt", "bolt_internal"],
         blurb:     "Photon Bolt internal determinism sync \u{2014} lockstep state synchronisation with input replay and deterministic physics.",
     }
@@ -19649,6 +21885,7 @@ protocols! {
         color:     0x3388BB,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["fishnet_teleport", "fish_networking"],
         blurb:     "Fish-Networking teleport serialization \u{2014} Unity transport-layer binary protocol for reliable sequenced messages and object replication.",
     }
@@ -19658,6 +21895,7 @@ protocols! {
         color:     0x55AACC,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mirror_fallback", "mirror_transport"],
         blurb:     "Mirror Networking fallback transport \u{2014} TCP-based reliable transport layer for Unity multiplayer when UDP/Steam is unavailable.",
     }
@@ -19667,6 +21905,7 @@ protocols! {
         color:     0xFF6600,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["faceit_ac", "faceit_plugin"],
         blurb:     "FACEIT server plugin anti-cheat RPC \u{2014} server-side agent communication for match integrity verification and player validation.",
     }
@@ -19676,6 +21915,7 @@ protocols! {
         color:     0x00A878,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["esea_ac", "esea_client"],
         blurb:     "ESEA client anti-cheat packet protocol \u{2014} ring-3 agent telemetry, process enumeration, and screen capture challenge-response.",
     }
@@ -19685,6 +21925,7 @@ protocols! {
         color:     0xCC3333,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["esl_wire", "esl_ac"],
         blurb:     "ESL Wire anti-cheat server verification \u{2014} trusted server attestation and match integrity heartbeat over TLS-encapsulated channel.",
     }
@@ -19694,6 +21935,7 @@ protocols! {
         color:     0xD13639,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["vanguard_net", "riot_vanguard"],
         blurb:     "Riot Vanguard kernel-to-userspace net intercept \u{2014} encrypted telemetry channel between kernel driver and user-space service for process introspection.",
     }
@@ -19703,6 +21945,7 @@ protocols! {
         color:     0x444444,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["battleye_pf", "be_packet_filter"],
         blurb:     "BattlEye packet filter signalling \u{2014} challenge-response heartbeat and game-state integrity checks via NDIS filter driver.",
     }
@@ -19712,6 +21955,7 @@ protocols! {
         color:     0x1DB100,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["easy_anticheat_stream", "eac_stream"],
         blurb:     "Easy Anti-Cheat stream verification \u{2014} continuous integrity stream with heartbeat, memory-scan commands, and behavioural analysis telemetry.",
     }
@@ -19721,6 +21965,7 @@ protocols! {
         color:     0x990000,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["denuvo_net", "denuvo_anti_tamper"],
         blurb:     "Denuvo Anti-Tamper online check-in protocol \u{2014} periodic activation validation, integrity token exchange, and entitlement verification.",
     }
@@ -19730,6 +21975,7 @@ protocols! {
         color:     0x008080,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openai_realtime", "oai_realtime"],
         blurb:     "OpenAI Realtime API WebSocket protocol \u{2014} bidirectional streaming of audio, text, and function calls over WebSocket with JSON or binary event framing.",
     }
@@ -19739,6 +21985,7 @@ protocols! {
         color:     0x006060,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openai_batch", "oai_batch"],
         blurb:     "OpenAI Batch API async job protocol \u{2014} long-running batch inference with job submission, status polling, and result retrieval over HTTPS.",
     }
@@ -19748,6 +21995,7 @@ protocols! {
         color:     0x009999,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openai_sse", "oai_streaming"],
         blurb:     "OpenAI streaming SSE token-level protocol \u{2014} server-sent events for token-by-token chat completion delivery with usage metadata.",
     }
@@ -19757,6 +22005,7 @@ protocols! {
         color:     0xCC7700,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["anthropic_messages_stream", "anthropic_stream"],
         blurb:     "Anthropic Messages API streaming SSE extensions \u{2014} server-sent events with content block deltas, stop reasons, and rate-limit headers.",
     }
@@ -19766,6 +22015,7 @@ protocols! {
         color:     0xBB6600,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["anthropic_tool_use", "claude_tool_bridge"],
         blurb:     "Anthropic tool_use content block bridge protocol \u{2014} structured JSON-RPC-style tool call and result transport within the Messages API.",
     }
@@ -19775,6 +22025,7 @@ protocols! {
         color:     0x4285F4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gemini_stream", "google_gemini"],
         blurb:     "Google Gemini API streaming gRPC-web protocol \u{2014} bidirectional gRPC-web transport for token-level generateContent and streamGenerateContent.",
     }
@@ -19784,6 +22035,7 @@ protocols! {
         color:     0x3367D6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["aistudio_ws", "google_aistudio"],
         blurb:     "Google AI Studio WebSocket connect protocol \u{2014} interactive prompt-editing WebSocket with model configuration, context injection, and streaming output.",
     }
@@ -19793,6 +22045,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["vllm_async", "vllm_scheduler"],
         blurb:     "vLLM async engine scheduler IPC \u{2014} inter-process communication between the HTTP frontend and the async engine scheduler for request queuing and KV-cache management.",
     }
@@ -19802,6 +22055,7 @@ protocols! {
         color:     0xFFD700,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["tgi_grpc", "huggingface_tgi"],
         blurb:     "HuggingFace TGI gRPC protocol \u{2014} protobuf-defined generate and tokenize RPCs with streaming response chunks and model metadata.",
     }
@@ -19811,6 +22065,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["triton_grpc", "triton_inference"],
         blurb:     "NVIDIA Triton Inference Server gRPC \u{2014} protobuf inference, model control, and health-check RPCs with tensor streaming.",
     }
@@ -19820,6 +22075,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["triton_repo_stream", "triton_model_repo"],
         blurb:     "Triton model repository file streaming \u{2014} chunked file transfer for model version upload, download, and concurrent reader synchronisation.",
     }
@@ -19829,6 +22085,7 @@ protocols! {
         color:     0xEC4899,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sglang_radix", "radix_cache"],
         blurb:     "SGLang RadixAttention cache sharing protocol \u{2014} distributed radix-tree prefix sharing for KV-cache between concurrent inference requests.",
     }
@@ -19838,6 +22095,7 @@ protocols! {
         color:     0x6C5CE7,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openllmetry", "llmetry_otlp"],
         blurb:     "OpenLLMetry OTLP trace extensions \u{2014} OpenTelemetry-protobuf traces with LLM-specific semantic conventions for model calls, token usage, and latency attribution.",
     }
@@ -19847,6 +22105,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["langfuse", "langfuse_ingest"],
         blurb:     "Langfuse trace ingestion API \u{2014} JSON-based trace, observation, and score ingestion with batching and idempotency keys for LLM observability pipelines.",
     }
@@ -19856,6 +22115,7 @@ protocols! {
         color:     0x0194E2,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mlflow_gateway", "mlflow_ai"],
         blurb:     "MLflow AI Gateway route protocol \u{2014} REST API for provider-agnostic LLM routing with endpoint definitions, route aliases, and request/response transformation.",
     }
@@ -19865,6 +22125,7 @@ protocols! {
         color:     0x10B981,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["liteserve", "litellm_scoring"],
         blurb:     "LiteLLM proxy internal scoring/fallback gRPC \u{2014} protobuf RPCs for model scoring, fallback routing, and spend tracking within the LiteLLM proxy layer.",
     }
@@ -19874,6 +22135,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["portkey", "portkey_router"],
         blurb:     "Portkey Gateway router RPC \u{2014} provider selection, failover, and load-balancing RPCs with latency-based, cost-based, and fallback routing strategies.",
     }
@@ -19883,6 +22145,7 @@ protocols! {
         color:     0xEF4444,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["helicone", "helicone_queue"],
         blurb:     "Helicone async log worker queue \u{2014} batched log ingestion with request/response capture, provider metadata, and backpressure signalling for LLM observability.",
     }
@@ -19892,6 +22155,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["langsmith", "langsmith_trace"],
         blurb:     "LangSmith trace push protocol \u{2014} run and trace ingestion over HTTPS with nested child runs, feedback scoring, and dataset versioning for LLM application debugging.",
     }
@@ -19901,6 +22165,7 @@ protocols! {
         color:     0x06B6D4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["arize_phoenix", "phoenix_collect"],
         blurb:     "Arize Phoenix OTLP collector extensions \u{2014} OpenTelemetry-protobuf exports with LLM-specific semantic conventions for embeddings, token counts, and retrieval-augmented generation spans.",
     }
@@ -19910,6 +22175,7 @@ protocols! {
         color:     0xA2AAAD,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["aneclientd", "apple_neural"],
         blurb:     "Apple Neural Engine daemon (aneclientd) protocol \u{2014} XPC-based IPC for neural network model compilation, loading, and inference on Apple Silicon ANE hardware.",
     }
@@ -19919,6 +22185,7 @@ protocols! {
         color:     0x8E8E93,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["coreml_compile", "aned_compile"],
         blurb:     "Apple Core ML model compilation IPC (ANED) \u{2014} ANE daemon RPC for compiling .mlmodelc bundles, optimizing compute graph for Apple Silicon ANE.",
     }
@@ -19928,6 +22195,7 @@ protocols! {
         color:     0x4285F4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["edgetpu_compiler", "google_tpu"],
         blurb:     "Google Edge TPU compiler-to-runtime protocol \u{2014} model compilation pipeline communication for deploying quantized TFLite models to Coral Edge TPU hardware.",
     }
@@ -19937,6 +22205,7 @@ protocols! {
         color:     0xE81B1B,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["apusys", "mediatek_npu"],
         blurb:     "MediaTek APUSYS NPU delegate IPC \u{2014} runtime delegation of neural network ops to the MediaTek NPU via the APUSYS kernel driver with shared memory buffers.",
     }
@@ -19946,6 +22215,7 @@ protocols! {
         color:     0x512BD4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["onnxruntime_ep", "ort_ep"],
         blurb:     "ONNX Runtime Execution Provider bridge \u{2014} session creation, tensor binding, and kernel invocation across custom EP backends for hardware-accelerated ONNX inference.",
     }
@@ -19955,6 +22225,7 @@ protocols! {
         color:     0x0078D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["openvino_npu", "ov_npu_plugin"],
         blurb:     "Intel OpenVINO NPU plugin driver IPC \u{2014} compiled graph upload, inference request submission, and tensor I/O for Intel NPU accelerator via the OpenVINO plugin architecture.",
     }
@@ -19964,6 +22235,7 @@ protocols! {
         color:     0x325D32,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["snpe_hexagon", "qcom_snpe"],
         blurb:     "Qualcomm SNPE Hexagon DSP RPC \u{2014} remote procedure calls for network load, graph execution, and tensor I/O on Qualcomm Hexagon DSP via the SNPE runtime.",
     }
@@ -19973,6 +22245,7 @@ protocols! {
         color:     0x1428A0,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["exynos_npu", "samsung_npu"],
         blurb:     "Samsung Exynos NPU mailbox IPC \u{2014} command queue submission, model load, inference trigger, and result notification via shared mailbox registers on Exynos SoCs.",
     }
@@ -19982,6 +22255,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["guardrails_ai", "gr_ai_validator"],
         blurb:     "Guardrails AI output validation RPC \u{2014} structured output validation with configurable validators for PII, tone, safety, and custom rules via RPC.",
     }
@@ -19991,6 +22265,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nemo_guardrails", "nemo_gr"],
         blurb:     "NVIDIA NeMo Guardrails HTTP \u{2014} REST server for Colang-based dialogue guardrails with topic enforcement, safety fences, and user intent classification.",
     }
@@ -20000,6 +22275,7 @@ protocols! {
         color:     0x10A37F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openai_moderation", "oai_moderation"],
         blurb:     "OpenAI Moderation API async pipeline \u{2014} content moderation with category classification, severity scoring, and async batch processing for text and images.",
     }
@@ -20009,6 +22285,7 @@ protocols! {
         color:     0xCC7700,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["anthropic_constitutional", "claude_constitution"],
         blurb:     "Anthropic Constitutional AI classifier \u{2014} principle-based output classification with critique-revision cycles, constitution definitions, and harmlessness scoring.",
     }
@@ -20018,6 +22295,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["aegis_llama", "nvidia_aegis"],
         blurb:     "NVIDIA Aegis content safety guard \u{2014} Llama-based content safety classifier with guard scores, harm category detection, and policy-based filtering for LLM outputs.",
     }
@@ -20027,6 +22305,7 @@ protocols! {
         color:     0x316194,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["llama_guard", "meta_safeguard"],
         blurb:     "Meta Llama Guard safeguard output \u{2014} token-level safety classification with unsafe content categories, policy violation descriptions, and binary safe/unsafe verdicts.",
     }
@@ -20036,6 +22315,7 @@ protocols! {
         color:     0x0078D4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["azure_content_safety", "acs_eval"],
         blurb:     "Azure AI Content Safety streaming eval \u{2014} real-time content safety evaluation with severity-based category analysis, prompt injection detection, and streaming verdicts.",
     }
@@ -20045,6 +22325,7 @@ protocols! {
         color:     0x00A650,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cognex", "cognex_insight"],
         blurb:     "Cognex In-Sight vision system streaming \u{2014} industrial image inspection results, pass/fail verdicts, and image data streaming over TCP/IP from Cognex vision controllers.",
     }
@@ -20054,6 +22335,7 @@ protocols! {
         color:     0xE31A1A,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["keyence", "keyence_cvx"],
         blurb:     "Keyence CV-X series image transfer \u{2014} FTP-based image acquisition from Keyence CV-X vision controllers with inspection result metadata.",
     }
@@ -20063,6 +22345,7 @@ protocols! {
         color:     0x005B94,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["basler_blaze", "blaze_tof"],
         blurb:     "Basler blaze ToF camera gRPC streaming \u{2014} time-of-flight depth map and point cloud streaming over gRPC with camera configuration and trigger control.",
     }
@@ -20072,6 +22355,7 @@ protocols! {
         color:     0xEE3124,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["flir_atlas", "flir_sdk"],
         blurb:     "FLIR Atlas SDK thermal streaming \u{2014} radiometric thermal data streaming with temperature measurement, palette configuration, and analysis region definitions.",
     }
@@ -20081,6 +22365,7 @@ protocols! {
         color:     0x00853E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sick_lidar", "sick_rms"],
         blurb:     "SICK LiDAR Robot Monitoring System \u{2014} laser scan data streaming, RMS health monitoring, and safety zone configuration for SICK LiDAR sensors.",
     }
@@ -20090,6 +22375,7 @@ protocols! {
         color:     0x00A3E0,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["velodyne", "vlp_packet"],
         blurb:     "Velodyne VLP LiDAR raw packet format \u{2014} UDP data blocks containing laser firing sequence measurements for VLP-16, VLP-32 and HDL-64E LiDAR sensors.",
     }
@@ -20099,6 +22385,7 @@ protocols! {
         color:     0x6C1D45,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ouster", "ouster_lidar"],
         blurb:     "Ouster LiDAR TCP command protocol \u{2014} device configuration, sensor info queries, and lidar mode control over TCP for Ouster OS-series LiDAR.",
     }
@@ -20108,6 +22395,7 @@ protocols! {
         color:     0x0071C5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["realsense", "realsense_dds"],
         blurb:     "Intel RealSense DDS ROS2 camera node \u{2014} depth, color, and IMU stream topics published over DDS for RealSense depth cameras in ROS2 environments.",
     }
@@ -20117,6 +22405,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["edge_impulse", "ei_studio"],
         blurb:     "Edge Impulse Studio data acquisition daemon \u{2014} sensor data ingestion, device management, and acquisition control for Edge Impulse machine learning pipelines.",
     }
@@ -20126,6 +22415,7 @@ protocols! {
         color:     0x10A37F,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["grove_vision", "seeed_vision"],
         blurb:     "Seeed Grove Vision AI module WebSocket \u{2014} real-time object detection and classification results over WebSocket from the Grove Vision AI module.",
     }
@@ -20135,6 +22425,7 @@ protocols! {
         color:     0x0066CC,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["opcua_pubsub_udp", "uadp_udp"],
         blurb:     "OPC UA PubSub UDP multicast (UADP) \u{2014} UDP multicast transport for OPC UA PubSub with UADP network message encoding, dataset payloads, and security headers.",
     }
@@ -20144,6 +22435,7 @@ protocols! {
         color:     0x3399FF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["opcua_pubsub_mqtt", "ua_mqtt"],
         blurb:     "OPC UA PubSub MQTT JSON encoding \u{2014} OPC UA PubSub messages over MQTT with JSON payload encoding for cloud and edge IoT interoperability.",
     }
@@ -20153,6 +22445,7 @@ protocols! {
         color:     0x005BB5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["opcua_gds", "gds_push"],
         blurb:     "OPC UA Global Discovery Server push \u{2014} server registration, discovery, and certificate push for OPC UA GDS with FindServers and RegisterServer services.",
     }
@@ -20162,6 +22455,7 @@ protocols! {
         color:     0x307070,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["opcua_dpi", "ua_dpi"],
         blurb:     "OPC UA DPI \u{2014} deep packet inspection layer for OPC UA binary protocol (UA-TCP) with full message-type parsing, handshake analysis, security-policy extraction, service-call identification, and anomaly detection for industrial network monitoring.",
     }
@@ -20171,6 +22465,7 @@ protocols! {
         color:     0x1F7A7A,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["opcua_sec_conv", "ua_secureconv"],
         blurb:     "OPC UA SecureConversation \u{2014} hybrid security message layer wrapping OPC UA binary traffic with secure-channel identifiers, token management, and sequence-number tracking for authenticated and encrypted industrial communication.",
     }
@@ -20180,6 +22475,7 @@ protocols! {
         color:     0x2A7070,
         transport: Tcp,
         rank:      5,
+        status:    Declared,
         aliases:   ["opcua_binary_det", "ua_binary_detail"],
         blurb:     "OPC UA Binary Detail \u{2014} deep OPC UA binary encoding layer parser for NodeId (TwoByte/FourByte/Numeric/String/Guid/ByteString), Variant (all 29 data types with array and dimension flags), and ExtensionObject type identification for forensic protocol analysis.",
     }
@@ -20189,6 +22485,7 @@ protocols! {
         color:     0x1F6A6A,
         transport: Tcp,
         rank:      5,
+        status:    Dissected,
         aliases:   ["opcua_sec_conv_det", "ua_sec_conv_detail"],
         blurb:     "OPC UA SecureConversation Detail \u{2014} in-depth secure channel analysis with token lifecycle tracking (initial/active/renewed), sequence-number ordering, security header type identification (Asymmetric/Symmetric), and channel state machine monitoring for OPC UA security auditing.",
     }
@@ -20198,6 +22495,7 @@ protocols! {
         color:     0x1E7A6A,
         transport: Udp,
         rank:      5,
+        status:    Dissected,
         aliases:   ["opcua_uadp_det", "uadp_detail"],
         blurb:     "OPC UA PubSub UADP Detail \u{2014} deep OPC UA UADP network message parser with extended flags decoding (PublisherId, WriterGroupId, WriterId, DataSetWriterId), payload header analysis, dataset message type classification, and DataSetMessage header field identification for UADP telemetry.",
     }
@@ -20207,6 +22505,7 @@ protocols! {
         color:     0x3A7A5A,
         transport: Tcp,
         rank:      5,
+        status:    Dissected,
         aliases:   ["opcua_json_det", "ua_pubsub_json"],
         blurb:     "OPC UA PubSub JSON Detail \u{2014} detailed OPC UA JSON NetworkMessage parser for DataSetMessage, KeyValueDataSet, MetaData, KeepAlive, and Event message types with PublisherId, DataSetWriterId, WriterGroupId, and SequenceNumber field extraction from JSON-encoded telemetry.",
     }
@@ -20216,6 +22515,7 @@ protocols! {
         color:     0x4A5A7A,
         transport: Tcp,
         rank:      5,
+        status:    Declared,
         aliases:   ["opcua_gds_cert", "gds_cert_push"],
         blurb:     "OPC UA GDS Cert Push \u{2014} OPC UA Global Discovery Server certificate management dissector for PushCertificate, PullCertificate, GetTrustList, GetCertificateGroups, RegisterServer, and ApplyChanges operations with certificate group type and status classification.",
     }
@@ -20225,6 +22525,7 @@ protocols! {
         color:     0x5A6A4A,
         transport: Tcp,
         rank:      5,
+        status:    Declared,
         aliases:   ["opcua_companion", "ua_companion_spec"],
         blurb:     "OPC UA Companion Spec \u{2014} OPC UA Companion Specification metadata identification for ISA-95, MTConnect, AutoID, PLCopen, IO-Link, PROFINET, EtherNet/IP, MODBUS, BACnet, PackML, and 20+ other industry-specific companion specifications with version extraction and namespace URI parsing.",
     }
@@ -20234,6 +22535,7 @@ protocols! {
         color:     0xCC4400,
         transport: Tcp,
         rank:      5,
+        status:    Dissected,
         aliases:   ["opcua_alarm_shell", "ua_alarm_detail"],
         blurb:     "OPC UA Alarm Shell \u{2014} deep OPC UA Alarms & Conditions event parser with alarm type classification (ExclusiveLimit, InclusiveLimit, Trip, RateOfChange, Discrete), state tracking (Active/Inactive/Acknowledged/Confirmed/Suppressed/Shelved), severity scoring (0-1000), and condition variable extraction for industrial safety monitoring.",
     }
@@ -20243,6 +22545,7 @@ protocols! {
         color:     0x5A4A6A,
         transport: Tcp,
         rank:      5,
+        status:    Dissected,
         aliases:   ["opcua_history", "ua_history_read"],
         blurb:     "OPC UA History Read Detail \u{2014} OPC UA Historical Access dissector for ReadRaw, ReadProcessed, and ReadAtTime operations with aggregate function identification (Interpolative, Average, Minimum, Maximum, StdDev), time range extraction, and continuation point tracking for historian data retrieval analysis.",
     }
@@ -20252,6 +22555,7 @@ protocols! {
         color:     0x6A4A5A,
         transport: Tcp,
         rank:      5,
+        status:    Dissected,
         aliases:   ["opcua_rev_conn", "ua_reverse_connect"],
         blurb:     "OPC UA ReverseConnect \u{2014} OPC UA Reverse Connection protocol dissector for ReverseHello message parsing, server-initiated connection endpoint extraction, session lifecycle tracking (CreateSession/SessionActivate/CloseSession), and client-server role reversal detection for firewall traversal and DMZ deployment monitoring.",
     }
@@ -20261,6 +22565,7 @@ protocols! {
         color:     0x3A6A7A,
         transport: Tcp,
         rank:      5,
+        status:    Dissected,
         aliases:   ["opcua_mqtt_json", "ua_mqtt_json_net"],
         blurb:     "OPC UA MQTT JSON Network \u{2014} OPC UA PubSub MQTT JSON NetworkMessage parser for DataSetMessage, MetaData, KeepAlive, Event, WriterGroup/DataSetWriter/ReaderGroup configuration, and Status messages with MQTT topic inference, payload format classification (KeyValuePair/RawData/DataSetArray), and field extraction for cloud-edge telemetry.",
     }
@@ -20270,6 +22575,7 @@ protocols! {
         color:     0xCC3300,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["opcua_alarm", "ua_alarm_condition"],
         blurb:     "OPC UA Alarms & Conditions client \u{2014} alarm notification, condition state, severity, and acknowledgement for OPC UA A&C event monitoring.",
     }
@@ -20279,6 +22585,7 @@ protocols! {
         color:     0xE67E22,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee8021qbv", "tas_schedule"],
         blurb:     "IEEE 802.1Qbv Time-Aware Shaper \u{2014} gate control list scheduling for deterministic Ethernet traffic with time-triggered queue opening and closing.",
     }
@@ -20288,6 +22595,7 @@ protocols! {
         color:     0xF39C12,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee8021qbu", "frame_preemption"],
         blurb:     "IEEE 802.1Qbu Frame Preemption \u{2014} MAC merge sublayer for preemptable and express frame fragment interleaving on full-duplex Ethernet links.",
     }
@@ -20297,6 +22605,7 @@ protocols! {
         color:     0xD35400,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee8021qci", "psfp"],
         blurb:     "IEEE 802.1Qci Per-Stream Filtering and Policing \u{2014} stream gate control, flow meter policing, and filtering for individual TSN traffic streams.",
     }
@@ -20306,6 +22615,7 @@ protocols! {
         color:     0x2980B9,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ieee8021as", "gptp_rev"],
         blurb:     "IEEE 802.1AS-Rev gPTP \u{2014} generalized precision time protocol revision for time synchronisation in TSN networks with hot-join and redundancy.",
     }
@@ -20315,6 +22625,7 @@ protocols! {
         color:     0x27AE60,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tsn_srp", "stream_reservation"],
         blurb:     "IEEE 802.1Qat Stream Reservation Protocol \u{2014} talker-to-listener stream reservation with accumulated latency and bandwidth registration for TSN flows.",
     }
@@ -20324,6 +22635,7 @@ protocols! {
         color:     0x8E44AD,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["detnet", "detnet_service"],
         blurb:     "DetNet Service Layer \u{2014} IETF Deterministic Networking application flow specification, TSPEC parameter negotiation, and path selection for bounded-latency services.",
     }
@@ -20333,6 +22645,7 @@ protocols! {
         color:     0x00A4EF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["windows_tsn", "tsn_nic"],
         blurb:     "Microsoft TSN-capable NIC driver wire extensions \u{2014} NDIS driver extensions for hardware TSN offload, schedule programming, and Qbv gate control on Windows.",
     }
@@ -20342,6 +22655,7 @@ protocols! {
         color:     0xE60012,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cclink_tsn", "mitsubishi_tsn"],
         blurb:     "CC-Link IE TSN \u{2014} Mitsubishi FA field network combining CC-Link IE with TSN for cyclic/transient data exchange, slave synchronisation, and open FA networking.",
     }
@@ -20351,6 +22665,7 @@ protocols! {
         color:     0x0078D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["azure_dtdl", "digitaltwins"],
         blurb:     "Azure Digital Twins DTDL model sync \u{2014} Digital Twins Definition Language model exchange with interface definitions, telemetry schemas, and component relationships for Azure digital twins.",
     }
@@ -20360,6 +22675,7 @@ protocols! {
         color:     0xFF9900,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["twinmaker", "aws_twinmaker"],
         blurb:     "AWS IoT TwinMaker Knowledge Graph sync \u{2014} workspace, entity, and component type definitions for digital twin knowledge graphs with property bindings and data connectors.",
     }
@@ -20369,6 +22685,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["omniverse_nucleus", "nvidia_nucleus"],
         blurb:     "NVIDIA Omniverse Nucleus DB replication \u{2014} asset versioning, collaborative layer replication, and metadata synchronisation for Omniverse Nucleus database servers.",
     }
@@ -20378,6 +22695,7 @@ protocols! {
         color:     0x56B400,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["omniverse_usd", "usd_stream"],
         blurb:     "Omniverse USD stream \u{2014} Universal Scene Description stage composition, primitive streaming, and layer editing over the Omniverse USD transport protocol.",
     }
@@ -20387,6 +22705,7 @@ protocols! {
         color:     0xFF6600,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ditto_twin", "eclipse_ditto"],
         blurb:     "Eclipse Ditto digital twin CRUD \u{2014} HTTP/SSE-based thing management with CRUD operations on digital twin features, policies, and connectivity for IoT devices.",
     }
@@ -20396,6 +22715,7 @@ protocols! {
         color:     0xE6007E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["vorto_sync", "eclipse_vorto"],
         blurb:     "Eclipse Vorto information model sync \u{2014} function block definition, namespace resolution, and mapping specification synchronisation for IoT device information models.",
     }
@@ -20405,6 +22725,7 @@ protocols! {
         color:     0x009999,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["mindsphere", "twinsync"],
         blurb:     "Siemens MindSphere twin sync \u{2014} asset twin synchronisation with aspect templates, property updates, and twin instance management for MindSphere IoT platform.",
     }
@@ -20414,6 +22735,7 @@ protocols! {
         color:     0xDA291C,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["thingworx", "thingworx_alwayson"],
         blurb:     "PTC ThingWorx AlwaysOn binary protocol \u{2014} persistent binary connection for property updates, service invocation, and event subscription with ThingWorx industrial IoT platform.",
     }
@@ -20423,6 +22745,7 @@ protocols! {
         color:     0x005BBB,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec61850_mms", "mms_proto"],
         blurb:     "IEC 61850 MMS \u{2014} client-server manufacturing message specification for substation automation with read/write, report, and control services over TCP/IP.",
     }
@@ -20432,6 +22755,7 @@ protocols! {
         color:     0xE60000,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec61850_goose", "goose_multicast"],
         blurb:     "IEC 61850 GOOSE \u{2014} generic object-oriented substation event fast multicast for high-speed peer-to-peer status and control data in substation automation.",
     }
@@ -20441,6 +22765,7 @@ protocols! {
         color:     0xFF6600,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec61850_sv", "sampled_values"],
         blurb:     "IEC 61850 Sampled Values \u{2014} streaming of voltage and current sampled measurements from merging units to protection and control IEDs over Ethernet.",
     }
@@ -20450,6 +22775,7 @@ protocols! {
         color:     0xCC3300,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec61850_rgoose", "routable_goose"],
         blurb:     "IEC 61850 R-GOOSE \u{2014} routable GOOSE messages over IP networks with VLAN tagging, time-to-live, and extended addressing for wide-area substation communication.",
     }
@@ -20459,6 +22785,7 @@ protocols! {
         color:     0x3399FF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iec61970_cim", "cim_xml"],
         blurb:     "IEC 61970 CIM XML \u{2014} Common Information Model RDF/XML exchange for power system resource definitions, topology, and equipment connectivity in energy management systems.",
     }
@@ -20468,6 +22795,7 @@ protocols! {
         color:     0x00A650,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["openadr", "oadr30"],
         blurb:     "OpenADR 3.0 \u{2014} open automated demand response protocol for utility-to-customer event signalling, resource registration, and report-based load management.",
     }
@@ -20477,6 +22805,7 @@ protocols! {
         color:     0x0078D4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ocpp", "ocpp21"],
         blurb:     "OCPP 2.1 \u{2014} open charge point protocol for EV charging station management with boot, authorize, transaction, and firmware update services over WebSocket/JSON.",
     }
@@ -20486,6 +22815,7 @@ protocols! {
         color:     0x00A4EF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["iso15118", "v2g_proto"],
         blurb:     "ISO 15118 V2G \u{2014} vehicle-to-grid communication interface for EV charging with session setup, service discovery, payment, and smart charging scheduling over TCP.",
     }
@@ -20495,6 +22825,7 @@ protocols! {
         color:     0x005A9E,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["dsrc_wsmp", "wave_wsmp"],
         blurb:     "DSRC WSMP \u{2014} WAVE Short Message Protocol for IEEE 802.11p DSRC, carrying safety and mobility messages with channel switching and provider service identifiers.",
     }
@@ -20504,6 +22835,7 @@ protocols! {
         color:     0x0078D4,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["c_v2x_pc5", "pc5_sidelink"],
         blurb:     "C-V2X PC5 \u{2014} 3GPP LTE/NR sidelink interface for direct vehicle-to-vehicle and vehicle-to-infrastructure communication without cellular infrastructure.",
     }
@@ -20513,6 +22845,7 @@ protocols! {
         color:     0x1E90FF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["c_v2x_uu", "uu_v2x"],
         blurb:     "C-V2X Uu \u{2014} 3GPP cellular V2X interface for wide-area vehicle-to-network communication with RRC signalling, V2X control, and application-layer messaging.",
     }
@@ -20522,6 +22855,7 @@ protocols! {
         color:     0xFF6600,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["j2735_bsm", "sae_bsm"],
         blurb:     "SAE J2735 BSM \u{2014} Basic Safety Message for V2V safety with vehicle position, speed, heading, brake status, and path history for collision avoidance.",
     }
@@ -20531,6 +22865,7 @@ protocols! {
         color:     0x33CC33,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["j2735_spat", "sae_spat"],
         blurb:     "SAE J2735 SPAT \u{2014} Signal Phase and Timing message broadcasting intersection signal state, phase timing, and movement event data for V2I situational awareness.",
     }
@@ -20540,6 +22875,7 @@ protocols! {
         color:     0x7B2D8E,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["autoware_zenoh", "aw_zenoh"],
         blurb:     "Autoware Zenoh \u{2014} ROS2-over-Zenoh transport for autonomous vehicle nodes, providing topic-based pub/sub with low-latency for planning, control, and perception data.",
     }
@@ -20549,6 +22885,7 @@ protocols! {
         color:     0x00A6D6,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["apollo_cyber_rtps", "cyber_rtps"],
         blurb:     "Apollo Cyber RTPS \u{2014} Baidu Apollo Cyber RT real-time publish-subscribe over RTPS for autonomous driving sensor fusion, planning, and control message passing.",
     }
@@ -20558,6 +22895,7 @@ protocols! {
         color:     0xE8751A,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["apollo_perception_bridge", "perception_bridge"],
         blurb:     "Apollo Perception Bridge \u{2014} bridge protocol between perception and planning modules in Baidu Apollo, carrying obstacle, lane, and trajectory prediction data.",
     }
@@ -20567,6 +22905,7 @@ protocols! {
         color:     0xCC0000,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["tesla_fsd", "fsd_inference"],
         blurb:     "Tesla FSD Inference \u{2014} internal inference fabric protocol for Tesla Full Self-Driving hardware, carrying tensor operations, model layer outputs, and neural network activations.",
     }
@@ -20576,6 +22915,7 @@ protocols! {
         color:     0x00BFA5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["waymo_fleet", "waymo_rpc"],
         blurb:     "Waymo Fleet RPC \u{2014} Waymo fleet management RPC protocol for vehicle dispatch, telemetry reporting, route planning, and fleet status monitoring over TCP.",
     }
@@ -20585,6 +22925,7 @@ protocols! {
         color:     0xD32F2F,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["fast_dds", "fastrtps"],
         blurb:     "ROS2 Fast DDS \u{2014} eProsima Fast DDS RTPS discovery and transport for ROS2 nodes with participant discovery, topic matching, and serialized message exchange.",
     }
@@ -20594,6 +22935,7 @@ protocols! {
         color:     0x1565C0,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["cyclone_dds", "iceoryx_dds"],
         blurb:     "ROS2 Cyclone DDS \u{2014} Eclipse Cyclone DDS with Iceoryx zero-copy shared memory transport for high-bandwidth sensor data in ROS2 applications.",
     }
@@ -20603,6 +22945,7 @@ protocols! {
         color:     0x7B2D8E,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rmw_zenoh", "ros2_zenoh"],
         blurb:     "ROS2 rmw_zenoh \u{2014} peer-to-peer ROS2 middleware over Zenoh protocol for topic-based pub/sub with low-latency and multi-node discovery.",
     }
@@ -20612,6 +22955,7 @@ protocols! {
         color:     0x00838F,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["iceoryx", "rmw_iceoryx"],
         blurb:     "ROS2 Iceoryx \u{2014} rmw_iceoryx shared memory transport for zero-copy inter-process communication of high-frequency sensor and actuator data.",
     }
@@ -20621,6 +22965,7 @@ protocols! {
         color:     0x4CAF50,
         transport: Other,
         rank:      3,
+        status:    Declared,
         aliases:   ["micro_ros_serial", "xrce_serial"],
         blurb:     "micro-ROS Serial \u{2014} XRCE-DDS serial transport for resource-constrained microcontrollers with topic pub/sub, service calls, and parameter sync over UART.",
     }
@@ -20630,6 +22975,7 @@ protocols! {
         color:     0x66BB6A,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["micro_ros_udp", "xrce_udp"],
         blurb:     "micro-ROS UDP \u{2014} XRCE-DDS over UDP transport for wireless microcontroller ROS2 communication with stream-based reliability and fragmentation.",
     }
@@ -20639,6 +22985,7 @@ protocols! {
         color:     0xFF9800,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["rosbridge_v3", "rosbridge_ws"],
         blurb:     "rosbridge WebSocket v3 \u{2014} JSON-based ROS bridge protocol over WebSocket for browser and external application integration with topic pub/sub and service calls.",
     }
@@ -20648,6 +22995,7 @@ protocols! {
         color:     0xE91E63,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["moveit2", "moveit_motion"],
         blurb:     "MoveIt2 Motion Service \u{2014} ROS2 service interface for motion planning queries with joint-space and Cartesian trajectory computation, collision checking, and kinematics.",
     }
@@ -20657,6 +23005,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["isaac_ros2", "isaac_bridge"],
         blurb:     "Isaac Sim ROS2 Bridge \u{2014} NVIDIA Isaac Sim to ROS2 bridge for simulation data exchange including scene geometry, sensor streams, and robot state over ROS2 topics.",
     }
@@ -20666,6 +23015,7 @@ protocols! {
         color:     0xE60000,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["profisafe_5g", "profisafe_urllc"],
         blurb:     "PROFIsafe over 5G \u{2014} safety protocol bridging PROFIsafe fail-safe communication over 5G URLLC with F-destination addressing and cyclic safety PDUs.",
     }
@@ -20675,6 +23025,7 @@ protocols! {
         color:     0x0078D4,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ethercat_tsn", "eoe_tsn"],
         blurb:     "EtherCAT over TSN \u{2014} EtherCAT on TSN profile for deterministic industrial Ethernet with time-aware scheduling, frame preemption, and cycle-synchronised data exchange.",
     }
@@ -20684,6 +23035,7 @@ protocols! {
         color:     0xFF6600,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["profinet_cca", "pn_cca_5g"],
         blurb:     "PROFINET CC-A over 5G \u{2014} PROFINET Conformance Class A over 5G URLLC for cyclic IO data, alarm handling, and parameterisation with deterministic latency.",
     }
@@ -20693,6 +23045,7 @@ protocols! {
         color:     0x00A650,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["modbus_tls", "modbus_secure"],
         blurb:     "Modbus/TCP Secure \u{2014} Modbus/TCP with TLS encryption per IETF draft for authenticated and encrypted industrial control communication with session establishment.",
     }
@@ -20702,6 +23055,7 @@ protocols! {
         color:     0x3399FF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hart_ip", "wirelesshart_ip"],
         blurb:     "HART-IP Advanced \u{2014} HART over IP with WirelessHART gateway bridging for process variable reporting, device diagnostics, and network management over TCP/IP.",
     }
@@ -20711,6 +23065,7 @@ protocols! {
         color:     0xDA291C,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ua_fx", "opcua_uafx"],
         blurb:     "OPC UA FX UAFX \u{2014} OPC UA Field eXchange protocol for deterministic field-level communication with cyclic data, alarms, and configuration on TSN networks.",
     }
@@ -20720,6 +23075,7 @@ protocols! {
         color:     0x005BBB,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pubsub_5g_tsn", "ua_pubsub_tsn"],
         blurb:     "OPC UA PubSub 5G TSN \u{2014} OPC UA PubSub bridging over 5G and TSN for deterministic publisher-subscriber data distribution with configurable dataset and writer groups.",
     }
@@ -20729,6 +23085,7 @@ protocols! {
         color:     0x7B2D8E,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["6g_p", "industrial_5g_fabric"],
         blurb:     "6G-P Industrial 5G \u{2014} 6G-P paradigm ultra-low-latency fabric for industrial 5G with sub-millisecond cycle times, time-sensitive forwarding, and deterministic scheduling.",
     }
@@ -20738,6 +23095,7 @@ protocols! {
         color:     0x1565C0,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["tls_hybrid_kem", "hybrid_kem"],
         blurb:     "TLS Hybrid KEM \u{2014} TLS 1.3 hybrid key exchange combining ECDH (X25519) with PQC KEM for post-quantum safety and classical security in a single handshake.",
     }
@@ -20747,6 +23105,7 @@ protocols! {
         color:     0x2E7D32,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["kyber1024", "ml_kem_1024"],
         blurb:     "TLS Kyber-1024 \u{2014} NIST ML-KEM-1024 lattice-based key encapsulation mechanism in TLS with ciphertext and shared secret for post-quantum key agreement.",
     }
@@ -20756,6 +23115,7 @@ protocols! {
         color:     0xC62828,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["dilithium5", "ml_dsa_87"],
         blurb:     "TLS Dilithium5 \u{2014} NIST ML-DSA-87 lattice-based digital signature for TLS authentication with high-security post-quantum certificate signing.",
     }
@@ -20765,6 +23125,7 @@ protocols! {
         color:     0x6A1B9A,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["sphincs_plus", "slh_dsa"],
         blurb:     "TLS SPHINCS+ \u{2014} NIST SLH-DSA stateless hash-based digital signature for TLS with conservative post-quantum security based on SHA-256.",
     }
@@ -20774,6 +23135,7 @@ protocols! {
         color:     0x00838F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["frodo_kem", "frodokem_aes"],
         blurb:     "TLS FrodoKEM \u{2014} FrodoKEM-1344-AES lattice-based key encapsulation with AES encryption for hybrid post-quantum key agreement in TLS.",
     }
@@ -20783,6 +23145,7 @@ protocols! {
         color:     0xE65100,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["classic_mceliece", "mceliece_kem"],
         blurb:     "TLS Classic McEliece \u{2014} code-based key encapsulation mechanism in TLS with Niederreiter cryptosystem for high-security post-quantum key agreement.",
     }
@@ -20792,6 +23155,7 @@ protocols! {
         color:     0x4E342E,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["bike_l5", "bike_kem"],
         blurb:     "TLS BIKE L5 \u{2014} BIKE (Bit Flipping Key Encapsulation) L5 code-based KEM with QC-MDPC codes for post-quantum key agreement in TLS.",
     }
@@ -20801,6 +23165,7 @@ protocols! {
         color:     0x37474F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["hqc", "hqc_kem"],
         blurb:     "TLS HQC \u{2014} Hamming Quasi-Cyclic code-based key encapsulation mechanism with efficient decryption for post-quantum TLS key agreement.",
     }
@@ -20810,6 +23175,7 @@ protocols! {
         color:     0x1976D2,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["x509_composite", "composite_certs"],
         blurb:     "X.509 Composite Certs \u{2014} X.509 certificates combining traditional (ECDSA/RSA) and post-quantum (ML-DSA) signatures for hybrid certification authority deployment.",
     }
@@ -20819,6 +23185,7 @@ protocols! {
         color:     0x7CB342,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["x509_alt_cms", "alt_cms_pq"],
         blurb:     "X.509 Alt CMS PQ \u{2014} alternative CMS (Cryptographic Message Syntax) post-quantum signature alongside traditional X.509 certificate signatures for hybrid PKI.",
     }
@@ -20828,6 +23195,7 @@ protocols! {
         color:     0xFF8F00,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["acme_pq", "pq_challenge"],
         blurb:     "ACME PQ Challenge \u{2014} ACME protocol extension for hybrid post-quantum domain validation with token-based challenge and PQ signature proof-of-possession.",
     }
@@ -20837,6 +23205,7 @@ protocols! {
         color:     0x5D4037,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["crl_merkle_pq", "merkle_crl"],
         blurb:     "CRL Merkle Tree PQ \u{2014} certificate revocation list using Merkle hash tree for compact, privacy-preserving PQ-revocation with inclusion proofs and tree root signing.",
     }
@@ -20846,6 +23215,7 @@ protocols! {
         color:     0x881136,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["wg_pq", "wireguard_pq"],
         blurb:     "WireGuard PQ Hybrid \u{2014} WireGuard with post-quantum hybrid key exchange combining Curve25519 with PQC KEM (ML-KEM) for quantum-resistant tunnel establishment.",
     }
@@ -20855,6 +23225,7 @@ protocols! {
         color:     0xE91E63,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["wg_kyber", "kyber_poly"],
         blurb:     "WireGuard Kyber+Poly \u{2014} WireGuard with Kyber PQC KEM and Poly1305 AEAD hybrid for post-quantum encrypted tunnel with authenticated data.",
     }
@@ -20864,6 +23235,7 @@ protocols! {
         color:     0x1565C0,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ikev2_pq", "ike_pq_dh"],
         blurb:     "IKEv2 PQ DH \u{2014} IKEv2 with post-quantum Diffie-Hellman groups per RFC 9382 using KEM-based PQC groups for IPSec tunnel key agreement.",
     }
@@ -20873,6 +23245,7 @@ protocols! {
         color:     0x00838F,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ikev2_frodo", "ike_frodo"],
         blurb:     "IKEv2 FrodoKEM \u{2014} IKEv2 with FrodoKEM-1344-AES extension for post-quantum key agreement in IPSec SA establishment.",
     }
@@ -20882,6 +23255,7 @@ protocols! {
         color:     0xFF6600,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openvpn_pq", "ovpn_pqc"],
         blurb:     "OpenVPN PQ Cipher \u{2014} OpenVPN 2.7+ post-quantum cipher negotiation with ML-KEM key encapsulation and Dilithium authentication for the TLS control channel.",
     }
@@ -20891,6 +23265,7 @@ protocols! {
         color:     0x7B2D8E,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ts_pq", "tailscale_noise_pq"],
         blurb:     "Tailscale PQ Noise \u{2014} Tailscale Noise IK handshake with post-quantum hybrid extension using X25519 + ML-KEM for quantum-resistant peer-to-peer tunnel setup.",
     }
@@ -20900,6 +23275,7 @@ protocols! {
         color:     0x4CAF50,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nebula_pq", "nebula_handshake_pq"],
         blurb:     "Nebula PQ Handshake \u{2014} Slack Nebula overlay network with post-quantum handshake extension using KEM-based key exchange for quantum-resistant mesh VPN tunnels.",
     }
@@ -20910,6 +23286,7 @@ protocols! {
         color:     0x0D47A1,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["tls_pqc_hsk_ext", "pqc_handshake_ext"],
         blurb:     "TLS PQC Handshake Ext — TLS 1.3 PQC handshake extension dissector for hybrid KEM parsing of supported_groups, key_share, and signature_algorithms extensions carrying post-quantum identifiers.",
     }
@@ -20919,6 +23296,7 @@ protocols! {
         color:     0x1565C0,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["tls_pqc_cert", "pqc_cert_chain"],
         blurb:     "TLS PQC Cert Chain — X.509 PQC composite certificate chain parser extracting traditional (ECDSA/RSA) and post-quantum (ML-DSA/SLH-DSA) signature certificates from TLS Certificate messages.",
     }
@@ -20928,6 +23306,7 @@ protocols! {
         color:     0x7B1FA2,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pqc_migration", "migration_signal"],
         blurb:     "TLS PQC Migration Signal — PQC migration signaling extension per RFC draft for negotiating PQC readiness, capability advertisement, and fallback mechanisms between TLS peers.",
     }
@@ -20937,6 +23316,7 @@ protocols! {
         color:     0x0D47A1,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pqc_wizard_scan", "wizard_scan"],
         blurb:     "TLS PQC Wizard Scan — bulk scanning engine that aggregates PQC handshake records, runs vulnerability rules, and generates a comprehensive PQC readiness report with CVSS-scored findings and compliance flags per NIST SP 800-131A/BSI TR-02102/ANSSI/CNSA 2.0.",
     }
@@ -20946,6 +23326,7 @@ protocols! {
         color:     0x1565C0,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ct_v3", "cert_transparency_v3"],
         blurb:     "TLS Cert Transparency v3 — Certificate Transparency v3 PQC-aware Signed Certificate Timestamp (SCT) parser for post-quantum certificate logs with ML-DSA and SLH-DSA signature verification.",
     }
@@ -20955,6 +23336,7 @@ protocols! {
         color:     0x1E88E5,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ech_pqc", "ech_pqc_interop"],
         blurb:     "TLS ECH PQC Interop — Encrypted Client Hello (ECH) + PQC compatibility testing protocol that validates KEM negotiation through ECH-encrypted extensions and detects PQC-unaware middlebox interference.",
     }
@@ -20964,6 +23346,7 @@ protocols! {
         color:     0x42A5F5,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["key_share_pred", "ks_prediction"],
         blurb:     "TLS Key Share Prediction — key share negotiation failure prediction and reporting protocol analyzing KEM offer/response mismatches, hybrid stripping, and fallback patterns from PQC handshake records.",
     }
@@ -20973,6 +23356,7 @@ protocols! {
         color:     0xE53935,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["downgrade_det", "tls_downgrade"],
         blurb:     "TLS Downgrade Detector — TLS downgrade attack detection engine feed that identifies version rollback (TLS 1.3 → 1.2), KEM stripping, and hybrid-to-classic downgrade attacks from PQC handshake records.",
     }
@@ -20982,6 +23366,7 @@ protocols! {
         color:     0xFF7043,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pqc_cve", "cve_feed_pqc"],
         blurb:     "PQC CVE Feed Integration — NIST NCCoE PQC CVE feed integration protocol that cross-references detected KEM algorithms against known post-quantum CVEs for timing side-channels, weak parameters, and constant-time violations.",
     }
@@ -20991,6 +23376,7 @@ protocols! {
         color:     0x66BB6A,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["perf_bench", "tls_perf_model"],
         blurb:     "TLS Perf Benchmark Model — TLS handshake performance benchmark model data dissector that measures classic vs PQC handshake latency, KEM computation time, bandwidth overhead, and throughput impact from real session data.",
     }
@@ -21000,6 +23386,7 @@ protocols! {
         color:     0xFFA726,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["middlebox", "tls_middlebox"],
         blurb:     "TLS Middlebox Detector — TLS middlebox interference detection protocol that identifies oversized handshake messages, protocol anomalies, hybrid KEM stripping, and PQC rejection patterns indicative of middlebox tampering.",
     }
@@ -21009,6 +23396,7 @@ protocols! {
         color:     0xAB47BC,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["pqc_compliance", "compliance_checker"],
         blurb:     "PQC Compliance Checker — multi-standard compliance checker that evaluates PQC handshake data against NIST SP 800-131A, BSI TR-02102, ANSSI PQC, NSA CNSA 2.0, and ETSI TS 119 312 frameworks for regulatory readiness.",
     }
@@ -21018,6 +23406,7 @@ protocols! {
         color:     0x26C6DA,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["session_resume_pqc", "pqc_psk"],
         blurb:     "TLS Session Resumption PQC — PQC-aware session resumption (PSK) analysis protocol that examines 0-RTT data, PSK modes, and KEM bindings for post-quantum session ticket and external PSK negotiation.",
     }
@@ -21027,6 +23416,7 @@ protocols! {
         color:     0xE65100,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ikev2_pqc_dh", "pqc_dh_group"],
         blurb:     "IKEv2 PQC DH Group — IKEv2 PQC Diffie-Hellman group negotiation dissector for post-quantum key exchange in IPsec IKEv2 with ML-KEM and FrodoKEM transform attributes.",
     }
@@ -21036,6 +23426,7 @@ protocols! {
         color:     0x880E4F,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["wg_pqc_hsk", "wireguard_pqc_handshake"],
         blurb:     "WireGuard PQC Handshake — WireGuard PQC handshake extension with KEM-based post-quantum key exchange wrapping the standard Curve25519 Noise handshake for quantum-resistant tunnel establishment.",
     }
@@ -21045,6 +23436,7 @@ protocols! {
         color:     0x2E7D32,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ssh_pqc", "sntrup761", "ssh_pq_kex"],
         blurb:     "SSH PQC KEX — OpenSSH 9.x post-quantum key exchange using sntrup761x25519-sha512 (Streamlined NTRU Prime 761 + X25519 hybrid) for quantum-resistant SSH session key agreement.",
     }
@@ -21054,6 +23446,7 @@ protocols! {
         color:     0x00695C,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["dnssec_pqc", "pqc_rrsig"],
         blurb:     "DNSSEC PQC Signing — DNSSEC post-quantum signing algorithm dissection for RRSIG records using Falcon-512/1024 or Dilithium (ML-DSA) signatures for quantum-resistant DNS zone signing and validation.",
     }
@@ -21063,6 +23456,7 @@ protocols! {
         color:     0x37474F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pqc_ct", "pq_sct"],
         blurb:     "PQC Cert Transparency — Certificate Transparency with post-quantum hybrid Signed Certificate Timestamps (SCT) using ML-DSA or SLH-DSA signatures for quantum-resistant certificate log verification.",
     }
@@ -21072,6 +23466,7 @@ protocols! {
         color:     0x4A148C,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["oqs_telemetry", "oqs_provider"],
         blurb:     "OQS Provider Telemetry — Open Quantum Safe (OQS) provider telemetry protocol for reporting PQC algorithm availability, performance benchmarks, and provider version information from OQS-enabled TLS stacks.",
     }
@@ -21081,6 +23476,7 @@ protocols! {
         color:     0xBF360C,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pqc_hsm", "hsm_bridge"],
         blurb:     "PQC HSM Bridge — PQC-capable HSM-to-application bridge protocol for post-quantum key generation, signing, and key encapsulation operations offloaded to hardware security modules with ML-KEM, ML-DSA, and SLH-DSA support.",
     }
@@ -21091,6 +23487,7 @@ protocols! {
         color:     0x00695C,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["canopen_nmt", "co_nmt"],
         blurb:     "CANopen NMT — CANopen Network Management protocol for node state control with Start/Stop/Reset commands, boot-up messages, and state machine transitions between Initialisation, Pre-Operational, Operational, and Stopped modes.",
     }
@@ -21100,6 +23497,7 @@ protocols! {
         color:     0x00838F,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["canopen_pdo", "co_pdo"],
         blurb:     "CANopen PDO — CANopen Process Data Object protocol for real-time cyclic data exchange with up to 8 bytes of process data per PDO, supporting synchronous/asynchronous transmission and 4 receive + 4 transmit PDO channels.",
     }
@@ -21109,6 +23507,7 @@ protocols! {
         color:     0x004D40,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["canopen_sdo", "co_sdo"],
         blurb:     "CANopen SDO — CANopen Service Data Object protocol for acyclic configuration access using index/subindex addressing, supporting expedited/segmented/block upload and download with comprehensive abort code reporting.",
     }
@@ -21118,6 +23517,7 @@ protocols! {
         color:     0x1565C0,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bb84_qkd", "bb84_classical"],
         blurb:     "BB84 QKD Classical \u{2014} BB84 quantum key distribution classical post-processing channel for basis sifting, parameter estimation, error reconciliation, and privacy amplification.",
     }
@@ -21127,6 +23527,7 @@ protocols! {
         color:     0x6A1B9A,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["e91_qkd", "entanglement_qkd"],
         blurb:     "E91 QKD Entanglement \u{2014} entanglement-based quantum key distribution classical channel for Bell inequality violation checks, basis matching, and key extraction.",
     }
@@ -21136,6 +23537,7 @@ protocols! {
         color:     0x00838F,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["etsi_qkd_014", "qkd_014"],
         blurb:     "ETSI GS QKD 014 \u{2014} ETSI standard REST API for QKD key delivery from KME to applications with key request, status, and key consumption reporting.",
     }
@@ -21145,6 +23547,7 @@ protocols! {
         color:     0xFF8F00,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["qkd_routing", "qkd_sdn"],
         blurb:     "QKD Network Routing \u{2014} ITU-T Q.4160 SDN-based routing protocol for QKD networks with link-state topology discovery, trusted-node path computation, and key relay scheduling.",
     }
@@ -21154,6 +23557,7 @@ protocols! {
         color:     0xC62828,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["decoy_bb84", "decoy_state_bb84"],
         blurb:     "Decoy-state BB84 Error \u{2014} decoy-state protocol error reconciliation using CASCADE iterative parity checks for BB84 QKD with photon-number-splitting attack resistance.",
     }
@@ -21163,6 +23567,7 @@ protocols! {
         color:     0x2E7D32,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cascade_ir", "cascade_recon"],
         blurb:     "CASCADE Info Recon \u{2014} CASCADE information reconciliation protocol with iterative parity checks, block splitting, and bidirectional communication for QKD error correction.",
     }
@@ -21172,6 +23577,7 @@ protocols! {
         color:     0xE65100,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ldpc_pa", "tweaked_ldpc"],
         blurb:     "Tweaked LDPC Privacy Amp \u{2014} tweak-based LDPC privacy amplification using universal hashing for QKD key distillation with compression ratio negotiation.",
     }
@@ -21181,6 +23587,7 @@ protocols! {
         color:     0x0077B6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["qr_link", "repeater_link"],
         blurb:     "Quantum Repeater Link \u{2014} quantum repeater entanglement link layer for Bell state distribution, entanglement swapping, purification, and heralded connections.",
     }
@@ -21190,6 +23597,7 @@ protocols! {
         color:     0x1565C0,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["groth16", "snark_groth16"],
         blurb:     "Groth16 \u{2014} pairing-based zk-SNARK proving system with constant-size proofs (3 group elements) and fast verification for arbitrary circuit satisfiability.",
     }
@@ -21199,6 +23607,7 @@ protocols! {
         color:     0xE65100,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["plonk", "snark_plonk"],
         blurb:     "PLONK \u{2014} universal and updatable zk-SNARK with permutation arguments and polynomial commitments for reusable trusted setup across multiple circuits.",
     }
@@ -21208,6 +23617,7 @@ protocols! {
         color:     0x2E7D32,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["stark_fri", "zk_stark"],
         blurb:     "zk-STARK FRI \u{2014} transparent scalable zk-STARK using Fast Reed-Solomon IOPP for low-latency proof generation without trusted setup.",
     }
@@ -21217,6 +23627,7 @@ protocols! {
         color:     0x6A1B9A,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bulletproofs", "bp_rangeproof"],
         blurb:     "Bulletproofs RangeProof \u{2014} short zero-knowledge range proofs without trusted setup using inner-product arguments for confidential transaction validation.",
     }
@@ -21226,6 +23637,7 @@ protocols! {
         color:     0x00838F,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["zk_email", "zke_dkim"],
         blurb:     "zk-email DKIM \u{2014} zero-knowledge proof of valid DKIM-signed email content using regex circuit verification for privacy-preserving email attestation.",
     }
@@ -21235,6 +23647,7 @@ protocols! {
         color:     0xC62828,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ggm_3pc", "mpc_ggm"],
         blurb:     "MPC GGM 3-Party \u{2014} Goldreich-Goldwasser-Micali 3-party secure computation using garbled circuits and secret sharing for honest-majority MPC.",
     }
@@ -21244,6 +23657,7 @@ protocols! {
         color:     0xFF8F00,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["spdz_online", "mpc_spdz"],
         blurb:     "SPDZ Online \u{2014} Smart-Past Nielsen Damg\u{00e5}rd Zakarias MPC online phase with Beaver triples, MAC-checked multiplication, and information-theoretic security.",
     }
@@ -21253,6 +23667,7 @@ protocols! {
         color:     0x4E342E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ttp_preproc", "mpc_ttp"],
         blurb:     "MPC TTP Preprocessing \u{2014} trusted third party preprocessing protocol for Beaver triple generation, correlated randomness, and offline material distribution.",
     }
@@ -21262,6 +23677,7 @@ protocols! {
         color:     0x0077B6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sealpir", "pir_seal"],
         blurb:     "SealPIR \u{2014} private information retrieval using BFV homomorphic encryption with query compression and database packing for efficient single-server PIR.",
     }
@@ -21271,6 +23687,7 @@ protocols! {
         color:     0x43A047,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["spiral_pir", "pir_spiral"],
         blurb:     "SPIRAL PIR Stream \u{2014} streaming private information retrieval with hint-based preprocessing, linear-time query, and sublinear communication for large databases.",
     }
@@ -21280,6 +23697,7 @@ protocols! {
         color:     0x1565C0,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["ckks_serialize", "fhe_ckks"],
         blurb:     "CKKS Ciphertext Serialize \u{2014} CKKS approximate homomorphic encryption ciphertext serialization with real/imaginary parts, slot count, and scaling factor for encrypted floating-point exchange.",
     }
@@ -21289,6 +23707,7 @@ protocols! {
         color:     0xE65100,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["bfv_ciphertext", "fhe_bfv"],
         blurb:     "BFV Ciphertext \u{2014} Brakerski-Fan-Vercauteren RLWE-based homomorphic encryption ciphertext wire format with plaintext modulus and ring dimension for integer arithmetic.",
     }
@@ -21298,6 +23717,7 @@ protocols! {
         color:     0x6A1B9A,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tfhe_bootstrap", "fhe_tfhe"],
         blurb:     "TFHE Bootstrapping \u{2014} TFHE gate bootstrapping RPC with lookup tables, key switching, and programmable gate evaluation for fast FHE boolean circuit execution.",
     }
@@ -21307,6 +23727,7 @@ protocols! {
         color:     0x2E7D32,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["openfhe_pke", "fhe_openfhe"],
         blurb:     "OpenFHE PKE \u{2014} OpenFHE public key encryption API supporting multiple FHE schemes (CKKS, BFV, BGV) with key generation, encryption, and evaluation operations.",
     }
@@ -21316,6 +23737,7 @@ protocols! {
         color:     0x00838F,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["helib_op", "ibm_helib"],
         blurb:     "IBM HELib Op \u{2014} IBM HELib homomorphic operation pipeline with multiplication, rotation, and bootstrapping on BGV-encrypted data for deep circuit evaluation.",
     }
@@ -21325,6 +23747,7 @@ protocols! {
         color:     0xC62828,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["google_shell", "shell_fhe"],
         blurb:     "Google SHELL \u{2014} Google symmetric homomorphic encryption with keyed nonce-based encryption for low-latency FHE on resource-constrained clients.",
     }
@@ -21334,6 +23757,7 @@ protocols! {
         color:     0xFF8F00,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cggi_transpiler", "fhe_cggi"],
         blurb:     "FHE Transpiler CGGI \u{2014} CGGI-to-TFHE bridge protocol for converting high-level circuit descriptions to TFHE gate bootstrapping operations with programmable LUTs.",
     }
@@ -21343,6 +23767,7 @@ protocols! {
         color:     0x627EEA,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["discv5", "devp2p_v5"],
         blurb:     "Ethereum discv5 \u{2014} Ethereum Node Discovery v5 using ENR (Ethereum Node Records) for peer discovery with PING/PONG, FINDNODE/NEIGHBORS, and TALK messages over UDP.",
     }
@@ -21352,6 +23777,7 @@ protocols! {
         color:     0x3C3C3D,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["snap_sync", "eth_snap"],
         blurb:     "Ethereum Snap Sync \u{2014} snap sync protocol for serving Ethereum state trie data with account range, storage range, and bytecode serving for fast state healing.",
     }
@@ -21361,6 +23787,7 @@ protocols! {
         color:     0x28A745,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["eth_cl_p2p", "consensus_p2p"],
         blurb:     "Ethereum CL p2p \u{2014} Ethereum Beacon Chain consensus layer p2p over libp2p with SSZ-serialized messages for beacon blocks, attestations, and aggregate gossip.",
     }
@@ -21370,6 +23797,7 @@ protocols! {
         color:     0xE67E22,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["blob_sidecar", "eip4844_blob"],
         blurb:     "Ethereum Blob Sidecar \u{2014} EIP-4844 protodanksharding blob sidecar gossip with KZG commitments, blob proofs, and versioned hashes for layer-2 data availability.",
     }
@@ -21379,6 +23807,7 @@ protocols! {
         color:     0x9945FF,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["solana_tpu", "tpu_proto"],
         blurb:     "Solana TPU \u{2014} Solana Transaction Processing Unit protocol for leader transaction ingestion with packet forwarding, signature verification, and banking stage scheduling.",
     }
@@ -21388,6 +23817,7 @@ protocols! {
         color:     0x19FB9B,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["turbine", "solana_turbine"],
         blurb:     "Solana Turbine Block \u{2014} Solana Turbine block propagation protocol using shred-based FEC coding and retransmission trees for efficient validator block distribution.",
     }
@@ -21397,6 +23827,7 @@ protocols! {
         color:     0x00D18C,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gulf_stream", "solana_gulf"],
         blurb:     "Solana Gulf Stream \u{2014} Solana Gulf Stream mempool forwarding with leader schedule-aware transaction push for zero-candidate-block latency.",
     }
@@ -21406,6 +23837,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gossipsub_v12", "libp2p_gossip"],
         blurb:     "libp2p GossipSub v1.2 \u{2014} libp2p GossipSub pub-sub mesh protocol with IHAVE/IWANT/GRAFT/PRUNE control messages, peer scoring, and topic discovery.",
     }
@@ -21415,6 +23847,7 @@ protocols! {
         color:     0x4F46E5,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["kad_dht_v2", "amino_dht"],
         blurb:     "libp2p Kademlia DHT v2 \u{2014} libp2p Kademlia Distributed Hash Table with FIND_NODE, GET_PROVIDERS, ADD_PROVIDER for peer discovery and content routing.",
     }
@@ -21424,6 +23857,7 @@ protocols! {
         color:     0x10B981,
         transport: Udp,
         rank:      3,
+        status:    Declared,
         aliases:   ["quic_transport", "libp2p_quic"],
         blurb:     "libp2p QUIC Transport \u{2014} libp2p QUIC and WebTransport multiplexed transport for low-latency browser-to-server and server-to-server connections.",
     }
@@ -21433,6 +23867,7 @@ protocols! {
         color:     0xF59E0B,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["webrtc_browser", "libp2p_wrtc"],
         blurb:     "libp2p WebRTC Browser \u{2014} libp2p WebRTC transport for browser-to-browser connectivity with SDP signalling, ICE negotiation, and STUN/TURN relays.",
     }
@@ -21442,6 +23877,7 @@ protocols! {
         color:     0xEF4444,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hotstuff", "hotstuff_bft"],
         blurb:     "HotStuff Consensus \u{2014} Diem/Libra2 HotStuff BFT consensus with prepare, pre-commit, commit, and decide phases using QC (Quorum Certificate) chaining for linear SMR.",
     }
@@ -21451,6 +23887,7 @@ protocols! {
         color:     0x0071C5,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sgx_dcap", "sgx_quote"],
         blurb:     "Intel SGX DCAP Quote \u{2014} Intel SGX Data Center Attestation Primitives quote verification with MRENCLAVE, MRSIGNER, and TCB status for enclave identity attestation.",
     }
@@ -21460,6 +23897,7 @@ protocols! {
         color:     0x00A4EF,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tdx_attest", "intel_tdx"],
         blurb:     "Intel TDX Attestation \u{2014} Intel Trust Domain Extension attestation with TDQUOTE, TEE TCB, and SEAM measurements for confidential VM verification.",
     }
@@ -21469,6 +23907,7 @@ protocols! {
         color:     0xED8B00,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sev_snp", "amd_sev"],
         blurb:     "AMD SEV-SNP Attestation \u{2014} AMD Secure Encrypted Virtualization-Secure Nested Paging attestation with ATTEST_REPORT, TCB version, and chip ID for VM isolation proof.",
     }
@@ -21478,6 +23917,7 @@ protocols! {
         color:     0x0091BD,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["cca_realm", "arm_cca"],
         blurb:     "Arm CCA Realm Attestation \u{2014} Arm Confidential Compute Architecture Realm attestation token with RPV, platform claims, and CCA token for confidential compute verification.",
     }
@@ -21487,6 +23927,7 @@ protocols! {
         color:     0x689F38,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["pkcs11_3_1", "cryptoki"],
         blurb:     "PKCS#11 v3.1 \u{2014} OASIS PKCS#11 Cryptoki interface v3.1 for cryptographic token operations with encryption, decryption, signing, and key management across HSM devices.",
     }
@@ -21496,6 +23937,7 @@ protocols! {
         color:     0x757575,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tpm2_attest", "tpm2_dice"],
         blurb:     "TPM 2.0 Remote Attestation \u{2014} TPM 2.0 remote attestation with DICE extension for TPMS_ATTEST quote, PCR measurements, and certified device identity.",
     }
@@ -21505,6 +23947,7 @@ protocols! {
         color:     0x1565C0,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["kmip_2_1", "hsm_kmip"],
         blurb:     "KMIP 2.1 \u{2014} OASIS Key Management Interoperability Protocol for HSM key lifecycle with Create, Get, Import, and Destroy operations over TCP/TLS.",
     }
@@ -21514,6 +23957,7 @@ protocols! {
         color:     0xE91E63,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gp_tui", "tee_tui"],
         blurb:     "GP TUI TEE \u{2014} GlobalPlatform Trusted User Interface TEE internal protocol for secure display and input handling in trusted execution environments.",
     }
@@ -21523,6 +23967,7 @@ protocols! {
         color:     0xFF9900,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["nitro_attest", "aws_nitro"],
         blurb:     "AWS Nitro Attestation \u{2014} AWS Nitro Enclave attestation document with PCR measurements, certificate chain, and user data signature for enclave identity verification.",
     }
@@ -21532,6 +23977,7 @@ protocols! {
         color:     0x10A37F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openai_chat_stream", "chatgpt_stream"],
         blurb:     "OpenAI Chat Stream \u{2014} OpenAI Chat Completions server-sent events stream with delta-based token output, finish reason, and usage metadata.",
     }
@@ -21541,6 +23987,7 @@ protocols! {
         color:     0x00B884,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openai_realtime_ws", "realtime_ws"],
         blurb:     "OpenAI Realtime WS \u{2014} OpenAI Realtime API WebSocket with audio/text bidirectional frames, transcript events, and function call handling.",
     }
@@ -21550,6 +23997,7 @@ protocols! {
         color:     0x1E8E3E,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openai_responses", "responses_api"],
         blurb:     "OpenAI Responses API \u{2014} OpenAI Responses API SSE stream with typed events, output items, and structured data for agent-based interactions.",
     }
@@ -21559,6 +24007,7 @@ protocols! {
         color:     0x9B8D7E,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["anthropic_sse_stream", "claude_stream"],
         blurb:     "Anthropic Stream Event \u{2014} Anthropic Claude API SSE event stream with message_start, content_block_delta, content_block_stop, and message_stop events.",
     }
@@ -21568,6 +24017,7 @@ protocols! {
         color:     0x4285F4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gemini_bidi", "gemini_live"],
         blurb:     "Google Gemini BiDi \u{2014} Google Gemini Live API bidirectional WebSocket for multimodal streaming with audio/video/text frames and real-time interaction.",
     }
@@ -21577,6 +24027,7 @@ protocols! {
         color:     0x34A853,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gemini_rest", "gemini_sse"],
         blurb:     "Google Gemini REST Stream \u{2014} Google Gemini generateContent REST SSE streaming with candidate chunks, safety ratings, and citation metadata.",
     }
@@ -21586,6 +24037,7 @@ protocols! {
         color:     0x0078D4,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["azure_aoai", "azure_openai_stream"],
         blurb:     "Azure AOAI Stream \u{2014} Azure OpenAI Service streaming with proprietary extensions including apim-request-id, content filtering annotations, and prompt filter results.",
     }
@@ -21595,6 +24047,7 @@ protocols! {
         color:     0x39594D,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cohere_stream", "cohere_v2"],
         blurb:     "Cohere Stream v2 \u{2014} Cohere Generate and Stream v2 event protocol with text generation events, finish reason, and token likelihood metadata.",
     }
@@ -21604,6 +24057,7 @@ protocols! {
         color:     0xFF6B00,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mistral_stream", "mistral_chat"],
         blurb:     "Mistral Chat Stream \u{2014} Mistral AI chat completion SSE streaming with delta token output, finish reason, and usage statistics.",
     }
@@ -21613,6 +24067,7 @@ protocols! {
         color:     0xF55036,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["groq_lpu", "groq_stream"],
         blurb:     "Groq LPU Stream \u{2014} Groq LPU inference engine streaming with x-groq headers, fast token generation, and real-time chat completion output.",
     }
@@ -21622,6 +24077,7 @@ protocols! {
         color:     0x6B46C1,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["together_stream", "together_ai"],
         blurb:     "Together AI Stream \u{2014} Together AI inference SSE streaming for open-source model deployment with delta token output and model metadata.",
     }
@@ -21631,6 +24087,7 @@ protocols! {
         color:     0xFB923C,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["fireworks_stream", "fireworks_ai"],
         blurb:     "Fireworks Stream \u{2014} Fireworks.ai fast inference SSE streaming with x-request-id tracing, delta token output, and usage reporting.",
     }
@@ -21640,6 +24097,7 @@ protocols! {
         color:     0x4F6BF5,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["deepseek_stream", "deepseek_api"],
         blurb:     "DeepSeek Stream \u{2014} DeepSeek API SSE streaming for chat completion with delta token output, reasoning traces, and usage counters.",
     }
@@ -21649,6 +24107,7 @@ protocols! {
         color:     0x1A1A2E,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["grok_stream", "xai_grok"],
         blurb:     "xAI Grok Stream \u{2014} xAI Grok API streaming with SSE event output for chat completion, real-time token generation, and reasoning steps.",
     }
@@ -21658,6 +24117,7 @@ protocols! {
         color:     0xFF9900,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["bedrock_stream", "bedrock_invoke"],
         blurb:     "AWS Bedrock Invoke Stream \u{2014} AWS Bedrock InvokeModelWithResponseStream for streaming inference from foundation models with chunked response payloads.",
     }
@@ -21667,6 +24127,7 @@ protocols! {
         color:     0x00A67E,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["litellm_proxy", "litellm_stream"],
         blurb:     "LiteLLM Proxy Stream \u{2014} LiteLLM proxy streaming relay with model routing, call IDs, and provider-agnostic SSE forwarding for multi-provider LLM access.",
     }
@@ -21676,6 +24137,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["portkey_relay", "portkey_stream"],
         blurb:     "Portkey Stream Relay \u{2014} Portkey AI gateway streaming relay with virtual key management, trace IDs, and config-based model routing for observability and fallback.",
     }
@@ -21685,6 +24147,7 @@ protocols! {
         color:     0x3B82F6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["helicone_log", "helicone_async"],
         blurb:     "Helicone Log Stream \u{2014} Helicone async log shipping with provider metadata, request/response capture, and usage tracking for LLM observability.",
     }
@@ -21694,6 +24157,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["langfuse_v2", "langfuse_trace_ingest"],
         blurb:     "Langfuse Ingest v2 \u{2014} Langfuse trace and observation ingestion with generation tracking, usage metrics, and hierarchical span modelling for LLM observability.",
     }
@@ -21703,6 +24167,7 @@ protocols! {
         color:     0x0194E2,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mlflow_gw", "mlflow_route"],
         blurb:     "MLflow Gateway Stream \u{2014} MLflow AI Gateway streaming inference with route-based model selection, endpoint abstraction, and multi-model serving for MLOps.",
     }
@@ -21712,6 +24177,7 @@ protocols! {
         color:     0xFF6B35,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["openrouter", "openrouter_sse"],
         blurb:     "OpenRouter Stream \u{2014} OpenRouter multi-provider LLM SSE streaming with metadata headers, model selection, and provider-agnostic chat completion forwarding.",
     }
@@ -21721,6 +24187,7 @@ protocols! {
         color:     0xF38020,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cf_ai_gateway", "cloudflare_ai"],
         blurb:     "Cloudflare AI Gateway \u{2014} Cloudflare AI Gateway streaming with WAF integration, workers-ai routing, and model-based rate limiting for edge LLM inference.",
     }
@@ -21730,6 +24197,7 @@ protocols! {
         color:     0x003459,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["kong_ai", "kong_llm"],
         blurb:     "Kong AI Gateway Stream \u{2014} Kong AI Gateway streaming middleware with AI route plugins, LLM model header injection, and rate-limited model proxying for API management.",
     }
@@ -21739,6 +24207,7 @@ protocols! {
         color:     0x10A37F,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["tiktoken", "cl100k_base"],
         blurb:     "Tiktoken BPE Header \u{2014} OpenAI tiktoken BPE encoding metadata for cl100k_base, o200k_base, p50k_base, and r50k_base tokenizer vocabularies with vocab size and merge data.",
     }
@@ -21748,6 +24217,7 @@ protocols! {
         color:     0x4285F4,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["sentencepiece", "sp_model"],
         blurb:     "SentencePiece Proto \u{2014} Google SentencePiece tokenizer model protocol with piece vocabulary, normalizer rules, byte fallback, and model configuration for subword tokenization.",
     }
@@ -21757,6 +24227,7 @@ protocols! {
         color:     0xFFD21E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["hf_tokenizer", "tokenizer_json"],
         blurb:     "HuggingFace Tokenizer Config \u{2014} HuggingFace tokenizer.json metadata with added tokens, normalizer, pre-tokenizer, decoder, and model configuration for fast tokenization.",
     }
@@ -21766,6 +24237,7 @@ protocols! {
         color:     0x1A73E8,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["gemma_tokenizer", "gemma_sp"],
         blurb:     "Gemma Tokenizer Header \u{2014} Google Gemma SentencePiece tokenizer variant with gemma-specific vocabulary, gemma2 extensions, and subword tokenization metadata.",
     }
@@ -21775,6 +24247,7 @@ protocols! {
         color:     0xFB9400,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["llama_tokenizer", "llama_spm"],
         blurb:     "Llama Tokenizer Header \u{2014} Meta Llama BPE tokenizer metadata with vocabulary, bos/eos token IDs, and SentencePiece-compatible model configuration for Llama-family models.",
     }
@@ -21784,6 +24257,7 @@ protocols! {
         color:     0x9B8D7E,
         transport: Tcp,
         rank:      3,
+        status:    Declared,
         aliases:   ["claude_tokenizer", "anthropic_token"],
         blurb:     "Anthropic Claude Tokenizer \u{2014} Anthropic Claude custom BPE tokenizer with claude-specific vocabulary, token IDs, and encoding metadata for Claude model family.",
     }
@@ -21793,6 +24267,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nvlink"],
         blurb:     "NVIDIA NVLink multi-node fabric protocol \u{2014} high-bandwidth GPU interconnect with packetised transaction-layer messages for peer-to-peer memory access and synchronisation across NVSwitch topologies.",
     }
@@ -21802,6 +24277,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nvswitch_tele"],
         blurb:     "NVIDIA NVSwitch internal telemetry \u{2014} in-band fabric health, temperature, power, and error-counter reporting from NVSwitch ASICs to the management plane.",
     }
@@ -21811,6 +24287,7 @@ protocols! {
         color:     0x8CD400,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["c2c"],
         blurb:     "NVLink-C2C chip-to-chip interconnect protocol \u{2014} NVIDIA\u{2019}s die-to-die and chip-to-chip PHY-link layer used for coherent CPU-GPU and GPU-GPU attachment over short-reach electrical channels.",
     }
@@ -21820,6 +24297,7 @@ protocols! {
         color:     0x00549F,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ib_rdmacm_v2", "rdmacm_v2"],
         blurb:     "InfiniBand RDMA Connection Manager v2 \u{2014} connection-establishment and address-resolution protocol for RC/UC/UD QPs over InfiniBand fabric, replacing the legacy CM v1 signalling.",
     }
@@ -21829,6 +24307,7 @@ protocols! {
         color:     0x0077C8,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ipoib_enhanced", "ipoib_enh"],
         blurb:     "IPoIB enhanced datagram mode \u{2014} improved IP-over-InfiniBand encapsulation with larger MTU, checksum offload, and scatter-gather support for high-performance Ethernet-over-IB bridging.",
     }
@@ -21838,6 +24317,7 @@ protocols! {
         color:     0xE95420,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nvmeof_tcp", "nvme_tcp"],
         blurb:     "NVMe-over-Fabrics TCP transport \u{2014} NVMe command submission and completion queues encapsulated in TCP PDUs with header-digest and data-digest protection for remote NVMe drive access.",
     }
@@ -21847,6 +24327,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gdr_rdma", "gpudirect_rdma"],
         blurb:     "NVIDIA GPUDirect RDMA peer-to-peer protocol \u{2014} direct GPU-to-GPU and GPU-to-NIC data-path bypassing host memory, using registered memory regions and RDMA read/write primitives.",
     }
@@ -21856,6 +24337,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["gds_dma", "gpudirect_storage"],
         blurb:     "NVIDIA GPUDirect Storage DMA protocol \u{2014} direct GPU-to-NVMe data-path with DMA scatter-gather lists, chunked transfers, and completion notifications for accelerated storage access.",
     }
@@ -21865,6 +24347,7 @@ protocols! {
         color:     0xFF6B35,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cxl_io"],
         blurb:     "CXL.io protocol \u{2014} PCIe 5.0/6.0-based I/O semantics for CXL-attached devices, carrying configuration-space accesses, MMIO transactions, and DMA operations over the Compute Express Link fabric.",
     }
@@ -21874,6 +24357,7 @@ protocols! {
         color:     0xE63946,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cxl_cache"],
         blurb:     "CXL.cache coherent caching protocol \u{2014} device-initiated cache coherence transactions including snoops, evictions, and writeback for coherently shared memory between host processors and CXL-attached accelerators.",
     }
@@ -21883,6 +24367,7 @@ protocols! {
         color:     0x457B9D,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["cxl_mem"],
         blurb:     "CXL.mem memory access protocol \u{2014} host-initiated and device-initiated memory load/store requests, with support for pooled memory expansion and tiered memory semantics over CXL fabric.",
     }
@@ -21892,6 +24377,7 @@ protocols! {
         color:     0x6A4C93,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["ucx_tl", "ucx_transport"],
         blurb:     "OpenUCX transport layer \u{2014} unified communication framework with support for RDMA (UCX-IB), TCP (UCX-TCP), shared memory (UCX-SM), and NVLink transports for HPC and AI workloads.",
     }
@@ -21901,6 +24387,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nccl_allreduce"],
         blurb:     "NVIDIA NCCL allreduce ring protocol \u{2014} GPU collective communication using ring-based allreduce with chunked data transfer, segmented ring construction, and pipelined reduce-scatter / all-gather phases.",
     }
@@ -21910,6 +24397,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nccl_allgather"],
         blurb:     "NCCL allgather algorithm \u{2014} GPU collective allgather communication supporting ring, tree, and NVLink direct topologies with multi-chunk scatter-gather and fused reduce operations.",
     }
@@ -21919,6 +24407,7 @@ protocols! {
         color:     0x8CD400,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["nccl_broadcast"],
         blurb:     "NCCL broadcast tree protocol \u{2014} GPU broadcast communication using spanning-tree topologies with pipelined chunk transfer, root-to-leaf propagation, and NVLink-aware tree construction.",
     }
@@ -21928,6 +24417,7 @@ protocols! {
         color:     0xEE4C2C,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["fsdp_shard", "pytorch_fsdp"],
         blurb:     "PyTorch Fully Sharded Data Parallel (FSDP) shard state sync protocol \u{2014} sharded parameter exchange with stateful unshard/reshard collectives and gradient synchronisation across data-parallel workers.",
     }
@@ -21937,6 +24427,7 @@ protocols! {
         color:     0x0066CC,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["deepspeed_gloo", "gloo_tcp"],
         blurb:     "DeepSpeed Gloo-TCP custom allreduce backend \u{2014} GPU collective allreduce using Gloo\u{2019}s TCP transport with chunked reduction, hierarchical aggregation, and mixed-precision support for ZeRO optimisation stages.",
     }
@@ -21946,6 +24437,7 @@ protocols! {
         color:     0x9B59B6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["horovod_elastic"],
         blurb:     "Horovod elastic training worker discovery \u{2014} dynamic worker registration, hostlist synchronisation, and rank assignment for elastic scaling of distributed Horovod training jobs.",
     }
@@ -21955,6 +24447,7 @@ protocols! {
         color:     0xE67E22,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["megatron_tp", "tp_overlap"],
         blurb:     "Megatron-LM tensor parallelism overlap IPC \u{2014} intra-layer tensor-parallel communication with compute-communication overlap, fused allreduce/fp32-allreduce for transformer blocks.",
     }
@@ -21964,6 +24457,7 @@ protocols! {
         color:     0xD35400,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["megatron_pp", "pipeline_flush"],
         blurb:     "Megatron-LM pipeline flush scheduling protocol \u{2014} inter-microbatch pipeline flush messages for scheduling one-forward-one-backward passes with explicit flush tokens and barrier synchronisation.",
     }
@@ -21973,6 +24467,7 @@ protocols! {
         color:     0xEE4C2C,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pytorch_rpc", "torch_rpc"],
         blurb:     "PyTorch distributed RPC framework \u{2014} remote procedure call protocol with request-reply semantics, reference-counted distributed autograd, and profiler events for multi-machine model-parallel training.",
     }
@@ -21982,6 +24477,7 @@ protocols! {
         color:     0x1A76D2,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["jax_pjit", "gspmd_sharding"],
         blurb:     "JAX pjit GSPMD sharding communication \u{2014} sharding-annotation-driven collective communication for partitioned computations with all-gather, reduce-scatter, and dynamic-slice for automated parallelisation.",
     }
@@ -21991,6 +24487,7 @@ protocols! {
         color:     0x35A560,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pinecone_index", "pc_index_grpc"],
         blurb:     "Pinecone gRPC index upsert/query protocol \u{2014} Protobuf-based vector index operations including Upsert, Query, Fetch, Update, and Delete with namespace-scoped vector and scalar metadata filtering.",
     }
@@ -22000,6 +24497,7 @@ protocols! {
         color:     0x2D8C50,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["pinecone_collection", "pc_col_stream"],
         blurb:     "Pinecone collection internal consistency stream \u{2014} shard-level streaming for collection creation and hydration, with segment alignment, record acknowledgment, and back-pressure signalling across index replicas.",
     }
@@ -22009,6 +24507,7 @@ protocols! {
         color:     0x4D6BFE,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["weaviate_gql_grpc", "weaviate_grpc"],
         blurb:     "Weaviate GraphQL-over-gRPC internal \u{2014} gRPC-based GraphQL query execution with batched vector search, hybrid (BM25 + vector) retrieval, and object-level aggregations across shards.",
     }
@@ -22018,6 +24517,7 @@ protocols! {
         color:     0x3D5AFE,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["weaviate_hnsw", "hnsw_repl_log"],
         blurb:     "Weaviate HNSW index replication log \u{2014} incremental HNSW graph mutation log for multi-node replication, carrying insert/delete operations with layer assignment and per-entry vector data.",
     }
@@ -22027,6 +24527,7 @@ protocols! {
         color:     0xEB5454,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["qdrant_raft", "raft_log"],
         blurb:     "Qdrant Raft consensus log replication \u{2014} Raft-based log entry replication for distributed collection state, with term-index addressing, snapshot install, and leader-election messaging.",
     }
@@ -22036,6 +24537,7 @@ protocols! {
         color:     0xD43A3A,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["qdrant_quant", "quant_sync"],
         blurb:     "Qdrant binary/splat quantization segment sync \u{2014} quantised vector segment synchronisation with binary, scalar, and product-quantisation codebooks, delta-encoded subvectors, and chunked transfer.",
     }
@@ -22045,6 +24547,7 @@ protocols! {
         color:     0x00A1D6,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["milvus_proxy", "proxy_grpc"],
         blurb:     "Milvus proxy-to-data-node gRPC \u{2014} query and insert forwarding from proxy to data nodes, with channel-level routing, segment ID assignment, and batch result streaming for vector search.",
     }
@@ -22054,6 +24557,7 @@ protocols! {
         color:     0x008BBB,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["milvus_sealed", "sealed_seg_stream"],
         blurb:     "Milvus sealed segment streaming protocol — chunked streaming of sealed segment data from data nodes to query nodes, including vector fields, scalar fields, and deletion bitmaps.",
     }
@@ -22063,6 +24567,7 @@ protocols! {
         color:     0xE67E22,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["edge_onnx", "onnx_runtime_edge"],
         blurb:     "ONNX Runtime edge inference IPC protocol — high-performance machine learning model inference using ONNX Runtime on edge devices, with session management, tensor I/O, and hardware accelerator binding.",
     }
@@ -22072,6 +24577,7 @@ protocols! {
         color:     0xFF6F00,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["edge_tflite", "tflite_micro"],
         blurb:     "TensorFlow Lite Micro inference protocol — lightweight ML inference for microcontrollers and edge devices, with quantized model execution, tensor arena management, and interpreter control.",
     }
@@ -22081,6 +24587,7 @@ protocols! {
         color:     0xEE4C2C,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["edge_pytorch", "pytorch_mobile"],
         blurb:     "PyTorch Mobile/Lite interpreter IPC protocol — on-device ML inference using PyTorch's optimized mobile runtime, with model serialization, tensor transport, and delegate dispatching.",
     }
@@ -22090,6 +24597,7 @@ protocols! {
         color:     0x00A9E0,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["nxp_eiq", "eiq_inference"],
         blurb:     "NXP eIQ edge intelligence inference protocol — NXP's ML inference stack for i.MX RT and LPC MCUs, with delegate dispatch to NPU, DSP, and CPU backends.",
     }
@@ -22099,6 +24607,7 @@ protocols! {
         color:     0x03234B,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["stm32cube_ai", "stm_ai"],
         blurb:     "STMicroelectronics STM32Cube.AI runtime protocol — AI model inference on STM32 MCUs using X-CUBE-AI, with neural network activation, memory pooling, and peripheral integration.",
     }
@@ -22108,6 +24617,7 @@ protocols! {
         color:     0x009999,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["siemens_edge", "industrial_edge"],
         blurb:     "Siemens Industrial Edge runtime app-to-app IPC protocol — inter-application communication on Siemens Industrial Edge devices, with app lifecycle, data pipeline, and OPC UA bridge integration.",
     }
@@ -22117,6 +24627,7 @@ protocols! {
         color:     0xE20015,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["bosch_nexeed", "nexeed_edge"],
         blurb:     "Bosch Nexeed edge analytics transport protocol — real-time production data analytics transport for Bosch Nexeed Industrial Application System, with sensor fusion and predictive maintenance streams.",
     }
@@ -22126,6 +24637,7 @@ protocols! {
         color:     0x00B4E6,
         transport: Udp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["beckhoff_twincat", "twincat_analytics"],
         blurb:     "Beckhoff TwinCAT Analytics data streaming protocol — real-time data acquisition and analysis for Beckhoff TwinCAT systems, with cyclic data streaming, event-triggered logging, and cloud connectivity.",
     }
@@ -22135,6 +24647,7 @@ protocols! {
         color:     0x007B3D,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["rockwell_factorytalk", "factorytalk_edge"],
         blurb:     "Rockwell FactoryTalk Edge Gateway protocol — edge-to-cloud data transport for Rockwell Automation's FactoryTalk ecosystem, with tag-based data publishing, alarm/event forwarding, and secure tunneling.",
     }
@@ -22144,6 +24657,7 @@ protocols! {
         color:     0x00B050,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["schneider_ecostruxure", "ecostruxure_edge"],
         blurb:     "Schneider EcoStruxure edge-to-cloud bridge protocol — secure data exchange between EcoStruxure Automation Expert edge devices and cloud analytics platforms, with asset model synchronization and time-series ingestion.",
     }
@@ -22154,6 +24668,7 @@ protocols! {
         color:     0x005A9E,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["iolink", "iec_61131_9"],
         blurb:     "IO-Link (IEC 61131-9) — point-to-point communication protocol for smart sensors and actuators with cyclic process data exchange, acyclic on-request data (ISDU), and event-driven diagnostics.",
     }
@@ -22163,6 +24678,7 @@ protocols! {
         color:     0xFF6600,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["as_interface", "asi"],
         blurb:     "AS-Interface (Actuator-Sensor Interface) — two-wire fieldbus for binary sensors and actuators with cyclic I/O data exchange, master-slave polling, and safety monitor extensions.",
     }
@@ -22172,6 +24688,7 @@ protocols! {
         color:     0x008B8B,
         transport: Tcp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["interbus", "phoenix_interbus"],
         blurb:     "INTERBUS — Phoenix Contact's shift-register-based fieldbus for cyclic process data, parameter channel access, and TCP/IP encapsulation for remote diagnostics and configuration.",
     }
@@ -22181,6 +24698,7 @@ protocols! {
         color:     0x6B3FA0,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         aliases:   ["controlnet", "rockwell_controlnet"],
         blurb:     "ControlNet — Rockwell Automation deterministic control network using CTDMA (Concurrent Time Domain Multiple Access) with scheduled I/O, unscheduled messaging, and redundant media support.",
     }
@@ -22190,6 +24708,7 @@ protocols! {
         color:     0xDC143C,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["mechatrolink", "yaskawa_motion"],
         blurb:     "MECHATROLINK — Yaskawa motion control fieldbus with cyclic position/velocity/torque commands, synchronous axes coordination, and distributed servo drive control over RS-485 (M-I/II) or Ethernet (M-III/IV).",
     }
@@ -22199,6 +24718,7 @@ protocols! {
         color:     0x2E8B57,
         transport: Other,
         rank:      3,
+        status:    Dissected,
         // Not "varan": that token is the VARAN EtherType row's own name.
         aliases:   ["varan_bus"],
         blurb:     "VARAN Bus — Versatile Automation Random Access Network real-time Ethernet fieldbus for deterministic machine control with cyclic I/O, event-driven messaging, and fail-safe safety communication.",
@@ -22209,6 +24729,7 @@ protocols! {
         color:     0x4169E1,
         transport: Udp,
         rank:      3,
+        status:    Dissected,
         aliases:   ["p_net", "pnet", "process_net"],
         blurb:     "P-NET — multi-master token-passing fieldbus for process automation with segmented addressing, acyclic client-server services, and UDP/IP encapsulation for remote access and diagnostics.",
     }
@@ -22218,6 +24739,7 @@ protocols! {
         color:     0xFF4500,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["fsoe", "fail_safe_ethercat", "safety_over_ethercat"],
         blurb:     "FSoE (Fail Safe over EtherCAT) — functional safety protocol embedded within EtherCAT datagrams for SIL 3 safety communication with connection monitoring, CRC integrity, and watchdog-based fail-safe state transitions.",
     }
@@ -22227,6 +24749,7 @@ protocols! {
         color:     0x00695C,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["profidrive", "drive_profile", "pi_drive"],
         blurb:     "PROFIdrive — application profile for drive technology over PROFIBUS and PROFINET with standardized parameter access, cyclic setpoint/actual value exchange, and isochronous axis control.",
     }
@@ -22237,6 +24760,7 @@ protocols! {
         color:     0x0D9488,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["profinet_rt_siemens", "pn_rt_siemens"],
         blurb:     "Siemens PROFINET RT extended frame — real-time cyclic I/O data with Siemens-specific alarm channel, diagnosis subframes, and extended status information beyond the base PROFINET specification.",
     }
@@ -22246,6 +24770,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["profinet_irt_siemens", "pn_irt_siemens"],
         blurb:     "Siemens PROFINET IRT (Isochronous Real-Time) — deterministic isochronous communication for high-precision motion control with Siemens sync domain extensions, jitter compensation, and drive clock alignment beyond the standard IRT profile.",
     }
@@ -22255,6 +24780,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["profibus_dp_siemens", "pb_dp_siemens"],
         blurb:     "Siemens PROFIBUS DP V2/V3 extensions — acyclic DP-V2 services for parametrization, alarm handling, and isochronous slave-to-slave communication with Siemens-specific FDL status, extended diagnostic data, and redundancy management.",
     }
@@ -22264,6 +24790,7 @@ protocols! {
         color:     0x1D4ED8,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["s7comm_plus_detail", "s7commplus_detail", "tia_portal_job"],
         blurb:     "Siemens S7Comm Plus (TIA Portal v13+) — detailed decode of the enhanced job/ack mechanism, session multiplexing, encrypted payload negotiation, and firmware-version-specific protocol extensions (v4.0+) used by modern S7-1200/1500 controllers.",
     }
@@ -22273,6 +24800,7 @@ protocols! {
         color:     0x0E7490,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["sinamics_drive_profile", "sinamics_profile"],
         blurb:     "Siemens SINAMICS drive profile — Siemens-specific PROFIdrive extensions including encoder emulation with virtual encoder mapping, safety limited speed (SLS) telegrams, dynamic drive control word extensions, and parameter access over the DPV1 acyclic channel.",
     }
@@ -22282,6 +24810,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["simatic_hmi_smartsrv", "hmi_smartsrv"],
         blurb:     "Siemens SIMATIC HMI SmartServer — WinCC RT Advanced tag streaming protocol with cyclic tag value publication, alarm/event forwarding, historical data retrieval, and multi-client session management for HMI visualization networks.",
     }
@@ -22291,6 +24820,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["sinumerik_nck_channel", "nck_channel"],
         blurb:     "Siemens SINUMERIK NCK channel protocol — CNC-specific G-code streaming with block-by-block execution, tool management (tool offsets, wear, magazine assignment), axis position setpoint/actual exchange, and synchronized multi-channel coordination.",
     }
@@ -22300,6 +24830,7 @@ protocols! {
         color:     0xE11D48,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["scalance_x_ring", "scalance_hrp"],
         blurb:     "Siemens SCALANCE X HRP (High-Speed Redundancy Protocol) — industrial Ethernet ring redundancy with sub-50ms failover, ring port status monitoring, topology change notification, and configuration synchronization for SCALANCE X managed switches.",
     }
@@ -22309,6 +24840,7 @@ protocols! {
         color:     0x065F46,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["siemens_l2_telegram", "pn_dcp_l2"],
         blurb:     "Siemens Layer-2 discovery telegram — PROFINET DCP (Discovery and Configuration Protocol) for NameOfStation assignment, IP parameter configuration, device identification, and factory reset operations at the Ethernet data link layer.",
     }
@@ -22318,6 +24850,7 @@ protocols! {
         color:     0xB45309,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["tia_portal_online_diag", "tia_online_diag"],
         blurb:     "TIA Portal online diagnostics — module status interrogation, rack/station topology queries, firmware version inventory, diagnostic buffer readout, and firmware update trigger frames exchanged between TIA Portal engineering station and Siemens automation devices.",
     }
@@ -22327,6 +24860,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["siemens_opc_ua_model", "s7_opcua_companion"],
         blurb:     "Siemens OPC UA Companion Model — Siemens-specific NodeId namespace mapping, device-specific variable type definitions, method call structures, and companion specification extensions for SIMATIC S7-1500 PLCs in the OPC UA information model.",
     }
@@ -22336,6 +24870,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["siemens_industrial_5g", "ind_5g_siemens"],
         blurb:     "Siemens Industrial 5G — private 5G network management protocol for industrial campuses with Siemens-specific UPF (User Plane Function) configuration, NEF (Network Exposure Function) extensions for deterministic latency, and 5G TSN integration for time-critical control.",
     }
@@ -22346,6 +24881,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["ether_net_ip_rockwell", "rockwell_enip"],
         blurb:     "Rockwell EtherNet/IP CIP extended services — Rockwell-specific Class 1 implicit messaging extensions for high-performance I/O, including multiple producer-consumer relationships, connection priority modulation, and extended forward-open service parameters beyond the ODVA specification.",
     }
@@ -22355,6 +24891,7 @@ protocols! {
         color:     0xDC2626,
         transport: Udp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["cip_safety_rockwell", "rockwell_cip_safety"],
         blurb:     "Rockwell CIP Safety — GuardLogix-specific safety signature verification, safety timestamp synchronization, and SIL 3 safety connection management with dual-channel comparison and discrepancy time monitoring for fail-safe operation.",
     }
@@ -22364,6 +24901,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["pccc_extended", "ab_pccc", "plc5_commands"],
         blurb:     "Allen-Bradley PCCC (Programmable Controller Communications Commands) — extended command set for PLC-5, SLC-500, and MicroLogix controllers including protected file read/write, file copy/fill, diagnostic counters, and online program changes beyond the basic PCCC command set.",
     }
@@ -22373,6 +24911,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["df1_full_duplex_ext", "ab_df1_ext"],
         blurb:     "Allen-Bradley DF1 Full-Duplex — extended CRC/BCC error-checking modes with packet sequence numbering, extended status byte reporting, and multi-packet transfers for large block reads/writes on DH-485 and RS-232 serial links.",
     }
@@ -22382,6 +24921,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["studio5000_online_comm", "studio5k_online", "logix_online"],
         blurb:     "Studio 5000 Logix Designer — online communication protocol for tag browsing, cross-reference queries, online rung editing (ladder logic), task/ program upload/download, and controller synchronization during live production without stopping the processor.",
     }
@@ -22391,6 +24931,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["factorytalk_view_hmi", "ft_view_me", "rockwell_hmi"],
         blurb:     "FactoryTalk View Machine Edition — Rockwell HMI tag subscription protocol with cyclic tag value publishing, alarm/event notifications, data log queries for historical trends, and multi-client display session management for PanelView Plus terminals.",
     }
@@ -22400,6 +24941,7 @@ protocols! {
         color:     0x0D9488,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["stratix_switch_telemetry", "stratix_telemetry"],
         blurb:     "Rockwell Stratix Switch — CIP-based industrial Ethernet switch telemetry for port mirroring configuration, QoS policy deployment, ring health monitoring, and CIP-to-SNMP bridge integration on Stratix 5400/5700 managed switches powered by Cisco IOS.",
     }
@@ -22409,6 +24951,7 @@ protocols! {
         color:     0x0E7490,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["powerflex_drive_cip", "pf_drive_cip", "ab_powerflex"],
         blurb:     "Rockwell PowerFlex Drive — CIP energy object (Class 0x4E) for drive energy consumption monitoring, torque profiling, motor thermal capacity tracking, and Rockwell-specific drive configuration parameters for PowerFlex 525/527/755 series variable-frequency drives.",
     }
@@ -22418,6 +24961,7 @@ protocols! {
         color:     0x065F46,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["control_logix_backplane", "clx_backplane", "1756_backplane"],
         blurb:     "ControlLogix 1756 backplane — chassis-level bus protocol for multi-controller communication across the ControlLogix backplane, covering owner/observer controller relationships, redundant controller synchronization, and module-level health monitoring across standard/redundant chassis configurations.",
     }
@@ -22427,6 +24971,7 @@ protocols! {
         color:     0xDC2626,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["guard_i_o_safety", "guard_io_safety", "ab_guard_safety"],
         blurb:     "Rockwell Guard I/O — safety module telemetry with per-channel individual diagnostics, discrepancy time monitoring for dual-channel inputs, safe-state output assertion, and SIL 3 certified communication integrity verification for distributed safety I/O modules on EtherNet/IP.",
     }
@@ -22437,6 +24982,7 @@ protocols! {
         color:     0x0284C7,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["ethercat_beckhoff_mdp", "ec_mdp_beckhoff", "beckhoff_mdp"],
         blurb:     "Beckhoff EtherCAT MDP — Modular Device Profile with Beckhoff-specific CoE (CANopen over EtherCAT) object dictionary extensions for modular I/O configuration, distributed clock synchronization parameters, and vendor-specific startup parameters for EL-series EtherCAT terminals.",
     }
@@ -22446,6 +24992,7 @@ protocols! {
         color:     0xEA580C,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["ethercat_safety_beckhoff", "twinsafe", "beckhoff_fsoe"],
         blurb:     "Beckhoff TwinSAFE — Fail Safe over EtherCAT (FSoE) safety protocol with Beckhoff safe logic editor connection validation, safety function block parameterization, and TwinSAFE group communication for distributed safe I/O and drive safety via the EL6900/EL6910 safety logic terminals.",
     }
@@ -22455,6 +25002,7 @@ protocols! {
         color:     0x1D4ED8,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["twincat_ads_detail", "ads_detail", "ams_netid"],
         blurb:     "Beckhoff TwinCAT ADS (Automation Device Specification) — detailed decode of the ADS command structure including AMS NetID routing between TwinCAT runtimes, sum commands for batch register access, device notification subscriptions, and symbolic access via the AMS router.",
     }
@@ -22464,6 +25012,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["twincat_router_telemetry", "ads_router_telemetry"],
         blurb:     "TwinCAT ADS Router telemetry — real-time task jitter measurement, cycle time exceedance notifications, CPU load monitoring per TwinCAT runtime, and communication load statistics for the AMS router diagnostic data stream used by the TwinCAT System Manager.",
     }
@@ -22473,6 +25022,7 @@ protocols! {
         color:     0x16A34A,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["twincat_scope_view", "tc_scope_stream"],
         blurb:     "TwinCAT Scope View — multi-channel synchronized oscilloscope data acquisition protocol for real-time process variable recording, multi-axis synchronized chart capture, YX scatter plot streaming, and trigger-based scope acquisition across distributed TwinCAT runtimes.",
     }
@@ -22482,6 +25032,7 @@ protocols! {
         color:     0x059669,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["ethercat_foe_detail", "ec_foe", "file_over_ethercat"],
         blurb:     "EtherCAT FoE (File Access over EtherCAT) — detailed decode of firmware update operations using the Beckhoff bootloader protocol with flash segment mapping, file password authentication, CRC-32 integrity verification, and multi-segment firmware transfer for EtherCAT slaves.",
     }
@@ -22491,6 +25042,7 @@ protocols! {
         color:     0x0D9488,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["ethercat_distributed_clocks", "ec_dc", "ethercat_clocks"],
         blurb:     "EtherCAT Distributed Clocks — detailed synchronization protocol for sub-microsecond clock alignment across all EtherCAT slaves including Beckhoff DC mode selection (free-run, SM-sync, DC-sync), drift compensation via system time propagation, and cycle time synchronization monitoring for coordinated motion control.",
     }
@@ -22500,6 +25052,7 @@ protocols! {
         color:     0x6366F1,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["beckhoff_xplanar_mover", "xplanar", "xplanar_mover"],
         blurb:     "Beckhoff XPlanar — protocol for free-moving planar transport system with maglev mover position tracking, 6-DOF tilt sensing, collision domain management, trajectory planning commands, and wireless coil commutation data exchange for the XPlanar planar motor system.",
     }
@@ -22510,6 +25063,7 @@ protocols! {
         color:     0xDC2626,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["mitsubishi_melsec_proto", "melsec_mc", "mitsubishi_mc"],
         blurb:     "Mitsubishi MELSEC MC (MELSEC Communication) protocol — binary and ASCII communication frames for iQ-R, iQ-F, and L-series PLCs with extended device memory map access (label access, intelligent function module buffers, multiple CPU shared memory), and online program monitoring.",
     }
@@ -22519,6 +25073,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      4,
+        status:    Dissected,
         aliases:   ["mitsubishi_cc_link_ie_field", "cclink_ie_ext", "mitsubishi_cclink"],
         blurb:     "Mitsubishi CC-Link IE Field basic extended protocol — cyclic and transient data exchange for Motion CPU and simple motion module network variables, with servo parameter access, synchronous axis control, and multiple CPU shared memory across CC-Link IE Field networks.",
     }
@@ -22528,6 +25083,7 @@ protocols! {
         color:     0x0284C7,
         transport: Udp,
         rank:      4,
+        status:    Dissected,
         // Not "omron_fins": that token belongs to the base Omron FINS row.
         // This one is the extended-command decode on top of it.
         aliases:   ["omron_fins_udp_detail", "fins_udp_detail"],
@@ -22539,6 +25095,7 @@ protocols! {
         color:     0x16A34A,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["keyence_kv_ethernet", "kv_ethernet", "keyence_kv"],
         blurb:     "Keyence KV-8000 and KV Nano series Ethernet protocol — PLC communication with ladder program upload/download, device memory read/write, remote run/stop control, and Keyence vision system trigger and inspection result relay over TCP/IP.",
     }
@@ -22548,6 +25105,7 @@ protocols! {
         color:     0x7C3AED,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["b_r_automation_pvi", "br_pvi", "automation_pvi"],
         blurb:     "B&R Automation PVI (Process Visualization Interface) — Automation Studio PVI transfer protocol for process variable access, cyclic data publication from the Automation Runtime, alarm handling, and device enumeration across B&R's POWERLINK and Ethernet networks.",
     }
@@ -22557,6 +25115,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["abb_robot_web_service", "abb_rw", "abb_robot_ws"],
         blurb:     "ABB Robot Web Services (RW 7.x) — RESTful bridge for RAPID-to-controller communication enabling motion data streaming, program upload/download, I/O signal monitoring, and real-time robot state subscription through the ABB controller's built-in web server.",
     }
@@ -22566,6 +25125,7 @@ protocols! {
         color:     0x2563EB,
         transport: Udp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["kuka_robot_sensor_interface", "kuka_rsi", "robot_sensor_iface"],
         blurb:     "KUKA Robot Sensor Interface (RSI) — real-time XML frame stream for sensor-guided robot motion with KUKA-specific sensor correction vectors, force/torque feedback integration, and position override commands transmitted cyclically over UDP at up to 1 kHz for closed-loop sensor-based robot control.",
     }
@@ -22575,6 +25135,7 @@ protocols! {
         color:     0xB45309,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["fanuc_focas2", "focas2", "fanuc_cnc"],
         blurb:     "FANUC FOCAS2 (FANUC Open CNC API Specification 2) — CNC and PMC data window protocol for reading/writing CNC variables, tool offset tables, macro variables, alarm history, servo/spindle tuning parameters, and PMC register access across Ethernet for Series 0i/30i/31i/32i controllers.",
     }
@@ -22584,6 +25145,7 @@ protocols! {
         color:     0x0E7490,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["yaskawa_memobus_tcp_detail", "memobus_tcp", "yaskawa_memobus"],
         blurb:     "Yaskawa MEMOBUS/TCP — extended register access protocol for Yaskawa drive and motion controllers with Sigma-7 EtherCAT to MEMOBUS gateway bridging, inverter parameter access beyond standard Modbus addressing, and multi-drive register block reads over TCP port 502.",
     }
@@ -22593,6 +25155,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      4,
+        status:    Dissected,
         aliases:   ["bosch_rexroth_open_core", "rexroth_open_core", "b_r_open_core"],
         blurb:     "Bosch Rexroth Open Core Interface — cross-platform communication protocol for IndraMotion MLC/XLC controllers enabling app-to-app bridging between IEC 61131-3 PLC programs, high-level language applications (C++, Java, C#), and IIoT cloud connectivity through the Open Core Engineering interface.",
     }
@@ -22896,8 +25459,7 @@ mod tests {
         out
     }
 
-    /// Every protocol in the registry must be one the dispatch can actually
-    /// produce.
+    /// Each row's `status` must match what the dispatch actually does.
     ///
     /// A variant no dissector ever assigns is a protocol that exists in the
     /// filter, the colour table and the education browser but can never appear
@@ -22905,13 +25467,20 @@ mod tests {
     /// `Pccc` had a registry row and a lesson while CIP, which tunnels it, was
     /// still labelling those packets as its own.
     ///
+    /// This used to demand that *every* protocol be produced, which 1941 rows
+    /// failed, so it was `#[ignore]`d and stopped protecting anything. Marking
+    /// a row `Declared` is now the supported way to say "not wired yet" â€” the
+    /// user-facing surfaces skip those â€” and this check enforces the field in
+    /// both directions: a `Dissected` row nothing produces is a lie, and a
+    /// `Declared` row that something *does* produce hides a working protocol
+    /// from the filter and the Learn tab.
+    ///
     /// The sources are read from disk rather than embedded, so the check needs
     /// no list of files to keep in step â€” which is the same kind of drift it
     /// exists to catch. Test modules are excluded deliberately: a variant only
     /// a test can produce is exactly what is being looked for.
     #[test]
-    #[ignore]
-    fn every_protocol_is_produced_by_some_dissector() {
+    fn declared_status_matches_the_dispatch() {
         use std::fs;
         use std::path::Path;
 
@@ -22942,14 +25511,28 @@ mod tests {
             read(&entry.path());
         }
 
-        let orphaned: Vec<String> = Protocol::ALL
+        let produced = |p: &Protocol| corpus.contains(&format!("Protocol::{p:?}"));
+
+        let lying: Vec<String> = Protocol::ALL
             .iter()
-            .filter(|p| !corpus.contains(&format!("Protocol::{p:?}")))
+            .filter(|p| p.support() == Support::Dissected && !produced(p))
             .map(|p| format!("{p:?}"))
             .collect();
         assert!(
-            orphaned.is_empty(),
-            "these protocols are in the registry but no dissector ever assigns them: {orphaned:?}"
+            lying.is_empty(),
+            "marked `status: Dissected` but no dissector assigns them — \
+             either wire them up or mark them `Declared`: {lying:?}"
+        );
+
+        let hidden: Vec<String> = Protocol::ALL
+            .iter()
+            .filter(|p| p.support() == Support::Declared && produced(p))
+            .map(|p| format!("{p:?}"))
+            .collect();
+        assert!(
+            hidden.is_empty(),
+            "a dissector produces these, but `status: Declared` keeps them out of \
+             the filter and the Learn tab — mark them `Dissected`: {hidden:?}"
         );
     }
 

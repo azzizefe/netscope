@@ -458,7 +458,9 @@ fn is_elevated() -> bool {
 /// starts drifting the moment a protocol is added.
 #[tauri::command]
 fn protocol_count() -> usize {
-    netscope_core::models::Protocol::ALL.len()
+    // `PRODUCED`, not `ALL`: the table also declares protocols no dissector
+    // assigns, and counting those would advertise coverage that does not exist.
+    netscope_core::models::Protocol::produced().len()
 }
 
 /// What the frontend needs to know about a protocol beyond its name.
@@ -1976,11 +1978,31 @@ mod tests {
         );
     }
 
+    /// The two answer different questions and must not be conflated.
+    ///
+    /// `protocol_count` is a claim shown to the user, so it counts only what a
+    /// capture can contain. `protocol_table` is a lookup the frontend consults
+    /// for a protocol it has *already* received, so it must answer for every
+    /// row — including ones only a future dissector will produce. This asserted
+    /// they were equal, which forced the displayed count to include ~1,900
+    /// protocols netscope cannot see.
     #[test]
-    fn protocol_count_matches_table_length() {
+    fn protocol_count_is_the_produced_subset_of_the_table() {
+        use netscope_core::models::Protocol;
         let count = protocol_count();
         let table = protocol_table();
-        assert_eq!(count, table.len());
+        assert_eq!(count, Protocol::produced().len());
+        assert!(
+            count < table.len(),
+            "every row is marked produced ({count}) — did the status field collapse?"
+        );
+        // The lookup must still cover the protocols the count advertises.
+        for p in Protocol::produced() {
+            let name = p.display_name();
+            if !name.is_empty() {
+                assert!(table.contains_key(name), "{name} missing from the lookup");
+            }
+        }
     }
 
     #[test]

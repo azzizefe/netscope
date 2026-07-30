@@ -42,7 +42,11 @@ use crate::models::{Packet, Protocol};
 fn known_protos() -> &'static [String] {
     static TOKENS: OnceLock<Vec<String>> = OnceLock::new();
     TOKENS.get_or_init(|| {
-        let mut tokens = crate::registry::filter_tokens();
+        // Only protocols the dispatch can produce. A predicate for a protocol
+        // no dissector assigns would parse and then match nothing, which lies
+        // to the user twice: it implies the filter worked and that the traffic
+        // was absent.
+        let mut tokens = crate::registry::produced_filter_tokens();
         tokens.extend(
             ["ip", "ipv4", "ipv6", "ai_traffic"]
                 .iter()
@@ -913,23 +917,46 @@ mod tests {
     /// hand-maintained keyword list, so they failed to parse and the UI quietly
     /// fell back to a substring search over the summary. Deriving the list from
     /// the registry fixed all of them at once.
+    /// Every protocol the dispatch can produce must be filterable by name.
+    ///
+    /// The hand-written token list this replaced included `kafka`, which has a
+    /// registry row and a lesson but no dissector and no port binding — so the
+    /// predicate parsed and then matched nothing, forever. Deriving the list
+    /// from `Protocol::produced()` means the check cannot assert a protocol
+    /// into existence.
     #[test]
-    fn every_registry_protocol_parses_as_a_predicate() {
-        for token in [
-            "redis",
-            "kafka",
-            "mongodb",
-            "bgp",
-            "smb",
-            "modbus",
-            "ospf",
-            "wireguard",
-        ] {
+    fn every_produced_protocol_parses_as_a_predicate() {
+        for p in crate::models::Protocol::produced() {
+            let display = p.display_name().to_ascii_lowercase();
+            let token = if crate::registry::is_lexable_token(&display) {
+                display
+            } else {
+                // Unlexable names (`OPC UA`, `EtherNet/IP`) reach the filter
+                // through an alias; the registry guarantees one exists.
+                match p.aliases().first() {
+                    Some(a) => (*a).to_string(),
+                    None => panic!("{p:?} has neither a lexable name nor an alias"),
+                }
+            };
             assert!(
-                Filter::parse(token).is_ok(),
-                "{token:?} should parse as a protocol predicate"
+                Filter::parse(&token).is_ok(),
+                "{token:?} ({p:?}) should parse as a protocol predicate"
             );
         }
+    }
+
+    /// A protocol with no dissector must *not* be a predicate — it would parse
+    /// and match nothing, which reads as "this traffic is absent" rather than
+    /// "netscope cannot see it". Those tokens fall through to substring search.
+    #[test]
+    fn declared_only_protocols_are_not_predicates() {
+        let produced: std::collections::HashSet<String> = crate::registry::produced_filter_tokens()
+            .into_iter()
+            .collect();
+        assert!(
+            !produced.contains("kafka"),
+            "kafka has no dissector; it must not be offered as a predicate"
+        );
     }
 
     /// `http3` and `qpack` were accepted keywords that resolved to no protocol

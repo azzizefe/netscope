@@ -8425,10 +8425,15 @@ const GENERIC_LESSON_TITLE: &str = "Unknown / other traffic";
 /// to *list* lessons cannot use `Protocol::ALL` directly: most of the registry
 /// falls through to one generic entry, and the reader would get the same
 /// paragraph over a thousand times. This returns the ones that say something.
+/// Only protocols the dispatch can actually produce are listed: teaching
+/// someone to recognise traffic netscope cannot show them is the same broken
+/// promise the registry's `status` field exists to prevent. The lessons for
+/// `Declared` protocols stay in the file — [`lesson`] still answers for them —
+/// they just do not appear in a browsable index.
 pub fn protocols_with_lessons() -> Vec<&'static Protocol> {
     Protocol::ALL
         .iter()
-        .filter(|p| lesson(p).title != GENERIC_LESSON_TITLE)
+        .filter(|p| p.is_produced() && lesson(p).title != GENERIC_LESSON_TITLE)
         .collect()
 }
 
@@ -8439,15 +8444,34 @@ mod lesson_listing_tests {
     /// The desktop app used to carry its own hardcoded array of ~50 protocols,
     /// so the Learn tab showed a fraction of what this file contains. Anything
     /// that enumerates lessons should get all of them.
+    ///
+    /// The bar was `> 1000` while the listing still included protocols no
+    /// dissector produces; now that it is limited to what a capture can
+    /// actually contain, the honest figure is ~446 of the ~590 produced
+    /// protocols. The rest of the registry keeps its lessons — they are simply
+    /// not browsable until something produces them.
     #[test]
     fn the_listing_covers_far_more_than_a_hand_written_selection() {
         let listed = protocols_with_lessons();
         assert!(
-            listed.len() > 1000,
+            listed.len() > 400,
             "only {} protocols have their own lesson — did the match collapse?",
             listed.len(),
         );
-        assert!(listed.len() < Protocol::ALL.len());
+        let produced = Protocol::produced().len();
+        assert!(
+            listed.len() <= produced,
+            "listed {} lessons but only {produced} protocols are produced",
+            listed.len(),
+        );
+    }
+
+    /// Nothing in the Learn tab may be a protocol netscope cannot show you.
+    #[test]
+    fn no_listed_protocol_is_unreachable() {
+        for p in protocols_with_lessons() {
+            assert!(p.is_produced(), "{p:?} has a lesson but no dissector");
+        }
     }
 
     /// The filter must exclude the fallback, or the list is padded with the
