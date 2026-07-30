@@ -5,6 +5,7 @@ pub mod dashboard;
 pub mod events;
 pub mod health;
 pub mod hunt;
+pub mod notifications_routes;
 pub mod reports;
 pub mod rules;
 pub mod sensors;
@@ -47,7 +48,8 @@ pub fn build_router(
             "/api/v1",
             auth_routes::routes(api_state.clone(), jwt.clone()),
         )
-        .nest("/api/v1", upgrade::routes(api_state.clone()));
+        .nest("/api/v1", upgrade::routes(api_state.clone()))
+        .nest("/api/v1", notifications_routes::routes(api_state.clone()));
 
     // `auth_middleware` establishes *who* the caller is; the permission each
     // route needs is declared on the route itself, inside each module's

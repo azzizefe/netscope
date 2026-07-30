@@ -343,6 +343,8 @@ mod tests {
             email_password: None,
             email_tls: None,
             slack_webhook_url: None,
+            discord_webhook_url: None,
+            custom_webhook_url: None,
             telegram_token: None,
             telegram_chat_id: None,
             syslog_host: None,

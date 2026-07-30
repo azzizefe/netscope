@@ -18,6 +18,8 @@ pub struct NotificationConfig {
     pub email_tls: Option<String>,
 
     pub slack_webhook_url: Option<String>,
+    pub discord_webhook_url: Option<String>,
+    pub custom_webhook_url: Option<String>,
     pub telegram_token: Option<String>,
     pub telegram_chat_id: Option<String>,
 
@@ -197,6 +199,53 @@ impl NotificationEngine {
             .post(&url)
             .send_json(payload)
             .map_err(|e| format!("Telegram notification failed: {}", e))?;
+        Ok(())
+    }
+
+    /// Discord Webhook Notification (§4.1.2)
+    pub fn send_discord(&self, alert_msg: &str, details_json: &str) -> Result<(), String> {
+        let url = self
+            .config
+            .discord_webhook_url
+            .as_ref()
+            .ok_or("No Discord webhook URL configured")?;
+        let payload = serde_json::json!({
+            "content": format!("🚨 **Netscope Security Alert** 🚨\n{}", alert_msg),
+            "embeds": [
+                {
+                    "title": "Threat Metadata & Event Details",
+                    "description": details_json,
+                    "color": 15158332 // Red
+                }
+            ]
+        });
+
+        let client = ureq::Agent::new();
+        client
+            .post(url)
+            .send_json(payload)
+            .map_err(|e| format!("Discord notification failed: {}", e))?;
+        Ok(())
+    }
+
+    /// Custom JSON Webhook Notification (§4.1.3)
+    pub fn send_custom_webhook(&self, alert_msg: &str, target_url: Option<&str>) -> Result<(), String> {
+        let url = target_url
+            .or(self.config.custom_webhook_url.as_deref())
+            .ok_or("No custom webhook URL configured")?;
+
+        let payload = serde_json::json!({
+            "source": "netscope-threat-engine",
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "alert": alert_msg,
+            "status": "triggered"
+        });
+
+        let client = ureq::Agent::new();
+        client
+            .post(url)
+            .send_json(payload)
+            .map_err(|e| format!("Custom webhook notification failed: {}", e))?;
         Ok(())
     }
 
@@ -423,6 +472,8 @@ mod tests {
             email_password: None,
             email_tls: None,
             slack_webhook_url: None,
+            discord_webhook_url: None,
+            custom_webhook_url: None,
             telegram_token: None,
             telegram_chat_id: None,
             syslog_host: None,
@@ -529,6 +580,8 @@ mod tests {
             email_password: None,
             email_tls: None,
             slack_webhook_url: None,
+            discord_webhook_url: None,
+            custom_webhook_url: None,
             telegram_token: None,
             telegram_chat_id: None,
             syslog_host: Some("127.0.0.1".to_string()),

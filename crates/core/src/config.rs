@@ -210,6 +210,8 @@ impl Notifications {
             email_password: opt(&self.email_password),
             email_tls: opt(&self.email_tls),
             slack_webhook_url: opt(&self.slack_webhook_url),
+            discord_webhook_url: None,
+            custom_webhook_url: None,
             telegram_token: opt(&self.telegram_token),
             telegram_chat_id: opt(&self.telegram_chat_id),
             syslog_host: opt(&self.syslog_host),
