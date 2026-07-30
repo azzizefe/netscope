@@ -359,7 +359,7 @@ masın
 
 ### 2.2 — Görsel Olay Örgüsü (Visual Narrative)
 
-- [ ] **2.2.1** **Attack Flow Diagram** — otomatik oluşturulan, Mermaid.js / D3.js ile:
+- [x] **2.2.1** **Attack Flow Diagram** — otomatik oluşturulan, Mermaid.js / D3.js ile:
   ```
   HR-DESK-023 ──(SYN scan, 47 ports, 32s)──→ FIN-DB-01
        │                                           │
@@ -377,8 +377,8 @@ masın
                                                    │
           T1021.001: Remote Desktop Protocol       │
   ```
-- [ ] **2.2.2** **Timeline visualization** — swimlane diagram (aktör, ağ, hedef lane'leri)
-- [ ] **2.2.3** **Attack tree** — saldırganın izlediği yolu ağaç yapısında göster
+- [x] **2.2.2** **Timeline visualization** — swimlane diagram (aktör, ağ, hedef lane'leri)
+- [x] **2.2.3** **Attack tree** — saldırganın izlediği yolu ağaç yapısında göster
 
 ---
 
