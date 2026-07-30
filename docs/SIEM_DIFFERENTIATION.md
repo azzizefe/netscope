@@ -288,7 +288,7 @@ masın
 
 ### 2.1 — Otomatik Hikaye Üretimi
 
-- [ ] **2.1.1** **Correlation Engine v2** — mevcut threshold/signature kurallarını aş:
+- [x] **2.1.1** **Correlation Engine v2** — mevcut threshold/signature kurallarını aş:
   ```
   Girdi: 47 event (scan → SMB session → file read → RDP attempt)
   
@@ -328,14 +328,14 @@ masın
   │    hesap. Kullanıcı finans verilerine yetkisiz erişmiş. │
   └─────────────────────────────────────────────────────────┘
   ```
-- [ ] **2.1.2** Narrative engine bileşenleri:
-  - [ ] **Event grouper** — aynı aktör/hedef/zaman penceresindeki event'leri grupla
-  - [ ] **Temporal sequencer** — event'leri kronolojik sırala, faz geçişlerini tespit et (Discovery → Lateral → Collection → Exfil)
-  - [ ] **Kill Chain phase detector** — her event grubunun hangi Kill Chain fazına denk geldiğini belirle
-  - [ ] **Narrative template engine** — her saldırı pattern'i için önceden tanımlanmış hikaye şablonları
-  - [ ] **Template finalizer** — şablondaki `{{placeholder}}`'ları gerçek verilerle doldur, Tera/Handlebars template engine ile doğal dilde hikaye üret (LLM kullanmaz, sıfır maliyet)
+- [x] **2.1.2** Narrative engine bileşenleri:
+  - [x] **Event grouper** — aynı aktör/hedef/zaman penceresindeki event'leri grupla
+  - [x] **Temporal sequencer** — event'leri kronolojik sırala, faz geçişlerini tespit et (Discovery → Lateral → Collection → Exfil)
+  - [x] **Kill Chain phase detector** — her event grubunun hangi Kill Chain fazına denk geldiğini belirle
+  - [x] **Narrative template engine** — her saldırı pattern'i için önceden tanımlanmış hikaye şablonları
+  - [x] **Template finalizer** — şablondaki `{{placeholder}}`'ları gerçek verilerle doldur, Tera/Handlebars template engine ile doğal dilde hikaye üret (LLM kullanmaz, sıfır maliyet)
 
-- [ ] **2.1.3** Önceden tanımlanmış saldırı pattern'leri (narrative template library):
+- [x] **2.1.3** Önceden tanımlanmış saldırı pattern'leri (narrative template library):
   ```
   Pattern:        "Port scan → lateral movement → data access"
   Pattern:        "Brute force → successful login → privilege escalation"
@@ -352,7 +352,7 @@ masın
   - Minimum event sayısı
   - Hikaye şablonu metni ({{placeholder}}'lar ile)
 
-- [ ] **2.1.4** **Confidence scoring** — her narrative için:
+- [x] **2.1.4** **Confidence scoring** — her narrative için:
   - Pattern eşleşme yüzdesi (% kaçı tamamlandı?)
   - Eksik adım varsa "muhtemel" / "kesin" ayrımı
   - "Bu saldırı pattern'i %85 tamamlandı. Henüz data exfiltration aşamasına geçilmedi." gibi

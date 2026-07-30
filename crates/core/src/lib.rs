@@ -58,6 +58,7 @@ pub mod models;
 pub mod mitre_killchain;
 pub mod multi_tenancy;
 pub mod names;
+pub mod narrative_correlation;
 pub mod network_identity;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod notifications;
