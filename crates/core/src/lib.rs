@@ -33,6 +33,7 @@ pub mod dissectors;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
+pub mod enriched_event;
 // `escalation` and `notifications` both reach the network through `ureq`, a
 // blocking HTTP client that is not built for wasm32 and is declared only for
 // the other targets.

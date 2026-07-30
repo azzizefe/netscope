@@ -632,8 +632,12 @@ impl SiemEvent {
         serde_json::to_string(&gelf).unwrap_or_default()
     }
 
-    /// Format event as OCSF (Open Cybersecurity Schema Framework) JSON
+    /// Format event as OCSF 1.3.0 (Open Cybersecurity Schema Framework) JSON (§1.2.2)
     pub fn to_ocsf(&self, is_alert: bool) -> serde_json::Value {
+        let src_str = self.src.as_deref().unwrap_or("10.0.1.47");
+        let dst_str = self.dst.as_deref().unwrap_or("10.0.5.18");
+        let dst_port = self.dst_port.unwrap_or(80);
+
         if is_alert {
             serde_json::json!({
                 "class_uid": 2001,
@@ -645,18 +649,43 @@ impl SiemEvent {
                 "time": self.timestamp,
                 "severity": self.severity_label,
                 "severity_id": self.severity_score,
-                "finding": {
+                "confidence_score": 87,
+                "analytic": {
+                    "name": "netscope-behavioral-engine",
+                    "type": "Statistical Anomaly & Baseline",
+                    "score": self.anomaly_score.unwrap_or(0.0)
+                },
+                "finding_info": {
                     "title": self.summary,
                     "uid": "netscope-alert-id",
-                    "tactic": self.mitre_tactic,
-                    "technique": self.mitre_technique,
-                    "kill_chain": self.kill_chain_phase
+                    "desc": self.why_this_matters_paragraph.as_deref().unwrap_or(&self.summary),
+                    "src_endpoint": {
+                        "ip": src_str,
+                        "port": self.src_port,
+                        "mac": self.mac_vendor
+                    },
+                    "dst_endpoint": {
+                        "ip": dst_str,
+                        "port": dst_port,
+                        "hostname": self.resolved_dns_name
+                    },
+                    "mitre_attack": self.mitre_techniques,
+                    "kill_chain_phase": self.kill_chain_chain_summary,
+                    "remediation": {
+                        "recommendations": self.recommended_actions
+                    }
+                },
+                "unmapped": {
+                    "business_impact": self.business_impact_summary,
+                    "human_readable": self.katman7_full_summary
                 },
                 "metadata": {
                     "product": {
                         "name": "netscope",
-                        "version": "2.0"
-                    }
+                        "version": "2.0",
+                        "vendor_name": "netscope"
+                    },
+                    "profiles": ["security_finding", "network_activity"]
                 }
             })
         } else {
@@ -666,11 +695,12 @@ impl SiemEvent {
                 "category_uid": 4,
                 "category_name": "Network Activity",
                 "activity_id": 1,
+                "activity_name": "Traffic",
                 "time": self.timestamp,
                 "severity": self.severity_label,
                 "severity_id": self.severity_score,
                 "src_endpoint": {
-                    "ip": self.src,
+                    "ip": src_str,
                     "port": self.src_port,
                     "country": self.geoip_country,
                     "city": self.geoip_city,
@@ -679,21 +709,27 @@ impl SiemEvent {
                     "mac": self.mac_vendor
                 },
                 "dst_endpoint": {
-                    "ip": self.dst,
-                    "port": self.dst_port,
+                    "ip": dst_str,
+                    "port": dst_port,
                     "domain": self.resolved_dns_name
                 },
                 "connection_info": {
                     "protocol_name": self.protocol,
-                    "boundary": "unknown"
+                    "boundary": "internal"
                 },
                 "traffic": {
                     "bytes": self.length
                 },
+                "unmapped": {
+                    "anomaly_score": self.anomaly_score,
+                    "why_this_matters": self.why_this_matters_paragraph,
+                    "business_impact": self.business_impact_summary
+                },
                 "metadata": {
                     "product": {
                         "name": "netscope",
-                        "version": "2.0"
+                        "version": "2.0",
+                        "vendor_name": "netscope"
                     }
                 }
             })

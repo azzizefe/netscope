@@ -545,9 +545,21 @@ mod tests {
         pipeline.join();
     }
 
-    /// Throughput sanity check mirroring `bench_dissect_throughput`, but
-    /// through the whole ring + rayon pipeline.
+    /// Throughput measurement mirroring `bench_dissect_throughput`, but
+    /// through the whole ring + rayon pipeline — and ignored by default for the
+    /// same reason: it asserts on wall-clock rate, so under `cargo test`'s
+    /// parallel load it measures how busy the machine is rather than what the
+    /// pipeline costs. Left un-ignored it fails on loaded machines and slow CI
+    /// runners for reasons that have nothing to do with the code, which is a
+    /// bad first impression for anyone who just cloned the repo.
+    ///
+    /// Nothing functional is lost: `dissects_in_order_across_batches` already
+    /// asserts every pushed frame comes out, in order, without timing anything.
+    ///
+    /// Run it on its own:
+    ///   cargo test --release bench_pipeline_throughput -- --ignored --nocapture
     #[test]
+    #[ignore = "timing-sensitive: measures machine load when run in parallel"]
     fn bench_pipeline_throughput() {
         const COUNT: usize = 10_000;
         let running = Arc::new(AtomicBool::new(true));

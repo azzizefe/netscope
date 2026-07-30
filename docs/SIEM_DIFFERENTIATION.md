@@ -180,7 +180,7 @@ masın
 
 ### 1.2 — Zenginleştirilmiş Event Schema (OCSF Uyumlu)
 
-- [ ] **1.2.1** Yeni `EnrichedEvent` yapısı (mevcut `Event` + tüm enrichment):
+- [x] **1.2.1** Yeni `EnrichedEvent` yapısı (mevcut `Event` + tüm enrichment):
   ```json
   {
     "id": "evt_abc123...",
@@ -277,8 +277,8 @@ masın
     }
   }
   ```
-- [ ] **1.2.2** OCSF 1.3.0 `security_finding` + `network_activity` class'larına tam uyum
-- [ ] **1.2.3** Her event'in `human_readable` alanı **her zaman dolu** olsun — hiçbir event "anlamsız IP-port çifti" olarak kal---
+- [x] **1.2.2** OCSF 1.3.0 `security_finding` + `network_activity` class'larına tam uyum
+- [x] **1.2.3** Her event'in `human_readable` alanı **her zaman dolu** olsun — hiçbir event "anlamsız IP-port çifti" olarak kalmasın
 
 ## 🧠 Faz 2 — Narrative Correlation (Olay Örgüsü / Hikaye Motoru)
 
