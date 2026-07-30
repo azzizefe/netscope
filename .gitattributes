@@ -6,6 +6,15 @@
 *.ico binary
 *.icns binary
 
+# Capture fixtures — must never be line-ending converted. `text=auto` above
+# would only guess, and a pcap whose first 8000 bytes hold no NUL byte would be
+# guessed wrong, silently corrupted on a Windows checkout, and fail the
+# integration tests with an unreadable-file error.
+*.pcap binary
+*.pcapng binary
+*.cap binary
+
 # Compiled / binary artifacts
 *.rlib binary
 *.lib binary
+*.wasm binary

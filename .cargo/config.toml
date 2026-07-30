@@ -1,0 +1,16 @@
+[env]
+LIBPCAP_LIBDIR = { value = "npcap-sdk/Lib/x64", relative = true }
+
+# rustc's LLVM optimize pass overflows its default 8 MB worker stack while
+# building the test binary, and dies with STATUS_STACK_OVERFLOW (0xc00000fd)
+# rather than a diagnostic — so `cargo test` reads as "the crate does not
+# compile". The cause is sheer size: `dissectors.rs` dispatches 400+ modules,
+# and the generated match is deep enough to recurse past the default.
+#
+# It surfaces intermittently, because only the modules cargo actually rebuilds
+# get re-optimised — a warm incremental build can miss it and the next one hit
+# it. `cargo check` never codegens, so it always looks fine.
+#
+# Cargo does not override a value already in the environment, so exporting a
+# larger RUST_MIN_STACK still wins over this floor.
+RUST_MIN_STACK = "134217728" # 128 MB
