@@ -132,7 +132,7 @@ impl AuditChainManager {
         let store = self.inner.read();
         let mut expected_prev_hash = GENESIS_HASH.to_string();
 
-        for (_idx, entry) in store.records.iter().enumerate() {
+        for entry in store.records.iter() {
             if entry.prev_hash != expected_prev_hash {
                 return AuditVerificationReport {
                     is_valid: false,
