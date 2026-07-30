@@ -36,6 +36,7 @@ pub fn routes(_state: Arc<ApiState>) -> Router {
         .route("/education", get(get_education))
         .route("/gamification", get(get_gamification))
         .route("/metrics", get(get_quality_metrics))
+        .route("/exclusive", get(get_exclusive_features))
 }
 
 #[derive(Debug, Deserialize)]
@@ -126,4 +127,9 @@ async fn export_asyncapi() -> Json<serde_json::Value> {
 async fn get_quality_metrics() -> Json<serde_json::Value> {
     let metrics = netscope_core::siem_quality_metrics::SiemQualityMetricsEngine::get_quality_metrics();
     Json(serde_json::to_value(&metrics).unwrap_or_default())
+}
+
+async fn get_exclusive_features() -> Json<serde_json::Value> {
+    let report = netscope_core::netscope_exclusive_features::NetscopeExclusiveEngine::get_exclusive_report();
+    Json(serde_json::to_value(&report).unwrap_or_default())
 }

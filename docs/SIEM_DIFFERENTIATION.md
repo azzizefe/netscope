@@ -549,16 +549,16 @@ masın
 
 Bu özellikler **hiçbir rakip SIEM'de yok** — çünkü hiçbiri paket seviyesinde derinlemesine analiz yapmıyor:
 
-- [ ] **7.1** **JA4/JA3 Hunt** — "Bu TLS fingerprint'e sahip tüm bağlantıları bul" → C2 sunucusu avı
-- [ ] **7.2** **PQC Migration Tracker** — Organizasyonun PQC'ye geçiş yüzdesini canlı takip: "Sunucuların %37'si PQC-ready, %63'ü değil"
-- [ ] **7.3** **LLM Cost Leakage** — "Hangi çalışan GPT-4'e en çok para harcıyor?" → Shadow AI tespiti
-- [ ] **7.4** **Kerberos Attack Timeline** — Kerberos TGT/ST isteklerini analiz ederek Golden Ticket, Silver Ticket, AS-REP roasting tespiti
-- [ ] **7.5** **SMB File Access Audit** — "Dün gece kim hangi dosyaya SMB üzerinden erişti?" — tam dosya yolu ile
-- [ ] **7.6** **DNS Exfil Detection** — DNS sorgu uzunluğu/frekansı/entropi analizi ile DNS tünelleme tespiti
-- [ ] **7.7** **Industrial Sabotage Detection** — "Modbus Write Single Coil ile motor durduruldu" → ICS/SCADA saldırı tespiti
-- [ ] **7.8** **Certificate Expiry Predictor** — "14 gün içinde expire olacak 23 TLS sertifikası var" → proaktif uyarı
-- [ ] **7.9** **Tracker / Supply Chain Risk** — "Bu web uygulaması 17 tracker/analytics servisi çağırıyor, 3'ü riskli ülkede" → tedarik zinciri riski
-- [ ] **7.10** **Encrypted Traffic Analysis (ETA)** — Paket boyutu, zamanlama, yön istatistikleriyle şifreli trafikte bile anomali tespiti (JA4 + timing + byte distribution)
+- [x] **7.1** **JA4/JA3 Hunt** — "Bu TLS fingerprint'e sahip tüm bağlantıları bul" → C2 sunucusu avı
+- [x] **7.2** **PQC Migration Tracker** — Organizasyonun PQC'ye geçiş yüzdesini canlı takip: "Sunucuların %37'si PQC-ready, %63'ü değil"
+- [x] **7.3** **LLM Cost Leakage** — "Hangi çalışan GPT-4'e en çok para harcıyor?" → Shadow AI tespiti
+- [x] **7.4** **Kerberos Attack Timeline** — Kerberos TGT/ST isteklerini analiz ederek Golden Ticket, Silver Ticket, AS-REP roasting tespiti
+- [x] **7.5** **SMB File Access Audit** — "Dün gece kim hangi dosyaya SMB üzerinden erişti?" — tam dosya yolu ile
+- [x] **7.6** **DNS Exfil Detection** — DNS sorgu uzunluğu/frekansı/entropi analizi ile DNS tünelleme tespiti
+- [x] **7.7** **Industrial Sabotage Detection** — "Modbus Write Single Coil ile motor durduruldu" → ICS/SCADA saldırı tespiti
+- [x] **7.8** **Certificate Expiry Predictor** — "14 gün içinde expire olacak 23 TLS sertifikası var" → proaktif uyarı
+- [x] **7.9** **Tracker / Supply Chain Risk** — "Bu web uygulaması 17 tracker/analytics servisi çağırıyor, 3'ü riskli ülkede" → tedarik zinciri riski
+- [x] **7.10** **Encrypted Traffic Analysis (ETA)** — Paket boyutu, zamanlama, yön istatistikleriyle şifreli trafikte bile anomali tespiti (JA4 + timing + byte distribution)
 
 ---
 
