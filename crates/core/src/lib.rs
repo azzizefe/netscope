@@ -36,6 +36,9 @@ pub mod dissectors;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
+// Built on `siem`, which is itself `cfg(not(wasm32))`, so it has to carry the
+// same gate or the wasm32 build fails on `crate::siem` not existing.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod enriched_event;
 // `escalation` and `notifications` both reach the network through `ureq`, a
 // blocking HTTP client that is not built for wasm32 and is declared only for

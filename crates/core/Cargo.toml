@@ -47,6 +47,14 @@ ccm = "0.5"
 # wrong under sudo and spoofable from the environment.
 libc = "0.2"
 
+# `uuid` refuses to build for wasm32 unless it is told where randomness comes
+# from, so adding it as a plain dependency broke `cargo build -p netscope-wasm
+# --target wasm32-unknown-unknown` — the display-filter engine the desktop
+# frontend loads, and CI's whole `frontend` job. Features are additive across
+# target sections, so this only extends the entry above for wasm builds.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+uuid = { version = "1", features = ["v4", "serde", "js"] }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 pcap = "2"
 # Three crates in this workspace reach `libsqlite3-sys` — here, the agent's

@@ -175,19 +175,24 @@ impl NotificationEngine {
         Ok(())
     }
 
-    /// 2.4.5 Telegram Bot API
+    /// 2.4.5 Telegram Bot API (§4.1.1)
     pub fn send_telegram(&self, alert_msg: &str) -> Result<(), String> {
         let token = self
             .config
             .telegram_token
             .as_ref()
             .ok_or("No Telegram token configured")?;
+        let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
+        self.send_telegram_to_url(alert_msg, &url)
+    }
+
+    /// Send Telegram notification to a specific endpoint URL (used for custom endpoints/testing).
+    pub fn send_telegram_to_url(&self, alert_msg: &str, endpoint_url: &str) -> Result<(), String> {
         let chat_id = self
             .config
             .telegram_chat_id
             .as_ref()
             .ok_or("No Telegram chat ID configured")?;
-        let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
         let payload = serde_json::json!({
             "chat_id": chat_id,
             "text": format!("🚨 *Netscope Alert* 🚨\n\n{}", alert_msg),
@@ -196,7 +201,7 @@ impl NotificationEngine {
 
         let client = ureq::Agent::new();
         client
-            .post(&url)
+            .post(endpoint_url)
             .send_json(payload)
             .map_err(|e| format!("Telegram notification failed: {}", e))?;
         Ok(())
@@ -247,6 +252,41 @@ impl NotificationEngine {
             .send_json(payload)
             .map_err(|e| format!("Custom webhook notification failed: {}", e))?;
         Ok(())
+    }
+
+    /// Dispatch high-severity alert notifications across all configured channels
+    /// (Telegram, Discord, Slack, Custom Webhook, Email, Syslog).
+    /// Returns a list of tuples containing channel names and their execution results.
+    pub fn dispatch_all_configured(
+        &self,
+        alert_msg: &str,
+        details_json: &str,
+    ) -> Vec<(&'static str, Result<(), String>)> {
+        let mut results = Vec::new();
+
+        if self.config.telegram_token.is_some() && self.config.telegram_chat_id.is_some() {
+            results.push(("telegram", self.send_telegram(alert_msg)));
+        }
+        if self.config.discord_webhook_url.is_some() {
+            results.push(("discord", self.send_discord(alert_msg, details_json)));
+        }
+        if self.config.slack_webhook_url.is_some() {
+            results.push(("slack", self.send_slack(alert_msg, details_json)));
+        }
+        if self.config.custom_webhook_url.is_some() {
+            results.push(("custom_webhook", self.send_custom_webhook(alert_msg, None)));
+        }
+        if self.config.email_smtp_host.is_some() {
+            results.push((
+                "email",
+                self.send_email(&format!("🚨 Netscope Alert: {}", alert_msg), alert_msg),
+            ));
+        }
+        if self.config.syslog_host.is_some() {
+            results.push(("syslog", self.send_syslog(alert_msg)));
+        }
+
+        results
     }
 
     // ---- On-call paging ---------------------------------------------------
@@ -607,6 +647,144 @@ mod tests {
                     || e.contains("eventcreate"),
                 "unhelpful event-log error: {e}"
             ),
+        }
+    }
+
+    fn start_mock_http_server() -> (String, std::sync::mpsc::Receiver<String>) {
+        use std::io::{BufRead, BufReader, Read, Write};
+        use std::net::TcpListener;
+        use std::sync::mpsc::channel;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let (tx, rx) = channel();
+
+        std::thread::spawn(move || {
+            while let Ok((sock, _)) = listener.accept() {
+                let mut reader = BufReader::new(sock.try_clone().unwrap());
+                let mut out = sock;
+                let mut content_length: usize = 0;
+                let mut line = String::new();
+
+                while reader.read_line(&mut line).is_ok() {
+                    if line == "\r\n" || line == "\n" {
+                        break;
+                    }
+                    if line.to_lowercase().starts_with("content-length:") {
+                        if let Some(val) = line.split(':').nth(1) {
+                            content_length = val.trim().parse().unwrap_or(0);
+                        }
+                    }
+                    line.clear();
+                }
+
+                let mut body = vec![0u8; content_length];
+                if content_length > 0 {
+                    let _ = reader.read_exact(&mut body);
+                }
+
+                let body_str = String::from_utf8_lossy(&body).to_string();
+                let _ = tx.send(body_str);
+
+                let resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 15\r\n\r\n{\"ok\":true}";
+                let _ = out.write_all(resp.as_bytes());
+            }
+        });
+
+        (format!("http://127.0.0.1:{}", port), rx)
+    }
+
+    #[test]
+    fn test_telegram_notification() {
+        let (url, rx) = start_mock_http_server();
+        let config = NotificationConfig {
+            telegram_token: Some("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11".to_string()),
+            telegram_chat_id: Some("987654321".to_string()),
+            ..blank_config()
+        };
+        let engine = NotificationEngine::new(config);
+
+        let res = engine.send_telegram_to_url("High severity attack detected", &url);
+        assert!(res.is_ok(), "Telegram send failed: {:?}", res);
+
+        let received_payload = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(received_payload.contains("987654321"));
+        assert!(received_payload.contains("High severity attack detected"));
+        assert!(received_payload.contains("Markdown"));
+    }
+
+    #[test]
+    fn test_discord_notification() {
+        let (url, rx) = start_mock_http_server();
+        let config = NotificationConfig {
+            discord_webhook_url: Some(url),
+            ..blank_config()
+        };
+        let engine = NotificationEngine::new(config);
+
+        let res = engine.send_discord("Malware activity", "{\"ip\": \"192.168.1.50\"}");
+        assert!(res.is_ok(), "Discord send failed: {:?}", res);
+
+        let received_payload = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(received_payload.contains("Netscope Security Alert"));
+        assert!(received_payload.contains("Malware activity"));
+        assert!(received_payload.contains("192.168.1.50"));
+    }
+
+    #[test]
+    fn test_slack_notification() {
+        let (url, rx) = start_mock_http_server();
+        let config = NotificationConfig {
+            slack_webhook_url: Some(url),
+            ..blank_config()
+        };
+        let engine = NotificationEngine::new(config);
+
+        let res = engine.send_slack("Exfiltration attempt", "{\"bytes\": 5000000}");
+        assert!(res.is_ok(), "Slack send failed: {:?}", res);
+
+        let received_payload = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(received_payload.contains("Netscope Alert"));
+        assert!(received_payload.contains("Exfiltration attempt"));
+        assert!(received_payload.contains("5000000"));
+    }
+
+    #[test]
+    fn test_custom_webhook_notification() {
+        let (url, rx) = start_mock_http_server();
+        let config = NotificationConfig {
+            custom_webhook_url: Some(url),
+            ..blank_config()
+        };
+        let engine = NotificationEngine::new(config);
+
+        let res = engine.send_custom_webhook("Port scan detected", None);
+        assert!(res.is_ok(), "Custom webhook send failed: {:?}", res);
+
+        let received_payload = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(received_payload.contains("netscope-threat-engine"));
+        assert!(received_payload.contains("Port scan detected"));
+        assert!(received_payload.contains("triggered"));
+    }
+
+    #[test]
+    fn test_dispatch_all_configured() {
+        let (url1, _rx1) = start_mock_http_server();
+        let (url2, _rx2) = start_mock_http_server();
+
+        let config = NotificationConfig {
+            discord_webhook_url: Some(url1),
+            custom_webhook_url: Some(url2),
+            syslog_host: Some("127.0.0.1".to_string()),
+            syslog_port: Some(5140),
+            ..blank_config()
+        };
+        let engine = NotificationEngine::new(config);
+
+        let results = engine.dispatch_all_configured("Critical Breach", "{\"src\": \"10.0.0.1\"}");
+        assert_eq!(results.len(), 3);
+        for (channel, res) in results {
+            assert!(res.is_ok(), "Channel {} failed: {:?}", channel, res);
         }
     }
 }

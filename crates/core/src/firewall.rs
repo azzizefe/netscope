@@ -160,7 +160,19 @@ mod imp {
         //
         // SAFETY: `geteuid` is a pure read of the calling process's effective
         // uid. It takes no arguments, cannot fail, and touches no memory.
-        unsafe { libc::geteuid() == 0 }
+        //
+        // `libc` is a `cfg(unix)` dependency but this block is `not(windows)`,
+        // which also selects wasm32-unknown-unknown — where the crate is absent
+        // and the build failed. There is no ambient process privilege in a
+        // browser sandbox, so the honest answer there is "not elevated".
+        #[cfg(unix)]
+        {
+            unsafe { libc::geteuid() == 0 }
+        }
+        #[cfg(not(unix))]
+        {
+            false
+        }
     }
 }
 

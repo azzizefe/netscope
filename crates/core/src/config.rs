@@ -192,6 +192,13 @@ pub struct Notifications {
 impl Notifications {
     /// Convert into the engine's config, mapping empty strings to `None` so the
     /// engine's own "not configured" checks stay the single source of truth.
+    ///
+    /// Gated like the module it returns: `notifications` is
+    /// `#[cfg(not(target_arch = "wasm32"))]` in `lib.rs` (it sends mail and
+    /// opens sockets), so referring to it unconditionally broke the wasm32
+    /// build of this crate — and with it the display-filter engine the desktop
+    /// frontend loads.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn to_engine_config(&self) -> crate::notifications::NotificationConfig {
         fn opt(s: &str) -> Option<String> {
             let t = s.trim();
@@ -254,6 +261,10 @@ impl Escalation {
     /// out or most of the year would have nobody on call — and the engine
     /// reports that as "Primary: None" rather than as an error. Rotating a
     /// short list across every week is what makes two names enough.
+    ///
+    /// Gated for the same reason as [`Notifications::to_engine_config`]: the
+    /// `escalation` module is not built for wasm32.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn shift_rotations(&self) -> HashMap<u32, crate::escalation::ShiftRotation> {
         let people = &self.oncall;
         if people.is_empty() {
