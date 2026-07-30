@@ -29,6 +29,60 @@ pub fn routes(_state: Arc<ApiState>) -> Router {
         .route("/stix", get(export_stix))
         .route("/sigma", get(export_sigma))
         .route("/asyncapi", get(export_asyncapi))
+        .route("/presets", get(get_presets))
+        .route("/autocomplete", get(get_autocomplete))
+        .route("/explain", get(get_explain))
+        .route("/pivot", get(get_pivot))
+        .route("/education", get(get_education))
+        .route("/gamification", get(get_gamification))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct QueryParams {
+    pub q: Option<String>,
+    pub field: Option<String>,
+    pub val: Option<String>,
+    pub pivot_type: Option<String>,
+    pub proto: Option<String>,
+    pub analyst: Option<String>,
+}
+
+async fn get_presets() -> Json<serde_json::Value> {
+    let presets = netscope_core::analyst_command_center::AnalystCommandCenterEngine::get_saved_filter_templates();
+    Json(serde_json::json!({ "presets": presets }))
+}
+
+async fn get_autocomplete(Query(qp): Query<QueryParams>) -> Json<serde_json::Value> {
+    let prefix = qp.q.as_deref().unwrap_or("");
+    let suggestions = netscope_core::analyst_command_center::AnalystCommandCenterEngine::get_autocomplete_suggestions(prefix);
+    Json(serde_json::to_value(&suggestions).unwrap_or_default())
+}
+
+async fn get_explain(Query(qp): Query<QueryParams>) -> Json<serde_json::Value> {
+    let filter_q = qp.q.as_deref().unwrap_or("smb");
+    let field = qp.field.as_deref().unwrap_or("protocol");
+    let val = qp.val.as_deref().unwrap_or("SMB");
+    let explanation = netscope_core::analyst_command_center::AnalystCommandCenterEngine::explain_search_match(filter_q, field, val);
+    Json(serde_json::to_value(&explanation).unwrap_or_default())
+}
+
+async fn get_pivot(Query(qp): Query<QueryParams>) -> Json<serde_json::Value> {
+    let ptype = qp.pivot_type.as_deref().unwrap_or("IP");
+    let pval = qp.val.as_deref().unwrap_or("10.0.1.47");
+    let pivot = netscope_core::analyst_command_center::AnalystCommandCenterEngine::generate_pivot(ptype, pval);
+    Json(serde_json::to_value(&pivot).unwrap_or_default())
+}
+
+async fn get_education(Query(qp): Query<QueryParams>) -> Json<serde_json::Value> {
+    let proto = qp.proto.as_deref().unwrap_or("SMB");
+    let edu = netscope_core::analyst_command_center::AnalystCommandCenterEngine::get_alert_education(proto);
+    Json(serde_json::to_value(&edu).unwrap_or_default())
+}
+
+async fn get_gamification(Query(qp): Query<QueryParams>) -> Json<serde_json::Value> {
+    let analyst = qp.analyst.as_deref().unwrap_or("efe.akkaya");
+    let gami = netscope_core::analyst_command_center::AnalystCommandCenterEngine::get_analyst_gamification(analyst);
+    Json(serde_json::to_value(&gami).unwrap_or_default())
 }
 
 async fn get_capability_matrix() -> Json<serde_json::Value> {

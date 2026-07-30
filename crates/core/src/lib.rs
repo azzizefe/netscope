@@ -12,6 +12,7 @@
 // `remote` and `discover` were left ungated while depending on `capture`,
 // `db`, `pipeline` and `pcap`, which are correctly gated.
 pub mod ai_traffic;
+pub mod analyst_command_center;
 pub mod baseline;
 pub mod business_impact;
 // Gated because it exports alerts through `siem`, which is itself gated.
