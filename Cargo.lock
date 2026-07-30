@@ -3207,6 +3207,7 @@ dependencies = [
  "futures",
  "http",
  "jsonwebtoken",
+ "netscope-core",
  "parking_lot",
  "prost",
  "rand 0.8.7",

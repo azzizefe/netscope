@@ -298,6 +298,7 @@
       <button class="tab" role="tab" aria-selected="false" data-view="script" data-i18n="tab.script">⚡ Script</button>
       <button class="tab" role="tab" aria-selected="false" data-view="learn" data-i18n="tab.learn">🎓 Learn</button>
       <button class="tab" role="tab" aria-selected="false" data-view="soc" data-i18n="tab.soc">🛡 SOC</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="siem">🔬 SIEM</button>
       <select id="split-view-select" class="split-view-select hidden" aria-label="Split view tab" style="margin-left:auto; background:var(--bg-card); color:var(--text); border:1px solid var(--border); padding:2px 8px; border-radius:4px">
         <option value="none">— Select Split View —</option>
         <option value="connections" data-i18n="tab.connections">Connections</option>
@@ -659,6 +660,9 @@
           </div>
         </div>
       </section>
+
+      <!-- SIEM View — Explanatory SIEM Command Center -->
+      <section id="view-siem" class="view"></section>
     </main>
 
     <!-- Right-click context menu on packet rows (Follow Stream, filters, copy) -->

@@ -8,6 +8,7 @@ import { packetRowHtml, renderPacketRows, renderPacketList, transportName, field
 import { closeVoipModal, switchVoipTab, renderVoipFlow, playVoipAudio, stopVoipAudio, renderVoipPlayer, showVoip } from './modules/views/voip.js';
 import initWasm from './wasm/netscope_wasm.js';
 import { observeDevice, renderWifi, initWifi } from './modules/wifi.js';
+import { renderSiemView } from './modules/views/siem.js';
 
 const PROTOCOL_COLORS = {
   TCP: '#4a9ef5', UDP: '#45d1c5', DNS: '#a78bfa', HTTP: '#34d399',
@@ -340,6 +341,7 @@ function refreshAfterIngest() {
   else if (state.view === 'topology') { renderTopology(); renderServiceCalls(); renderTraces(); }
   else if (state.view === 'script') updateScriptCount();
   else if (state.view === 'wifi') renderWifi();
+  else if (state.view === 'siem') renderSiemView($('#view-siem'));
 }
 
 function onPacket(event) {
