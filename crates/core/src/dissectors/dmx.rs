@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Art-Net and sACN — stage lighting carried over Ethernet.
 //!
 //! Theatrical lighting is controlled by DMX512: 512 channels of one byte each,

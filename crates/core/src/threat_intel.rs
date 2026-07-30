@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 
 //! Semantic Event Enrichment — Layer 3: Threat Intelligence Engine (§1.1.3).
 //!

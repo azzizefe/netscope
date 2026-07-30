@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! PROFINET PTCP — the clock every isochronous cycle depends on.
 //!
 //! PROFINET's fastest mode, IRT, does not send data whenever it is ready; it

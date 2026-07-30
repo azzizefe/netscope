@@ -1,21 +1,76 @@
-MIT License
+netscope — Proprietary Software License
+Copyright (c) 2026 azzizefe. All rights reserved.
 
-Copyright (c) 2026 netscope contributors
+This software and its source code, documentation, build scripts, test fixtures
+and any accompanying materials (the "Software") are the confidential and
+proprietary property of the copyright holder. The Software is licensed, not
+sold, and no ownership rights are transferred by access to it.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. NO LICENSE BY DEFAULT
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+   No right to use, copy, modify, merge, publish, distribute, sublicense,
+   create derivative works of, or sell the Software is granted to anyone,
+   except under a separate written agreement signed by the copyright holder.
+   Possession of a copy of the Software — by clone, download, fork, cache, or
+   mirror — does not grant any such right.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. PERMITTED USE UNDER A WRITTEN AGREEMENT
+
+   Where a separate written agreement exists, use of the Software is limited to
+   the scope, term, and number of users stated in that agreement. All rights
+   not expressly granted there are reserved.
+
+3. RESTRICTIONS
+
+   Except to the extent that applicable law overrides this clause, and absent
+   written permission, no person may:
+     (a) redistribute the Software or make it available to third parties;
+     (b) reverse engineer, decompile, or disassemble any binary form;
+     (c) remove or alter any copyright, license, or attribution notice;
+     (d) use the Software to build a competing product or service.
+
+4. CONFIDENTIALITY
+
+   The source code is confidential information. Anyone granted access must not
+   disclose it to third parties and must protect it with at least the care they
+   apply to their own confidential material.
+
+5. THIRD-PARTY COMPONENTS
+
+   The Software builds against third-party components that are NOT covered by
+   this license and are NOT redistributed with it. They remain governed by
+   their own terms, and this license grants no rights in them:
+
+     - Npcap (Windows capture driver) and the Npcap SDK — proprietary Npcap
+       license, https://npcap.com/#license. Downloaded by the user or by
+       tools/ensure-npcap-sdk.ps1 at build time; never vendored here.
+     - libpcap (Linux/macOS) — BSD-3-Clause, supplied by the operating system
+       or package manager.
+     - MaxMind GeoLite2 databases (optional GeoIP) — downloaded by the user
+       under MaxMind's own EULA; the Software only reads a local .mmdb it is
+       pointed at.
+     - Rust crate dependencies — fetched from crates.io by cargo under their
+       own licenses; none are vendored into this repository. Redistributing a
+       compiled binary of the Software requires complying with those licenses.
+
+6. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+7. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR
+   OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+   OTHER DEALINGS IN THE SOFTWARE.
+
+8. PRIOR MIT-LICENSED REVISIONS
+
+   Revisions published to a public repository before 2026-07-30 carried an MIT
+   license header. That grant, once given, cannot be withdrawn: copies of those
+   specific revisions remain usable under MIT by whoever obtained them. This
+   license governs this revision and every revision after it.
+
+Licensing enquiries: the repository owner.

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! MKA — the negotiation that has to succeed before MACsec encrypts anything.
 //!
 //! MACsec encrypts a link at layer 2, but only once both ends have agreed a key.

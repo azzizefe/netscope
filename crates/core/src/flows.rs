@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Flow (conversation) tracking — groups packets into bidirectional
 //! conversations keyed by endpoints + transport, like Wireshark's
 //! "Conversations" window.

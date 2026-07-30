@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! TLS secrets from an `SSLKEYLOGFILE`, parsed once and indexed.
 //!
 //! The format is one secret per line, as written by NSS, BoringSSL, OpenSSL

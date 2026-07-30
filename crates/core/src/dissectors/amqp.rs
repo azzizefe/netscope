@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! AMQP 0-9-1, the protocol RabbitMQ speaks.
 //!
 //! Only the opening handshake was recognised before, so every frame after it

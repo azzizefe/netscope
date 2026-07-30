@@ -56,7 +56,7 @@ cargo run -p netscope-tui -- -r fixtures/mixed.pcap --headless   # offline
 
 ## Project Conventions
 
-- Rust edition 2021, MIT license
+- Rust edition 2021, proprietary license (see `LICENSE`) — this repository is **not** open source; never publish crates, snippets or fixtures outside `origin`
 - Clippy lint config in root `Cargo.toml` under `[workspace.lints.clippy]`; each crate opts in with `[lints] workspace = true`
 - `desktop/frontend/` — Tauri web UI (svelte/vite); `desktop/frontend-tests/` — vitest tests
 - `fixtures/` — offline pcap files for testing

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! The header every 3GPP application protocol shares.
 //!
 //! NGAP, S1AP, RANAP, XnAP, F1AP and the rest of the family are separate

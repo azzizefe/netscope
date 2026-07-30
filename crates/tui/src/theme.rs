@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+﻿// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Color themes for the TUI chrome (ROADMAP §6.1). A [`Theme`] carries the
 //! handful of colours the shell paints — selection, the status/keybind bars,
 //! panel borders and an accent — so the whole UI can be recoloured at runtime

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! NFLOG — the Linux firewall's own log stream (`DLT_NFLOG`).
 //!
 //! An iptables or nftables rule can hand a packet to a log group instead of, or

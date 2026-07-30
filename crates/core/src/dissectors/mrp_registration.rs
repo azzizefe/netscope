@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! MVRP and MMRP — switches agreeing which VLANs and groups go where (802.1ak).
 //!
 //! A switch does not need to carry a VLAN that nothing downstream is using.

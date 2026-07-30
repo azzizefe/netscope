@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Memcached's binary protocol, which shares port 11211 with the text one.
 //!
 //! The two are different protocols on the same port, told apart by a magic

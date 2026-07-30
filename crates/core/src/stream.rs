@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Packet streaming & lazy parse — open big pcaps without loading or parsing
 //! them up front (ROADMAP §2.2).
 //!

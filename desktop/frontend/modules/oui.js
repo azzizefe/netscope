@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 // netscope Desktop — OUI (MAC vendor) lookup.
 //
 // The first three bytes of a MAC address are an Organizationally Unique

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 
 // What is gated below is what needs something wasm does not have: a socket, a
 // thread, a subprocess, a file, a database. Everything else builds everywhere.

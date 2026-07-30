@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! FlexRay — the bus where being on time is the protocol.
 //!
 //! CAN decides who talks by arbitration: the lowest identifier wins, whenever

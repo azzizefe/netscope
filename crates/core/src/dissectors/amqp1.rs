@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! AMQP 1.0 — a different protocol from AMQP 0-9-1, sharing its port.
 //!
 //! The two are related only by name. 0-9-1 is what RabbitMQ speaks natively;

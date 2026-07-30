@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! iSER — iSCSI with the data path handed to RDMA (RFC 7145).
 //!
 //! Ordinary iSCSI copies every block through the kernel twice. iSER keeps

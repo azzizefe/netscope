@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Capture merge & split — netscope's take on Wireshark's `mergecap` and
 //! `editcap`, plus a `capinfos`-style summary.
 //!

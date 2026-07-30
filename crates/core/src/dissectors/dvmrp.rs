@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! DVMRP — the first multicast routing protocol (IGMP type 0x13).
 //!
 //! DVMRP floods a multicast stream everywhere and then waits to be told to

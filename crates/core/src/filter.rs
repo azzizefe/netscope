@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Wireshark-style display filter language.
 //!
 //! Parses expressions like `ip.addr == 1.2.3.4 && tcp.port == 443`, `dns`,

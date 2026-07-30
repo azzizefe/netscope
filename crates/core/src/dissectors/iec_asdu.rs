@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! The IEC 60870-5 ASDU — what a telecontrol message actually says.
 //!
 //! IEC 60870-5 is the protocol behind a great deal of electricity

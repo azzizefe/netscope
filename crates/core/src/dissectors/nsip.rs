@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! NS over IP — the link that carries every cell's packet traffic.
 //!
 //! GPRS Network Service is the layer underneath [`super::bssgp`]: it multiplexes

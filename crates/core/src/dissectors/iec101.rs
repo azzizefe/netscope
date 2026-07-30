@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! IEC 60870-5-101 — the serial telecontrol link (FT1.2 framing).
 //!
 //! The same telecontrol messages as [`super::iec104`], carried over a serial

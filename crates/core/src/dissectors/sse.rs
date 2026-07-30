@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Server-Sent Events, and which model API is streaming through one.
 //!
 //! Every hosted LLM answers a streaming request the same way on the wire: an

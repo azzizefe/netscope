@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! IGRP — Cisco's pre-EIGRP interior routing protocol (IP protocol 9).
 //!
 //! IGRP was Cisco's answer to RIP's fifteen-hop ceiling: a distance-vector

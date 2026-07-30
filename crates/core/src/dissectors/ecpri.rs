@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! eCPRI — the fronthaul between a radio and its baseband (EtherType 0xAEFE).
 //!
 //! A modern base station is split in two: the radio unit at the top of the

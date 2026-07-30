@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Mobile IPv6 — keeping an address while moving (RFC 6275, IP protocol 135).
 //!
 //! A mobile node keeps one permanent home address no matter which network it

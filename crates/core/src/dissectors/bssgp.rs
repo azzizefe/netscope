@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! BSSGP — where a cell tells the core network it cannot cope.
 //!
 //! Between a GSM/GPRS base station subsystem and the SGSN sits BSS GPRS

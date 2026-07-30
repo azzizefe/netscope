@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+﻿// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 // netscope Desktop — API Module
 // Handles Tauri IPC invocations and capture control flows.
 

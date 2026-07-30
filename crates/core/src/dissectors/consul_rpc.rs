@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Consul RPC — the server port where leadership is decided (TCP 8300).
 //!
 //! Consul multiplexes several unrelated protocols onto one port, and the first

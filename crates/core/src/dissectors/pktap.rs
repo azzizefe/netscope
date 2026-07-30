@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! PKTAP — macOS packet tap metadata (`DLT_PKTAP`).
 //!
 //! Capturing with `tcpdump -i pktap` on macOS prefixes every packet with a

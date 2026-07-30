@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! PTP — IEEE 1588 precision time, and the 802.1AS profile that TSN runs on.
 //!
 //! Ordinary time sync gets a machine's clock within milliseconds. PTP gets it

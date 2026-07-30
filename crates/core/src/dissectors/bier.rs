@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! BIER — multicast with no per-flow state anywhere (RFC 8296).
 //!
 //! Traditional multicast asks every router on the path to remember a tree per

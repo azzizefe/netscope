@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! IEEE 802.15.4 and Zigbee/ZCL protocol dissector (DLT 195).
 //!
 //! IEEE 802.15.4 is the link-layer protocol for low-power wireless PANs.

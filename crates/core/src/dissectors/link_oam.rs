@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Link OAM — a link reporting its own health, and its own death (802.3ah).
 //!
 //! Two devices at either end of a link exchange these continuously. Most of the

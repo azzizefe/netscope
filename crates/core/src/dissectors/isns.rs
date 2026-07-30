@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! iSNS — how an iSCSI initiator finds its storage (RFC 4171, port 3205).
 //!
 //! An iSCSI initiator does not usually have its targets configured by hand. It

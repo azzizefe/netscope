@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Declarative protocol plugins — recognise new protocols without touching
 //! Rust or recompiling (ROADMAP §2.3).
 //!

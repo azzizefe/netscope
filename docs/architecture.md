@@ -66,8 +66,8 @@ netscope/
 │   ├── ISSUE_TEMPLATE/
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md          # Internal dev guide (repo is not open source)
+├── LICENSE                  # Proprietary — all rights reserved
 └── README.md
 ```
 

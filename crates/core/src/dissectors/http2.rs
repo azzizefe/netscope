@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! HTTP/2 (RFC 9113) cleartext frames + gRPC detection.
 //!
 //! Like WebSocket, HTTP/2 has no port of its own in the clear: h2c runs on 80,

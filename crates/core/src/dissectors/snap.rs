@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! LLC/SNAP dispatch for 802.3 length-form frames.
 //!
 //! Frames whose EtherType field is really a length carry an 802.2 LLC header.

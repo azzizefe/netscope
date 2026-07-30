@@ -1,13 +1,19 @@
 # 🎯 netscope — Kurumsal Destek / SLA · Öncelikli Destek · Profesyonel Hizmetler
 
-> **Mevcut durum:** netscope açık kaynak (MIT), GitHub Issues + Discussions
-> üzerinden topluluk desteği var. Herhangi bir ticari destek paketi, SLA
-> taahhüdü, öncelikli destek kanalı veya profesyonel hizmet sunumu yok.
+> ⚠️ **2026-07-30 itibarıyla geçersizleşen varsayım:** netscope artık açık
+> kaynak değil. Lisans tescilli (`LICENSE`), depo özel, crates.io yayını
+> kapalı. Bu belgenin "açık çekirdek + ücretli destek" (open-core) dayanağı
+> ortadan kalktı; **ticari model bölümleri yeniden yazılmalı.** Somut destek
+> iş kalemleri (SLA matrisi, eskalasyon, diagnostics bundle, lisans key
+> sistemi) modelden bağımsız olarak geçerli kalıyor.
 >
-> Bu spesifikasyon, **açık kaynak çekirdeği koruyarak** üzerine kurumsal
-> destek katmanı inşa etmek için gereken her şeyi tanımlar. Model: **açık
-> kaynak (MIT) + ücretli enterprise destek** — Redis, Elasticsearch, GitLab
-> ile aynı strateji.
+> **Mevcut durum:** Ticari destek paketi, SLA taahhüdü, öncelikli destek
+> kanalı veya profesyonel hizmet sunumu yok.
+>
+> Kapalı kaynakta doğal model: **ücretli lisans + kademeli destek**. Redis /
+> Elasticsearch / GitLab benzetmesi artık uymuyor — onların ücretsiz katmanı
+> kaynak olarak açıktır; burada ücretsiz katman varsa en fazla ücretsiz
+> *ikili* dağıtım olur.
 >
 > Hedef kitle: **SOC ekipleri, kritik altyapı işleten kurumlar, regülasyona
 > tabi sektörler** (finans, sağlık, enerji, telekom, kamu).
@@ -521,10 +527,12 @@
 
 ---
 
-> **Strateji:** Açık kaynak çekirdek (MIT) herkese açık ve ücretsiz kalır.
-> Ücretli katman, **SLA, öncelikli destek, TAM, profesyonel hizmetler ve
-> sertifikasyon** gibi kurumsal ihtiyaçları karşılar. Bu model Redis,
-> Elasticsearch ve GitLab tarafından kanıtlanmıştır.
+> **Strateji (güncellendi):** Kaynak kapalı ve tescilli. Ücretsiz kalabilecek
+> şey en fazla **ikili dağıtım** (kişisel/değerlendirme kullanımı); kurumsal
+> kullanım lisans sözleşmesine bağlı. Ücretli katman, **SLA, öncelikli destek,
+> TAM, profesyonel hizmetler ve sertifikasyon** gibi kurumsal ihtiyaçları
+> karşılar. Fiyatlama ve paketleme, open-core değil **klasik ticari lisans**
+> modeline göre yeniden kurgulanmalı.
 >
 > **Her checkbox, enterprise müşteriye taahhüt edilebilir bir destek
 > organizasyonu kurmak için gereken somut iş kalemidir.**

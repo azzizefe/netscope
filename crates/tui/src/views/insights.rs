@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+﻿// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! The Insights view (ROADMAP §6.1) — a scrollable list of the automatic
 //! security/privacy findings produced by [`crate::insights::analyze`], the
 //! TUI counterpart of the desktop's Insights tab.

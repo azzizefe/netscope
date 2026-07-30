@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! UDS — the diagnostic language inside a DoIP message (ISO 14229).
 //!
 //! DoIP is the envelope; this is the letter. A capture that says "diagnostic

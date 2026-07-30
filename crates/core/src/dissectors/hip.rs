@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! HIP — separating who a host is from where it is (RFC 7401, IP protocol 139).
 //!
 //! IP addresses do two jobs at once: they say who a host is and where it is on

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! CMP — how a device gets, renews and revokes its certificate (RFC 4210).
 //!
 //! Certificate Management Protocol is what runs underneath automated PKI: an

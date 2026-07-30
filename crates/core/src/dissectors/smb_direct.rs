@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! SMB Direct — SMB3 over RDMA transport (MS-SMBD).
 //!
 //! SMB Direct (SMBD) is a transport protocol that allows SMB2/3 messages to be

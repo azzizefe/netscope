@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Shared capture bootstrap for the TUI and headless modes: turns the CLI
 //! options into a running [`CaptureEngine`] — local interfaces, `-i -`
 //! (pcap stream on stdin), Windows USBPcap devices, or a remote host over

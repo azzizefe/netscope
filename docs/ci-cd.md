@@ -80,8 +80,11 @@ Depends on both TUI and desktop jobs. Downloads all artifacts and creates a GitH
 
 - `.github/workflows/ci.yml` — 4 jobs (lint, test, frontend, bench)
 - `.github/workflows/release.yml` — 3 jobs (TUI binary, desktop installer, release)
-- `.github/workflows/publish.yml` — crates.io publish for `netscope-core` and
-  `netscope-tui` only, so it needs no `protoc`
+
+There is no registry publish workflow. The crates are `publish = false` and the
+license is proprietary, so crates.io — which requires an OSI-approved license
+and makes every published file world-readable — is not a distribution channel.
+Releases ship as binaries from `release.yml`.
 
 ## Adding a New Platform
 

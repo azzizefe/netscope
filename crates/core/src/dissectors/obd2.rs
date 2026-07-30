@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! OBD-II over CAN — what a diagnostic scanner asks a car, and what it hears.
 //!
 //! Unlike most CAN traffic, this is identifiable with certainty: the standard

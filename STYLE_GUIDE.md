@@ -2,11 +2,11 @@
 
 ## Genel Kurallar
 
-- Rust edition 2021, MIT license
+- Rust edition 2021, tescilli lisans (bkz. `LICENSE`) — açık kaynak değil
 - `cargo fmt` ile biçimlendir (varsayılan rustfmt, özel yapılandırma yok)
 - `cargo clippy --workspace --exclude netscope-desktop -- -D warnings` ile lint
 - Clippy override'ları root `Cargo.toml` > `[workspace.lints.clippy]`; her crate `[lints] workspace = true` ile dahil olur
-- Her dosyada SPDX başlığı: `// SPDX-License-Identifier: MIT` + `// Copyright (c) 2026 netscope contributors`
+- Her dosyada SPDX başlığı: `// SPDX-License-Identifier: LicenseRef-Proprietary` + `// Copyright (c) 2026 azzizefe. All rights reserved.` (dosya tipinin yorum sözdizimiyle)
 
 ## Dil & Araçlar
 

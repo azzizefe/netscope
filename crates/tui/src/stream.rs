@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Follow TCP/UDP Stream for the TUI (ROADMAP §6.1) — the terminal counterpart
 //! of the desktop's "Follow Stream". Given the selected packet, it gathers
 //! every packet in the ring belonging to the same conversation (the two

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! Milter — the filter that decides whether mail lives or dies (TCP 8891).
 //!
 //! A mail server hands each message to its filters — spam scoring, signing,

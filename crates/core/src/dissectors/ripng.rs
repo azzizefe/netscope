@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 //! RIPng — RIP for IPv6 (RFC 2080, UDP 521).
 //!
 //! RIPng keeps RIP's shape — periodic full-table broadcasts, a hop count, and

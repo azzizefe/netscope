@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 netscope contributors
+﻿// SPDX-License-Identifier: LicenseRef-Proprietary
+// Copyright (c) 2026 azzizefe. All rights reserved.
 // netscope — Wireshark-style display filter (WASM-based engine).
 //
 // Uses the compiled Rust filter engine (crates/core/src/filter.rs) over WebAssembly.

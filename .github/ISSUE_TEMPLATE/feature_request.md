@@ -6,6 +6,9 @@ labels: enhancement
 assignees: ''
 ---
 
+> Internal tracker for a private, proprietary repository. Keep contents
+> confidential.
+
 ## Is your feature request related to a problem?
 
 A clear and concise description of what the problem is. Ex. "I'm always frustrated when [...]"
