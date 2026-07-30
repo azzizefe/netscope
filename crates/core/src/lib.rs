@@ -14,6 +14,7 @@
 pub mod ai_traffic;
 pub mod analyst_command_center;
 pub mod baseline;
+pub mod brute_force_protection;
 pub mod business_impact;
 // Gated because it exports alerts through `siem`, which is itself gated.
 #[cfg(not(target_arch = "wasm32"))]

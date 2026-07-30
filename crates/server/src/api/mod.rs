@@ -29,11 +29,13 @@ pub fn build_router(
 ) -> Router {
     let commands = CommandStore::new();
     let session_mgr = Arc::new(netscope_core::session_manager::SessionManager::new());
+    let protector = Arc::new(netscope_core::brute_force_protection::BruteForceProtector::new());
     let api_state = Arc::new(ApiState {
         pool,
         cache,
         commands,
         session_mgr,
+        protector,
     });
 
     let public = Router::new()
@@ -79,6 +81,7 @@ pub struct ApiState {
     pub cache: Option<Arc<CacheLayer>>,
     pub commands: Arc<CommandStore>,
     pub session_mgr: Arc<netscope_core::session_manager::SessionManager>,
+    pub protector: Arc<netscope_core::brute_force_protection::BruteForceProtector>,
 }
 
 #[cfg(test)]

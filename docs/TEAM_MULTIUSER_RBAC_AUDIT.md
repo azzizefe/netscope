@@ -77,10 +77,10 @@
 
 ### 1.2 — Brute-Force Koruması
 
-- [ ] **1.2.1** **Account lockout** — 5 başarısız deneme → 15 dakika kilit (configurable)
-- [ ] **1.2.2** **IP-based rate limit** — aynı IP'den 10 başarısız deneme → 30 dakika geçici kısıtlama
-- [ ] **1.2.3** **Audit log for lockouts** — her hesap kilitleme işlemi audit log'a kaydedilsin
-- [ ] **1.2.4** **Unlock flow** — Admin manuel unlock yapabilsin (`POST /api/v1/users/:id/unlock`), veya süre dolunca otomatik açılsın
+- [x] **1.2.1** **Account lockout** — 5 başarısız deneme → 15 dakika kilit (configurable)
+- [x] **1.2.2** **IP-based rate limit** — aynı IP'den 10 başarısız deneme → 30 dakika geçici kısıtlama
+- [x] **1.2.3** **Audit log for lockouts** — her hesap kilitleme işlemi audit log'a kaydedilsin
+- [x] **1.2.4** **Unlock flow** — Admin manuel unlock yapabilsin (`POST /api/v1/auth/unlock/account/:username`), veya süre dolunca otomatik açılsın
 
 ---
 

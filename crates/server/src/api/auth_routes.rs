@@ -16,6 +16,7 @@ use crate::api::ApiState;
 use crate::auth::{self, AuthResponse, JwtState, LoginRequest};
 use crate::db::models::CreateUser;
 use crate::db::queries;
+use netscope_core::brute_force_protection::LockoutStatus;
 
 #[derive(Debug, Deserialize)]
 pub struct CreateApiKeyRequest {
@@ -34,6 +35,9 @@ pub fn routes(api_state: Arc<ApiState>, jwt: Arc<JwtState>) -> Router {
         .route("/auth/force-reset/{user_id}", post(force_password_reset))
         .route("/auth/api-keys", post(create_api_key).get(list_api_keys))
         .route("/auth/api-keys/{id}", delete(revoke_api_key))
+        .route("/auth/unlock/account/{username}", post(unlock_account))
+        .route("/auth/unlock/ip/{ip}", post(unlock_ip))
+        .route("/auth/lockout-events", get(list_lockout_events))
         .with_state(api_state)
         .layer(axum::extract::Extension(jwt))
 }
@@ -43,21 +47,49 @@ async fn login(
     axum::extract::Extension(jwt): axum::extract::Extension<Arc<JwtState>>,
     Json(creds): Json<LoginRequest>,
 ) -> impl IntoResponse {
+    let client_ip = "127.0.0.1";
+
+    // 1. Check account & IP lockout status (§1.2.1, §1.2.2)
+    match state.protector.check_allowed(&creds.username, client_ip) {
+        LockoutStatus::AccountLocked { remaining_secs } => {
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                Json(json!({
+                    "error": "account_locked",
+                    "message": format!("Account is locked due to repeated failed logins. Retry in {} seconds.", remaining_secs),
+                    "remaining_secs": remaining_secs
+                })),
+            ).into_response();
+        }
+        LockoutStatus::IpBanned { remaining_secs } => {
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                Json(json!({
+                    "error": "ip_banned",
+                    "message": format!("IP address is temporarily restricted. Retry in {} seconds.", remaining_secs),
+                    "remaining_secs": remaining_secs
+                })),
+            ).into_response();
+        }
+        LockoutStatus::Allowed => {}
+    }
+
     let user = match queries::get_user_by_username(&state.pool, &creds.username).await {
         Ok(Some(u)) => u,
         Ok(None) => {
+            state.protector.record_failure(&creds.username, client_ip);
             return (
                 StatusCode::UNAUTHORIZED,
                 Json(json!({"error": "invalid credentials"})),
             )
-                .into_response()
+                .into_response();
         }
         Err(e) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": e.to_string()})),
             )
-                .into_response()
+                .into_response();
         }
     };
 
@@ -70,20 +102,34 @@ async fn login(
     }
 
     match auth::verify_password(&creds.password, &user.password_hash) {
-        Ok(true) => {}
+        Ok(true) => {
+            // Reset failure counter on successful login (§1.2.1)
+            state.protector.record_success(&creds.username, client_ip);
+        }
         Ok(false) => {
+            let status = state.protector.record_failure(&creds.username, client_ip);
+            let err_msg = match status {
+                LockoutStatus::AccountLocked { remaining_secs } => {
+                    format!("Invalid credentials. Account has been locked for {} seconds.", remaining_secs)
+                }
+                LockoutStatus::IpBanned { remaining_secs } => {
+                    format!("Invalid credentials. IP address has been restricted for {} seconds.", remaining_secs)
+                }
+                LockoutStatus::Allowed => "invalid credentials".to_string(),
+            };
+
             return (
                 StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "invalid credentials"})),
+                Json(json!({"error": err_msg})),
             )
-                .into_response()
+                .into_response();
         }
         Err(e) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": e.to_string()})),
             )
-                .into_response()
+                .into_response();
         }
     }
 
@@ -94,12 +140,12 @@ async fn login(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": e.to_string()})),
             )
-                .into_response()
+                .into_response();
         }
     };
 
     // Register active session in SessionManager (§1.1.1, §1.1.4)
-    let (session, _raw_token) = state.session_mgr.create_session(user.id, &user.username, "127.0.0.1", "netscope-client");
+    let (session, _raw_token) = state.session_mgr.create_session(user.id, &user.username, client_ip, "netscope-client");
 
     (
         StatusCode::OK,
@@ -281,4 +327,36 @@ async fn revoke_api_key(
     } else {
         (StatusCode::NOT_FOUND, Json(json!({"error": "api key not found"})))
     }
+}
+
+/// Admin manual account unlock (§1.2.4).
+async fn unlock_account(
+    State(state): State<Arc<ApiState>>,
+    Path(username): Path<String>,
+) -> impl IntoResponse {
+    let success = state.protector.unlock_account(&username);
+    if success {
+        (StatusCode::OK, Json(json!({"status": "account_unlocked", "username": username})))
+    } else {
+        (StatusCode::NOT_FOUND, Json(json!({"error": "account not locked or not found"})))
+    }
+}
+
+/// Admin manual IP unlock (§1.2.4).
+async fn unlock_ip(
+    State(state): State<Arc<ApiState>>,
+    Path(ip): Path<String>,
+) -> impl IntoResponse {
+    let success = state.protector.unlock_ip(&ip);
+    if success {
+        (StatusCode::OK, Json(json!({"status": "ip_unlocked", "ip": ip})))
+    } else {
+        (StatusCode::NOT_FOUND, Json(json!({"error": "ip not banned or not found"})))
+    }
+}
+
+/// List lockout and IP ban audit events (§1.2.3).
+async fn list_lockout_events(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
+    let events = state.protector.get_audit_events();
+    (StatusCode::OK, Json(json!(events)))
 }

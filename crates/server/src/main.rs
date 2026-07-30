@@ -142,11 +142,13 @@ async fn main() -> Result<()> {
     let sensor_ws_registry = Arc::new(crate::ws::SensorWsRegistry::new());
     let commands = crate::api::sensors::CommandStore::new();
     let session_mgr = Arc::new(netscope_core::session_manager::SessionManager::new());
+    let protector = Arc::new(netscope_core::brute_force_protection::BruteForceProtector::new());
     let api_state = Arc::new(ApiState {
         pool: pool.clone(),
         cache: cache.clone(),
         commands,
         session_mgr,
+        protector,
     });
 
     // ── Build router ──
