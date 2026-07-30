@@ -134,18 +134,17 @@ impl AdaptiveSampler {
             }
         } else if cpu_fill_pct < self.cpu_threshold_percent.saturating_sub(15)
             && ring_fill_pct < self.queue_threshold_percent.saturating_sub(20)
+            && target > 1
         {
-            if target > 1 {
-                target = (target / 2).max(1);
-                self.current_ratio.store(target, Ordering::Relaxed);
-            }
+            target = (target / 2).max(1);
+            self.current_ratio.store(target, Ordering::Relaxed);
         }
 
         let ratio = target as u32;
         if ratio <= 1 {
             (true, 1)
         } else {
-            let keep = (packet_idx % (ratio as u64)) == 0;
+            let keep = packet_idx.is_multiple_of(ratio as u64);
             if !keep {
                 self.sampled_out_count.fetch_add(1, Ordering::Relaxed);
             }

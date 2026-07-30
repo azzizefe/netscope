@@ -118,25 +118,32 @@ async fn login(
             // Reset failure counter on successful login (§1.2.1)
             state.protector.record_success(&creds.username, client_ip);
             // Log entry into tamper-proof audit hash chain (§3.1.1)
-            state.audit_chain.log_action(&user.id.to_string(), "USER_LOGIN", &user.username, client_ip);
+            state.audit_chain.log_action(
+                &user.id.to_string(),
+                "USER_LOGIN",
+                &user.username,
+                client_ip,
+            );
         }
         Ok(false) => {
             let status = state.protector.record_failure(&creds.username, client_ip);
             let err_msg = match status {
                 LockoutStatus::AccountLocked { remaining_secs } => {
-                    format!("Invalid credentials. Account has been locked for {} seconds.", remaining_secs)
+                    format!(
+                        "Invalid credentials. Account has been locked for {} seconds.",
+                        remaining_secs
+                    )
                 }
                 LockoutStatus::IpBanned { remaining_secs } => {
-                    format!("Invalid credentials. IP address has been restricted for {} seconds.", remaining_secs)
+                    format!(
+                        "Invalid credentials. IP address has been restricted for {} seconds.",
+                        remaining_secs
+                    )
                 }
                 LockoutStatus::Allowed => "invalid credentials".to_string(),
             };
 
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(json!({"error": err_msg})),
-            )
-                .into_response();
+            return (StatusCode::UNAUTHORIZED, Json(json!({"error": err_msg}))).into_response();
         }
         Err(e) => {
             return (
@@ -159,7 +166,10 @@ async fn login(
     };
 
     // Register active session in SessionManager (§1.1.1, §1.1.4)
-    let (session, _raw_token) = state.session_mgr.create_session(user.id, &user.username, client_ip, "netscope-client");
+    let (session, _raw_token) =
+        state
+            .session_mgr
+            .create_session(user.id, &user.username, client_ip, "netscope-client");
 
     (
         StatusCode::OK,
@@ -270,9 +280,15 @@ async fn revoke_session(
 ) -> impl IntoResponse {
     let success = state.session_mgr.revoke_session(&session_id);
     if success {
-        (StatusCode::OK, Json(json!({"status": "revoked", "session_id": session_id})))
+        (
+            StatusCode::OK,
+            Json(json!({"status": "revoked", "session_id": session_id})),
+        )
     } else {
-        (StatusCode::NOT_FOUND, Json(json!({"error": "session not found"})))
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "session not found"})),
+        )
     }
 }
 
@@ -283,10 +299,18 @@ async fn revoke_all_sessions(
 ) -> impl IntoResponse {
     let user_id = match user_id_str.parse::<Uuid>() {
         Ok(u) => u,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid user_id uuid"}))),
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "invalid user_id uuid"})),
+            )
+        }
     };
     let count = state.session_mgr.revoke_all_sessions_for_user(user_id);
-    (StatusCode::OK, Json(json!({"status": "all_sessions_revoked", "count": count})))
+    (
+        StatusCode::OK,
+        Json(json!({"status": "all_sessions_revoked", "count": count})),
+    )
 }
 
 /// Force password reset flag on next login (§1.1.6).
@@ -296,10 +320,18 @@ async fn force_password_reset(
 ) -> impl IntoResponse {
     let user_id = match user_id_str.parse::<Uuid>() {
         Ok(u) => u,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid user_id uuid"}))),
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "invalid user_id uuid"})),
+            )
+        }
     };
     let count = state.session_mgr.force_password_reset(user_id);
-    (StatusCode::OK, Json(json!({"status": "password_reset_forced", "revoked_sessions": count})))
+    (
+        StatusCode::OK,
+        Json(json!({"status": "password_reset_forced", "revoked_sessions": count})),
+    )
 }
 
 /// Create a scoped API Key (§1.1.7).
@@ -308,7 +340,10 @@ async fn create_api_key(
     Json(req): Json<CreateApiKeyRequest>,
 ) -> impl IntoResponse {
     let dummy_user_id = Uuid::nil();
-    let (key_meta, raw_key) = state.session_mgr.create_api_key(&req.name, dummy_user_id, req.permissions, req.ttl_days);
+    let (key_meta, raw_key) =
+        state
+            .session_mgr
+            .create_api_key(&req.name, dummy_user_id, req.permissions, req.ttl_days);
 
     (
         StatusCode::CREATED,
@@ -337,9 +372,15 @@ async fn revoke_api_key(
 ) -> impl IntoResponse {
     let success = state.session_mgr.revoke_api_key(&key_id);
     if success {
-        (StatusCode::OK, Json(json!({"status": "revoked", "key_id": key_id})))
+        (
+            StatusCode::OK,
+            Json(json!({"status": "revoked", "key_id": key_id})),
+        )
     } else {
-        (StatusCode::NOT_FOUND, Json(json!({"error": "api key not found"})))
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "api key not found"})),
+        )
     }
 }
 
@@ -350,9 +391,15 @@ async fn unlock_account(
 ) -> impl IntoResponse {
     let success = state.protector.unlock_account(&username);
     if success {
-        (StatusCode::OK, Json(json!({"status": "account_unlocked", "username": username})))
+        (
+            StatusCode::OK,
+            Json(json!({"status": "account_unlocked", "username": username})),
+        )
     } else {
-        (StatusCode::NOT_FOUND, Json(json!({"error": "account not locked or not found"})))
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "account not locked or not found"})),
+        )
     }
 }
 
@@ -363,9 +410,15 @@ async fn unlock_ip(
 ) -> impl IntoResponse {
     let success = state.protector.unlock_ip(&ip);
     if success {
-        (StatusCode::OK, Json(json!({"status": "ip_unlocked", "ip": ip})))
+        (
+            StatusCode::OK,
+            Json(json!({"status": "ip_unlocked", "ip": ip})),
+        )
     } else {
-        (StatusCode::NOT_FOUND, Json(json!({"error": "ip not banned or not found"})))
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "ip not banned or not found"})),
+        )
     }
 }
 
@@ -386,7 +439,10 @@ async fn create_role(
     State(state): State<Arc<ApiState>>,
     Json(req): Json<CreateCustomRoleRequest>,
 ) -> impl IntoResponse {
-    match state.rbac_engine.create_custom_role(&req.name, &req.description, req.permissions) {
+    match state
+        .rbac_engine
+        .create_custom_role(&req.name, &req.description, req.permissions)
+    {
         Ok(role) => (StatusCode::CREATED, Json(json!(role))).into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     }
@@ -398,8 +454,16 @@ async fn delete_role(
     Path(name): Path<String>,
 ) -> impl IntoResponse {
     match state.rbac_engine.delete_custom_role(&name) {
-        Ok(true) => (StatusCode::OK, Json(json!({"status": "role_deleted", "name": name}))).into_response(),
-        Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "role not found"}))).into_response(),
+        Ok(true) => (
+            StatusCode::OK,
+            Json(json!({"status": "role_deleted", "name": name})),
+        )
+            .into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "role not found"})),
+        )
+            .into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     }
 }

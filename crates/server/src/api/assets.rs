@@ -14,9 +14,7 @@ use std::sync::Arc;
 
 use crate::api::ApiState;
 use crate::auth::require;
-use netscope_core::business_impact::{
-    global_asset_registry, AssetItem,
-};
+use netscope_core::business_impact::{global_asset_registry, AssetItem};
 
 /// Asset Inventory & CMDB Sync API routes (§1.1.6).
 pub fn routes(state: Arc<ApiState>) -> Router {
@@ -53,7 +51,11 @@ async fn get_asset_by_ip(Path(ip_str): Path<String>) -> impl IntoResponse {
             return (StatusCode::OK, Json(json!(asset))).into_response();
         }
     }
-    (StatusCode::NOT_FOUND, Json(json!({"error": "Asset not found"}))).into_response()
+    (
+        StatusCode::NOT_FOUND,
+        Json(json!({"error": "Asset not found"})),
+    )
+        .into_response()
 }
 
 async fn create_or_update_asset(Json(asset): Json<AssetItem>) -> impl IntoResponse {
@@ -87,5 +89,9 @@ async fn delete_asset(Path(ip_str): Path<String>) -> impl IntoResponse {
             return (StatusCode::OK, Json(json!(removed))).into_response();
         }
     }
-    (StatusCode::NOT_FOUND, Json(json!({"error": "Asset not found"}))).into_response()
+    (
+        StatusCode::NOT_FOUND,
+        Json(json!({"error": "Asset not found"})),
+    )
+        .into_response()
 }

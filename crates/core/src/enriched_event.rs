@@ -8,9 +8,9 @@
 //! - §1.2.2 OCSF 1.3.0 Security Finding (Class 2001) and Network Activity (Class 4001)
 //! - §1.2.3 Always-populated human-readable explanations (no meaningless IP-port pairs)
 
+use crate::models::Packet;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::models::Packet;
 
 /// Actor (Source Endpoint & Host) Enrichment (§1.2.1).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -141,16 +141,25 @@ impl EnrichedEvent {
         // Construct SiemEvent to collect lower-layer evaluations
         let siem_evt = crate::siem::SiemEvent::from_packet_with_sensor(pkt, sensor_id);
 
-        let src_ip_str = siem_evt.src.clone().unwrap_or_else(|| "10.0.1.47".to_string());
-        let dst_ip_str = siem_evt.dst.clone().unwrap_or_else(|| "10.0.5.18".to_string());
+        let src_ip_str = siem_evt
+            .src
+            .clone()
+            .unwrap_or_else(|| "10.0.1.47".to_string());
+        let dst_ip_str = siem_evt
+            .dst
+            .clone()
+            .unwrap_or_else(|| "10.0.5.18".to_string());
         let dst_port = siem_evt.dst_port.unwrap_or(80);
 
-        let src_ip_addr = pkt.src_addr.unwrap_or_else(|| "10.0.1.47".parse().unwrap());
+        let _src_ip_addr = pkt.src_addr.unwrap_or_else(|| "10.0.1.47".parse().unwrap());
         let dst_ip_addr = pkt.dst_addr.unwrap_or_else(|| "10.0.5.18".parse().unwrap());
 
         // Asset Lookup (§1.1.6)
-        let asset_registry = crate::business_impact::global_asset_registry().lock().unwrap();
-        let target_asset = asset_registry.evaluate_impact(Some(dst_ip_addr), siem_evt.resolved_dns_name.as_deref());
+        let asset_registry = crate::business_impact::global_asset_registry()
+            .lock()
+            .unwrap();
+        let target_asset = asset_registry
+            .evaluate_impact(Some(dst_ip_addr), siem_evt.resolved_dns_name.as_deref());
 
         let target_hostname = if target_asset.affected_asset_name != "Unknown-Host" {
             target_asset.affected_asset_name.clone()
@@ -165,7 +174,10 @@ impl EnrichedEvent {
             ip: src_ip_str.clone(),
             hostname: format!("DESK-{}", src_ip_str.replace('.', "-")),
             mac: Some("00:1A:2B:3C:4D:5F".to_string()),
-            mac_vendor: siem_evt.mac_vendor.clone().or_else(|| Some("Dell Inc.".to_string())),
+            mac_vendor: siem_evt
+                .mac_vendor
+                .clone()
+                .or_else(|| Some("Dell Inc.".to_string())),
             os: Some("Windows 11 Pro 22H2".to_string()),
             department: Some("Human Resources".to_string()),
             user: Some("efe.akkaya".to_string()),
@@ -179,7 +191,11 @@ impl EnrichedEvent {
             hostname: target_hostname.clone(),
             fqdn: Some(format!("{}.internal.corp", target_hostname.to_lowercase())),
             asset_criticality: target_asset.criticality_label.clone(),
-            asset_tier: if target_asset.criticality_label.contains("CRITICAL") { 1 } else { 2 },
+            asset_tier: if target_asset.criticality_label.contains("CRITICAL") {
+                1
+            } else {
+                2
+            },
             data_classification: target_asset.data_classification.clone(),
             department: Some("Finance".to_string()),
             service: Some(format!("{} Service", pkt.protocol)),
@@ -217,11 +233,18 @@ impl EnrichedEvent {
         let tls_reason = if is_encrypted {
             "Connection is encrypted using TLS/SSH protocol ✓".to_string()
         } else {
-            format!("{} connection is plaintext — no TLS detected ❌", pkt.protocol)
+            format!(
+                "{} connection is plaintext — no TLS detected ❌",
+                pkt.protocol
+            )
         };
 
         let tls_enrichment = TlsEnrichment {
-            version: if is_encrypted { Some("TLS 1.3".to_string()) } else { None },
+            version: if is_encrypted {
+                Some("TLS 1.3".to_string())
+            } else {
+                None
+            },
             reason: tls_reason,
         };
 
@@ -242,12 +265,20 @@ impl EnrichedEvent {
         let anomaly_val = siem_evt.anomaly_score.unwrap_or(0.0);
         let baseline_enrichment = BaselineEnrichment {
             actor_to_target_7day_avg: 0.2,
-            current_vs_baseline: if anomaly_val > 0.0 { format!("{:.0}×", (anomaly_val / 2.0).max(1.0)) } else { "1×".to_string() },
+            current_vs_baseline: if anomaly_val > 0.0 {
+                format!("{:.0}×", (anomaly_val / 2.0).max(1.0))
+            } else {
+                "1×".to_string()
+            },
             time_of_day_normal: anomaly_val < 30.0,
             protocol_normal_for_host: true,
             data_volume_7day_avg_mb: 0.05,
             current_data_volume_mb: (pkt.length as f64 / 1024.0 / 1024.0).max(0.01),
-            volume_vs_baseline: if pkt.length > 100_000 { "196×".to_string() } else { "1×".to_string() },
+            volume_vs_baseline: if pkt.length > 100_000 {
+                "196×".to_string()
+            } else {
+                "1×".to_string()
+            },
         };
 
         // MITRE ATT&CK Enrichment
@@ -279,13 +310,15 @@ impl EnrichedEvent {
             } else {
                 "medium".to_string()
             },
-            data_at_risk: "Employee salary & payroll data (KVKK Art. 6 — özel nitelikli)".to_string(),
+            data_at_risk: "Employee salary & payroll data (KVKK Art. 6 — özel nitelikli)"
+                .to_string(),
             compliance: target_asset.compliance_frameworks.clone(),
             estimated_financial_risk: "YÜKSEK".to_string(),
         };
 
         // Human Readable Block (§1.2.3 Guarantee: ALWAYS non-empty)
-        let one_line = format!(
+        let one_line =
+            format!(
             "Workstation {} ({}) accessed {} ({}) over {} {}, {} — data volume: {}, timestamp: {}",
             actor.hostname,
             actor.user.as_deref().unwrap_or("unknown"),
@@ -306,7 +339,10 @@ impl EnrichedEvent {
         });
 
         let recommended_action = if let Some(ref actions) = siem_evt.recommended_actions {
-            actions.iter().map(|a| format!("{}. {}", a.step_number, a.instruction)).collect()
+            actions
+                .iter()
+                .map(|a| format!("{}. {}", a.step_number, a.instruction))
+                .collect()
         } else {
             vec![
                 format!("1. Isolate {} from the network immediately if unauthorized activity is confirmed", actor.hostname),
@@ -448,9 +484,9 @@ impl EnrichedEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Protocol;
     use bytes::Bytes;
     use chrono::Utc;
-    use crate::models::Protocol;
 
     #[test]
     fn test_enriched_event_schema_and_guarantees() {

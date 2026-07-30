@@ -234,7 +234,11 @@ impl NotificationEngine {
     }
 
     /// Custom JSON Webhook Notification (§4.1.3)
-    pub fn send_custom_webhook(&self, alert_msg: &str, target_url: Option<&str>) -> Result<(), String> {
+    pub fn send_custom_webhook(
+        &self,
+        alert_msg: &str,
+        target_url: Option<&str>,
+    ) -> Result<(), String> {
         let url = target_url
             .or(self.config.custom_webhook_url.as_deref())
             .ok_or("No custom webhook URL configured")?;

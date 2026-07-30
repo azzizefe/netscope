@@ -16,9 +16,9 @@ use serde::{Deserialize, Serialize};
 pub struct AlertQualityMetrics {
     pub false_positive_rate_pct: f32,
     pub true_positive_rate_pct: f32,
-    pub mtta_seconds: u32,             // Mean Time to Acknowledge
-    pub mttr_seconds: u32,             // Mean Time to Resolve
-    pub noise_score: f32,              // Hourly alerts generated / manually closed
+    pub mtta_seconds: u32, // Mean Time to Acknowledge
+    pub mttr_seconds: u32, // Mean Time to Resolve
+    pub noise_score: f32,  // Hourly alerts generated / manually closed
     pub mtta_formatted: String,
     pub mttr_formatted: String,
 }
@@ -26,10 +26,10 @@ pub struct AlertQualityMetrics {
 /// §6.2 Event Enrichment Quality Metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnrichmentQualityMetrics {
-    pub completeness_rate_pct: f32,    // % of events with all 7 layers filled
-    pub threat_intel_hit_rate_pct: f32,// % of events matching TI
+    pub completeness_rate_pct: f32, // % of events with all 7 layers filled
+    pub threat_intel_hit_rate_pct: f32, // % of events matching TI
     pub anomaly_distribution_pct: f32, // % of events flagged anomalous
-    pub layers_covered: u8,            // 7
+    pub layers_covered: u8,         // 7
 }
 
 /// §6.3 Analyst Productivity Metrics.

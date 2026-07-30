@@ -60,8 +60,8 @@ pub mod game_plugins;
 pub mod ha;
 pub mod industrial_edge;
 pub mod llm_analytics;
-pub mod models;
 pub mod mitre_killchain;
+pub mod models;
 pub mod multi_tenancy;
 pub mod names;
 pub mod narrative_correlation;
@@ -85,8 +85,8 @@ pub mod pqc_wizard;
 pub mod privacy;
 pub mod protocol_risk;
 pub mod protocol_semantics;
-pub mod registry;
 pub mod rbac_engine;
+pub mod registry;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]

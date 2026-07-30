@@ -268,7 +268,10 @@ mod tests {
         assert!(!report.ja4_c2_hunt.is_empty());
         assert_eq!(report.pqc_migration.pqc_ready_pct, 37.0);
         assert!(!report.llm_cost_leakage.is_empty());
-        assert_eq!(report.smb_file_audit[0].file_name, "Q4_2026_MaaS_Salaries.xlsx");
+        assert_eq!(
+            report.smb_file_audit[0].file_name,
+            "Q4_2026_MaaS_Salaries.xlsx"
+        );
         assert!(report.dns_exfil[0].is_tunneling);
         assert!(report.ics_sabotage[0].is_unauthorized_override);
         assert_eq!(report.cert_expiries[0].days_until_expiry, 14);

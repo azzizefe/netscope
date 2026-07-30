@@ -290,6 +290,9 @@ mod tests {
         }
 
         assert!(protector.unlock_ip(ip));
-        assert_eq!(protector.check_allowed("any_user", ip), LockoutStatus::Allowed);
+        assert_eq!(
+            protector.check_allowed("any_user", ip),
+            LockoutStatus::Allowed
+        );
     }
 }

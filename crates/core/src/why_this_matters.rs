@@ -167,7 +167,9 @@ impl WhyThisMattersEngine {
             "rdp_high".to_string()
         } else if p == "ssh" || s.contains("ssh") {
             "ssh_high".to_string()
-        } else if p == "dns" && (s.contains("tunnel") || s.contains("exfil") || s.contains("anomaly")) {
+        } else if p == "dns"
+            && (s.contains("tunnel") || s.contains("exfil") || s.contains("anomaly"))
+        {
             "dns_tunnel".to_string()
         } else if s.contains("scan") || s.contains("discovery") {
             "scan_medium".to_string()
@@ -178,7 +180,8 @@ impl WhyThisMattersEngine {
 
     /// Render "Why This Matters" evaluation for an event (§1.1.7).
     pub fn evaluate(&self, ctx: &TemplateContext) -> WhyThisMattersEvaluation {
-        let template_key = self.select_template_key(&ctx.protocol, &ctx.severity, &ctx.anomaly_reasons);
+        let template_key =
+            self.select_template_key(&ctx.protocol, &ctx.severity, &ctx.anomaly_reasons);
         let template = self
             .templates
             .get(&template_key)
@@ -251,7 +254,8 @@ impl WhyThisMattersEngine {
 
 /// Global thread-safe WhyThisMattersEngine singleton.
 pub fn global_why_this_matters_engine() -> &'static std::sync::Mutex<WhyThisMattersEngine> {
-    static ENGINE: std::sync::OnceLock<std::sync::Mutex<WhyThisMattersEngine>> = std::sync::OnceLock::new();
+    static ENGINE: std::sync::OnceLock<std::sync::Mutex<WhyThisMattersEngine>> =
+        std::sync::OnceLock::new();
     ENGINE.get_or_init(|| std::sync::Mutex::new(WhyThisMattersEngine::new()))
 }
 
@@ -269,14 +273,18 @@ mod tests {
             department: "HR".to_string(),
             protocol: "SMB".to_string(),
             severity: "HIGH".to_string(),
-            anomaly_reasons: "Bu erişim mesai dışı saatte, normalin 39 katı bağlantı ile gerçekleşti.".to_string(),
+            anomaly_reasons:
+                "Bu erişim mesai dışı saatte, normalin 39 katı bağlantı ile gerçekleşti."
+                    .to_string(),
             asset_type: "Production Database".to_string(),
         };
 
         let eval = engine.evaluate(&ctx);
         assert!(eval.why_this_matters_paragraph.contains("FIN-DB-01"));
         assert!(eval.why_this_matters_paragraph.contains("HR"));
-        assert!(eval.formatted_actions_text.contains("1. Bu host'u (10.0.1.47) hemen izole edin."));
+        assert!(eval
+            .formatted_actions_text
+            .contains("1. Bu host'u (10.0.1.47) hemen izole edin."));
         assert!(eval.formatted_full_block.contains("🧠 Neden önemli?"));
     }
 
@@ -295,7 +303,9 @@ mod tests {
         };
 
         let eval = engine.evaluate(&ctx);
-        assert!(eval.why_this_matters_paragraph.contains("Remote Desktop Protocol"));
+        assert!(eval
+            .why_this_matters_paragraph
+            .contains("Remote Desktop Protocol"));
         assert_eq!(eval.recommended_actions.len(), 3);
     }
 }

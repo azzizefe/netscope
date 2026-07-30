@@ -144,7 +144,8 @@ impl AssetInventoryRegistry {
     /// Register or update an asset in CMDB inventory (CMDB Sync API).
     pub fn register_asset(&mut self, asset: AssetItem) {
         self.assets_by_ip.insert(asset.ip_address, asset.clone());
-        self.assets_by_hostname.insert(asset.hostname.to_lowercase(), asset);
+        self.assets_by_hostname
+            .insert(asset.hostname.to_lowercase(), asset);
     }
 
     /// Get asset by IP address.
@@ -165,7 +166,8 @@ impl AssetInventoryRegistry {
     /// Remove asset by IP.
     pub fn remove_asset(&mut self, ip: IpAddr) -> Option<AssetItem> {
         if let Some(asset) = self.assets_by_ip.remove(&ip) {
-            self.assets_by_hostname.remove(&asset.hostname.to_lowercase());
+            self.assets_by_hostname
+                .remove(&asset.hostname.to_lowercase());
             Some(asset)
         } else {
             None
@@ -173,7 +175,11 @@ impl AssetInventoryRegistry {
     }
 
     /// Evaluate business impact for a target host/IP (§1.1.6).
-    pub fn evaluate_impact(&self, target_ip: Option<IpAddr>, target_host: Option<&str>) -> BusinessImpactEvaluation {
+    pub fn evaluate_impact(
+        &self,
+        target_ip: Option<IpAddr>,
+        target_host: Option<&str>,
+    ) -> BusinessImpactEvaluation {
         let asset_opt = target_ip
             .and_then(|ip| self.get_by_ip(ip))
             .or_else(|| target_host.and_then(|h| self.get_by_hostname(h)));
@@ -250,7 +256,9 @@ impl AssetInventoryRegistry {
                 criticality_label: "UNKNOWN".to_string(),
                 data_classification: "INTERNAL".to_string(),
                 compliance_frameworks: vec!["Standart Güvenlik Politikası".to_string()],
-                business_impact_description: "Tanımsız varlık erişimi, potansiyel yetkisiz erişim riski oluşturur.".to_string(),
+                business_impact_description:
+                    "Tanımsız varlık erişimi, potansiyel yetkisiz erişim riski oluşturur."
+                        .to_string(),
                 estimated_financial_impact: FinancialImpactLevel::Medium.as_str().to_string(),
                 formatted_summary,
             }
@@ -278,7 +286,9 @@ mod tests {
 
         let impact = reg.evaluate_impact(Some(ip), Some("FIN-DB-01"));
         assert_eq!(impact.affected_asset_name, "FIN-DB-01");
-        assert!(impact.formatted_summary.contains("CRITICAL (Production Database, Finance)"));
+        assert!(impact
+            .formatted_summary
+            .contains("CRITICAL (Production Database, Finance)"));
         assert!(impact.formatted_summary.contains("CONFIDENTIAL"));
         assert!(impact.formatted_summary.contains("PCI-DSS"));
     }

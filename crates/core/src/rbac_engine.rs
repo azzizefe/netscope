@@ -16,24 +16,68 @@ use std::sync::Arc;
 /// Comprehensive 50+ Granular Permissions List (§2.1.1).
 pub const ALL_PERMISSIONS: &[&str] = &[
     // PCAP & Traffic Analysis
-    "pcap:read", "pcap:export", "pcap:delete", "pcap:reorder", "pcap:replay",
+    "pcap:read",
+    "pcap:export",
+    "pcap:delete",
+    "pcap:reorder",
+    "pcap:replay",
     // Alerts & Incidents
-    "alert:read", "alert:write", "alert:ack", "alert:delete", "alert:assign", "incident:create", "incident:update",
+    "alert:read",
+    "alert:write",
+    "alert:ack",
+    "alert:delete",
+    "alert:assign",
+    "incident:create",
+    "incident:update",
     // Detection Rules & Threat Hunting
-    "rules:read", "rules:write", "rules:delete", "rules:enable", "hunt:execute", "sigma:import", "stix:export",
+    "rules:read",
+    "rules:write",
+    "rules:delete",
+    "rules:enable",
+    "hunt:execute",
+    "sigma:import",
+    "stix:export",
     // Fleet & Sensor Operations
-    "sensor:read", "sensor:write", "sensor:command", "sensor:delete", "sensor:restart", "sensor:upgrade",
+    "sensor:read",
+    "sensor:write",
+    "sensor:command",
+    "sensor:delete",
+    "sensor:restart",
+    "sensor:upgrade",
     // Reports & Dashboards
-    "report:read", "report:create", "report:schedule", "report:export", "dashboard:read", "dashboard:customize",
+    "report:read",
+    "report:create",
+    "report:schedule",
+    "report:export",
+    "dashboard:read",
+    "dashboard:customize",
     // SIEM & Connectors
-    "siem:matrix", "siem:export", "siem:connector_write", "siem:metrics",
+    "siem:matrix",
+    "siem:export",
+    "siem:connector_write",
+    "siem:metrics",
     // User Management & Security Administration
-    "user:read", "user:write", "user:delete", "user:unlock", "role:read", "role:write", "role:delete",
-    "session:read", "session:revoke", "apikey:create", "apikey:revoke",
+    "user:read",
+    "user:write",
+    "user:delete",
+    "user:unlock",
+    "role:read",
+    "role:write",
+    "role:delete",
+    "session:read",
+    "session:revoke",
+    "apikey:create",
+    "apikey:revoke",
     // Audit & Forensics
-    "audit:read", "audit:verify", "forensics:timeline", "forensics:extract",
+    "audit:read",
+    "audit:verify",
+    "forensics:timeline",
+    "forensics:extract",
     // SOAR & Automations
-    "soar:read", "soar:execute", "soar:write", "webhook:manage",
+    "soar:read",
+    "soar:execute",
+    "soar:write",
+    "webhook:manage",
 ];
 
 /// Representation of a Role with assigned permissions (§2.1.2, §2.1.3).
@@ -74,7 +118,8 @@ impl RbacEngine {
             "admin".to_string(),
             RoleDefinition {
                 name: "admin".to_string(),
-                description: "System Administrator with full permissions across all components".to_string(),
+                description: "System Administrator with full permissions across all components"
+                    .to_string(),
                 permissions: admin_perms,
                 is_builtin: true,
             },
@@ -82,11 +127,31 @@ impl RbacEngine {
 
         // 2. Analyst — Packet inspection, filtering, rule creation, alert triage & acknowledgement
         let analyst_perms: HashSet<String> = vec![
-            "pcap:read", "pcap:export", "pcap:reorder", "pcap:replay",
-            "alert:read", "alert:write", "alert:ack", "alert:assign", "incident:create", "incident:update",
-            "rules:read", "rules:write", "rules:enable", "hunt:execute", "sigma:import", "stix:export",
-            "report:read", "report:create", "dashboard:read", "siem:matrix", "siem:export",
-            "forensics:timeline", "forensics:extract", "soar:read", "soar:execute",
+            "pcap:read",
+            "pcap:export",
+            "pcap:reorder",
+            "pcap:replay",
+            "alert:read",
+            "alert:write",
+            "alert:ack",
+            "alert:assign",
+            "incident:create",
+            "incident:update",
+            "rules:read",
+            "rules:write",
+            "rules:enable",
+            "hunt:execute",
+            "sigma:import",
+            "stix:export",
+            "report:read",
+            "report:create",
+            "dashboard:read",
+            "siem:matrix",
+            "siem:export",
+            "forensics:timeline",
+            "forensics:extract",
+            "soar:read",
+            "soar:execute",
         ]
         .into_iter()
         .map(String::from)
@@ -104,8 +169,15 @@ impl RbacEngine {
 
         // 3. Auditor — Read-only reports & audit logs
         let auditor_perms: HashSet<String> = vec![
-            "report:read", "report:export", "audit:read", "audit:verify",
-            "dashboard:read", "siem:matrix", "siem:metrics", "user:read", "role:read",
+            "report:read",
+            "report:export",
+            "audit:read",
+            "audit:verify",
+            "dashboard:read",
+            "siem:matrix",
+            "siem:metrics",
+            "user:read",
+            "role:read",
         ]
         .into_iter()
         .map(String::from)
@@ -115,7 +187,9 @@ impl RbacEngine {
             "auditor".to_string(),
             RoleDefinition {
                 name: "auditor".to_string(),
-                description: "Auditor with read-only access to reports, audit trails, and compliance metrics".to_string(),
+                description:
+                    "Auditor with read-only access to reports, audit trails, and compliance metrics"
+                        .to_string(),
                 permissions: auditor_perms,
                 is_builtin: true,
             },
@@ -123,8 +197,14 @@ impl RbacEngine {
 
         // 4. Operator — Fleet monitoring, start/stop live capture, sensor commands
         let operator_perms: HashSet<String> = vec![
-            "sensor:read", "sensor:write", "sensor:command", "sensor:restart",
-            "pcap:read", "alert:read", "dashboard:read", "siem:metrics",
+            "sensor:read",
+            "sensor:write",
+            "sensor:command",
+            "sensor:restart",
+            "pcap:read",
+            "alert:read",
+            "dashboard:read",
+            "siem:metrics",
         ]
         .into_iter()
         .map(String::from)
@@ -134,7 +214,9 @@ impl RbacEngine {
             "operator".to_string(),
             RoleDefinition {
                 name: "operator".to_string(),
-                description: "Fleet Operator with sensor management and live capture control capabilities".to_string(),
+                description:
+                    "Fleet Operator with sensor management and live capture control capabilities"
+                        .to_string(),
                 permissions: operator_perms,
                 is_builtin: true,
             },
@@ -258,7 +340,11 @@ mod tests {
             .create_custom_role(
                 "tier2_hunter",
                 "Junior threat hunter role",
-                vec!["pcap:read".into(), "hunt:execute".into(), "alert:ack".into()],
+                vec![
+                    "pcap:read".into(),
+                    "hunt:execute".into(),
+                    "alert:ack".into(),
+                ],
             )
             .unwrap();
 

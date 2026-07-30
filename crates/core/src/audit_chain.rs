@@ -107,7 +107,8 @@ impl AuditChainManager {
 
         let id = store.records.len() as u64 + 1;
         let prev_hash = store.last_hash.clone();
-        let entry_hash = Self::compute_entry_hash(&prev_hash, user_id, action, resource, ip_address, now);
+        let entry_hash =
+            Self::compute_entry_hash(&prev_hash, user_id, action, resource, ip_address, now);
 
         let entry = AuditEntry {
             id,
@@ -131,7 +132,7 @@ impl AuditChainManager {
         let store = self.inner.read();
         let mut expected_prev_hash = GENESIS_HASH.to_string();
 
-        for (idx, entry) in store.records.iter().enumerate() {
+        for (_idx, entry) in store.records.iter().enumerate() {
             if entry.prev_hash != expected_prev_hash {
                 return AuditVerificationReport {
                     is_valid: false,
@@ -172,7 +173,10 @@ impl AuditChainManager {
             is_valid: true,
             total_records: store.records.len(),
             tampered_index: None,
-            message: format!("Audit chain integrity verified. All {} records are authentic and tamper-free.", store.records.len()),
+            message: format!(
+                "Audit chain integrity verified. All {} records are authentic and tamper-free.",
+                store.records.len()
+            ),
         }
     }
 
@@ -221,7 +225,12 @@ mod tests {
         let manager = AuditChainManager::new();
 
         manager.log_action("admin", "PCAP_EXPORT", "pcap/finance_q4.pcap", "10.0.1.47");
-        manager.log_action("analyst1", "RULE_CREATE", "rules/detect_smb.json", "10.0.1.18");
+        manager.log_action(
+            "analyst1",
+            "RULE_CREATE",
+            "rules/detect_smb.json",
+            "10.0.1.18",
+        );
         manager.log_action("operator", "SENSOR_RESTART", "sensor-01", "10.0.5.12");
 
         let report = manager.verify_integrity();

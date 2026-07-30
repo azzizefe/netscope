@@ -178,7 +178,13 @@ mod tests {
             .with_virustotal_key("vt_test_key_12345")
             .with_shodan_key("shodan_test_key_67890");
 
-        assert_eq!(enricher.api_keys.virustotal_key.as_deref(), Some("vt_test_key_12345"));
-        assert_eq!(enricher.api_keys.shodan_key.as_deref(), Some("shodan_test_key_67890"));
+        assert_eq!(
+            enricher.api_keys.virustotal_key.as_deref(),
+            Some("vt_test_key_12345")
+        );
+        assert_eq!(
+            enricher.api_keys.shodan_key.as_deref(),
+            Some("shodan_test_key_67890")
+        );
     }
 }

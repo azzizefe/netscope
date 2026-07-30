@@ -55,10 +55,19 @@ pub struct EmailTestPayload {
 
 pub fn routes(api_state: Arc<ApiState>) -> Router {
     Router::new()
-        .route("/notifications/telegram/send", post(send_telegram_notification))
-        .route("/notifications/discord/send", post(send_discord_notification))
+        .route(
+            "/notifications/telegram/send",
+            post(send_telegram_notification),
+        )
+        .route(
+            "/notifications/discord/send",
+            post(send_discord_notification),
+        )
         .route("/notifications/slack/send", post(send_slack_notification))
-        .route("/notifications/webhook/send", post(send_custom_webhook_notification))
+        .route(
+            "/notifications/webhook/send",
+            post(send_custom_webhook_notification),
+        )
         .route("/notifications/email/send", post(send_email_notification))
         .with_state(api_state)
 }
@@ -87,7 +96,11 @@ async fn send_telegram_notification(
 
     let engine = NotificationEngine::new(cfg);
     match engine.send_telegram(&payload.message) {
-        Ok(_) => (StatusCode::OK, Json(json!({"status": "sent", "channel": "telegram"}))).into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({"status": "sent", "channel": "telegram"})),
+        )
+            .into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     }
 }
@@ -114,10 +127,16 @@ async fn send_discord_notification(
         syslog_port: None,
     };
 
-    let details = payload.details.unwrap_or_else(|| "No additional details".to_string());
+    let details = payload
+        .details
+        .unwrap_or_else(|| "No additional details".to_string());
     let engine = NotificationEngine::new(cfg);
     match engine.send_discord(&payload.message, &details) {
-        Ok(_) => (StatusCode::OK, Json(json!({"status": "sent", "channel": "discord"}))).into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({"status": "sent", "channel": "discord"})),
+        )
+            .into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     }
 }
@@ -144,10 +163,16 @@ async fn send_slack_notification(
         syslog_port: None,
     };
 
-    let details = payload.details.unwrap_or_else(|| "No additional details".to_string());
+    let details = payload
+        .details
+        .unwrap_or_else(|| "No additional details".to_string());
     let engine = NotificationEngine::new(cfg);
     match engine.send_slack(&payload.message, &details) {
-        Ok(_) => (StatusCode::OK, Json(json!({"status": "sent", "channel": "slack"}))).into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({"status": "sent", "channel": "slack"})),
+        )
+            .into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     }
 }
@@ -176,7 +201,11 @@ async fn send_custom_webhook_notification(
 
     let engine = NotificationEngine::new(cfg);
     match engine.send_custom_webhook(&payload.message, payload.target_url.as_deref()) {
-        Ok(_) => (StatusCode::OK, Json(json!({"status": "sent", "channel": "custom_webhook"}))).into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({"status": "sent", "channel": "custom_webhook"})),
+        )
+            .into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     }
 }
@@ -205,7 +234,11 @@ async fn send_email_notification(
 
     let engine = NotificationEngine::new(cfg);
     match engine.send_email(&payload.subject, &payload.body) {
-        Ok(_) => (StatusCode::OK, Json(json!({"status": "sent", "channel": "email"}))).into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({"status": "sent", "channel": "email"})),
+        )
+            .into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     }
 }

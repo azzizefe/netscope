@@ -201,7 +201,10 @@ pub fn map_event_mitre_and_killchain(
     }
 
     // 8. Exfiltration / High Entropy / Data Volume
-    if s.contains("exfiltration") || s.contains("high entropy") || (has_anomaly && s.contains("transfer")) {
+    if s.contains("exfiltration")
+        || s.contains("high entropy")
+        || (has_anomaly && s.contains("transfer"))
+    {
         techniques.push(MitreTechniqueMapping {
             id: "T1041".to_string(),
             name: "Exfiltration Over C2 Channel".to_string(),
@@ -272,17 +275,28 @@ mod tests {
 
     #[test]
     fn test_mitre_killchain_mapping() {
-        let eval = map_event_mitre_and_killchain("SMB", "SMB Read Request on Admin Share", Some(445), true);
+        let eval = map_event_mitre_and_killchain(
+            "SMB",
+            "SMB Read Request on Admin Share",
+            Some(445),
+            true,
+        );
         assert!(!eval.techniques.is_empty());
         assert!(eval.techniques.iter().any(|t| t.id == "T1021.002"));
-        assert!(eval.techniques.iter().any(|t| t.confidence == ConfidenceLevel::High));
+        assert!(eval
+            .techniques
+            .iter()
+            .any(|t| t.confidence == ConfidenceLevel::High));
         assert!(eval.kill_chain_summary.contains("2 (Weaponization)"));
-        assert!(eval.detection_coverage_summary.contains("ATT&CK tekniğini kapsıyor"));
+        assert!(eval
+            .detection_coverage_summary
+            .contains("ATT&CK tekniğini kapsıyor"));
     }
 
     #[test]
     fn test_rdp_and_scan_mapping() {
-        let eval = map_event_mitre_and_killchain("RDP", "RDP Connection Attempt", Some(3389), false);
+        let eval =
+            map_event_mitre_and_killchain("RDP", "RDP Connection Attempt", Some(3389), false);
         assert!(eval.techniques.iter().any(|t| t.id == "T1021.001"));
         assert!(eval.kill_chain_summary.contains("4 (Exploitation)"));
     }

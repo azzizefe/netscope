@@ -430,12 +430,17 @@ impl SensorBaseline {
         let mut reasons = Vec::new();
         let mut max_z = 0.0f64;
 
-        let src_ip = packet.src_addr.unwrap_or(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED));
-        let dst_ip = packet.dst_addr.unwrap_or(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED));
+        let src_ip = packet
+            .src_addr
+            .unwrap_or(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED));
+        let dst_ip = packet
+            .dst_addr
+            .unwrap_or(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED));
         let proto_str = packet.protocol.to_string();
         let length = packet.length as u64;
 
-        let host_bl = self.host_baselines
+        let host_bl = self
+            .host_baselines
             .entry(src_ip)
             .or_insert_with(|| HostBaseline::new(src_ip));
 
@@ -457,18 +462,23 @@ impl SensorBaseline {
             1.0
         };
 
-        metric_z_scores.insert("conn_frequency".to_string(), MetricZScore {
-            metric_name: "conn_frequency".to_string(),
-            current_value: current_conn,
-            baseline_mean: conn_mean,
-            baseline_std: conn_std,
-            z_score: conn_z,
-            ratio_multiplier: conn_ratio,
-        });
+        metric_z_scores.insert(
+            "conn_frequency".to_string(),
+            MetricZScore {
+                metric_name: "conn_frequency".to_string(),
+                current_value: current_conn,
+                baseline_mean: conn_mean,
+                baseline_std: conn_std,
+                z_score: conn_z,
+                ratio_multiplier: conn_ratio,
+            },
+        );
 
         if (conn_ratio >= 2.0 || conn_z > 3.0) && conn_tracker.count > 0 {
             max_z = max_z.max(conn_z.abs().max(conn_ratio));
-            let dst_label = dst_name.map(|n| n.to_string()).unwrap_or_else(|| dst_ip.to_string());
+            let dst_label = dst_name
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| dst_ip.to_string());
             reasons.push(format!(
                 "  - {}'nin {}'e bağlantı sayısı: {} (7-günlük ortalama: {:.1})\n    → Anomali skoru: +{:.0}× baseline ⚠️",
                 src_ip, dst_label, current_conn as u64, conn_mean, conn_ratio
@@ -489,7 +499,7 @@ impl SensorBaseline {
             0.0
         };
 
-        let is_off_hours = hour < 6 || hour >= 22;
+        let is_off_hours = !(6..22).contains(&hour);
         if is_off_hours && (time_tracker.count == 0 || time_mean < 50.0) {
             max_z = max_z.max(3.5);
             let hour_end = (hour + 2) % 24;
@@ -499,22 +509,33 @@ impl SensorBaseline {
             ));
         }
 
-        metric_z_scores.insert("time_activity".to_string(), MetricZScore {
-            metric_name: "time_activity".to_string(),
-            current_value: length as f64,
-            baseline_mean: time_mean,
-            baseline_std: time_std,
-            z_score: time_z,
-            ratio_multiplier: if time_mean > 0.0 { length as f64 / time_mean } else { 1.0 },
-        });
+        metric_z_scores.insert(
+            "time_activity".to_string(),
+            MetricZScore {
+                metric_name: "time_activity".to_string(),
+                current_value: length as f64,
+                baseline_mean: time_mean,
+                baseline_std: time_std,
+                z_score: time_z,
+                ratio_multiplier: if time_mean > 0.0 {
+                    length as f64 / time_mean
+                } else {
+                    1.0
+                },
+            },
+        );
 
-        host_bl.hourly_matrix.record(day_of_week, hour, length as f64);
+        host_bl
+            .hourly_matrix
+            .record(day_of_week, hour, length as f64);
 
         // 3. New Target Anomaly (yeni hedef anomalisi)
         let is_new_target = !host_bl.seen_destinations.contains(&dst_ip);
         if is_new_target && dst_ip != IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED) {
             max_z = max_z.max(3.0);
-            let dst_label = dst_name.map(|n| n.to_string()).unwrap_or_else(|| dst_ip.to_string());
+            let dst_label = dst_name
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| dst_ip.to_string());
             reasons.push(format!(
                 "  - {}'nin {}'e erişimi: İLK KEZ (daha önce hiç olmamış)\n    → Yeni hedef anomalisi ⚠️",
                 src_ip, dst_label
@@ -523,7 +544,8 @@ impl SensorBaseline {
         }
 
         // 4. Data Volume Anomaly (veri hacmi anomalisi)
-        let (proto_tracker, max_bytes_7d) = host_bl.protocol_bytes
+        let (proto_tracker, max_bytes_7d) = host_bl
+            .protocol_bytes
             .entry(proto_str.clone())
             .or_insert_with(|| (WelfordTracker::new(), 0));
 
@@ -550,14 +572,21 @@ impl SensorBaseline {
             0.0
         };
 
-        metric_z_scores.insert("data_volume".to_string(), MetricZScore {
-            metric_name: "data_volume".to_string(),
-            current_value: current_bytes as f64,
-            baseline_mean: proto_tracker.mean,
-            baseline_std: proto_tracker.std_dev(),
-            z_score: vol_z,
-            ratio_multiplier: if prev_max > 0 { current_bytes as f64 / prev_max as f64 } else { 1.0 },
-        });
+        metric_z_scores.insert(
+            "data_volume".to_string(),
+            MetricZScore {
+                metric_name: "data_volume".to_string(),
+                current_value: current_bytes as f64,
+                baseline_mean: proto_tracker.mean,
+                baseline_std: proto_tracker.std_dev(),
+                z_score: vol_z,
+                ratio_multiplier: if prev_max > 0 {
+                    current_bytes as f64 / prev_max as f64
+                } else {
+                    1.0
+                },
+            },
+        );
 
         proto_tracker.update(current_bytes as f64);
         if current_bytes > *max_bytes_7d {
@@ -574,7 +603,10 @@ impl SensorBaseline {
         let explanation = if reasons.is_empty() {
             "Bu event için normalden sapma tespit edilmedi.".to_string()
         } else {
-            format!("Bu event'in normalden sapma derecesi:\n{}", reasons.join("\n"))
+            format!(
+                "Bu event'in normalden sapma derecesi:\n{}",
+                reasons.join("\n")
+            )
         };
 
         BaselineEvaluation {
@@ -618,7 +650,8 @@ impl SensorBaselineManager {
 }
 
 pub fn global_baseline_manager() -> &'static std::sync::Mutex<SensorBaselineManager> {
-    static MGR: std::sync::OnceLock<std::sync::Mutex<SensorBaselineManager>> = std::sync::OnceLock::new();
+    static MGR: std::sync::OnceLock<std::sync::Mutex<SensorBaselineManager>> =
+        std::sync::OnceLock::new();
     MGR.get_or_init(|| std::sync::Mutex::new(SensorBaselineManager::new()))
 }
 
@@ -685,9 +718,9 @@ mod tests {
 
     #[test]
     fn test_katman_4_behavioral_baseline_and_zscore() {
+        use crate::models::Protocol;
         use bytes::Bytes;
         use chrono::Utc;
-        use crate::models::Protocol;
 
         let mut mgr = SensorBaselineManager::new();
         let sensor_id = "sensor_istanbul_01";
@@ -727,7 +760,10 @@ mod tests {
         assert!(eval2.anomaly_score >= 10.0);
         assert!(!eval2.metric_z_scores.is_empty());
         assert!(eval2.explanation.contains("normalden sapma derecesi"));
-        assert!(eval2.explanation.contains("Zaman anomalisi: mesai dışı") || eval2.explanation.contains("Veri hacmi anomalisi"));
+        assert!(
+            eval2.explanation.contains("Zaman anomalisi: mesai dışı")
+                || eval2.explanation.contains("Veri hacmi anomalisi")
+        );
     }
 
     #[test]
@@ -737,4 +773,3 @@ mod tests {
         assert_eq!(format_byte_size(2300 * 1024), "2.2 MB");
     }
 }
-

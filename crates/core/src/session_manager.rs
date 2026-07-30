@@ -43,9 +43,13 @@ impl std::fmt::Display for SessionError {
         match self {
             SessionError::TokenNotFound => write!(f, "Session token not found"),
             SessionError::SessionExpired => write!(f, "Session has expired"),
-            SessionError::SessionIdleTimeout => write!(f, "Session expired due to inactivity (idle timeout)"),
+            SessionError::SessionIdleTimeout => {
+                write!(f, "Session expired due to inactivity (idle timeout)")
+            }
             SessionError::SessionRevoked => write!(f, "Session has been revoked"),
-            SessionError::PasswordResetRequired => write!(f, "User is required to reset password before continuing"),
+            SessionError::PasswordResetRequired => {
+                write!(f, "User is required to reset password before continuing")
+            }
             SessionError::ApiKeyNotFound => write!(f, "API Key not found"),
             SessionError::ApiKeyExpired => write!(f, "API Key has expired"),
             SessionError::ApiKeyRevoked => write!(f, "API Key has been revoked"),
@@ -95,11 +99,11 @@ pub struct SessionManager {
 
 #[derive(Debug)]
 struct SessionStore {
-    sessions: HashMap<String, UserSession>, // Key: token_hash
+    sessions: HashMap<String, UserSession>,  // Key: token_hash
     api_keys: HashMap<String, ScopedApiKey>, // Key: key_hash
     max_concurrent_sessions: usize,
     access_token_ttl_secs: u64,
-    refresh_token_ttl_secs: u64,
+    _refresh_token_ttl_secs: u64,
     idle_timeout_secs: u64,
     next_seq: u64,
 }
@@ -118,7 +122,7 @@ impl SessionManager {
                 api_keys: HashMap::new(),
                 max_concurrent_sessions: DEFAULT_MAX_CONCURRENT_SESSIONS,
                 access_token_ttl_secs: DEFAULT_ACCESS_TOKEN_TTL_SECS,
-                refresh_token_ttl_secs: DEFAULT_REFRESH_TOKEN_TTL_SECS,
+                _refresh_token_ttl_secs: DEFAULT_REFRESH_TOKEN_TTL_SECS,
                 idle_timeout_secs: DEFAULT_IDLE_TIMEOUT_SECS,
                 next_seq: 1,
             })),
@@ -148,7 +152,11 @@ impl SessionManager {
         ip_address: &str,
         user_agent: &str,
     ) -> (UserSession, String) {
-        let raw_token = format!("netscope_sess_{}_{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
+        let raw_token = format!(
+            "netscope_sess_{}_{}",
+            Uuid::new_v4().simple(),
+            Uuid::new_v4().simple()
+        );
         let token_hash = Self::hash_token(&raw_token);
         let now = Self::now_epoch();
 
@@ -422,18 +430,23 @@ mod tests {
     fn test_session_lifecycle_and_expiry() {
         let sm = SessionManager::new();
         let user_id = Uuid::new_v4();
-        let (sess, raw_token) = sm.create_session(user_id, "efe.akkaya", "127.0.0.1", "netscope-desktop/1.0");
+        let (sess, raw_token) =
+            sm.create_session(user_id, "efe.akkaya", "127.0.0.1", "netscope-desktop/1.0");
 
         assert_eq!(sess.username, "efe.akkaya");
         assert!(!sess.revoked);
 
-        let validated = sm.validate_and_touch(&raw_token, "127.0.0.1", "netscope-desktop/1.0").unwrap();
+        let validated = sm
+            .validate_and_touch(&raw_token, "127.0.0.1", "netscope-desktop/1.0")
+            .unwrap();
         assert_eq!(validated.user_id, user_id);
 
         let revoked = sm.revoke_session(&sess.session_id);
         assert!(revoked);
 
-        let err = sm.validate_and_touch(&raw_token, "127.0.0.1", "netscope-desktop/1.0").unwrap_err();
+        let err = sm
+            .validate_and_touch(&raw_token, "127.0.0.1", "netscope-desktop/1.0")
+            .unwrap_err();
         assert_eq!(err, SessionError::SessionRevoked);
     }
 
@@ -445,7 +458,8 @@ mod tests {
         // Create 6 sessions (limit is 5)
         let mut tokens = Vec::new();
         for i in 0..6 {
-            let (_, token) = sm.create_session(user_id, "analyst", "10.0.0.1", &format!("agent-{}", i));
+            let (_, token) =
+                sm.create_session(user_id, "analyst", "10.0.0.1", &format!("agent-{}", i));
             tokens.push(token);
         }
 
@@ -453,11 +467,15 @@ mod tests {
         assert_eq!(active.len(), 5);
 
         // First token should be auto-revoked
-        let err = sm.validate_and_touch(&tokens[0], "10.0.0.1", "agent-0").unwrap_err();
+        let err = sm
+            .validate_and_touch(&tokens[0], "10.0.0.1", "agent-0")
+            .unwrap_err();
         assert_eq!(err, SessionError::SessionRevoked);
 
         // Latest token should be valid
-        assert!(sm.validate_and_touch(&tokens[5], "10.0.0.1", "agent-5").is_ok());
+        assert!(sm
+            .validate_and_touch(&tokens[5], "10.0.0.1", "agent-5")
+            .is_ok());
     }
 
     #[test]
@@ -465,14 +483,24 @@ mod tests {
         let sm = SessionManager::new();
         let user_id = Uuid::new_v4();
 
-        let (key, raw_key) = sm.create_api_key("sensor-fleet-key", user_id, vec!["events:write".into(), "sensors:read".into()], Some(30));
+        let (key, raw_key) = sm.create_api_key(
+            "sensor-fleet-key",
+            user_id,
+            vec!["events:write".into(), "sensors:read".into()],
+            Some(30),
+        );
         assert!(raw_key.starts_with("netscope_api_"));
 
         let validated = sm.validate_api_key(&raw_key, Some("events:write")).unwrap();
         assert_eq!(validated.name, "sensor-fleet-key");
 
-        let err = sm.validate_api_key(&raw_key, Some("rules:write")).unwrap_err();
-        assert_eq!(err, SessionError::PermissionDenied("rules:write".to_string()));
+        let err = sm
+            .validate_api_key(&raw_key, Some("rules:write"))
+            .unwrap_err();
+        assert_eq!(
+            err,
+            SessionError::PermissionDenied("rules:write".to_string())
+        );
 
         assert!(sm.revoke_api_key(&key.key_id));
         let err2 = sm.validate_api_key(&raw_key, None).unwrap_err();

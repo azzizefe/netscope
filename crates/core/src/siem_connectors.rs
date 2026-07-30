@@ -175,7 +175,10 @@ impl SiemConnectorManager {
 
         StixBundle {
             r#type: "bundle".to_string(),
-            id: format!("bundle--{:x}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)),
+            id: format!(
+                "bundle--{:x}",
+                chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+            ),
             spec_version: "2.1".to_string(),
             objects: vec![indicator],
         }
@@ -185,9 +188,15 @@ impl SiemConnectorManager {
     pub fn export_sigma_rule(title: &str, protocol: &str, condition: &str) -> SigmaRule {
         SigmaRule {
             title: title.to_string(),
-            id: format!("sigma-{:x}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)),
+            id: format!(
+                "sigma-{:x}",
+                chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+            ),
             status: "experimental".to_string(),
-            description: format!("netscope auto-exported Sigma detection rule for {}", protocol),
+            description: format!(
+                "netscope auto-exported Sigma detection rule for {}",
+                protocol
+            ),
             logsource: serde_json::json!({
                 "category": "network_traffic",
                 "product": "netscope"
@@ -237,11 +246,16 @@ mod tests {
         let connectors = SiemConnectorManager::get_available_connectors();
         assert_eq!(connectors.len(), 10);
 
-        let stix = SiemConnectorManager::export_stix21_bundle("ip", "10.0.1.47", "Malicious insider workstation");
+        let stix = SiemConnectorManager::export_stix21_bundle(
+            "ip",
+            "10.0.1.47",
+            "Malicious insider workstation",
+        );
         assert_eq!(stix.spec_version, "2.1");
         assert_eq!(stix.objects.len(), 1);
 
-        let sigma = SiemConnectorManager::export_sigma_rule("SMB Unsigned Access", "SMB", "signing=false");
+        let sigma =
+            SiemConnectorManager::export_sigma_rule("SMB Unsigned Access", "SMB", "signing=false");
         assert_eq!(sigma.level, "high");
 
         let asyncapi = SiemConnectorManager::export_asyncapi_spec();

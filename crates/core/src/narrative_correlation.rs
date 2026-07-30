@@ -10,15 +10,14 @@
 //! - §2.1.3 Pre-defined Attack Pattern Library (8 core attack patterns)
 //! - §2.1.4 Confidence scoring & Probable/Confirmed classification
 
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::models::Packet;
+use serde::{Deserialize, Serialize};
 
 /// Narrative Timeline Event Step (§2.1.1, §2.1.2).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NarrativeStep {
     pub timestamp_str: String,
-    pub phase_name: String,      // e.g. "Discovery", "Lateral Movement", "Collection"
+    pub phase_name: String, // e.g. "Discovery", "Lateral Movement", "Collection"
     pub mitre_technique: String, // e.g. "T1046", "T1021.002", "T1213"
     pub description: String,
     pub detail: String,
@@ -44,7 +43,7 @@ pub struct AttackNarrative {
     pub target_id: String,
     pub risk_score: u8,
     pub confidence_pct: u8,
-    pub is_confirmed: bool,      // true if 100% matched ("kesin"), false if partially completed ("muhtemel")
+    pub is_confirmed: bool, // true if 100% matched ("kesin"), false if partially completed ("muhtemel")
     pub completion_status_text: String,
     pub total_duration_str: String,
     pub timeline_steps: Vec<NarrativeStep>,
@@ -70,7 +69,9 @@ impl Default for NarrativeCorrelationEngine {
 
 impl NarrativeCorrelationEngine {
     pub fn new() -> Self {
-        let mut engine = Self { patterns: Vec::new() };
+        let mut engine = Self {
+            patterns: Vec::new(),
+        };
         engine.init_pattern_library();
         engine
     }
@@ -81,7 +82,12 @@ impl NarrativeCorrelationEngine {
             AttackPatternDef {
                 id: "pattern_1".to_string(),
                 name: "Port scan → lateral movement → data access".to_string(),
-                required_sequence: vec!["scan".into(), "smb".into(), "collection".into(), "rdp".into()],
+                required_sequence: vec![
+                    "scan".into(),
+                    "smb".into(),
+                    "collection".into(),
+                    "rdp".into(),
+                ],
                 max_timeout_secs: 1800,
                 min_event_count: 3,
                 template_pattern: "Potential Data Exfiltration / Insider Access".to_string(),
@@ -89,7 +95,11 @@ impl NarrativeCorrelationEngine {
             AttackPatternDef {
                 id: "pattern_2".to_string(),
                 name: "Brute force → successful login → privilege escalation".to_string(),
-                required_sequence: vec!["brute_force".into(), "login_success".into(), "priv_esc".into()],
+                required_sequence: vec![
+                    "brute_force".into(),
+                    "login_success".into(),
+                    "priv_esc".into(),
+                ],
                 max_timeout_secs: 3600,
                 min_event_count: 3,
                 template_pattern: "Account Takeover & Privilege Escalation".to_string(),
@@ -113,7 +123,11 @@ impl NarrativeCorrelationEngine {
             AttackPatternDef {
                 id: "pattern_5".to_string(),
                 name: "DGA DNS → encrypted C2 → large outbound transfer".to_string(),
-                required_sequence: vec!["dga_dns".into(), "tls_c2".into(), "outbound_transfer".into()],
+                required_sequence: vec![
+                    "dga_dns".into(),
+                    "tls_c2".into(),
+                    "outbound_transfer".into(),
+                ],
                 max_timeout_secs: 3600,
                 min_event_count: 2,
                 template_pattern: "DGA Malware & Encrypted C2 Exfiltration".to_string(),
@@ -172,7 +186,10 @@ impl NarrativeCorrelationEngine {
                     phase_name: "Discovery".to_string(),
                     mitre_technique: "T1046 (Network Service Discovery)".to_string(),
                     description: format!("{} started scanning {}:", actor, target),
-                    detail: format!("{} ports probed in 32 seconds. Open: 445/SMB, 3389/RDP, 5432/PostgreSQL", event_count.max(47)),
+                    detail: format!(
+                        "{} ports probed in 32 seconds. Open: 445/SMB, 3389/RDP, 5432/PostgreSQL",
+                        event_count.max(47)
+                    ),
                 });
             } else if proto_lc.contains("smb") || summary_lc.contains("smb") {
                 has_smb = true;
@@ -180,10 +197,14 @@ impl NarrativeCorrelationEngine {
                     timestamp_str: ts,
                     phase_name: "Lateral Movement".to_string(),
                     mitre_technique: "T1021.002 (SMB/Windows Admin Shares)".to_string(),
-                    description: format!("SMB connection established. NTLMv2 auth: CORP\\jsmith."),
+                    description: "SMB connection established. NTLMv2 auth: CORP\\jsmith."
+                        .to_string(),
                     detail: format!("SMB signing DISABLED. Share: \\\\{}\\payroll.", target),
                 });
-            } else if summary_lc.contains("read") || summary_lc.contains("query") || pkt.length > 500_000 {
+            } else if summary_lc.contains("read")
+                || summary_lc.contains("query")
+                || pkt.length > 500_000
+            {
                 has_collection = true;
                 steps.push(NarrativeStep {
                     timestamp_str: ts,
@@ -211,7 +232,8 @@ impl NarrativeCorrelationEngine {
                 phase_name: "Discovery".to_string(),
                 mitre_technique: "T1046 (Network Service Discovery)".to_string(),
                 description: format!("{} started scanning {}:", actor, target),
-                detail: "47 ports probed in 32 seconds. Open: 445/SMB, 3389/RDP, 5432/PostgreSQL".to_string(),
+                detail: "47 ports probed in 32 seconds. Open: 445/SMB, 3389/RDP, 5432/PostgreSQL"
+                    .to_string(),
             });
             steps.push(NarrativeStep {
                 timestamp_str: "02:42:07".to_string(),
@@ -241,12 +263,16 @@ impl NarrativeCorrelationEngine {
         }
 
         // Confidence scoring (§2.1.4)
-        let matched_count = (has_scan as u8) + (has_smb as u8) + (has_collection as u8) + (has_rdp as u8);
+        let matched_count =
+            (has_scan as u8) + (has_smb as u8) + (has_collection as u8) + (has_rdp as u8);
         let confidence_pct = ((matched_count as f32 / 4.0) * 100.0) as u8;
         let is_confirmed = confidence_pct >= 90;
 
         let completion_status_text = if is_confirmed {
-            format!("Bu saldırı pattern'i %{} tamamlandı (KESİN SALDIRI).", confidence_pct)
+            format!(
+                "Bu saldırı pattern'i %{} tamamlandı (KESİN SALDIRI).",
+                confidence_pct
+            )
         } else {
             format!("Bu saldırı pattern'i %{} tamamlandı. Henüz tüm adımlar gerçekleşmedi (MUHTEMEL SALDIRI).", confidence_pct)
         };
@@ -264,12 +290,19 @@ impl NarrativeCorrelationEngine {
             box_lines.push(format!("│   {}", step.description));
             box_lines.push(format!("│   {}", step.detail));
             box_lines.push(format!("│   → MITRE {}", step.mitre_technique));
-            box_lines.push("│                                                         │".to_string());
+            box_lines
+                .push("│                                                         │".to_string());
         }
 
         box_lines.push("│ 📊 Toplam süre: 3 dakika 39 saniye                      │".to_string());
-        box_lines.push(format!("│ 🎯 Hedef: {} (Finance Database, KRİTİK)         │", target));
-        box_lines.push(format!("│ 👤 Aktör: jsmith / {}                          │", actor));
+        box_lines.push(format!(
+            "│ 🎯 Hedef: {} (Finance Database, KRİTİK)         │",
+            target
+        ));
+        box_lines.push(format!(
+            "│ 👤 Aktör: jsmith / {}                          │",
+            actor
+        ));
         box_lines.push("│ 🔴 Risk: 92/100 (Critical)                              │".to_string());
         box_lines.push("│                                                         │".to_string());
         box_lines.push("│ 💡 Karar: Bu bir insider threat veya ele geçirilmiş     │".to_string());
@@ -282,12 +315,14 @@ impl NarrativeCorrelationEngine {
         let mermaid_flow_diagram = Self::generate_mermaid_flow_diagram(actor, target, &steps);
 
         // §2.2.2 Timeline Visualization Swimlane Diagram
-        let mermaid_swimlane_diagram = Self::generate_mermaid_swimlane_diagram(actor, target, &steps);
+        let mermaid_swimlane_diagram =
+            Self::generate_mermaid_swimlane_diagram(actor, target, &steps);
 
         // §2.2.3 Attack Tree Diagram
         let mermaid_attack_tree = Self::generate_mermaid_attack_tree(actor, target, &steps);
 
-        static NARRATIVE_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        static NARRATIVE_COUNTER: std::sync::atomic::AtomicU64 =
+            std::sync::atomic::AtomicU64::new(1);
         let seq = NARRATIVE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let ts = chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0);
 
@@ -311,7 +346,11 @@ impl NarrativeCorrelationEngine {
     }
 
     /// §2.2.1 Attack Flow Diagram Generator (Mermaid.js)
-    pub fn generate_mermaid_flow_diagram(actor: &str, target: &str, steps: &[NarrativeStep]) -> String {
+    pub fn generate_mermaid_flow_diagram(
+        actor: &str,
+        target: &str,
+        steps: &[NarrativeStep],
+    ) -> String {
         let mut lines = Vec::new();
         lines.push("sequenceDiagram".to_string());
         lines.push("  autonumber".to_string());
@@ -319,7 +358,8 @@ impl NarrativeCorrelationEngine {
         lines.push(format!("  participant T as {} (Target)", target));
 
         for step in steps {
-            let is_failed = step.detail.to_lowercase().contains("failed") || step.description.to_lowercase().contains("failed");
+            let is_failed = step.detail.to_lowercase().contains("failed")
+                || step.description.to_lowercase().contains("failed");
             let arrow = if is_failed { "--x" } else { "->>" };
             lines.push(format!(
                 "  A{}T: {} [{}]",
@@ -331,24 +371,40 @@ impl NarrativeCorrelationEngine {
     }
 
     /// §2.2.2 Timeline Swimlane Diagram Generator (Mermaid.js Gantt/Swimlane)
-    pub fn generate_mermaid_swimlane_diagram(actor: &str, target: &str, steps: &[NarrativeStep]) -> String {
+    pub fn generate_mermaid_swimlane_diagram(
+        actor: &str,
+        target: &str,
+        steps: &[NarrativeStep],
+    ) -> String {
         let mut lines = Vec::new();
         lines.push("gantt".to_string());
-        lines.push(format!("  title Attack Timeline Swimlane — {} → {}", actor, target));
+        lines.push(format!(
+            "  title Attack Timeline Swimlane — {} → {}",
+            actor, target
+        ));
         lines.push("  dateFormat  HH:mm:ss".to_string());
         lines.push("  axisFormat  %H:%M:%S".to_string());
         lines.push(format!("  section Actor Lane ({})", actor));
 
         for (idx, step) in steps.iter().enumerate() {
-            let start_time = if step.timestamp_str.is_empty() { "02:41:12" } else { &step.timestamp_str };
+            let start_time = if step.timestamp_str.is_empty() {
+                "02:41:12"
+            } else {
+                &step.timestamp_str
+            };
             lines.push(format!(
                 "  {} ({}) :active, step{}, {}, 1m",
-                step.phase_name, step.mitre_technique, idx + 1, start_time
+                step.phase_name,
+                step.mitre_technique,
+                idx + 1,
+                start_time
             ));
         }
 
         lines.push("  section Network & Controls".to_string());
-        lines.push("  SMB Signing Enforcement Check (Disabled) :crit, done, 02:42:07, 2m".to_string());
+        lines.push(
+            "  SMB Signing Enforcement Check (Disabled) :crit, done, 02:42:07, 2m".to_string(),
+        );
         lines.push(format!("  section Target Asset ({})", target));
         lines.push("  RDP Access Policy Denial :done, 02:44:51, 1m".to_string());
 
@@ -356,11 +412,21 @@ impl NarrativeCorrelationEngine {
     }
 
     /// §2.2.3 Attack Tree Diagram Generator (Mermaid.js Graph TD)
-    pub fn generate_mermaid_attack_tree(actor: &str, target: &str, steps: &[NarrativeStep]) -> String {
+    pub fn generate_mermaid_attack_tree(
+        actor: &str,
+        target: &str,
+        _steps: &[NarrativeStep],
+    ) -> String {
         let mut lines = Vec::new();
         lines.push("graph TD".to_string());
-        lines.push(format!("  Root[\"🎯 Attack Goal: Data Exfiltration from {}\"]", target));
-        lines.push(format!("  Actor[\"👤 Actor: {}\"] --> Phase1[\"1. Reconnaissance & Discovery\"]", actor));
+        lines.push(format!(
+            "  Root[\"🎯 Attack Goal: Data Exfiltration from {}\"]",
+            target
+        ));
+        lines.push(format!(
+            "  Actor[\"👤 Actor: {}\"] --> Phase1[\"1. Reconnaissance & Discovery\"]",
+            actor
+        ));
         lines.push("  Phase1 --> Step1[\"T1046: Port Scan 47 Ports\"]".to_string());
         lines.push("  Step1 --> Phase2[\"2. Lateral Movement\"]".to_string());
         lines.push("  Phase2 --> Step2[\"T1021.002: SMB Share Connection\"]".to_string());
@@ -378,16 +444,17 @@ impl NarrativeCorrelationEngine {
 
 /// Global thread-safe Narrative Correlation Engine singleton.
 pub fn global_narrative_engine() -> &'static std::sync::Mutex<NarrativeCorrelationEngine> {
-    static ENGINE: std::sync::OnceLock<std::sync::Mutex<NarrativeCorrelationEngine>> = std::sync::OnceLock::new();
+    static ENGINE: std::sync::OnceLock<std::sync::Mutex<NarrativeCorrelationEngine>> =
+        std::sync::OnceLock::new();
     ENGINE.get_or_init(|| std::sync::Mutex::new(NarrativeCorrelationEngine::new()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Protocol;
     use bytes::Bytes;
     use chrono::Utc;
-    use crate::models::Protocol;
 
     #[test]
     fn test_narrative_correlation_engine() {
@@ -409,7 +476,9 @@ mod tests {
 
         let narrative = engine.correlate_events("HR-DESK-023", "FIN-DB-01", &[&pkt1]);
 
-        assert!(narrative.formatted_box_narrative.contains("Attack Narrative"));
+        assert!(narrative
+            .formatted_box_narrative
+            .contains("Attack Narrative"));
         assert!(narrative.formatted_box_narrative.contains("HR-DESK-023"));
         assert!(narrative.formatted_box_narrative.contains("FIN-DB-01"));
         assert_eq!(narrative.risk_score, 92);

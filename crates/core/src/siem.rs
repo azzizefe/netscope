@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-use chrono::{Datelike, Timelike};
 use crate::models::Packet;
 use crate::names::NameCache;
+use chrono::{Datelike, Timelike};
 use crossbeam_channel::Receiver;
 use maxminddb::Reader;
 use serde::Serialize;
@@ -35,6 +35,7 @@ fn global_geoip_reader() -> &'static Option<Reader<Vec<u8>>> {
     })
 }
 
+#[allow(dead_code)]
 fn map_threat_intel_mitre_and_killchain(
     protocol: &str,
     summary: &str,
@@ -224,99 +225,6 @@ pub struct SiemEvent {
 
 impl SiemEvent {
     pub fn from_packet(pkt: &Packet) -> Self {
-        use crate::expert::{classify, ExpertSeverity};
-        let severity = classify(pkt);
-        let (severity_score, severity_label) = match severity {
-            ExpertSeverity::Chat => (0, "Chat".to_string()),
-            ExpertSeverity::Note => (3, "Note".to_string()),
-            ExpertSeverity::Warning => (6, "Warning".to_string()),
-            ExpertSeverity::Error => (9, "Error".to_string()),
-        };
-
-        let (mitre_tactic, mitre_technique, kill_chain_phase) =
-            map_threat_intel_mitre_and_killchain(&pkt.protocol.to_string(), &pkt.summary);
-
-        // Passive DNS
-        global_name_cache().lock().unwrap().observe(pkt);
-        let resolved_dns_name = if let Some(ip) = pkt.dst_addr {
-            global_name_cache()
-                .lock()
-                .unwrap()
-                .name_for(ip)
-                .map(|s| s.to_string())
-        } else if let Some(ip) = pkt.src_addr {
-            global_name_cache()
-                .lock()
-                .unwrap()
-                .name_for(ip)
-                .map(|s| s.to_string())
-        } else {
-            None
-        };
-
-        // MAC Vendor
-        let mac_vendor = if pkt.data.len() >= 12 {
-            let mac_src = &pkt.data[6..12];
-            mac_vendor_lookup(mac_src)
-        } else {
-            None
-        };
-
-        // TLS Fingerprints
-        let (ja3, ja4, ja3s) = if pkt.protocol == crate::registry::Protocol::Tls {
-            let payload = tls_payload(pkt);
-            let ja3 = payload
-                .and_then(crate::dissectors::tls::parse_client_hello)
-                .map(|h| crate::dissectors::tls::ja3_hash(&h));
-            let ja4 = payload
-                .and_then(crate::dissectors::tls::parse_client_hello)
-                .map(|h| crate::dissectors::tls::ja4(&h, 't'));
-            let ja3s = payload
-                .and_then(crate::dissectors::tls::parse_server_hello)
-                .map(|s| crate::dissectors::tls::ja3s_hash(&s));
-            (ja3, ja4, ja3s)
-        } else {
-            (None, None, None)
-        };
-
-        // GeoIP & ASN
-        let mut geoip_country = None;
-        let mut geoip_city = None;
-        let mut asn = None;
-        let mut isp = None;
-
-        if let Some(ref reader) = global_geoip_reader() {
-            let lookup_ip = pkt.dst_addr.or(pkt.src_addr);
-            if let Some(ip) = lookup_ip {
-                if let Ok(city) = reader.lookup::<maxminddb::geoip2::City>(ip) {
-                    geoip_country = city
-                        .country
-                        .and_then(|c| c.names)
-                        .and_then(|n| n.get("en").map(|s| s.to_string()));
-                    geoip_city = city
-                        .city
-                        .and_then(|c| c.names)
-                        .and_then(|n| n.get("en").map(|s| s.to_string()));
-                }
-                if let Ok(asn_info) = reader.lookup::<maxminddb::geoip2::Asn>(ip) {
-                    asn = asn_info
-                        .autonomous_system_number
-                        .map(|a| format!("AS{}", a));
-                    isp = asn_info
-                        .autonomous_system_organization
-                        .map(|s| s.to_string());
-                }
-            }
-        }
-
-        // Threat intel match status
-        let threat_intel_matched = Some(
-            pkt.summary.contains("AbuseIPDB")
-                || pkt.summary.contains("URLhaus")
-                || pkt.summary.contains("Threat")
-                || pkt.summary.contains("malicious"),
-        );
-
         Self::from_packet_with_sensor(pkt, "default_sensor")
     }
 
@@ -330,9 +238,6 @@ impl SiemEvent {
             ExpertSeverity::Warning => (6, "Warning".to_string()),
             ExpertSeverity::Error => (9, "Error".to_string()),
         };
-
-        let (mitre_tactic, mitre_technique, kill_chain_phase) =
-            map_threat_intel_mitre_and_killchain(&pkt.protocol.to_string(), &pkt.summary);
 
         // Passive DNS
         global_name_cache().lock().unwrap().observe(pkt);
@@ -449,8 +354,14 @@ impl SiemEvent {
         );
 
         let mitre_tactic = mitre_eval.techniques.first().map(|t| t.tactic.clone());
-        let mitre_technique = mitre_eval.techniques.first().map(|t| format!("{} - {}", t.id, t.name));
-        let kill_chain_phase = mitre_eval.kill_chain_phases.first().map(|p| p.phase_name.clone());
+        let mitre_technique = mitre_eval
+            .techniques
+            .first()
+            .map(|t| format!("{} - {}", t.id, t.name));
+        let kill_chain_phase = mitre_eval
+            .kill_chain_phases
+            .first()
+            .map(|p| p.phase_name.clone());
 
         // Katman 6 — İş Etkisi (Business Impact) (§1.1.6)
         let impact_eval = crate::business_impact::global_asset_registry()
@@ -460,8 +371,14 @@ impl SiemEvent {
 
         // Katman 7 — "Bunu Neden Önemsemeliyim?" Açıklaması (§1.1.7)
         let template_ctx = crate::why_this_matters::TemplateContext {
-            src_ip: pkt.src_addr.map(|a| a.to_string()).unwrap_or_else(|| "10.0.1.47".to_string()),
-            dst_ip: pkt.dst_addr.map(|a| a.to_string()).unwrap_or_else(|| "10.0.5.18".to_string()),
+            src_ip: pkt
+                .src_addr
+                .map(|a| a.to_string())
+                .unwrap_or_else(|| "10.0.1.47".to_string()),
+            dst_ip: pkt
+                .dst_addr
+                .map(|a| a.to_string())
+                .unwrap_or_else(|| "10.0.5.18".to_string()),
             dst_host: impact_eval.affected_asset_name.clone(),
             department: "HR".to_string(),
             protocol: pkt.protocol.to_string(),

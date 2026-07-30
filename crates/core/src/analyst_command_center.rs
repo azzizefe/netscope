@@ -13,7 +13,6 @@
 //! - §5.2.5 Analyst Gamification & Metrics Tracker
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Saved Filter Template Preset (§5.1.4).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,16 +123,38 @@ impl AnalystCommandCenterEngine {
     pub fn get_autocomplete_suggestions(query_prefix: &str) -> AutocompleteSuggestions {
         let _prefix = query_prefix.to_lowercase();
         AutocompleteSuggestions {
-            ips: vec!["10.0.1.47".into(), "10.0.5.18".into(), "192.168.1.100".into()],
+            ips: vec![
+                "10.0.1.47".into(),
+                "10.0.5.18".into(),
+                "192.168.1.100".into(),
+            ],
             hostnames: vec!["HR-DESK-023".into(), "FIN-DB-01".into(), "SRV-ADMIN".into()],
-            protocols: vec!["SMB".into(), "RDP".into(), "DNS".into(), "PostgreSQL".into(), "SSH".into()],
-            mitre_techniques: vec!["T1046 (Network Service Discovery)".into(), "T1021.002 (SMB Shares)".into(), "T1213 (Data Repositories)".into()],
-            event_types: vec!["Security Finding".into(), "Network Activity".into(), "Anomaly Alert".into()],
+            protocols: vec![
+                "SMB".into(),
+                "RDP".into(),
+                "DNS".into(),
+                "PostgreSQL".into(),
+                "SSH".into(),
+            ],
+            mitre_techniques: vec![
+                "T1046 (Network Service Discovery)".into(),
+                "T1021.002 (SMB Shares)".into(),
+                "T1213 (Data Repositories)".into(),
+            ],
+            event_types: vec![
+                "Security Finding".into(),
+                "Network Activity".into(),
+                "Anomaly Alert".into(),
+            ],
         }
     }
 
     /// §5.1.3 Search Result "Explain" Rule Engine.
-    pub fn explain_search_match(filter_query: &str, field_name: &str, field_val: &str) -> SearchExplanation {
+    pub fn explain_search_match(
+        filter_query: &str,
+        field_name: &str,
+        field_val: &str,
+    ) -> SearchExplanation {
         SearchExplanation {
             matched_term: filter_query.to_string(),
             matched_field: field_name.to_string(),
@@ -152,31 +173,46 @@ impl AnalystCommandCenterEngine {
                 pivot_type: "IP".to_string(),
                 pivot_value: value.to_string(),
                 generated_filter: format!("ip.src == '{}' || ip.dst == '{}'", value, value),
-                summary_text: format!("{} IP adresine ait tüm aktif ve geçmiş ağ trafiği sorgulandı.", value),
+                summary_text: format!(
+                    "{} IP adresine ait tüm aktif ve geçmiş ağ trafiği sorgulandı.",
+                    value
+                ),
             },
             "USER" => PivotResult {
                 pivot_type: "User".to_string(),
                 pivot_value: value.to_string(),
                 generated_filter: format!("user.name == '{}'", value),
-                summary_text: format!("'{}' kullanıcısının gerçekleştirildiği tüm oturumlar ve erişimler listelendi.", value),
+                summary_text: format!(
+                    "'{}' kullanıcısının gerçekleştirildiği tüm oturumlar ve erişimler listelendi.",
+                    value
+                ),
             },
             "JA4" => PivotResult {
                 pivot_type: "JA4".to_string(),
                 pivot_value: value.to_string(),
                 generated_filter: format!("tls.ja4 == '{}'", value),
-                summary_text: format!("'{}' JA4 fingerprint'ine sahip tüm TLS istemci bağlantıları saptandı.", value),
+                summary_text: format!(
+                    "'{}' JA4 fingerprint'ine sahip tüm TLS istemci bağlantıları saptandı.",
+                    value
+                ),
             },
             "DNS" => PivotResult {
                 pivot_type: "DNS".to_string(),
                 pivot_value: value.to_string(),
                 generated_filter: format!("dns.query == '{}'", value),
-                summary_text: format!("'{}' domain adı için yapılan tüm DNS sorguları ve yanıtları getirildi.", value),
+                summary_text: format!(
+                    "'{}' domain adı için yapılan tüm DNS sorguları ve yanıtları getirildi.",
+                    value
+                ),
             },
             _ => PivotResult {
                 pivot_type: "SMB".to_string(),
                 pivot_value: value.to_string(),
                 generated_filter: format!("smb.share == '{}'", value),
-                summary_text: format!("'{}' SMB paylaşımına yapılan tüm dosya okuma/yazma aktiviteleri sorgulandı.", value),
+                summary_text: format!(
+                    "'{}' SMB paylaşımına yapılan tüm dosya okuma/yazma aktiviteleri sorgulandı.",
+                    value
+                ),
             },
         }
     }
