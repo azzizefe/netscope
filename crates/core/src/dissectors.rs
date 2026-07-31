@@ -4486,6 +4486,29 @@ mod robustness {
     ///
     /// If this fails: wire the module into the dispatch, or, if its parent
     /// builds the result, drop its entry point and add it to [`HELPER_MODULES`].
+    ///
+    /// `#[ignore]`d because 140 modules still fail it, so it tracks a backlog
+    /// rather than gating CI:
+    ///
+    /// ```text
+    /// cargo test -p netscope-core --lib every_dissector_module_is_reachable -- --ignored
+    /// ```
+    ///
+    /// **Do not empty that backlog by listing the modules in
+    /// [`HELPER_MODULES`].** That list means "deliberately not reached" — a
+    /// shared parser, a nested dissector whose parent builds the result, or an
+    /// analysis pass with no wire form. A skeleton dissector that simply has
+    /// nowhere to be called from is none of those, and moving it there turns
+    /// this check into one that cannot fail. It was done once, in bulk, and
+    /// silently retired the guard for 141 modules.
+    ///
+    /// Nor should the backlog be emptied by inventing a port. Most of these
+    /// read fixed offsets and validate nothing — `nccl_allreduce` accepts any
+    /// 32-byte payload — so a binding would relabel unrelated traffic rather
+    /// than find the protocol. That has already happened three times here; see
+    /// the ephemeral-range rule at the top of `bindings.rs`. Wiring one needs a
+    /// registered port or a real signature, which in turn needs a capture or a
+    /// spec.
     #[test]
     #[ignore]
     fn every_dissector_module_is_reachable() {
