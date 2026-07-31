@@ -451,6 +451,46 @@ fn is_elevated() -> bool {
     netscope_core::firewall::is_elevated()
 }
 
+/// Restart netscope with Administrator rights.
+///
+/// Capture needs elevation on Windows, so the UI offers this as one click
+/// rather than making the user find the executable themselves. The elevated
+/// instance is launched through PowerShell's `-Verb RunAs` — that is what
+/// raises the UAC prompt — and this process then leaves through Tauri's own
+/// exit so the capture pipeline and any open capture file close cleanly.
+#[tauri::command]
+fn relaunch_elevated(app: AppHandle) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        let current_exe =
+            std::env::current_exe().map_err(|e| format!("Cannot locate the application: {e}"))?;
+
+        // Doubling is how a single quote escapes inside a PowerShell literal.
+        let path = current_exe.to_string_lossy().replace('\'', "''");
+        // Without `-ErrorAction Stop` a declined UAC prompt still exits 0, and
+        // we would quit the running instance without a replacement.
+        let status = std::process::Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                &format!("Start-Process -FilePath '{path}' -Verb RunAs -ErrorAction Stop"),
+            ])
+            .status()
+            .map_err(|e| e.to_string())?;
+
+        if !status.success() {
+            return Err("Administrator rights were not granted.".into());
+        }
+        app.exit(0);
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Err("Automatic elevation is only available on Windows — start netscope with sudo.".into())
+    }
+}
+
 /// How many protocols the build recognises.
 ///
 /// Read from the registry rather than written down in the UI, because the
@@ -1859,6 +1899,7 @@ pub fn run() {
             tls_keylog_status,
             get_glossary,
             is_elevated,
+            relaunch_elevated,
             protocol_count,
             protocol_table,
             list_blocked,

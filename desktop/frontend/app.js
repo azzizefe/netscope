@@ -6243,7 +6243,25 @@ async function init() {
   // elevation + existing blocks
   try {
     state.elevated = await invoke('is_elevated');
-    if (!state.elevated) els.elevationBadge.classList.remove('hidden');
+    if (!state.elevated) {
+      els.elevationBadge.classList.remove('hidden');
+      const relaunchPrompt = async () => {
+        if (!confirm(I18N.t('prompt.relaunch_elevated'))) return;
+        try {
+          await invoke('relaunch_elevated');
+        } catch (err) {
+          alert(err);
+        }
+      };
+      els.elevationBadge.addEventListener('click', relaunchPrompt);
+      // Offer the restart once, so a first run explains why capture is empty.
+      // After that the badge is the way in — asking on every launch would nag
+      // the people who deliberately run unelevated to read a saved capture.
+      if (!loadJSON('netscope.elevationAsked', false)) {
+        saveJSON('netscope.elevationAsked', true);
+        setTimeout(relaunchPrompt, 100);
+      }
+    }
     // Fills in the protocol count on the empty packet list. Not awaited: the
     // number is decoration, and nothing else waits on it.
     loadProtocolCount(invoke);
