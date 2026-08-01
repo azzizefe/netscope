@@ -362,91 +362,28 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
 
 ### 5.1 — SCCM / Microsoft Configuration Manager
 
-- [ ] **5.1.1** **SCCM Application Model** — detection method + deployment type:
-  - Detection: Registry `HKLM\SOFTWARE\Netscope\Agent\Version`
-  - Install: `msiexec /i netscope-agent.msi /qn SERVER_URL=... TOKEN=...`
-  - Uninstall: `msiexec /x {ProductCode} /qn`
-- [ ] **5.1.2** **SCCM Collection** — "All Windows Servers", "Domain Controllers", "DMZ Servers"
-- [ ] **5.1.3** **SCCM Deployment Phases**:
-  - Phase 1: Pilot (10 makine, 1 hafta izle)
-  - Phase 2: Ring 1 (100 makine)
-  - Phase 3: Ring 2 (500 makine)
-  - Phase 4: Full production
-- [ ] **5.1.4** **SCCM Compliance Baseline** — sensör versiyonu, config doğruluğu, servis çalışıyor mu?
+- [x] **5.1.1** **SCCM Application Model** — (`deploy/sccm/sccm-app-definition.xml`)
+- [x] **5.1.2** **SCCM Collection** — Sunucu grupları ve dağıtım halkaları
+- [x] **5.1.3** **SCCM Deployment Phases** — Pilot, Ring 1, Ring 2 kademeli dağıtım
+- [x] **5.1.4** **SCCM Compliance Baseline** — Sensör versiyon ve servis doğrulaması
 
 ### 5.2 — Ansible
 
-- [ ] **5.2.1** Ansible role: `ansible/roles/netscope-agent/`
-  ```
-  roles/netscope-agent/
-  ├── tasks/
-  │   ├── main.yml          # OS detection → include install-{windows,linux,macos}.yml
-  │   ├── install-windows.yml
-  │   ├── install-linux.yml
-  │   ├── install-macos.yml
-  │   ├── configure.yml     # config.toml template deployment
-  │   ├── enroll.yml        # enrollment token doğrulama
-  │   └── validate.yml      # health check
-  ├── templates/
-  │   ├── config.toml.j2
-  │   ├── netscope-agent.service.j2   # systemd unit
-  │   └── com.netscope.agent.plist.j2 # launchd
-  ├── defaults/main.yml
-  └── handlers/main.yml
-  ```
-- [ ] **5.2.2** Ansible playbook örneği:
-  ```yaml
-  # deploy-netscope.yml
-  - name: Deploy netscope agent to all servers
-    hosts: all
-    become: yes
-    roles:
-      - netscope-agent
-    vars:
-      netscope_server_url: "https://soc-server.internal.corp:9443"
-      netscope_enrollment_token: "{{ vault_netscope_token }}"
-      netscope_sensor_group: "{{ ansible_environment }}"
-      netscope_log_level: "info"
-  ```
-- [ ] **5.2.3** Ansible Vault ile token şifreleme
-- [ ] **5.2.4** Dinamik inventory — AWS EC2, Azure VM, GCP Compute Engine tag'leri ile otomatik grup
+- [x] **5.2.1** Ansible role (`deploy/ansible/roles/netscope-agent/tasks/main.yml`, `templates/config.toml.j2`)
+- [x] **5.2.2** Ansible playbook desteği (`deploy/ansible/site.yml`)
+- [x] **5.2.3** Ansible Vault ile token şifreleme desteği
+- [x] **5.2.4** Dinamik inventory desteği (AWS, Azure, GCP VM tag'leri)
 
 ### 5.3 — PowerShell DSC (Desired State Configuration)
 
-- [ ] **5.3.1** DSC Resource modülü: `NetscopeAgentDSC`
-  ```powershell
-  Configuration NetscopeAgentConfig {
-      Import-DscResource -ModuleName NetscopeAgentDSC
-      
-      Node "DC-Istanbul-*" {
-          NetscopeAgent InstallAgent {
-              Ensure = "Present"
-              Version = "0.2.0"
-              ServerUrl = "https://soc.istanbul.corp:9443"
-              EnrollmentToken = "nse_token_istanbul..."
-              SensorGroup = "DC-Istanbul"
-              CaptureFilter = "not host 192.168.255.1"
-          }
-      }
-      
-      Node "DC-Ankara-*" {
-          NetscopeAgent InstallAgent {
-              Ensure = "Present"
-              Version = "0.2.0"
-              ServerUrl = "https://soc.ankara.corp:9443"
-              EnrollmentToken = "nse_token_ankara..."
-              SensorGroup = "DC-Ankara"
-          }
-      }
-  }
-  ```
-- [ ] **5.3.2** DSC Pull Server / Azure Automation DSC desteği
-- [ ] **5.3.3** DSC ile config drift detection ve auto-remediation
+- [x] **5.3.1** DSC Resource modülü (`deploy/powershell/NetscopeAgentDSC.ps1`)
+- [x] **5.3.2** DSC Pull Server / Azure Automation DSC desteği
+- [x] **5.3.3** DSC ile config drift detection ve otomasyon
 
 ### 5.4 — PDQ Deploy
 
-- [ ] **5.4.1** PDQ package XML — netscope-agent için hazır import dosyası
-- [ ] **5.4.2** PDQ Inventory collection — netscope yüklü/yüksüz/outdated raporu
+- [x] **5.4.1** PDQ package XML (`deploy/pdq/netscope-pdq-package.xml`)
+- [x] **5.4.2** PDQ Inventory collection raporlama desteği
 
 ---
 

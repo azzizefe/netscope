@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 netscope contributors -->
+<PDQDeploy>
+  <Package>
+    <Name>Netscope Enterprise Agent</Name>
+    <Version>0.2.0</Version>
+    <Steps>
+      <Step Type="Install">
+        <Title>Install Netscope Agent MSI</Title>
+        <Path>netscope-agent-0.2.0-x64.msi</Path>
+        <Parameters>/qn /norestart NETSCOPE_SERVER_URL="$(ServerUrl)" NETSCOPE_ENROLLMENT_TOKEN="$(EnrollmentToken)"</Parameters>
+      </Step>
+    </Steps>
+  </Package>
+</PDQDeploy>

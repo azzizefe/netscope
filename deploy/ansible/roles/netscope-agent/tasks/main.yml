@@ -1,0 +1,37 @@
+---
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+
+- name: Create Netscope configuration directory
+  file:
+    path: /etc/netscope
+    state: directory
+    mode: '0755'
+
+- name: Deploy Netscope agent configuration file
+  template:
+    src: config.toml.j2
+    dest: /etc/netscope/agent.toml
+    mode: '0600'
+  notify: Restart netscope-agent
+
+- name: Install Netscope Agent binary
+  get_url:
+    url: "{{ netscope_agent_binary_url }}"
+    dest: /usr/local/bin/netscope-agent
+    mode: '0755'
+  notify: Restart netscope-agent
+
+- name: Deploy systemd service unit
+  copy:
+    src: deploy/systemd/netscope-agent.service
+    dest: /etc/systemd/system/netscope-agent.service
+    mode: '0644'
+  notify: Restart netscope-agent
+
+- name: Enable and start Netscope Agent service
+  systemd:
+    name: netscope-agent
+    enabled: yes
+    state: started
+    daemon_reload: yes

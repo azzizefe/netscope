@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 netscope contributors -->
+<AppML xmlns="http://schemas.microsoft.com/SystemCenterConfigurationManager/2012/AppManagement">
+  <Application>
+    <Title>Netscope Enterprise Agent</Title>
+    <Publisher>netscope contributors</Publisher>
+    <SoftwareVersion>0.2.0</SoftwareVersion>
+    <DeploymentTypes>
+      <DeploymentType Name="MSI Silent Installer" Technology="MSI">
+        <InstallCommand>msiexec /i netscope-agent-0.2.0-x64.msi /qn /norestart NETSCOPE_SERVER_URL="%SERVER_URL%" NETSCOPE_ENROLLMENT_TOKEN="%TOKEN%"</InstallCommand>
+        <UninstallCommand>msiexec /x {A1B2C3D4-E5F6-7890-ABCD-EF1234567890} /qn</UninstallCommand>
+        <DetectionMethodType>Registry</DetectionMethodType>
+        <DetectionRuleKey>HKLM\SOFTWARE\Policies\Netscope\Agent</DetectionRuleKey>
+        <DetectionRuleValue>Version</DetectionRuleValue>
+      </DeploymentType>
+    </DeploymentTypes>
+  </Application>
+</AppML>
