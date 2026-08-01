@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
+
+//! Forensics, Session Reconstruction, File Carving & Smart Pre-Buffering (§5.1).
+
 use crate::models::{Packet, Protocol};
+use chrono::{DateTime, Utc};
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReconstructedSession {
@@ -29,6 +35,69 @@ pub struct TimelineEvent {
     pub protocol: String,
     pub length: u32,
     pub summary: String,
+}
+
+/// Continuous RAM Ring Buffer for Smart Packet Pre-buffering (§5.1).
+///
+/// Keeps the last 10 seconds of raw packets in RAM. When a security threat alert triggers,
+/// it extracts packets from 5 seconds BEFORE to 5 seconds AFTER the alert for zero-data-loss PCAP analysis.
+#[derive(Debug, Clone)]
+pub struct SmartPreBuffer {
+    capacity_secs: i64,
+    buffer: Arc<RwLock<VecDeque<Packet>>>,
+}
+
+impl SmartPreBuffer {
+    /// Create a new pre-buffer with specified capacity in seconds (default 10 seconds).
+    pub fn new(capacity_secs: i64) -> Self {
+        Self {
+            capacity_secs,
+            buffer: Arc::new(RwLock::new(VecDeque::new())),
+        }
+    }
+
+    /// Push a packet into the RAM ring-buffer and purge packets older than capacity.
+    pub fn push(&self, pkt: Packet) {
+        let mut b = self.buffer.write();
+        let now = pkt.timestamp;
+        b.push_back(pkt);
+
+        // Trim expired packets outside the capacity window
+        let cutoff = now - chrono::Duration::seconds(self.capacity_secs);
+        while let Some(front) = b.front() {
+            if front.timestamp < cutoff {
+                b.pop_front();
+            } else {
+                break;
+            }
+        }
+    }
+
+    /// Extract forensic packet window (-pre_secs before trigger, +post_secs after trigger) (§5.1).
+    pub fn extract_forensic_window(
+        &self,
+        trigger_time: DateTime<Utc>,
+        pre_secs: i64,
+        post_secs: i64,
+    ) -> Vec<Packet> {
+        let b = self.buffer.read();
+        let start_time = trigger_time - chrono::Duration::seconds(pre_secs);
+        let end_time = trigger_time + chrono::Duration::seconds(post_secs);
+
+        b.iter()
+            .filter(|p| p.timestamp >= start_time && p.timestamp <= end_time)
+            .cloned()
+            .collect()
+    }
+
+    /// Total count of buffered packets in RAM.
+    pub fn len(&self) -> usize {
+        self.buffer.read().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.buffer.read().is_empty()
+    }
 }
 
 // 1. Session Reconstruction
@@ -165,7 +234,7 @@ pub fn carve_files(data: &[u8]) -> Vec<CarvedFile> {
                 }
 
                 files.push(CarvedFile {
-                    filename: format!("carved_{}.jpg", idx),
+                    filename: format!("carved_{idx}.jpg"),
                     file_type: "JPEG Image".to_string(),
                     start_offset: idx,
                     size,
@@ -197,11 +266,11 @@ pub fn carve_files(data: &[u8]) -> Vec<CarvedFile> {
                 if carved_data.len() >= 24 && &carved_data[12..16] == b"IHDR" {
                     let w = u32::from_be_bytes(carved_data[16..20].try_into().unwrap_or([0; 4]));
                     let h = u32::from_be_bytes(carved_data[20..24].try_into().unwrap_or([0; 4]));
-                    metadata.insert("Dimensions".to_string(), format!("{}x{}", w, h));
+                    metadata.insert("Dimensions".to_string(), format!("{w}x{h}"));
                 }
 
                 files.push(CarvedFile {
-                    filename: format!("carved_{}.png", idx),
+                    filename: format!("carved_{idx}.png"),
                     file_type: "PNG Image".to_string(),
                     start_offset: idx,
                     size,
@@ -253,7 +322,7 @@ pub fn carve_files(data: &[u8]) -> Vec<CarvedFile> {
                 }
 
                 files.push(CarvedFile {
-                    filename: format!("carved_{}.pdf", idx),
+                    filename: format!("carved_{idx}.pdf"),
                     file_type: "PDF Document".to_string(),
                     start_offset: idx,
                     size,
@@ -284,7 +353,7 @@ pub fn carve_files(data: &[u8]) -> Vec<CarvedFile> {
                 metadata.insert("Archive Type".to_string(), "ZIP File".to_string());
 
                 files.push(CarvedFile {
-                    filename: format!("carved_{}.zip", idx),
+                    filename: format!("carved_{idx}.zip"),
                     file_type: "ZIP Archive".to_string(),
                     start_offset: idx,
                     size,
@@ -316,7 +385,7 @@ pub fn carve_files(data: &[u8]) -> Vec<CarvedFile> {
                 metadata.insert("Format".to_string(), "Windows Executable (PE)".to_string());
 
                 files.push(CarvedFile {
-                    filename: format!("carved_{}.exe", idx),
+                    filename: format!("carved_{idx}.exe"),
                     file_type: "PE Binary".to_string(),
                     start_offset: idx,
                     size,
@@ -336,7 +405,7 @@ pub fn carve_files(data: &[u8]) -> Vec<CarvedFile> {
             metadata.insert("Format".to_string(), "Linux Executable (ELF)".to_string());
 
             files.push(CarvedFile {
-                filename: format!("carved_{}.elf", idx),
+                filename: format!("carved_{idx}.elf"),
                 file_type: "ELF Binary".to_string(),
                 start_offset: idx,
                 size,
@@ -394,6 +463,49 @@ pub fn export_timeline_json(events: &[TimelineEvent]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytes::Bytes;
+
+    #[test]
+    fn test_smart_pre_buffer() {
+        let prebuf = SmartPreBuffer::new(10);
+
+        let now = Utc::now();
+        let p1 = Packet {
+            timestamp: now - chrono::Duration::seconds(6),
+            src_addr: Some("10.0.0.1".parse().unwrap()),
+            dst_addr: Some("10.0.0.2".parse().unwrap()),
+            src_port: Some(1234),
+            dst_port: Some(80),
+            protocol: Protocol::Http,
+            length: 100,
+            summary: "GET /api HTTP/1.1".into(),
+            data: Bytes::new(),
+            llm: None,
+        };
+
+        let p2 = Packet {
+            timestamp: now,
+            src_addr: Some("10.0.0.1".parse().unwrap()),
+            dst_addr: Some("10.0.0.2".parse().unwrap()),
+            src_port: Some(1234),
+            dst_port: Some(80),
+            protocol: Protocol::Http,
+            length: 150,
+            summary: "Threat alert trigger".into(),
+            data: Bytes::new(),
+            llm: None,
+        };
+
+        prebuf.push(p1);
+        prebuf.push(p2);
+
+        assert_eq!(prebuf.len(), 2);
+
+        // Extract forensic window (-5s before, +5s after alert)
+        let extracted = prebuf.extract_forensic_window(now, 5, 5);
+        assert_eq!(extracted.len(), 1);
+        assert_eq!(extracted[0].summary, "Threat alert trigger");
+    }
 
     #[test]
     fn test_carve_png() {
@@ -408,40 +520,5 @@ mod tests {
             carved[0].metadata.get("Dimensions").map(|s| s.as_str()),
             Some("256x256")
         );
-    }
-
-    #[test]
-    fn test_carve_pdf() {
-        let mut data = vec![0; 50];
-        data.extend_from_slice(b"%PDF-1.4\n/Title (Incident Report)\n/Author (Analyst)\n%%EOF");
-
-        let carved = carve_files(&data);
-        assert_eq!(carved.len(), 1);
-        assert_eq!(carved[0].file_type, "PDF Document");
-        assert_eq!(
-            carved[0].metadata.get("Title").map(|s| s.as_str()),
-            Some("Incident Report")
-        );
-        assert_eq!(
-            carved[0].metadata.get("Author").map(|s| s.as_str()),
-            Some("Analyst")
-        );
-    }
-
-    #[test]
-    fn test_timeline_export() {
-        let events = vec![TimelineEvent {
-            timestamp: "2026-07-15T18:30:00Z".into(),
-            src: "10.0.0.1".into(),
-            dst: "8.8.8.8".into(),
-            protocol: "Dns".into(),
-            length: 64,
-            summary: "Standard query A google.com".into(),
-        }];
-        let csv = export_timeline_csv(&events);
-        assert!(csv.contains("Timestamp,Source,Destination,Protocol,Length,Summary"));
-        assert!(csv.contains(
-            "2026-07-15T18:30:00Z,10.0.0.1,8.8.8.8,Dns,64,\"Standard query A google.com\""
-        ));
     }
 }

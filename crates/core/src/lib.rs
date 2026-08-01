@@ -24,6 +24,10 @@ pub mod alerting;
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod dpdk;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ebpf_xdp;
 pub mod compliance_reports;
 pub mod config;
 pub mod crypto;
@@ -33,6 +37,7 @@ pub mod deployment;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod discover;
 pub mod dissectors;
+pub mod dpi;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
@@ -51,6 +56,7 @@ pub mod export;
 pub mod fieldbus;
 pub mod filter;
 pub mod firewall;
+pub mod fleet;
 pub mod flows;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod forensics;
@@ -61,6 +67,7 @@ pub mod ha;
 pub mod industrial_edge;
 pub mod llm_analytics;
 pub mod mitre_killchain;
+pub mod mitre_matrix;
 pub mod models;
 pub mod multi_tenancy;
 pub mod names;
@@ -93,6 +100,7 @@ pub mod remote;
 pub mod rotate;
 pub mod scalability;
 pub mod security;
+pub mod sensor_watchdog;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod session_manager;
 #[cfg(not(target_arch = "wasm32"))]
@@ -109,4 +117,5 @@ pub mod threat;
 pub mod threat_intel;
 pub mod tls_keylog;
 pub mod triage;
+pub mod ueba;
 pub mod why_this_matters;

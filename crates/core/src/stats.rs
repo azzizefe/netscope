@@ -218,6 +218,11 @@ impl StatsEngine {
             }
         }
 
+        // Track NVIDIA GPU cluster & AI infrastructure telemetry
+        if crate::ai_traffic::NvidiaInfraMetrics::is_nvidia_protocol(&packet.protocol) {
+            self.ai_traffic.record_nvidia_infra(&packet.protocol, bytes);
+        }
+
         // Track LLM analytics
         if let Some(ref meta) = packet.llm {
             self.llm.record(meta);

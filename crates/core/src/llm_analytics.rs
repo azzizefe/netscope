@@ -1381,4 +1381,136 @@ mod tests {
         analytics.record(&meta);
         assert_eq!(analytics.total_requests, 1);
     }
+
+    #[test]
+    fn test_ai_anomaly_alerts_ttft() {
+        let mut analytics = LlmAnalytics::default();
+        let sm = LlmSessionMetrics {
+            model: "gpt-4o".into(),
+            provider: "openai".into(),
+            model_family: "gpt-4".into(),
+            request_type: "chat".into(),
+            prompt_tokens: 100,
+            completion_tokens: 50,
+            total_tokens: 150,
+            cost: 0.01,
+            ttft_ms: 650, // > 500ms
+            stream_duration_ms: 1000,
+            http_status: 200,
+            streaming: true,
+            finish_reason: "stop".into(),
+            error_type: None,
+            prompt_text: String::new(),
+            response_text: String::new(),
+        };
+        analytics.record_session_metrics(&sm);
+        let anomalies = analytics.peek_anomalies();
+        assert!(anomalies.iter().any(|a| a.metric == "TTFT" && a.value == "650ms"));
+    }
+
+    #[test]
+    fn test_ai_anomaly_alerts_tpot_and_tps() {
+        let mut analytics = LlmAnalytics::default();
+        let sm = LlmSessionMetrics {
+            model: "claude-3-opus".into(),
+            provider: "anthropic".into(),
+            model_family: "claude-3".into(),
+            request_type: "chat".into(),
+            prompt_tokens: 100,
+            completion_tokens: 10,
+            total_tokens: 110,
+            cost: 0.01,
+            ttft_ms: 100,
+            stream_duration_ms: 1000, // 1000ms / 10 tokens = 100ms TPOT (>80ms), 10 tokens / 1s = 10 TPS (<20)
+            http_status: 200,
+            streaming: true,
+            finish_reason: "stop".into(),
+            error_type: None,
+            prompt_text: String::new(),
+            response_text: String::new(),
+        };
+        analytics.record_session_metrics(&sm);
+        let anomalies = analytics.peek_anomalies();
+        assert!(anomalies.iter().any(|a| a.metric == "TPOT"));
+        assert!(anomalies.iter().any(|a| a.metric == "Tok/s"));
+    }
+
+    #[test]
+    fn test_ai_anomaly_alerts_bill_shock() {
+        let mut analytics = LlmAnalytics::default();
+        let sm = LlmSessionMetrics {
+            model: "gpt-4".into(),
+            provider: "openai".into(),
+            model_family: "gpt-4".into(),
+            request_type: "chat".into(),
+            prompt_tokens: 10000,
+            completion_tokens: 2000,
+            total_tokens: 12000,
+            cost: 0.25, // > $0.10
+            ttft_ms: 200,
+            stream_duration_ms: 1000,
+            http_status: 200,
+            streaming: false,
+            finish_reason: "stop".into(),
+            error_type: None,
+            prompt_text: String::new(),
+            response_text: String::new(),
+        };
+        analytics.record_session_metrics(&sm);
+        let anomalies = analytics.peek_anomalies();
+        assert!(anomalies.iter().any(|a| a.metric == "Maliyet" && a.value == "$0.2500"));
+    }
+
+    #[test]
+    fn test_ai_anomaly_alerts_rate_limit() {
+        let mut analytics = LlmAnalytics::default();
+        let sm = LlmSessionMetrics {
+            model: "gemini-1.5-pro".into(),
+            provider: "google".into(),
+            model_family: "gemini".into(),
+            request_type: "chat".into(),
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+            cost: 0.0,
+            ttft_ms: 0,
+            stream_duration_ms: 0,
+            http_status: 429, // Rate limit
+            streaming: false,
+            finish_reason: "".into(),
+            error_type: Some("rate_limit_exceeded".into()),
+            prompt_text: String::new(),
+            response_text: String::new(),
+        };
+        analytics.record_session_metrics(&sm);
+        let anomalies = analytics.peek_anomalies();
+        assert!(anomalies.iter().any(|a| a.metric == "Rate Limit" && a.value == "429"));
+    }
+
+    #[test]
+    fn test_ai_anomaly_alerts_incomplete_stream() {
+        let mut analytics = LlmAnalytics::default();
+        let sm = LlmSessionMetrics {
+            model: "deepseek-coder".into(),
+            provider: "deepseek".into(),
+            model_family: "deepseek".into(),
+            request_type: "chat".into(),
+            prompt_tokens: 50,
+            completion_tokens: 30,
+            total_tokens: 80,
+            cost: 0.005,
+            ttft_ms: 150,
+            stream_duration_ms: 1000,
+            http_status: 200,
+            streaming: true,
+            finish_reason: "length".into(), // != "stop"
+            error_type: None,
+            prompt_text: String::new(),
+            response_text: String::new(),
+        };
+        analytics.record_session_metrics(&sm);
+        let anomalies = analytics.peek_anomalies();
+        assert!(anomalies.iter().any(|a| a.metric == "Stream Kesintisi" && a.value == "length"));
+    }
 }
+

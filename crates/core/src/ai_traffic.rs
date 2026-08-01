@@ -480,12 +480,126 @@ fn percentile(sorted: &[f64], p: f64) -> f64 {
     sorted[idx.min(sorted.len() - 1)]
 }
 
+/// NVIDIA AI & GPU Cluster Infrastructure Telemetry
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct NvidiaInfraMetrics {
+    pub nccl_allreduce_count: u64,
+    pub nccl_allgather_count: u64,
+    pub nccl_broadcast_count: u64,
+    pub nvlink_fabric_bytes: u64,
+    pub nvswitch_telemetry_events: u64,
+    pub nvlink_c2c_events: u64,
+    pub gpudirect_rdma_transfers: u64,
+    pub gpudirect_storage_transfers: u64,
+    pub triton_inference_requests: u64,
+    pub triton_model_repo_streams: u64,
+    pub nemo_guardrails_requests: u64,
+    pub aegis_guard_evaluations: u64,
+    pub total_bytes: u64,
+}
+
+impl NvidiaInfraMetrics {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check if a protocol belongs to the NVIDIA AI Infrastructure family.
+    pub fn is_nvidia_protocol(p: &crate::models::Protocol) -> bool {
+        matches!(
+            p,
+            crate::models::Protocol::NcclAllreduce
+                | crate::models::Protocol::NcclAllgather
+                | crate::models::Protocol::NcclBroadcast
+                | crate::models::Protocol::NvlinkFabric
+                | crate::models::Protocol::NvswitchTelemetry
+                | crate::models::Protocol::NvlinkC2c
+                | crate::models::Protocol::GpuDirectRdma
+                | crate::models::Protocol::GpuDirectStorage
+                | crate::models::Protocol::TritonInferenceGrpc
+                | crate::models::Protocol::TritonModelRepoStream
+                | crate::models::Protocol::NemoGuardrailsHttp
+                | crate::models::Protocol::AegisGuardLlama
+        )
+    }
+
+    /// Record a packet matching an NVIDIA AI infrastructure protocol.
+    pub fn record(&mut self, p: &crate::models::Protocol, bytes: u64) -> bool {
+        let len = bytes;
+        let matched = match p {
+            crate::models::Protocol::NcclAllreduce => {
+                self.nccl_allreduce_count += 1;
+                true
+            }
+            crate::models::Protocol::NcclAllgather => {
+                self.nccl_allgather_count += 1;
+                true
+            }
+            crate::models::Protocol::NcclBroadcast => {
+                self.nccl_broadcast_count += 1;
+                true
+            }
+            crate::models::Protocol::NvlinkFabric => {
+                self.nvlink_fabric_bytes += len;
+                true
+            }
+            crate::models::Protocol::NvswitchTelemetry => {
+                self.nvswitch_telemetry_events += 1;
+                true
+            }
+            crate::models::Protocol::NvlinkC2c => {
+                self.nvlink_c2c_events += 1;
+                true
+            }
+            crate::models::Protocol::GpuDirectRdma => {
+                self.gpudirect_rdma_transfers += 1;
+                true
+            }
+            crate::models::Protocol::GpuDirectStorage => {
+                self.gpudirect_storage_transfers += 1;
+                true
+            }
+            crate::models::Protocol::TritonInferenceGrpc => {
+                self.triton_inference_requests += 1;
+                true
+            }
+            crate::models::Protocol::TritonModelRepoStream => {
+                self.triton_model_repo_streams += 1;
+                true
+            }
+            crate::models::Protocol::NemoGuardrailsHttp => {
+                self.nemo_guardrails_requests += 1;
+                true
+            }
+            crate::models::Protocol::AegisGuardLlama => {
+                self.aegis_guard_evaluations += 1;
+                true
+            }
+            _ => false,
+        };
+        if matched {
+            self.total_bytes += len;
+        }
+        matched
+    }
+
+    /// Total NCCL collective communication operations.
+    pub fn total_nccl_ops(&self) -> u64 {
+        self.nccl_allreduce_count + self.nccl_allgather_count + self.nccl_broadcast_count
+    }
+
+    /// Total GPUDirect P2P/Storage transfers.
+    pub fn total_gpudirect_transfers(&self) -> u64 {
+        self.gpudirect_rdma_transfers + self.gpudirect_storage_transfers
+    }
+}
+
 /// Tracks active LLM sessions across packets, producing complete records.
 #[derive(Debug, Clone)]
 pub struct AiTrafficTracker {
     sessions: HashMap<(IpAddr, u16, IpAddr, u16), ActiveSession>,
     completed: Vec<AiTrafficRecord>,
     next_retry: HashMap<(IpAddr, u16, IpAddr, u16), u8>,
+    pub nvidia_infra: NvidiaInfraMetrics,
 }
 
 impl Default for AiTrafficTracker {
@@ -500,7 +614,12 @@ impl AiTrafficTracker {
             sessions: HashMap::new(),
             completed: Vec::new(),
             next_retry: HashMap::new(),
+            nvidia_infra: NvidiaInfraMetrics::new(),
         }
+    }
+
+    pub fn record_nvidia_infra(&mut self, protocol: &crate::models::Protocol, payload_len: u64) -> bool {
+        self.nvidia_infra.record(protocol, payload_len)
     }
 
     // Eight and nine arguments, but every one is a distinct value the caller
@@ -1027,4 +1146,29 @@ mod tests {
         assert_eq!(tracker.drain_completed().len(), 1);
         assert_eq!(tracker.drain_completed().len(), 0);
     }
+
+    #[test]
+    fn test_nvidia_infra_metrics() {
+        use crate::models::Protocol;
+        let mut tracker = AiTrafficTracker::new();
+
+        assert!(NvidiaInfraMetrics::is_nvidia_protocol(&Protocol::NcclAllreduce));
+        assert!(NvidiaInfraMetrics::is_nvidia_protocol(&Protocol::GpuDirectRdma));
+        assert!(NvidiaInfraMetrics::is_nvidia_protocol(&Protocol::TritonInferenceGrpc));
+        assert!(!NvidiaInfraMetrics::is_nvidia_protocol(&Protocol::Http));
+
+        assert!(tracker.record_nvidia_infra(&Protocol::NcclAllreduce, 1024));
+        assert!(tracker.record_nvidia_infra(&Protocol::NcclAllgather, 2048));
+        assert!(tracker.record_nvidia_infra(&Protocol::NcclBroadcast, 512));
+        assert!(tracker.record_nvidia_infra(&Protocol::GpuDirectRdma, 4096));
+        assert!(tracker.record_nvidia_infra(&Protocol::TritonInferenceGrpc, 512));
+        assert!(!tracker.record_nvidia_infra(&Protocol::Http, 100));
+
+        let m = &tracker.nvidia_infra;
+        assert_eq!(m.total_nccl_ops(), 3);
+        assert_eq!(m.total_gpudirect_transfers(), 1);
+        assert_eq!(m.triton_inference_requests, 1);
+        assert_eq!(m.total_bytes, 1024 + 2048 + 512 + 4096 + 512);
+    }
 }
+

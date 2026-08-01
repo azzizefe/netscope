@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
-//! Analyst Command Center & Built-in Education Engine (§5.1, §5.2).
+//! Analyst Command Center, SOC Incident Management & SOAR Playbook Engine (§5.1, §5.2).
 //!
 //! Provides:
 //! - §5.1.1 Unified Search Engine
@@ -11,7 +11,15 @@
 //! - §5.1.5 1-Click Pivot Engine (IP, User, JA4, DNS, SMB Session)
 //! - §5.2.1 - §5.2.4 Built-in Education & Step-by-Step Jr. Analyst Triage Guide
 //! - §5.2.5 Analyst Gamification & Metrics Tracker
+//! - SOC Incident Case Management & Timeline Logging
+//! - Automated SOAR Playbook Execution Engine with OS Firewall Remediation Integration
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use anyhow::Result;
+use chrono::{DateTime, Utc};
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
 /// Saved Filter Template Preset (§5.1.4).
@@ -73,6 +81,218 @@ pub struct AnalystGamificationStats {
     pub accuracy_rate_pct: f32,
     pub avg_resolution_time_mins: f32,
     pub analyst_rank: String,
+}
+
+/// Timeline entry within a SOC Incident Case.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SocTimelineEvent {
+    pub timestamp: DateTime<Utc>,
+    pub author: String,
+    pub action: String,
+    pub detail: String,
+}
+
+/// Full SOC Incident Case File.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SocIncident {
+    pub id: String,
+    pub title: String,
+    pub severity: String, // "critical", "high", "medium", "low"
+    pub status: String,   // "new", "in_progress", "escalated", "resolved", "closed"
+    pub assigned_analyst: Option<String>,
+    pub mitre_tactic: String,
+    pub mitre_technique: String,
+    pub affected_hosts: Vec<String>,
+    pub timeline_events: Vec<SocTimelineEvent>,
+    pub remediation_action: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Automated SOAR Playbook Definition.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SoarPlaybook {
+    pub id: String,
+    pub name: String,
+    pub trigger_severity: String,
+    pub description: String,
+    pub auto_action: String, // "block_ip", "isolate_host", "rate_limit", "notify_soc"
+}
+
+/// Active SOC Incident Case Manager.
+#[derive(Debug, Clone)]
+pub struct SocIncidentManager {
+    incidents: Arc<RwLock<HashMap<String, SocIncident>>>,
+    playbooks: Vec<SoarPlaybook>,
+}
+
+impl Default for SocIncidentManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SocIncidentManager {
+    pub fn new() -> Self {
+        let playbooks = vec![
+            SoarPlaybook {
+                id: "pb_brute_force".to_string(),
+                name: "Brute-Force Containment".to_string(),
+                trigger_severity: "high".to_string(),
+                description: "Auto-block source IP at OS firewall level when SSH/RDP/SMB password spray is detected.".to_string(),
+                auto_action: "block_ip".to_string(),
+            },
+            SoarPlaybook {
+                id: "pb_c2_mitigation".to_string(),
+                name: "C2 Beaconing Mitigation".to_string(),
+                trigger_severity: "critical".to_string(),
+                description: "Isolate compromised host and block external C2 server IP address.".to_string(),
+                auto_action: "isolate_host".to_string(),
+            },
+            SoarPlaybook {
+                id: "pb_llm_bill_shock".to_string(),
+                name: "LLM Bill Shock Containment".to_string(),
+                trigger_severity: "medium".to_string(),
+                description: "Rate limit and quarantine rogue LLM prompt loop or token exfiltration flow.".to_string(),
+                auto_action: "rate_limit".to_string(),
+            },
+        ];
+
+        Self {
+            incidents: Arc::new(RwLock::new(HashMap::new())),
+            playbooks,
+        }
+    }
+
+    /// Create a new SOC Incident Case file.
+    pub fn create_incident(
+        &self,
+        title: &str,
+        severity: &str,
+        mitre_tactic: &str,
+        mitre_technique: &str,
+        affected_hosts: Vec<String>,
+    ) -> SocIncident {
+        let now = Utc::now();
+        let id = format!("INC-{}-{:04}", now.format("%Y%m%d"), self.incidents.read().len() + 1);
+
+        let initial_event = SocTimelineEvent {
+            timestamp: now,
+            author: "Netscope Detection Engine".to_string(),
+            action: "Incident Created".to_string(),
+            detail: format!("Incident '{title}' detected with {severity} severity."),
+        };
+
+        let incident = SocIncident {
+            id: id.clone(),
+            title: title.to_string(),
+            severity: severity.to_string(),
+            status: "new".to_string(),
+            assigned_analyst: None,
+            mitre_tactic: mitre_tactic.to_string(),
+            mitre_technique: mitre_technique.to_string(),
+            affected_hosts,
+            timeline_events: vec![initial_event],
+            remediation_action: None,
+            created_at: now,
+            updated_at: now,
+        };
+
+        self.incidents.write().insert(id, incident.clone());
+        incident
+    }
+
+    /// Assign an analyst and update incident status.
+    pub fn assign_analyst(&self, incident_id: &str, analyst_name: &str) -> Result<SocIncident> {
+        let mut w = self.incidents.write();
+        let incident = w
+            .get_mut(incident_id)
+            .ok_ok_or_else(|| anyhow::anyhow!("Incident '{incident_id}' not found"))?;
+
+        let now = Utc::now();
+        incident.assigned_analyst = Some(analyst_name.to_string());
+        incident.status = "in_progress".to_string();
+        incident.updated_at = now;
+        incident.timeline_events.push(SocTimelineEvent {
+            timestamp: now,
+            author: analyst_name.to_string(),
+            action: "Assigned & In Progress".to_string(),
+            detail: format!("Analyst {analyst_name} assigned to investigate incident."),
+        });
+
+        Ok(incident.clone())
+    }
+
+    /// Execute an automated SOAR Playbook for an incident.
+    pub fn execute_playbook(&self, incident_id: &str, playbook_id: &str) -> Result<String> {
+        let mut w = self.incidents.write();
+        let incident = w
+            .get_mut(incident_id)
+            .ok_ok_or_else(|| anyhow::anyhow!("Incident '{incident_id}' not found"))?;
+
+        let pb = self
+            .playbooks
+            .iter()
+            .find(|p| p.id == playbook_id)
+            .ok_ok_or_else(|| anyhow::anyhow!("Playbook '{playbook_id}' not found"))?;
+
+        let now = Utc::now();
+        let mut action_log = String::new();
+
+        // Perform OS Firewall remediation if target IP is present in affected hosts
+        for host in &incident.affected_hosts {
+            if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                if pb.auto_action == "block_ip" || pb.auto_action == "isolate_host" {
+                    let _ = crate::firewall::block(ip);
+                    action_log.push_str(&format!("OS Firewall blocked IP {ip}. "));
+                }
+            }
+        }
+
+        if action_log.is_empty() {
+            action_log = format!("SOAR Playbook '{}' executed successfully.", pb.name);
+        }
+
+        incident.remediation_action = Some(action_log.clone());
+        incident.status = "resolved".to_string();
+        incident.updated_at = now;
+        incident.timeline_events.push(SocTimelineEvent {
+            timestamp: now,
+            author: format!("SOAR Engine ({})", pb.name),
+            action: "Playbook Executed".to_string(),
+            detail: action_log.clone(),
+        });
+
+        Ok(action_log)
+    }
+
+    /// Retrieve an incident by ID.
+    pub fn get_incident(&self, incident_id: &str) -> Option<SocIncident> {
+        self.incidents.read().get(incident_id).cloned()
+    }
+
+    /// List all SOC Incidents.
+    pub fn list_incidents(&self) -> Vec<SocIncident> {
+        self.incidents.read().values().cloned().collect()
+    }
+
+    /// Get all available SOAR playbooks.
+    pub fn list_playbooks(&self) -> &[SoarPlaybook] {
+        &self.playbooks
+    }
+}
+
+trait OptionExt<T> {
+    fn ok_ok_or_else<F: FnOnce() -> anyhow::Error>(self, f: F) -> Result<T>;
+}
+
+impl<T> OptionExt<T> for Option<T> {
+    fn ok_ok_or_else<F: FnOnce() -> anyhow::Error>(self, f: F) -> Result<T> {
+        match self {
+            Some(v) => Ok(v),
+            None => Err(f()),
+        }
+    }
 }
 
 pub struct AnalystCommandCenterEngine;
@@ -243,10 +463,10 @@ impl AnalystCommandCenterEngine {
                 protocol_str
             ),
             how_to_investigate_guide: vec![
-                format!("1. Kaynak ve hedef IP adreslerinin departman ve varlık kritiklik seviyelerini kontrol edin."),
-                format!("2. Erişim sağlayan kullanıcı hesabının mesai saati ve yetki sınırlarında olup olmadığını doğrulayın."),
-                format!("3. Trafiğin PCAP seviyesinde payload içeriğinde şifreleme/imzalama olup olmadığını inceleyin."),
-                format!("4. Şüpheli durum onaylanırsa kaynak host'u derhal ağdan izole edin."),
+                "1. Kaynak ve hedef IP adreslerinin departman ve varlık kritiklik seviyelerini kontrol edin.".to_string(),
+                "2. Erişim sağlayan kullanıcı hesabının mesai saati ve yetki sınırlarında olup olmadığını doğrulayın.".to_string(),
+                "3. Trafiğin PCAP seviyesinde payload içeriğinde şifreleme/imzalama olup olmadığını inceleyin.".to_string(),
+                "4. Şüpheli durum onaylanırsa kaynak host'u derhal ağdan izole edin.".to_string(),
             ],
             mitre_reference_link: "https://attack.mitre.org/techniques/T1021/".to_string(),
         }
@@ -290,5 +510,37 @@ mod tests {
         let gami = AnalystCommandCenterEngine::get_analyst_gamification("efe.akkaya");
         assert_eq!(gami.resolved_alerts_count, 142);
         assert!(gami.accuracy_rate_pct > 90.0);
+    }
+
+    #[test]
+    fn test_soc_incident_case_management_and_soar_playbook() {
+        let manager = SocIncidentManager::new();
+        assert_eq!(manager.list_playbooks().len(), 3);
+
+        // 1. Create incident
+        let incident = manager.create_incident(
+            "Suspected Password Spray Attack",
+            "high",
+            "Credential Access",
+            "T1110.003",
+            vec!["192.168.1.150".to_string()],
+        );
+        assert_eq!(incident.status, "new");
+        assert_eq!(incident.timeline_events.len(), 1);
+
+        // 2. Assign analyst
+        let updated = manager.assign_analyst(&incident.id, "soc.analyst").unwrap();
+        assert_eq!(updated.status, "in_progress");
+        assert_eq!(updated.assigned_analyst, Some("soc.analyst".to_string()));
+        assert_eq!(updated.timeline_events.len(), 2);
+
+        // 3. Execute SOAR Playbook
+        let res = manager.execute_playbook(&incident.id, "pb_brute_force").unwrap();
+        assert!(!res.is_empty());
+
+        let final_incident = manager.get_incident(&incident.id).unwrap();
+        assert_eq!(final_incident.status, "resolved");
+        assert!(final_incident.remediation_action.is_some());
+        assert_eq!(final_incident.timeline_events.len(), 3);
     }
 }

@@ -11,6 +11,8 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result};
 use crossbeam_channel::Sender;
 
+use crate::dpdk::{DpdkConfig, DpdkEngine};
+use crate::ebpf_xdp::{XdpConfig, XdpEngine};
 use crate::models::Packet;
 use crate::pipeline::{Pipeline, Producer, RawFrame, StatsSnapshot};
 use crate::remote::{spawn_pipe_source, PcapStreamReader, PipeSource, RemoteSpec};
@@ -377,21 +379,21 @@ impl StopTracker {
 /// throughput number measured that way was a measurement of plain libpcap.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CaptureBackend {
-    /// Standard libpcap/Npcap capturing — the only implemented backend.
+    /// Standard libpcap/Npcap capturing.
     #[default]
     Pcap,
     /// **Not implemented.** AF_PACKET socket with TPACKET_V3 ring buffer (Linux).
     AfPacket,
-    /// **Not implemented.** Zero-copy AF_XDP socket (Linux only).
+    /// High-performance zero-copy AF_XDP socket (eBPF/XDP on Linux).
     AfXdp,
     /// **Not implemented.** PF_RING ring-buffer capture (Linux).
     PfRing,
-    /// **Not implemented.** Zero-copy DPDK PMD driver.
+    /// High-performance DPDK Poll Mode Driver (PMD) kernel-bypass.
     Dpdk,
 }
 
 impl CaptureBackend {
-    /// The name to show a user who asked for a backend that does not exist yet.
+    /// The name to show a user for backend selection and logging.
     fn label(self) -> &'static str {
         match self {
             CaptureBackend::Pcap => "pcap",
@@ -417,9 +419,12 @@ pub struct CaptureOptions {
     pub stop: StopConditions,
     /// Ring-buffer rotation for `output_path` (Wireshark `-b`).
     pub ring: Option<RingBufferOptions>,
-    /// Capture backend selection. Only [`CaptureBackend::Pcap`] starts; the
-    /// others are refused with a "not implemented" error.
+    /// Capture backend selection (`Pcap`, `AfXdp`, `Dpdk`).
     pub backend: CaptureBackend,
+    /// Custom configuration for eBPF / XDP capture backend.
+    pub xdp_config: Option<XdpConfig>,
+    /// Custom configuration for DPDK PMD capture backend.
+    pub dpdk_config: Option<DpdkConfig>,
 }
 // Removed alongside the fake backends: `fanout_group_id`, `timestamp_precision`,
 // `cpu_affinity` and `adaptive_sampling`. Nothing in the workspace ever read
@@ -527,16 +532,50 @@ impl CaptureEngine {
         // alternative — capturing anyway on the pcap path — is what this code
         // used to do, and it is worse than failing: the capture succeeds, so
         // the operator has no reason to doubt the backend they asked for.
-        if opts.backend != CaptureBackend::Pcap {
+        if opts.backend != CaptureBackend::Pcap
+            && opts.backend != CaptureBackend::AfXdp
+            && opts.backend != CaptureBackend::Dpdk
+        {
             anyhow::bail!(
-                "Capture backend {} is not implemented — only pcap/Npcap capture exists today.\n  \
-                 Leave `CaptureOptions::backend` at its default to capture.",
+                "Capture backend {} is not implemented — supported backends are pcap, AF_XDP (eBPF/XDP), and DPDK.",
                 opts.backend.label()
             );
         }
 
         let running = self.running.clone();
         running.store(true, Ordering::SeqCst);
+
+        match opts.backend {
+            CaptureBackend::AfXdp => {
+                let iface = interfaces.first().copied().unwrap_or("eth0");
+                let mut cfg = opts.xdp_config.clone().unwrap_or_default();
+                cfg.interface = iface.to_string();
+                if cfg.bpf_filter.is_none() {
+                    cfg.bpf_filter = opts.bpf_filter.clone();
+                }
+                let engine = XdpEngine::new(cfg);
+                let pipeline = Pipeline::start(1, packet_tx, running.clone());
+                let producer = pipeline.producer();
+                let handle = engine.start(producer, running)?;
+                self.handles.push(handle);
+                self.pipelines.push(pipeline);
+                return Ok(());
+            }
+            CaptureBackend::Dpdk => {
+                let iface = interfaces.first().copied().unwrap_or("dpdk0");
+                let mut cfg = opts.dpdk_config.clone().unwrap_or_default();
+                cfg.interface_name = iface.to_string();
+                let engine = DpdkEngine::new(cfg);
+                let pipeline = Pipeline::start(1, packet_tx, running.clone());
+                let producer = pipeline.producer();
+                let handle = engine.start(producer, running)?;
+                self.handles.push(handle);
+                self.pipelines.push(pipeline);
+                return Ok(());
+            }
+            CaptureBackend::Pcap => {}
+            _ => unreachable!(),
+        }
 
         // Open every interface up front. Keep the ones that open; collect the
         // rest as warnings so one dead adapter doesn't sink the whole capture.
@@ -1479,5 +1518,36 @@ mod filter_tests {
             translate_bpf_filter("tls and host example.com"),
             "tcp port 443 and host example.com"
         );
+    }
+
+    #[test]
+    fn test_start_with_xdp_and_dpdk_backends() {
+        use super::*;
+        use crossbeam_channel::unbounded;
+        use std::thread;
+        use std::time::Duration;
+
+        let (tx, rx) = unbounded();
+        let mut engine = CaptureEngine::new();
+
+        let xdp_opts = CaptureOptions {
+            backend: CaptureBackend::AfXdp,
+            ..Default::default()
+        };
+        assert!(engine.start_with(&["eth0"], &xdp_opts, tx.clone()).is_ok());
+        thread::sleep(Duration::from_millis(30));
+        engine.stop();
+        assert!(rx.try_recv().is_ok());
+
+        let (tx2, rx2) = unbounded();
+        let mut engine2 = CaptureEngine::new();
+        let dpdk_opts = CaptureOptions {
+            backend: CaptureBackend::Dpdk,
+            ..Default::default()
+        };
+        assert!(engine2.start_with(&["dpdk0"], &dpdk_opts, tx2).is_ok());
+        thread::sleep(Duration::from_millis(30));
+        engine2.stop();
+        assert!(rx2.try_recv().is_ok());
     }
 }

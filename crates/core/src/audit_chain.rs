@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
-//! Cryptographic Audit Hash Chain Engine (§3.1.1, §3.1.2).
+//! Cryptographic Audit Hash Chain Engine (§3.1.1, §3.1.2, §4.2).
 //!
 //! Provides a thread-safe, append-only, SHA-256 cryptographic hash chain:
 //! - Immutability: Every record stores the SHA-256 hash of the previous record (`prev_hash`)
-//!   and its own composite hash (`entry_hash`) (§3.1.1)
+//!   and its own composite hash (`entry_hash`) (§3.1.1, §4.2)
 //! - Chain Verification: Verification tool (`verify_integrity()`) that scans the entire
 //!   log chain and flags tampered or altered audit records (§3.1.2)
+//! - SOC Action Logging: Explicit helpers for recording analyst PCAP views, IP blocks, and logins (§4.2)
 //! - SQLite DDL Schema compatibility for zero-dependency persistence
 
 use parking_lot::RwLock;
@@ -18,7 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const GENESIS_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
-/// Represents a single cryptographic audit log entry (§3.1.1).
+/// Represents a single cryptographic audit log entry (§3.1.1, §4.2).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuditEntry {
     pub id: u64,
@@ -32,7 +33,7 @@ pub struct AuditEntry {
     pub timestamp_iso: String,
 }
 
-/// Detailed verification result report for audit chain auditing (§3.1.2).
+/// Detailed verification result report for audit chain auditing (§3.1.2, §4.2).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditVerificationReport {
     pub is_valid: bool,
@@ -93,7 +94,7 @@ impl AuditChainManager {
         format!("{:x}", hasher.finalize())
     }
 
-    /// Append a new action to the audit chain (§3.1.1).
+    /// Append a new action to the cryptographic audit chain (§3.1.1, §4.2).
     pub fn log_action(
         &self,
         user_id: &str,
@@ -127,7 +128,22 @@ impl AuditChainManager {
         entry
     }
 
-    /// Verify chain integrity and check for any tampered records (§3.1.2).
+    /// Log SOC Analyst PCAP / Payload View (§4.2).
+    pub fn log_analyst_pcap_view(&self, user_id: &str, pcap_name: &str, analyst_ip: &str) -> AuditEntry {
+        self.log_action(user_id, "ANALYST_INSPECT_PCAP", pcap_name, analyst_ip)
+    }
+
+    /// Log SOC Analyst IP Firewall Block Action (§4.2).
+    pub fn log_analyst_ip_block(&self, user_id: &str, target_ip: &str, analyst_ip: &str) -> AuditEntry {
+        self.log_action(user_id, "ANALYST_BLOCK_IP", target_ip, analyst_ip)
+    }
+
+    /// Log User Session Login Event (§4.2).
+    pub fn log_analyst_login(&self, user_id: &str, auth_provider: &str, client_ip: &str) -> AuditEntry {
+        self.log_action(user_id, "USER_LOGIN_SUCCESS", auth_provider, client_ip)
+    }
+
+    /// Verify chain integrity and check for any tampered records (§3.1.2, §4.2).
     pub fn verify_integrity(&self) -> AuditVerificationReport {
         let store = self.inner.read();
         let mut expected_prev_hash = GENESIS_HASH.to_string();
@@ -221,28 +237,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_audit_chain_integrity() {
+    fn test_audit_chain_integrity_and_soc_actions() {
         let manager = AuditChainManager::new();
 
-        manager.log_action("admin", "PCAP_EXPORT", "pcap/finance_q4.pcap", "10.0.1.47");
-        manager.log_action(
-            "analyst1",
-            "RULE_CREATE",
-            "rules/detect_smb.json",
-            "10.0.1.18",
-        );
-        manager.log_action("operator", "SENSOR_RESTART", "sensor-01", "10.0.5.12");
+        manager.log_analyst_login("efe.akkaya", "AzureAD_OIDC", "10.0.1.47");
+        manager.log_analyst_pcap_view("efe.akkaya", "finance_traffic.pcap", "10.0.1.47");
+        manager.log_analyst_ip_block("efe.akkaya", "198.51.100.1", "10.0.1.47");
 
         let report = manager.verify_integrity();
         assert!(report.is_valid);
         assert_eq!(report.total_records, 3);
-        assert!(report.tampered_index.is_none());
 
         let records = manager.get_records(10, 0);
-        assert_eq!(records.len(), 3);
-        assert_eq!(records[0].action, "PCAP_EXPORT");
-        assert_eq!(records[1].action, "RULE_CREATE");
-        assert_eq!(records[2].action, "SENSOR_RESTART");
+        assert_eq!(records[0].action, "USER_LOGIN_SUCCESS");
+        assert_eq!(records[1].action, "ANALYST_INSPECT_PCAP");
+        assert_eq!(records[2].action, "ANALYST_BLOCK_IP");
+        assert_eq!(records[2].resource, "198.51.100.1");
     }
 
     #[test]

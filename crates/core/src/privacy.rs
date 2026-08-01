@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 
-//! Data Privacy, Masking & Compliance Engine (§7.2).
+//! Data Privacy, Masking & Compliance Engine (§7.2, §4.1).
 //!
 //! Provides:
-//! - Automated payload masking for PCI-DSS (Credit Cards), PII (Emails, Phones), HIPAA
+//! - Edge (Sensor-Level) Payload Masking for PCI-DSS (Credit Cards), PII (Emails, Phones, Turkish T.C. Identity Nos), and Passwords/API Keys
 //! - IP Anonymization (IPv4 /24 masking, IPv6 /48 masking)
 //! - Configurable retention policies (Events, Alerts, Audit logs, PCAP)
 //! - Auto-purge runner for expired files/records
-//! - AES-256-GCM Encryption at Rest helper
-//! - GDPR / KVKK "Right to Erasure" targeted IP data purge tool
+//! - Targeted GDPR / KVKK "Right to Erasure" IP data purge engine
 
 use std::collections::HashSet;
 use std::net::IpAddr;
 use std::path::Path;
 use std::time::SystemTime;
 
-/// Payload Masker for PCI-DSS, PII, and HIPAA (§7.2.1).
+/// Edge Payload Masker for PCI-DSS, PII, and KVKK/GDPR (§4.1, §7.2.1).
 #[derive(Debug, Clone, Default)]
 pub struct PayloadMasker;
 
@@ -25,17 +24,22 @@ impl PayloadMasker {
         Self
     }
 
-    /// Mask PCI-DSS credit cards, PII emails, and phone numbers in text string (§7.2.1).
+    /// Scrub PII, Credit Cards, TC Kimlik Nos, Passwords, and API Keys at Sensor Edge (§4.1).
     pub fn mask_text(&self, text: &str) -> String {
         let mut words: Vec<String> = Vec::new();
         for token in text.split_whitespace() {
             let clean = token.trim_matches(|c: char| {
-                !c.is_alphanumeric() && c != '@' && c != '.' && c != '+' && c != '-'
+                !c.is_alphanumeric() && c != '@' && c != '.' && c != '+' && c != '-' && c != '=' && c != ':'
             });
+
             if is_email(clean) {
                 words.push("[PII MASKED EMAIL]".to_string());
             } else if is_credit_card(clean) {
                 words.push("[PCI-DSS MASKED CARD]".to_string());
+            } else if is_turkish_tc_kn(clean) {
+                words.push("[KVKK MASKED TC_NO]".to_string());
+            } else if is_api_key_or_password(clean) {
+                words.push("[MASKED SECRET KEY/PASS]".to_string());
             } else if is_phone_number(clean) {
                 words.push("[PII MASKED PHONE]".to_string());
             } else {
@@ -45,12 +49,18 @@ impl PayloadMasker {
         words.join(" ")
     }
 
-    pub fn mask_bytes(&self, data: &[u8]) -> Vec<u8> {
+    /// Edge sensor-level payload scrubber before raw network bytes hit disk or server stream (§4.1).
+    pub fn scrub_packet_payload_at_edge(&self, data: &[u8]) -> Vec<u8> {
         if let Ok(text) = std::str::from_utf8(data) {
             self.mask_text(text).into_bytes()
         } else {
+            // For binary data, retain as is or apply byte pattern replacement if printable text spans exist
             data.to_vec()
         }
+    }
+
+    pub fn mask_bytes(&self, data: &[u8]) -> Vec<u8> {
+        self.scrub_packet_payload_at_edge(data)
     }
 }
 
@@ -71,6 +81,37 @@ fn is_credit_card(s: &str) -> bool {
     } else {
         false
     }
+}
+
+/// Algorithmic verification of 11-digit Turkish T.C. Kimlik Number (KVKK Uyum).
+fn is_turkish_tc_kn(s: &str) -> bool {
+    let digits: Vec<u32> = s.chars().filter_map(|c| c.to_digit(10)).collect();
+    if digits.len() != 11 || digits[0] == 0 {
+        return false;
+    }
+
+    let odd_sum: u32 = digits[0] + digits[2] + digits[4] + digits[6] + digits[8];
+    let even_sum: u32 = digits[1] + digits[3] + digits[5] + digits[7];
+
+    let digit10 = ((odd_sum * 7) + 330 - even_sum) % 10;
+    let digit11 = (digits.iter().take(10).sum::<u32>()) % 10;
+
+    digits[9] == digit10 && digits[10] == digit11
+}
+
+/// Detect API keys, bearer tokens, or password parameters in HTTP payloads.
+fn is_api_key_or_password(s: &str) -> bool {
+    let lower = s.to_lowercase();
+    if lower.starts_with("bearer ")
+        || lower.starts_with("sk-proj-")
+        || lower.starts_with("api_key=")
+        || lower.starts_with("password=")
+        || lower.starts_with("pass=")
+        || lower.starts_with("sec_")
+    {
+        return true;
+    }
+    false
 }
 
 fn luhn_check(digits: &str) -> bool {
@@ -193,12 +234,16 @@ mod tests {
     #[test]
     fn test_payload_masker() {
         let masker = PayloadMasker::new();
-        let input = "Contact user@example.com or phone +1-555-123-4567 with card 4111111111111111";
+        let input = "Contact user@example.com or phone +1-555-123-4567 with card 4111111111111111 TC 10000000146 bearer sk-proj-123456789";
         let masked = masker.mask_text(input);
         assert!(!masked.contains("user@example.com"));
         assert!(!masked.contains("4111111111111111"));
+        assert!(!masked.contains("10000000146"));
+        assert!(!masked.contains("sk-proj-123456789"));
         assert!(masked.contains("[PII MASKED EMAIL]"));
         assert!(masked.contains("[PCI-DSS MASKED CARD]"));
+        assert!(masked.contains("[KVKK MASKED TC_NO]"));
+        assert!(masked.contains("[MASKED SECRET KEY/PASS]"));
     }
 
     #[test]

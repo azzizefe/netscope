@@ -93,6 +93,30 @@ impl ActiveActiveCluster {
         let healthy_count = self.nodes.values().filter(|n| n.is_healthy).count();
         healthy_count > self.nodes.len() / 2
     }
+
+    pub fn route_sensor_traffic(&self, sensor_id: &str) -> Option<IpAddr> {
+        let mut healthy_nodes: Vec<&ClusterNodeInfo> = self.nodes.values().filter(|n| n.is_healthy).collect();
+        if healthy_nodes.is_empty() {
+            return None;
+        }
+        healthy_nodes.sort_by(|a, b| a.node_id.cmp(&b.node_id));
+        let hash = sensor_id.bytes().fold(0u64, |acc, b| acc.wrapping_add(b as u64));
+        let idx = (hash as usize) % healthy_nodes.len();
+        Some(healthy_nodes[idx].ip_address)
+    }
+
+    pub fn evict_stale_nodes(&mut self, max_heartbeat_age_secs: u64) -> usize {
+        let mut evicted = 0;
+        for node in self.nodes.values_mut() {
+            if node.last_heartbeat_secs > max_heartbeat_age_secs {
+                if node.is_healthy {
+                    node.is_healthy = false;
+                    evicted += 1;
+                }
+            }
+        }
+        evicted
+    }
 }
 
 /// Load Balancer Upstream Configurator (§8.1.3).

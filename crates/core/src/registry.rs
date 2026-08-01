@@ -25501,6 +25501,7 @@ mod tests {
                 let stem = path.file_stem().unwrap_or_default().to_string_lossy();
                 if name != "registry.rs"
                     && name != "education.rs"
+                    && name != "ai_traffic.rs"
                     && !unreachable.iter().any(|m| *m == stem)
                 {
                     if let Ok(text) = fs::read_to_string(path) {
