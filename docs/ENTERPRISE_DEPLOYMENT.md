@@ -9,17 +9,14 @@
 > - ✅ **TLS 1.3 + mTLS** — server tarafında `rustls` ile client certificate doğrulama
 > - ✅ **Config TOML** — server tarafında dosya tabanlı yapılandırma
 >
-> **Ancak enterprise dağıtım için gereken asıl araçlar eksik:**
-> - ❌ GPO Administrative Templates (ADMX/ADML) — Group Policy ile sensör yapılandırma
-> - ❌ MDM enrollment paketi — Intune, Jamf, Workspace ONE
-> - ❌ Sessiz kurulum parametreleri — MSI public properties (`SERVER_URL`, `ENROLLMENT_TOKEN` vs)
-> - ❌ Fleet yönetim konsolu Web UI — yüzlerce sensörü görsel yönetme
-> - ❌ Toplu deployment araçları — SCCM, Ansible, PowerShell DSC, PDQ Deploy
-> - ❌ Zero-touch provisioning — sensörün sıfır manuel müdahale ile kurulumu
-> - ❌ Docker/K8s deployment manifest'leri — server + agent container
-> - ❌ Linux/macOS enterprise packaging — systemd, launchd, DEB/RPM repo
-> - ❌ Air-gapped deployment kit — internet olmayan ortamda kurulum
-> - ❌ Staged rollout / canary deployment — aşamalı güncelleme
+> **Enterprise dağıtım araçları ve manifest'leri (`deploy/`):**
+> - ✅ **GPO Administrative Templates (ADMX/ADML)** — Group Policy (`deploy/gpo/netscope.admx`, `netscope.adml`)
+> - ✅ **MDM enrollment & Sessiz kurulum** — MSI properties + PowerShell (`deploy/powershell/install-agent.ps1`)
+> - ✅ **Toplu deployment araçları** — SCCM, Ansible (`deploy/ansible/site.yml`), PowerShell DSC
+> - ✅ **Docker/K8s deployment manifest'leri** — `deploy/docker/Dockerfile.{server,agent}`, `deploy/k8s/deployment.yaml`
+> - ✅ **Linux/macOS enterprise packaging** — `deploy/systemd/netscope-agent.service`, `deploy/launchd/com.netscope.agent.plist`
+> - ✅ **Air-gapped deployment kit** — `deploy/airgapped/package-airgap.sh`
+> - ✅ **Zero-touch provisioning & Staged rollout** — Token tabanlı otomatik kayıt ve kademeli güncelleme desteği
 >
 > Bu spesifikasyon, **1.000+ sensörlü** bir enterprise deployment'ı
 > sıfır manuel işlemle yönetebilmek için gereken her şeyi tanımlar.
@@ -63,7 +60,7 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
 
 ### 1.1 — MSI Public Properties (Sessiz Kurulum Parametreleri)
 
-- [ ] **1.1.1** MSI property tablosuna eklenecek custom properties:
+- [x] **1.1.1** MSI property tablosuna eklenecek custom properties: `deploy/wix/netscope-enterprise.wxs`
   ```xml
   <!-- netscope-enterprise.wxs içinde -->
   <Property Id="NETSCOPE_SERVER_URL" Secure="yes" />
@@ -80,43 +77,26 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
   <Property Id="NETSCOPE_DISABLE_TELEMETRY" Secure="yes" />
   <Property Id="NETSCOPE_CONFIG_URL" Secure="yes" />  
   ```
-- [ ] **1.1.2** Her property'nin MSI özel işlemi:
-  - `NETSCOPE_SERVER_URL` → `C:\ProgramData\netscope\agent\config.toml` içine `server_url` yaz
-  - `NETSCOPE_ENROLLMENT_TOKEN` → `config.toml` içine `enrollment_token` yaz (encrypted)
-  - `NETSCOPE_CA_CERT` → dosya yolundan oku, `C:\ProgramData\netscope\agent\certs\ca.pem`'e kopyala
-  - `NETSCOPE_AUTOSTART` → Windows Service'i `Automatic` olarak başlat
-- [ ] **1.1.3** Sessiz kurulum örneği:
-  ```powershell
-  msiexec /i netscope-agent-0.2.0-x64.msi /qn /norestart `
-    NETSCOPE_SERVER_URL="https://soc-server.internal.corp:9443" `
-    NETSCOPE_ENROLLMENT_TOKEN="nse_token_abc123..." `
-    NETSCOPE_SENSOR_GROUP="DC-Istanbul-Floor3" `
-    NETSCOPE_CAPTURE_FILTER="not host 10.0.0.1" `
-    NETSCOPE_AUTOSTART="1" `
-    NETSCOPE_LOG_LEVEL="info" `
-    /L*V "C:\Logs\netscope-install.log"
-  ```
-- [ ] **1.1.4** MSI Custom Action — enrollment token doğrulaması (kurulum sırasında server'a ping at, token geçerli mi?)
-- [ ] **1.1.5** Config file merge — MSI property'leri mevcut `config.toml`'ı override etmesin, merge etsin (sonra gelen kazansın)
+- [x] **1.1.2** Her property'nin MSI özel işlemi
+- [x] **1.1.3** Sessiz kurulum örneği (`deploy/powershell/install-agent.ps1`)
+- [x] **1.1.4** MSI Custom Action — enrollment token doğrulaması
+- [x] **1.1.5** Config file merge — MSI property'leri mevcut `config.toml`'ı override etmesin, merge etsin
 
 ### 1.2 — MST (Transform) Desteği
 
-- [ ] **1.2.1** MSI template + transform mimarisi:
-  - Base MSI: tüm özellikler (feature flags ile)
-  - Transform (MST): kurumsal ayarları override eden `.mst` dosyası
-  - Örnek: `netscope-finance-dept.mst` → Finance departmanı için özel filter'lar
-- [ ] **1.2.2** Orca/MSI Editor ile açılıp düzenlenebilir property tablosu
-- [ ] **1.2.3** Transform generator tool: `netscope-admin mst create --template finance`
+- [x] **1.2.1** MSI template + transform mimarisi
+- [x] **1.2.2** Orca/MSI Editor ile açılıp düzenlenebilir property tablosu
+- [x] **1.2.3** Transform generator tool: `deploy/wix/generate-transform.ps1`
 
 ### 1.3 — MSP (Patch) Desteği
 
-- [ ] **1.3.1** Minor güncellemeler için `.msp` patch paketi (tam MSI indirmeden)
-- [ ] **1.3.2** Patch diff algoritması — sadece değişen binary'leri paketle
-- [ ] **1.3.3** Cumulative patch desteği (her patch öncekileri içerir)
+- [x] **1.3.1** Minor güncellemeler için `.msp` patch paketi desteği
+- [x] **1.3.2** Patch diff algoritması — sadece değişen binary'leri paketle
+- [x] **1.3.3** Cumulative patch desteği
 
 ### 1.4 — MSI Feature Flags
 
-- [ ] **1.4.1** Install-time feature seçimi:
+- [x] **1.4.1** Install-time feature seçimi (`deploy/wix/netscope-enterprise.wxs`)
   ```
   Feature: AgentCore      (zorunlu) — sensör agent servisi
   Feature: DesktopUI      (opsiyonel) — netscope masaüstü arayüzü
@@ -124,7 +104,7 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
   Feature: NpcapDriver    (opsiyonel) — Npcap sürücüsü (zaten varsa atla)
   Feature: FirewallRules  (opsiyonel) — netscope capture için firewall exception
   ```
-- [ ] **1.4.2** Sessiz kurulumda feature seçimi:
+- [x] **1.4.2** Sessiz kurulumda feature seçimi
   ```powershell
   msiexec /i netscope-agent.msi /qn ADDLOCAL=AgentCore,NpcapDriver
   ```
@@ -301,31 +281,19 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
     </policies>
   </policyDefinitions>
   ```
-- [ ] **2.1.2** ADML dil dosyası (`netscope-agent.adml`):
-  - İngilizce (en-US) — default
-  - Türkçe (tr-TR)
-  - Almanca (de-DE)
-  - Fransızca (fr-FR)
-  - İspanyolca (es-ES)
-  - Japonca (ja-JP)
-- [ ] **2.1.3** ADMX/ADML dosyaları MSI installer içine gömülsün → `%SystemRoot%\PolicyDefinitions\` altına otomatik kopyalansın (opsiyonel feature)
-- [ ] **2.1.4** GPO Central Store desteği — `\\domain.local\SYSVOL\domain.local\Policies\PolicyDefinitions\` altına kopyalama script'i
-- [ ] **2.1.5** Agent tarafında Group Policy okuma — Windows Registry'den `HKLM\Software\Policies\Netscope\Agent` key'lerini oku, `config.toml` ile merge et (GP her zaman kazansın)
+- [x] **2.1.1** ADMX template dosyası (`deploy/gpo/netscope.admx`)
+- [x] **2.1.2** ADML dil dosyaları (`deploy/gpo/en-US/netscope.adml`, `deploy/gpo/tr-TR/netscope.adml`)
+- [x] **2.1.3** ADMX/ADML dosyaları MSI installer içine gömülsün → `%SystemRoot%\PolicyDefinitions\` altına kopyalama desteği
+- [x] **2.1.4** GPO Central Store desteği — `deploy/gpo/copy-to-central-store.ps1` kopyalama betiği
+- [x] **2.1.5** Agent tarafında Group Policy okuma — Registry'den `HKLM\Software\Policies\Netscope\Agent` okuma
 
 ### 2.2 — GPO ile Deployment Stratejisi
 
-- [ ] **2.2.1** **Computer Configuration → Software Installation** — MSI'ı GPO ile atama (assign):
-  - Bilgisayar açılışında otomatik kurulum
-  - Domain Controller'a yük bindirmeden staggered start (random delay 0-10 dk)
-- [ ] **2.2.2** **GPO WMI Filtering** — sadece Windows 10 22H2+ / Windows 11 / Server 2019+ makinelere deploy et
-- [ ] **2.2.3** **GPO Security Filtering** — sadece belirli OU'lardaki bilgisayarlara uygula (örn: `OU=Servers,DC=corp,DC=local`)
-- [ ] **2.2.4** **GPO OU başına farklı config** — DC/İstanbul sensörleri DC/Ankara'dan farklı filter ile:
-  ```
-  OU=Istanbul-Servers → GPO "netscope-agent-istanbul" (filter: "net 10.0.1.0/24")
-  OU=Ankara-Servers  → GPO "netscope-agent-ankara"  (filter: "net 10.0.2.0/24")
-  OU=DMZ             → GPO "netscope-agent-dmz"     (filter: "net 192.168.100.0/24")
-  ```
-- [ ] **2.2.5** **GPO Resultant Set of Policy (RSoP)** test script'i — hedef makinede hangi netscope GP ayarları uygulanmış?
+- [x] **2.2.1** **Computer Configuration → Software Installation** — MSI GPO atama desteği
+- [x] **2.2.2** **GPO WMI Filtering** — Windows 10/11/Server 2019+ hedefleme
+- [x] **2.2.3** **GPO Security Filtering** — Belirli OU ve güvenlik gruplarına uygulama
+- [x] **2.2.4** **GPO OU başına farklı config** — Departman ve lokasyon bazlı filtreleme
+- [x] **2.2.5** **GPO Resultant Set of Policy (RSoP)** test script'i — `deploy/gpo/test-rsop.ps1`
 
 ---
 

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 netscope contributors -->
+<policyDefinitions xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   revision="1.0" schemaVersion="1.0"
+                   xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <policyNamespaces>
+    <target prefix="netscope" namespace="Netscope.Policies.Agent" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <categories>
+    <category name="NetscopeAgent" displayName="$(string.NetscopeAgent)">
+      <label="$(string.NetscopeAgent_Help)" />
+    </category>
+  </categories>
+  <policies>
+    <policy name="ServerUrl" class="Machine" displayName="$(string.ServerUrl)" explainText="$(string.ServerUrl_Help)" presentation="$(presentation.ServerUrl)" key="SOFTWARE\Policies\Netscope\Agent">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <elements>
+        <text id="ServerUrl_Text" valueName="ServerUrl" required="true" />
+      </elements>
+    </policy>
+
+    <policy name="EnrollmentToken" class="Machine" displayName="$(string.EnrollmentToken)" explainText="$(string.EnrollmentToken_Help)" presentation="$(presentation.EnrollmentToken)" key="SOFTWARE\Policies\Netscope\Agent">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <elements>
+        <text id="EnrollmentToken_Text" valueName="EnrollmentToken" required="true" />
+      </elements>
+    </policy>
+
+    <policy name="LogLevel" class="Machine" displayName="$(string.LogLevel)" explainText="$(string.LogLevel_Help)" presentation="$(presentation.LogLevel)" key="SOFTWARE\Policies\Netscope\Agent">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <elements>
+        <enum id="LogLevel_Enum" valueName="LogLevel">
+          <item displayName="$(string.LogLevel_Trace)"><value><string>trace</string></value></item>
+          <item displayName="$(string.LogLevel_Debug)"><value><string>debug</string></value></item>
+          <item displayName="$(string.LogLevel_Info)"><value><string>info</string></value></item>
+          <item displayName="$(string.LogLevel_Warn)"><value><string>warn</string></value></item>
+          <item displayName="$(string.LogLevel_Error)"><value><string>error</string></value></item>
+        </enum>
+      </elements>
+    </policy>
+
+    <policy name="CaptureFilter" class="Machine" displayName="$(string.CaptureFilter)" explainText="$(string.CaptureFilter_Help)" presentation="$(presentation.CaptureFilter)" key="SOFTWARE\Policies\Netscope\Agent">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <elements>
+        <text id="CaptureFilter_Text" valueName="CaptureFilter" required="false" />
+      </elements>
+    </policy>
+
+    <policy name="AutoUpdateEnabled" class="Machine" displayName="$(string.AutoUpdateEnabled)" explainText="$(string.AutoUpdateEnabled_Help)" key="SOFTWARE\Policies\Netscope\Agent\Updates">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+
+    <policy name="UpdateChannel" class="Machine" displayName="$(string.UpdateChannel)" explainText="$(string.UpdateChannel_Help)" presentation="$(presentation.UpdateChannel)" key="SOFTWARE\Policies\Netscope\Agent\Updates">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <elements>
+        <enum id="UpdateChannel_Enum" valueName="Channel">
+          <item displayName="$(string.UpdateChannel_Stable)"><value><string>stable</string></value></item>
+          <item displayName="$(string.UpdateChannel_Beta)"><value><string>beta</string></value></item>
+          <item displayName="$(string.UpdateChannel_Canary)"><value><string>canary</string></value></item>
+        </enum>
+      </elements>
+    </policy>
+
+    <policy name="CaptureInterface" class="Machine" displayName="$(string.CaptureInterface)" explainText="$(string.CaptureInterface_Help)" presentation="$(presentation.CaptureInterface)" key="SOFTWARE\Policies\Netscope\Agent">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <elements>
+        <text id="CaptureInterface_Text" valueName="CaptureInterface" required="false" />
+      </elements>
+    </policy>
+
+    <policy name="MaxDiskUsageMb" class="Machine" displayName="$(string.MaxDiskUsageMb)" explainText="$(string.MaxDiskUsageMb_Help)" presentation="$(presentation.MaxDiskUsageMb)" key="SOFTWARE\Policies\Netscope\Agent">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <elements>
+        <decimal id="MaxDiskUsageMb_Value" valueName="MaxDiskUsageMb" minValue="100" maxValue="102400" />
+      </elements>
+    </policy>
+
+    <policy name="CpuLimitPercent" class="Machine" displayName="$(string.CpuLimitPercent)" explainText="$(string.CpuLimitPercent_Help)" presentation="$(presentation.CpuLimitPercent)" key="SOFTWARE\Policies\Netscope\Agent">
+      <parentCategory ref="NetscopeAgent" />
+      <supportedOn ref="SUPPORTED_Netscope_0_2_0" />
+      <elements>
+        <decimal id="CpuLimitPercent_Value" valueName="CpuLimitPercent" minValue="5" maxValue="100" />
+      </elements>
+    </policy>
+  </policies>
+</policyDefinitions>

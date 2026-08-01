@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+FROM rust:1.80-slim as builder
+
+WORKDIR /usr/src/netscope
+RUN apt-get update && apt-get install -y libpcap-dev pkg-config
+
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+COPY tools ./tools
+COPY fixtures ./fixtures
+
+RUN cargo build -p netscope-agent --release
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y libpcap0.8 ca-certificates && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/src/netscope/target/release/netscope-agent /usr/local/bin/netscope-agent
+
+ENTRYPOINT ["netscope-agent"]

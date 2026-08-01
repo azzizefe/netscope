@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 netscope contributors -->
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           revision="1.0" schemaVersion="1.0"
+                           xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>Netscope Sensör İdari Şablonları</displayName>
+  <description>Netscope Kurumsal Sensör Ajanı için Grup İlkesi yapılandırma politikaları.</description>
+  <resources>
+    <stringTable>
+      <string id="NetscopeAgent">Netscope Sensörü</string>
+      <string id="NetscopeAgent_Help">Netscope Kurumsal Sensör ayarlarını yapılandırır.</string>
+      <string id="SUPPORTED_Netscope_0_2_0">Netscope Sensör 0.2.0 veya üzeri</string>
+
+      <string id="ServerUrl">Merkezi Netscope Sunucu adresi</string>
+      <string id="ServerUrl_Help">Merkezi Netscope Sunucusunun adresini belirtir (ör. https://netscope.internal.corp:9443).</string>
+      <string id="EnrollmentToken">Kayıt Jetonu (Enrollment Token)</string>
+      <string id="EnrollmentToken_Help">Sensör kaydı ve kimlik doğrulaması için geçerli jetonu belirtir.</string>
+      <string id="LogLevel">Günlükleme Seviyesi (Log Level)</string>
+      <string id="LogLevel_Help">Sensör günlüklerinin ayrıntı seviyesini belirtir.</string>
+      <string id="LogLevel_Trace">Izleme (Trace)</string>
+      <string id="LogLevel_Debug">Hata Ayıklama (Debug)</string>
+      <string id="LogLevel_Info">Bilgi (Info)</string>
+      <string id="LogLevel_Warn">Uyarı (Warn)</string>
+      <string id="LogLevel_Error">Hata (Error)</string>
+      <string id="CaptureFilter">BPF Yakalama Filtresi</string>
+      <string id="CaptureFilter_Help">Paket yakalamaya uygulanacak varsayılan BPF filtresini belirtir.</string>
+
+      <string id="AutoUpdateEnabled">Otomatik Güncellemeleri Etkinleştir</string>
+      <string id="AutoUpdateEnabled_Help">Arka planda sensör yazılım güncellemelerini etkinleştirir.</string>
+      <string id="UpdateChannel">Güncelleme Kanalı</string>
+      <string id="UpdateChannel_Help">Dağıtım kanalını seçer (stable, beta, canary).</string>
+      <string id="UpdateChannel_Stable">Kararlı (Stable)</string>
+      <string id="UpdateChannel_Beta">Test (Beta)</string>
+      <string id="UpdateChannel_Canary">Canary</string>
+
+      <string id="CaptureInterface">Ağ Yakalama Arayüzü</string>
+      <string id="CaptureInterface_Help">Paket analizi yapılacak ağ arayüzünü belirtir.</string>
+      <string id="MaxDiskUsageMb">Maksimum Disk Kullanımı (MB)</string>
+      <string id="MaxDiskUsageMb_Help">Yerel disk arabelleğinin megabayt cinsinden maksimum boyutunu belirtir.</string>
+      <string id="CpuLimitPercent">CPU Sınırı (%)</string>
+      <string id="CpuLimitPercent_Help">Sensörün kullanabileceği maksimum CPU yüzdesini belirtir.</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="ServerUrl">
+        <textBox refId="ServerUrl_Text"><label>Sunucu URL:</label></textBox>
+      </presentation>
+      <presentation id="EnrollmentToken">
+        <textBox refId="EnrollmentToken_Text"><label>Kayıt Jetonu:</label></textBox>
+      </presentation>
+      <presentation id="LogLevel">
+        <dropdownList refId="LogLevel_Enum">Günlük Seviyesi:</dropdownList>
+      </presentation>
+      <presentation id="CaptureFilter">
+        <textBox refId="CaptureFilter_Text"><label>BPF Filtresi:</label></textBox>
+      </presentation>
+      <presentation id="UpdateChannel">
+        <dropdownList refId="UpdateChannel_Enum">Güncelleme Kanalı:</dropdownList>
+      </presentation>
+      <presentation id="CaptureInterface">
+        <textBox refId="CaptureInterface_Text"><label>Yakalama Arayüzü:</label></textBox>
+      </presentation>
+      <presentation id="MaxDiskUsageMb">
+        <decimalTextBox refId="MaxDiskUsageMb_Value">Maksimum Disk (MB):</decimalTextBox>
+      </presentation>
+      <presentation id="CpuLimitPercent">
+        <decimalTextBox refId="CpuLimitPercent_Value">CPU Sınırı (%):</decimalTextBox>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

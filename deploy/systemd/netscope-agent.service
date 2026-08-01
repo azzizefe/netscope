@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+[Unit]
+Description=Netscope Enterprise Sensor Agent
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/netscope-agent --config /etc/netscope/agent.toml
+Restart=always
+RestartSec=5s
+User=root
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_SYS_NICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

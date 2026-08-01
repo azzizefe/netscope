@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 netscope contributors -->
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           revision="1.0" schemaVersion="1.0"
+                           xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>Netscope Agent Administrative Templates</displayName>
+  <description>Group Policy configuration policies for Netscope Enterprise Agent.</description>
+  <resources>
+    <stringTable>
+      <string id="NetscopeAgent">Netscope Agent</string>
+      <string id="NetscopeAgent_Help">Configures enterprise sensor settings for Netscope Agent.</string>
+      <string id="SUPPORTED_Netscope_0_2_0">Netscope Agent 0.2.0 or higher</string>
+
+      <string id="ServerUrl">Central Netscope Server URL</string>
+      <string id="ServerUrl_Help">Specifies the central Netscope Server URL (e.g. https://netscope.internal.corp:9443).</string>
+      <string id="EnrollmentToken">Enrollment Token</string>
+      <string id="EnrollmentToken_Help">Specifies the sensor enrollment authentication token.</string>
+      <string id="LogLevel">Logging Level</string>
+      <string id="LogLevel_Help">Specifies the verbosity level for sensor logs.</string>
+      <string id="LogLevel_Trace">Trace</string>
+      <string id="LogLevel_Debug">Debug</string>
+      <string id="LogLevel_Info">Info</string>
+      <string id="LogLevel_Warn">Warning</string>
+      <string id="LogLevel_Error">Error</string>
+      <string id="CaptureFilter">BPF Capture Filter</string>
+      <string id="CaptureFilter_Help">Specifies default BPF filter applied to packet capture (e.g. not port 22).</string>
+
+      <string id="AutoUpdateEnabled">Enable Automatic Updates</string>
+      <string id="AutoUpdateEnabled_Help">Enables background sensor software updates.</string>
+      <string id="UpdateChannel">Update Channel</string>
+      <string id="UpdateChannel_Help">Specifies the release channel (stable, beta, canary).</string>
+      <string id="UpdateChannel_Stable">Stable</string>
+      <string id="UpdateChannel_Beta">Beta</string>
+      <string id="UpdateChannel_Canary">Canary</string>
+
+      <string id="CaptureInterface">Network Capture Interface</string>
+      <string id="CaptureInterface_Help">Specifies target network interface for packet inspection (e.g. eth0, \Device\NPF_...).</string>
+      <string id="MaxDiskUsageMb">Maximum Disk Usage (MB)</string>
+      <string id="MaxDiskUsageMb_Help">Specifies maximum local disk buffer size in megabytes.</string>
+      <string id="CpuLimitPercent">CPU Limit (%)</string>
+      <string id="CpuLimitPercent_Help">Specifies maximum allowed CPU usage percentage for sensor processing.</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="ServerUrl">
+        <textBox refId="ServerUrl_Text"><label>Server URL:</label></textBox>
+      </presentation>
+      <presentation id="EnrollmentToken">
+        <textBox refId="EnrollmentToken_Text"><label>Enrollment Token:</label></textBox>
+      </presentation>
+      <presentation id="LogLevel">
+        <dropdownList refId="LogLevel_Enum">Log Level:</dropdownList>
+      </presentation>
+      <presentation id="CaptureFilter">
+        <textBox refId="CaptureFilter_Text"><label>BPF Filter:</label></textBox>
+      </presentation>
+      <presentation id="UpdateChannel">
+        <dropdownList refId="UpdateChannel_Enum">Update Channel:</dropdownList>
+      </presentation>
+      <presentation id="CaptureInterface">
+        <textBox refId="CaptureInterface_Text"><label>Capture Interface:</label></textBox>
+      </presentation>
+      <presentation id="MaxDiskUsageMb">
+        <decimalTextBox refId="MaxDiskUsageMb_Value">Max Disk Usage (MB):</decimalTextBox>
+      </presentation>
+      <presentation id="CpuLimitPercent">
+        <decimalTextBox refId="CpuLimitPercent_Value">CPU Limit (%):</decimalTextBox>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

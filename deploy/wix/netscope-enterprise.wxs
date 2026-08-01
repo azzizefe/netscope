@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 netscope contributors -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="Netscope Enterprise Agent" Language="1033" Version="0.2.0.0" Manufacturer="netscope contributors" UpgradeCode="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Netscope Enterprise Agent is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ===================================================================== -->
+    <!-- MSI Public Properties (Silent Installation Parameters)                 -->
+    <!-- ===================================================================== -->
+    <Property Id="NETSCOPE_SERVER_URL" Secure="yes" />
+    <Property Id="NETSCOPE_ENROLLMENT_TOKEN" Secure="yes" />
+    <Property Id="NETSCOPE_SENSOR_GROUP" Secure="yes" Value="Default" />
+    <Property Id="NETSCOPE_CAPTURE_FILTER" Secure="yes" />
+    <Property Id="NETSCOPE_CAPTURE_INTERFACE" Secure="yes" />
+    <Property Id="NETSCOPE_CA_CERT" Secure="yes" />
+    <Property Id="NETSCOPE_LOG_LEVEL" Secure="yes" Value="info" />
+    <Property Id="NETSCOPE_AUTOSTART" Secure="yes" Value="1" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="Netscope">
+          <Component Id="AgentBinary" Guid="b2c3d4e5-f6a7-8901-bcde-f23456789012">
+            <File Id="NetscopeAgentExe" Source="$(var.SourceDir)\netscope-agent.exe" KeyPath="yes" />
+            <ServiceInstall Id="ServiceInstaller" Type="ownProcess" Name="NetscopeAgent" DisplayName="Netscope Enterprise Agent" Description="Netscope Packet Inspection and Sensor Agent" Start="auto" Account="LocalSystem" ErrorControl="normal" />
+            <ServiceControl Id="ServiceControl" Start="install" Stop="both" Remove="uninstall" Name="NetscopeAgent" Wait="yes" />
+          </Component>
+          <Component Id="TuiBinary" Guid="c3d4e5f6-a7b8-9012-cdef-345678901234">
+            <File Id="NetscopeTuiExe" Source="$(var.SourceDir)\netscope-tui.exe" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <!-- ===================================================================== -->
+    <!-- Feature Flags                                                        -->
+    <!-- ===================================================================== -->
+    <Feature Id="AgentCore" Title="Netscope Agent Core Service" Level="1" Absent="disallow">
+      <ComponentRef Id="AgentBinary" />
+    </Feature>
+
+    <Feature Id="TUI" Title="Netscope CLI (TUI)" Level="1">
+      <ComponentRef Id="TuiBinary" />
+    </Feature>
+  </Product>
+</Wix>

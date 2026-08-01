@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netscope-server
+  namespace: netscope
+  labels:
+    app: netscope-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: netscope-server
+  template:
+    metadata:
+      labels:
+        app: netscope-server
+    spec:
+      containers:
+      - name: netscope-server
+        image: netscope/netscope-server:v0.2.0
+        ports:
+        - containerPort: 9443
+          name: grpc
+        - containerPort: 8080
+          name: http
+        env:
+        - name: RUST_LOG
+          value: "info"
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi
+          requests:
+            cpu: "500m"
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netscope-server-service
+  namespace: netscope
+spec:
+  selector:
+    app: netscope-server
+  ports:
+  - port: 9443
+    targetPort: 9443
+    name: grpc
+  - port: 8080
+    targetPort: 8080
+    name: http
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: netscope-agent
+  namespace: netscope
+spec:
+  selector:
+    matchLabels:
+      app: netscope-agent
+  template:
+    metadata:
+      labels:
+        app: netscope-agent
+    spec:
+      hostNetwork: true
+      containers:
+      - name: netscope-agent
+        image: netscope/netscope-agent:v0.2.0
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN", "NET_RAW"]
+        env:
+        - name: NETSCOPE_SERVER_URL
+          value: "https://netscope-server-service.netscope.svc:9443"
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: "100m"
+            memory: 128Mi

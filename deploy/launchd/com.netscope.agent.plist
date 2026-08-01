@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 netscope contributors -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.netscope.agent</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/netscope-agent</string>
+        <string>--config</string>
+        <string>/Library/Application Support/Netscope/agent.toml</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/netscope-agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/netscope-agent.err</string>
+</dict>
+</plist>

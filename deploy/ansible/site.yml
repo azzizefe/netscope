@@ -1,0 +1,57 @@
+---
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+- name: Deploy Netscope Agent Fleet
+  hosts: all
+  become: yes
+  vars:
+    netscope_server_url: "https://netscope-server.internal.corp:9443"
+    netscope_enrollment_token: "nse_token_abc123"
+    netscope_agent_version: "0.2.0"
+
+  tasks:
+    - name: Ensure Netscope config directory exists
+      file:
+        path: /etc/netscope
+        state: directory
+        mode: '0755'
+
+    - name: Deploy Netscope agent configuration
+      copy:
+        dest: /etc/netscope/agent.toml
+        content: |
+          server_url = "{{ netscope_server_url }}"
+          enrollment_token = "{{ netscope_enrollment_token }}"
+          log_level = "info"
+        mode: '0600'
+
+    - name: Install Netscope Agent binary
+      get_url:
+        url: "https://releases.netscope.io/v{{ netscope_agent_version }}/netscope-agent-linux-x86_64"
+        dest: /usr/local/bin/netscope-agent
+        mode: '0755'
+
+    - name: Deploy systemd unit file
+      copy:
+        dest: /etc/systemd/system/netscope-agent.service
+        content: |
+          [Unit]
+          Description=Netscope Enterprise Sensor Agent
+          After=network.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/netscope-agent --config /etc/netscope/agent.toml
+          Restart=always
+          User=root
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+
+    - name: Enable and start Netscope Agent service
+      systemd:
+        name: netscope-agent
+        enabled: yes
+        state: started
+        daemon_reload: yes
