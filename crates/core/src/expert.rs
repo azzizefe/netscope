@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-use crate::models::{Packet, Protocol};
+use crate::models::Packet;
 
 /// Severity levels matching industry standard Wireshark Expert Info.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -352,6 +352,7 @@ pub fn classify(pkt: &Packet) -> ExpertSeverity {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Protocol;
     use bytes::Bytes;
     use chrono::Utc;
 

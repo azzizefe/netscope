@@ -62,7 +62,7 @@ pub fn build_mitre_matrix(evaluations: &[MitreKillChainEvaluation]) -> MitreAtta
 
             let entry = tactic_map
                 .entry(tech.tactic.clone())
-                .or_insert_with(Vec::new);
+                .or_default();
 
             // Avoid duplicate technique IDs within the same column
             if !entry.iter().any(|t| t.id == tech.id) {

@@ -218,10 +218,8 @@ impl DpiEngine {
         }
 
         // Executable magic bytes
-        if data.len() >= 4 {
-            if &data[..2] == b"MZ" || &data[..4] == b"\x7fELF" {
-                return DpiPayloadType::Executable;
-            }
+        if data.len() >= 4 && (&data[..2] == b"MZ" || &data[..4] == b"\x7fELF") {
+            return DpiPayloadType::Executable;
         }
 
         // SSE Stream
@@ -264,7 +262,7 @@ impl DpiEngine {
     /// Build L2 -> L7 protocol stack hierarchy.
     pub fn build_protocol_stack(packet: &Packet) -> Vec<String> {
         let mut stack = vec!["Ethernet (L2)".to_string()];
-        if packet.src_addr.map_or(false, |a| a.is_ipv6()) {
+        if packet.src_addr.is_some_and(|a| a.is_ipv6()) {
             stack.push("IPv6 (L3)".to_string());
         } else {
             stack.push("IPv4 (L3)".to_string());

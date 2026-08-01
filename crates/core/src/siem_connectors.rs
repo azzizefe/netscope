@@ -328,6 +328,36 @@ impl SiemConnectorManager {
             level: "high".to_string(),
         }
     }
+
+    /// Export AsyncAPI 3.0.0 Specification for Netscope Streaming Events (§4.1.4).
+    pub fn export_asyncapi_spec() -> serde_json::Value {
+        serde_json::json!({
+            "asyncapi": "3.0.0",
+            "info": {
+                "title": "Netscope Real-Time Network Event & Threat Stream API",
+                "version": "2.0.0",
+                "description": "AsyncAPI specification for streaming packet events, threat alerts, and SOAR actions over WebSocket & gRPC."
+            },
+            "channels": {
+                "events/enrichment": {
+                    "address": "netscope/v2/events",
+                    "messages": {
+                        "EnrichedEvent": {
+                            "summary": "Enriched Network Event containing L2-L7 dissect details, threat score, and PII detection results."
+                        }
+                    }
+                },
+                "alerts/threats": {
+                    "address": "netscope/v2/alerts",
+                    "messages": {
+                        "ThreatAlert": {
+                            "summary": "High-priority security alert triggered by NDR rules or expert system."
+                        }
+                    }
+                }
+            }
+        })
+    }
 }
 
 #[cfg(test)]

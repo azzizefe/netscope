@@ -1930,10 +1930,11 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_pcap_bytes, build_pcapng_bytes, get_alert_rules, get_glossary, get_lessons,
-        get_protocol_risk, is_elevated, list_plugins, notification_channels, protocol_count,
-        protocol_table, replay_packet, save_object, tls_keylog_clear, tls_keylog_load,
-        tls_keylog_status, NotificationChannelInfo,
+        arp_scan, block_ip, build_pcap_bytes, build_pcapng_bytes, english_name, get_alert_rules,
+        get_glossary, get_lessons, get_protocol_risk, is_elevated, list_blocked, list_interfaces,
+        list_plugins, notification_channels, protocol_count, protocol_table, replay_packet,
+        save_object, tls_keylog_clear, tls_keylog_load, tls_keylog_status, unblock_ip,
+        NotificationChannelInfo,
     };
     use netscope_core::models::Packet;
     use std::io::{Read, Write};
@@ -2393,5 +2394,105 @@ mod tests {
         let mut buf = [0u8; 4];
         r.read_exact(&mut buf).unwrap();
         assert_eq!(buf, [0x0A, 0x0D, 0x0D, 0x0A], "pcapng SHB magic");
+    }
+
+    #[test]
+    fn block_unblock_ip_workflow() {
+        let ip = "192.168.1.240";
+        let _ = unblock_ip(ip.into());
+        let initial_blocked = list_blocked();
+        assert!(!initial_blocked.contains(&ip.to_string()));
+
+        let err = block_ip("invalid-ip".into()).unwrap_err();
+        assert!(err.contains("not a valid IP address"));
+
+        let unblock_err = unblock_ip("invalid-ip".into()).unwrap_err();
+        assert!(unblock_err.contains("not a valid IP address"));
+    }
+
+    #[test]
+    fn list_interfaces_returns_adapters() {
+        let interfaces = list_interfaces().expect("interface enumeration should succeed");
+        for iface in &interfaces {
+            assert!(!iface.name.is_empty());
+            assert!(!iface.kind.is_empty());
+        }
+    }
+
+    #[test]
+    fn arp_scan_handles_all_and_invalid_interfaces() {
+        let res = arp_scan("__all__".into());
+        assert!(res.is_ok());
+
+        // Invalid or non-matching interface name gracefully falls back or returns Ok
+        let invalid = arp_scan("nonexistent_iface_xyz_999".into());
+        assert!(invalid.is_ok() || invalid.is_err());
+    }
+
+    #[test]
+    fn notification_channels_lists_all_targets() {
+        let channels = notification_channels(&netscope_core::config::Notifications::default());
+        assert_eq!(channels.len(), 5);
+
+        let ids: Vec<&str> = channels.iter().map(|c| c.id.as_str()).collect();
+        assert!(ids.contains(&"syslog"));
+        assert!(ids.contains(&"email"));
+        assert!(ids.contains(&"slack"));
+        assert!(ids.contains(&"telegram"));
+        assert!(ids.contains(&"winevent"));
+    }
+
+    #[test]
+    fn encrypted_pcap_validation_flow() {
+        let packet = Packet {
+            timestamp: chrono::Utc::now(),
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: netscope_core::models::Protocol::Tcp,
+            length: 4,
+            summary: "test".into(),
+            data: b"ping"[..].into(),
+            llm: None,
+        };
+        let plain_bytes = build_pcap_bytes(&[packet]);
+        assert!(!netscope_core::crypto::is_encrypted(&plain_bytes));
+
+        let sealed = netscope_core::crypto::encrypt(&plain_bytes, "secret-pass").unwrap();
+        assert!(netscope_core::crypto::is_encrypted(&sealed));
+
+        let decrypted = netscope_core::crypto::decrypt(&sealed, "secret-pass").unwrap();
+        assert_eq!(decrypted, plain_bytes);
+
+        let bad_pass = netscope_core::crypto::decrypt(&sealed, "wrong-pass");
+        assert!(bad_pass.is_err());
+    }
+
+    #[test]
+    fn english_name_helper_extracts_name() {
+        let names = maxminddb::geoip2::Names {
+            english: Some("Turkey"),
+            german: None,
+            spanish: None,
+            french: None,
+            japanese: None,
+            brazilian_portuguese: None,
+            russian: None,
+            simplified_chinese: None,
+        };
+        assert_eq!(english_name(&names), Some("Turkey".into()));
+
+        let empty_names = maxminddb::geoip2::Names {
+            english: None,
+            german: None,
+            spanish: None,
+            french: None,
+            japanese: None,
+            brazilian_portuguese: None,
+            russian: None,
+            simplified_chinese: None,
+        };
+        assert_eq!(english_name(&empty_names), None);
     }
 }

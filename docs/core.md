@@ -437,6 +437,40 @@ Bandwidth tracking uses 1-second windows with a 60-sample rolling buffer. Top ta
 
 ---
 
+## Yapay Zeka (AI), LLM ve PQC Ağ Analitiği (`ai_traffic.rs`, `llm_analytics.rs`, `pqc_analytics.rs`)
+
+Netscope, modern veri merkezlerinde ve kurumsal ağlarda akan AI, LLM ve GPU küme trafiğini analiz etmek ve güvenliğini sağlamak için özel çekirdek modüllerine sahiptir:
+
+### 1. AI ve LLM Protokol Çözümleyicileri (AI Traffic Dissectors)
+Netscope, popüler yapay zeka sağlayıcılarının ve API ağ geçitlerinin (AI Gateways) protokollerini doğrudan tanır ve paket gövdesini (payload) çözümleyerek anlamlı verilere dönüştürür ([`registry.rs`](file:///c:/Users/efe/Desktop/netscope/crates/core/src/registry.rs)):
+* **Lider LLM Servisleri:** OpenAI (Chat, Realtime, Batch, Streaming), Anthropic (Claude Messages, ToolUse, Constitutional), Google Gemini (Bidirectional WS, Rest Stream, AI Studio WS), DeepSeek, Mistral, Groq, xAI (Grok), AWS Bedrock.
+* **AI Gateway ve Observability Ağ Geçitleri:** Cloudflare AI Gateway, Kong AI Gateway, LiteLLM Proxy, Portkey Gateway, Helicone, Langfuse, MLflow Gateway, Arize Phoenix.
+* **Açık Kaynak Çıkarım (Inference) Sunucuları:** vLLM, HuggingFace TGI, NVIDIA Triton Inference Server, Sglang Radix Cache.
+
+### 2. LLM Performans Telemetrisi ve Metrikleri
+Netscope, ağ üzerinden akan LLM API istek ve yanıt paketlerini birleştirerek gerçek zamanlı performans analizi yapar:
+* **TTFT (Time to First Token):** İsteğin gönderilmesi ile modelin ilk yanıt token'ının ağ üzerinden gönderilmesi arasında geçen süre (ms).
+* **TPOT (Time Per Output Token):** Modelin karakter üretim hızı (ms/token).
+* **TPS (Tokens Per Second):** Canlı akış (streaming) sırasında saniyede iletilen ortalama token hızı.
+* **Otomatik Maliyet Tahmini (USD Cost Estimation):** Model fiyatlandırma listelerini kullanarak ağ paketlerindeki prompt/completion token sayılarından harcanan bütçeyi canlı hesaplar.
+
+### 3. Yapay Zeka Tabanlı Anomali Tespit Motoru
+Netscope çekirdeği, toplanan LLM metriklerini izleyerek otomatik alarmlar üretir:
+* **Gecikme (TTFT > 500ms) Anomalisi:** Model ilk yanıt süresi 500 ms üzerinde ise alarm verilir.
+* **Üretim Yavaşlama (TPOT > 80ms / TPS < 20) Anomalisi:** Token üretme yavaşlamasında model tıkanma uyarısı tetiklenir.
+* **Maliyet Aşımı (Bill Shock > 0.10 USD):** Tek istek maliyeti 0.10 USD sınırını aştığında uyarı üretilir.
+* **Rate Limit (HTTP 429) & Akış Bölünme Anomalileri:** Ağdan dönen HTTP 429 paketleri ve yarım kalan akışlar SOC uyarısına dönüştürülür.
+
+### 4. Yapay Zeka Altyapısı (GPU Küme) Protokolleri
+* **GPU Kolektif İletişimi:** NVIDIA NCCL (Broadcast, AllGather) ve DeepSpeed (GlooTCP) trafiği izlenerek GPU'lar arası senkronizasyon gecikmeleri ölçülür.
+* **Model Dağıtımı & Sharding:** PyTorch RPC Framework ve JAX Pjit Sharding trafiği izlenerek model parametrelerinin GPU'lara dağıtım verimliliği incelenir.
+* **Vektör Veritabanları:** Pinecone, Weaviate, Qdrant ve Milvus gRPC/Raft replikasyon ve sorgu protokolleri analiz edilerek RAG altyapı performansı ölçülür.
+
+### 5. Post-Quantum Kriptografi (PQC) Analitiği
+* SSL/TLS el sıkışmalarını inceleyerek kuantum güvenli algoritmaların (Kyber / ML-KEM ve Dilithium / ML-DSA) kullanılıp kullanılmadığını analiz eder ve kurumsal PQC uyumluluk skorunu hesaplar ([`pqc_analytics.rs`](file:///c:/Users/efe/Desktop/netscope/crates/core/src/pqc_analytics.rs)).
+
+---
+
 ## Testing & Benchmarks
 
 - **314 unit tests** covering all dissectors, models, stats, name cache, plus fuzz

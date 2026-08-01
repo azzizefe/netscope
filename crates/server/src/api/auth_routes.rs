@@ -30,6 +30,7 @@ pub struct CreateCustomRoleRequest {
     pub name: String,
     pub description: String,
     pub permissions: Vec<String>,
+    pub can_view_raw_payload: Option<bool>,
 }
 
 pub fn routes(api_state: Arc<ApiState>, jwt: Arc<JwtState>) -> Router {
@@ -439,9 +440,10 @@ async fn create_role(
     State(state): State<Arc<ApiState>>,
     Json(req): Json<CreateCustomRoleRequest>,
 ) -> impl IntoResponse {
+    let can_view = req.can_view_raw_payload.unwrap_or(true);
     match state
         .rbac_engine
-        .create_custom_role(&req.name, &req.description, req.permissions)
+        .create_custom_role(&req.name, &req.description, req.permissions, can_view)
     {
         Ok(role) => (StatusCode::CREATED, Json(json!(role))).into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),

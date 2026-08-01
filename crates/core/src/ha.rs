@@ -108,11 +108,9 @@ impl ActiveActiveCluster {
     pub fn evict_stale_nodes(&mut self, max_heartbeat_age_secs: u64) -> usize {
         let mut evicted = 0;
         for node in self.nodes.values_mut() {
-            if node.last_heartbeat_secs > max_heartbeat_age_secs {
-                if node.is_healthy {
-                    node.is_healthy = false;
-                    evicted += 1;
-                }
+            if node.last_heartbeat_secs > max_heartbeat_age_secs && node.is_healthy {
+                node.is_healthy = false;
+                evicted += 1;
             }
         }
         evicted
