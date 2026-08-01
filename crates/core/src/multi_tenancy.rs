@@ -143,8 +143,10 @@ mod tests {
     #[test]
     fn test_custom_branding_and_quota() {
         let mut engine = MultiTenancyEngine::new();
-        let mut b = CustomBranding::default();
-        b.primary_color_hex = "#FF0000".to_string();
+        let b = CustomBranding {
+            primary_color_hex: "#FF0000".to_string(),
+            ..Default::default()
+        };
         engine.set_branding("tenant_x", b.clone());
 
         assert_eq!(
@@ -163,8 +165,10 @@ mod tests {
     #[test]
     fn test_tenant_backup_and_restore() {
         let mut engine = MultiTenancyEngine::new();
-        let mut b = CustomBranding::default();
-        b.primary_color_hex = "#00FF00".to_string();
+        let b = CustomBranding {
+            primary_color_hex: "#00FF00".to_string(),
+            ..Default::default()
+        };
         engine.set_branding("tenant_y", b);
 
         let backup = engine.export_tenant_backup("tenant_y");

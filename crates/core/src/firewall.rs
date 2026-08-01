@@ -25,6 +25,22 @@ pub fn rule_name(ip: IpAddr) -> String {
     format!("{RULE_PREFIX}-{ip}")
 }
 
+/// Parse one whitespace-separated token from `iptables-save` / `pfctl -T show`
+/// into an address, or `None` if it is not one.
+///
+/// Both tools print addresses in CIDR form (`1.2.3.4/32`, `2606:4700::1/128`),
+/// which [`IpAddr`] itself rejects — so a parser that skips the prefix silently
+/// finds nothing and `unblock_all` becomes a no-op. Kept out of the
+/// platform-specific module so it is unit-testable on any host.
+///
+/// Only the Unix backend calls it; on Windows `netsh` output is parsed
+/// differently, so there it is exercised solely by the tests below.
+#[cfg_attr(windows, allow(dead_code))]
+fn parse_saved_address(token: &str) -> Option<IpAddr> {
+    let bare = token.split('/').next()?;
+    bare.parse::<IpAddr>().ok()
+}
+
 /// Whether blocking is available on this build/platform.
 pub fn is_supported() -> bool {
     cfg!(windows) || cfg!(target_os = "linux") || cfg!(target_os = "macos")
@@ -36,9 +52,9 @@ pub struct FirewallRule {
     pub id: String,
     pub ip: IpAddr,
     pub port: Option<u16>,
-    pub protocol: String, // "TCP", "UDP", "ANY"
+    pub protocol: String,  // "TCP", "UDP", "ANY"
     pub direction: String, // "inbound", "outbound", "both"
-    pub action: String, // "block", "allow"
+    pub action: String,    // "block", "allow"
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub reason: String,
@@ -205,23 +221,99 @@ mod imp {
     use super::*;
     use std::process::Command;
 
+    /// The iptables binary that understands `ip`'s address family. IPv6 rules
+    /// are rejected by plain `iptables`, so picking the wrong one here means
+    /// every IPv6 block silently fails.
+    #[cfg(target_os = "linux")]
+    fn iptables_for(ip: IpAddr) -> &'static str {
+        if ip.is_ipv6() {
+            "ip6tables"
+        } else {
+            "iptables"
+        }
+    }
+
+    /// Run a rule-installing command, surfacing a non-zero exit to the caller.
+    ///
+    /// The Windows backend reports `netsh` failures; this does the same so
+    /// `block` cannot report success when `iptables`/`pfctl` is missing, the
+    /// process is unprivileged, or the rule was rejected.
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    fn run(program: &str, args: &[&str]) -> Result<()> {
+        let output = Command::new(program)
+            .args(args)
+            .output()
+            .map_err(|e| anyhow::anyhow!("could not run {program}: {e}"))?;
+        if output.status.success() {
+            return Ok(());
+        }
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = format!("{stdout}{stderr}");
+        let detail = detail.trim();
+        if !super::is_elevated() {
+            anyhow::bail!("blocking needs root — rerun netscope under sudo. ({detail})");
+        }
+        anyhow::bail!("{program} failed: {detail}");
+    }
+
+    /// Run a rule-removing command. A rule that is already gone is not an error
+    /// — `unblock` is documented as a no-op when nothing is blocked — but a
+    /// missing binary still is, so the spawn failure is still reported.
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    fn run_delete(program: &str, args: &[&str]) -> Result<()> {
+        Command::new(program)
+            .args(args)
+            .output()
+            .map_err(|e| anyhow::anyhow!("could not run {program}: {e}"))?;
+        Ok(())
+    }
+
     pub fn block(ip: IpAddr) -> Result<()> {
         #[cfg(target_os = "linux")]
         {
+            let tool = iptables_for(ip);
+            let addr = ip.to_string();
             let comment = rule_name(ip);
-            let _ = Command::new("iptables")
-                .args(["-A", "INPUT", "-s", &ip.to_string(), "-m", "comment", "--comment", &comment, "-j", "DROP"])
-                .output();
-            let _ = Command::new("iptables")
-                .args(["-A", "OUTPUT", "-d", &ip.to_string(), "-m", "comment", "--comment", &comment, "-j", "DROP"])
-                .output();
+            // Outbound: stop us reaching the host. Inbound: stop it reaching us.
+            run(
+                tool,
+                &[
+                    "-A",
+                    "INPUT",
+                    "-s",
+                    &addr,
+                    "-m",
+                    "comment",
+                    "--comment",
+                    &comment,
+                    "-j",
+                    "DROP",
+                ],
+            )?;
+            run(
+                tool,
+                &[
+                    "-A",
+                    "OUTPUT",
+                    "-d",
+                    &addr,
+                    "-m",
+                    "comment",
+                    "--comment",
+                    &comment,
+                    "-j",
+                    "DROP",
+                ],
+            )?;
             return Ok(());
         }
         #[cfg(target_os = "macos")]
         {
-            let _ = Command::new("pfctl")
-                .args(["-t", "netscope_blocked", "-T", "add", &ip.to_string()])
-                .output();
+            run(
+                "pfctl",
+                &["-t", "netscope_blocked", "-T", "add", &ip.to_string()],
+            )?;
             return Ok(());
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
@@ -231,14 +323,37 @@ mod imp {
     pub fn block_port(ip: IpAddr, port: u16, protocol: &str) -> Result<()> {
         #[cfg(target_os = "linux")]
         {
-            let comment = format!("{}-{}-p{}", rule_name(ip), protocol.to_lowercase(), port);
-            let _ = Command::new("iptables")
-                .args(["-A", "INPUT", "-s", &ip.to_string(), "-p", protocol, "--dport", &port.to_string(), "-m", "comment", "--comment", &comment, "-j", "DROP"])
-                .output();
+            let tool = iptables_for(ip);
+            let addr = ip.to_string();
+            let proto = protocol.to_lowercase();
+            let port_str = port.to_string();
+            let comment = format!("{}-{}-p{}", rule_name(ip), proto, port);
+            run(
+                tool,
+                &[
+                    "-A",
+                    "INPUT",
+                    "-s",
+                    &addr,
+                    "-p",
+                    &proto,
+                    "--dport",
+                    &port_str,
+                    "-m",
+                    "comment",
+                    "--comment",
+                    &comment,
+                    "-j",
+                    "DROP",
+                ],
+            )?;
             return Ok(());
         }
+        // pfctl tables match on address only, so a port-scoped block degrades
+        // to blocking the whole host rather than silently doing nothing.
         #[cfg(not(target_os = "linux"))]
         {
+            let _ = (port, protocol);
             block(ip)
         }
     }
@@ -246,20 +361,47 @@ mod imp {
     pub fn unblock(ip: IpAddr) -> Result<()> {
         #[cfg(target_os = "linux")]
         {
+            let tool = iptables_for(ip);
+            let addr = ip.to_string();
             let comment = rule_name(ip);
-            let _ = Command::new("iptables")
-                .args(["-D", "INPUT", "-s", &ip.to_string(), "-m", "comment", "--comment", &comment, "-j", "DROP"])
-                .output();
-            let _ = Command::new("iptables")
-                .args(["-D", "OUTPUT", "-d", &ip.to_string(), "-m", "comment", "--comment", &comment, "-j", "DROP"])
-                .output();
+            run_delete(
+                tool,
+                &[
+                    "-D",
+                    "INPUT",
+                    "-s",
+                    &addr,
+                    "-m",
+                    "comment",
+                    "--comment",
+                    &comment,
+                    "-j",
+                    "DROP",
+                ],
+            )?;
+            run_delete(
+                tool,
+                &[
+                    "-D",
+                    "OUTPUT",
+                    "-d",
+                    &addr,
+                    "-m",
+                    "comment",
+                    "--comment",
+                    &comment,
+                    "-j",
+                    "DROP",
+                ],
+            )?;
             return Ok(());
         }
         #[cfg(target_os = "macos")]
         {
-            let _ = Command::new("pfctl")
-                .args(["-t", "netscope_blocked", "-T", "delete", &ip.to_string()])
-                .output();
+            run_delete(
+                "pfctl",
+                &["-t", "netscope_blocked", "-T", "delete", &ip.to_string()],
+            )?;
             return Ok(());
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
@@ -267,24 +409,43 @@ mod imp {
     }
 
     pub fn blocked_ips() -> BTreeSet<IpAddr> {
-        let set = BTreeSet::new();
         #[cfg(target_os = "linux")]
         {
-            if let Ok(output) = Command::new("iptables-save").output() {
+            let mut set = BTreeSet::new();
+            let needle = format!("{RULE_PREFIX}-");
+            // Both families, or `unblock_all` would never see an IPv6 block.
+            for tool in ["iptables-save", "ip6tables-save"] {
+                let Ok(output) = Command::new(tool).output() else {
+                    continue;
+                };
                 let text = String::from_utf8_lossy(&output.stdout);
-                let needle = format!("{RULE_PREFIX}-");
                 for line in text.lines() {
-                    if line.contains(&needle) {
-                        for part in line.split_whitespace() {
-                            if let Ok(ip) = part.parse::<IpAddr>() {
-                                set.insert(ip);
-                            }
-                        }
+                    if !line.contains(&needle) {
+                        continue;
+                    }
+                    for part in line.split_whitespace() {
+                        set.extend(super::parse_saved_address(part));
                     }
                 }
             }
+            return set;
         }
-        set
+        #[cfg(target_os = "macos")]
+        {
+            let mut set = BTreeSet::new();
+            let Ok(output) = Command::new("pfctl")
+                .args(["-t", "netscope_blocked", "-T", "show"])
+                .output()
+            else {
+                return set;
+            };
+            for line in String::from_utf8_lossy(&output.stdout).lines() {
+                set.extend(super::parse_saved_address(line.trim()));
+            }
+            set
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        BTreeSet::new()
     }
 
     pub fn unblock_all() -> Result<usize> {
@@ -366,7 +527,12 @@ impl FirewallEngine {
     }
 
     /// Block an IP temporarily for N seconds with auto-expiry.
-    pub fn block_temporary(&self, ip: IpAddr, duration_secs: u64, reason: &str) -> Result<FirewallRule> {
+    pub fn block_temporary(
+        &self,
+        ip: IpAddr,
+        duration_secs: u64,
+        reason: &str,
+    ) -> Result<FirewallRule> {
         block(ip)?;
         let rule = FirewallRule::new_temporary_block(ip, duration_secs, reason);
         self.rules.write().insert(rule.id.clone(), rule.clone());
@@ -438,6 +604,40 @@ mod tests {
     #[test]
     fn blocked_ips_never_panics() {
         let _ = blocked_ips();
+    }
+
+    #[test]
+    fn saved_addresses_parse_with_and_without_a_cidr_prefix() {
+        // iptables-save always prints the prefix; pfctl -T show does not.
+        assert_eq!(
+            parse_saved_address("1.2.3.4/32"),
+            Some("1.2.3.4".parse().unwrap())
+        );
+        assert_eq!(
+            parse_saved_address("1.2.3.4"),
+            Some("1.2.3.4".parse().unwrap())
+        );
+        assert_eq!(
+            parse_saved_address("2606:4700::1/128"),
+            Some("2606:4700::1".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn saved_address_parser_rejects_the_other_tokens_on_the_line() {
+        // The rule line an address is recovered from also carries the comment,
+        // the chain name and the flags; none of them may parse as an address.
+        for token in [
+            "-A",
+            "INPUT",
+            "-s",
+            "--comment",
+            "netscope-block-1.2.3.4",
+            "DROP",
+            "",
+        ] {
+            assert_eq!(parse_saved_address(token), None, "token {token:?}");
+        }
     }
 
     #[test]
