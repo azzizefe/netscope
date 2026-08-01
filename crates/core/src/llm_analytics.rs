@@ -1405,7 +1405,9 @@ mod tests {
         };
         analytics.record_session_metrics(&sm);
         let anomalies = analytics.peek_anomalies();
-        assert!(anomalies.iter().any(|a| a.metric == "TTFT" && a.value == "650ms"));
+        assert!(anomalies
+            .iter()
+            .any(|a| a.metric == "TTFT" && a.value == "650ms"));
     }
 
     #[test]
@@ -1458,7 +1460,9 @@ mod tests {
         };
         analytics.record_session_metrics(&sm);
         let anomalies = analytics.peek_anomalies();
-        assert!(anomalies.iter().any(|a| a.metric == "Maliyet" && a.value == "$0.2500"));
+        assert!(anomalies
+            .iter()
+            .any(|a| a.metric == "Maliyet" && a.value == "$0.2500"));
     }
 
     #[test]
@@ -1484,7 +1488,9 @@ mod tests {
         };
         analytics.record_session_metrics(&sm);
         let anomalies = analytics.peek_anomalies();
-        assert!(anomalies.iter().any(|a| a.metric == "Rate Limit" && a.value == "429"));
+        assert!(anomalies
+            .iter()
+            .any(|a| a.metric == "Rate Limit" && a.value == "429"));
     }
 
     #[test]
@@ -1510,7 +1516,8 @@ mod tests {
         };
         analytics.record_session_metrics(&sm);
         let anomalies = analytics.peek_anomalies();
-        assert!(anomalies.iter().any(|a| a.metric == "Stream Kesintisi" && a.value == "length"));
+        assert!(anomalies
+            .iter()
+            .any(|a| a.metric == "Stream Kesintisi" && a.value == "length"));
     }
 }
-

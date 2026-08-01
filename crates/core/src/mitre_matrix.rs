@@ -60,9 +60,7 @@ pub fn build_mitre_matrix(evaluations: &[MitreKillChainEvaluation]) -> MitreAtta
                 high_conf_count += 1;
             }
 
-            let entry = tactic_map
-                .entry(tech.tactic.clone())
-                .or_default();
+            let entry = tactic_map.entry(tech.tactic.clone()).or_default();
 
             // Avoid duplicate technique IDs within the same column
             if !entry.iter().any(|t| t.id == tech.id) {
@@ -73,10 +71,7 @@ pub fn build_mitre_matrix(evaluations: &[MitreKillChainEvaluation]) -> MitreAtta
 
     let mut columns = Vec::new();
     for (tactic_id, tactic_name) in MITRE_TACTICS {
-        let tech_list = tactic_map
-            .get(*tactic_name)
-            .cloned()
-            .unwrap_or_default();
+        let tech_list = tactic_map.get(*tactic_name).cloned().unwrap_or_default();
 
         columns.push(MitreTacticColumn {
             tactic_id: tactic_id.to_string(),
@@ -103,7 +98,10 @@ fn format_matrix_as_markdown(columns: &[MitreTacticColumn]) -> String {
 
     for col in columns {
         if col.techniques.is_empty() {
-            md.push_str(&format!("| `{}` | {} | *None* |\n", col.tactic_id, col.tactic_name));
+            md.push_str(&format!(
+                "| `{}` | {} | *None* |\n",
+                col.tactic_id, col.tactic_name
+            ));
         } else {
             let tech_strs: Vec<String> = col
                 .techniques
@@ -129,7 +127,8 @@ mod tests {
 
     #[test]
     fn test_build_mitre_matrix() {
-        let eval1 = map_event_mitre_and_killchain("smb", "smb admin share connect", Some(445), true);
+        let eval1 =
+            map_event_mitre_and_killchain("smb", "smb admin share connect", Some(445), true);
         let eval2 = map_event_mitre_and_killchain("tcp", "port scan detected", Some(80), true);
 
         let matrix = build_mitre_matrix(&[eval1, eval2]);

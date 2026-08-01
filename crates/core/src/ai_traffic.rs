@@ -618,7 +618,11 @@ impl AiTrafficTracker {
         }
     }
 
-    pub fn record_nvidia_infra(&mut self, protocol: &crate::models::Protocol, payload_len: u64) -> bool {
+    pub fn record_nvidia_infra(
+        &mut self,
+        protocol: &crate::models::Protocol,
+        payload_len: u64,
+    ) -> bool {
         self.nvidia_infra.record(protocol, payload_len)
     }
 
@@ -1152,9 +1156,15 @@ mod tests {
         use crate::models::Protocol;
         let mut tracker = AiTrafficTracker::new();
 
-        assert!(NvidiaInfraMetrics::is_nvidia_protocol(&Protocol::NcclAllreduce));
-        assert!(NvidiaInfraMetrics::is_nvidia_protocol(&Protocol::GpuDirectRdma));
-        assert!(NvidiaInfraMetrics::is_nvidia_protocol(&Protocol::TritonInferenceGrpc));
+        assert!(NvidiaInfraMetrics::is_nvidia_protocol(
+            &Protocol::NcclAllreduce
+        ));
+        assert!(NvidiaInfraMetrics::is_nvidia_protocol(
+            &Protocol::GpuDirectRdma
+        ));
+        assert!(NvidiaInfraMetrics::is_nvidia_protocol(
+            &Protocol::TritonInferenceGrpc
+        ));
         assert!(!NvidiaInfraMetrics::is_nvidia_protocol(&Protocol::Http));
 
         assert!(tracker.record_nvidia_infra(&Protocol::NcclAllreduce, 1024));
@@ -1171,4 +1181,3 @@ mod tests {
         assert_eq!(m.total_bytes, 1024 + 2048 + 512 + 4096 + 512);
     }
 }
-

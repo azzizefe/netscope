@@ -101,7 +101,10 @@ impl ProtocolExpertEngine {
         let proto = pkt.protocol.to_string();
 
         // Checksum & Integrity
-        if s.contains("bad checksum") || s.contains("Bad checksum") || s.contains("checksum mismatch") {
+        if s.contains("bad checksum")
+            || s.contains("Bad checksum")
+            || s.contains("checksum mismatch")
+        {
             diags.push(ProtocolDiagnosticInfo {
                 severity: ExpertSeverity::Error,
                 group: ExpertGroup::Checksum,
@@ -235,14 +238,20 @@ impl ProtocolExpertEngine {
 
         // Construct Flow Key from first packet
         let first_pkt = &packets[0];
-        let src = first_pkt.src_addr.map_or("?".to_string(), |a| a.to_string());
-        let dst = first_pkt.dst_addr.map_or("?".to_string(), |a| a.to_string());
+        let src = first_pkt
+            .src_addr
+            .map_or("?".to_string(), |a| a.to_string());
+        let dst = first_pkt
+            .dst_addr
+            .map_or("?".to_string(), |a| a.to_string());
         let flow_key = format!("{src} <-> {dst} ({})", first_pkt.protocol);
 
         for (i, p) in packets.iter().enumerate() {
             let diags = Self::analyze_packet(p);
             for d in &diags {
-                *severity_map.entry(d.severity.label().to_string()).or_insert(0) += 1;
+                *severity_map
+                    .entry(d.severity.label().to_string())
+                    .or_insert(0) += 1;
             }
             all_diagnostics.extend(diags);
 
@@ -260,7 +269,10 @@ impl ProtocolExpertEngine {
             // Estimate RTT between SYN and SYN-ACK or request/response pair
             if i > 0 {
                 let prev = &packets[i - 1];
-                let dt = (p.timestamp - prev.timestamp).num_microseconds().unwrap_or(0) as f64 / 1000.0;
+                let dt = (p.timestamp - prev.timestamp)
+                    .num_microseconds()
+                    .unwrap_or(0) as f64
+                    / 1000.0;
                 if dt > 0.1 && dt < 5000.0 {
                     rtt_samples.push(dt);
                 }

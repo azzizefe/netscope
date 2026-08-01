@@ -29,7 +29,13 @@ impl PayloadMasker {
         let mut words: Vec<String> = Vec::new();
         for token in text.split_whitespace() {
             let clean = token.trim_matches(|c: char| {
-                !c.is_alphanumeric() && c != '@' && c != '.' && c != '+' && c != '-' && c != '=' && c != ':'
+                !c.is_alphanumeric()
+                    && c != '@'
+                    && c != '.'
+                    && c != '+'
+                    && c != '-'
+                    && c != '='
+                    && c != ':'
             });
 
             if is_email(clean) {

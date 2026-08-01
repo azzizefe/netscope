@@ -441,10 +441,12 @@ async fn create_role(
     Json(req): Json<CreateCustomRoleRequest>,
 ) -> impl IntoResponse {
     let can_view = req.can_view_raw_payload.unwrap_or(true);
-    match state
-        .rbac_engine
-        .create_custom_role(&req.name, &req.description, req.permissions, can_view)
-    {
+    match state.rbac_engine.create_custom_role(
+        &req.name,
+        &req.description,
+        req.permissions,
+        can_view,
+    ) {
         Ok(role) => (StatusCode::CREATED, Json(json!(role))).into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
     }

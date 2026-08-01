@@ -95,11 +95,7 @@ impl XdpEngine {
     }
 
     /// Start the eBPF/XDP capture thread and push zero-copy frames into Netscope's [`Producer`].
-    pub fn start(
-        &self,
-        producer: Producer,
-        running: Arc<AtomicBool>,
-    ) -> Result<JoinHandle<()>> {
+    pub fn start(&self, producer: Producer, running: Arc<AtomicBool>) -> Result<JoinHandle<()>> {
         let config = self.config.clone();
         let rx_packets = self.rx_packets.clone();
         let rx_bytes = self.rx_bytes.clone();
@@ -168,7 +164,8 @@ fn xdp_capture_loop(
         let payload = generate_synthetic_xdp_packet(&config.interface, seq);
         let len = payload.len() as u32;
 
-        let frame = RawFrame::new(ts_sec, ts_nanos, len, Bytes::from(payload)).with_hw_timestamp(true);
+        let frame =
+            RawFrame::new(ts_sec, ts_nanos, len, Bytes::from(payload)).with_hw_timestamp(true);
 
         rx_packets.fetch_add(1, Ordering::Relaxed);
         rx_bytes.fetch_add(len as u64, Ordering::Relaxed);
@@ -193,12 +190,12 @@ fn generate_synthetic_xdp_packet(iface: &str, seq: u64) -> Vec<u8> {
     let mut packet = vec![
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, // dst mac
         0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, // src mac
-        0x08, 0x00,                         // IPv4
-        0x45, 0x00, 0x00, 0x3c,             // IP hdr
+        0x08, 0x00, // IPv4
+        0x45, 0x00, 0x00, 0x3c, // IP hdr
         0x00, 0x01, 0x00, 0x00, 0x40, 0x06, 0x00, 0x00, // TTL, TCP
-        192, 168, 1, 100,                   // src ip
-        10, 0, 0, 1,                        // dst ip
-        0x01, 0xbb, 0x1f, 0x90,             // src port 443, dst port 8080
+        192, 168, 1, 100, // src ip
+        10, 0, 0, 1, // dst ip
+        0x01, 0xbb, 0x1f, 0x90, // src port 443, dst port 8080
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // seq/ack
         0x50, 0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, // flags
     ];
@@ -212,8 +209,8 @@ fn generate_synthetic_xdp_packet(iface: &str, seq: u64) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossbeam_channel::unbounded;
     use crate::pipeline::Pipeline;
+    use crossbeam_channel::unbounded;
 
     #[test]
     fn test_xdp_config_default() {

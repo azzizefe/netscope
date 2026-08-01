@@ -24,10 +24,6 @@ pub mod alerting;
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod dpdk;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ebpf_xdp;
 pub mod compliance_reports;
 pub mod config;
 pub mod crypto;
@@ -37,7 +33,11 @@ pub mod deployment;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod discover;
 pub mod dissectors;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod dpdk;
 pub mod dpi;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ebpf_xdp;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
@@ -98,8 +98,8 @@ pub mod registry;
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rotate;
-pub mod scalability;
 pub mod scada_dpi;
+pub mod scalability;
 pub mod security;
 pub mod sensor_watchdog;
 #[cfg(not(target_arch = "wasm32"))]

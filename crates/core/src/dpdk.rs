@@ -99,11 +99,7 @@ impl DpdkEngine {
     }
 
     /// Launch the DPDK poll-mode burst capture thread feeding Netscope's [`Producer`].
-    pub fn start(
-        &self,
-        producer: Producer,
-        running: Arc<AtomicBool>,
-    ) -> Result<JoinHandle<()>> {
+    pub fn start(&self, producer: Producer, running: Arc<AtomicBool>) -> Result<JoinHandle<()>> {
         let config = self.config.clone();
         let rx_packets = self.rx_packets.clone();
         let rx_bytes = self.rx_bytes.clone();
@@ -114,13 +110,7 @@ impl DpdkEngine {
             .name(format!("dpdk:port{}", config.port_id))
             .spawn(move || {
                 dpdk_capture_loop(
-                    &config,
-                    producer,
-                    running,
-                    rx_packets,
-                    rx_bytes,
-                    rx_missed,
-                    rx_errors,
+                    &config, producer, running, rx_packets, rx_bytes, rx_missed, rx_errors,
                 );
             })
             .context("Failed to spawn DPDK capture thread")?;
@@ -157,10 +147,12 @@ fn dpdk_capture_loop(
         // Simulate/extract hardware packet burst (up to burst_size packets per iteration)
         let packets_in_burst = (config.burst_size / 4).max(1);
         for i in 0..packets_in_burst {
-            let payload = generate_synthetic_dpdk_packet(&config.interface_name, burst_seq, i as u64);
+            let payload =
+                generate_synthetic_dpdk_packet(&config.interface_name, burst_seq, i as u64);
             let len = payload.len() as u32;
 
-            let frame = RawFrame::new(ts_sec, ts_nanos, len, Bytes::from(payload)).with_hw_timestamp(true);
+            let frame =
+                RawFrame::new(ts_sec, ts_nanos, len, Bytes::from(payload)).with_hw_timestamp(true);
 
             rx_packets.fetch_add(1, Ordering::Relaxed);
             rx_bytes.fetch_add(len as u64, Ordering::Relaxed);
@@ -185,13 +177,13 @@ fn generate_synthetic_dpdk_packet(iface: &str, burst_seq: u64, idx: u64) -> Vec<
     let mut packet = vec![
         0x00, 0x50, 0x56, 0xca, 0xfe, 0xba, // dst mac
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, // src mac
-        0x08, 0x00,                         // IPv4
-        0x45, 0x00, 0x00, 0x40,             // IP hdr
+        0x08, 0x00, // IPv4
+        0x45, 0x00, 0x00, 0x40, // IP hdr
         0x00, 0x02, 0x00, 0x00, 0x40, 0x11, 0x00, 0x00, // UDP
-        10, 200, 1, 50,                     // src ip
-        10, 200, 2, 100,                    // dst ip
-        0x13, 0x88, 0x13, 0x89,             // src 5000, dst 5001
-        0x00, 0x2c, 0x00, 0x00,             // len, checksum
+        10, 200, 1, 50, // src ip
+        10, 200, 2, 100, // dst ip
+        0x13, 0x88, 0x13, 0x89, // src 5000, dst 5001
+        0x00, 0x2c, 0x00, 0x00, // len, checksum
     ];
 
     let tag = format!("DPDK-{}-burst-{}-pkt-{}", iface, burst_seq, idx);
@@ -202,8 +194,8 @@ fn generate_synthetic_dpdk_packet(iface: &str, burst_seq: u64, idx: u64) -> Vec<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossbeam_channel::unbounded;
     use crate::pipeline::Pipeline;
+    use crossbeam_channel::unbounded;
 
     #[test]
     fn test_dpdk_config_default() {

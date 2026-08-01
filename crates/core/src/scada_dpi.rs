@@ -106,7 +106,11 @@ impl ScadaDpiEngine {
         match func_code {
             // Write Single Coil (0x05), Write Single Register (0x06), Write Multiple Coils (0x0F), Write Multiple Registers (0x10)
             0x05 | 0x06 | 0x0F | 0x10 => {
-                let severity = if self.readonly_mode { "CRITICAL" } else { "HIGH" };
+                let severity = if self.readonly_mode {
+                    "CRITICAL"
+                } else {
+                    "HIGH"
+                };
                 alerts.push(IcsSecurityAlert {
                     protocol: IcsProtocolKind::ModbusTcp,
                     anomaly_kind: IcsAnomalyKind::UnauthorizedWrite,
@@ -125,7 +129,10 @@ impl ScadaDpiEngine {
                     anomaly_kind: IcsAnomalyKind::IllegalFunctionCode,
                     severity: "HIGH",
                     summary: format!("Modbus TCP Illegal Function Code 0x{:02X}", func_code),
-                    details: format!("Observed reserved/illegal Modbus function code 0x{:02X}", func_code),
+                    details: format!(
+                        "Observed reserved/illegal Modbus function code 0x{:02X}",
+                        func_code
+                    ),
                 });
             }
             _ => {}
@@ -141,13 +148,23 @@ impl ScadaDpiEngine {
         match func_code {
             // Cold Restart (0x0D), Warm Restart (0x0E)
             0x0D | 0x0E => {
-                let restart_type = if func_code == 0x0D { "Cold Restart" } else { "Warm Restart" };
+                let restart_type = if func_code == 0x0D {
+                    "Cold Restart"
+                } else {
+                    "Warm Restart"
+                };
                 alerts.push(IcsSecurityAlert {
                     protocol: IcsProtocolKind::Dnp3,
                     anomaly_kind: IcsAnomalyKind::UnauthorizedRestart,
                     severity: "CRITICAL",
-                    summary: format!("DNP3 Controller {} Command (Func 0x{:02X})", restart_type, func_code),
-                    details: format!("Out-of-band DNP3 {} command issued to outstation asset.", restart_type),
+                    summary: format!(
+                        "DNP3 Controller {} Command (Func 0x{:02X})",
+                        restart_type, func_code
+                    ),
+                    details: format!(
+                        "Out-of-band DNP3 {} command issued to outstation asset.",
+                        restart_type
+                    ),
                 });
             }
             // Direct Operate (0x05), Direct Operate No ACK (0x06)
@@ -211,7 +228,10 @@ impl ScadaDpiEngine {
                     protocol: IcsProtocolKind::Bacnet,
                     anomaly_kind: IcsAnomalyKind::UnauthorizedWrite,
                     severity: "MEDIUM",
-                    summary: format!("BACnet Write Property Command (Service 0x{:02X})", service_choice),
+                    summary: format!(
+                        "BACnet Write Property Command (Service 0x{:02X})",
+                        service_choice
+                    ),
                     details: "Modification of BACnet object property value executed.".to_string(),
                 });
             }
@@ -222,7 +242,11 @@ impl ScadaDpiEngine {
     }
 
     /// Main entry point: inspect raw SCADA payload buffer.
-    pub fn inspect_payload(&self, protocol: IcsProtocolKind, payload: &[u8]) -> Vec<IcsSecurityAlert> {
+    pub fn inspect_payload(
+        &self,
+        protocol: IcsProtocolKind,
+        payload: &[u8],
+    ) -> Vec<IcsSecurityAlert> {
         if payload.is_empty() {
             return Vec::new();
         }

@@ -174,7 +174,11 @@ impl SocIncidentManager {
         affected_hosts: Vec<String>,
     ) -> SocIncident {
         let now = Utc::now();
-        let id = format!("INC-{}-{:04}", now.format("%Y%m%d"), self.incidents.read().len() + 1);
+        let id = format!(
+            "INC-{}-{:04}",
+            now.format("%Y%m%d"),
+            self.incidents.read().len() + 1
+        );
 
         let initial_event = SocTimelineEvent {
             timestamp: now,
@@ -535,7 +539,9 @@ mod tests {
         assert_eq!(updated.timeline_events.len(), 2);
 
         // 3. Execute SOAR Playbook
-        let res = manager.execute_playbook(&incident.id, "pb_brute_force").unwrap();
+        let res = manager
+            .execute_playbook(&incident.id, "pb_brute_force")
+            .unwrap();
         assert!(!res.is_empty());
 
         let final_incident = manager.get_incident(&incident.id).unwrap();

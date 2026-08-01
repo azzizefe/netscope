@@ -196,7 +196,9 @@ impl UebaEngine {
                 10.0
             };
             if tx_ratio > 3.0 {
-                let severity = ((profile.bytes_sent as f64 / self.exfiltration_threshold_bytes as f64) * 50.0).min(95.0);
+                let severity =
+                    ((profile.bytes_sent as f64 / self.exfiltration_threshold_bytes as f64) * 50.0)
+                        .min(95.0);
                 max_severity = max_severity.max(severity);
                 anomalies.push(UebaAnomaly {
                     kind: UebaAnomalyKind::ExfiltrationSpike,
@@ -226,14 +228,18 @@ impl UebaEngine {
         // Aggregated Threat Score
         let threat_score = max_severity;
         let is_suspicious = threat_score >= 50.0;
-        let summary = if is_suspicious {
-            format!(
+        let summary =
+            if is_suspicious {
+                format!(
                 "CRITICAL UEBA ANOMALY for {}: Threat Score {:.1}/100 with {} behavioral alerts.",
                 ip, threat_score, anomalies.len()
             )
-        } else {
-            format!("Entity {} behavior is within normal statistical baselines.", ip)
-        };
+            } else {
+                format!(
+                    "Entity {} behavior is within normal statistical baselines.",
+                    ip
+                )
+            };
 
         Some(UebaEvaluation {
             entity_ip: ip.to_string(),
@@ -251,7 +257,11 @@ impl UebaEngine {
             .keys()
             .filter_map(|ip| self.evaluate_entity(ip))
             .collect();
-        evaluations.sort_by(|a, b| b.threat_score.partial_cmp(&a.threat_score).unwrap_or(std::cmp::Ordering::Equal));
+        evaluations.sort_by(|a, b| {
+            b.threat_score
+                .partial_cmp(&a.threat_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         evaluations
     }
 }
