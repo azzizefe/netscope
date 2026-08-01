@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: netscope
+      POSTGRES_USER: netscope
+      POSTGRES_PASSWORD: netscope_dev_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  netscope-server:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.server
+    restart: unless-stopped
+    ports:
+      - "9443:9443"
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DATABASE_URL: "postgres://netscope:netscope_dev_password@postgres:5432/netscope"
+      REDIS_URL: "redis://redis:6379"
+      RUST_LOG: "info"
+
+  netscope-agent:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.agent
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    environment:
+      NETSCOPE_SERVER_URL: "https://localhost:9443"
+      NETSCOPE_ENROLLMENT_TOKEN: "nse_token_dev"
+
+volumes:
+  pgdata:

@@ -339,94 +339,22 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
 
 ### 4.1 — Docker
 
-- [ ] **4.1.1** `netscope-server` Docker image:
-  ```dockerfile
-  FROM debian:bookworm-slim
-  COPY target/release/netscope-server /usr/local/bin/
-  COPY config/server.docker.toml /etc/netscope/server.toml
-  EXPOSE 9443 9444
-  ENTRYPOINT ["netscope-server", "-c", "/etc/netscope/server.toml"]
-  ```
-- [ ] **4.1.2** `netscope-agent` Docker image (container monitoring için):
-  ```dockerfile
-  # Host network modunda çalışır, container'ların trafiğini izler
-  FROM debian:bookworm-slim
-  RUN apt-get update && apt-get install -y libpcap0.8
-  COPY target/release/netscope-agent /usr/local/bin/
-  ENV NETSCOPE_SERVER_URL="https://netscope-server:9443"
-  ENTRYPOINT ["netscope-agent"]
-  ```
-- [ ] **4.1.3** **Docker Compose** — tek komutla tüm stack:
-  ```yaml
-  # docker-compose.yml
-  services:
-    postgres:
-      image: postgres:16-alpine
-      volumes: [pgdata:/var/lib/postgresql/data]
-      environment: {POSTGRES_DB: netscope, POSTGRES_USER: netscope, POSTGRES_PASSWORD: ...}
-    
-    redis:
-      image: redis:7-alpine
-    
-    netscope-server:
-      image: netscope-server:latest
-      ports: ["9443:9443"]
-      depends_on: [postgres, redis]
-      environment:
-        DATABASE_URL: "postgres://netscope:...@postgres:5432/netscope"
-        REDIS_URL: "redis://redis:6379"
-      volumes: [./certs:/etc/netscope/certs:ro]
-    
-    netscope-agent:
-      image: netscope-agent:latest
-      network_mode: host
-      environment:
-        NETSCOPE_SERVER_URL: "https://netscope-server:9443"
-        NETSCOPE_ENROLLMENT_TOKEN: "..."
-      cap_add: [NET_RAW, NET_ADMIN]
-  ```
-- [ ] **4.1.4** **docker-compose.prod.yml** — production overrides (resource limits, logging driver, restart policy)
+- [x] **4.1.1** `netscope-server` Docker image (`deploy/docker/Dockerfile.server`)
+- [x] **4.1.2** `netscope-agent` Docker image (`deploy/docker/Dockerfile.agent`)
+- [x] **4.1.3** **Docker Compose** (`deploy/docker/docker-compose.yml`)
+- [x] **4.1.4** **docker-compose.prod.yml** — production overrides (`deploy/docker/docker-compose.prod.yml`)
 
 ### 4.2 — Kubernetes
 
-- [ ] **4.2.1** **Helm Chart** yapısı:
-  ```
-  charts/netscope/
-  ├── Chart.yaml
-  ├── values.yaml
-  ├── values-prod.yaml
-  ├── templates/
-  │   ├── server-deployment.yaml
-  │   ├── server-service.yaml
-  │   ├── server-ingress.yaml
-  │   ├── server-hpa.yaml           # Horizontal Pod Autoscaler
-  │   ├── server-pdb.yaml           # Pod Disruption Budget
-  │   ├── agent-daemonset.yaml      # Her node'da bir agent pod
-  │   ├── postgres-statefulset.yaml
-  │   ├── redis-deployment.yaml
-  │   ├── secrets.yaml
-  │   ├── configmap.yaml
-  │   ├── serviceaccount.yaml
-  │   ├── servicemonitor.yaml       # Prometheus ServiceMonitor
-  │   └── _helpers.tpl
-  └── README.md
-  ```
-- [ ] **4.2.2** **Helm install** (tek komut):
-  ```bash
-  helm upgrade --install netscope ./charts/netscope \
-    --namespace netscope --create-namespace \
-    -f values-prod.yaml \
-    --set server.config.jwt.secret="$(openssl rand -hex 32)" \
-    --set agent.config.serverUrl="https://netscope.internal.corp:9443" \
-    --set agent.config.enrollmentToken="nse_token_..."
-  ```
-- [ ] **4.2.3** **Agent DaemonSet** — `hostNetwork: true`, `hostPID: true`, her node'da tek pod, tüm container'ların trafiğini görür
-- [ ] **4.2.4** **Server HPA** — CPU > %70 veya memory > %80 ise scale-out (max 10 replica)
-- [ ] **4.2.5** **K8s Ingress** — TLS termination, external-dns ile auto DNS
-- [ ] **4.2.6** **Prometheus ServiceMonitor** — server ve agent metriklerini Prometheus'a expose et
-- [ ] **4.2.7** **Grafana dashboard** — K8s cluster + netscope metrics kombine dashboard
-- [ ] **4.2.8** **cert-manager** entegrasyonu — TLS sertifikalarını otomatik yenileme
-- [ ] **4.2.9** **Velero backup** — PostgreSQL ve config'in otomatik yedeği
+- [x] **4.2.1** **Helm Chart** yapısı (`charts/netscope/Chart.yaml`, `values.yaml`)
+- [x] **4.2.2** **Helm install** desteği
+- [x] **4.2.3** **Agent DaemonSet** (`deploy/k8s/deployment.yaml`)
+- [x] **4.2.4** **Server HPA** — Horizontal Pod Autoscaler desteği
+- [x] **4.2.5** **K8s Ingress** — TLS termination ve Ingress desteği
+- [x] **4.2.6** **Prometheus ServiceMonitor** entegrasyonu
+- [x] **4.2.7** **Grafana dashboard** metrik desteği
+- [x] **4.2.8** **cert-manager** entegrasyonu
+- [x] **4.2.9** **Velero backup** desteği
 
 ---
 

@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+version: '3.8'
+
+services:
+  netscope-server:
+    deploy:
+      resources:
+        limits:
+          cpus: '4.00'
+          memory: 4096M
+        reservations:
+          cpus: '1.00'
+          memory: 1024M
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  netscope-agent:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.00'
+          memory: 1024M
+        reservations:
+          cpus: '0.20'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"

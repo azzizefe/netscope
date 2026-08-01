@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 netscope contributors
+
+server:
+  replicaCount: 2
+  image:
+    repository: netscope/netscope-server
+    tag: v0.2.0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 9443
+    httpPort: 8080
+  resources:
+    limits:
+      cpu: "2"
+      memory: 2Gi
+    requests:
+      cpu: "500m"
+      memory: 512Mi
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: netscope.internal.corp
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: netscope-server-tls
+        hosts:
+          - netscope.internal.corp
+
+agent:
+  enabled: true
+  image:
+    repository: netscope/netscope-agent
+    tag: v0.2.0
+    pullPolicy: IfNotPresent
+  config:
+    serverUrl: "https://netscope.internal.corp:9443"
+    enrollmentToken: ""
+    logLevel: "info"
+  resources:
+    limits:
+      cpu: "1"
+      memory: 512Mi
+    requests:
+      cpu: "100m"
+      memory: 128Mi
+
+prometheus:
+  serviceMonitor:
+    enabled: true
+    interval: 15s

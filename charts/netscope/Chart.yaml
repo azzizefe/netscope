@@ -1,0 +1,14 @@
+apiVersion: v2
+name: netscope
+description: Helm chart for Netscope Enterprise Network Inspection and Agent Stack
+type: application
+version: 0.2.0
+appVersion: "0.2.0"
+keywords:
+  - security
+  - network
+  - packet-inspection
+  - sensor
+maintainers:
+  - name: netscope contributors
+    url: https://github.com/azzizefe/netscope
