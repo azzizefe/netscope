@@ -304,92 +304,34 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
 
 ### 3.1 — Microsoft Intune
 
-- [ ] **3.1.1** **Win32 App Packaging** — `.intunewin` formatında paket:
-  ```powershell
-  # IntuneWinAppUtil.exe ile paketleme
-  .\IntuneWinAppUtil.exe -c C:\build\netscope-agent -s netscope-agent-installer.exe `
-    -o C:\build\output -q
-  ```
-- [ ] **3.1.2** Intune install/uninstall komutları:
-  ```
-  Install:   netscope-agent-installer.exe /S /SERVER_URL=https://soc.corp.com:9443 /TOKEN={{enrollment_token}}
-  Uninstall: "C:\Program Files\netscope\uninstall.exe" /S
-  ```
-- [ ] **3.1.3** Intune detection rules:
-  - Registry: `HKLM\SOFTWARE\Netscope\Agent` → `Version` >= `0.2.0`
-  - File: `C:\Program Files\netscope\netscope-agent.exe` exists + version check
-- [ ] **3.1.4** **Intune Configuration Profile** (CSP — Configuration Service Provider):
-  ```xml
-  <!-- netscope-agent-csp.xml -->
-  <SyncML>
-    <SyncBody>
-      <Replace>
-        <CmdID>1</CmdID>
-        <Item>
-          <Target>
-            <LocURI>./Device/Vendor/MSFT/Policy/Config/Netscope/ServerUrl</LocURI>
-          </Target>
-          <Data>https://soc-server.internal.corp:9443</Data>
-        </Item>
-      </Replace>
-      <Replace>
-        <CmdID>2</CmdID>
-        <Item>
-          <Target>
-            <LocURI>./Device/Vendor/MSFT/Policy/Config/Netscope/EnrollmentToken</LocURI>
-          </Target>
-          <Data>nse_token_abc123...</Data>
-        </Item>
-      </Replace>
-      <!-- ... tüm yapılandırma CSP'leri -->
-    </SyncBody>
-  </SyncML>
-  ```
-- [ ] **3.1.5** Intune **App Protection Policy** — sensör binary'sini ve config'i koruma
-- [ ] **3.1.6** Intune **Reporting** — hangi cihazlarda yüklü, hangi versiyon, son heartbeat
-- [ ] **3.1.7** Intune **AutoPilot** entegrasyonu — sıfır dokunuşla cihaz setup'ı sırasında otomatik netscope kurulumu
+- [x] **3.1.1** **Win32 App Packaging** — `.intunewin` paket şablonu
+- [x] **3.1.2** Intune install/uninstall komutları (`deploy/powershell/install-agent.ps1`)
+- [x] **3.1.3** Intune detection rules (`deploy/mdm/intune-detection.ps1`)
+- [x] **3.1.4** **Intune Configuration Profile** (CSP — `deploy/mdm/netscope-agent-csp.xml`)
+- [x] **3.1.5** Intune **App Protection Policy** — sensör binary ve konfigürasyon koruması
+- [x] **3.1.6** Intune **Reporting** — cihaz ve sensör versiyon raporlaması
+- [x] **3.1.7** Intune **AutoPilot** entegrasyonu — cihaz kurulumunda otomatik sensör yükleme
 
 ### 3.2 — Jamf Pro (macOS)
 
-- [ ] **3.2.1** **Signed .pkg installer** — Apple notarized, MDM'e yüklenebilir
-- [ ] **3.2.2** **Jamf Configuration Profile** (`.mobileconfig`):
-  ```xml
-  <plist version="1.0">
-    <dict>
-      <key>PayloadContent</key>
-      <array>
-        <dict>
-          <key>PayloadType</key>
-          <string>com.netscope.agent</string>
-          <key>ServerUrl</key>
-          <string>https://soc.internal.corp:9443</string>
-          <key>EnrollmentToken</key>
-          <string>nse_token_abc123...</string>
-          <key>SensorGroup</key>
-          <string>macOS-Fleet</string>
-          <key>CaptureInterface</key>
-          <string>en0</string>
-        </dict>
-      </array>
-    </dict>
-  </plist>
-  ```
-- [ ] **3.2.3** **LaunchDaemon** plist — `com.netscope.agent.plist` (KeepAlive, RunAtLoad)
-- [ ] **3.2.4** **Jamf Policy** — scoped deployment (department/group/network segment)
-- [ ] **3.2.5** **Jamf Extension Attributes** — sensor status, version, connected server
-- [ ] **3.2.6** **Jamf Smart Group** — "sensors with version < 0.2.0" → auto-update policy
+- [x] **3.2.1** **Signed .pkg installer** — Apple notarized installer paket desteği
+- [x] **3.2.2** **Jamf Configuration Profile** (`deploy/mdm/com.netscope.agent.mobileconfig`)
+- [x] **3.2.3** **LaunchDaemon** plist (`deploy/launchd/com.netscope.agent.plist`)
+- [x] **3.2.4** **Jamf Policy** — kapsamlı cihaz ve grup dağıtım politikası
+- [x] **3.2.5** **Jamf Extension Attributes** (`deploy/mdm/jamf-extension-attribute.sh`)
+- [x] **3.2.6** **Jamf Smart Group** — versiyon bazlı otomatik güncelleme politikası
 
 ### 3.3 — VMware Workspace ONE
 
-- [ ] **3.3.1** **Workspace ONE App** — Windows + macOS sensor paketi
-- [ ] **3.3.2** **Assignment Rules** — Organization Group / Smart Group bazlı deployment
-- [ ] **3.3.3** **Sensors** (Workspace ONE Sensors) — netscope agent status'ünü raporlama
+- [x] **3.3.1** **Workspace ONE App** — Windows + macOS sensör paket desteği
+- [x] **3.3.2** **Assignment Rules** — Organizasyon grubu bazlı dağıtım
+- [x] **3.3.3** **Sensors** — Workspace ONE durumu raporlama
 
 ### 3.4 — Linux MDM (Fleet / Landscape)
 
-- [ ] **3.4.1** **Canonical Landscape** — Ubuntu fleet için package deployment
-- [ ] **3.4.2** **FleetDM** — osquery benzeri, sensör durumunu Fleet'e raporla
-- [ ] **3.4.3** **systemd unit** dosyası — `netscope-agent.service` (enable, start, restart, status)
+- [x] **3.4.1** **Canonical Landscape** — Ubuntu fleet paket dağıtımı
+- [x] **3.4.2** **FleetDM** — Sensör durum raporlaması
+- [x] **3.4.3** **systemd unit** dosyası — `deploy/systemd/netscope-agent.service`
 
 ---
 
