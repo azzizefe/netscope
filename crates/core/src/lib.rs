@@ -99,6 +99,7 @@ pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rotate;
 pub mod scalability;
+pub mod scada_dpi;
 pub mod security;
 pub mod sensor_watchdog;
 #[cfg(not(target_arch = "wasm32"))]
