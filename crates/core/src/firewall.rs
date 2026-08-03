@@ -4,9 +4,17 @@
 //! Advanced OS-Level & In-Memory Firewall Engine.
 //!
 //! Provides active OS-level threat mitigation across Windows (`netsh advfirewall`),
-//! Linux (`iptables`/`nftables`), and macOS (`pfctl`), plus an in-memory rule engine
+//! Linux (`iptables`/`ip6tables`), and macOS (`pfctl`), plus an in-memory rule engine
 //! with temporary auto-expiring block policies, port-specific blocks, CIDR subnets,
 //! and SOC auto-remediation triggers.
+//!
+//! The Linux path shells out to `iptables`/`ip6tables` and nothing else. This
+//! line used to say "`iptables`/`nftables`"; no `nft` command is issued
+//! anywhere in this file. On a distribution where `iptables` is the nft-backed
+//! compatibility shim the rules do land in nftables, but that is the
+//! distribution's doing, not this module's, and on a host with only `nft`
+//! installed blocking fails. Naming both made it look like there was a
+//! fallback to fall back to.
 
 use std::collections::{BTreeSet, HashMap};
 use std::net::IpAddr;

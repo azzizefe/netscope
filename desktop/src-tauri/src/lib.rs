@@ -694,7 +694,7 @@ fn list_interfaces() -> Result<Vec<InterfaceInfo>, String> {
     Ok(out)
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 struct NeighbourInfo {
     ip: String,
     mac: String,
@@ -2410,23 +2410,58 @@ mod tests {
         assert!(unblock_err.contains("not a valid IP address"));
     }
 
+    /// Whatever adapters this machine has, the list the frontend receives must
+    /// be well-formed: every row selectable by a unique name, and every `kind`
+    /// one the UI knows how to render.
+    ///
+    /// An empty list is a legitimate result — a machine with no capture driver
+    /// installed has no interfaces — so this asserts the *shape* of each row
+    /// rather than that any exist. Verifying real enumeration needs a real
+    /// adapter; that is recorded in `UNTESTED.md`.
     #[test]
-    fn list_interfaces_returns_adapters() {
+    fn every_listed_interface_is_selectable_and_classified() {
+        const KINDS: [&str; 5] = ["ethernet", "loopback", "usb", "bluetooth", "can"];
+
         let interfaces = list_interfaces().expect("interface enumeration should succeed");
+        let mut names = std::collections::HashSet::new();
         for iface in &interfaces {
-            assert!(!iface.name.is_empty());
-            assert!(!iface.kind.is_empty());
+            assert!(
+                !iface.name.is_empty(),
+                "an interface with no name cannot be selected"
+            );
+            assert!(
+                KINDS.contains(&iface.kind.as_str()),
+                "unknown interface kind {:?} — the UI has no icon for it",
+                iface.kind
+            );
+            assert!(
+                names.insert(iface.name.clone()),
+                "duplicate interface name {:?}: selecting one would start the other",
+                iface.name
+            );
         }
     }
 
+    /// Scanning an interface that does not exist must fail, not answer.
+    ///
+    /// The previous version of this test asserted
+    /// `invalid.is_ok() || invalid.is_err()` — true of every `Result` ever
+    /// constructed — because the behaviour underneath was itself undecided:
+    /// `discover::interface_ipv4` fell back to the first adapter with a
+    /// routable address, so an unknown name returned a neighbour list for
+    /// some other subnet. Both are fixed; this pins the result.
+    ///
+    /// The `"__all__"` path is deliberately not exercised here: it sends UDP
+    /// probes across the live subnet and sleeps 1.5s, which is a side effect,
+    /// not a test.
     #[test]
-    fn arp_scan_handles_all_and_invalid_interfaces() {
-        let res = arp_scan("__all__".into());
-        assert!(res.is_ok());
-
-        // Invalid or non-matching interface name gracefully falls back or returns Ok
-        let invalid = arp_scan("nonexistent_iface_xyz_999".into());
-        assert!(invalid.is_ok() || invalid.is_err());
+    fn arp_scan_refuses_an_unknown_interface() {
+        let err = arp_scan("nonexistent_iface_xyz_999".into())
+            .expect_err("an interface that does not exist has no neighbours to report");
+        assert!(
+            err.contains("routable IPv4"),
+            "the error should say why nothing was scanned, got: {err}"
+        );
     }
 
     #[test]

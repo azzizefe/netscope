@@ -1,6 +1,8 @@
 # netscope — Proje İlerleme Raporu
 
-> Son güncelleme: **2026-07-29 (akşam)**
+> Son güncelleme: **2026-08-03**
+> Bu dosyadaki her sayı o gün `cargo test --workspace` ve kaynak ağacı
+> sayımıyla ölçüldü. Sayıyı elle güncellemeyin — yeniden ölçün.
 
 ---
 
@@ -8,13 +10,13 @@
 
 | Ölçüm | Değer |
 |---|---|
-| Rust kaynak dosyası | ~621 (6 crate) |
-| Test sayısı (Rust) | ~2,323 geçiyor, 0 başarısız |
-| Test sayısı (vitest) | 88 frontend testi |
-| Dissector modülü | 501 dosya, ~2,500 protokol |
-| Çalışan crate'ler | core, tui, wasm, desktop |
-| Derlenmeyen crate | *(yok)* — tümü derleniyor |
-| Lint | ✅ clippy + fmt temiz (server hariç) |
+| Rust kaynak dosyası | 659 (6 crate) |
+| Test (Rust, tüm workspace) | **2.462 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Dissector modülü | 501 dosya |
+| Registry satırı | 2.528 protokol |
+| **Bir dissector'ın gerçekten ürettiği protokol** | **458** |
+| Sadece bildirilmiş (`Declared`) protokol | 2.070 |
+| Lint | ✅ `cargo clippy --workspace --all-targets -- -D warnings` temiz, `cargo fmt --check` temiz |
 
 ---
 
@@ -22,27 +24,12 @@
 
 | Bileşen | Durum | Test | Detay |
 |---|---|---|---|
-| **netscope-core** | ✅ Hazır | 2,227 test | Capture engine, dissectors, alerting, SIEM, stats, expert system, education |
-| **netscope-tui** | ✅ Hazır | 44 test | 7 görünüm (packet list, tree, hex, stats, dashboard, vs.) |
-| **netscope-wasm** | ✅ Hazır | 1 test | Filter modülü, wasm32-unknown-unknown, 154 KB |
-| **netscope-server** | ✅ Derleniyor | 25 test | gRPC + REST API, SOAR, RBAC, migrations — **clippy temiz** |
-| **netscope-agent** | ✅ Hazır | 18 test | Sensor agent, heartbeat, upgrade, WebSocket, remote config |
-| **netscope-desktop** | ✅ Hazır | 18 test | Tauri v2, 38 komut (13 testli), NSIS/MSI/DMG/DEB/AppImage |
-| **Frontend (vitest)** | ✅ Hazır | 88 test | PII detection, UI unit tests |
-
----
-
-## Branch Yapısı
-
-| Branch | Amaç |
-|---|---|
-| `main` | Aktif geliştirme — her şey burada |
-| `backup-local-main` | Yerel yedek |
-| `feature/dissectors-expansion` | Dissector genişletme |
-| `feature/failure-reasons-dns-and-routing` | DNS/routing hata analizi |
-| `feature/protocol-registry-and-expansion` | Protocol registry |
-| `fix/desktop-test-manifest` | Windows test manifest fix |
-| `release/tauri-msi-versioning` | MSI versiyonlama |
+| **netscope-core** | ✅ Hazır | 2.330 (+4 ignore) | Capture engine, dissectors, alerting, SIEM, stats, expert system, education |
+| **netscope-tui** | ✅ Hazır | 44 | 7 görünüm (packet list, tree, hex, stats, dashboard, vs.) |
+| **netscope-wasm** | ✅ Hazır | 1 | Filter modülü, wasm32-unknown-unknown |
+| **netscope-server** | ✅ Derleniyor | 25 | gRPC + REST API, SOAR, RBAC, migrations |
+| **netscope-agent** | ✅ Hazır | 18 | Sensor agent, heartbeat, upgrade, WebSocket, remote config |
+| **netscope-desktop** | ✅ Hazır | 24 | Tauri v2, 39 komut (18'i testlerden çağrılıyor) |
 
 ---
 
@@ -50,49 +37,37 @@
 
 | # | Sorun | Etki | Detay |
 |---|---|---|---|
-| 🔴 1 | `netscope-server` derlenmiyor | Tüm fleet management tier (auth, RBAC, gRPC, SOAR) kullanılamaz | `api/hunt.rs`: `queries::CreateRule` private, 3 tip uyuşmazlığı |
-| 🟠 2 | 145 dissector modülü dispatch'ten erişilemez | Kullanıcıya gösterilmeyen protokoller | İmza/magic byte eksik |
-| 🟠 3 | 1,938 protocol registry'de ama üretilmiyor | Filtre/renk/eğitim içeriği boş | Hiçbir kod yolu `Protocol` değerini atamıyor |
+| 🟠 1 | 144 dissector modülü dispatch'ten erişilemez | Bu protokoller hiçbir pakette görünmez | `every_dissector_module_is_reachable` (`--ignored`) listeliyor. Neredeyse hepsinin **imzası yok**: sabit ofset okuyup hiçbir şey doğrulamıyorlar. Port uydurarak bağlamayın — bu depoda dört kez gerçek hataya dönüştü. |
+| 🟠 2 | 2.070 protokol registry'de ama üretilmiyor | Ders içerikleri var, filtre/renk yok | Bunlar `Declared` olarak işaretli ve **kasıtlı olarak** filtre listesinden, Learn sekmesinden ve protokol sayısından dışarıda tutuluyor — yani kullanıcıya yalan söylemiyorlar. Kapatmanın tek yolu dissector yazmak. |
+| 🟡 3 | 21 Tauri komutu testsiz | Regresyon fark edilmeden geçebilir | Çoğu gerçek donanım/yetki istiyor. Ayrıntı ve isim listesi: [`%100.md` Adım 4](%100.md). |
 
 ---
 
-## Proje Büyüklüğü
+## 2026-08-03: Doğruluk Onarımı
 
-| Kategori | Sayı |
-|---|---|
-| Dissector modülü | 501 `.rs` dosyası |
-| Toplam Rust testi | ~2,327 |
-| Toplam frontend testi | 88 |
-| SIEM formatı | 3 (CEF, LEEF, JSON) |
-| Desktop komutu | 33 Tauri command |
-| Veritabanı migration | 8 SQL dosyası |
-| GitHub Actions workflow | 3 (ci, publish, release) |
-| PQC güvenlik modülü | 4 (CVE feed, CT v3, ECH interop, session resumption) |
-| Doküman | 14 dosya (`docs/`) + SOC roadmap |
+1 Ağustos'taki toplu commitler, kod tabanının kendi korumalarını devre dışı
+bırakmıştı. Bu oturumda geri alındı — ayrıntılı gerekçeler ilgili dosyaların
+doc yorumlarında duruyor:
 
----
-
-## Geçmiş Kilometre Taşları
-
-- ✅ Core engine + 500+ dissector
-- ✅ TUI (ratatui) tüm görünümler
-- ✅ WASM filter (tarayıcıda çalışan)
-- ✅ Tauri desktop uygulaması (Windows/macOS/Linux)
-- ✅ Alert engine + rule-based triggering
-- ✅ Expert system (packet severity classification)
-- ✅ SIEM export (CEF, LEEF, JSON)
-- ✅ SOC 7x24 monitoring dokümantasyonu
-- ✅ gRPC + REST API iskeleti
-- ✅ CI/CD pipeline (lint, test, bench, frontend)
-- ✅ Release pipeline (TUI binary + desktop installer)
-- ✅ Multi-platform release artifact (NSIS, MSI, DMG, DEB, AppImage)
+| Ne bulundu | Nerede | Ne yapıldı |
+|---|---|---|
+| Erişilebilirlik koruması susturulmuş: 140 modül toptan `HELPER_MODULES`'a eklenmiş, `#[ignore]` aynı diff'te silinmiş | `dissectors.rs` | Liste 62 gerçek helper'a döndürüldü, `#[ignore]` geri kondu, hiçbir modülü adlandırmayan 1.330 hayalet girdi silindi ve `helper_modules_name_real_modules` testi eklendi |
+| Bunun üzerine 128 registry satırı `Declared` → `Dissected` çevrilmiş | `registry.rs` | 128'i geri çevrildi; `declared_status_matches_the_dispatch` yeniden anlamlı |
+| AF_XDP ve DPDK arka uçları **uydurma paket üretip** canlı boru hattına `hw_timestamp = true` ile basıyordu | `ebpf_xdp.rs`, `dpdk.rs`, `capture.rs` | İki dosya silindi; pcap dışı her arka uç yine hata döndürüyor, `every_backend_but_pcap_refuses_to_start` bunu sabitliyor |
+| `assert!(x.is_ok() \|\| x.is_err())` gibi tanımı gereği geçen testler | `desktop/src-tauri/src/lib.rs` | Gerçek iddialarla değiştirildi |
+| Var olmayan arayüz adı, **başka bir arayüzün** komşularını döndürüyordu | `discover.rs` | Adlandırılmış arayüz artık ya kendisine çözülür ya hiçbir şeye |
+| Ephemeral aralıkta (32768-60999), içerik koruması olmayan 5 port bağlaması | `dissectors/bindings.rs` | Kaldırıldı (41100, 44819, 48400, 48898, 48899); gerekçe dosyaya yazıldı, `an_ephemeral_source_port_is_not_a_protocol` genişletildi |
+| `firewall.rs` "nftables destekliyor" diyordu, hiçbir yerde `nft` çağrısı yok | `firewall.rs` | Doc düzeltildi (`iptables`/`ip6tables`) |
 
 ---
 
 ## Sıradaki Adımlar
 
-1. **🟠 145 imzasız dissector'a imza ekle** — dispatch'e bağlanabilir hale getir
-2. **🟠 Protocol registry üretim bağlantısı** — her `Protocol` değeri bir dissector tarafından atanmalı
-3. **📈 Desktop command test coverage** — 38 komuttan 25'i hâlâ testsiz
-4. **🌐 Web sitesi (Astro + Vercel)** — ROADMAP.md Faz 1
-5. **🔄 Auto-update** — Tauri updater plugin + Vercel serverless
+Sıra ve gerekçe için [`%100.md`](%100.md):
+
+1. **CI yeşillendirme** (`libpcap-dev`, `protobuf-compiler`, wasm adımı) — Adım 5
+2. **Fleet güvenliği**: Ed25519 güncelleme doğrulaması + gRPC mTLS — Adım 6
+3. **macOS universal binary + notarization** — Adım 3
+4. **Kalan 21 Tauri komut testi** — Adım 4
+5. **Web sitesi (Astro) + WASM demo + auto-update** — Adım 7
+6. **Git geçmişi temizliği** (yıkıcı, force-push, en sona) — Adım 1

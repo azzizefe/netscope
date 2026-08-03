@@ -1,6 +1,6 @@
 # netscope — Otomatik Testle Doğrulanamayan Yollar
 
-> **Son güncelleme:** 28 Temmuz 2026
+> **Son güncelleme:** 3 Ağustos 2026
 
 Bu doküman bir **kapsam raporu değil.** Kapsam sayısı CI'ın işi: `cargo test`
 her push'ta koşuyor ve sayıyı orada görürsün. Burada yazan şey, **birim testinin
@@ -8,8 +8,8 @@ prensip olarak doğrulayamayacağı** yollar — gerçek donanım, gerçek ayrı
 seviyesi ya da gerçek bir uzak makine gerektirenler. Bunlar bir sürüm öncesi
 elle doğrulanmalıdır.
 
-**Bugünkü test sayısı:** 2136 core + 36 TUI + 17 agent + 15 server + 3 desktop
-Rust testi, 88 frontend (vitest) testi.
+**Bugünkü test sayısı:** 2330 core + 44 TUI + 18 agent + 25 server + 24 desktop
++ 1 wasm Rust testi (workspace toplamı 2.462 geçiyor, 4'ü `#[ignore]`).
 
 ---
 
@@ -28,6 +28,7 @@ doğrulanmalı.
 | **Bluetooth HCI** (`bluetooth.rs`) | H4 komut/olay/ACL/LE, phdr yön | **Gerçek `bluetoothN` yakalaması** |
 | **CAN** (`can.rs`) | Std/ext/RTR/ERR/FD çerçeve özeti | **Gerçek SocketCAN (`can0`) yakalaması** |
 | **Durdurma koşulları** (`capture.rs`) | Paket/bayt limiti (stream ile), yapılandırma reddi | Süre limiti gerçek zamanlı canlı yakalamada |
+| **Arayüz sayımı** (`list_interfaces`) | Dönen her satırın biçimi: boş olmayan ad, bilinen `kind`, tekrarsız isim | **Gerçek bir adaptörün listelenmesi** — sürücüsüz makinede liste boş döner, bu meşru bir sonuç |
 | **Desktop komutları** | — | `start_remote_capture`, USBPcap seçimi, `capture-stopped` olayı (UI render + payload eşleme) |
 
 `usbpcap_cmd_path` / `usbpcap_interfaces` yalnızca Windows'ta ve USBPcap kurulu

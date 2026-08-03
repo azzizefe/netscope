@@ -573,9 +573,15 @@ mod tests {
     /// 51000-51002 held three edge-AI dissectors that validated nothing, so a
     /// connection assigned 51000 as its source port was reported as PyTorch
     /// Mobile inference. Nothing may claim a bare payload on those ports again.
+    ///
+    /// 41100, 44819, 48400 and 48898/48899 were the second wave — Rexroth Open
+    /// Core, FactoryTalk Edge and TwinCAT Analytics, each formatting fixed
+    /// offsets of any payload into a session id and an opcode. They are listed
+    /// here so re-adding one without a content guard fails immediately rather
+    /// than at the next audit.
     #[test]
     fn an_ephemeral_source_port_is_not_a_protocol() {
-        for port in [51000u16, 51001, 51002] {
+        for port in [51000u16, 51001, 51002, 41100, 44819, 48400, 48898, 48899] {
             let protocol = dissect_on_port(port, &[0u8; 64]).protocol;
             assert_eq!(
                 protocol,

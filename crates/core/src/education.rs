@@ -8447,9 +8447,13 @@ mod lesson_listing_tests {
     ///
     /// The bar was `> 1000` while the listing still included protocols no
     /// dissector produces; now that it is limited to what a capture can
-    /// actually contain, the honest figure is ~446 of the ~590 produced
-    /// protocols. The rest of the registry keeps its lessons — they are simply
-    /// not browsable until something produces them.
+    /// actually contain, the honest figure is **405 of the 458 produced
+    /// protocols** (2026-08-03). The rest of the registry keeps its lessons —
+    /// they are simply not browsable until something produces them.
+    ///
+    /// This figure moves whenever the registry's `status` field is corrected:
+    /// it read "~446 of ~590" while 128 unreachable rows were marked
+    /// `Dissected`. Re-measure rather than adjust it by feel.
     #[test]
     fn the_listing_covers_far_more_than_a_hand_written_selection() {
         let listed = protocols_with_lessons();

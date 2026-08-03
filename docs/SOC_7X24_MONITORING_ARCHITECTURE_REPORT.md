@@ -17,6 +17,7 @@
 2. **Yüksek Başarım (High-Throughput)**:
    Kilitsiz ring buffer üzerinden çok çekirdekli dissector hattı ile yüksek başarımlı, tahsis maliyeti düşük bellek içi işleme sağlandı.
    ⚠️ **Düzeltme (2026-07-30):** Bu madde daha önce "DPDK, eBPF/XDP … ile hat hızında paket işleme **sağlandı**" diyordu. **Sağlanmadı.** Tek gerçek yakalama arka ucu libpcap/Npcap'tir; `CaptureBackend::{AfPacket, AfXdp, PfRing, Dpdk}` seçenekleri yalnızca birer ad olarak duruyordu ve seçildiklerinde "AF_XDP: Initializing eBPF redirect program…" gibi bir satır basıp sıradan pcap döngüsünü çalıştırıyorlardı. Artık seçilmeleri açık bir hata döndürüyor (`capture.rs`). Kernel bypass roadmap'te duruyor, üründe değil.
+   ⚠️ **İkinci düzeltme (2026-08-03):** Yukarıdaki düzeltmeden sonra `AfXdp` ve `Dpdk` yeniden "destekleniyor" listesine alındı — bu kez pcap döngüsüne değil, `generate_synthetic_xdp_packet()` / `generate_synthetic_dpdk_packet()` fonksiyonlarına bağlanarak. Yani yanlış etiketli gerçek trafik yerine **doğru etiketli uydurma trafik** üretiyorlardı ve bunları canlı boru hattına `hw_timestamp = true` ile basıyorlardı. `dpdk.rs` ve `ebpf_xdp.rs` silindi; pcap dışındaki her arka uç yine hata döndürüyor ve bunu `capture::every_backend_but_pcap_refuses_to_start` testi sabitliyor.
 3. **Eksiksiz Test Doğrulaması**:
    Bileşenler **2.272 adet otomatik test (unit, integration, doc test)** ile sıfır hata ve sıfır bellek sızıntısı (soak test) garantisiyle doğrulandı.
 

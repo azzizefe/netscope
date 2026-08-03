@@ -34,10 +34,8 @@ pub mod deployment;
 pub mod discover;
 pub mod dissectors;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod dpdk;
 pub mod dpi;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod ebpf_xdp;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
