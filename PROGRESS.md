@@ -11,7 +11,7 @@
 | Ölçüm | Değer |
 |---|---|
 | Rust kaynak dosyası | 659 (6 crate) |
-| Test (Rust, tüm workspace) | **2.470 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Test (Rust, tüm workspace) | **2.468 geçiyor, 0 başarısız, 4 `#[ignore]`** |
 | Dissector modülü | 501 dosya |
 | Registry satırı | 2.528 protokol |
 | **Bir dissector'ın gerçekten ürettiği protokol** | **458** |
@@ -57,6 +57,11 @@ doc yorumlarında duruyor:
 | Var olmayan arayüz adı, **başka bir arayüzün** komşularını döndürüyordu | `discover.rs` | Adlandırılmış arayüz artık ya kendisine çözülür ya hiçbir şeye |
 | Ephemeral aralıkta (32768-60999), içerik koruması olmayan 5 port bağlaması | `dissectors/bindings.rs` | Kaldırıldı (41100, 44819, 48400, 48898, 48899); gerekçe dosyaya yazıldı, `an_ephemeral_source_port_is_not_a_protocol` genişletildi |
 | `firewall.rs` "nftables destekliyor" diyordu, hiçbir yerde `nft` çağrısı yok | `firewall.rs` | Doc düzeltildi (`iptables`/`ip6tables`) |
+| Uyumluluk raporları %100 uyumlu diyordu — her kontrol sabit `true`, skor `uyumlu/toplam × 100` yani tanımı gereği 100.0 | `compliance_reports.rs` | Modül silindi (hiçbir yerden çağrılmıyordu) |
+| **API'den servis edilen** üç uydurma uç: Cobalt Strike C2 bulgusu + iç IP'ler, SOC KPI panosu, kişiye özel analist performans kaydı | `api/siem.rs` + iki core modülü | Uçlar ve modüller silindi; statik referans veri dönen uçlar kaldı |
+| GDPR/KVKK skorları sabit 92.0 ve 90.0, `overall_score`'un 2/5'ini oluşturuyordu; veri yokken 94.5 / 89.0 / 100.0 | `db/queries.rs`, `models.rs`, `dashboard.html` | Hepsi `Option<f64>`; ölçülmeyen `None`, pano "—" çiziyor; skorlar örneklem sayısıyla birlikte |
+| "7 günlük baseline" iki sabitten ibaretti, oranlar o sabitlere karşı hesaplanıyordu | `enriched_event.rs` | `Option`/`None`; gerçek `baseline.rs` motoruna bağlanana kadar "bilinmiyor" |
+| `risk_score: 92` ve sabit süre, gerçekten hesaplanan `confidence_pct`'in yanında | `narrative_correlation.rs` | İkisi de kaldırıldı |
 
 ---
 
