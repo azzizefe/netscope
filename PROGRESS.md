@@ -11,7 +11,7 @@
 | Ölçüm | Değer |
 |---|---|
 | Rust kaynak dosyası | 659 (6 crate) |
-| Test (Rust, tüm workspace) | **2.468 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Test (Rust, tüm workspace) | **2.470 geçiyor, 0 başarısız, 4 `#[ignore]`** |
 | Dissector modülü | 501 dosya |
 | Registry satırı | 2.528 protokol |
 | **Bir dissector'ın gerçekten ürettiği protokol** | **458** |
@@ -29,7 +29,7 @@
 | **netscope-wasm** | ✅ Hazır | 1 | Filter modülü, wasm32-unknown-unknown |
 | **netscope-server** | ✅ Derleniyor | 27 | gRPC + REST API (TLS/mTLS), SOAR, RBAC, migrations |
 | **netscope-agent** | ✅ Hazır | 20 | Sensor agent, heartbeat, imzalı upgrade, WebSocket, remote config |
-| **netscope-desktop** | ✅ Hazır | 26 | Tauri v2, 39 komut (18'i testlerden çağrılıyor; kalanların mantığı saf fonksiyonlara çıkarılıyor) |
+| **netscope-desktop** | ✅ Hazır | 28 | Tauri v2, 39 komut; kapsanan şey sarmalayıcı değil, çıkarılmış mantık |
 
 ---
 
@@ -39,7 +39,6 @@
 |---|---|---|---|
 | 🟠 1 | 144 dissector modülü dispatch'ten erişilemez | Bu protokoller hiçbir pakette görünmez | `every_dissector_module_is_reachable` (`--ignored`) listeliyor. Neredeyse hepsinin **imzası yok**: sabit ofset okuyup hiçbir şey doğrulamıyorlar. Port uydurarak bağlamayın — bu depoda dört kez gerçek hataya dönüştü. |
 | 🟠 2 | 2.070 protokol registry'de ama üretilmiyor | Ders içerikleri var, filtre/renk yok | Bunlar `Declared` olarak işaretli ve **kasıtlı olarak** filtre listesinden, Learn sekmesinden ve protokol sayısından dışarıda tutuluyor — yani kullanıcıya yalan söylemiyorlar. Kapatmanın tek yolu dissector yazmak. |
-| 🟡 3 | 21 Tauri komutu testsiz | Regresyon fark edilmeden geçebilir | Çoğu gerçek donanım/yetki istiyor. Ayrıntı ve isim listesi: [`%100.md` Adım 4](%100.md). |
 
 ---
 
@@ -68,6 +67,6 @@ Sıra ve gerekçe için [`%100.md`](%100.md):
 1. ~~CI yeşillendirme — Adım 5~~ ✅ **2026-08-03** (zaten yapılmıştı; clippy'nin `--all-targets` boşluğu kapatıldı)
 2. ~~Fleet güvenliği — Adım 6~~ ✅ **2026-08-03** (gRPC TLS/mTLS eklendi, imza doğrulamanın pozitif yolu teste bağlandı)
 3. ~~macOS binary + notarization — Adım 3~~ ✅ **2026-08-03** (zaten yapılmıştı; kalan tek şey Apple secret'larının depoya girilmesi)
-4. **Kalan 21 Tauri komut testi** — Adım 4
+4. ~~Tauri komut test kapsamı — Adım 4~~ ✅ **2026-08-03** (mantık çıkarıldı ve testlendi; runtime gerektirenler UNTESTED.md'de)
 5. **Web sitesi (Astro) + WASM demo + auto-update** — Adım 7
 6. **Git geçmişi temizliği** (yıkıcı, force-push, en sona) — Adım 1

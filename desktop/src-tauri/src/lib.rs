@@ -1082,6 +1082,63 @@ fn spawn_escalation_ticker(app: &AppHandle, notifier: Option<crossbeam_channel::
 }
 
 #[tauri::command]
+/// The status shown when there is no engine, which has two different causes.
+///
+/// `build_escalation_engine` returns `None` both when escalation is switched
+/// off and when it is switched on with an empty `[[escalation.oncall]]`. Those
+/// look identical from here and mean opposite things to the reader: one is "you
+/// have not turned this on", the other is "you turned it on and it will page
+/// nobody". Getting the two messages the wrong way round tells an operator
+/// their rota is fine when it is empty.
+fn escalation_off(configured_enabled: bool, iso_week: u32) -> EscalationStatus {
+    EscalationStatus {
+        enabled: false,
+        reason: if configured_enabled {
+            "No one is listed under [[escalation.oncall]].".into()
+        } else {
+            "Set [escalation] enabled = true to turn this on.".into()
+        },
+        iso_week,
+        primary: None,
+        backup: None,
+        steps: Vec::new(),
+        active: Vec::new(),
+    }
+}
+
+/// The open escalations, worst first.
+///
+/// "Worst" is oldest: the alert nobody has answered longest is the one about to
+/// go past the top of the chain. An escalation that has run off the end of the
+/// chain has no step to name, and is reported as `Top` rather than dropped —
+/// that is exactly the row an operator needs to see.
+fn active_escalations(
+    engine: &netscope_core::escalation::EscalationEngine,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Vec<ActiveEscalationInfo> {
+    let mut active: Vec<ActiveEscalationInfo> = engine
+        .active_escalations
+        .values()
+        .map(|e| ActiveEscalationInfo {
+            alert_id: e.alert_id.clone(),
+            rule_name: e.rule_name.clone(),
+            alert_msg: e.alert_msg.clone(),
+            status: e.status.clone(),
+            level: engine
+                .default_policy
+                .chain
+                .get(e.current_step_index)
+                .map(|s| format!("{:?}", s.level))
+                // Past the last rung there is nowhere left to escalate to.
+                .unwrap_or_else(|| "Top".into()),
+            age_secs: now.signed_duration_since(e.start_time).num_seconds(),
+        })
+        .collect();
+    active.sort_by_key(|e| std::cmp::Reverse(e.age_secs));
+    active
+}
+
+#[tauri::command]
 fn get_escalation_status(
     esc: State<'_, Mutex<EscalationState>>,
     cfg: State<'_, Mutex<ConfigState>>,
@@ -1098,20 +1155,7 @@ fn get_escalation_status(
             .ok()
             .map(|c| c.config.escalation.enabled)
             .unwrap_or(false);
-        return EscalationStatus {
-            enabled: false,
-            reason: if enabled {
-                // enabled but no engine can only mean an empty rotation
-                "No one is listed under [[escalation.oncall]].".into()
-            } else {
-                "Set [escalation] enabled = true to turn this on.".into()
-            },
-            iso_week,
-            primary: None,
-            backup: None,
-            steps: Vec::new(),
-            active: Vec::new(),
-        };
+        return escalation_off(enabled, iso_week);
     };
 
     let rotation = engine.get_on_call_for_time(now);
@@ -1135,27 +1179,6 @@ fn get_escalation_status(
         })
         .collect();
 
-    let mut active: Vec<ActiveEscalationInfo> = engine
-        .active_escalations
-        .values()
-        .map(|e| ActiveEscalationInfo {
-            alert_id: e.alert_id.clone(),
-            rule_name: e.rule_name.clone(),
-            alert_msg: e.alert_msg.clone(),
-            status: e.status.clone(),
-            level: engine
-                .default_policy
-                .chain
-                .get(e.current_step_index)
-                .map(|s| format!("{:?}", s.level))
-                // Past the last rung there is nowhere left to escalate to.
-                .unwrap_or_else(|| "Top".into()),
-            age_secs: now.signed_duration_since(e.start_time).num_seconds(),
-        })
-        .collect();
-    // Oldest first: the one nobody has answered longest is the urgent one.
-    active.sort_by_key(|e| std::cmp::Reverse(e.age_secs));
-
     EscalationStatus {
         enabled: true,
         reason: String::new(),
@@ -1163,7 +1186,7 @@ fn get_escalation_status(
         primary: rotation.map(|r| person(&r.primary_user)),
         backup: rotation.map(|r| person(&r.backup_user)),
         steps,
-        active,
+        active: active_escalations(engine, now),
     }
 }
 
@@ -1951,11 +1974,12 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        arp_scan, block_ip, build_pcap_bytes, build_pcapng_bytes, encode_capture, english_name,
-        get_alert_rules, get_glossary, get_lessons, get_protocol_risk, is_elevated, list_blocked,
-        list_interfaces, list_plugins, notification_channels, protocol_count, protocol_table,
-        replay_packet, save_object, tls_keylog_clear, tls_keylog_load, tls_keylog_status,
-        unblock_ip, wants_pcapng, NotificationChannelInfo,
+        active_escalations, arp_scan, block_ip, build_pcap_bytes, build_pcapng_bytes,
+        encode_capture, english_name, escalation_off, get_alert_rules, get_glossary, get_lessons,
+        get_protocol_risk, is_elevated, list_blocked, list_interfaces, list_plugins,
+        notification_channels, protocol_count, protocol_table, replay_packet, save_object,
+        tls_keylog_clear, tls_keylog_load, tls_keylog_status, unblock_ip, wants_pcapng,
+        NotificationChannelInfo,
     };
     use netscope_core::models::Packet;
     use std::io::{Read, Write};
@@ -2461,6 +2485,80 @@ mod tests {
                 iface.name
             );
         }
+    }
+
+    /// "Off" has two causes and they must not be described with each other's
+    /// message.
+    ///
+    /// `build_escalation_engine` returns `None` both for `enabled = false` and
+    /// for `enabled = true` with an empty rota. The second is the dangerous
+    /// one — escalation is switched on and will page nobody — and the only
+    /// thing that tells the two apart in the UI is this string.
+    #[test]
+    fn a_switched_on_but_empty_rota_says_so() {
+        let empty_rota = escalation_off(true, 31);
+        assert!(!empty_rota.enabled);
+        assert!(
+            empty_rota.reason.contains("escalation.oncall"),
+            "an enabled-but-empty rota must point at the empty list, got: {}",
+            empty_rota.reason
+        );
+
+        let switched_off = escalation_off(false, 31);
+        assert!(
+            switched_off.reason.contains("enabled = true"),
+            "a disabled escalation must say how to turn it on, got: {}",
+            switched_off.reason
+        );
+
+        assert_ne!(
+            empty_rota.reason, switched_off.reason,
+            "the two causes must not read the same"
+        );
+        assert_eq!(empty_rota.iso_week, 31, "the week is reported either way");
+    }
+
+    /// Open escalations come back oldest first, and one that has run off the
+    /// end of the chain is still listed.
+    #[test]
+    fn open_escalations_are_oldest_first_and_never_dropped() {
+        use netscope_core::escalation::{ActiveEscalation, EscalationEngine};
+
+        let now = chrono::Utc::now();
+        let mut engine = EscalationEngine::new(Default::default());
+        let chain_len = engine.default_policy.chain.len();
+
+        let mut add = |id: &str, age_mins: i64, step: usize| {
+            engine.active_escalations.insert(
+                id.to_string(),
+                ActiveEscalation {
+                    alert_id: id.to_string(),
+                    rule_name: "rule".into(),
+                    alert_msg: "msg".into(),
+                    start_time: now - chrono::Duration::minutes(age_mins),
+                    current_step_index: step,
+                    last_escalated: now,
+                    status: "Escalating".into(),
+                },
+            );
+        };
+        add("recent", 5, 0);
+        add("oldest", 90, chain_len); // past the last rung
+        add("middle", 40, 1);
+
+        let listed = active_escalations(&engine, now);
+        let ids: Vec<&str> = listed.iter().map(|e| e.alert_id.as_str()).collect();
+        assert_eq!(
+            ids,
+            ["oldest", "middle", "recent"],
+            "the longest-unanswered alert must come first"
+        );
+        assert_eq!(
+            listed[0].level, "Top",
+            "an escalation past the last step has nowhere higher to go, and must \
+             still be shown"
+        );
+        assert!(listed[0].age_secs >= 90 * 60);
     }
 
     /// The file name decides the format, and both save paths must read it the
