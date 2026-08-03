@@ -69,7 +69,6 @@ pub mod models;
 pub mod multi_tenancy;
 pub mod names;
 pub mod narrative_correlation;
-pub mod netscope_exclusive_features;
 pub mod network_identity;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod notifications;
@@ -105,7 +104,6 @@ pub mod session_manager;
 pub mod siem;
 pub mod siem_comparison;
 pub mod siem_connectors;
-pub mod siem_quality_metrics;
 pub mod stats;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stream;
