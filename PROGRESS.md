@@ -11,7 +11,7 @@
 | Ölçüm | Değer |
 |---|---|
 | Rust kaynak dosyası | 659 (6 crate) |
-| Test (Rust, tüm workspace) | **2.465 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Test (Rust, tüm workspace) | **2.462 geçiyor, 0 başarısız, 4 `#[ignore]`** |
 | Dissector modülü | 501 dosya |
 | Registry satırı | 2.528 protokol |
 | **Bir dissector'ın gerçekten ürettiği protokol** | **457** |
@@ -38,7 +38,7 @@
 | # | Sorun | Etki | Detay |
 |---|---|---|---|
 | 🟠 1 | 144 dissector modülü dispatch'ten erişilemez | Bu protokoller hiçbir pakette görünmez | `every_dissector_module_is_reachable` (`--ignored`) listeliyor. Neredeyse hepsinin **imzası yok**: sabit ofset okuyup hiçbir şey doğrulamıyorlar. Port uydurarak bağlamayın — bu depoda dört kez gerçek hataya dönüştü. |
-| 🟠 2 | 2.070 protokol registry'de ama üretilmiyor | Ders içerikleri var, filtre/renk yok | Bunlar `Declared` olarak işaretli ve **kasıtlı olarak** filtre listesinden, Learn sekmesinden ve protokol sayısından dışarıda tutuluyor — yani kullanıcıya yalan söylemiyorlar. Kapatmanın tek yolu dissector yazmak. |
+| 🟠 2 | 2.071 protokol registry'de ama üretilmiyor | Ders içerikleri var, filtre/renk yok | Bunlar `Declared` olarak işaretli ve **kasıtlı olarak** filtre listesinden, Learn sekmesinden ve protokol sayısından dışarıda tutuluyor — yani kullanıcıya yalan söylemiyorlar. Kapatmanın tek yolu dissector yazmak. |
 
 ---
 
@@ -64,6 +64,8 @@ doc yorumlarında duruyor:
 | `risk_score: 92` ve sabit süre, gerçekten hesaplanan `confidence_pct`'in yanında | `narrative_correlation.rs` | İkisi de kaldırıldı |
 | `test_strategy.rs`'in tamamı uydurma test sonucu: kapsama `85.4` sabiti, entegrasyon `true`, PCAP replay dosya varsa `5`, chaos senaryolarının üçü de dirençli, soak testi `memory_leak_detected: false` | `test_strategy.rs` + iki SOC dokümanı | Modül silindi; dokümanlardaki "sıfır bellek sızıntısı garantisi" iddiası kaldırıldı |
 | DeviceNet `Dissected` işaretliydi ama koruması `-> bool { false }` — dallanma hiç alınamıyordu | `dissectors.rs`, `can.rs`, `registry.rs` | Ölü dallanma ve stub kaldırıldı, satır `Declared`'a çevrildi, gerekçe `can.rs`'e yazıldı |
+| `test_data.rs`: "sentetik trafik üreteci" `pps × süre` çarpıyordu, "zararlı PCAP kütüphanesi"nin beş dosyası depoda yok, "100 GB veri seti" bir `Default` struct'tı | `test_data.rs` + iki SOC dokümanı | Modül silindi, dokümanlar düzeltildi |
+| `BenchmarkData`: 108.500 eps'e karşı "rakip ortalaması 25.000", 8,4 MB'a karşı 850 MB — iki taraf da ölçülmemiş, `/api/v1/siem/benchmarks`ten servis ediliyordu | `siem_comparison.rs`, `api/siem.rs` | Fonksiyon, tip ve uç kaldırıldı; gerçek ölçüm `cargo bench`te |
 
 ---
 

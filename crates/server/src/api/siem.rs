@@ -20,7 +20,7 @@ pub fn routes(_state: Arc<ApiState>) -> Router {
     Router::new()
         .route("/matrix", get(get_capability_matrix))
         .route("/usps", get(get_usps))
-        .route("/benchmarks", get(get_benchmarks))
+        // `/benchmarks` removed 2026-08-03 with the literal table behind it.
         .route("/connectors", get(get_connectors))
         .route("/stix", get(export_stix))
         .route("/sigma", get(export_sigma))
@@ -99,11 +99,6 @@ async fn get_capability_matrix() -> Json<serde_json::Value> {
 async fn get_usps() -> Json<serde_json::Value> {
     let usps = SiemComparisonEngine::get_usps();
     Json(serde_json::json!({ "usps": usps }))
-}
-
-async fn get_benchmarks() -> Json<serde_json::Value> {
-    let benchmarks = SiemComparisonEngine::get_benchmarks();
-    Json(serde_json::json!({ "benchmarks": benchmarks }))
 }
 
 async fn get_connectors() -> Json<serde_json::Value> {

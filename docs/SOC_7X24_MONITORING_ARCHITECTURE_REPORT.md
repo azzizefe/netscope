@@ -19,7 +19,7 @@
    ⚠️ **Düzeltme (2026-07-30):** Bu madde daha önce "DPDK, eBPF/XDP … ile hat hızında paket işleme **sağlandı**" diyordu. **Sağlanmadı.** Tek gerçek yakalama arka ucu libpcap/Npcap'tir; `CaptureBackend::{AfPacket, AfXdp, PfRing, Dpdk}` seçenekleri yalnızca birer ad olarak duruyordu ve seçildiklerinde "AF_XDP: Initializing eBPF redirect program…" gibi bir satır basıp sıradan pcap döngüsünü çalıştırıyorlardı. Artık seçilmeleri açık bir hata döndürüyor (`capture.rs`). Kernel bypass roadmap'te duruyor, üründe değil.
    ⚠️ **İkinci düzeltme (2026-08-03):** Yukarıdaki düzeltmeden sonra `AfXdp` ve `Dpdk` yeniden "destekleniyor" listesine alındı — bu kez pcap döngüsüne değil, `generate_synthetic_xdp_packet()` / `generate_synthetic_dpdk_packet()` fonksiyonlarına bağlanarak. Yani yanlış etiketli gerçek trafik yerine **doğru etiketli uydurma trafik** üretiyorlardı ve bunları canlı boru hattına `hw_timestamp = true` ile basıyorlardı. `dpdk.rs` ve `ebpf_xdp.rs` silindi; pcap dışındaki her arka uç yine hata döndürüyor ve bunu `capture::every_backend_but_pcap_refuses_to_start` testi sabitliyor.
 3. **Eksiksiz Test Doğrulaması**:
-   Bileşenler **2.468 adet otomatik test (unit, integration, doc test)** ile
+   Bileşenler **2.462 adet otomatik test (unit, integration, doc test)** ile
    sıfır hata olarak doğrulandı (2026-08-03 ölçümü, `cargo test --workspace`).
    ⚠️ **Düzeltme (2026-08-03):** Bu madde ayrıca "sıfır bellek sızıntısı (soak
    test) garantisiyle" diyordu. **Böyle bir soak testi hiç koşmadı.** Cümlenin
@@ -172,10 +172,19 @@ Gerçek test güvencesi CI'dadır: `cargo test --workspace` her push'ta koşuyor
 engineering, soak testi ve kapsama denetimi **yapılmadı** — yapılırsa buraya
 ölçüm sonucuyla birlikte yazılmalı.
 
-#### 9.2 Test Verisi & Sentetik Trafik Engine ([`test_data.rs`](../crates/core/src/test_data.rs))
-- **Sentetik Trafik Akış Üreteci (§9.2.1)**: Normal baseline ve şüpheli tehdit paketlerini eşzamanlı üreten sentetik trafik motoru ([`SyntheticGeneratorConfig`](../crates/core/src/test_data.rs#L34)).
-- **Zararlı PCAP Kütüphane Kataloğu (§9.2.2)**: C2 beaconing, DGA DNS sorguları, SQLi, TCP SYN port taramaları ve SMB EternalBlue istismar PCAP kayıtları kataloğu ([`MaliciousPcapItem`](../crates/core/src/test_data.rs#L22)).
-- **100 GB Kurumsal Benchmark Veri Seti (§9.2.3)**: Anonimleştirilmiş 100 GB büyüklüğünde kurumsal ağ PCAP benchmark veri kümesi oluşturucu ([`EnterpriseBenchmarkDataset`](../crates/core/src/test_data.rs#L53)).
+#### 9.2 Test Verisi & Sentetik Trafik Engine — ❌ **KALDIRILDI (2026-08-03)**
+
+`test_data.rs` da §9.1'deki `test_strategy.rs` ile aynıydı: hiçbir veri
+üretmiyor, üretmiş gibi anlatıyordu.
+
+| İddia edilen | Fonksiyon gerçekte ne yapıyordu |
+|---|---|
+| "Sentetik trafik akış üreteci" | `pps × süre` çarpıp iki sayı döndürüyordu — tek bir paket üretmiyordu |
+| "Zararlı PCAP kütüphane kataloğu" | Beş dosya adı listeliyordu (`c2_cobaltstrike_beacon.pcap`, `smb_eternalblue_exploit.pcap`, …). **Hiçbiri bu depoda yok.** `fixtures/` yalnızca zararsız temel örnekleri içeriyor |
+| "Anonimleştirilmiş 100 GB kurumsal benchmark veri seti" | `EnterpriseBenchmarkDataset::default()` — yani `{ dataset_name: "Enterprise-100GB-Synthetic-Baseline.pcap", total_size_gigabytes: 100, is_anonymized: true }`. Bir dosya değil, bir dosyanın tarifi |
+
+Gerçek fixture'lar `fixtures/` altında ve `tools/gen-fixtures` ile üretiliyor;
+dissector testleri onları kullanıyor.
 
 ---
 
@@ -208,7 +217,6 @@ Platforma eklenen tüm yeni modüller [`crates/core/src/lib.rs`](../crates/core/
 | [`scalability.rs`](../crates/core/src/scalability.rs) | `pub mod scalability;` | K8s HPA, Analitik DB Sürücüsü, Hot/Cold Katmanlama, DB Shard Yönlendirici |
 | [`multi_tenancy.rs`](../crates/core/src/multi_tenancy.rs) | `pub mod multi_tenancy;` | TenantContext İzolasyonu, Custom Branding, Kotalar, Kiracı Yedeği |
 | [`deployment.rs`](../crates/core/src/deployment.rs) | `pub mod deployment;` | Docker Compose, Helm Charts, Air-Gapped Yapılandırması, Ansible, Terraform |
-| [`test_data.rs`](../crates/core/src/test_data.rs) | `pub mod test_data;` | Sentetik Akış Üreteci, Zararlı PCAP Kataloğu, 100GB Benchmark Yapıcı |
 | [`op_docs.rs`](../crates/core/src/op_docs.rs) | `pub mod op_docs;` | Admin/Analist Playbook'ları, OpenAPI 3.1 Spec, Donanım Boyutlandırma |
 | [`education.rs`](../crates/core/src/education.rs) | `pub mod education;` | İnteraktif SOC Modu, CTF Eğitim Lab'leri, NCSA Sertifika Sınav Motoru |
 

@@ -30,15 +30,11 @@ pub struct UniqueValueProposition {
     pub example: String,
 }
 
-/// Benchmark Metric Data (§3.1.3).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BenchmarkData {
-    pub metric: String,
-    pub netscope_value: String,
-    pub competitor_avg: String,
-    pub unit: String,
-    pub advantage_factor: String,
-}
+// `BenchmarkData` was declared here and is removed with its only producer. A
+// type whose fields are `netscope_value` and `competitor_avg` as free-form
+// strings has no way to record how either was obtained, which is how it came to
+// hold numbers nobody had measured. If comparative benchmarks come back, the
+// type needs to carry the method and the source alongside each figure.
 
 pub struct SiemComparisonEngine;
 
@@ -305,32 +301,19 @@ impl SiemComparisonEngine {
         ]
     }
 
-    /// Return §3.1.3 Benchmarks.
-    pub fn get_benchmarks() -> Vec<BenchmarkData> {
-        vec![
-            BenchmarkData {
-                metric: "Throughput (events/sec per single node)".to_string(),
-                netscope_value: "108,500 eps".to_string(),
-                competitor_avg: "25,000 eps".to_string(),
-                unit: "eps".to_string(),
-                advantage_factor: "4.3x faster".to_string(),
-            },
-            BenchmarkData {
-                metric: "Binary Executable Footprint".to_string(),
-                netscope_value: "8.4 MB".to_string(),
-                competitor_avg: "850 MB".to_string(),
-                unit: "MB".to_string(),
-                advantage_factor: "100x smaller".to_string(),
-            },
-            BenchmarkData {
-                metric: "Idle RAM Memory Usage".to_string(),
-                netscope_value: "48 MB".to_string(),
-                competitor_avg: "3,200 MB".to_string(),
-                unit: "MB".to_string(),
-                advantage_factor: "66x lighter".to_string(),
-            },
-        ]
-    }
+    // `get_benchmarks() -> Vec<BenchmarkData>` was here, removed 2026-08-03.
+    //
+    // It returned three literal rows: 108,500 eps against a "competitor
+    // average" of 25,000; an 8.4 MB binary against 850 MB; 48 MB idle RAM
+    // against 3,200 MB — with derived factors of 4.3x, 100x and 66x. Neither
+    // side of any of those comparisons was ever measured, and the type is
+    // called `BenchmarkData`. It was served at `/api/v1/siem/benchmarks`.
+    //
+    // This crate has a real benchmark suite — `cargo bench -p netscope-core`
+    // runs `parse_throughput`, `filter_match` and `mem_usage`, and CI runs them
+    // on every push. A number that belongs in this module has to come from
+    // there, with the machine and the input it was measured on written next to
+    // it. Competitor figures need a citation or they do not belong at all.
 }
 
 #[cfg(test)]
@@ -345,8 +328,5 @@ mod tests {
 
         let usps = SiemComparisonEngine::get_usps();
         assert_eq!(usps.len(), 6);
-
-        let bench = SiemComparisonEngine::get_benchmarks();
-        assert_eq!(bench.len(), 3);
     }
 }
