@@ -15,9 +15,15 @@
 //!
 //! 1. **Port plus a content guard** — a port that sits in the ephemeral range
 //!    (DRDA on 50000, MySQL X on 33060) only claims a flow if the payload also
-//!    carries the protocol's framing.
+//!    carries the protocol's framing. The same applies to the ports listed in
+//!    `tcp::UNVERIFIED_VENDOR_PORTS`, which may not claim a payload that is
+//!    plainly HTTP or TLS.
 //! 2. **Exact port match** — this table.
-//! 3. **Port ranges** — BitTorrent 6881-6889, X11 6000-6005, SOME/IP 30490-30510.
+//! 3. **Port ranges** — SOME/IP 30490-30510, in `tcp.rs`. This line used to
+//!    read "BitTorrent 6881-6889, X11 6000-6005, SOME/IP 30490-30510"; neither
+//!    of the first two exists. There is no X11 dissector at all, and BitTorrent
+//!    is recognised in `udp.rs` by its framing, not by a range. A precedence
+//!    list is the one place a reader trusts to say what the dispatch does.
 //! 4. **Structural sniffs** — protocols with no fixed port at all (SPICE, ZMTP,
 //!    DTLS, RTP), recognised by their framing.
 //! 5. **User plugins**, which never shadow a built-in.

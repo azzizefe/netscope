@@ -10,8 +10,92 @@ use crate::models::Protocol;
 use super::{
     amqp1, bindings, consul_rpc, drbd, fix, hl7, http, http2, iec101, memcached_bin, milter,
     modbus_ascii, modbus_rtu, ntlm, opc_ua_dpi, openvpn, redis_cluster, schneider_ecostruxure_edge,
-    someip, syslog, websocket, zmtp, DissectedResult,
+    someip, syslog, tls, websocket, zmtp, DissectedResult,
 };
+
+/// Ports claimed by a dissector that validates nothing, on a number the vendor
+/// is not known to own.
+///
+/// Every entry was added by the same batch of industrial and edge-AI
+/// dissectors: each reads fixed offsets and formats them as a session id, a
+/// message type and a counter, without checking a single byte first. An exact
+/// port match outranks every structural sniff, so on these ports ordinary
+/// traffic came back wearing a PLC protocol's name.
+///
+/// Kept as a list rather than folded into `bindings` because it is a statement
+/// about *confidence in the port*, not about the protocol. The right way off
+/// this list is a real signature — then the dissector can claim its port
+/// outright, the way the ones not listed here do.
+const UNVERIFIED_VENDOR_PORTS: &[u16] = &[
+    2020,  // sinumerik_nck_channel — SINUMERIK talks S7 on 102; IANA has xinupageserver
+    4121,  // interbus — a fieldbus, not an IP protocol; IANA has e-Builder
+    4410,  // tia_portal_online_diag — TIA Portal diagnostics ride S7comm on 102
+    4841,  // studio5000_online_comm — IANA `opcua-tls`; Studio 5000 uses EtherNet/IP 44818
+    6002,  // factorytalk_view_hmi — X11 display :2
+    8001,  // edge_inference_onnx — generic alternate HTTP
+    8087,  // twincat_scope_view — IANA simplifymedia; also Riak protobuf
+    8090,  // simatic_hmi_smartsrv — generic alternate HTTP
+    8501,  // edge_tensorflow_lite — TensorFlow Serving's REST port, which is HTTP
+    8910,  // bosch_nexeed_edge — IANA manyone-http
+    11157, // b_r_automation_pvi — B&R PVI is documented on 11159/11160
+];
+
+/// Whether the payload opens an HTTP/1.x request or response.
+///
+/// Only the start line is checked, and only exactly: a request is a known
+/// method, a space, a target, and ` HTTP/1.`; a response is `HTTP/1.` outright.
+/// Nothing here should ever fire on binary framing.
+fn looks_like_http_message(payload: &[u8]) -> bool {
+    const METHODS: [&[u8]; 9] = [
+        b"GET ",
+        b"POST ",
+        b"PUT ",
+        b"HEAD ",
+        b"DELETE ",
+        b"OPTIONS ",
+        b"PATCH ",
+        b"TRACE ",
+        b"CONNECT ",
+    ];
+    if payload.starts_with(b"HTTP/1.") {
+        return true;
+    }
+    let Some(method) = METHODS.iter().find(|m| payload.starts_with(m)) else {
+        return false;
+    };
+    // The version token has to be on the same line, or this is a payload that
+    // merely happens to begin with those four bytes.
+    let line_end = payload
+        .iter()
+        .position(|&b| b == b'\r' || b == b'\n')
+        .unwrap_or(payload.len())
+        .min(8192);
+    payload[method.len()..line_end]
+        .windows(7)
+        .any(|w| w == b"HTTP/1.")
+}
+
+/// Whether the payload opens a TLS record.
+///
+/// Content type in the assigned range, a `3.x` legacy version, and a record
+/// length within the 2^14 + expansion ceiling TLS itself imposes. Three
+/// independent constraints, which is what keeps this from firing on arbitrary
+/// binary that happens to start with 0x16.
+fn looks_like_tls_record(payload: &[u8]) -> bool {
+    if payload.len() < 5 {
+        return false;
+    }
+    let content_type = payload[0];
+    // change_cipher_spec, alert, handshake, application_data.
+    if !(0x14..=0x17).contains(&content_type) {
+        return false;
+    }
+    if payload[1] != 0x03 || payload[2] > 0x04 {
+        return false;
+    }
+    let len = u16::from_be_bytes([payload[3], payload[4]]);
+    len > 0 && len <= 0x4800
+}
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 struct TcpFlowKey {
@@ -244,6 +328,34 @@ fn dissect_tcp_inner(
     } else if !tcp_payload.is_empty() {
         // Try application-layer dissection by well-known port.
         let on = |p: u16| src_port == p || dst_port == p;
+        // 0. A vendor port nothing here can verify does not get to swallow a
+        //    payload that is unmistakably something else.
+        //
+        //    These ports were bound to industrial and edge-AI dissectors that
+        //    read fixed offsets and validate nothing, so whatever arrived came
+        //    back as "TagSubscribe tags:3" or "session:16030100 InferenceReq".
+        //    Because an exact-port match outranks every structural sniff, real
+        //    HTTP and real TLS on any of them were relabelled — and several of
+        //    the ports are not the vendor's at all: 4841 is IANA `opcua-tls`,
+        //    6002 is X11 display :2, and 8001/8087/8090/8910 are ordinary
+        //    alternate-HTTP ports.
+        //
+        //    Rather than guess at each vendor's framing, which needs a spec
+        //    none of these has, this rules out the two protocols that are
+        //    cheap to recognise and impossible to mistake. A vendor protocol
+        //    that genuinely starts with `GET / HTTP/1.1` does not exist.
+        //    FANUC FOCAS (8193) and OMRON FINS (9600) are deliberately absent:
+        //    both are the vendor's real, documented port.
+        if UNVERIFIED_VENDOR_PORTS.contains(&src_port)
+            || UNVERIFIED_VENDOR_PORTS.contains(&dst_port)
+        {
+            if looks_like_http_message(tcp_payload) {
+                return http::dissect_http(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+            }
+            if looks_like_tls_record(tcp_payload) {
+                return tls::dissect_tls(src_ip, dst_ip, src_port, dst_port, tcp_payload);
+            }
+        }
         // 1. Ports that need more than a port number to decide. Each of these
         //    either picks between two protocols that share a port, or sits in
         //    the ephemeral range and must see its own framing before claiming
@@ -568,6 +680,74 @@ mod tests {
         }
     }
 
+    /// A vendor port whose claim nothing can verify must not swallow HTTP.
+    ///
+    /// Every one of these ports was bound to an industrial or edge-AI
+    /// dissector that reads fixed offsets and validates nothing, and an exact
+    /// port match outranks every structural sniff — so `GET / HTTP/1.1` on any
+    /// of them came back as, for instance, "FactoryTalk View HMI — session:4745
+    /// TagSubscribe tags:2074". Several of the ports are not the vendor's at
+    /// all: 4841 is IANA `opcua-tls`, 6002 is X11 display :2, and 8001, 8087,
+    /// 8090 and 8910 are ordinary alternate-HTTP ports.
+    #[test]
+    fn an_unverified_vendor_port_does_not_swallow_http() {
+        let http = b"GET /index.html HTTP/1.1\r\nHost: plant.local\r\n\r\n";
+        for &port in UNVERIFIED_VENDOR_PORTS {
+            let protocol = dissect_on_port(port, http).protocol;
+            assert_eq!(
+                protocol,
+                Protocol::Http,
+                "port {port} claimed an HTTP request as {protocol:?}",
+            );
+        }
+    }
+
+    /// The same for TLS, which is the other thing these ports actually carry.
+    #[test]
+    fn an_unverified_vendor_port_does_not_swallow_tls() {
+        // A ClientHello record header: handshake, TLS 1.0 legacy version, a
+        // length inside the record ceiling, then the handshake body.
+        let mut tls = vec![
+            0x16, 0x03, 0x01, 0x00, 0x2c, 0x01, 0x00, 0x00, 0x28, 0x03, 0x03,
+        ];
+        tls.extend_from_slice(&[0u8; 32]);
+        for &port in UNVERIFIED_VENDOR_PORTS {
+            let protocol = dissect_on_port(port, &tls).protocol;
+            assert_eq!(
+                protocol,
+                Protocol::Tls,
+                "port {port} claimed a TLS record as {protocol:?}",
+            );
+        }
+    }
+
+    /// The guards must not fire on the vendor framing they sit in front of.
+    ///
+    /// Both are deliberately narrow — three independent constraints for TLS, a
+    /// method and a version token on one line for HTTP — because a guard that
+    /// over-matches would take the traffic these dissectors are for.
+    #[test]
+    fn the_http_and_tls_guards_do_not_claim_binary_framing() {
+        // The shape these vendor dissectors expect: a session id, a message
+        // type, a counter. Starts with 0x16 in the third case on purpose.
+        for framing in [
+            &[0x00u8, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00, 0x04][..],
+            &[0xde, 0xad, 0xbe, 0xef, 0x07, 0x02, 0x00, 0x10][..],
+            &[0x16, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04][..],
+            b"GETTING STARTED\r\n",
+            b"POSTGRES",
+        ] {
+            assert!(
+                !looks_like_http_message(framing),
+                "HTTP guard claimed {framing:02x?}",
+            );
+            assert!(
+                !looks_like_tls_record(framing),
+                "TLS guard claimed {framing:02x?}",
+            );
+        }
+    }
+
     /// An unguarded dissector on a port inside the ephemeral range relabels
     /// ordinary traffic, because the binding table matches source ports too.
     /// 51000-51002 held three edge-AI dissectors that validated nothing, so a
@@ -579,6 +759,7 @@ mod tests {
     /// offsets of any payload into a session id and an opcode. They are listed
     /// here so re-adding one without a content guard fails immediately rather
     /// than at the next audit.
+
     #[test]
     fn an_ephemeral_source_port_is_not_a_protocol() {
         for port in [51000u16, 51001, 51002, 41100, 44819, 48400, 48898, 48899] {
