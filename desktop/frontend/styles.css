@@ -1625,6 +1625,31 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
   color: var(--text-dim, #94a3b8);
 }
 
+/* A capability that is on the roadmap rather than in the build has to be
+   readable as such at a glance, not only in the sentence underneath. */
+.exclusive-card-planned {
+  opacity: 0.72;
+  border-style: dashed;
+}
+
+.exclusive-card-planned h4 {
+  color: var(--text-dim, #94a3b8);
+}
+
+.exclusive-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border: 1px solid var(--border, #334155);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #94a3b8);
+  vertical-align: middle;
+}
+
 .metric-card {
   background: var(--bg-card, #1e293b);
   border: 1px solid var(--border, #334155);

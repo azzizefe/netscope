@@ -16,6 +16,7 @@
 | Registry satırı | 2.528 protokol |
 | **Bir dissector'ın gerçekten ürettiği protokol** | **457** |
 | Sadece bildirilmiş (`Declared`) protokol | 2.071 |
+| Test (frontend, vitest) | **173 geçiyor** |
 | Lint | ✅ `cargo clippy --workspace --all-targets -- -D warnings` temiz, `cargo fmt --check` temiz |
 
 ---
@@ -66,6 +67,10 @@ doc yorumlarında duruyor:
 | DeviceNet `Dissected` işaretliydi ama koruması `-> bool { false }` — dallanma hiç alınamıyordu | `dissectors.rs`, `can.rs`, `registry.rs` | Ölü dallanma ve stub kaldırıldı, satır `Declared`'a çevrildi, gerekçe `can.rs`'e yazıldı |
 | `test_data.rs`: "sentetik trafik üreteci" `pps × süre` çarpıyordu, "zararlı PCAP kütüphanesi"nin beş dosyası depoda yok, "100 GB veri seti" bir `Default` struct'tı | `test_data.rs` + iki SOC dokümanı | Modül silindi, dokümanlar düzeltildi |
 | `BenchmarkData`: 108.500 eps'e karşı "rakip ortalaması 25.000", 8,4 MB'a karşı 850 MB — iki taraf da ölçülmemiş, `/api/v1/siem/benchmarks`ten servis ediliyordu | `siem_comparison.rs`, `api/siem.rs` | Fonksiyon, tip ve uç kaldırıldı; gerçek ölçüm `cargo bench`te |
+| **Masaüstü VoIP paneli:** RTP paketi yokken SSRC `0x00c0ffee`, jitter `1.8 ms` ve **MOS `4.3`** gösteriyordu — medya içermeyen bir yakalama için "çağrı kalitesi iyi" demek | `views/voip.js` | Uydurma fallback kaldırıldı, üçü de "—" kalıyor; RTP yoksa oynatma düğmesi kapalı ve nedeni yazıyor |
+| **Masaüstü "Play Audio":** RTP çözülmüyor, jitter'a göre modüle edilmiş bir osilatör çalıyordu; kullanıcı çağrıyı dinlediğini sanabilirdi | `views/voip.js`, `index.html` | "Play Synthesised Tone" olarak etiketlendi, dalga formu başlığı ve durum metni ne olduğunu açıkça söylüyor |
+| **Masaüstü "10 Exclusive Features":** 10 yetenekten **5'i mevcut değil** — Kerberos Golden/Silver Ticket tespiti, Modbus "Coil 47 Emergency Stop Motor 3" denetimi (silinen sahte veri modülünden birebir kopya), sertifika son kullanma uyarısı, tracker risk analizi, ETA | `views/siem.js` | Her yetenek `built`/`planned` olarak işaretlendi; olmayanlar "Not implemented" diyor ve kesikli çerçeveyle çiziliyor |
+| **Masaüstü karşılaştırma tablosu:** dissector sayısı `590` (eski), MITRE "Every event", ve hiçbir kod yolunun üretmediği "Narrative attack chain ✅" | `views/siem.js` | 457'ye düzeltildi, MITRE kapsamı "Alerts & SIEM export" oldu, narrative satırı kaldırıldı |
 
 ---
 

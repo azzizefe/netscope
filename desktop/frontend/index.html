@@ -744,9 +744,10 @@
           <!-- RTP Player Tab -->
           <div id="voip-tab-player-content" class="voip-tab-content hidden">
             <div class="player-controls" style="display:flex; align-items:center; gap:16px; margin-bottom:12px; padding:10px; background:var(--bg-elev-2); border-radius:6px; border:1px solid var(--border);">
-              <button id="voip-play-btn" class="btn btn-primary">▶ Play Audio</button>
+              <button id="voip-play-btn" class="btn btn-primary">▶ Play Synthesised Tone</button>
               <div id="voip-player-status" style="font-size:13px; font-weight:600;">Status: Idle</div>
             </div>
+            <div id="voip-player-note" style="font-size:12px; color:var(--text-muted); margin-bottom:12px;"></div>
             <div style="margin-bottom:12px;">
               <h4 style="margin:0 0 6px 0;">Dynamic QoS Metrics</h4>
               <div id="voip-qos-metrics" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;">
@@ -765,7 +766,7 @@
               </div>
             </div>
             <div>
-              <h4 style="margin:0 0 6px 0;">Audio Waveform</h4>
+              <h4 style="margin:0 0 6px 0;">Synthesised Waveform <span style="font-weight:400; font-size:12px; color:var(--text-muted);">— an oscillator driven by the measured jitter, not the decoded call audio</span></h4>
               <canvas id="voip-waveform" width="600" height="120" style="width:100%; height:120px; background:#0b111e; border-radius:6px; border:1px solid var(--border); display:block;"></canvas>
             </div>
           </div>
