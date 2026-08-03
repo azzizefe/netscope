@@ -11,11 +11,11 @@
 | Ölçüm | Değer |
 |---|---|
 | Rust kaynak dosyası | 659 (6 crate) |
-| Test (Rust, tüm workspace) | **2.468 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Test (Rust, tüm workspace) | **2.465 geçiyor, 0 başarısız, 4 `#[ignore]`** |
 | Dissector modülü | 501 dosya |
 | Registry satırı | 2.528 protokol |
-| **Bir dissector'ın gerçekten ürettiği protokol** | **458** |
-| Sadece bildirilmiş (`Declared`) protokol | 2.070 |
+| **Bir dissector'ın gerçekten ürettiği protokol** | **457** |
+| Sadece bildirilmiş (`Declared`) protokol | 2.071 |
 | Lint | ✅ `cargo clippy --workspace --all-targets -- -D warnings` temiz, `cargo fmt --check` temiz |
 
 ---
@@ -62,6 +62,8 @@ doc yorumlarında duruyor:
 | GDPR/KVKK skorları sabit 92.0 ve 90.0, `overall_score`'un 2/5'ini oluşturuyordu; veri yokken 94.5 / 89.0 / 100.0 | `db/queries.rs`, `models.rs`, `dashboard.html` | Hepsi `Option<f64>`; ölçülmeyen `None`, pano "—" çiziyor; skorlar örneklem sayısıyla birlikte |
 | "7 günlük baseline" iki sabitten ibaretti, oranlar o sabitlere karşı hesaplanıyordu | `enriched_event.rs` | `Option`/`None`; gerçek `baseline.rs` motoruna bağlanana kadar "bilinmiyor" |
 | `risk_score: 92` ve sabit süre, gerçekten hesaplanan `confidence_pct`'in yanında | `narrative_correlation.rs` | İkisi de kaldırıldı |
+| `test_strategy.rs`'in tamamı uydurma test sonucu: kapsama `85.4` sabiti, entegrasyon `true`, PCAP replay dosya varsa `5`, chaos senaryolarının üçü de dirençli, soak testi `memory_leak_detected: false` | `test_strategy.rs` + iki SOC dokümanı | Modül silindi; dokümanlardaki "sıfır bellek sızıntısı garantisi" iddiası kaldırıldı |
+| DeviceNet `Dissected` işaretliydi ama koruması `-> bool { false }` — dallanma hiç alınamıyordu | `dissectors.rs`, `can.rs`, `registry.rs` | Ölü dallanma ve stub kaldırıldı, satır `Declared`'a çevrildi, gerekçe `can.rs`'e yazıldı |
 
 ---
 

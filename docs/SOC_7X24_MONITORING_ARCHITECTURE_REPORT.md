@@ -19,7 +19,13 @@
    ⚠️ **Düzeltme (2026-07-30):** Bu madde daha önce "DPDK, eBPF/XDP … ile hat hızında paket işleme **sağlandı**" diyordu. **Sağlanmadı.** Tek gerçek yakalama arka ucu libpcap/Npcap'tir; `CaptureBackend::{AfPacket, AfXdp, PfRing, Dpdk}` seçenekleri yalnızca birer ad olarak duruyordu ve seçildiklerinde "AF_XDP: Initializing eBPF redirect program…" gibi bir satır basıp sıradan pcap döngüsünü çalıştırıyorlardı. Artık seçilmeleri açık bir hata döndürüyor (`capture.rs`). Kernel bypass roadmap'te duruyor, üründe değil.
    ⚠️ **İkinci düzeltme (2026-08-03):** Yukarıdaki düzeltmeden sonra `AfXdp` ve `Dpdk` yeniden "destekleniyor" listesine alındı — bu kez pcap döngüsüne değil, `generate_synthetic_xdp_packet()` / `generate_synthetic_dpdk_packet()` fonksiyonlarına bağlanarak. Yani yanlış etiketli gerçek trafik yerine **doğru etiketli uydurma trafik** üretiyorlardı ve bunları canlı boru hattına `hw_timestamp = true` ile basıyorlardı. `dpdk.rs` ve `ebpf_xdp.rs` silindi; pcap dışındaki her arka uç yine hata döndürüyor ve bunu `capture::every_backend_but_pcap_refuses_to_start` testi sabitliyor.
 3. **Eksiksiz Test Doğrulaması**:
-   Bileşenler **2.272 adet otomatik test (unit, integration, doc test)** ile sıfır hata ve sıfır bellek sızıntısı (soak test) garantisiyle doğrulandı.
+   Bileşenler **2.468 adet otomatik test (unit, integration, doc test)** ile
+   sıfır hata olarak doğrulandı (2026-08-03 ölçümü, `cargo test --workspace`).
+   ⚠️ **Düzeltme (2026-08-03):** Bu madde ayrıca "sıfır bellek sızıntısı (soak
+   test) garantisiyle" diyordu. **Böyle bir soak testi hiç koşmadı.** Cümlenin
+   dayandığı `test_strategy.rs::run_soak_test_simulation`, sabit bellek
+   değerleri ve `memory_leak_detected: false` döndüren bir fonksiyondu; §9.1'e
+   bakın. Sızıntı iddiası kaldırıldı, test sayısı yeniden ölçüldü.
 
 ---
 
@@ -144,13 +150,27 @@ graph LR
 
 ### Faz 9 — Test Stratejisi & QA Motoru
 
-#### 9.1 Test Stratejisi & Chaos Engineering ([`test_strategy.rs`](../crates/core/src/test_strategy.rs))
-- **Unit Test Kapsama Denetçisi (§9.1.1)**: %80 ve üzeri test kapsama oranını doğrulayan denetçi (`audit_unit_test_coverage`).
-- **Uçtan Uca Entegrasyon Test Düzeneği (§9.1.2)**: Sunucu, sensör ve SIEM konnektörü veri akışlarını doğrulayan entegrasyon çalıştırıcısı (`run_integration_suite`).
-- **PCAP Replay Alert Doğrulayıcısı (§9.1.3)**: Çevrimdışı zararlı PCAP kayıtlarını replay ederek alert'lerin tetiklendiğini doğrulayan motor (`replay_pcap_and_verify_alerts`).
-- **Chaos Engineering Hata Enjektörü (§9.1.4)**: Sensör kesintisi, ağ kopması ve disk dolması senaryolarını simüle eden hata enjektörü ([`inject_chaos_scenario`](../crates/core/src/test_strategy.rs#L72)).
-- **100 Sensörlü Soak Test & Bellek Sızıntısı Tespiti (§9.1.5)**: 100 sensörlü 7 günlük çalışma simülasyonu ile bellek stabilizasyonunu doğrulayan motor ([`run_soak_test_simulation`](../crates/core/src/test_strategy.rs#L93)).
-- **Performans Regresyon & Fuzzing Düzeneği (§9.1.6, §9.1.7)**: Benchmark regresyon sarıcısı ve ayrıştırıcıların bozuk veride panic vermediğini sınayan fuzzer hedef motoru.
+#### 9.1 Test Stratejisi & Chaos Engineering — ❌ **KALDIRILDI (2026-08-03)**
+
+Bu bölüm `test_strategy.rs` modülünü kanıt gösteriyordu. **O modül hiçbir test
+çalıştırmıyordu; sonuç uyduruyordu** ve silindi:
+
+| İddia edilen | Fonksiyon gerçekte ne yapıyordu |
+|---|---|
+| "%80+ kapsama oranını doğrulayan denetçi" | `85.4` döndürüyordu, sabit |
+| "Uçtan uca entegrasyon çalıştırıcısı" | `true` döndürüyordu, koşulsuz |
+| "PCAP replay alert doğrulayıcısı" | Dosyanın *var olup olmadığına* bakıp `5` döndürüyordu — pcap'i açmıyor, ayrıştırmıyor, hiçbir alert tetiklemiyordu |
+| "Chaos engineering hata enjektörü" | Üç senaryonun üçü de `is_resilient: true`, kurtarma süreleri 1200/2500/500 ms — hiçbir şey enjekte edilmiyordu |
+| "100 sensörlü soak test & bellek sızıntısı tespiti" | Sabit bellek değerleri ve `memory_leak_detected: false` |
+| "Performans regresyon düzeneği" | `-> bool { true }` |
+| "Fuzzer hedef motoru" | Girdiye `from_utf8` uygulayıp sonucu atıyor, `true` döndürüyordu |
+
+Gerçek test güvencesi CI'dadır: `cargo test --workspace` her push'ta koşuyor
+([ci.yml](../.github/workflows/ci.yml)), benchmark'lar `cargo bench` ile
+ölçülüyor, ve dissector'ların bozuk veride panic vermediğini
+`dissectors::robustness` içindeki gerçek fuzz sweep'leri sınıyor. Chaos
+engineering, soak testi ve kapsama denetimi **yapılmadı** — yapılırsa buraya
+ölçüm sonucuyla birlikte yazılmalı.
 
 #### 9.2 Test Verisi & Sentetik Trafik Engine ([`test_data.rs`](../crates/core/src/test_data.rs))
 - **Sentetik Trafik Akış Üreteci (§9.2.1)**: Normal baseline ve şüpheli tehdit paketlerini eşzamanlı üreten sentetik trafik motoru ([`SyntheticGeneratorConfig`](../crates/core/src/test_data.rs#L34)).
@@ -188,7 +208,6 @@ Platforma eklenen tüm yeni modüller [`crates/core/src/lib.rs`](../crates/core/
 | [`scalability.rs`](../crates/core/src/scalability.rs) | `pub mod scalability;` | K8s HPA, Analitik DB Sürücüsü, Hot/Cold Katmanlama, DB Shard Yönlendirici |
 | [`multi_tenancy.rs`](../crates/core/src/multi_tenancy.rs) | `pub mod multi_tenancy;` | TenantContext İzolasyonu, Custom Branding, Kotalar, Kiracı Yedeği |
 | [`deployment.rs`](../crates/core/src/deployment.rs) | `pub mod deployment;` | Docker Compose, Helm Charts, Air-Gapped Yapılandırması, Ansible, Terraform |
-| [`test_strategy.rs`](../crates/core/src/test_strategy.rs) | `pub mod test_strategy;` | Test Kapsama Denetimi, E2E Entegrasyon, Chaos Injection, Soak Tespiti |
 | [`test_data.rs`](../crates/core/src/test_data.rs) | `pub mod test_data;` | Sentetik Akış Üreteci, Zararlı PCAP Kataloğu, 100GB Benchmark Yapıcı |
 | [`op_docs.rs`](../crates/core/src/op_docs.rs) | `pub mod op_docs;` | Admin/Analist Playbook'ları, OpenAPI 3.1 Spec, Donanım Boyutlandırma |
 | [`education.rs`](../crates/core/src/education.rs) | `pub mod education;` | İnteraktif SOC Modu, CTF Eğitim Lab'leri, NCSA Sertifika Sınav Motoru |

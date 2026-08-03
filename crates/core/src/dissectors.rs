@@ -69,42 +69,6 @@ pub mod consul_rpc;
 pub mod dccp;
 pub mod decnet;
 pub mod der;
-pub mod e1ap;
-pub mod evpn;
-pub mod f1ap;
-pub mod iax2;
-pub mod isup;
-pub mod lisp;
-pub mod m3ua;
-pub mod modbus_ascii;
-pub mod mssqlbrowser;
-pub mod nsh;
-pub mod nvgre;
-pub mod pcp;
-pub mod profisafe;
-pub mod q931;
-pub mod redis;
-pub mod redis_cluster;
-pub mod rpc;
-pub mod rtsp;
-pub mod rwho;
-pub mod smb;
-pub mod srv6;
-pub mod devicenet {
-    pub(crate) fn looks_like_devicenet(_id: u32) -> bool {
-        false
-    }
-    pub(crate) fn result(_id: u32, _payload: &[u8]) -> super::DissectedResult {
-        super::DissectedResult {
-            src_addr: None,
-            dst_addr: None,
-            src_port: None,
-            dst_port: None,
-            protocol: crate::models::Protocol::DeviceNet,
-            summary: String::new(),
-        }
-    }
-}
 pub mod dhcp;
 pub mod dhcpv6;
 pub mod dht;
@@ -118,6 +82,7 @@ pub mod drbd;
 pub mod dtls;
 pub mod dtp;
 pub mod dvmrp;
+pub mod e1ap;
 pub mod eap;
 pub mod eapol;
 pub mod ecpri;
@@ -128,6 +93,8 @@ pub mod esmc;
 pub mod ethercat;
 pub mod etherip;
 pub mod ethernet;
+pub mod evpn;
+pub mod f1ap;
 pub mod fcoe;
 pub mod finger;
 pub mod fix;
@@ -152,6 +119,7 @@ pub mod hsrp;
 pub mod http;
 pub mod http2;
 pub mod http_body;
+pub mod iax2;
 pub mod icmp;
 pub mod iec101;
 pub mod iec_asdu;
@@ -168,6 +136,7 @@ pub mod iser;
 pub mod isis;
 pub mod isns;
 pub mod isotp;
+pub mod isup;
 pub mod j1708;
 pub mod j1939;
 pub mod kerberos;
@@ -181,6 +150,22 @@ pub mod ldap;
 pub mod ldp;
 #[cfg(feature = "ot")]
 pub mod lin;
+pub mod lisp;
+pub mod m3ua;
+pub mod modbus_ascii;
+pub mod mssqlbrowser;
+pub mod nsh;
+pub mod nvgre;
+pub mod pcp;
+pub mod profisafe;
+pub mod q931;
+pub mod redis;
+pub mod redis_cluster;
+pub mod rpc;
+pub mod rtsp;
+pub mod rwho;
+pub mod smb;
+pub mod srv6;
 #[cfg(not(feature = "ot"))]
 pub mod lin {
     pub fn dissect_lin(_payload: &[u8]) -> super::DissectedResult {
@@ -3109,7 +3094,6 @@ pub(crate) mod robustness {
         "tcap",
         "tcp_analysis",
         "modbus_ascii",
-        "devicenet",
         "controlnet",
         "nvgre",
         "evpn",

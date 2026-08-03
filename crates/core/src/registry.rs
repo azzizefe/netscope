@@ -9636,7 +9636,13 @@ protocols! {
         color:     0xD4643A,
         transport: Other,
         rank:      3,
-        status:    Dissected,
+        // Was `Dissected` on the strength of a stub in `dissectors.rs` whose
+        // guard was `-> bool { false }`. The branch in `can.rs` could never be
+        // taken, so no packet has ever been labelled DeviceNet, but the stub
+        // body contained `Protocol::DeviceNet` and that was enough to satisfy
+        // the corpus check. See `can.rs` for why an identifier-band guard
+        // cannot be written for this protocol.
+        status:    Declared,
         aliases:   ["devicenet"],
         blurb:     "An industrial controller message (DeviceNet)  —  the CAN identifier names both the message group and the node address.",
     }

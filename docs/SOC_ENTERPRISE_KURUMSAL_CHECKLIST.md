@@ -508,7 +508,15 @@ Risk Skoru = Baz Alert Ağırlığı (0-40)
 
 ## 14. Test Stratejisi, Chaos Engineering & QA Motoru
 
-> **Kaynak Modülleri:** [`test_strategy.rs`](../crates/core/src/test_strategy.rs), [`test_data.rs`](../crates/core/src/test_data.rs)  
+> **Kaynak Modülleri:** [`test_data.rs`](../crates/core/src/test_data.rs)
+> — `test_strategy.rs` 2026-08-03'te **silindi**. Bu bölümdeki maddelerin
+> "kaynağı" olarak duruyordu ama hiçbir test çalıştırmıyordu: kapsama oranı
+> `85.4` sabitiydi, entegrasyon çalıştırıcısı koşulsuz `true` döndürüyordu,
+> PCAP replay doğrulayıcısı dosyanın var olup olmadığına bakıp `5` diyordu,
+> chaos senaryolarının üçü de `is_resilient: true` idi ve soak testi sabit
+> bellek değerleriyle `memory_leak_detected: false` raporluyordu. Aşağıdaki
+> kutuların hiçbiri işaretli değil ve öyle kalmalı — bir modülün var olması
+> maddeyi karşılamaz.  
 > **Amaç:** Platformun üretim ortamında güvenilir çalıştığını kanıtlamak. Kaos senaryolarında bile veri kaybı ve servis kesintisi olmadığını doğrulamak.
 
 - [ ] **14.1 — Birim Test Kapsama Denetçisi**  
