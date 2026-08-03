@@ -22,6 +22,9 @@ cargo test -p netscope-core --lib filter::tests::test_filter_tcp_port
 # Benchmark
 cargo bench -p netscope-core --bench parse_throughput -- --quick
 
+# Kod kapsaması — MSVC toolchain'i şart (aşağıdaki nota bak)
+cargo +stable-x86_64-pc-windows-msvc llvm-cov --workspace --html
+
 # Fuzzing — Windows'ta iki şart var ve ikisi de hata mesajından anlaşılmıyor:
 #   1. nightly + MSVC toolchain. Varsayılan windows-gnu'da libfuzzer-sys'in
 #      kendi libFuzzer kopyası derlenmiyor (Windows desteği MSVC'ye özgü).
@@ -106,6 +109,30 @@ describe('filter', () => {
 
 `crates/core/benches/` — `#[cfg(test)]` kodunu göremez, bu yüzden yardımcı fonksiyonlar `common/mod.rs`'de tekrar tanımlanır.
 
+## Windows'ta neden bazı araçlar varsayılan toolchain'de çalışmıyor
+
+Bu depoda üç araç aynı sebeple `stable-x86_64-pc-windows-gnu` üzerinde
+başarısız oluyor, ve **üçünün de hata mesajı sebebi söylemiyor**. Hepsi LLVM'in
+çalışma zamanı bileşenlerine ihtiyaç duyuyor; rustup bunları windows-gnu için
+dağıtmıyor, MSVC için dağıtıyor.
+
+| Araç | windows-gnu'daki hata | Gerçek sebep |
+|---|---|---|
+| `cargo llvm-cov` | ``can't find crate for `profiler_builtins` `` | Kapsama sayaçları profiler runtime'ı ister; gnu toolchain'inde bu kütüphane hiç yok (`lib/rustlib/*/lib` altında sıfır dosya, MSVC'de iki tane) |
+| `cargo fuzz` (derleme) | `FuzzerExtFunctionsWindows.cpp: expected constructor…` | libfuzzer-sys kendi libFuzzer kopyasını derliyor; Windows desteği `__pragma(comment(linker, …))` kullanıyor, GCC bunu reddediyor |
+| `cargo fuzz` (çalıştırma) | `STATUS_DLL_NOT_FOUND (0xc0000135)` | ASan runtime'ı Windows'ta ayrı bir DLL ve PATH'te değil |
+
+Çözüm üçü için de aynı: **MSVC toolchain'ini kullan.**
+
+```bash
+cargo +stable-x86_64-pc-windows-msvc llvm-cov --workspace --html
+```
+
+Fuzzing ayrıca nightly istiyor; tam komut ve ASan yolu için `fuzz/README.md`.
+
+Linux'ta bunların hiçbiri gerekmiyor — bileşenler toolchain'le geliyor. CI
+Linux'ta koştuğu için orada ek bir ayar yok.
+
 ## Test Yardımcıları
 
 | Yardımcı | Yer | Kapsam |
@@ -124,4 +151,17 @@ describe('filter', () => {
 4. **İsimlendirme tutarlılığı**: Her test `pcap_<protokol>_<yön>` desenini takip edebilir.
 5. **Kaynak dosyadaki test module**: Test edilen kodun hemen altında, aynı dosyada.
 6. **Assertion mesajı**: Karmaşık assertion'larda hata mesajı ekle (`assert!(expr, "beklenen {} alınan {}", a, b)`).
-7. **Yavaş testleri işaretle**: 1 saniyeyi geçen testlere `#[ignore]` ekle.
+7. **Yavaş testi `#[ignore]` ile susturma — hızlandır ya da taşı.** Bu kural
+   daha önce "1 saniyeyi geçen testlere `#[ignore]` ekle" diyordu ve dördü de
+   öyle eklenmişti. Sonuç: ignore edilen test kimse için çalışmaz, dolayısıyla
+   *içindeki doğruluk iddiaları da* çalışmaz — bu depoda bir koruma iki kez
+   sessizce devre dışı kaldı ve erişilemez modül sayısı 140'tan 145'e kimse
+   fark etmeden çıktı. Dördünün de gerçek çözümü vardı:
+   - **Zamanlama iddiası mı?** Criterion bench'ine taşı (`benches/`). Bir duvar
+     saati ölçümü `cargo test`'in paralel yükü altında makinenin ne kadar
+     meşgul olduğunu ölçer; criterion örnekleyip aykırı değeri işaretler.
+   - **Kapatılamayan bir backlog mu?** Listeyi sabitle ve kümenin listeye *eşit*
+     olduğunu iddia et (`UNREACHABLE_BACKLOG` böyle). Sayı yalnızca düşebilir.
+   - **Yavaşlık tekrar mı?** Neyin tekrarlandığına bak. 65.536 portluk sweep 589
+     saniyeydi; portların ~65.000'i aynı yolu izlediği için eşdeğerlik
+     kanıtlanıp örneklemle değiştirildi: 0,37 saniye, aynı kapsam.
