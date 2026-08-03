@@ -115,5 +115,12 @@ harness = false
 name = "mem_usage"
 harness = false
 
+# Took over from `pipeline::tests::bench_pipeline_throughput`, an `#[ignore]`d
+# test that asserted a packet rate off one wall-clock reading and therefore ran
+# for nobody. Criterion samples it instead of failing on a busy machine.
+[[bench]]
+name = "pipeline_throughput"
+harness = false
+
 [lints]
 workspace = true

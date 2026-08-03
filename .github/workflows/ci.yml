@@ -272,10 +272,16 @@ jobs:
       - name: Install libpcap-dev
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
-      - name: Parse & filter benchmarks (quick mode)
+      # `pipeline_throughput` took over from `pipeline::tests::
+      # bench_pipeline_throughput`, an `#[ignore]`d test that asserted a packet
+      # rate off a single wall-clock reading and so ran for nobody. Criterion
+      # samples it instead of failing when a runner is busy, which is the whole
+      # reason the test could not stay a test.
+      - name: Parse, filter & pipeline benchmarks (quick mode)
         run: |
           cargo bench -p netscope-core --bench parse_throughput -- --quick
           cargo bench -p netscope-core --bench filter_match -- --quick
+          cargo bench -p netscope-core --bench pipeline_throughput -- --quick
 
       - name: Memory footprint (200k packets)
         run: MEM_PACKETS=200000 cargo bench -p netscope-core --bench mem_usage

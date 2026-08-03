@@ -2529,9 +2529,12 @@ mod tests {
     }
 }
 
-/// Benchmark: measure throughput of dissect() with realistic packets.
+/// Correctness checks over a realistic mixed corpus.
 ///
-/// Run with: `cargo test bench_dissect_throughput -- --nocapture`
+/// This module was named for a throughput benchmark that no longer lives here —
+/// timing belongs in `benches/parse_throughput.rs`, where criterion can sample
+/// it properly. What is left is the deterministic half: 10,000 mixed packets
+/// have to dissect without a single parse failure.
 #[cfg(test)]
 mod bench {
     use super::*;
@@ -2602,49 +2605,21 @@ mod bench {
         );
     }
 
-    /// Throughput measurement — ignored by default.
-    ///
-    /// It asserts on wall-clock rate, so under `cargo test`'s parallel load it
-    /// measures how busy the machine is rather than what the dissector costs,
-    /// and fails intermittently for reasons that have nothing to do with the
-    /// code. Measured standalone on this machine: ~338k pkt/s in debug,
-    /// ~1.77M in release — so the 100k floor below only catches a collapse,
-    /// not a gradual regression.
-    ///
-    /// Run it on its own:
-    ///   cargo test --release bench_dissect_throughput -- --ignored --nocapture
-    #[test]
-    #[ignore = "timing-sensitive: measures machine load when run in parallel"]
-    fn bench_dissect_throughput() {
-        const COUNT: usize = 10_000;
-        let packets = build_mixed_packets(COUNT);
-
-        // Warmup
-        for pkt in &packets[..100] {
-            let _ = dissect(pkt);
-        }
-
-        let start = std::time::Instant::now();
-        let failures = parse_failures(&packets);
-        let elapsed = start.elapsed();
-        let rate = COUNT as f64 / elapsed.as_secs_f64();
-
-        println!(
-            "Dissected {} packets in {:.2}s → {:.0} pkt/s ({} failures)",
-            COUNT,
-            elapsed.as_secs_f64(),
-            rate,
-            failures
-        );
-
-        assert_eq!(failures, 0, "corpus should dissect cleanly");
-        // Ensure we can handle at least 100k pps
-        assert!(
-            rate > 100_000.0,
-            "Performance too low: {:.0} pkt/s (need > 100k)",
-            rate
-        );
-    }
+    // `bench_dissect_throughput` was here: 10,000 mixed packets through
+    // `dissect()`, asserting `rate > 100_000.0` from a wall-clock measurement.
+    // It was `#[ignore]`d because under `cargo test`'s parallel load it
+    // measured how busy the machine was rather than what the dissector costs —
+    // so it ran for nobody, and a floor that only catches a total collapse is
+    // not worth an intermittent red build either way.
+    //
+    // The measurement moved to where the tooling handles this properly:
+    // `benches/parse_throughput.rs` benches exactly this — the full
+    // Ethernet → IP → TCP/UDP → app chain over the same 10,000 mixed packets —
+    // and criterion warms up, samples repeatedly and reports outliers instead
+    // of failing a single timed run. CI runs it on every push.
+    //
+    // The half that was worth keeping is above, un-ignored:
+    // `bench_corpus_dissects_without_failures`.
 }
 #[cfg(test)]
 mod batch16_dispatch_check {

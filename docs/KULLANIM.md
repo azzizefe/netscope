@@ -147,8 +147,11 @@ dissector zincirinden geçirir (asla çökmez, bozuk paket = "Unknown") → çö
 paket bir kanala yazılır → arayüz her 50 ms'de kanaldan paketleri çekip
 istatistik motoruna, akış tablosuna ve ekrana işler.
 
-**Neden hızlı?** Rust-native; dissector zinciri saniyede 100.000+ paketi
-işleyebilir (test paketinde `bench_dissect_throughput` ile doğrulanır).
+**Neden hızlı?** Rust-native, kilitsiz ring buffer ve çok çekirdekli dissector
+hattı. Kendi makinendeki gerçek sayıyı ölçmek için:
+`cargo bench -p netscope-core --bench parse_throughput` (dissector zinciri) ve
+`--bench pipeline_throughput` (ring + rayon aşaması). Buraya tek bir rakam
+yazmıyoruz: o rakam yalnızca onu yazan makineyi tarif eder.
 
 **Alan adları nereden geliyor?** netscope yakaladığı DNS yanıtlarını izler ve
 hangi IP'nin hangi alan adına ait olduğunu öğrenir. Böylece paket listesinde

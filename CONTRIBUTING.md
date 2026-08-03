@@ -71,15 +71,28 @@ apt packages on every push.
 
 ### Timing-sensitive tests
 
-Two tests assert a wall-clock packets/sec floor, so under `cargo test`'s
-parallel load they measure how busy your machine is rather than what the code
-costs. Both are `#[ignore]`d — run them deliberately, ideally on a quiet
-machine:
+Throughput lives in the criterion benches, not in `cargo test`. Two tests used
+to assert a wall-clock packets/sec floor, and under `cargo test`'s parallel load
+they measured how busy the machine was rather than what the code costs — so both
+were `#[ignore]`d, and therefore ran for nobody. Criterion warms up, samples
+repeatedly and reports outliers instead of failing one timed run:
 
 ```bash
-cargo test --release bench_dissect_throughput  -- --ignored --nocapture
-cargo test --release bench_pipeline_throughput -- --ignored --nocapture
+cargo bench -p netscope-core --bench parse_throughput
 ```
+
+```bash
+cargo bench -p netscope-core --bench pipeline_throughput
+```
+
+`parse_throughput` is `dissect()` end to end; `pipeline_throughput` is the ring
+plus the rayon stage. `filter_match` and `mem_usage` are the other two. CI runs
+all four with `--quick` on every push.
+
+What stayed in `cargo test` is the deterministic half of each:
+`bench_corpus_dissects_without_failures` asserts the same 10k mixed packets
+dissect with zero parse failures, and `a_full_ring_of_frames_all_arrive` asserts
+a full ring's worth of frames all come out.
 
 ## Code Style
 

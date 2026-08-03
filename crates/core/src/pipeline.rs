@@ -544,61 +544,70 @@ mod tests {
         pipeline.join();
     }
 
-    /// Throughput measurement mirroring `bench_dissect_throughput`, but
-    /// through the whole ring + rayon pipeline — and ignored by default for the
-    /// same reason: it asserts on wall-clock rate, so under `cargo test`'s
-    /// parallel load it measures how busy the machine is rather than what the
-    /// pipeline costs. Left un-ignored it fails on loaded machines and slow CI
-    /// runners for reasons that have nothing to do with the code, which is a
-    /// bad first impression for anyone who just cloned the repo.
+    /// A full ring's worth of frames through the default-capacity pipeline,
+    /// every one of them out the other end.
     ///
-    /// Nothing functional is lost: `dissects_in_order_across_batches` already
-    /// asserts every pushed frame comes out, in order, without timing anything.
+    /// This is the deterministic half of a `bench_pipeline_throughput` test
+    /// that used to be here. That one pushed 10,000 frames and then asserted
+    /// `rate > 50_000.0` from a wall-clock measurement, so under `cargo test`'s
+    /// parallel load it measured how busy the machine was rather than what the
+    /// pipeline costs. It was `#[ignore]`d for that — and so it ran for nobody,
+    /// its correctness assertion included. An assertion that never executes
+    /// protects nothing, and a floor low enough not to flake only catches a
+    /// total collapse anyway. The measurement moved to
+    /// `benches/pipeline_throughput.rs`, where criterion can sample it.
     ///
-    /// Run it on its own:
-    ///   cargo test --release bench_pipeline_throughput -- --ignored --nocapture
+    /// **What this does not prove:** backpressure. `COUNT` exceeds
+    /// [`DEFAULT_RING_CAPACITY`], but that does not make the ring fill —
+    /// whether it does depends on the dissector stage keeping up, and on this
+    /// machine it does, so swapping `push_blocking` for the *dropping*
+    /// `push_live` still passes. Raising the count only moves the race. A ring
+    /// this large cannot be filled on demand, which is exactly why
+    /// [`Self::dissects_in_order_across_batches`] uses a deliberately tiny
+    /// 256-slot one: there, filling is certain, and that test owns backpressure
+    /// and ordering.
+    ///
+    /// What is left is still worth running: at production's ring size, a bug in
+    /// the batching or the hand-off that loses the tail of a large run — the
+    /// kind that 2,000 frames through a 256-slot ring would not reach — fails
+    /// here.
     #[test]
-    #[ignore = "timing-sensitive: measures machine load when run in parallel"]
-    fn bench_pipeline_throughput() {
-        const COUNT: usize = 10_000;
+    fn a_full_ring_of_frames_all_arrive() {
+        // One and a bit times round the default ring.
+        const COUNT: usize = DEFAULT_RING_CAPACITY + 4_096;
         let running = Arc::new(AtomicBool::new(true));
         let (tx, rx) = crossbeam_channel::unbounded();
         let mut pipeline = Pipeline::start(1, tx, running.clone());
         let producer = pipeline.producer();
 
-        let payloads: Vec<Vec<u8>> = (0..COUNT)
-            .map(|i| {
-                build_tcp_packet(
-                    [10, 0, 0, 1],
-                    [10, 0, 0, 2],
-                    12345,
-                    80,
-                    TcpFlags {
-                        ack: true,
-                        ..Default::default()
-                    },
-                    if i % 2 == 0 {
-                        b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n".as_slice()
-                    } else {
-                        b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n".as_slice()
-                    },
-                )
-            })
-            .collect();
-
-        let start = std::time::Instant::now();
-        for (i, data) in payloads.into_iter().enumerate() {
-            assert!(producer.push_blocking(frame(i, data), &running));
+        for i in 0..COUNT {
+            let data = build_tcp_packet(
+                [10, 0, 0, 1],
+                [10, 0, 0, 2],
+                12345,
+                80,
+                TcpFlags {
+                    ack: true,
+                    ..Default::default()
+                },
+                if i % 2 == 0 {
+                    b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n".as_slice()
+                } else {
+                    b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n".as_slice()
+                },
+            );
+            assert!(
+                producer.push_blocking(frame(i, data), &running),
+                "frame {i} was refused while the pipeline was still running",
+            );
         }
         producer.finish();
         pipeline.join();
-        let elapsed = start.elapsed();
 
-        let n = rx.try_iter().count();
-        assert_eq!(n, COUNT);
-        let rate = COUNT as f64 / elapsed.as_secs_f64();
-        println!("Pipeline: {COUNT} packets in {elapsed:?} → {rate:.0} pkt/s");
-        // Keep a conservative floor so CI boxes don't flake.
-        assert!(rate > 50_000.0, "pipeline too slow: {rate:.0} pkt/s");
+        assert_eq!(
+            rx.try_iter().count(),
+            COUNT,
+            "the pipeline dropped frames between the ring and the channel",
+        );
     }
 }
