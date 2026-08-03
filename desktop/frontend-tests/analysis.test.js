@@ -158,9 +158,21 @@ describe('service / tracker / CVE classification', () => {
   });
   it('matchCVE flags known-vulnerable server banners', () => {
     expect(app.matchCVE('Apache/2.4.49').id).toBe('CVE-2021-41773');
+    expect(app.matchCVE('Apache/2.4.50').id).toBe('CVE-2021-42013');
     expect(app.matchCVE('nginx/1.10.3').id).toBe('old-nginx');
     expect(app.matchCVE('PHP/7.2.1').id).toBe('php-eol');
     expect(app.matchCVE('MyServer/1.0')).toBeNull();
+  });
+
+  // A finding that names a CVE is a claim someone will act on. The Apache
+  // pattern used to be `2\.4\.(4[0-9]|50)`, so every 2.4.4x release was
+  // reported as CVE-2021-41773 — a path-traversal RCE those versions do not
+  // have. The versions between the last safe one and the two affected ones are
+  // the whole test: matching 2.4.49 is easy, not matching 2.4.48 is the point.
+  it('matchCVE does not attach a CVE to Apache versions it does not affect', () => {
+    for (const banner of ['Apache/2.4.41', 'Apache/2.4.46', 'Apache/2.4.48', 'Apache/2.4.51', 'Apache/2.4.58']) {
+      expect(app.matchCVE(banner), `${banner} must not be flagged`).toBeNull();
+    }
   });
 });
 
