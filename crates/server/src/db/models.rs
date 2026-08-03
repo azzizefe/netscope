@@ -435,18 +435,37 @@ pub struct CountByEntity {
     pub count: i64,
 }
 
+/// What netscope can say about a deployment's compliance posture.
+///
+/// Every score is optional, and `None` is a real answer: it means netscope did
+/// not measure this, either because the framework asks about something that
+/// does not appear in network telemetry, or because there was no data in the
+/// window to measure. The alternative is what this struct used to do — return
+/// `f64` and fill the gaps with 94.5, 89.0, 92.0 and 90.0, invented constants
+/// with one decimal place, which the dashboard then drew as green bars. A score
+/// nobody computed must not be renderable as a score.
+///
+/// The scores that do exist are narrow proxies, not audits: an acknowledgement
+/// SLA is evidence *towards* ISO 27001 A.5.25, not a verdict on the standard.
+/// `*_details` says which measurement was taken and over how many samples, so a
+/// 100% drawn from three alerts cannot be read as a 100% drawn from thirty
+/// thousand.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceReport {
-    pub overall_score: f64,
-    pub gdpr_score: f64,
+    /// Mean of the scores that were actually measured; `None` if none were.
+    pub overall_score: Option<f64>,
+    /// Not measured. Whether personal data is processed lawfully is not
+    /// visible in packet headers.
+    pub gdpr_score: Option<f64>,
     pub gdpr_details: String,
-    pub kvkk_score: f64,
+    /// Not measured, for the same reason as `gdpr_score`.
+    pub kvkk_score: Option<f64>,
     pub kvkk_details: String,
-    pub iso27001_score: f64,
+    pub iso27001_score: Option<f64>,
     pub iso27001_details: String,
-    pub pci_dss_score: f64,
+    pub pci_dss_score: Option<f64>,
     pub pci_dss_details: String,
-    pub nis2_score: f64,
+    pub nis2_score: Option<f64>,
     pub nis2_details: String,
     pub generated_at: DateTime<Utc>,
 }

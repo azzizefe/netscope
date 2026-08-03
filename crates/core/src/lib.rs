@@ -24,7 +24,6 @@ pub mod alerting;
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
-pub mod compliance_reports;
 pub mod config;
 pub mod crypto;
 #[cfg(not(target_arch = "wasm32"))]
