@@ -22,6 +22,13 @@ cargo test -p netscope-core --lib filter::tests::test_filter_tcp_port
 # Benchmark
 cargo bench -p netscope-core --bench parse_throughput -- --quick
 
+# Fuzzing — nightly, ve Windows'ta MSVC toolchain'i şart.
+# Varsayılan windows-gnu'da çalışmaz: libfuzzer-sys kendi libFuzzer kopyasını
+# derliyor ve onun Windows desteği MSVC'ye özgü (`__pragma(comment(linker, …))`,
+# GCC reddediyor). Ayrıntı: fuzz/README.md
+cargo +nightly-x86_64-pc-windows-msvc fuzz run parse_packet_fuzz \
+  --target x86_64-pc-windows-msvc -- -max_total_time=60
+
 # Frontend testleri
 cd desktop/frontend-tests && npm test
 

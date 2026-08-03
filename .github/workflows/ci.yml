@@ -22,7 +22,8 @@ concurrency:
 #   1. lint        — cargo clippy (deny warnings) + cargo fmt --check
 #   2. test        — cargo test on Linux / macOS / Windows
 #   3. frontend    — npm test (vitest) for desktop frontend unit tests
-#   4. bench       — continuous benchmarks (parse, filter, memory)
+#   4. bench       — continuous benchmarks (parse, filter, pipeline, memory)
+#   5. fuzz        — 60s of cargo-fuzz over the packet dispatch (Linux only)
 # ─────────────────────────────────────────────────────────────────────────────
 
 jobs:
@@ -285,3 +286,50 @@ jobs:
 
       - name: Memory footprint (200k packets)
         run: MEM_PACKETS=200000 cargo bench -p netscope-core --bench mem_usage
+
+  # ── 5. Fuzzing (bounded) ───────────────────────────────────────────────────
+  # The dispatch parses bytes an attacker chooses, so it is worth fuzzing. This
+  # job exists as much to stop the target rotting as to find bugs in sixty
+  # seconds: it sat broken for a while — the manifest had no `[workspace]`
+  # table so cargo refused to build the package at all, `netscope-core` pointed
+  # at the workspace root instead of `crates/core`, and the target body was
+  # still `cargo fuzz init`'s `// fuzzed code goes here`. None of that could
+  # fail a build, because nothing built it.
+  #
+  # Linux only: `libfuzzer-sys` compiles a bundled libFuzzer whose Windows
+  # support is MSVC-specific, so it cannot build on a windows-gnu host at all.
+  fuzz:
+    name: Fuzz (60s)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            fuzz
+
+      - name: Install libpcap-dev
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      # A minute finds little on its own, but it proves the target still builds
+      # and still reaches `dissect()`. A crash here is a real one: libFuzzer
+      # writes the input to fuzz/artifacts/, which the step below uploads so it
+      # can be reproduced rather than guessed at.
+      - name: Run parse_packet_fuzz
+        run: cargo fuzz run parse_packet_fuzz -- -max_total_time=60
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts/
+          if-no-files-found: ignore

@@ -539,8 +539,13 @@ Risk Skoru = Baz Alert Ağırlığı (0-40)
 - [ ] **14.6 — Performans Regresyon Testi**  
   Her release öncesi benchmark karşılaştırması. Paket işleme hızında %5'ten fazla düşüş tespit edilirse release engellenir.
 
-- [ ] **14.7 — Fuzzing (Bulanıklaştırma) Testi**  
-  Protokol ayrıştırıcılarına (dissectors) rastgele bozuk veri gönderilir. Panic veya crash olmadığı doğrulanır.
+- [x] **14.7 — Fuzzing (Bulanıklaştırma) Testi** *(2026-08-04)*  
+  `fuzz/parse_packet_fuzz` hedefi `dissectors::dissect()`'i libFuzzer ile
+  sürüyor; CI her push'ta 60 saniye koşuyor ve çökme girdisini artefakt olarak
+  yüklüyor. Deterministik tarafı zaten `dissectors::robustness` içinde: her
+  dispatch edilen port ve yapısal fall-through, bozuk payload kümesiyle
+  süpürülüyor. Çalıştırma ve **toolchain gereksinimi** (nightly + Windows'ta
+  MSVC): [fuzz/README.md](../fuzz/README.md).
 
 - [ ] **14.8 — Sentetik Trafik Üreteci**  
   Normal baseline ve şüpheli tehdit paketlerini eşzamanlı üreten konfigüre edilebilir trafik motoru. Demo ve eğitim ortamlarında kullanılır.
