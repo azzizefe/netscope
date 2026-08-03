@@ -20,10 +20,16 @@ pub fn dissect_icmp(
 
     let summary = match payload.first() {
         Some(&icmp_type) => {
+            // The code byte is half the message. Type 11 (v4) and type 3 (v6)
+            // are both "Time Exceeded", and code 1 means the *fragment
+            // reassembly* timer ran out rather than the hop count — a
+            // different event with a different cause, which this reported as a
+            // TTL expiry either way.
+            let code = payload.get(1).copied().unwrap_or(0);
             if is_v6 {
-                describe_icmpv6(icmp_type, payload)
+                describe_icmpv6(icmp_type, code, payload)
             } else {
-                describe_icmpv4(icmp_type)
+                describe_icmpv4(icmp_type, code)
             }
         }
         None => "ICMP message".into(),
@@ -39,26 +45,71 @@ pub fn dissect_icmp(
     }
 }
 
-fn describe_icmpv4(icmp_type: u8) -> String {
+fn describe_icmpv4(icmp_type: u8, code: u8) -> String {
     match icmp_type {
         0 => "Ping reply (echo reply)".into(),
         3 => "Destination unreachable".into(),
         5 => "Redirect".into(),
         8 => "Ping request (echo request)".into(),
-        11 => "Time-to-live exceeded".into(),
+        // RFC 792: code 0 is the hop count running out in transit, code 1 is
+        // the reassembly timer expiring on a host that never received every
+        // fragment. Both used to read "Time-to-live exceeded", which sends the
+        // reader looking for a routing loop when the fault is fragmentation.
+        11 => match code {
+            1 => "Fragment reassembly time exceeded".into(),
+            _ => "Time-to-live exceeded".into(),
+        },
         t => format!("ICMP message (type {t})"),
     }
 }
 
-fn describe_icmpv6(icmp_type: u8, payload: &[u8]) -> String {
+/// Whether a Router Advertisement carries a Prefix Information option.
+///
+/// Walks the option chain rather than scanning for the byte pair `03 04`. The
+/// scan this replaces looked anywhere in the message, so any RA whose router
+/// lifetime, reachable time or a neighbouring option happened to contain those
+/// two bytes was reported as advertising a SLAAC prefix — a claim about how
+/// hosts on that link get their addresses. Finding a field by walking the
+/// structure rather than searching for its bytes is the rule everywhere else in
+/// this crate; the two disagree exactly when it matters.
+///
+/// RFC 4861 §4.2: the RA header is 16 bytes, then options as
+/// `(type, length-in-8-octet-units, data)`. Option type 3 is Prefix
+/// Information, and its length is always 4.
+fn has_prefix_information(payload: &[u8]) -> bool {
+    const RA_HEADER_LEN: usize = 16;
+    const PREFIX_INFORMATION: u8 = 3;
+
+    let mut offset = RA_HEADER_LEN;
+    while offset + 2 <= payload.len() {
+        let opt_type = payload[offset];
+        let units = payload[offset + 1] as usize;
+        // A zero length is malformed and would loop forever; RFC 4861 says the
+        // packet must be discarded, and here it simply ends the walk.
+        if units == 0 {
+            return false;
+        }
+        if opt_type == PREFIX_INFORMATION {
+            return true;
+        }
+        offset += units * 8;
+    }
+    false
+}
+
+fn describe_icmpv6(icmp_type: u8, code: u8, payload: &[u8]) -> String {
     match icmp_type {
         1 => "Destination unreachable".into(),
-        3 => "Hop limit exceeded".into(),
+        // RFC 4443 §3.3, the same split as ICMPv4 type 11.
+        3 => match code {
+            1 => "Fragment reassembly time exceeded".into(),
+            _ => "Hop limit exceeded".into(),
+        },
         128 => "Ping request (echo request)".into(),
         129 => "Ping reply (echo reply)".into(),
         133 => "Router solicitation".into(),
         134 => {
-            if payload.windows(2).any(|w| w[0] == 3 && w[1] == 4) {
+            if has_prefix_information(payload) {
                 "Router Advertisement (SLAAC prefix info)".into()
             } else {
                 "Router Advertisement".into()
@@ -211,5 +262,66 @@ mod tests {
     fn icmpv6_hop_limit_exceeded() {
         let result = dissect_icmp(None, None, &[3, 0], true);
         assert_eq!(result.summary, "Hop limit exceeded");
+    }
+
+    /// Code 1 of "Time Exceeded" is a different failure from a hop count
+    /// running out, and it used to be reported as one.
+    ///
+    /// A reader told "TTL exceeded" goes looking for a routing loop. The actual
+    /// cause is that a host waited for fragments that never all arrived —
+    /// usually an MTU or a path problem, and the fix is nowhere near a router's
+    /// hop count.
+    #[test]
+    fn a_reassembly_timeout_is_not_a_hop_count_expiry() {
+        assert_eq!(
+            dissect_icmp(None, None, &[11, 1], false).summary,
+            "Fragment reassembly time exceeded"
+        );
+        assert_eq!(
+            dissect_icmp(None, None, &[11, 0], false).summary,
+            "Time-to-live exceeded"
+        );
+        assert_eq!(
+            dissect_icmp(None, None, &[3, 1], true).summary,
+            "Fragment reassembly time exceeded"
+        );
+    }
+
+    /// A Router Advertisement only advertises a SLAAC prefix if it carries the
+    /// option, not if the bytes `03 04` appear somewhere in it.
+    ///
+    /// The old check scanned the whole message. The first case below is the one
+    /// it got wrong: a router lifetime of 0x0304 in the header, no options at
+    /// all, reported as advertising a prefix — a claim about how every host on
+    /// that link gets its address.
+    #[test]
+    fn a_router_advertisement_needs_the_option_not_the_bytes() {
+        // type, code, checksum×2, cur-hop-limit, flags, router lifetime = 0x0304,
+        // reachable time ×4, retrans timer ×4. Sixteen bytes, no options.
+        let no_options = [134, 0, 0, 0, 64, 0, 0x03, 0x04, 0, 0, 0, 0, 0, 0, 0, 0];
+        assert_eq!(
+            dissect_icmp(None, None, &no_options, true).summary,
+            "Router Advertisement",
+        );
+
+        // The same header, then a real Prefix Information option: type 3,
+        // length 4 (thirty-two bytes).
+        let mut with_prefix = no_options.to_vec();
+        with_prefix.extend_from_slice(&[3, 4]);
+        with_prefix.extend_from_slice(&[0u8; 30]);
+        assert_eq!(
+            dissect_icmp(None, None, &with_prefix, true).summary,
+            "Router Advertisement (SLAAC prefix info)",
+        );
+
+        // An option chain that does not include one: Source Link-Layer Address
+        // (type 1, length 1) followed by MTU (type 5, length 1).
+        let mut other_options = no_options.to_vec();
+        other_options.extend_from_slice(&[1, 1, 0, 0, 0, 0, 0, 0]);
+        other_options.extend_from_slice(&[5, 1, 0, 0, 0, 0, 0x03, 0x04]);
+        assert_eq!(
+            dissect_icmp(None, None, &other_options, true).summary,
+            "Router Advertisement",
+        );
     }
 }
