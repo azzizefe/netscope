@@ -9,7 +9,13 @@ a live capture the packets that arrive while it is down are gone.
 
 ## Running it
 
-**Requires a nightly toolchain, and on Windows the MSVC one specifically.**
+**Requires a nightly toolchain, and on Windows the MSVC one specifically, with
+the ASan runtime on PATH.** Both requirements are covered below; neither failure
+mode says what is wrong, which is the only reason they are worth this much text.
+
+Verified working on this repo: 5,000 runs, no crash, reaching `dispatch_l3`,
+`ip::dissect_ipv4`, `dispatch_transport` and `snap::dissect_snap`. Note the
+first build takes roughly 40 minutes — netscope-core in release is large.
 
 ```bash
 cargo +nightly-x86_64-pc-windows-msvc fuzz run parse_packet_fuzz --target x86_64-pc-windows-msvc
@@ -26,6 +32,35 @@ Bounded run, which is what you want when checking a change rather than hunting:
 ```bash
 cargo +nightly fuzz run parse_packet_fuzz -- -max_total_time=60
 ```
+
+### And on Windows, the sanitiser runtime has to be on PATH
+
+cargo-fuzz builds with AddressSanitizer, and on Windows that runtime is a DLL
+rather than something linked in. Without it the binary builds fine, links fine,
+and then refuses to start:
+
+```text
+error: process didn't exit successfully: `...\parse_packet_fuzz.exe ...`
+       (exit code: 0xc0000135, STATUS_DLL_NOT_FOUND)
+```
+
+`0xc0000135` names no DLL, so there is nothing in that message to act on. The
+one it wants is `clang_rt.asan_dynamic-x86_64.dll`, which ships with the MSVC
+toolchain:
+
+```powershell
+$asan = "C:\Program Files\Microsoft Visual Studio\<ver>\<edition>\VC\Tools\MSVC\<toolset>\bin\Hostx64\x64"
+$env:PATH = "$asan;$env:PATH"
+```
+
+An LLVM install has a copy too, under `lib\clang\<n>\lib\windows\`. Confirm what
+a built target actually wants with:
+
+```bash
+objdump -p fuzz/target/x86_64-pc-windows-msvc/release/parse_packet_fuzz.exe | grep "DLL Name"
+```
+
+Linux does not need any of this — the runtime comes with the toolchain.
 
 ### Why the toolchain matters
 

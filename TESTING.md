@@ -22,10 +22,14 @@ cargo test -p netscope-core --lib filter::tests::test_filter_tcp_port
 # Benchmark
 cargo bench -p netscope-core --bench parse_throughput -- --quick
 
-# Fuzzing — nightly, ve Windows'ta MSVC toolchain'i şart.
-# Varsayılan windows-gnu'da çalışmaz: libfuzzer-sys kendi libFuzzer kopyasını
-# derliyor ve onun Windows desteği MSVC'ye özgü (`__pragma(comment(linker, …))`,
-# GCC reddediyor). Ayrıntı: fuzz/README.md
+# Fuzzing — Windows'ta iki şart var ve ikisi de hata mesajından anlaşılmıyor:
+#   1. nightly + MSVC toolchain. Varsayılan windows-gnu'da libfuzzer-sys'in
+#      kendi libFuzzer kopyası derlenmiyor (Windows desteği MSVC'ye özgü).
+#   2. ASan runtime DLL'i PATH'te olmalı, yoksa binary derlenir ama
+#      STATUS_DLL_NOT_FOUND (0xc0000135) ile başlamaz — mesaj DLL adını vermez.
+# Ayrıntı ve tam yollar: fuzz/README.md
+$asan = "C:\Program Files\Microsoft Visual Studio\<sürüm>\<edition>\VC\Tools\MSVC\<toolset>\bin\Hostx64\x64"
+$env:PATH = "$asan;$env:PATH"
 cargo +nightly-x86_64-pc-windows-msvc fuzz run parse_packet_fuzz \
   --target x86_64-pc-windows-msvc -- -max_total_time=60
 
