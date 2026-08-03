@@ -2,6 +2,10 @@
 name = "netscope-wasm"
 version = "0.1.0"
 edition = "2021"
+# Reported unlicensed by `cargo deny check licenses`. This one ships: the
+# desktop frontend loads the wasm this crate builds, so it reaches users with
+# no stated terms at all.
+license.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -13,7 +17,7 @@ serde-wasm-bindgen = "0.6"
 chrono = { version = "0.4", features = ["wasmbind"] }
 bytes = "1"
 getrandom = { version = "0.2", features = ["js"] }
-netscope-core = { path = "../core" }
+netscope-core = { path = "../core", version = "0.2.0" }
 
 [lints]
 workspace = true

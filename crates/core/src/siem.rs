@@ -291,23 +291,20 @@ impl SiemEvent {
         if let Some(ref reader) = global_geoip_reader() {
             let lookup_ip = pkt.dst_addr.or(pkt.src_addr);
             if let Some(ip) = lookup_ip {
-                if let Ok(city) = reader.lookup::<maxminddb::geoip2::City>(ip) {
-                    geoip_country = city
-                        .country
-                        .and_then(|c| c.names)
-                        .and_then(|n| n.get("en").map(|s| s.to_string()));
-                    geoip_city = city
-                        .city
-                        .and_then(|c| c.names)
-                        .and_then(|n| n.get("en").map(|s| s.to_string()));
-                }
-                if let Ok(asn_info) = reader.lookup::<maxminddb::geoip2::Asn>(ip) {
-                    asn = asn_info
-                        .autonomous_system_number
-                        .map(|a| format!("AS{}", a));
-                    isp = asn_info
-                        .autonomous_system_organization
-                        .map(|s| s.to_string());
+                // maxminddb 0.27: `lookup` returns a record to decode, rather
+                // than decoding in the call, and `names` is a struct with a
+                // field per language instead of a map keyed by "en".
+                if let Ok(record) = reader.lookup(ip) {
+                    if let Ok(Some(city)) = record.decode::<maxminddb::geoip2::City>() {
+                        geoip_country = city.country.names.english.map(str::to_string);
+                        geoip_city = city.city.names.english.map(str::to_string);
+                    }
+                    if let Ok(Some(asn_info)) = record.decode::<maxminddb::geoip2::Asn>() {
+                        asn = asn_info
+                            .autonomous_system_number
+                            .map(|a| format!("AS{}", a));
+                        isp = asn_info.autonomous_system_organization.map(str::to_string);
+                    }
                 }
             }
         }

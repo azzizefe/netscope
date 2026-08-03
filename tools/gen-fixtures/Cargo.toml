@@ -3,6 +3,13 @@ name = "gen-fixtures"
 version = "0.1.0"
 edition = "2021"
 publish = false
+# `cargo deny check licenses` reported this crate as unlicensed. `publish =
+# false` keeps it off crates.io but says nothing about the terms it is under,
+# and a workspace member with no license field reads as "all rights reserved"
+# to any tool that looks — including one a downstream user runs on a vendored
+# copy of this repo. The repository is MIT; this inherits it like every other
+# member.
+license.workspace = true
 
 [dependencies]
 etherparse = "0.16"

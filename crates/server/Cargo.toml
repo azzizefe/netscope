@@ -14,7 +14,7 @@ categories.workspace = true
 
 [dependencies]
 # Workspace crates
-netscope-core = { path = "../core" }
+netscope-core = { path = "../core", version = "0.2.0" }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
@@ -34,7 +34,6 @@ prost = "0.14"
 
 # TLS
 rustls = "0.23"
-rustls-pemfile = "2"
 tokio-rustls = "0.26"
 
 # Database
@@ -97,6 +96,7 @@ rand = "0.8"
 sha2 = "0.10"
 
 [dev-dependencies]
+mockall = "0.15.0"
 # `oneshot` — drives the router in-process so the route/permission wiring can be
 # tested without a listener or a database.
 tower = { version = "0.5", features = ["util"] }
