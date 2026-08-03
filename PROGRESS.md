@@ -67,7 +67,7 @@ Sıra ve gerekçe için [`%100.md`](%100.md):
 
 1. ~~CI yeşillendirme — Adım 5~~ ✅ **2026-08-03** (zaten yapılmıştı; clippy'nin `--all-targets` boşluğu kapatıldı)
 2. ~~Fleet güvenliği — Adım 6~~ ✅ **2026-08-03** (gRPC TLS/mTLS eklendi, imza doğrulamanın pozitif yolu teste bağlandı)
-3. **macOS universal binary + notarization** — Adım 3
+3. ~~macOS binary + notarization — Adım 3~~ ✅ **2026-08-03** (zaten yapılmıştı; kalan tek şey Apple secret'larının depoya girilmesi)
 4. **Kalan 21 Tauri komut testi** — Adım 4
 5. **Web sitesi (Astro) + WASM demo + auto-update** — Adım 7
 6. **Git geçmişi temizliği** (yıkıcı, force-push, en sona) — Adım 1
