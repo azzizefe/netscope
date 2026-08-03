@@ -27,6 +27,15 @@ use super::{
     source_query, vxlan, wol, zrtp, DissectedResult,
 };
 
+/// UDP ports claimed by a dissector that validates nothing, on a number the
+/// vendor is not known to own. The TCP half of this list, and the reasoning
+/// behind it, is `tcp::UNVERIFIED_VENDOR_PORTS`.
+const UNVERIFIED_VENDOR_PORTS: &[u16] = &[
+    2224, // cip_safety — CIP Safety rides inside EtherNet/IP (UDP 2222 / TCP 44818)
+    5100, // p_net — PROFINET is on 34962-34964 and the DCE/RPC range, not here
+    5500, // mechatrolink — a motion fieldbus with its own physical layer, not UDP
+];
+
 pub fn dissect_udp(
     src_ip: Option<IpAddr>,
     dst_ip: Option<IpAddr>,
@@ -75,6 +84,22 @@ pub fn dissect_udp(
     // before the flow is claimed.
     if on(7946) && memberlist::looks_like_memberlist(udp_payload) {
         return memberlist::dissect_memberlist(src_ip, dst_ip, src_port, dst_port, udp_payload);
+    }
+
+    // A vendor port nothing here can verify does not get to swallow a payload
+    // that is unmistakably something else. Same rule as `tcp.rs`, and for the
+    // same reason: these three dissectors read fixed offsets and validate
+    // nothing, and an exact port match outranks the structural sniffs below,
+    // so a DTLS handshake on any of them came back as a motion-control frame.
+    // DTLS is the one that matters on UDP, and `looks_like_dtls` is already
+    // written and tested.
+    //
+    // OMRON FINS (9600) is deliberately absent: that is the vendor's real,
+    // documented port, and there a well-known port beating a sniff is right.
+    let unverified_port =
+        UNVERIFIED_VENDOR_PORTS.contains(&src_port) || UNVERIFIED_VENDOR_PORTS.contains(&dst_port);
+    if unverified_port && dtls::looks_like_dtls(udp_payload) {
+        return dtls::dissect_dtls(src_ip, dst_ip, src_port, dst_port, udp_payload);
     }
 
     // 2. Exact well-known port.
@@ -260,6 +285,47 @@ mod tests {
         assert_eq!(result.src_port, Some(30000));
         assert_eq!(result.dst_port, Some(40000));
         assert_eq!(result.summary, "UDP — 5 bytes of payload");
+    }
+
+    /// A vendor port whose claim nothing can verify must not swallow DTLS.
+    ///
+    /// `cip_safety`, `p_net` and `mechatrolink` read fixed offsets and validate
+    /// nothing, and an exact port match outranks the DTLS sniff further down,
+    /// so a DTLS handshake on 2224, 5100 or 5500 came back as a safety or
+    /// motion-control frame with invented field values. None of the three ports
+    /// belongs to the protocol claiming it: CIP Safety rides inside EtherNet/IP
+    /// on 2222, PROFINET is on 34962-34964, and MECHATROLINK is not IP at all.
+    #[test]
+    fn an_unverified_vendor_port_does_not_swallow_dtls() {
+        let mut dtls = vec![22u8, 0xFE, 0xFD, 0x00, 0x00];
+        dtls.extend_from_slice(&[0u8; 8]);
+        dtls.extend_from_slice(&[0x00, 0x2c]);
+        dtls.extend_from_slice(&[0u8; 44]);
+        for &port in UNVERIFIED_VENDOR_PORTS {
+            let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, port, &dtls);
+            let protocol = run(&data).protocol;
+            assert_eq!(
+                protocol,
+                Protocol::Dtls,
+                "UDP port {port} claimed a DTLS record as {protocol:?}",
+            );
+        }
+    }
+
+    /// OMRON FINS keeps 9600, because that is genuinely its port.
+    ///
+    /// The guard above is about ports the vendor does not own; it must not
+    /// spread to the ones that do, or a real FINS frame would start falling
+    /// through to the structural sniffs.
+    #[test]
+    fn a_real_vendor_port_still_wins_outright() {
+        assert!(
+            !UNVERIFIED_VENDOR_PORTS.contains(&9600),
+            "9600 is OMRON FINS's documented port and must keep its binding",
+        );
+        let fins = [0u8; 16];
+        let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 9600, &fins);
+        assert_eq!(run(&data).protocol, Protocol::OmronFinsUdpDetail);
     }
 
     /// The reason step 2 exists: a table row has to actually be reached.
