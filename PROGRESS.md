@@ -11,12 +11,12 @@
 | Ölçüm | Değer |
 |---|---|
 | Rust kaynak dosyası | 659 (6 crate) |
-| Test (Rust, tüm workspace) | **2.462 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Test (Rust, tüm workspace) | **2.469 geçiyor, 0 başarısız, 4 `#[ignore]`** |
 | Dissector modülü | 501 dosya |
 | Registry satırı | 2.528 protokol |
 | **Bir dissector'ın gerçekten ürettiği protokol** | **457** |
 | Sadece bildirilmiş (`Declared`) protokol | 2.071 |
-| Test (frontend, vitest) | **173 geçiyor** |
+| Test (frontend, vitest) | **174 geçiyor** |
 | Lint | ✅ `cargo clippy --workspace --all-targets -- -D warnings` temiz, `cargo fmt --check` temiz |
 
 ---
@@ -71,6 +71,11 @@ doc yorumlarında duruyor:
 | **Masaüstü "Play Audio":** RTP çözülmüyor, jitter'a göre modüle edilmiş bir osilatör çalıyordu; kullanıcı çağrıyı dinlediğini sanabilirdi | `views/voip.js`, `index.html` | "Play Synthesised Tone" olarak etiketlendi, dalga formu başlığı ve durum metni ne olduğunu açıkça söylüyor |
 | **Masaüstü "10 Exclusive Features":** 10 yetenekten **5'i mevcut değil** — Kerberos Golden/Silver Ticket tespiti, Modbus "Coil 47 Emergency Stop Motor 3" denetimi (silinen sahte veri modülünden birebir kopya), sertifika son kullanma uyarısı, tracker risk analizi, ETA | `views/siem.js` | Her yetenek `built`/`planned` olarak işaretlendi; olmayanlar "Not implemented" diyor ve kesikli çerçeveyle çiziliyor |
 | **Masaüstü karşılaştırma tablosu:** dissector sayısı `590` (eski), MITRE "Every event", ve hiçbir kod yolunun üretmediği "Narrative attack chain ✅" | `views/siem.js` | 457'ye düzeltildi, MITRE kapsamı "Alerts & SIEM export" oldu, narrative satırı kaldırıldı |
+| **Masaüstü CVE bulgusu:** Apache deseni `2\.4\.(4[0-9]\|50)` idi ama etiketi CVE-2021-41773 — o CVE yalnızca 2.4.49'u etkiler. Yakalamadaki her 2.4.4x sunucusu "uzaktan istismar edilebilir" diye raporlanıyordu | `app.js` | Tam eşleşmeye çevrildi ve iki ayrı CVE'ye ayrıldı (2.4.50 → CVE-2021-42013); eşleşmemesi gereken sürümler teste bağlandı |
+| **11 TCP portu gerçek HTTP ve TLS trafiğini yutuyordu** — 4841 (IANA `opcua-tls`), 6002 (X11 :2), 8001/8087/8090/8910 (alternatif HTTP) ve diğerleri; dissector'lar hiçbir şey doğrulamıyor ve tam port eşleşmesi tüm yapısal sezgileri geçiyor | `dissectors/tcp.rs` | `UNVERIFIED_VENDOR_PORTS` + `looks_like_http_message` / `looks_like_tls_record`; FANUC FOCAS (8193) ve OMRON FINS (9600) gerçek portlar olduğu için listede yok |
+| **3 UDP portu DTLS'i yutuyordu** — 2224 (CIP Safety aslında EtherNet/IP 2222 içinde), 5100 (PROFINET 34962-34964'te), 5500 (MECHATROLINK IP bile değil) | `dissectors/udp.rs` | Aynı koruma; `looks_like_dtls` artık port tablosundan önce çalışıyor |
+| **ICMP "Time Exceeded" kod baytını yok sayıyordu** — kod 1 parça birleştirme zaman aşımıdır, TTL bitmesi değil; ikisi de "Time-to-live exceeded" diye raporlanıyordu (RFC 792, RFC 4443 §3.3) | `dissectors/icmp.rs` | Kod ayrımı eklendi |
+| **ICMPv6 Router Advertisement, SLAAC prefix iddiasını bayt taramasıyla yapıyordu** — mesajın herhangi bir yerindeki `03 04` yetiyordu, örneğin router lifetime 0x0304 ise | `dissectors/icmp.rs` | RFC 4861 §4.2'ye göre opsiyon zinciri yürünüyor; yanlış pozitif üreten iki girdi teste bağlandı |
 
 ---
 
