@@ -1704,17 +1704,45 @@ fn build_pcapng_bytes(packets: &[Packet]) -> Result<Vec<u8>, String> {
     Ok(buf)
 }
 
+/// Whether the file name asks for pcapng rather than classic pcap.
+///
+/// A trailing `.enc` is stripped first, because the encrypted save reuses the
+/// capture extension underneath it. The two save paths used to test the name
+/// differently — `.pcapng` here, `.pcapng.enc` there — so saving an encrypted
+/// capture as `session.pcapng` wrote *classic pcap bytes* into a file named
+/// pcapng. Nothing complained: the encryption succeeded, the write succeeded,
+/// and the mismatch only surfaced later, in whatever tool opened the decrypted
+/// file and found the wrong magic.
+fn wants_pcapng(path: &str) -> bool {
+    let lower = path.to_lowercase();
+    lower
+        .strip_suffix(".enc")
+        .unwrap_or(&lower)
+        .ends_with(".pcapng")
+}
+
+/// Encode the buffered packets in the format `path` names.
+///
+/// Shared by the plain and encrypted saves so they cannot disagree about which
+/// format a name means.
+fn encode_capture(
+    packets: &[netscope_core::models::Packet],
+    path: &str,
+) -> Result<Vec<u8>, String> {
+    if packets.is_empty() {
+        return Err("No captured packets to save.".to_string());
+    }
+    if wants_pcapng(path) {
+        build_pcapng_bytes(packets)
+    } else {
+        Ok(build_pcap_bytes(packets))
+    }
+}
+
 #[tauri::command]
 fn save_pcap(state: State<'_, Mutex<CaptureState>>, path: String) -> Result<(), String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
-    if guard.packet_buffer.is_empty() {
-        return Err("No captured packets to save.".to_string());
-    }
-    let bytes = if path.to_lowercase().ends_with(".pcapng") {
-        build_pcapng_bytes(&guard.packet_buffer)?
-    } else {
-        build_pcap_bytes(&guard.packet_buffer)
-    };
+    let bytes = encode_capture(&guard.packet_buffer, &path)?;
     drop(guard);
     std::fs::write(&path, bytes).map_err(|e| format!("Failed to write '{path}': {e}"))
 }
@@ -1737,14 +1765,7 @@ fn save_pcap_encrypted(
         return Err("A passphrase is required to encrypt the capture.".to_string());
     }
     let guard = state.lock().map_err(|e| e.to_string())?;
-    if guard.packet_buffer.is_empty() {
-        return Err("No captured packets to save.".to_string());
-    }
-    let bytes = if path.to_lowercase().ends_with(".pcapng.enc") {
-        build_pcapng_bytes(&guard.packet_buffer)?
-    } else {
-        build_pcap_bytes(&guard.packet_buffer)
-    };
+    let bytes = encode_capture(&guard.packet_buffer, &path)?;
     drop(guard);
     let sealed = netscope_core::crypto::encrypt(&bytes, &passphrase)
         .map_err(|e| format!("Encryption failed: {e}"))?;
@@ -1930,11 +1951,11 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        arp_scan, block_ip, build_pcap_bytes, build_pcapng_bytes, english_name, get_alert_rules,
-        get_glossary, get_lessons, get_protocol_risk, is_elevated, list_blocked, list_interfaces,
-        list_plugins, notification_channels, protocol_count, protocol_table, replay_packet,
-        save_object, tls_keylog_clear, tls_keylog_load, tls_keylog_status, unblock_ip,
-        NotificationChannelInfo,
+        arp_scan, block_ip, build_pcap_bytes, build_pcapng_bytes, encode_capture, english_name,
+        get_alert_rules, get_glossary, get_lessons, get_protocol_risk, is_elevated, list_blocked,
+        list_interfaces, list_plugins, notification_channels, protocol_count, protocol_table,
+        replay_packet, save_object, tls_keylog_clear, tls_keylog_load, tls_keylog_status,
+        unblock_ip, wants_pcapng, NotificationChannelInfo,
     };
     use netscope_core::models::Packet;
     use std::io::{Read, Write};
@@ -2440,6 +2461,76 @@ mod tests {
                 iface.name
             );
         }
+    }
+
+    /// The file name decides the format, and both save paths must read it the
+    /// same way.
+    ///
+    /// They did not: `save_pcap` keyed on `.pcapng`, `save_pcap_encrypted` on
+    /// `.pcapng.enc`. Saving an encrypted capture as `session.pcapng` therefore
+    /// wrote classic pcap bytes under a pcapng name — a file that encrypts,
+    /// writes and decrypts without complaint, and is only found to be the wrong
+    /// format by whatever opens it afterwards.
+    #[test]
+    fn the_extension_picks_the_format_the_same_way_encrypted_or_not() {
+        for name in [
+            "session.pcapng",
+            "session.pcapng.enc",
+            "SESSION.PCAPNG",
+            "SESSION.PCAPNG.ENC",
+            "/tmp/a.b.c/session.pcapng.enc",
+        ] {
+            assert!(wants_pcapng(name), "{name} should be written as pcapng");
+        }
+        for name in [
+            "session.pcap",
+            "session.pcap.enc",
+            "session",
+            "pcapng.pcap",
+            "session.pcapng.gz",
+        ] {
+            assert!(!wants_pcapng(name), "{name} should be written as pcap");
+        }
+    }
+
+    /// The bytes must match the format the name promised, and an empty buffer
+    /// must be refused rather than written as a zero-packet file the user
+    /// mistakes for their capture.
+    #[test]
+    fn encode_capture_writes_the_format_the_name_promises() {
+        let packet = Packet {
+            timestamp: chrono::Utc::now(),
+            src_addr: None,
+            dst_addr: None,
+            src_port: None,
+            dst_port: None,
+            protocol: netscope_core::models::Protocol::Tcp,
+            length: 4,
+            summary: "test".into(),
+            data: b"ping"[..].into(),
+            llm: None,
+        };
+
+        let pcapng = encode_capture(std::slice::from_ref(&packet), "session.pcapng.enc").unwrap();
+        assert_eq!(
+            &pcapng[..4],
+            &[0x0A, 0x0D, 0x0D, 0x0A],
+            "an encrypted .pcapng must still be pcapng underneath"
+        );
+
+        let pcap = encode_capture(std::slice::from_ref(&packet), "session.pcap.enc").unwrap();
+        assert_eq!(
+            &pcap[..4],
+            &[0xD4, 0xC3, 0xB2, 0xA1],
+            "a .pcap must be classic pcap"
+        );
+
+        let err = encode_capture(&[], "session.pcap")
+            .expect_err("an empty buffer is nothing to save, not an empty file");
+        assert!(
+            err.contains("No captured packets"),
+            "unexpected error: {err}"
+        );
     }
 
     /// Scanning an interface that does not exist must fail, not answer.

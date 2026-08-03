@@ -11,7 +11,7 @@
 | Ölçüm | Değer |
 |---|---|
 | Rust kaynak dosyası | 659 (6 crate) |
-| Test (Rust, tüm workspace) | **2.466 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Test (Rust, tüm workspace) | **2.468 geçiyor, 0 başarısız, 4 `#[ignore]`** |
 | Dissector modülü | 501 dosya |
 | Registry satırı | 2.528 protokol |
 | **Bir dissector'ın gerçekten ürettiği protokol** | **458** |
@@ -29,7 +29,7 @@
 | **netscope-wasm** | ✅ Hazır | 1 | Filter modülü, wasm32-unknown-unknown |
 | **netscope-server** | ✅ Derleniyor | 27 | gRPC + REST API (TLS/mTLS), SOAR, RBAC, migrations |
 | **netscope-agent** | ✅ Hazır | 20 | Sensor agent, heartbeat, imzalı upgrade, WebSocket, remote config |
-| **netscope-desktop** | ✅ Hazır | 24 | Tauri v2, 39 komut (18'i testlerden çağrılıyor) |
+| **netscope-desktop** | ✅ Hazır | 26 | Tauri v2, 39 komut (18'i testlerden çağrılıyor; kalanların mantığı saf fonksiyonlara çıkarılıyor) |
 
 ---
 

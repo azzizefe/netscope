@@ -30,6 +30,7 @@ doğrulanmalı.
 | **Durdurma koşulları** (`capture.rs`) | Paket/bayt limiti (stream ile), yapılandırma reddi | Süre limiti gerçek zamanlı canlı yakalamada |
 | **Arayüz sayımı** (`list_interfaces`) | Dönen her satırın biçimi: boş olmayan ad, bilinen `kind`, tekrarsız isim | **Gerçek bir adaptörün listelenmesi** — sürücüsüz makinede liste boş döner, bu meşru bir sonuç |
 | **Desktop komutları** | — | `start_remote_capture`, USBPcap seçimi, `capture-stopped` olayı (UI render + payload eşleme) |
+| **`AppHandle` alan komutlar** | Çıkardıkları saf mantık (ör. `encode_capture`, `wants_pcapng`) | `start_capture`, `open_pcap`, `open_pcap_encrypted`, `open_new_window`, `open_detached_window`, `relaunch_elevated` — **pencere açıyor, olay yayınlıyor ya da süreci yükseltilmiş yetkiyle yeniden başlatıyorlar.** Bunlara birim testi yazmak için Tauri runtime'ı ayağa kaldırmak gerekir; sarmalayıcıyı çağırıp "geçti" demek kapsam sayısını artırır, güvence vermez. |
 
 `usbpcap_cmd_path` / `usbpcap_interfaces` yalnızca Windows'ta ve USBPcap kurulu
 olduğunda anlamlı sonuç döndürür; kurulu değilse boş liste — bu fallback test
