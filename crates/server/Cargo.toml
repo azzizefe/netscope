@@ -28,7 +28,7 @@ http = "1"
 # gRPC. `prost` and `tonic-prost` have no mention in this crate's sources on
 # purpose — `grpc/proto.rs` is one `tonic::include_proto!`, and the code that
 # expands there is what refers to them.
-tonic = { version = "0.14", features = ["transport", "channel", "server", "tls-webpki-roots"] }
+tonic = { version = "0.14", features = ["transport", "channel", "server", "tls-ring", "tls-webpki-roots"] }
 tonic-prost = "0.14"
 prost = "0.14"
 

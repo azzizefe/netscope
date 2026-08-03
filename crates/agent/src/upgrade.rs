@@ -316,6 +316,70 @@ mod tests {
         assert!(verify_signature_with(Some(SAMPLE_PUBKEY), b"payload", Some("")).is_err());
     }
 
+    /// A binary signed by the key the agent carries is accepted.
+    ///
+    /// Every other test here asserts a refusal, which means all of them would
+    /// still pass if `verify_signature_with` were replaced with an
+    /// unconditional `Err`. A verifier that rejects everything is not a
+    /// verifier — it is a broken upgrade path that looks safe. This is the one
+    /// test that fails in that case, and it needs the secret half of a keypair,
+    /// so it generates its own rather than shipping one.
+    #[test]
+    fn a_binary_signed_by_the_built_in_key_is_accepted() {
+        let binary = b"the new agent binary, byte for byte";
+
+        let keypair = minisign::KeyPair::generate_unencrypted_keypair()
+            .expect("generating a throwaway signing keypair");
+        let signature = minisign::sign(
+            None,
+            &keypair.sk,
+            &mut std::io::Cursor::new(&binary[..]),
+            None,
+            None,
+        )
+        .expect("signing the test payload")
+        .to_string();
+
+        // `PublicKeyBox`'s text form is the two-line file minisign writes; the
+        // agent is built with the single base64 line from it.
+        let pubkey_box = keypair.pk.to_box().expect("public key box").to_string();
+        let pubkey = pubkey_box
+            .lines()
+            .nth(1)
+            .expect("a minisign public key file is a comment line then the key");
+
+        verify_signature_with(Some(pubkey), binary, Some(&signature))
+            .expect("a binary signed by the built-in key must be accepted");
+    }
+
+    /// The same signature over different bytes does not verify.
+    ///
+    /// Pins that the check is over the payload, not merely that a well-formed
+    /// signature was present — which is what a "the signature parsed, good
+    /// enough" implementation would do.
+    #[test]
+    fn a_signature_does_not_carry_over_to_a_different_binary() {
+        let keypair = minisign::KeyPair::generate_unencrypted_keypair().unwrap();
+        let signature = minisign::sign(
+            None,
+            &keypair.sk,
+            &mut std::io::Cursor::new(&b"the binary that was signed"[..]),
+            None,
+            None,
+        )
+        .unwrap()
+        .to_string();
+        let pubkey_box = keypair.pk.to_box().unwrap().to_string();
+        let pubkey = pubkey_box.lines().nth(1).unwrap();
+
+        verify_signature_with(
+            Some(pubkey),
+            b"a different binary entirely",
+            Some(&signature),
+        )
+        .expect_err("a signature over other bytes must not authorise this download");
+    }
+
     /// Version order, not string order. `"0.10.0" > "0.9.0"` is false as
     /// strings, so a sensor on 0.9.0 was never offered 0.10.0.
     #[test]

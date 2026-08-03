@@ -49,3 +49,12 @@ default = []
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+# The signing half of `minisign-verify`, for tests only. Every test of
+# `upgrade::verify_signature_with` asserted a *refusal*, so the function could
+# have been `Err(..)` unconditionally and the suite would still have been green
+# — nothing proved a genuinely signed binary is accepted. Generating a keypair
+# in the test is the only way to hold the secret half; the release key's secret
+# half is not in this repo and must never be.
+minisign = "0.9"

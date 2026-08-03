@@ -11,7 +11,7 @@
 | Ölçüm | Değer |
 |---|---|
 | Rust kaynak dosyası | 659 (6 crate) |
-| Test (Rust, tüm workspace) | **2.462 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Test (Rust, tüm workspace) | **2.466 geçiyor, 0 başarısız, 4 `#[ignore]`** |
 | Dissector modülü | 501 dosya |
 | Registry satırı | 2.528 protokol |
 | **Bir dissector'ın gerçekten ürettiği protokol** | **458** |
@@ -27,8 +27,8 @@
 | **netscope-core** | ✅ Hazır | 2.330 (+4 ignore) | Capture engine, dissectors, alerting, SIEM, stats, expert system, education |
 | **netscope-tui** | ✅ Hazır | 44 | 7 görünüm (packet list, tree, hex, stats, dashboard, vs.) |
 | **netscope-wasm** | ✅ Hazır | 1 | Filter modülü, wasm32-unknown-unknown |
-| **netscope-server** | ✅ Derleniyor | 25 | gRPC + REST API, SOAR, RBAC, migrations |
-| **netscope-agent** | ✅ Hazır | 18 | Sensor agent, heartbeat, upgrade, WebSocket, remote config |
+| **netscope-server** | ✅ Derleniyor | 27 | gRPC + REST API (TLS/mTLS), SOAR, RBAC, migrations |
+| **netscope-agent** | ✅ Hazır | 20 | Sensor agent, heartbeat, imzalı upgrade, WebSocket, remote config |
 | **netscope-desktop** | ✅ Hazır | 24 | Tauri v2, 39 komut (18'i testlerden çağrılıyor) |
 
 ---
@@ -65,8 +65,8 @@ doc yorumlarında duruyor:
 
 Sıra ve gerekçe için [`%100.md`](%100.md):
 
-1. **CI yeşillendirme** (`libpcap-dev`, `protobuf-compiler`, wasm adımı) — Adım 5
-2. **Fleet güvenliği**: Ed25519 güncelleme doğrulaması + gRPC mTLS — Adım 6
+1. ~~CI yeşillendirme — Adım 5~~ ✅ **2026-08-03** (zaten yapılmıştı; clippy'nin `--all-targets` boşluğu kapatıldı)
+2. ~~Fleet güvenliği — Adım 6~~ ✅ **2026-08-03** (gRPC TLS/mTLS eklendi, imza doğrulamanın pozitif yolu teste bağlandı)
 3. **macOS universal binary + notarization** — Adım 3
 4. **Kalan 21 Tauri komut testi** — Adım 4
 5. **Web sitesi (Astro) + WASM demo + auto-update** — Adım 7

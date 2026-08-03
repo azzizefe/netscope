@@ -56,12 +56,17 @@ jobs:
       # red run is unreadable to exactly the people who would fix it —
       # contributors, and anyone triaging from a fork's PR. The step summary is
       # public, and readable over the API as `check-runs/{id}` → `output`.
+      # `--all-targets` so tests and benches are linted too, not just the
+      # library. Without it clippy sees only the `--lib`/`--bin` targets, and
+      # test code — which is where this repo's correctness guards live — was
+      # never checked at all. A lint error inside a `#[cfg(test)]` module
+      # passed CI and only appeared on a contributor's machine.
       - name: Clippy (all workspace crates except desktop)
         id: clippy
         shell: bash
         run: |
           set -o pipefail
-          cargo clippy --workspace --exclude netscope-desktop -- -D warnings 2>&1 | tee clippy.log
+          cargo clippy --workspace --exclude netscope-desktop --all-targets -- -D warnings 2>&1 | tee clippy.log
 
       - name: Publish clippy failure to the job summary
         if: failure() && steps.clippy.outcome == 'failure'
