@@ -2826,13 +2826,44 @@ pub(crate) mod robustness {
                 }
             }
         }
-        // The range-dispatched protocols, which have no single port to scrape.
-        ports.extend(6881..=6889);
-        ports.extend(6000..=6005);
-        ports.extend(30490..=30510);
+        // Range-dispatched protocols have no single port to scrape, so scrape
+        // the range instead. This used to be three hardcoded ranges — SOME/IP,
+        // plus BitTorrent 6881-6889 and X11 6000-6005, neither of which the
+        // dispatch has ever had. Hardcoding meant a new range would be swept by
+        // nobody until someone noticed, which is the same failure the `on(N)`
+        // scrape above exists to avoid.
+        ports.extend(dispatched_ranges().into_iter().flatten());
         ports.sort_unstable();
         ports.dedup();
         ports
+    }
+
+    /// The `in_range(A..=B)` arms in the transport dispatches.
+    ///
+    /// Guarded by [`dispatched_ranges_are_found`], so a rename or a change of
+    /// shape fails loudly instead of quietly returning nothing — a scraper that
+    /// finds zero ranges would leave those ports unswept and every test still
+    /// green.
+    fn dispatched_ranges() -> Vec<std::ops::RangeInclusive<u16>> {
+        let mut ranges = Vec::new();
+        for src in [
+            include_str!("dissectors/tcp.rs"),
+            include_str!("dissectors/udp.rs"),
+        ] {
+            let mut rest = src;
+            while let Some(i) = rest.find("in_range(") {
+                rest = &rest[i + "in_range(".len()..];
+                let Some(j) = rest.find(')') else { continue };
+                let arg = &rest[..j];
+                let Some((lo, hi)) = arg.split_once("..=") else {
+                    continue;
+                };
+                if let (Ok(lo), Ok(hi)) = (lo.trim().parse::<u16>(), hi.trim().parse::<u16>()) {
+                    ranges.push(lo..=hi);
+                }
+            }
+        }
+        ranges
     }
 
     /// No dissector should re-implement the shared line reader.
@@ -3204,6 +3235,176 @@ pub(crate) mod robustness {
         unreachable
     }
 
+    /// The dissector modules that reach no dispatch, pinned so the number can
+    /// only go down.
+    ///
+    /// This list is the backlog [`every_dissector_module_is_reachable`] used to
+    /// carry behind an `#[ignore]`. Ignored, it protected nothing: a module
+    /// added with no way to reach it slipped in unnoticed, which is how the
+    /// count went 140 -> 145 once without anyone deciding it should. Pinned, the
+    /// guard fails both ways — a new unreachable module is a red build, and so
+    /// is wiring one up without striking it off here, which is the failure you
+    /// want.
+    ///
+    /// **Do not add a module here to make a build green.** The entry is a
+    /// statement that nothing can reach it *and that is a known gap*, not that
+    /// it is fine. `HELPER_MODULES` is the list for modules that are
+    /// deliberately not reached; the two mean opposite things.
+    ///
+    /// Almost every entry has the same cause: no signature. They read fixed
+    /// offsets and validate nothing, so they can only be reached from a port or
+    /// a parent discriminator, and for the game, anti-cheat and AI-infra ones no
+    /// such key exists — those protocols negotiate ports at runtime and their
+    /// wire formats are not public. Binding one to a guessed port relabels
+    /// unrelated traffic; that has happened four times in this repo. Getting a
+    /// module off this list needs a capture or a spec.
+    const UNREACHABLE_BACKLOG: &[&str] = &[
+        "abb_robot_web_service",
+        "anthropic_tool_use_bridge",
+        "apex_legends_netprop",
+        "as_interface",
+        "azure_aoai_stream",
+        "battleye_packet_filter",
+        "beckhoff_twincat_analytics",
+        "beckhoff_xplanar_mover",
+        "bosch_rexroth_open_core",
+        "cip_safety_rockwell",
+        "control_logix_backplane",
+        "cryengine_net_channel",
+        "cxl_cache_protocol",
+        "cxl_io_protocol",
+        "cxl_memory_protocol",
+        "darkrift2_netcode",
+        "deepseek_stream",
+        "deepspark_glootcp",
+        "denuvo_anti_tamper_net",
+        "df1_full_duplex_ext",
+        "easy_anti_cheat_stream",
+        "edge_pytorch_mobile",
+        "epic_dtls_p2p",
+        "epic_online_voice",
+        "esea_client_anti_cheat",
+        "esl_wire_proto",
+        "ether_net_ip_rockwell",
+        "ethercat_safety_beckhoff",
+        "faceit_server_plugin",
+        "fishnet_teleport",
+        "fortnite_replay_stream",
+        "fsdp_shard_state",
+        "fsoe",
+        "godot_enet",
+        "godot_rpc_mp",
+        "godot_websocket_mp",
+        "google_aistudio_ws",
+        "google_gemini_stream",
+        "gpu_direct_rdma",
+        "gpu_direct_storage",
+        "groq_lpcu_stream",
+        "guard_i_o_safety",
+        "horizon_worlds_sync",
+        "horovod_elastic",
+        "infiniband_ipoib_enhanced",
+        "infiniband_rdmacm_v2",
+        "iolink",
+        "jax_pjit_sharding",
+        "keyence_kv_ethernet",
+        "kuka_robot_sensor_interface",
+        "liteserve_grpc",
+        "luna_stream_proto",
+        "megatron_pipeline_flush",
+        "megatron_tp_overlap",
+        "milvus_proxy_grpc",
+        "milvus_sealed_seg_stream",
+        "mirror_transport_fallback",
+        "mistral_chat_stream",
+        "nccl_allgather",
+        "nccl_allreduce",
+        "nccl_broadcast",
+        "nvidia_gfn_ctrl",
+        "nvidia_gfn_stream",
+        "nvlink_c2c",
+        "nvlink_fabric",
+        "nvswitch_telemetry",
+        "nxp_eiq_inference",
+        "o3de_aznetworking",
+        "opc_ua_alarm_shell",
+        "opc_ua_history_read_detail",
+        "opc_ua_mqtt_json_network",
+        "opc_ua_pubsub_json_detail",
+        "opc_ua_pubsub_uadp_detail",
+        "opc_ua_secure_conversation",
+        "openai_batch_api",
+        "openai_realtime",
+        "overwatch2_state_sync",
+        "pccc_extended",
+        "phaser_heroiclabs",
+        "photon_bolt_internal",
+        "photon_realtime_v5",
+        "pinecone_collection_stream",
+        "pinecone_grpc_index",
+        "playfab_multiplayer_v2",
+        "playfab_party",
+        "powerflex_drive_cip",
+        "profibus_dp_siemens",
+        "profidrive",
+        "ps_remote_play_v3",
+        "psn_rtc_signaling",
+        "pubg_net_field_array",
+        "pytorch_rpc_framework",
+        "qdrant_quantization_sync",
+        "qdrant_raft_log",
+        "rainbow6_siege_netvoice",
+        "recroom_room_server",
+        "riot_vanguard_net",
+        "roblox_physics_replicator",
+        "roblox_voice_internal",
+        "rockwell_factorytalk_edge",
+        "scalance_x_ring",
+        "secondlife_lludp",
+        "sglang_radix_cache",
+        "siemens_industrial_5g",
+        "siemens_l2_telegram",
+        "siemens_opc_ua_model",
+        "sinamics_drive_profile",
+        "source2_netmessage",
+        "source2_svcmsg",
+        "spatial_io_webxr_sync",
+        "stadia_controller_wifi",
+        "steam_game_networking_s2",
+        "steam_link_transport",
+        "steam_remote_play_together",
+        "steam_sdr_relay_v3",
+        "stm_stm32cube_ai",
+        "stratix_switch_telemetry",
+        "tgi_messages",
+        "triton_inference_grpc",
+        "triton_model_repo_stream",
+        "twincat_ads_detail",
+        "twincat_router_telemetry",
+        "ucx_transport",
+        "unity_entities_netcode",
+        "unity_ngo",
+        "unity_relay",
+        "unity_transport",
+        "unreal_iris",
+        "unreal_iris_fast_array",
+        "unreal_net_driver_v2",
+        "unreal_replication_graph",
+        "valorant_fog_of_war",
+        "valorant_net_var",
+        "vllm_async_engine",
+        "vrchat_ik_sync",
+        "vrchat_udon_net",
+        "warzone_netcode_rigid",
+        "weaviate_graphql_grpc",
+        "weaviate_hnsw_replication",
+        "xbox_live_mpsd",
+        "xbox_reliable_udp",
+        "xcloud_fragment",
+        "xcloud_input_pipe",
+        "yaskawa_memobus_tcp_detail",
+    ];
+
     /// Every dissector module must be reachable from the dispatch.
     ///
     /// A dissector nothing calls is worse than no dissector: it compiles, its
@@ -3219,12 +3420,14 @@ pub(crate) mod robustness {
     /// If this fails: wire the module into the dispatch, or, if its parent
     /// builds the result, drop its entry point and add it to [`HELPER_MODULES`].
     ///
-    /// `#[ignore]`d because 144 modules still fail it (2026-08-03), so it
-    /// tracks a backlog rather than gating CI:
-    ///
-    /// ```text
-    /// cargo test -p netscope-core --lib every_dissector_module_is_reachable -- --ignored
-    /// ```
+    /// It used to be `#[ignore]`d, because 144 modules fail the "everything is
+    /// reachable" version of the question. That made it a guard nobody ran, and
+    /// an unrun guard is how the count silently went 140 → 145 once, and how
+    /// the whole check was neutered twice (below). The backlog now lives in
+    /// [`UNREACHABLE_BACKLOG`] and this asserts the set *equals* it, so the test
+    /// runs on every `cargo test` and fails in both directions: a new
+    /// unreachable module is red, and so is one that became reachable without
+    /// being struck off the list.
     ///
     /// **Do not empty that backlog by listing the modules in
     /// [`HELPER_MODULES`].** That list means "deliberately not reached" — a
@@ -3247,12 +3450,24 @@ pub(crate) mod robustness {
     /// registered port or a real signature, which in turn needs a capture or a
     /// spec.
     #[test]
-    #[ignore]
     fn every_dissector_module_is_reachable() {
         let unreachable = unreachable_modules();
+        let known: Vec<String> = UNREACHABLE_BACKLOG.iter().map(|s| s.to_string()).collect();
+
+        let newly_unreachable: Vec<&String> =
+            unreachable.iter().filter(|m| !known.contains(m)).collect();
         assert!(
-            unreachable.is_empty(),
-            "these dissectors are never reached from the dispatch: {unreachable:?}"
+            newly_unreachable.is_empty(),
+            "these dissectors are new and reach no dispatch — wire them, or add \
+             them to UNREACHABLE_BACKLOG with a reason: {newly_unreachable:?}"
+        );
+
+        let now_reachable: Vec<&String> =
+            known.iter().filter(|m| !unreachable.contains(m)).collect();
+        assert!(
+            now_reachable.is_empty(),
+            "these are reachable now — delete them from UNREACHABLE_BACKLOG so \
+             the count keeps falling: {now_reachable:?}"
         );
     }
 
@@ -3404,20 +3619,106 @@ pub(crate) mod robustness {
         }
     }
 
-    /// The exhaustive version: every one of the 65536 ports, which also covers
-    /// the structural (portless) dissectors that can claim traffic on any port.
-    /// Ignored because it is ~5 minutes; the run that introduced this module
-    /// passed it clean over 9.5M dissect calls.
-    ///
-    ///   cargo test --release dissectors::robustness::every_port -- --ignored
+    /// Guards the range scraper, the way `dispatched_ports_are_found` guards
+    /// the `on(N)` one: a scraper that silently finds nothing leaves those
+    /// ports unswept while every test stays green.
     #[test]
-    #[ignore = "exhaustive: ~5 minutes, run on demand"]
-    fn every_port_never_panics_on_malformed_input() {
-        let bodies = malformed_payloads();
+    fn dispatched_ranges_are_found() {
+        let ranges = dispatched_ranges();
+        assert!(
+            !ranges.is_empty(),
+            "no `in_range(A..=B)` arms found — has the dispatch shape changed?"
+        );
+        // SOME/IP is the one range the dispatch actually has; the other two
+        // this list used to carry were never implemented.
+        assert!(
+            ranges.iter().any(|r| r.contains(&30_500)),
+            "the SOME/IP range 30490-30510 is missing from the sweep: {ranges:?}"
+        );
+    }
+
+    /// Every port outside [`dispatched_ports`] really is an ordinary
+    /// fall-through.
+    ///
+    /// This is the assumption that lets the sweeps below skip 65,000 ports
+    /// without losing coverage, so it is asserted rather than believed. A port
+    /// the tables do not answer for reaches the structural sniffs and nothing
+    /// else, which means one such port exercises the same code as all of them.
+    ///
+    /// Both directions are checked because `bindings::tcp` matches the source
+    /// port as well as the destination — the detail behind three of this
+    /// repo's mislabelling bugs.
+    ///
+    /// Sixty-five thousand binary searches, so it costs milliseconds.
+    #[test]
+    fn every_undispatched_port_really_is_a_fall_through() {
+        let dispatched: std::collections::HashSet<u16> = dispatched_ports().into_iter().collect();
+        const OTHER: u16 = 40_000;
+
+        let mut bound_but_unswept = Vec::new();
         for port in 0u16..=u16::MAX {
+            if dispatched.contains(&port) {
+                continue;
+            }
+            if super::bindings::tcp(port, OTHER).is_some()
+                || super::bindings::tcp(OTHER, port).is_some()
+                || super::bindings::udp(port, OTHER).is_some()
+                || super::bindings::udp(OTHER, port).is_some()
+            {
+                bound_but_unswept.push(port);
+            }
+        }
+        assert!(
+            bound_but_unswept.is_empty(),
+            "these ports have a binding but are not in dispatched_ports(), so \
+             the malformed-input sweeps never reach them: {bound_but_unswept:?}"
+        );
+    }
+
+    /// The structural fall-through — the portless sniffs that run when no
+    /// binding answers — must not panic on malformed input either.
+    ///
+    /// This replaces `every_port_never_panics_on_malformed_input`, a loop over
+    /// all 65,536 ports that made 9.6M dissect calls and took ten minutes in
+    /// debug. It was `#[ignore]`d for that, so it protected nothing between the
+    /// rare occasions somebody remembered it.
+    ///
+    /// Almost all of that work was the same work repeated: 65,000 of those
+    /// ports have no binding, so each one ran the identical fall-through.
+    /// [`Self::every_undispatched_port_really_is_a_fall_through`] proves that,
+    /// [`Self::dispatched_ports_never_panic_on_malformed_input`] covers the
+    /// ports that *are* bound, and this covers the path everything else takes.
+    ///
+    /// The sample is not arbitrary: it includes both neighbours of every
+    /// dispatched port, because an off-by-one in a range or a table is the way
+    /// a port stops being a fall-through, and it is exactly the case a spread
+    /// of round numbers would miss.
+    #[test]
+    fn the_structural_fall_through_never_panics_on_malformed_input() {
+        let dispatched: std::collections::HashSet<u16> = dispatched_ports().into_iter().collect();
+
+        let mut sample: Vec<u16> = Vec::new();
+        for &p in &dispatched {
+            sample.extend([p.saturating_sub(1), p.saturating_add(1)]);
+        }
+        sample.extend((0..=u16::MAX).step_by(701));
+        sample.extend([0, 1, u16::MAX - 1, u16::MAX]);
+        sample.retain(|p| !dispatched.contains(p));
+        sample.sort_unstable();
+        sample.dedup();
+        assert!(
+            sample.len() > 300,
+            "the fall-through sample collapsed to {} ports",
+            sample.len()
+        );
+
+        let bodies = malformed_payloads();
+        for port in sample {
             for body in &bodies {
                 let _ = dissect_udp(ip(), ip(), &udp_pkt(40000, port, body));
                 let _ = dissect_tcp(ip(), ip(), &tcp_pkt(40000, port, body));
+                let _ = dissect_udp(ip(), ip(), &udp_pkt(port, 40000, body));
+                let _ = dissect_tcp(ip(), ip(), &tcp_pkt(port, 40000, body));
             }
         }
     }

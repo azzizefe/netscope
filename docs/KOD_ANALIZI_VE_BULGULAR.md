@@ -292,7 +292,15 @@ Mevcut tablo temiz (44818, 47808, 51820, 64738 — hepsi kayıtlı atama), yani 
 
 **Konum:** `dissectors.rs:4741-4751`
 
-`every_port_never_panics_on_malformed_input` (65.536 port × bozuk payload) `#[ignore]` — gerekçesi meşru (~5 dakika) ve talep üzerine çalıştırma komutu belgelenmiş. Ancak CI'da hiç çalışmadığı için, dar kapsamlı sürümün kaçırdığı bir panik regresyonu fark edilmez. Nightly bir işte çalıştırılması önerilir.
+`every_port_never_panics_on_malformed_input` (65.536 port × bozuk payload) `#[ignore]` idi — gerekçesi meşru (~5 dakika; debug'da ölçüldü: **589 saniye, 9,57 milyon dissect çağrısı**) ama sonuç aynıydı: CI'da hiç çalışmıyordu.
+
+**Çözüldü (2026-08-03).** Nightly bir işe taşımak yerine testin neden yavaş olduğuna bakıldı: 65.536 portun ~65.336'sının hiçbir bağlaması yok ve **hepsi aynı fall-through yolunu** izliyor, yani işin neredeyse tamamı aynı işin tekrarıydı. Yerine üç şey geçti:
+
+- `every_undispatched_port_really_is_a_fall_through` — eşdeğerliği *varsaymak yerine kanıtlıyor*: `dispatched_ports()` dışındaki hiçbir portun bağlaması olmadığını 65 bin ikili aramayla doğruluyor (milisaniyeler).
+- `the_structural_fall_through_never_panics_on_malformed_input` — portsuz yapısal sezgileri, her dispatch edilen portun **iki komşusu** dahil bir örneklemle süpürüyor (aralık/tablo off-by-one'ları tam da burada saklanır).
+- `dispatched_ranges_are_found` — aralıklar artık kaynaktan kazınıyor (`in_range(A..=B)`), elle yazılmak yerine; scraper sessizce boş dönerse test kırmızıya döner.
+
+Süre 589 s → 0,37 s. Kapsam aynı, üstelik yeni bir aralık eklendiğinde otomatik olarak süpürülüyor.
 
 ### M-5 — Unix güvenlik duvarı backend'leri stub
 

@@ -12,8 +12,12 @@ cargo test -p netscope-core
 # Sadece tek bir test
 cargo test -p netscope-core --lib filter::tests::test_filter_tcp_port
 
-# Ignored testler (yavaş/özellik testleri)
-cargo test -p netscope-core -- --ignored
+# Ignored test yok — 2026-08-03'ten beri sıfır.
+# Dördü de kaldırıldı, çünkü ignore edilen bir test kimse için çalışmaz ve bu
+# depoda tam olarak bu yüzden iki koruma sessizce devre dışı kaldı:
+#   * iki throughput testi criterion bench'lerine taşındı (`cargo bench`),
+#   * erişilebilirlik backlog'u `UNREACHABLE_BACKLOG` ile sabitlendi,
+#   * 65.536 portluk sweep, eşdeğerliği kanıtlanmış bir örneklemle değiştirildi.
 
 # Benchmark
 cargo bench -p netscope-core --bench parse_throughput -- --quick

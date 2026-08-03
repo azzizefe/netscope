@@ -11,7 +11,7 @@
 | Ölçüm | Değer |
 |---|---|
 | Rust kaynak dosyası | 659 (6 crate) |
-| Test (Rust, tüm workspace) | **2.469 geçiyor, 0 başarısız, 4 `#[ignore]`** |
+| Test (Rust, tüm workspace) | **2.474 geçiyor, 0 başarısız, 0 `#[ignore]`** |
 | Dissector modülü | 501 dosya |
 | Registry satırı | 2.528 protokol |
 | **Bir dissector'ın gerçekten ürettiği protokol** | **457** |
@@ -25,7 +25,7 @@
 
 | Bileşen | Durum | Test | Detay |
 |---|---|---|---|
-| **netscope-core** | ✅ Hazır | 2.330 (+4 ignore) | Capture engine, dissectors, alerting, SIEM, stats, expert system, education |
+| **netscope-core** | ✅ Hazır | 2.332 | Capture engine, dissectors, alerting, SIEM, stats, expert system, education |
 | **netscope-tui** | ✅ Hazır | 44 | 7 görünüm (packet list, tree, hex, stats, dashboard, vs.) |
 | **netscope-wasm** | ✅ Hazır | 1 | Filter modülü, wasm32-unknown-unknown |
 | **netscope-server** | ✅ Derleniyor | 27 | gRPC + REST API (TLS/mTLS), SOAR, RBAC, migrations |
@@ -38,7 +38,7 @@
 
 | # | Sorun | Etki | Detay |
 |---|---|---|---|
-| 🟠 1 | 144 dissector modülü dispatch'ten erişilemez | Bu protokoller hiçbir pakette görünmez | `every_dissector_module_is_reachable` (`--ignored`) listeliyor. Neredeyse hepsinin **imzası yok**: sabit ofset okuyup hiçbir şey doğrulamıyorlar. Port uydurarak bağlamayın — bu depoda dört kez gerçek hataya dönüştü. |
+| 🟠 1 | 144 dissector modülü dispatch'ten erişilemez | Bu protokoller hiçbir pakette görünmez | Liste `UNREACHABLE_BACKLOG`'da sabitlendi ve `every_dissector_module_is_reachable` artık **ignore'suz**: yeni bir erişilemez modül de, listeden silinmeden bağlanan bir modül de derlemeyi kırar. Yani sayı yalnızca düşebilir. Neredeyse hepsinin **imzası yok**: sabit ofset okuyup hiçbir şey doğrulamıyorlar. Port uydurarak bağlamayın — bu depoda dört kez gerçek hataya dönüştü. |
 | 🟠 2 | 2.071 protokol registry'de ama üretilmiyor | Ders içerikleri var, filtre/renk yok | Bunlar `Declared` olarak işaretli ve **kasıtlı olarak** filtre listesinden, Learn sekmesinden ve protokol sayısından dışarıda tutuluyor — yani kullanıcıya yalan söylemiyorlar. Kapatmanın tek yolu dissector yazmak. |
 
 ---
