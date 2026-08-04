@@ -98,28 +98,46 @@ impl Database {
             // First run only: create the three RBAC accounts with RANDOM
             // passwords, hashed with Argon2id, and print them once. No fixed
             // credentials are compiled into the binary or committed to the repo.
+            //
+            // The count above is a fast path, not a guard — hashing three
+            // passwords with Argon2id is not free, and reading it does not stop
+            // a second opener reaching the same conclusion before this one has
+            // written anything. Two `ApiServer::new` calls in parallel tests did
+            // exactly that on a fresh database, and the loser died on
+            // `UNIQUE constraint failed: users.username`. `OR IGNORE` makes the
+            // insert decide, so whoever gets there second simply finds the row
+            // already present.
             let creds = [
                 ("admin", "Admin", random_password()),
                 ("analyst", "Analyst", random_password()),
                 ("viewer", "Viewer", random_password()),
             ];
+            let mut created = Vec::new();
             for (username, role, password) in &creds {
                 let hash = crate::crypto::hash_password(password).map_err(to_db_err)?;
-                self.conn.execute(
-                    "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                let rows = self.conn.execute(
+                    "INSERT OR IGNORE INTO users (username, password_hash, role) VALUES (?, ?, ?)",
                     params![username, hash, role],
                 )?;
+                // Only a row this call actually wrote has the password below.
+                // Printing the rest would hand out credentials that were never
+                // stored — the other opener's random ones are in the table.
+                if rows == 1 {
+                    created.push(format!("  {username:<8} {password}"));
+                }
             }
 
-            eprintln!(
-                "\n=== netscope: first-run account setup ===\n\
-                 Generated random passwords for the optional local REST API accounts.\n\
-                 They are shown ONCE and are not recoverable — save the ones you need\n\
-                 (the API is off by default and binds to 127.0.0.1 only):\n\n  \
-                 admin    {}\n  analyst  {}\n  viewer   {}\n\
-                 =========================================\n",
-                creds[0].2, creds[1].2, creds[2].2,
-            );
+            if !created.is_empty() {
+                eprintln!(
+                    "\n=== netscope: first-run account setup ===\n\
+                     Generated random passwords for the optional local REST API accounts.\n\
+                     They are shown ONCE and are not recoverable — save the ones you need\n\
+                     (the API is off by default and binds to 127.0.0.1 only):\n\n\
+                     {}\n\
+                     =========================================\n",
+                    created.join("\n"),
+                );
+            }
         }
         Ok(())
     }
