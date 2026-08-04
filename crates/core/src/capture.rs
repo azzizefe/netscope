@@ -829,7 +829,21 @@ impl CaptureEngine {
 
         // Detect format (ROADMAP §2.2 / §2.5 support for other formats)
         let format = crate::formats::detect(filepath).ok();
-        let is_native = format.is_some_and(|f| f.is_native_pcap());
+
+        // Two readers can open a pcap: libpcap below, and the workspace's own
+        // `RecordReader` further down — which is what every other format
+        // already uses, and which reads pcap and pcapng through the same pure
+        // Rust parser. Measured over `fixtures/*.pcap`, the two agree on packet
+        // count, byte total, linktype and timestamps for every file, so this is
+        // a choice rather than a compromise.
+        //
+        // libpcap is kept for exactly one thing it still does better: compiling
+        // a BPF expression. So a filtered read goes through it, and an
+        // unfiltered one does not — which is what stops reading a capture file
+        // from requiring Npcap on Windows. `wpcap.dll` is a separate download
+        // there, so a machine without it could not open a file it had every
+        // means to parse. CI's Windows runner is one such machine.
+        let is_native = format.is_some_and(|f| f.is_native_pcap()) && bpf_filter.is_some();
 
         if is_native {
             require_packet_library()?;
