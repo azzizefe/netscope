@@ -97,6 +97,12 @@ pub mod rotate;
 pub mod scada_dpi;
 pub mod scalability;
 pub mod security;
+// Holds a `pipeline::AdaptiveSampler`, and `pipeline` is gated below, so an
+// ungated declaration here breaks `cargo build -p netscope-wasm --target
+// wasm32-unknown-unknown` — CI's whole frontend job — with an
+// `unresolved import crate::pipeline` that names the wrong file. See the same
+// note on `Notifications::to_engine_config`.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod sensor_watchdog;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod session_manager;
