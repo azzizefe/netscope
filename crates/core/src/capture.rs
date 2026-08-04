@@ -1048,6 +1048,11 @@ fn build_file_writer(
 
 /// Convert a libpcap packet into the pipeline's raw-frame form (§5.2.3 zero-copy).
 fn raw_frame(pkt: pcap::Packet) -> RawFrame {
+    // `tv_sec` is `i32` on Windows and `i64` on Linux and macOS, so this widens
+    // on one platform and is a no-op on the others — where clippy calls it a
+    // useless conversion and CI's `-D warnings` turns that into a failure. `as`
+    // would only trade this lint for `unnecessary_cast` on the same platforms.
+    #[allow(clippy::useless_conversion)]
     let ts_sec = i64::from(pkt.header.ts.tv_sec);
     RawFrame::new(
         ts_sec,

@@ -541,14 +541,10 @@ fn decrypt_tls_record_stream(
         } else {
             // TLS 1.2 GCM
             if typ == 23 {
-                if let Some(plaintext) =
-                    decrypt_tls12_record(key, iv, *seq_num, &header, record_body, cipher_suite)
-                {
-                    decrypted_stream.extend_from_slice(&plaintext);
-                    *seq_num += 1;
-                } else {
-                    return None;
-                }
+                let plaintext =
+                    decrypt_tls12_record(key, iv, *seq_num, &header, record_body, cipher_suite)?;
+                decrypted_stream.extend_from_slice(&plaintext);
+                *seq_num += 1;
             }
         }
         pos += 5 + len;

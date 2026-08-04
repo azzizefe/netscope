@@ -314,7 +314,7 @@ mod imp {
                     "DROP",
                 ],
             )?;
-            return Ok(());
+            Ok(())
         }
         #[cfg(target_os = "macos")]
         {
@@ -322,7 +322,7 @@ mod imp {
                 "pfctl",
                 &["-t", "netscope_blocked", "-T", "add", &ip.to_string()],
             )?;
-            return Ok(());
+            Ok(())
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         anyhow::bail!("blocking is not implemented for this platform")
@@ -355,7 +355,7 @@ mod imp {
                     "DROP",
                 ],
             )?;
-            return Ok(());
+            Ok(())
         }
         // pfctl tables match on address only, so a port-scoped block degrades
         // to blocking the whole host rather than silently doing nothing.
@@ -402,7 +402,7 @@ mod imp {
                     "DROP",
                 ],
             )?;
-            return Ok(());
+            Ok(())
         }
         #[cfg(target_os = "macos")]
         {
@@ -410,7 +410,7 @@ mod imp {
                 "pfctl",
                 &["-t", "netscope_blocked", "-T", "delete", &ip.to_string()],
             )?;
-            return Ok(());
+            Ok(())
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         anyhow::bail!("unblocking is not implemented for this platform")
@@ -436,7 +436,7 @@ mod imp {
                     }
                 }
             }
-            return set;
+            set
         }
         #[cfg(target_os = "macos")]
         {
