@@ -513,6 +513,26 @@ fn block_unblock_ip_workflow() {
 fn every_listed_interface_is_selectable_and_classified() {
     const KINDS: [&str; 5] = ["ethernet", "loopback", "usb", "bluetooth", "can"];
 
+    // A machine with no capture library cannot enumerate at all — it cannot
+    // even tell an empty list from an unanswerable question, so `list_interfaces`
+    // refuses instead of returning `Ok(vec![])` and calling that "no adapters".
+    // CI's Windows runner is such a machine. There is still something to assert
+    // there, and it is the part users meet: the refusal says what to install
+    // rather than taking the process down, which is what it used to do.
+    if !netscope_core::capture::packet_library_available() {
+        // `match` rather than `expect_err`, which would want `InterfaceInfo:
+        // Debug` for the success arm it never prints.
+        let err = match list_interfaces() {
+            Ok(_) => panic!("enumeration cannot succeed without the capture library"),
+            Err(e) => e,
+        };
+        assert!(
+            err.contains("npcap.com"),
+            "the refusal has to name the download; got {err:?}"
+        );
+        return;
+    }
+
     let interfaces = list_interfaces().expect("interface enumeration should succeed");
     let mut names = std::collections::HashSet::new();
     for iface in &interfaces {
