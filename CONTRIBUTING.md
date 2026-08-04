@@ -69,11 +69,24 @@ manifest asking for it — which the test harness did not. It only showed up und
 `--workspace`, because building alongside the other crates changes feature
 unification enough to pull the dialog path into the test binary.
 
-`desktop/src-tauri/build.rs` now links the manifest resource into the test
-targets as well, so the full workspace run works. CI still invokes the crates
-separately (`-p netscope-core -p netscope-tui -p netscope-server -p netscope-agent`,
-then `-p netscope-desktop`) to keep Linux from having to install the seven Tauri
-apt packages on every push.
+`desktop/src-tauri/build.rs` links the manifest resource into the test targets
+as well, so the full workspace run works. CI still invokes the crates separately
+(`-p netscope-core -p netscope-tui -p netscope-server -p netscope-agent`, then
+`-p netscope-desktop`) to keep Linux from having to install the seven Tauri apt
+packages on every push.
+
+That resource is scoped to `rustc-link-arg-tests`, which is why the desktop
+crate's tests live in `desktop/src-tauri/tests/` rather than in `src/lib.rs`:
+the unscoped form is the only one that reaches a lib's unit tests, and it also
+lands on the bin, where tauri-build has already linked the same archive. GNU ld
+drops the duplicate; MSVC's CVTRES calls it fatal, and MSVC is what CI and the
+release bundles use. Moving a test back into `src/lib.rs` reintroduces the
+choice between a test with no manifest and a Windows build that does not link.
+
+Because integration tests can only see the crate's public API, the commands they
+call are reached through `netscope_desktop_lib::testing` — thin wrappers, since
+`#[tauri::command]` at the crate root cannot itself be `pub`. Add a test that
+needs a new command, and the wrapper goes there too.
 
 ### Coverage needs the MSVC toolchain on Windows
 

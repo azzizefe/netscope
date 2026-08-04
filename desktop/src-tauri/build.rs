@@ -69,38 +69,40 @@ fn main() {
     tauri_build::try_build(attributes).expect("failed to run tauri-build");
 
     // tauri-build compiles the manifest above into a resource archive and links
-    // it into the binary — but only the binary. Test targets get no resource,
-    // so they get no manifest, so they do not request comctl32 version 6, so
-    // they die on the missing `TaskDialogIndirect` export described above.
-    // Linking the same archive into the test targets is what makes
-    // `cargo test --workspace` work on Windows.
+    // it into the binary — but only the binary, through `rustc-link-arg-bins`.
+    // Test targets get no resource, so they get no manifest, so they do not
+    // request comctl32 version 6, so they die on the missing
+    // `TaskDialogIndirect` export described above. Linking the same archive
+    // into the test targets is what makes `cargo test --workspace` work on
+    // Windows.
     #[cfg(windows)]
     {
         let out = std::env::var("OUT_DIR").expect("OUT_DIR is always set");
         // The archive is named by the toolchain: GNU produces `libresource.a`,
         // MSVC `resource.lib`.
-        // This is `rustc-link-arg`, not `-tests`: the crate's tests live in
-        // `src/lib.rs`, so they build as the lib's unit-test target, and
-        // `-tests` only covers a `tests/` directory. The app binary links the
-        // archive twice as a result.
         //
-        // GNU ld discards the second copy, so on the default Windows toolchain
-        // this is invisible. MSVC does not: CVTRES treats the repeated VERSION
-        // resource as fatal, and the bin target fails to link.
+        // `-tests`, not the unscoped `rustc-link-arg`, and the crate's tests
+        // live in `tests/` for exactly that reason. Measured, because the
+        // scopes are not documented precisely enough to guess: `-tests` reaches
+        // a `tests/` target and nothing else, `-bins` reaches both the bin and
+        // the bin's test build, and a *lib's* unit tests are reached by neither
+        // — only by the unscoped form, which also lands on the bin that
+        // tauri-build has already given the archive to.
+        //
+        // That double link is invisible under GNU ld, which drops the second
+        // copy, and fatal under MSVC:
         //
         //   CVTRES : fatal error CVT1100: duplicate resource. type:VERSION, name:1
         //   LINK : fatal error LNK1123: failure during conversion to COFF
         //
-        // Measured under `+stable-x86_64-pc-windows-msvc`: every other crate in
-        // the workspace builds and tests clean, only this target fails. That is
-        // why `scripts/coverage.ps1` excludes netscope-desktop. Removing the
-        // duplicate means giving the lib's unit-test target the resource without
-        // giving it to the bin, which cargo has no link-arg scope for — the way
-        // out is to move those tests into `tests/` and use `-tests`.
+        // It took out the app binary itself, not just the tests — so CI's
+        // Windows desktop job and the release bundle, both of which run on
+        // MSVC. Keep these tests in `tests/`; moving one back into `src/lib.rs`
+        // would either leave it without a manifest or bring the duplicate back.
         for name in ["libresource.a", "resource.lib"] {
             let path = std::path::Path::new(&out).join(name);
             if path.exists() {
-                println!("cargo:rustc-link-arg={}", path.display());
+                println!("cargo:rustc-link-arg-tests={}", path.display());
                 break;
             }
         }

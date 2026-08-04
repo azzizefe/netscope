@@ -137,8 +137,15 @@ Denenip **işe yaramayan** yol (bir daha denememek için): gnu toolchain'ine
 cargo-llvm-cov build script'lerini de enstrümante ediyor ve onlar **host** için
 derleniyor — host hâlâ gnu. Değişmesi gereken şey hedef değil, toolchain.
 
-Son ölçüm (2026-08-04, `netscope-desktop` hariç):
-**%75,7 region · %82,7 fonksiyon · %76,6 satır.**
+Son ölçüm (2026-08-04, **tüm workspace** — 2471 test):
+**%75,1 region · %81,7 fonksiyon · %76,2 satır.**
+
+Bu sayı bir önceki ölçümden (%75,7) düşük, çünkü kapsam genişledi:
+`netscope-desktop` dışarıda tutulmuyor artık. Dışlanmasının sebebi, Tauri
+hedeflerinin MSVC altında linklenmemesiydi — manifest resource'unun iki kez
+linklenmesi. `desktop/src-tauri/build.rs` arşivi artık `-tests` kapsamıyla
+veriyor, dışlamaya gerek kalmadı; ayrıntısı oradaki yorumda. Desktop crate'i
+kendi başına %30,2 region, ortalamayı aşağı çeken kısım o.
 
 Fuzzing ayrıca nightly istiyor; tam komut ve ASan yolu için `fuzz/README.md`.
 

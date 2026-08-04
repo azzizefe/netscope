@@ -186,8 +186,10 @@ jobs:
       # This used to be impossible to fold into the line above: on Windows the
       # desktop test binary died with STATUS_ENTRYPOINT_NOT_FOUND before `main`
       # ran, because it had no application manifest requesting comctl32
-      # version 6. `build.rs` now links the manifest resource into test targets
-      # too, so `cargo test --workspace` works — see the comment there.
+      # version 6. `build.rs` links the manifest resource into test targets too,
+      # scoped to `rustc-link-arg-tests` — which is why the crate's tests live in
+      # `src-tauri/tests/`. Unscoped, it would also double the resource on the
+      # bin and this job would fail to link under MSVC. See the comment there.
       - name: Test desktop
         if: runner.os != 'Linux'
         run: cargo test -p netscope-desktop
