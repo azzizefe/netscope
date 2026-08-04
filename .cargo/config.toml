@@ -69,3 +69,30 @@ RUST_MIN_STACK = "134217728" # 128 MB
 # release binaries are where speed matters, and they keep cargo's defaults.
 [target.wasm32-unknown-unknown]
 rustflags = ["-C", "opt-level=z", "-C", "codegen-units=256"]
+
+# `wpcap.dll` is Npcap's runtime library, and Npcap is a separate download that
+# a Windows machine does not have by default. Linked normally it is a *load-time*
+# import: the loader resolves it before `main`, and on a machine without Npcap
+# every netscope binary dies with `STATUS_DLL_NOT_FOUND (0xc0000135)` — no
+# window, no message, no exit code anyone can act on. CI's Windows job shows
+# exactly this, and so would any user who ran the app before installing Npcap.
+#
+# Delay-loading moves that resolution to the first call into the library. The
+# binary starts; `capture::packet_library_available()` is then what decides,
+# and it returns an error naming the download instead of taking the process
+# down. Never remove one without the other: a delay-load failure is a
+# structured exception (0xC06D007E), which no Rust `Result` can catch.
+#
+# `delayimp.lib` provides the helper the linker calls to resolve the import
+# lazily. `/IGNORE:4199` silences "delayload ignored; no imports found" on the
+# binaries in this workspace that never touch pcap — most of them.
+#
+# MSVC only: this is the toolchain CI and the release bundles use, and
+# `/DELAYLOAD` is a MSVC linker feature. A windows-gnu build keeps the
+# load-time import and still needs Npcap present to start.
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = [
+  "-C", "link-arg=/DELAYLOAD:wpcap.dll",
+  "-C", "link-arg=delayimp.lib",
+  "-C", "link-arg=/IGNORE:4199",
+]

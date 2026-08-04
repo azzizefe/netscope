@@ -120,7 +120,50 @@ pub fn translate_bpf_filter(raw: &str) -> String {
     result
 }
 
+/// Whether the packet-capture library this process needs is actually loadable.
+///
+/// On Windows that library is `wpcap.dll`, which ships with Npcap — a separate
+/// download. The MSVC build delay-loads it (see `.cargo/config.toml`), so a
+/// machine without Npcap starts netscope fine and only trips on the first call
+/// into pcap. That call must not be made blind: a delay-load failure raises a
+/// structured exception (`0xC06D007E`) that no `Result` can catch, and the
+/// process dies with a hex code. So every entry point into the library asks
+/// this first, and gets to return an error naming the download instead.
+///
+/// Elsewhere libpcap is an ordinary shared library resolved at load time: if it
+/// were missing the process would not have started, so by the time this runs
+/// the answer is yes.
+#[cfg(windows)]
+pub fn packet_library_available() -> bool {
+    extern "system" {
+        fn LoadLibraryA(name: *const core::ffi::c_char) -> *mut core::ffi::c_void;
+    }
+    // SAFETY: the argument is a NUL-terminated literal. The handle is
+    // deliberately not freed — the library stays loaded for the process, which
+    // is what the delay-load helper will want moments later.
+    unsafe { !LoadLibraryA(c"wpcap.dll".as_ptr()).is_null() }
+}
+
+#[cfg(not(windows))]
+pub fn packet_library_available() -> bool {
+    true
+}
+
+/// The guard every pcap entry point runs first. See
+/// [`packet_library_available`] for why calling in blind is not an option.
+fn require_packet_library() -> Result<()> {
+    if packet_library_available() {
+        return Ok(());
+    }
+    anyhow::bail!(
+        "Npcap is not installed, so this build cannot capture or read pcap files.\n  \
+         Install it from https://npcap.com and start netscope again.\n  \
+         (Reading a capture file goes through the same library as live capture.)"
+    )
+}
+
 pub fn list_interfaces() -> Result<Vec<pcap::Device>> {
+    require_packet_library()?;
     pcap::Device::list().context("Failed to list network interfaces.\n  On Windows: Install Npcap from https://npcap.com\n  On Linux/macOS: Run with sudo or set CAP_NET_RAW capability")
 }
 
@@ -244,6 +287,7 @@ fn open_live_capture(
     bpf_filter: Option<&str>,
     monitor: bool,
 ) -> Result<(pcap::Capture<pcap::Active>, i32)> {
+    require_packet_library()?;
     let inactive = pcap::Capture::from_device(interface)
         .map_err(|e| {
             if cfg!(target_os = "windows") {
@@ -788,6 +832,7 @@ impl CaptureEngine {
         let is_native = format.is_some_and(|f| f.is_native_pcap());
 
         if is_native {
+            require_packet_library()?;
             let mut cap = pcap::Capture::from_file(filepath)
                 .map_err(|e| anyhow::anyhow!("Failed to open pcap file '{filepath}': {e}"))?;
 
