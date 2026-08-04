@@ -124,14 +124,42 @@ allow = [
 confidence-threshold = 0.9
 
 [bans]
-# 55 crates appear at more than one version, almost entirely inside Tauri's
-# dependency tree, which netscope does not control. A hard failure would say
-# nothing actionable, so this reports without blocking.
+# Reports without blocking, because most duplicates here are not netscope's to
+# resolve — but the list is only useful if the ones that *are* stand out.
 #
-# It does still earn its keep: it is what surfaced two copies of `maxminddb` in
-# this workspace, one of them the version carrying RUSTSEC-2025-0132. Both
-# crates now agree on 0.27.
+# Measured rather than assumed: of 44 duplicated crates, exactly four were named
+# by a netscope manifest at all — `toml`, `rand`, `getrandom` and
+# `tokio-tungstenite`. The other 40 appear only inside dependency trees we do
+# not choose. Of those four, three could not be collapsed either:
+#
+#   toml       — netscope's 0.8 also satisfies `system-deps`, a build dependency
+#                of the GTK3 `-sys` crates under Tauri. Moving to 1.x leaves the
+#                old copy in place for them and changes `FromStr for Value` to
+#                parse a single value rather than a document, which broke the
+#                agent's remote-config merge. Tried, reverted.
+#   rand       — 0.8 is held by `rsa` (via num-bigint-dig) and `sqlx-postgres`.
+#   getrandom  — 0.2 is held by `rand_core` 0.6, from that same rand 0.8.
+#
+# `tokio-tungstenite` was the one that moved: the agent asked for 0.24 while
+# axum brought 0.29 into the server, so bumping the agent collapsed both it and
+# `tungstenite`. 44 → 42.
+#
+# This check earns its keep either way: it is what surfaced two copies of
+# `maxminddb` in this workspace, one of them carrying RUSTSEC-2025-0132.
 multiple-versions = "warn"
+# Trees netscope does not pick the versions inside. Skipping them is what keeps
+# a duplicate we *did* introduce from being lost among forty we cannot act on.
+# Remove an entry to see that tree's duplicates again.
+skip-tree = [
+    # Brings the whole Windows API family (windows-sys/-targets/-core/-result/
+    # -strings at four or five versions each), GTK3 on Linux, png, unic-*, and
+    # the toml/winnow chain through system-deps.
+    { crate = "tauri", depth = 20 },
+    { crate = "tauri-build", depth = 20 },
+    # rand 0.8 and, through rand_core 0.6, getrandom 0.2.
+    { crate = "rsa", depth = 10 },
+    { crate = "sqlx", depth = 10 },
+]
 # A dependency with no version bound takes whatever crates.io publishes next,
 # which is a supply-chain decision made by nobody.
 wildcards = "deny"
