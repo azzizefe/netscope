@@ -273,13 +273,13 @@ fn dissect_tcp_inner(
                         stream
                             .stream_data
                             .extend_from_slice(&tcp_payload_raw[overlap..]);
-                        stream.next_seq = seq + tcp_payload_raw.len() as u32;
+                        stream.next_seq = seq.wrapping_add(tcp_payload_raw.len() as u32);
                         is_contiguous = true;
                     }
 
                     while let Some(next_data) = stream.buffered.remove(&stream.next_seq) {
                         stream.stream_data.extend_from_slice(&next_data);
-                        stream.next_seq += next_data.len() as u32;
+                        stream.next_seq = stream.next_seq.wrapping_add(next_data.len() as u32);
                         is_contiguous = true;
                     }
                 } else if seq > stream.next_seq {
@@ -292,12 +292,12 @@ fn dissect_tcp_inner(
                         stream
                             .stream_data
                             .extend_from_slice(&tcp_payload_raw[overlap..]);
-                        stream.next_seq = seq + tcp_payload_raw.len() as u32;
+                        stream.next_seq = seq.wrapping_add(tcp_payload_raw.len() as u32);
                         is_contiguous = true;
 
                         while let Some(next_data) = stream.buffered.remove(&stream.next_seq) {
                             stream.stream_data.extend_from_slice(&next_data);
-                            stream.next_seq += next_data.len() as u32;
+                            stream.next_seq = stream.next_seq.wrapping_add(next_data.len() as u32);
                         }
                     }
                 }
@@ -1190,5 +1190,38 @@ mod tests {
         );
         assert_eq!(result.protocol, Protocol::Tcp);
         assert_eq!(result.summary, "TCP — no payload (keep-alive or ACK)");
+    }
+
+    /// A sequence number close to the top of the u32 space plus a payload wraps
+    /// — that is how TCP is specified, and every long-lived connection does it.
+    /// The reassembler advanced `next_seq` with a plain `+`, so a debug build
+    /// panicked with "attempt to add with overflow" and a release build silently
+    /// kept a wrong offset. `cargo fuzz` found it in 60 seconds; no fixture had
+    /// ever carried a sequence number that high.
+    #[test]
+    fn a_sequence_number_near_the_wrap_does_not_panic() {
+        let mut frame = build_tcp_packet(
+            [10, 0, 0, 1],
+            [10, 0, 0, 2],
+            41001,
+            41002,
+            TcpFlags {
+                ack: true,
+                ..Default::default()
+            },
+            b"payload that pushes the sequence past the end",
+        );
+        // Sequence number lives 4 bytes into the TCP header, which starts after
+        // the 14-byte ethernet and 20-byte IPv4 headers.
+        let seq_at = 14 + 20 + 4;
+        frame[seq_at..seq_at + 4].copy_from_slice(&(u32::MAX - 4).to_be_bytes());
+
+        let (_s, _d, _p, tcp_data) = crate::dissectors::ip::dissect_ipv4(&frame[14..]);
+        let result = dissect_tcp(
+            Some("10.0.0.1".parse().unwrap()),
+            Some("10.0.0.2".parse().unwrap()),
+            &tcp_data,
+        );
+        assert_eq!(result.protocol, Protocol::Tcp);
     }
 }
