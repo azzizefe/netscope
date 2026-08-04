@@ -30,3 +30,42 @@ LIBPCAP_LIBDIR = { value = "npcap-sdk/Lib/x64", relative = true }
 # Cargo does not override a value already in the environment, so exporting a
 # larger RUST_MIN_STACK still wins over this floor.
 RUST_MIN_STACK = "134217728" # 128 MB
+
+# The release wasm build — CI's `frontend` job, and the display-filter engine
+# the desktop frontend loads — does not fit in the memory of the machine that
+# runs it. Measured on a 31.6 GB developer machine at cargo's release defaults
+# (`opt-level=3`, `codegen-units=16`): one rustc at 23.8 GB resident and still
+# climbing after 44 CPU minutes, killed rather than allowed to exhaust the box.
+# A GitHub-hosted runner has 7 GB, which is what the job's SIGTERM says.
+#
+# `netscope-core` is the crate that does it: 400+ dissector modules and an
+# 800 KB `registry.rs`. Peak resident memory of the whole build, measured here
+# rather than reasoned about, sampling every 3s with an abort at 2.5 GB free:
+#
+#   opt-level  codegen-units  -j   peak      result
+#   3 (dflt)   16 (dflt)      16   23.8 GB   killed, still climbing at 44 CPU min
+#   3          256             2   21.2 GB   killed, no .wasm produced
+#   z          16              2    8.2 GB   ok, 3.0 min, 1.09 MB
+#   z          256             2    7.5 GB   ok, 2.6 min, 1.09 MB
+#   z          256            16    8.0 GB   ok, 1.7 min, 1.09 MB
+#
+# So `opt-level` is the lever, not the unit count: at `-O3` this does not build
+# even split 256 ways and pinned to two jobs. Splitting is still worth keeping —
+# 0.7 GB, and the margin is where it matters. Parallelism barely moves it
+# (7.5 vs 8.0), so the cost is LLVM's work per function, not threads holding
+# modules at once.
+#
+# Honest about the remaining margin: 7.5 GB clears a 16 GB runner comfortably
+# and a 7 GB one not at all. If that job is still killed, the next thing to cut
+# is what gets compiled — the wasm filter engine may not need the whole registry
+# — not another flag.
+#
+# `z` is a real cost: this wasm is the display-filter engine the desktop
+# frontend runs as the user types. It is here because the alternative measured
+# above is a build nobody can run, not because size was the goal — the file
+# ships inside the desktop bundle and is never downloaded.
+#
+# Scoped to the target rather than `[profile.release]` on purpose: the native
+# release binaries are where speed matters, and they keep cargo's defaults.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "opt-level=z", "-C", "codegen-units=256"]
