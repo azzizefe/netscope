@@ -96,7 +96,6 @@ rand = "0.8"
 sha2 = "0.10"
 
 [dev-dependencies]
-mockall = "0.15.0"
 # `oneshot` — drives the router in-process so the route/permission wiring can be
 # tested without a listener or a database.
 tower = { version = "0.5", features = ["util"] }
