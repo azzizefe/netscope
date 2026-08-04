@@ -47,6 +47,12 @@ cargo run -p netscope-tui
 cargo run -p netscope-tui -- -r fixtures/mixed.pcap --headless
 ```
 
+```powershell
+# Coverage — run the script, not `cargo llvm-cov` (see below)
+.\scripts\coverage.ps1            # summary in the terminal
+.\scripts\coverage.ps1 -Html      # target/llvm-cov/html/index.html
+```
+
 ### Fixed: `cargo test --workspace` on Windows
 
 `cargo test --workspace` used to die on Windows before any test ran:
@@ -68,6 +74,27 @@ targets as well, so the full workspace run works. CI still invokes the crates
 separately (`-p netscope-core -p netscope-tui -p netscope-server -p netscope-agent`,
 then `-p netscope-desktop`) to keep Linux from having to install the seven Tauri
 apt packages on every push.
+
+### Coverage needs the MSVC toolchain on Windows
+
+Running `cargo llvm-cov` directly on Windows fails before a single test does,
+with forty lines of rustc invocations ending in:
+
+```
+error[E0463]: can't find crate for `profiler_builtins`
+```
+
+Coverage counters need the profiler runtime, and rustup does not ship it for
+`x86_64-pc-windows-gnu` — the toolchain most Windows machines default to. It
+does ship it for MSVC. `--target x86_64-pc-windows-msvc` is not a fix either:
+cargo-llvm-cov instruments build scripts too, and those build for the *host*.
+The toolchain has to change, not the target.
+
+`scripts/coverage.ps1` selects `+stable-x86_64-pc-windows-msvc` for you, tells
+you the install command if that toolchain is missing, and is a plain
+`cargo llvm-cov` everywhere else. Use it instead of the bare command.
+[TESTING.md](TESTING.md) has the same note for `cargo fuzz`, which fails on the
+gnu toolchain for two unrelated reasons.
 
 ### Timing-sensitive tests
 

@@ -82,7 +82,21 @@ fn main() {
         // This is `rustc-link-arg`, not `-tests`: the crate's tests live in
         // `src/lib.rs`, so they build as the lib's unit-test target, and
         // `-tests` only covers a `tests/` directory. The app binary links the
-        // archive twice as a result, which the linker discards as duplicate.
+        // archive twice as a result.
+        //
+        // GNU ld discards the second copy, so on the default Windows toolchain
+        // this is invisible. MSVC does not: CVTRES treats the repeated VERSION
+        // resource as fatal, and the bin target fails to link.
+        //
+        //   CVTRES : fatal error CVT1100: duplicate resource. type:VERSION, name:1
+        //   LINK : fatal error LNK1123: failure during conversion to COFF
+        //
+        // Measured under `+stable-x86_64-pc-windows-msvc`: every other crate in
+        // the workspace builds and tests clean, only this target fails. That is
+        // why `scripts/coverage.ps1` excludes netscope-desktop. Removing the
+        // duplicate means giving the lib's unit-test target the resource without
+        // giving it to the bin, which cargo has no link-arg scope for — the way
+        // out is to move those tests into `tests/` and use `-tests`.
         for name in ["libresource.a", "resource.lib"] {
             let path = std::path::Path::new(&out).join(name);
             if path.exists() {

@@ -51,6 +51,12 @@ if ($IsWindows -or $env:OS -eq 'Windows_NT') {
 # with LNK1123, and it is the one crate whose coverage says least — its logic
 # lives in plain functions the desktop tests already exercise, and the rest is
 # window plumbing. Everything else in the workspace is measured.
+#
+# That LNK1123 is not an MSVC limitation, it is a duplicate: `desktop/src-tauri/
+# build.rs` links the manifest resource archive a second time so the test target
+# gets it, and CVTRES rejects the repeated VERSION resource (CVT1100) where GNU
+# ld silently drops it. See the comment there. Fixing it would let this script
+# drop the exclusion.
 $cargoArgs = @('llvm-cov', '--workspace', '--exclude', 'netscope-desktop') + $targetArgs
 
 if ($Html) {
