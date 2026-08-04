@@ -22,8 +22,10 @@ cargo test -p netscope-core --lib filter::tests::test_filter_tcp_port
 # Benchmark
 cargo bench -p netscope-core --bench parse_throughput -- --quick
 
-# Kod kapsaması — MSVC toolchain'i şart (aşağıdaki nota bak)
-cargo +stable-x86_64-pc-windows-msvc llvm-cov --workspace --html
+# Kod kapsaması. Düz `cargo llvm-cov` Windows'ta çalışmaz (aşağıdaki nota bak),
+# script doğru toolchain'i kendisi seçiyor:
+.\scripts\coverage.ps1            # terminalde özet
+.\scripts\coverage.ps1 -Html      # target/llvm-cov/html/index.html
 
 # Fuzzing — Windows'ta iki şart var ve ikisi de hata mesajından anlaşılmıyor:
 #   1. nightly + MSVC toolchain. Varsayılan windows-gnu'da libfuzzer-sys'in
@@ -122,11 +124,21 @@ dağıtmıyor, MSVC için dağıtıyor.
 | `cargo fuzz` (derleme) | `FuzzerExtFunctionsWindows.cpp: expected constructor…` | libfuzzer-sys kendi libFuzzer kopyasını derliyor; Windows desteği `__pragma(comment(linker, …))` kullanıyor, GCC bunu reddediyor |
 | `cargo fuzz` (çalıştırma) | `STATUS_DLL_NOT_FOUND (0xc0000135)` | ASan runtime'ı Windows'ta ayrı bir DLL ve PATH'te değil |
 
-Çözüm üçü için de aynı: **MSVC toolchain'ini kullan.**
+Çözüm üçü için de aynı: **MSVC toolchain'ini kullan.** Kapsama için bunu
+hatırlamak zorunda değilsin, script yapıyor:
 
-```bash
-cargo +stable-x86_64-pc-windows-msvc llvm-cov --workspace --html
+```powershell
+.\scripts\coverage.ps1
 ```
+
+Denenip **işe yaramayan** yol (bir daha denememek için): gnu toolchain'ine
+`rustup target add x86_64-pc-windows-msvc` ile msvc hedefini eklemek ve
+`--target` vermek. Hedef tarafı için profiler runtime'ı geliyor, ama
+cargo-llvm-cov build script'lerini de enstrümante ediyor ve onlar **host** için
+derleniyor — host hâlâ gnu. Değişmesi gereken şey hedef değil, toolchain.
+
+Son ölçüm (2026-08-04, `netscope-desktop` hariç):
+**%75,7 region · %82,7 fonksiyon · %76,6 satır.**
 
 Fuzzing ayrıca nightly istiyor; tam komut ve ASan yolu için `fuzz/README.md`.
 
