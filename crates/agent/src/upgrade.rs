@@ -435,10 +435,7 @@ mod tests {
         .to_string();
 
         let pubkey_box = keypair.pk.to_box().expect("public key box").to_string();
-        let pubkey = pubkey_box
-            .lines()
-            .nth(1)
-            .expect("public key line");
+        let pubkey = pubkey_box.lines().nth(1).expect("public key line");
 
         // Verify positive signature check
         assert!(verify_signature_with(Some(pubkey), binary_payload, Some(&signature)).is_ok());

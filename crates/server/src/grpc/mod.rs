@@ -211,7 +211,10 @@ pub fn api_key_interceptor(req: Request<()>) -> Result<Request<()>, Status> {
         .and_then(|v| v.to_str().ok());
 
     if let Some(token_str) = token {
-        let clean_token = token_str.strip_prefix("Bearer ").unwrap_or(token_str).trim();
+        let clean_token = token_str
+            .strip_prefix("Bearer ")
+            .unwrap_or(token_str)
+            .trim();
         if !clean_token.is_empty() {
             return Ok(req);
         }
@@ -222,17 +225,13 @@ pub fn api_key_interceptor(req: Request<()>) -> Result<Request<()>, Status> {
     ))
 }
 
-pub fn grpc_service(
-    pool: PgPool,
-    cache: Option<Arc<CacheLayer>>,
-) -> InterceptedService<
+pub type InterceptedSensorService = InterceptedService<
     SensorServiceServer<SensorGrpcService>,
     fn(Request<()>) -> Result<Request<()>, Status>,
-> {
-    SensorServiceServer::with_interceptor(
-        SensorGrpcService { pool, cache },
-        api_key_interceptor,
-    )
+>;
+
+pub fn grpc_service(pool: PgPool, cache: Option<Arc<CacheLayer>>) -> InterceptedSensorService {
+    SensorServiceServer::with_interceptor(SensorGrpcService { pool, cache }, api_key_interceptor)
 }
 
 #[cfg(test)]
