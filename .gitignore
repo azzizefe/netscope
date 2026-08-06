@@ -150,3 +150,43 @@ temp/
 # ============================================================
 *.wasm
 pkg/
+
+# ============================================================
+# Dijital İmzalar, Şifreleme Anahtarları & Sertifikalar
+# (Ed25519, RSA, Code Signing, TLS, Agent Upgrade Signatures)
+# ============================================================
+*.key
+*.pem
+*.pubkey
+*.privkey
+*.sig
+*.signature
+*.minisig
+*.p12
+*.pfx
+*.asc
+*.gpg
+*.keystore
+*.jks
+*.cer
+*.crt
+*.der
+*.provisionprofile
+*.mobileprovision
+keys/
+certs/
+signatures/
+secrets/
+
+# ============================================================
+# Gizli / Özel Strateji & Pazarlama Dokümanları
+# ============================================================
+docs/*GUMROAD*
+docs/*PAZARLAMA*
+docs/*SATIS*
+docs/*PRIVATE*
+docs/*SECRET*
+docs/*STRATEJI_GIZLI*
+*.token
+*.jwt
+

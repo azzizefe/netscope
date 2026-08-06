@@ -38,6 +38,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
 
@@ -62,12 +63,19 @@ jobs:
       # test code — which is where this repo's correctness guards live — was
       # never checked at all. A lint error inside a `#[cfg(test)]` module
       # passed CI and only appeared on a contributor's machine.
-      - name: Clippy (all workspace crates except desktop)
+      - name: Clippy (all workspace crates except desktop and wasm)
         id: clippy
         shell: bash
         run: |
           set -o pipefail
-          cargo clippy --workspace --exclude netscope-desktop --all-targets -- -D warnings 2>&1 | tee clippy.log
+          cargo clippy --workspace --exclude netscope-desktop --exclude netscope-wasm --all-targets -- -D warnings 2>&1 | tee clippy.log
+
+      - name: Clippy (netscope-wasm)
+        id: clippy-wasm
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy -p netscope-wasm --target wasm32-unknown-unknown -- -D warnings 2>&1 | tee -a clippy.log
 
       - name: Publish clippy failure to the job summary
         if: failure() && steps.clippy.outcome == 'failure'
@@ -115,9 +123,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       # Platform-specific packet capture library setup
-      - name: Install libpcap-dev (Linux)
+      - name: Install libpcap-dev & set CAP_NET_RAW (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+        run: |
+          sudo apt-get update && sudo apt-get install -y libpcap-dev libcap2-bin
+          sudo setcap cap_net_raw,cap_net_admin+eip $(type -p cargo) || true
 
       - name: Install Npcap SDK (Windows)
         if: runner.os == 'Windows'
@@ -241,7 +251,15 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Cache wasm-bindgen-cli
+        uses: actions/cache@v4
+        id: cache-wasm-bindgen
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: ${{ runner.os }}-wasm-bindgen-cli-0.2.126
+
       - name: Install wasm-bindgen-cli
+        if: steps.cache-wasm-bindgen.outputs.cache-hit != 'true'
         run: cargo install wasm-bindgen-cli --version 0.2.126
 
       # The frontend tests load this module at runtime.

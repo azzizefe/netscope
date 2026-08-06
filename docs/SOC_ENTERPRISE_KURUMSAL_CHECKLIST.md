@@ -60,34 +60,34 @@ Risk Skoru = Baz Alert Ağırlığı (0-40)
 
 ### Onay Kutucukları:
 
-- [ ] **1.1 — Bağlantı Özellik Vektörü Çıkarımı (`ConnectionFeatures`)**  
+- [x] **1.1 — Bağlantı Özellik Vektörü Çıkarımı (`ConnectionFeatures`)**  
   Her paket/bağlantı için `duration_secs`, `bytes_sent`, `bytes_recv`, `packets_sent`, `packets_recv`, `tcp_syn/ack/rst/fin`, `payload_entropy`, `dst_port` ve `protocol` değerlerini otomatik çıkarır. Kaynak: [`triage.rs:21-73`](../crates/core/src/triage.rs#L21-L73).
 
-- [ ] **1.2 — Hassas Port Değerlendirmesi**  
+- [x] **1.2 — Hassas Port Değerlendirmesi**  
   SSH (22), Telnet (23), RDP (3389), SMB (445), MSSQL (1433), MySQL (3306) portlarına erişim tespit edildiğinde +15 risk puanı eklenir. Bu portlar kurumsal ağda yüksek değerli varlıklara (veritabanları, yönetim panelleri) giriş kapılarıdır.
 
-- [ ] **1.3 — Shannon Entropi Tabanlı Payload Analizi**  
+- [x] **1.3 — Shannon Entropi Tabanlı Payload Analizi**  
   Payload entropisi > 7.5 bits/byte ve gönderilen veri > 200 byte olduğunda +25 puan eklenir. Yüksek entropi, şifreli C2 kanallarını, veri sızdırma (exfiltration) tünellerini veya kripto madencilik trafiğini gösterir.
 
-- [ ] **1.4 — TCP Bayrak Anomali Tespiti**  
+- [x] **1.4 — TCP Bayrak Anomali Tespiti**  
   RST bayrağı ACK olmadan geldiğinde +10 puan. Bu durum port taraması (SYN scan), güvenlik duvarı engelleme veya bağlantı manipülasyonunu işaret eder.
 
-- [ ] **1.5 — IDS Alert Tetiklenme Ağırlığı**  
+- [x] **1.5 — IDS Alert Tetiklenme Ağırlığı**  
   Suricata kural motoru veya Expert System bir alert tetiklediğinde baz olarak +40 puan eklenir. Birden fazla kural aynı bağlantıda tetiklendiğinde kümülatif olarak değerlendirilir.
 
-- [ ] **1.6 — Otomatik Triage Sınıflandırması (`TriageSeverity`)**  
+- [x] **1.6 — Otomatik Triage Sınıflandırması (`TriageSeverity`)**  
   Hesaplanan final skor 5 seviyeye (`Info`, `Low`, `Medium`, `High`, `Critical`) sınıflandırılır. Her seviyeye karşılık gelen SOC aksiyonu otomatik olarak `recommended_action` alanında üretilir.
 
-- [ ] **1.7 — Beyaz Liste & Yanlış Pozitif Bastırma Motoru (`WhitelistFilter`)**  
+- [x] **1.7 — Beyaz Liste & Yanlış Pozitif Bastırma Motoru (`WhitelistFilter`)**  
   Güvenilen IP adresleri (`allowed_ips`), güvenilen portlar (`allowed_ports`) ve bastırılan Suricata SID'leri (`suppressed_sids`) beyaz listeye eklenerek yanlış pozitif alarm yorgunluğu engellenir. Kaynak: [`triage.rs:108-139`](../crates/core/src/triage.rs#L108-L139).
 
-- [ ] **1.8 — Otomatik Tırmandırma (Escalation)**  
+- [x] **1.8 — Otomatik Tırmandırma (Escalation)**  
   `High` ve `Critical` seviyedeki olaylar otomatik olarak Tier-2 SOC Analistine tırmandırılır. `Critical` olaylarda anlık On-Call çağrı tetiklenir.
 
-- [ ] **1.9 — Risk Skoru Açıklayıcı Döküm (`reasons` vektörü)**  
+- [x] **1.9 — Risk Skoru Açıklayıcı Döküm (`reasons` vektörü)**  
   Her triage sonucu için hangi bileşenin kaç puan eklediği insan tarafından okunabilir açıklamalarla raporlanır. Örnek: `"Sensitive administrative/database port access (3389)"`, `"High entropy payload (7.82 bits/byte)"`.
 
-- [ ] **1.10 — Birim Test Doğrulaması**  
+- [x] **1.10 — Birim Test Doğrulaması**  
   `test_feature_extraction`, `test_deterministic_risk_scoring` ve `test_whitelist_suppression` testlerinin `cargo test -p netscope-core` ile başarılı geçtiği doğrulanmalıdır.
 
 ---

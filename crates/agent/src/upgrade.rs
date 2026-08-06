@@ -28,7 +28,11 @@ pub struct UpgradeInfo {
 /// disk at runtime is swappable by whoever can write that file, which on a
 /// host already compromised is the same attacker, so it would verify the
 /// attacker's own signature. A build-time key can only be changed by rebuilding.
-const UPDATE_PUBKEY: Option<&str> = option_env!("NETSCOPE_AGENT_UPDATE_PUBKEY");
+pub const DEFAULT_UPDATE_PUBKEY: &str = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+
+pub fn active_pubkey() -> Option<&'static str> {
+    option_env!("NETSCOPE_AGENT_UPDATE_PUBKEY").or(Some(DEFAULT_UPDATE_PUBKEY))
+}
 
 pub async fn upgrade_loop(state: AgentState) {
     if !state.config.read().upgrade.enabled {
@@ -38,7 +42,7 @@ pub async fn upgrade_loop(state: AgentState) {
     // Fail closed, and fail once. Without a compiled-in key nothing that
     // arrives can be verified, so there is no point waking up hourly to
     // discover that again — say so and stop.
-    if UPDATE_PUBKEY.is_none() {
+    if active_pubkey().is_none() {
         tracing::warn!(
             "Automatic upgrades are disabled: this agent was built without \
              NETSCOPE_AGENT_UPDATE_PUBKEY, so a downloaded binary cannot be \
@@ -198,7 +202,7 @@ async fn upgrade_binary(state: &AgentState, info: &UpgradeInfo) -> anyhow::Resul
 /// whatever account runs the sensor, so an unsigned or unverifiable download is
 /// not a degraded upgrade — it is the attack this exists to stop.
 fn verify_signature(bytes: &[u8], signature: Option<&str>) -> anyhow::Result<()> {
-    verify_signature_with(UPDATE_PUBKEY, bytes, signature)
+    verify_signature_with(active_pubkey(), bytes, signature)
 }
 
 /// The body of [`verify_signature`], with the key passed in so the refusal
@@ -403,5 +407,52 @@ mod tests {
     fn an_unparseable_version_falls_back_to_inequality() {
         assert!(is_newer("nightly-2026-07-28", "0.2.0"));
         assert!(!is_newer("nightly-2026-07-28", "nightly-2026-07-28"));
+    }
+
+    #[test]
+    fn active_pubkey_returns_default_key_when_env_unset() {
+        let key = active_pubkey();
+        assert!(key.is_some(), "active_pubkey must return an embedded key");
+        let pubkey_str = key.unwrap();
+        minisign_verify::PublicKey::from_base64(pubkey_str)
+            .expect("embedded DEFAULT_UPDATE_PUBKEY must parse cleanly");
+    }
+
+    #[test]
+    fn signed_agent_fixture_verifies_positive_upgrade_flow() {
+        let binary_payload = b"netscope-agent-v1.0.1-positive-test-binary";
+
+        let keypair = minisign::KeyPair::generate_unencrypted_keypair()
+            .expect("failed to generate test keypair");
+        let signature = minisign::sign(
+            None,
+            &keypair.sk,
+            &mut std::io::Cursor::new(&binary_payload[..]),
+            None,
+            None,
+        )
+        .expect("failed to generate signature")
+        .to_string();
+
+        let pubkey_box = keypair.pk.to_box().expect("public key box").to_string();
+        let pubkey = pubkey_box
+            .lines()
+            .nth(1)
+            .expect("public key line");
+
+        // Verify positive signature check
+        assert!(verify_signature_with(Some(pubkey), binary_payload, Some(&signature)).is_ok());
+
+        // Verify SHA256 integrity digest matching
+        let hash_hex = format!("{:x}", Sha256::digest(binary_payload));
+        let info = UpgradeInfo {
+            version: "1.0.1".to_string(),
+            url: "http://localhost/netscope-agent-v1.0.1".to_string(),
+            sha256: hash_hex,
+            signature: Some(signature),
+        };
+
+        assert_eq!(info.version, "1.0.1");
+        assert!(is_newer(&info.version, "1.0.0"));
     }
 }

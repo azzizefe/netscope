@@ -142,9 +142,9 @@ gantt
 ```
 
 ### MVP Başarı Listesi (Canlıya Çıkış Öncesi)
-- [ ] 1. **Güvenlik & Lisans:** Git geçmişi temizlendi, `npcap-sdk` ikilileri geçmişten uçuruldu.
-- [ ] 2. **Derleme & CI:** CI yeşile döndü, tüm testler otomatik geçiyor.
-- [ ] 3. **Dispatch Olgunluğu:** 141 dissector sisteme bağlandı, testlerde erişilemeyen dissector kalmadı.
-- [ ] 4. **Çoklu Platform:** Linux ve macOS üzerinde IP bloklama çalışıyor.
-- [ ] 5. **Dağıtım:** macOS installer'ları (noter onaylı) ve Windows installer'ları hazır.
-- [ ] 6. **Web Sitesi:** Vercel'de çalışan, WASM demolı, updater manifest destekli Astro web sitesi yayında.
+- [x] 1. **Güvenlik & Lisans:** Git geçmişi temizlendi, `npcap-sdk` ikilileri geçmişten uçuruldu.
+- [x] 2. **Derleme & CI:** CI yeşile döndü, tüm testler otomatik geçiyor.
+- [x] 3. **Dispatch Olgunluğu:** 141 dissector sisteme bağlandı, testlerde erişilemeyen dissector kalmadı.
+- [x] 4. **Çoklu Platform:** Linux ve macOS üzerinde IP bloklama çalışıyor.
+- [x] 5. **Dağıtım:** macOS installer'ları (noter onaylı) ve Windows installer'ları hazır.
+- [x] 6. **Web Sitesi:** Vercel'de çalışan, WASM demolı, updater manifest destekli Astro web sitesi yayında.

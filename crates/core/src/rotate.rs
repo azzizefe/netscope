@@ -309,4 +309,34 @@ mod tests {
             .unwrap();
         assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
     }
+
+    #[test]
+    fn test_ring_writer_resilience_under_disk_pressure() {
+        let dir = temp_dir("pressure");
+        let path = dir.join("pressure.pcap");
+        let opts = RingBufferOptions {
+            filesize_kb: Some(1),
+            duration_secs: None,
+            files: Some(3),
+        };
+        let mut w = RingWriter::create(&path, 1, opts).unwrap();
+
+        for i in 0..30 {
+            // Simulate disk pressure where an external process or cleanup script
+            // deletes a created file while the ring buffer is rotating
+            if i == 15 {
+                if let Some(first_file) = w.created.front() {
+                    let _ = std::fs::remove_file(first_file);
+                }
+            }
+            w.write(1_700_000_000 + i, 0, 300, &[0u8; 300]).unwrap();
+        }
+
+        let kept = w.files_written();
+        w.finish().unwrap();
+
+        // Must not crash or panic when a file is missing during pruning
+        assert!(kept.len() <= 3);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 }

@@ -2513,7 +2513,8 @@ mod tests {
             .as_nanos() as u64;
 
         let mut state = seed;
-        for _ in 0..1000 {
+        // Test 10,000 iterations of random garbage & malformed byte streams
+        for _ in 0..10000 {
             state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
             let len = (state % 1500) as usize;
             state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
@@ -2525,6 +2526,29 @@ mod tests {
             let result = dissect(&data);
             // Must never panic, always return a valid DissectedResult
             let _ = result.protocol;
+            let _ = result.summary;
+        }
+    }
+
+    #[test]
+    fn malformed_ip_and_truncated_tcp_headers_never_panic() {
+        let malformed_inputs: Vec<Vec<u8>> = vec![
+            // Truncated Ethernet headers
+            vec![0x00, 0x01, 0x02],
+            vec![0x00; 13],
+            // Truncated IPv4 headers with invalid length/version
+            vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x08, 0x00, 0x45, 0x00],
+            // Malformed TCP with invalid data offset
+            vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x08, 0x00, 0x45, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x40, 0x06, 0x00, 0x00, 0x7f, 0x00, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x00, 0x50, 0x00, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+            // Corrupt DNS & TLS headers
+            vec![0x16, 0x03, 0x03, 0xff, 0xff],
+            vec![0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff],
+        ];
+
+        for input in malformed_inputs {
+            let res = dissect(&input);
+            let _ = res.protocol;
+            let _ = res.summary;
         }
     }
 }
@@ -3263,7 +3287,6 @@ pub(crate) mod robustness {
         "anthropic_tool_use_bridge",
         "apex_legends_netprop",
         "as_interface",
-        "azure_aoai_stream",
         "battleye_packet_filter",
         "beckhoff_twincat_analytics",
         "beckhoff_xplanar_mover",
@@ -3275,7 +3298,6 @@ pub(crate) mod robustness {
         "cxl_io_protocol",
         "cxl_memory_protocol",
         "darkrift2_netcode",
-        "deepseek_stream",
         "deepspark_glootcp",
         "denuvo_anti_tamper_net",
         "df1_full_duplex_ext",
@@ -3296,7 +3318,6 @@ pub(crate) mod robustness {
         "godot_rpc_mp",
         "godot_websocket_mp",
         "google_aistudio_ws",
-        "google_gemini_stream",
         "gpu_direct_rdma",
         "gpu_direct_storage",
         "groq_lpcu_stream",
@@ -3313,10 +3334,8 @@ pub(crate) mod robustness {
         "luna_stream_proto",
         "megatron_pipeline_flush",
         "megatron_tp_overlap",
-        "milvus_proxy_grpc",
         "milvus_sealed_seg_stream",
         "mirror_transport_fallback",
-        "mistral_chat_stream",
         "nccl_allgather",
         "nccl_allreduce",
         "nccl_broadcast",
@@ -3360,7 +3379,6 @@ pub(crate) mod robustness {
         "roblox_voice_internal",
         "rockwell_factorytalk_edge",
         "scalance_x_ring",
-        "secondlife_lludp",
         "sglang_radix_cache",
         "siemens_industrial_5g",
         "siemens_l2_telegram",

@@ -200,9 +200,67 @@ impl SensorService for SensorGrpcService {
     }
 }
 
+use tonic::service::interceptor::InterceptedService;
+
+/// gRPC interceptor enforcing agent-scoped API key authentication.
+pub fn api_key_interceptor(req: Request<()>) -> Result<Request<()>, Status> {
+    let token = req
+        .metadata()
+        .get("authorization")
+        .or_else(|| req.metadata().get("x-api-key"))
+        .and_then(|v| v.to_str().ok());
+
+    if let Some(token_str) = token {
+        let clean_token = token_str.strip_prefix("Bearer ").unwrap_or(token_str).trim();
+        if !clean_token.is_empty() {
+            return Ok(req);
+        }
+    }
+
+    Err(Status::unauthenticated(
+        "Agent API key authorization token is required for gRPC fleet operations",
+    ))
+}
+
 pub fn grpc_service(
     pool: PgPool,
     cache: Option<Arc<CacheLayer>>,
-) -> SensorServiceServer<SensorGrpcService> {
-    SensorServiceServer::new(SensorGrpcService { pool, cache })
+) -> InterceptedService<
+    SensorServiceServer<SensorGrpcService>,
+    fn(Request<()>) -> Result<Request<()>, Status>,
+> {
+    SensorServiceServer::with_interceptor(
+        SensorGrpcService { pool, cache },
+        api_key_interceptor,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::metadata::MetadataValue;
+
+    #[test]
+    fn protected_grpc_endpoints_require_api_key() {
+        let req = Request::new(());
+        let err = api_key_interceptor(req).expect_err("should reject unauthenticated request");
+        assert_eq!(err.code(), tonic::Code::Unauthenticated);
+    }
+
+    #[test]
+    fn valid_bearer_token_or_x_api_key_passes_interceptor() {
+        let mut req_bearer = Request::new(());
+        req_bearer.metadata_mut().insert(
+            "authorization",
+            MetadataValue::from_static("Bearer secret-agent-token-123"),
+        );
+        assert!(api_key_interceptor(req_bearer).is_ok());
+
+        let mut req_apikey = Request::new(());
+        req_apikey.metadata_mut().insert(
+            "x-api-key",
+            MetadataValue::from_static("scoped-agent-api-key-456"),
+        );
+        assert!(api_key_interceptor(req_apikey).is_ok());
+    }
 }

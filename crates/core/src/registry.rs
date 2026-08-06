@@ -21821,7 +21821,7 @@ protocols! {
         color:     0xCC8822,
         transport: Udp,
         rank:      3,
-        status:    Declared,
+        status:    Dissected,
         aliases:   ["secondlife_lludp", "sl_lludp"],
         blurb:     "Second Life LLUDP message template protocol \u{2014} packetised message system with zero-encoding, ACK, and sequence-numbered templates for world-state replication.",
     }
@@ -24553,7 +24553,7 @@ protocols! {
         color:     0x00A1D6,
         transport: Tcp,
         rank:      3,
-        status:    Declared,
+        status:    Dissected,
         aliases:   ["milvus_proxy", "proxy_grpc"],
         blurb:     "Milvus proxy-to-data-node gRPC \u{2014} query and insert forwarding from proxy to data nodes, with channel-level routing, segment ID assignment, and batch result streaming for vector search.",
     }

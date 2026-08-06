@@ -19,14 +19,18 @@
 
 use netscope_core::models::Packet;
 use netscope_desktop_lib::testing::{
-    arp_scan, block_ip, escalation_off, get_alert_rules, get_glossary, get_lessons,
-    get_protocol_risk, is_elevated, list_blocked, list_interfaces, list_plugins, protocol_count,
-    protocol_table, replay_packet, save_object, tls_keylog_clear, tls_keylog_load,
+    acknowledge_escalation, arp_scan, block_ip, create_test_capture_state,
+    create_test_config_state, create_test_escalation_state, create_test_geodb_state,
+    escalation_off, geoip_lookup, geoip_unload_db, get_alert_rules, get_app_config,
+    get_capture_stats, get_escalation_status, get_glossary, get_lessons, get_notification_channels,
+    get_protocol_risk, is_elevated, list_blocked, list_interfaces, list_interfaces_with_provider,
+    list_plugins, protocol_count, protocol_table, reload_plugins, replay_packet,
+    resolve_escalation, save_object, test_notification_channel, tls_keylog_clear, tls_keylog_load,
     tls_keylog_status, unblock_ip,
 };
 use netscope_desktop_lib::{
     active_escalations, build_pcap_bytes, build_pcapng_bytes, encode_capture, english_name,
-    notification_channels, wants_pcapng, NotificationChannelInfo,
+    notification_channels, wants_pcapng, MockInterfaceProvider, NotificationChannelInfo,
 };
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -784,4 +788,86 @@ fn english_name_helper_extracts_name() {
         simplified_chinese: None,
     };
     assert_eq!(english_name(&empty_names), None);
+}
+
+#[test]
+fn test_mock_interface_provider_dependency_injection() {
+    use netscope_desktop_lib::InterfaceInfo;
+    let mock_interfaces = vec![
+        InterfaceInfo {
+            name: "mock_eth0".into(),
+            description: "Mock Ethernet Adapter".into(),
+            kind: "ethernet".into(),
+        },
+        InterfaceInfo {
+            name: "mock_wlan0".into(),
+            description: "Mock Wireless Adapter".into(),
+            kind: "wifi".into(),
+        },
+    ];
+    let provider = MockInterfaceProvider {
+        interfaces: mock_interfaces,
+    };
+    let ifaces = list_interfaces_with_provider(&provider).expect("mock provider should succeed");
+
+    assert!(ifaces.iter().any(|i| i.name == "mock_eth0"));
+    assert!(ifaces.iter().any(|i| i.name == "mock_wlan0"));
+}
+
+#[test]
+fn test_config_and_plugins_state_commands() {
+    let config_state = create_test_config_state();
+    let geodb_state = create_test_geodb_state();
+
+    let cfg_info = get_app_config(&config_state, &geodb_state);
+    assert!(!cfg_info.dir.is_empty());
+
+    let reloaded = reload_plugins(&config_state, &geodb_state);
+    assert_eq!(reloaded.plugins_loaded, cfg_info.plugins_loaded);
+}
+
+#[test]
+fn test_capture_stats_uninitialized_returns_none() {
+    let capture_state = create_test_capture_state();
+    let stats = get_capture_stats(&capture_state);
+    assert!(stats.is_none());
+}
+
+#[test]
+fn test_geoip_state_management() {
+    let geodb_state = create_test_geodb_state();
+
+    // Lookup on unloaded DB returns Ok(None)
+    let res = geoip_lookup(&geodb_state, "8.8.8.8".into()).unwrap();
+    assert!(res.is_none());
+
+    // Invalid IP returns error
+    let err = geoip_lookup(&geodb_state, "invalid_ip".into());
+    assert!(err.is_err());
+
+    geoip_unload_db(&geodb_state);
+}
+
+#[test]
+fn test_notification_channels_commands() {
+    let config_state = create_test_config_state();
+    let channels = get_notification_channels(&config_state);
+    assert!(!channels.is_empty());
+
+    // Test a dummy channel
+    let res = test_notification_channel("nonexistent_channel".into(), &config_state);
+    assert!(res.is_err());
+}
+
+#[test]
+fn test_escalation_workflow_commands() {
+    let escalation_state = create_test_escalation_state();
+    let config_state = create_test_config_state();
+
+    let status = get_escalation_status(&escalation_state, &config_state);
+    assert!(status.active.is_empty());
+
+    // Acknowledge or resolve invalid ID returns error
+    assert!(acknowledge_escalation(&escalation_state, "nonexistent".into()).is_err());
+    assert!(resolve_escalation(&escalation_state, "nonexistent".into()).is_err());
 }

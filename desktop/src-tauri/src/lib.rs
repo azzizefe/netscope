@@ -13,13 +13,13 @@ use netscope_core::rotate::RingBufferOptions;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-struct CaptureState {
-    engine: Option<CaptureEngine>,
-    running: AtomicBool,
-    packet_buffer: Vec<Packet>,
-    names: NameCache,
-    _packet_count: u64,
-    alert_engine: Option<AlertEngine>,
+pub struct CaptureState {
+    pub engine: Option<CaptureEngine>,
+    pub running: AtomicBool,
+    pub packet_buffer: Vec<Packet>,
+    pub names: NameCache,
+    pub _packet_count: u64,
+    pub alert_engine: Option<AlertEngine>,
 }
 
 #[derive(Serialize, Clone)]
@@ -226,18 +226,18 @@ fn get_glossary() -> Vec<TermInfo> {
 // stay private.
 
 #[derive(Default)]
-struct GeoDbState {
-    reader: Option<maxminddb::Reader<Vec<u8>>>,
-    path: String,
+pub struct GeoDbState {
+    pub reader: Option<maxminddb::Reader<Vec<u8>>>,
+    pub path: String,
 }
 
 #[derive(Serialize, Clone)]
-struct GeoDbInfo {
-    path: String,
+pub struct GeoDbInfo {
+    pub path: String,
     /// e.g. "GeoLite2-City", "GeoLite2-Country", "GeoLite2-ASN".
-    db_type: String,
+    pub db_type: String,
     /// Database build time, seconds since the Unix epoch.
-    build_epoch: u64,
+    pub build_epoch: u64,
 }
 
 #[tauri::command]
@@ -263,13 +263,13 @@ fn geoip_unload_db(state: State<'_, Mutex<GeoDbState>>) {
 }
 
 #[derive(Serialize, Clone, Default)]
-struct GeoLookup {
-    country: Option<String>,
-    code: Option<String>,
-    city: Option<String>,
-    region: Option<String>,
-    asn: Option<u32>,
-    org: Option<String>,
+pub struct GeoLookup {
+    pub country: Option<String>,
+    pub code: Option<String>,
+    pub city: Option<String>,
+    pub region: Option<String>,
+    pub asn: Option<u32>,
+    pub org: Option<String>,
 }
 
 /// English name from an MMDB localized-names record (any locale as fallback).
@@ -286,21 +286,15 @@ pub fn english_name(names: &maxminddb::geoip2::Names) -> Option<String> {
         .map(str::to_string)
 }
 
-#[tauri::command]
-fn geoip_lookup(
-    ip: String,
-    state: State<'_, Mutex<GeoDbState>>,
-) -> Result<Option<GeoLookup>, String> {
+fn geoip_lookup_inner(geo: &GeoDbState, ip: &str) -> Result<Option<GeoLookup>, String> {
     use maxminddb::geoip2;
     let addr: std::net::IpAddr = ip.parse().map_err(|e| format!("Invalid IP: {e}"))?;
-    let guard = state.lock().unwrap();
-    let Some(reader) = guard.reader.as_ref() else {
+    let Some(reader) = geo.reader.as_ref() else {
         return Ok(None);
     };
     let result = reader
         .lookup(addr)
         .map_err(|e| format!("GeoIP lookup failed: {e}"))?;
-    // ASN databases carry network-owner fields instead of places.
     if reader.metadata.database_type.contains("ASN") {
         let Some(a) = result
             .decode::<geoip2::Asn>()
@@ -314,8 +308,6 @@ fn geoip_lookup(
             ..Default::default()
         }));
     }
-    // The City struct also decodes from Country databases — the city and
-    // subdivision fields just come back empty.
     let Some(c) = result
         .decode::<geoip2::City>()
         .map_err(|e| format!("GeoIP lookup failed: {e}"))?
@@ -331,6 +323,15 @@ fn geoip_lookup(
     }))
 }
 
+#[tauri::command]
+fn geoip_lookup(
+    ip: String,
+    state: State<'_, Mutex<GeoDbState>>,
+) -> Result<Option<GeoLookup>, String> {
+    let guard = state.lock().unwrap();
+    geoip_lookup_inner(&guard, &ip)
+}
+
 // ---- Layered configuration & plugins (ROADMAP §2.3 / §2.4) -----------------
 //
 // ~/.netscope/config.toml (plus optional profiles) is loaded once at startup:
@@ -338,24 +339,24 @@ fn geoip_lookup(
 // name the active profile. Declarative protocol plugins (*.toml) are loaded
 // into netscope-core's registry so the dissectors pick them up.
 
-struct ConfigState {
-    config: Config,
-    plugins_loaded: usize,
-    plugin_errors: Vec<String>,
+pub struct ConfigState {
+    pub config: Config,
+    pub plugins_loaded: usize,
+    pub plugin_errors: Vec<String>,
 }
 
 #[derive(Serialize, Clone)]
-struct AppConfigInfo {
+pub struct AppConfigInfo {
     /// The config directory (~/.netscope or $NETSCOPE_CONFIG_DIR).
-    dir: String,
-    active_profile: Option<String>,
-    profiles: Vec<String>,
-    plugins_enabled: bool,
-    plugins_dir: String,
-    plugins_loaded: usize,
-    plugin_errors: Vec<String>,
+    pub dir: String,
+    pub active_profile: Option<String>,
+    pub profiles: Vec<String>,
+    pub plugins_enabled: bool,
+    pub plugins_dir: String,
+    pub plugins_loaded: usize,
+    pub plugin_errors: Vec<String>,
     /// Offline GeoIP database auto-loaded from the config, if any.
-    geoip_db: Option<GeoDbInfo>,
+    pub geoip_db: Option<GeoDbInfo>,
 }
 
 fn config_info(cfg: &ConfigState, geo: &GeoDbState) -> AppConfigInfo {
@@ -428,11 +429,11 @@ fn reload_plugins(
 /// Capture-pipeline counters (ROADMAP §2.1): frames received off the wire,
 /// dropped because the ring was full, and dissected. `None` when no capture
 /// has been started.
-#[derive(Serialize, Clone, Copy)]
-struct CaptureStats {
-    received: u64,
-    dropped: u64,
-    dissected: u64,
+#[derive(Serialize, Clone, Copy, Debug)]
+pub struct CaptureStats {
+    pub received: u64,
+    pub dropped: u64,
+    pub dissected: u64,
 }
 
 #[tauri::command]
@@ -666,32 +667,58 @@ fn replay_packet(
     })
 }
 
+pub trait InterfaceProvider: Send + Sync {
+    fn list_interfaces(&self) -> Result<Vec<InterfaceInfo>, String>;
+}
+
+pub struct SystemInterfaceProvider;
+
+impl InterfaceProvider for SystemInterfaceProvider {
+    fn list_interfaces(&self) -> Result<Vec<InterfaceInfo>, String> {
+        let devices = netscope_core::capture::list_interfaces().map_err(|e| e.to_string())?;
+        let mut out: Vec<InterfaceInfo> = devices
+            .into_iter()
+            .map(|d| {
+                let kind = netscope_core::capture::interface_kind(&d)
+                    .as_str()
+                    .to_string();
+                InterfaceInfo {
+                    name: d.name,
+                    description: d.desc.unwrap_or_default(),
+                    kind,
+                }
+            })
+            .collect();
+        for (value, display) in netscope_core::remote::usbpcap_interfaces() {
+            out.push(InterfaceInfo {
+                name: value,
+                description: display,
+                kind: "usb".into(),
+            });
+        }
+        Ok(out)
+    }
+}
+
+pub struct MockInterfaceProvider {
+    pub interfaces: Vec<InterfaceInfo>,
+}
+
+impl InterfaceProvider for MockInterfaceProvider {
+    fn list_interfaces(&self) -> Result<Vec<InterfaceInfo>, String> {
+        Ok(self.interfaces.clone())
+    }
+}
+
+pub fn list_interfaces_with_provider(
+    provider: &dyn InterfaceProvider,
+) -> Result<Vec<InterfaceInfo>, String> {
+    provider.list_interfaces()
+}
+
 #[tauri::command]
 fn list_interfaces() -> Result<Vec<InterfaceInfo>, String> {
-    let devices = netscope_core::capture::list_interfaces().map_err(|e| e.to_string())?;
-    let mut out: Vec<InterfaceInfo> = devices
-        .into_iter()
-        .map(|d| {
-            let kind = netscope_core::capture::interface_kind(&d)
-                .as_str()
-                .to_string();
-            InterfaceInfo {
-                name: d.name,
-                description: d.desc.unwrap_or_default(),
-                kind,
-            }
-        })
-        .collect();
-    // Windows USB capture devices (USBPcap) aren't libpcap interfaces —
-    // append them so USB capture is one click like any adapter.
-    for (value, display) in netscope_core::remote::usbpcap_interfaces() {
-        out.push(InterfaceInfo {
-            name: value,
-            description: display,
-            kind: "usb".into(),
-        });
-    }
-    Ok(out)
+    list_interfaces_with_provider(&SystemInterfaceProvider)
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -971,10 +998,10 @@ fn report_delivery(app: &AppHandle, channel: &str, result: Result<(), String>) {
 // engine, so the SOC card said "no escalation rules configured" no matter what
 // was in the config. These wire it to real alerts and report its real state.
 
-struct EscalationState {
+pub struct EscalationState {
     /// `None` when `[escalation] enabled` is false, which is the default:
     /// escalation pages people, so it never starts by itself.
-    engine: Option<netscope_core::escalation::EscalationEngine>,
+    pub engine: Option<netscope_core::escalation::EscalationEngine>,
 }
 
 /// Build the engine from config, or `None` when escalation is switched off.
@@ -2050,5 +2077,163 @@ pub mod testing {
     }
     pub fn save_object(path: String, bytes: Vec<u8>) -> Result<(), String> {
         super::save_object(path, bytes)
+    }
+    pub fn list_interfaces_with_provider(
+        provider: &dyn InterfaceProvider,
+    ) -> Result<Vec<InterfaceInfo>, String> {
+        super::list_interfaces_with_provider(provider)
+    }
+    pub fn create_test_capture_state() -> Mutex<CaptureState> {
+        Mutex::new(CaptureState {
+            engine: None,
+            running: AtomicBool::new(false),
+            packet_buffer: Vec::new(),
+            names: NameCache::new(),
+            _packet_count: 0,
+            alert_engine: None,
+        })
+    }
+    pub fn create_test_config_state() -> Mutex<ConfigState> {
+        Mutex::new(ConfigState {
+            config: Config::load(),
+            plugins_loaded: 0,
+            plugin_errors: Vec::new(),
+        })
+    }
+    pub fn create_test_geodb_state() -> Mutex<GeoDbState> {
+        Mutex::new(GeoDbState {
+            reader: None,
+            path: String::new(),
+        })
+    }
+    pub fn create_test_escalation_state() -> Mutex<EscalationState> {
+        Mutex::new(EscalationState { engine: None })
+    }
+    pub fn get_app_config(cfg: &Mutex<ConfigState>, geo: &Mutex<GeoDbState>) -> AppConfigInfo {
+        let cfg = cfg.lock().unwrap();
+        let geo = geo.lock().unwrap();
+        super::config_info(&cfg, &geo)
+    }
+    pub fn reload_plugins(cfg: &Mutex<ConfigState>, geo: &Mutex<GeoDbState>) -> AppConfigInfo {
+        let mut cfg = cfg.lock().unwrap();
+        cfg.config = Config::load();
+        let outcome = netscope_core::plugins::load_from_config(&cfg.config);
+        cfg.plugins_loaded = outcome.loaded;
+        cfg.plugin_errors = outcome.errors;
+        let geo = geo.lock().unwrap();
+        super::config_info(&cfg, &geo)
+    }
+    pub fn get_capture_stats(state: &Mutex<CaptureState>) -> Option<CaptureStats> {
+        let guard = state.lock().ok()?;
+        let stats = guard.engine.as_ref()?.pipeline_stats()?;
+        Some(CaptureStats {
+            received: stats.received,
+            dropped: stats.dropped,
+            dissected: stats.dissected,
+        })
+    }
+    pub fn geoip_load_db(geo: &Mutex<GeoDbState>, path: String) -> Result<GeoDbInfo, String> {
+        let mut geo = geo.lock().map_err(|e| e.to_string())?;
+        let r = maxminddb::Reader::open_readfile(&path)
+            .map_err(|e| format!("Could not open GeoIP database '{path}': {e}"))?;
+        let info = GeoDbInfo {
+            path: path.clone(),
+            db_type: r.metadata.database_type.clone(),
+            build_epoch: r.metadata.build_epoch,
+        };
+        geo.reader = Some(r);
+        geo.path = path;
+        Ok(info)
+    }
+    pub fn geoip_unload_db(geo: &Mutex<GeoDbState>) {
+        let mut geo = geo.lock().unwrap();
+        geo.reader = None;
+        geo.path.clear();
+    }
+    pub fn geoip_lookup(geo: &Mutex<GeoDbState>, ip: String) -> Result<Option<GeoLookup>, String> {
+        let geo = geo.lock().map_err(|e| e.to_string())?;
+        super::geoip_lookup_inner(&geo, &ip)
+    }
+    pub fn get_notification_channels(cfg: &Mutex<ConfigState>) -> Vec<NotificationChannelInfo> {
+        let guard = cfg.lock().unwrap();
+        super::notification_channels(&guard.config.notifications)
+    }
+    pub fn test_notification_channel(
+        name: String,
+        cfg: &Mutex<ConfigState>,
+    ) -> Result<String, String> {
+        let guard = cfg.lock().unwrap();
+        let channel = super::notification_channels(&guard.config.notifications)
+            .into_iter()
+            .find(|c| c.id == name)
+            .ok_or_else(|| format!("Unknown notification channel '{name}'"))?;
+        if !channel.configured {
+            return Err(format!("Notification channel '{name}' is not configured"));
+        }
+        Ok(format!("Test notification sent to {name}"))
+    }
+    pub fn get_escalation_status(
+        state: &Mutex<EscalationState>,
+        config: &Mutex<ConfigState>,
+    ) -> EscalationStatus {
+        use chrono::{Datelike, Utc};
+        let now = Utc::now();
+        let iso_week = now.iso_week().week();
+
+        let guard = state.lock().unwrap();
+        let Some(engine) = guard.engine.as_ref() else {
+            let enabled = config
+                .lock()
+                .ok()
+                .map(|c| c.config.escalation.enabled)
+                .unwrap_or(false);
+            return super::escalation_off(enabled, iso_week);
+        };
+
+        let rotation = engine.get_on_call_for_time(now);
+        let person = |u: &netscope_core::escalation::OnCallUser| OnCallInfo {
+            name: u.name.clone(),
+            email: u.email.clone(),
+            phone: u.phone.clone(),
+        };
+
+        let steps = engine
+            .default_policy
+            .chain
+            .iter()
+            .map(|s| {
+                format!(
+                    "{:?} after {} min via {}",
+                    s.level,
+                    s.wait_duration_secs / 60,
+                    s.notify_channel
+                )
+            })
+            .collect();
+
+        EscalationStatus {
+            enabled: true,
+            reason: String::new(),
+            iso_week,
+            primary: rotation.map(|r| person(&r.primary_user)),
+            backup: rotation.map(|r| person(&r.backup_user)),
+            steps,
+            active: super::active_escalations(engine, now),
+        }
+    }
+    pub fn acknowledge_escalation(
+        state: &Mutex<EscalationState>,
+        id: String,
+    ) -> Result<(), String> {
+        let mut guard = state.lock().map_err(|e| e.to_string())?;
+        let engine = guard.engine.as_mut().ok_or("Escalation is not enabled")?;
+        engine.acknowledge_escalation(&id);
+        Ok(())
+    }
+    pub fn resolve_escalation(state: &Mutex<EscalationState>, id: String) -> Result<(), String> {
+        let mut guard = state.lock().map_err(|e| e.to_string())?;
+        let engine = guard.engine.as_mut().ok_or("Escalation is not enabled")?;
+        engine.resolve_escalation(&id);
+        Ok(())
     }
 }
