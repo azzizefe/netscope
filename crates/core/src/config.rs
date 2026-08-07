@@ -1,20 +1,20 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-//! Layered configuration — a single, discoverable home for netscope's
-//! user settings, shared by the TUI and desktop (ROADMAP §2.4).
+//! Layered configuration â€” a single, discoverable home for netscope's
+//! user settings, shared by the TUI and desktop (ROADMAP Â§2.4).
 //!
 //! Everything lives under one directory:
 //!
 //! ```text
 //! ~/.netscope/
-//! ├── config.toml          # this file — global settings + paths below
-//! ├── profiles/            # named overlays merged on top of config.toml
-//! │   ├── http-analysis.toml
-//! │   └── security.toml
-//! ├── coloring-rules.toml  # user coloring rules (see crate::coloring)
-//! ├── plugins/             # declarative protocol plugins (see crate::plugins)
-//! │   └── redis.toml
-//! └── geoip.mmdb           # offline GeoIP database
+//! â”œâ”€â”€ config.toml          # this file â€” global settings + paths below
+//! â”œâ”€â”€ profiles/            # named overlays merged on top of config.toml
+//! â”‚   â”œâ”€â”€ http-analysis.toml
+//! â”‚   â””â”€â”€ security.toml
+//! â”œâ”€â”€ coloring-rules.toml  # user coloring rules (see crate::coloring)
+//! â”œâ”€â”€ plugins/             # declarative protocol plugins (see crate::plugins)
+//! â”‚   â””â”€â”€ redis.toml
+//! â””â”€â”€ geoip.mmdb           # offline GeoIP database
 //! ```
 //!
 //! The location is `$NETSCOPE_CONFIG_DIR` when set (handy for tests and
@@ -47,7 +47,7 @@
 //! falls through, so a profile only has to state its differences:
 //!
 //! ```toml
-//! # profiles/security.toml — only overrides what it cares about
+//! # profiles/security.toml â€” only overrides what it cares about
 //! [general]
 //! resolve_hostnames = false
 //! ```
@@ -58,7 +58,7 @@
 
 // Only `shift_rotations` uses this, and that is `cfg(not(target_arch =
 // "wasm32"))` because the escalation module it returns types from is not built
-// for wasm32 — so on that target the import is unused and warns. The host
+// for wasm32 â€” so on that target the import is unused and warns. The host
 // clippy job never sees it (it lints the host target only); the wasm32 build
 // does.
 #[cfg(not(target_arch = "wasm32"))]
@@ -165,7 +165,7 @@ impl Default for Plugins {
 /// Where alerts are delivered, on top of showing up in the UI.
 ///
 /// Every field is optional and empty by default, and a channel counts as
-/// configured only when the fields it actually needs are filled in — see
+/// configured only when the fields it actually needs are filled in â€” see
 /// [`crate::notifications::NotificationConfig`], which this converts into.
 /// Nothing is enabled implicitly: an unconfigured channel is simply never
 /// contacted, which is why the SOC view can report each one's real state
@@ -182,8 +182,8 @@ pub struct Notifications {
     /// `"starttls"` (default), `"implicit"` or `"none"`.
     ///
     /// Explicit rather than inferred from the port: a silent downgrade to
-    /// plaintext is how credentials end up on the wire. `"none"` is allowed —
-    /// a local relay on port 25 is a real deployment — but it has to be asked
+    /// plaintext is how credentials end up on the wire. `"none"` is allowed â€”
+    /// a local relay on port 25 is a real deployment â€” but it has to be asked
     /// for by name.
     pub email_tls: String,
 
@@ -202,7 +202,7 @@ impl Notifications {
     /// Gated like the module it returns: `notifications` is
     /// `#[cfg(not(target_arch = "wasm32"))]` in `lib.rs` (it sends mail and
     /// opens sockets), so referring to it unconditionally broke the wasm32
-    /// build of this crate — and with it the display-filter engine the desktop
+    /// build of this crate â€” and with it the display-filter engine the desktop
     /// frontend loads.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn to_engine_config(&self) -> crate::notifications::NotificationConfig {
@@ -264,7 +264,7 @@ impl Escalation {
     ///
     /// [`crate::escalation::EscalationEngine::get_on_call_for_time`] looks up
     /// the exact ISO week, so a literal config would need all 53 weeks spelled
-    /// out or most of the year would have nobody on call — and the engine
+    /// out or most of the year would have nobody on call â€” and the engine
     /// reports that as "Primary: None" rather than as an error. Rotating a
     /// short list across every week is what makes two names enough.
     ///
@@ -319,7 +319,7 @@ pub struct Config {
     pub plugins: Plugins,
     pub notifications: Notifications,
     pub escalation: Escalation,
-    /// Directory this config was loaded from — the anchor for relative paths.
+    /// Directory this config was loaded from â€” the anchor for relative paths.
     /// Skipped during deserialization; filled in by [`Config::load`].
     #[serde(skip)]
     dir: PathBuf,
@@ -331,7 +331,7 @@ pub struct Config {
 impl Config {
     /// Load configuration from the default directory, applying built-in
     /// defaults for anything unset and merging the active profile (from
-    /// `$NETSCOPE_PROFILE` or `general.profile`) on top. Never fails — a
+    /// `$NETSCOPE_PROFILE` or `general.profile`) on top. Never fails â€” a
     /// missing or unparsable `config.toml` just yields defaults anchored at
     /// the config dir.
     pub fn load() -> Self {
@@ -452,7 +452,7 @@ impl Config {
     }
 
     /// Absolute path to the plugins directory (regardless of whether plugins
-    /// are enabled — check [`Plugins::enabled`] separately).
+    /// are enabled â€” check [`Plugins::enabled`] separately).
     pub fn plugins_dir(&self) -> PathBuf {
         self.resolve(&self.plugins.dir)
     }
@@ -460,7 +460,7 @@ impl Config {
 
 /// One user coloring rule from `coloring-rules.toml`: a hex colour (with or
 /// without `#`) and a display-filter expression. Compiling the filter and the
-/// colour is the UI's job — this type is just the stored form.
+/// colour is the UI's job â€” this type is just the stored form.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ColoringRule {
     pub color: String,
@@ -483,7 +483,7 @@ struct ColoringRulesFile {
 ///
 /// or the legacy one-rule-per-line format (`RRGGBB <display filter>`, `#`
 /// comments). Unparseable lines are passed through with whatever colour word
-/// they carry — the consumer validates colours and filters, so comments and
+/// they carry â€” the consumer validates colours and filters, so comments and
 /// typos are dropped there, not here.
 pub fn parse_coloring_rules(text: &str) -> Vec<ColoringRule> {
     if let Ok(file) = toml::from_str::<ColoringRulesFile>(text) {
@@ -503,7 +503,7 @@ pub fn parse_coloring_rules(text: &str) -> Vec<ColoringRule> {
 }
 
 /// Read and parse a TOML file, returning `None` on any failure (missing file,
-/// bad UTF-8, syntax error) — configuration loading must never abort startup.
+/// bad UTF-8, syntax error) â€” configuration loading must never abort startup.
 fn read_toml_value(path: &Path) -> Option<toml::Value> {
     let text = std::fs::read_to_string(path).ok()?;
     text.parse::<toml::Value>().ok()
@@ -605,14 +605,16 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn no_oncall_listed_means_no_rotation() {
         let cfg = Escalation::default();
         assert!(cfg.shift_rotations().is_empty());
     }
 
-    /// A blank integration key must read as absent — the engine branches on
+    /// A blank integration key must read as absent â€” the engine branches on
     /// `Some(key)` to decide whether it can page PagerDuty at all.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn blank_integration_key_becomes_none() {
         let mut p = person("ayse");
         p.integration_key = "   ".into();
@@ -646,6 +648,7 @@ mod tests {
     /// The whole `[escalation]` block has to survive a real TOML round-trip,
     /// since that is the only way anyone configures it.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn escalation_parses_from_toml() {
         let dir = temp_dir("escalation");
         std::fs::write(
@@ -656,7 +659,7 @@ enabled = true
 step_minutes = [5, 10, 20]
 
 [[escalation.oncall]]
-name = "Ayşe"
+name = "AyÅŸe"
 email = "ayse@example.com"
 integration_key = "R0UT1NG"
 
@@ -670,13 +673,14 @@ email = "mehmet@example.com"
         let cfg = Config::load_from(&dir);
         assert!(cfg.escalation.enabled);
         assert_eq!(cfg.escalation.oncall.len(), 2);
-        assert_eq!(cfg.escalation.oncall[0].name, "Ayşe");
+        assert_eq!(cfg.escalation.oncall[0].name, "AyÅŸe");
         assert_eq!(cfg.escalation.step_minutes, vec![5, 10, 20]);
         assert_eq!(cfg.escalation.shift_rotations().len(), 53);
     }
 
-    /// Escalation stays off unless asked for — it pages people.
+    /// Escalation stays off unless asked for â€” it pages people.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn escalation_is_off_by_default() {
         let dir = temp_dir("escalation-default");
         let cfg = Config::load_from(&dir);
@@ -685,6 +689,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn defaults_when_no_file() {
         let dir = std::env::temp_dir().join("netscope-cfg-none");
         let cfg = Config::load_from(&dir);
@@ -721,6 +726,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn absolute_paths_are_kept() {
         let mut cfg = Config {
             dir: PathBuf::from("/cfg"),
@@ -737,6 +743,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn env_override_is_honored() {
         // Set the override, resolve, then restore to avoid cross-test leakage.
         let prev = std::env::var_os(CONFIG_DIR_ENV);
@@ -749,6 +756,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn profile_overrides_only_what_it_sets() {
         let dir = temp_dir("profile-merge");
         std::fs::write(
@@ -772,6 +780,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn profile_key_in_config_is_applied_on_load() {
         let dir = temp_dir("profile-key");
         std::fs::write(dir.join("config.toml"), "[general]\nprofile = \"quiet\"\n").unwrap();
@@ -788,6 +797,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn missing_profile_falls_back_to_base() {
         let dir = temp_dir("profile-missing");
         std::fs::write(dir.join("config.toml"), "[geoip]\ndatabase = \"x.mmdb\"\n").unwrap();
@@ -797,6 +807,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn coloring_rules_toml_form() {
         let rules = parse_coloring_rules(
             "[[rule]]\ncolor = \"ef4444\"\nfilter = 'tcp.flags.rst == 1'\n\n\
@@ -808,6 +819,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn coloring_rules_legacy_line_form() {
         let rules = parse_coloring_rules(
             "# comment\n\
@@ -822,6 +834,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn profiles_are_listed_sorted() {
         let dir = temp_dir("profile-list");
         std::fs::create_dir_all(dir.join("profiles")).unwrap();

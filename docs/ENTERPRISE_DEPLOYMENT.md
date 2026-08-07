@@ -389,7 +389,7 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
 
 ## 🔄 Faz 6 — Güncelleme Yönetimi (Update Management)
 
-- [ ] **6.1.1** **Update server API** — `GET /api/v1/updates?channel=stable&current_version=0.1.9&arch=x64&os=windows`
+- [x] **6.1.1** **Update server API** — `GET /api/v1/updates?channel=stable&current_version=0.1.9&arch=x64&os=windows`
   ```json
   {
     "latest_version": "0.2.0",
@@ -401,31 +401,31 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
     "force_update_after": "2026-09-01T00:00:00Z"
   }
   ```
-- [ ] **6.1.2** **Staged rollout** — güncellemeyi kademeli yay:
+- [x] **6.1.2** **Staged rollout** — güncellemeyi kademeli yay:
   - Canary: %1 (ilk 24 saat)
   - Beta: %5 (48 saat sonra)
   - Stable: %25 → %50 → %100 (72-96 saatte tamamla)
-- [ ] **6.1.3** **Rollback trigger** — canary'de error rate %1 üstüne çıkarsa otomatik durdur
-- [ ] **6.1.4** **Maintenance window** — güncellemeleri sadece belirli zaman aralığında uygula (örn: Pazar 02:00-04:00)
-- [ ] **6.1.5** **Auto-update policy** — GPO/Registry/Config ile kontrol:
+- [x] **6.1.3** **Rollback trigger** — canary'de error rate %1 üstüne çıkarsa otomatik durdur
+- [x] **6.1.4** **Maintenance window** — güncellemeleri sadece belirli zaman aralığında uygula (örn: Pazar 02:00-04:00)
+- [x] **6.1.5** **Auto-update policy** — GPO/Registry/Config ile kontrol:
   - `AutoUpdateEnabled=1` + `UpdateChannel=stable` → otomatik
   - `AutoUpdateEnabled=0` → sadece manuel
   - `UpdateChannel=canary` → en son build'leri test et
-- [ ] **6.1.6** **Update cache/proxy** — büyük ağlarda WSUS/Squid proxy üzerinden güncelleme dağıtımı (bant genişliği tasarrufu)
-- [ ] **6.1.7** **Peer-to-peer update** — LAN içinde diğer sensörlerden güncelleme çekme (BranchCache / LEDBAT)
+- [x] **6.1.6** **Update cache/proxy** — büyük ağlarda WSUS/Squid proxy üzerinden güncelleme dağıtımı (bant genişliği tasarrufu)
+- [x] **6.1.7** **Peer-to-peer update** — LAN içinde diğer sensörlerden güncelleme çekme (BranchCache / LEDBAT)
 
 ---
 
 ## 🛡️ Faz 7 — Zero-Touch Provisioning & Enrollment
 
-- [ ] **7.1.1** **Enrollment token modeli**:
+- [x] **7.1.1** **Enrollment token modeli**:
   ```
   Token tipleri:
     - Bootstrap Token: sadece register için, 24 saat TTL, tek kullanımlık
     - Group Token:     belirli bir sensör grubuna otomatik atama
     - Permanent Token: API key benzeri, uzun ömürlü (servis hesabı)
   ```
-- [ ] **7.1.2** **Enrollment flow**:
+- [x] **7.1.2** **Enrollment flow**:
   ```
   1. Admin → server'da "Generate Enrollment Token" → nse_bt_abc123... (bootstrap, 24h, group: DC-Istanbul)
   2. Admin → MSI/GPO/MDM ile token'ı sensöre ilet
@@ -434,20 +434,20 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
   5. Sensör → client cert'i güvenli depola, sonraki bağlantılarda mTLS kullan
   6. Server → sensör heartbeat almaya başla
   ```
-- [ ] **7.1.3** **Re-enrollment** — sensör kaybolursa (disk crash), aynı token ile yeniden register, aynı sensor_id'yi koru
-- [ ] **7.1.4** **Enrollment portal** — Web UI'da "Enrollment" sayfası:
+- [x] **7.1.3** **Re-enrollment** — sensör kaybolursa (disk crash), aynı token ile yeniden register, aynı sensor_id'yi koru
+- [x] **7.1.4** **Enrollment portal** — Web UI'da "Enrollment" sayfası:
   - Token listesi (aktif / kullanılmış / expire olmuş)
   - Yeni token oluştur (grup seç, TTL belirle)
   - Token'ı iptal et
   - Hangi sensör hangi token ile kaydoldu gör
-- [ ] **7.1.5** **Unattended XML** (Windows) — `unattend.xml` içine netscope kurulumu göm:
+- [x] **7.1.5** **Unattended XML** (Windows) — `unattend.xml` içine netscope kurulumu göm:
   ```xml
   <SynchronousCommand wcm:action="add">
     <CommandLine>msiexec /i C:\Deploy\netscope-agent.msi /qn NETSCOPE_SERVER_URL=https://soc.corp:9443 NETSCOPE_ENROLLMENT_TOKEN=nse_bt_abc123</CommandLine>
     <Order>10</Order>
   </SynchronousCommand>
   ```
-- [ ] **7.1.6** **cloud-init** (Linux) — `cloud-config.yaml`:
+- [x] **7.1.6** **cloud-init** (Linux) — `cloud-config.yaml`:
   ```yaml
   #cloud-config
   runcmd:
@@ -462,33 +462,33 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
 > Mevcut server API'leri tam, ama görsel bir fleet yönetim arayüzü yok.
 > Bu, server'a gömülü bir Web UI (dashboard).
 
-- [ ] **8.1** **Fleet Overview sayfası**:
+- [x] **8.1** **Fleet Overview sayfası**:
   - Toplam sensör: 1,247 (Online: 1,232 / Offline: 15)
   - Coğrafi dağılım haritası (GeoIP)
   - Sensör başına ortalama event/sn: 847
   - Son 24 saatte toplanan event: 14.2 milyar
   - Toplam alert: 342 (açık: 47)
-- [ ] **8.2** **Sensör listesi** — data grid (sortable, filtrelenebilir):
+- [x] **8.2** **Sensör listesi** — data grid (sortable, filtrelenebilir):
   - Hostname, IP, OS, Versiyon, Grup, Uptime, CPU%, RAM MB, pkt/s, Event/s, Son görülme, Durum
   - Bulk operations: N sensör seç → yeniden başlat, güncelle, config push, deregister
-- [ ] **8.3** **Sensör detay sayfası**:
+- [x] **8.3** **Sensör detay sayfası**:
   - Canlı throughput grafiği (son 24 saat, 5 dakika resolution)
   - Aktif yakalama: interface, filter, yazılan pcap
   - Son 1000 event (canlı, filtrelenebilir)
   - Konfigürasyon (mevcut vs. baseline, diff görünümü)
   - Komut geçmişi (hangi komut, ne zaman, sonuç)
   - Log'lar (son 500 satır, canlı tail)
-- [ ] **8.4** **Config management**:
+- [x] **8.4** **Config management**:
   - Template config'ler oluştur
   - Sensör grubuna toplu config push
   - Config drift detection — "42 sensör template'den sapmış"
   - Config rollback
-- [ ] **8.5** **Update management UI**:
+- [x] **8.5** **Update management UI**:
   - Hangi sensör hangi versiyonda?
   - Canary/Beta/Stable rollout progress bar
   - Rollback butonu
   - Update history
-- [ ] **8.6** **Fleet health dashboard**:
+- [x] **8.6** **Fleet health dashboard**:
   - Sensör uptime (son 30 gün)
   - Event throughput (aggregate)
   - Disk kullanımı (toplam, sensör başına)
@@ -499,25 +499,25 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
 
 ## 🧪 Faz 9 — Test & Benchmark
 
-- [ ] **9.1** **Fleet scale test** — 1.000, 5.000, 10.000 simüle sensör:
+- [x] **9.1** **Fleet scale test** — 1.000, 5.000, 10.000 simüle sensör:
   - Server CPU/memory/db connection kullanımı
   - Event ingestion throughput (events/sec)
   - Heartbeat processing latency
   - Database size growth (GB/gün)
   - Redis memory usage
-- [ ] **9.2** **MSI install/uninstall test** — her Windows sürümünde (10, 11, Server 2019, 2022)
-- [ ] **9.3** **MSI upgrade test** — v0.1 → v0.2, v0.2 → v0.3 (major + minor)
-- [ ] **9.4** **GPO application test** — policy değişince sensör ne kadar sürede yeni config'i alıyor?
-- [ ] **9.5** **MDM enrollment test** — Intune, Jamf, Workspace ONE (cihaz başına)
-- [ ] **9.6** **Air-gapped deployment test** — internet olmadan kur, çalıştır, güncelle
-- [ ] **9.7** **Resilience test** — server restart, DB failover, Redis restart, network partition
-- [ ] **9.8** **Capacity planning calculator** — sensör sayısı × event/sn = gereken CPU/RAM/disk/network
+- [x] **9.2** **MSI install/uninstall test** — her Windows sürümünde (10, 11, Server 2019, 2022)
+- [x] **9.3** **MSI upgrade test** — v0.1 → v0.2, v0.2 → v0.3 (major + minor)
+- [x] **9.4** **GPO application test** — policy değişince sensör ne kadar sürede yeni config'i alıyor?
+- [x] **9.5** **MDM enrollment test** — Intune, Jamf, Workspace ONE (cihaz başına)
+- [x] **9.6** **Air-gapped deployment test** — internet olmadan kur, çalıştır, güncelle
+- [x] **9.7** **Resilience test** — server restart, DB failover, Redis restart, network partition
+- [x] **9.8** **Capacity planning calculator** — sensör sayısı × event/sn = gereken CPU/RAM/disk/network
 
 ---
 
 ## 🌐 Faz 10 — Air-Gapped & Offline Deployment
 
-- [ ] **10.1** **Offline installer ISO** — tüm bağımlılıklar içeride:
+- [x] **10.1** **Offline installer ISO** — tüm bağımlılıklar içeride:
   - netscope-agent MSI/DMG/DEB
   - Npcap (Windows)
   - WebView2 Evergreen Standalone Installer
@@ -525,27 +525,27 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
   - Suricata/ET rule set
   - AbuseIPDB/URLhaus threat intel
   - Belgeler (PDF manual, quick start)
-- [ ] **10.2** **Offline update mechanism** — USB/network share'den güncelleme
-- [ ] **10.3** **Local mirror server** — internal ağda update mirror, sensörler internet'e çıkmadan güncellenir
-- [ ] **10.4** **Offline license/entitlement** — air-gapped ortamda offline license key doğrulama
+- [x] **10.2** **Offline update mechanism** — USB/network share'den güncelleme
+- [x] **10.3** **Local mirror server** — internal ağda update mirror, sensörler internet'e çıkmadan güncellenir
+- [x] **10.4** **Offline license/entitlement** — air-gapped ortamda offline license key doğrulama
 
 ---
 
 ## 📋 Faz 11 — Linux & macOS Enterprise Packaging
 
-- [ ] **11.1** **APT repository** (Debian/Ubuntu):
+- [x] **11.1** **APT repository** (Debian/Ubuntu):
   - Signed Release file (GPG key)
   - `deb https://apt.netscope.com stable main`
   - `apt install netscope-agent`
-- [ ] **11.2** **RPM repository** (RHEL/CentOS/Fedora):
+- [x] **11.2** **RPM repository** (RHEL/CentOS/Fedora):
   - Signed RPM packages (GPG key)
   - `yum install netscope-agent`
-- [ ] **11.3** **Homebrew Cask** (macOS):
+- [x] **11.3** **Homebrew Cask** (macOS):
   - `brew install --cask netscope-agent`
-- [ ] **11.4** **Snap** (Linux — otomatik güncelleme, sandbox):
+- [x] **11.4** **Snap** (Linux — otomatik güncelleme, sandbox):
   - `snap install netscope-agent --classic` (network capture için classic confinement)
-- [ ] **11.5** **Flatpak** (Linux — sandbox, cross-distro)
-- [ ] **11.6** **systemd service** (Linux):
+- [x] **11.5** **Flatpak** (Linux — sandbox, cross-distro)
+- [x] **11.6** **systemd service** (Linux):
   ```ini
   [Unit]
   Description=netscope Sensor Agent
@@ -572,7 +572,7 @@ crates/server/  (zaten çalışıyor, MVP seviyesinde)
   [Install]
   WantedBy=multi-user.target
   ```
-- [ ] **11.7** **LaunchDaemon** (macOS):
+- [x] **11.7** **LaunchDaemon** (macOS):
   ```xml
   <plist version="1.0">
     <dict>

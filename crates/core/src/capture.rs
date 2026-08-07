@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use std::io::Read;
 use std::sync::{
@@ -51,7 +51,7 @@ pub fn translate_bpf_filter(raw: &str) -> String {
         ("postgres", "tcp port 5432"),
         ("redis", "tcp port 6379"),
         ("mongodb", "tcp port 27017"),
-        // already-valid BPF tokens — pass through (listed only so
+        // already-valid BPF tokens â€” pass through (listed only so
         // sub-word matches like "icmp" inside "icmp6" are avoided)
         ("icmp6", "icmp6"),
         ("icmp", "icmp"),
@@ -61,7 +61,7 @@ pub fn translate_bpf_filter(raw: &str) -> String {
     let mut result = String::with_capacity(raw.len() + 64);
     let mut i = 0;
     let bytes = raw.as_bytes();
-    // When true, the next token is a hostname / address — skip protocol
+    // When true, the next token is a hostname / address â€” skip protocol
     // translation. Set by the BPF keyword "host" and cleared after one token.
     let mut next_is_host = false;
 
@@ -85,7 +85,7 @@ pub fn translate_bpf_filter(raw: &str) -> String {
         }
         let token = &raw[start..i];
 
-        // If this token follows "host", it is a hostname — never
+        // If this token follows "host", it is a hostname â€” never
         // translate it. "host http.example.com" stays untouched.
         let replacement = if next_is_host {
             next_is_host = false;
@@ -103,7 +103,7 @@ pub fn translate_bpf_filter(raw: &str) -> String {
         match replacement {
             Some(r) => {
                 result.push_str(r);
-                // Replacement is valid BPF (e.g. "tcp port 80") — no
+                // Replacement is valid BPF (e.g. "tcp port 80") â€” no
                 // host-keyword tracking needed inside it.
             }
             None => {
@@ -122,7 +122,7 @@ pub fn translate_bpf_filter(raw: &str) -> String {
 
 /// Whether the packet-capture library this process needs is actually loadable.
 ///
-/// On Windows that library is `wpcap.dll`, which ships with Npcap — a separate
+/// On Windows that library is `wpcap.dll`, which ships with Npcap â€” a separate
 /// download. The MSVC build delay-loads it (see `.cargo/config.toml`), so a
 /// machine without Npcap starts netscope fine and only trips on the first call
 /// into pcap. That call must not be made blind: a delay-load failure raises a
@@ -135,13 +135,24 @@ pub fn translate_bpf_filter(raw: &str) -> String {
 /// the answer is yes.
 #[cfg(windows)]
 pub fn packet_library_available() -> bool {
-    extern "system" {
-        fn LoadLibraryA(name: *const core::ffi::c_char) -> *mut core::ffi::c_void;
+    // Miri cannot call FFI functions like LoadLibraryA.  Returning false
+    // makes every live-capture path bail out via `require_packet_library`
+    // with an Err, which the tests handle naturally.
+    #[cfg(miri)]
+    {
+        return false;
     }
-    // SAFETY: the argument is a NUL-terminated literal. The handle is
-    // deliberately not freed — the library stays loaded for the process, which
-    // is what the delay-load helper will want moments later.
-    unsafe { !LoadLibraryA(c"wpcap.dll".as_ptr()).is_null() }
+
+    #[cfg(not(miri))]
+    {
+        extern "system" {
+            fn LoadLibraryA(name: *const core::ffi::c_char) -> *mut core::ffi::c_void;
+        }
+        // SAFETY: the argument is a NUL-terminated literal. The handle is
+        // deliberately not freed â€” the library stays loaded for the process, which
+        // is what the delay-load helper will want moments later.
+        unsafe { !LoadLibraryA(c"wpcap.dll".as_ptr()).is_null() }
+    }
 }
 
 #[cfg(not(windows))]
@@ -223,7 +234,7 @@ pub enum InterfaceKind {
 }
 
 impl InterfaceKind {
-    /// Stable lowercase tag for serialization ("ethernet", "usb", …).
+    /// Stable lowercase tag for serialization ("ethernet", "usb", â€¦).
     pub fn as_str(&self) -> &'static str {
         match self {
             InterfaceKind::Regular => "ethernet",
@@ -343,7 +354,7 @@ fn open_live_capture(
     Ok((cap, linktype))
 }
 
-/// Autostop conditions — Wireshark's `-a`: the capture stops itself as soon
+/// Autostop conditions â€” Wireshark's `-a`: the capture stops itself as soon
 /// as **any** configured limit is reached. Counters are shared across every
 /// interface of a multi-interface capture.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -374,7 +385,7 @@ struct StopTracker {
 }
 
 impl StopTracker {
-    /// `None` when there is nothing to track — the loops then skip the
+    /// `None` when there is nothing to track â€” the loops then skip the
     /// per-packet checks entirely.
     fn new(c: &StopConditions) -> Option<Arc<Self>> {
         if c.is_unlimited() {
@@ -400,7 +411,7 @@ impl StopTracker {
             || self.expired()
     }
 
-    /// Duration check alone — polled on idle read timeouts so a quiet
+    /// Duration check alone â€” polled on idle read timeouts so a quiet
     /// interface still stops on schedule.
     fn expired(&self) -> bool {
         self.deadline.is_some_and(|d| Instant::now() >= d)
@@ -410,14 +421,14 @@ impl StopTracker {
 /// The underlying technology to use for live capturing.
 ///
 /// Only [`CaptureBackend::Pcap`] is implemented. The kernel-bypass variants are
-/// declared because the roadmap plans them (§5.2.1–§5.2.2), and selecting one is
-/// a hard error — see [`CaptureEngine::start_live_multi`].
+/// declared because the roadmap plans them (Â§5.2.1â€“Â§5.2.2), and selecting one is
+/// a hard error â€” see [`CaptureEngine::start_live_multi`].
 ///
 /// They used to be accepted: each had a loop that printed
-/// `"AF_XDP: Initializing eBPF redirect program…"` (or the PF_RING / DPDK /
+/// `"AF_XDP: Initializing eBPF redirect programâ€¦"` (or the PF_RING / DPDK /
 /// AF_PACKET equivalent) and then ran the ordinary libpcap loop. The capture
 /// worked, so nothing looked broken, while the operator had been told their
-/// traffic was going through a zero-copy path that does not exist — and any
+/// traffic was going through a zero-copy path that does not exist â€” and any
 /// throughput number measured that way was a measurement of plain libpcap.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CaptureBackend {
@@ -466,11 +477,11 @@ pub struct CaptureOptions {
 }
 // Removed alongside the fake backends: `fanout_group_id`, `timestamp_precision`,
 // `cpu_affinity` and `adaptive_sampling`. Nothing in the workspace ever read
-// them — not this module, not the TUI, not the desktop app — so setting one
+// them â€” not this module, not the TUI, not the desktop app â€” so setting one
 // configured nothing while reading like a tuning knob. They come back with the
 // code that honours them, not before.
 
-/// Capture engine built on the parallel pipeline (ROADMAP §2.1): each capture
+/// Capture engine built on the parallel pipeline (ROADMAP Â§2.1): each capture
 /// thread feeds raw frames into a lock-free ring, a rayon-backed dissector
 /// stage parses them across cores, and finished [`Packet`]s arrive on the
 /// `Sender` given to `start_live`/`start_live_multi`/`start_offline`. Capturing
@@ -480,14 +491,14 @@ pub struct CaptureOptions {
 /// Beyond local interfaces the engine can also consume *streamed* captures:
 /// [`start_remote`](Self::start_remote) (sshdump-style over SSH),
 /// [`start_pipe`](Self::start_pipe) (any extcap-style command writing pcap to
-/// stdout — USBPcapCMD, ciscodump, custom scripts) and
+/// stdout â€” USBPcapCMD, ciscodump, custom scripts) and
 /// [`start_read_stream`](Self::start_read_stream) (an already-open byte
 /// stream, e.g. stdin).
 pub struct CaptureEngine {
     running: Arc<AtomicBool>,
     handles: Vec<thread::JoinHandle<()>>,
     pipelines: Vec<Pipeline>,
-    /// External capture processes (ssh, USBPcapCMD…) killed on stop so a
+    /// External capture processes (ssh, USBPcapCMDâ€¦) killed on stop so a
     /// reader blocked on the pipe wakes up.
     pipes: Vec<PipeSource>,
 }
@@ -554,7 +565,7 @@ impl CaptureEngine {
     /// warning, and it's an error only if *none* opens.
     ///
     /// Writing to a file while capturing on multiple interfaces is not
-    /// supported — classic pcap has one global link type — so the output
+    /// supported â€” classic pcap has one global link type â€” so the output
     /// path is ignored (with a warning) for >1 interface.
     pub fn start_with(
         &mut self,
@@ -567,7 +578,7 @@ impl CaptureEngine {
         }
 
         // Refuse an unimplemented backend before opening a single handle. The
-        // alternative — capturing anyway on the pcap path — is what this code
+        // alternative â€” capturing anyway on the pcap path â€” is what this code
         // used to do, and it is worse than failing: the capture succeeds, so
         // the operator has no reason to doubt the backend they asked for.
         //
@@ -579,7 +590,7 @@ impl CaptureEngine {
         // engines are gone. Anything but pcap fails here, and it fails loudly.
         if opts.backend != CaptureBackend::Pcap {
             anyhow::bail!(
-                "Capture backend {} is not implemented — the only supported backend is pcap.",
+                "Capture backend {} is not implemented â€” the only supported backend is pcap.",
                 opts.backend.label()
             );
         }
@@ -605,7 +616,7 @@ impl CaptureEngine {
             );
         }
         for e in &errors {
-            eprintln!("Warning: skipping interface — {e}");
+            eprintln!("Warning: skipping interface â€” {e}");
         }
 
         // File writing (plain or ring-buffer) only works for one interface.
@@ -657,7 +668,7 @@ impl CaptureEngine {
     }
 
     /// Capture from any local command that writes a pcap/pcapng stream to
-    /// its stdout — the extcap model. This is how Windows USB capture runs
+    /// its stdout â€” the extcap model. This is how Windows USB capture runs
     /// (`USBPcapCMD.exe -d \\.\USBPcap1 -o -`) and how tools like ciscodump
     /// or androiddump can be plugged in without netscope knowing them.
     ///
@@ -685,7 +696,7 @@ impl CaptureEngine {
             .take_stdout()
             .context("capture command has no stdout pipe")?;
 
-        // Blocks until the pcap header arrives — this is where a failed SSH
+        // Blocks until the pcap header arrives â€” this is where a failed SSH
         // login or a mistyped remote command comes back to the caller.
         let reader = match PcapStreamReader::new(stdout) {
             Ok(r) => r,
@@ -712,7 +723,7 @@ impl CaptureEngine {
         })
     }
 
-    /// Dissect a pcap/pcapng stream from an already-open byte source —
+    /// Dissect a pcap/pcapng stream from an already-open byte source â€”
     /// netscope's `-i -` (read a live capture from stdin, e.g.
     /// `ssh host "tcpdump -U -w -" | netscope -i -`).
     pub fn start_read_stream(
@@ -773,7 +784,7 @@ impl CaptureEngine {
                                     frame.orig_len,
                                     &frame.data,
                                 ) {
-                                    eprintln!("Warning: capture file write failed: {e} — file saving disabled");
+                                    eprintln!("Warning: capture file write failed: {e} â€” file saving disabled");
                                     write_failed = true;
                                 }
                             }
@@ -790,7 +801,7 @@ impl CaptureEngine {
                         }
                         Ok(None) => break, // clean end of stream
                         Err(e) => {
-                            // A killed child (user stop) also lands here —
+                            // A killed child (user stop) also lands here â€”
                             // only report when the capture was still running.
                             if run.load(Ordering::SeqCst) {
                                 eprintln!("Capture stream '{label}' ended: {e:#}");
@@ -827,11 +838,11 @@ impl CaptureEngine {
         let running = self.running.clone();
         running.store(true, Ordering::SeqCst);
 
-        // Detect format (ROADMAP §2.2 / §2.5 support for other formats)
+        // Detect format (ROADMAP Â§2.2 / Â§2.5 support for other formats)
         let format = crate::formats::detect(filepath).ok();
 
         // Two readers can open a pcap: libpcap below, and the workspace's own
-        // `RecordReader` further down — which is what every other format
+        // `RecordReader` further down â€” which is what every other format
         // already uses, and which reads pcap and pcapng through the same pure
         // Rust parser. Measured over `fixtures/*.pcap`, the two agree on packet
         // count, byte total, linktype and timestamps for every file, so this is
@@ -839,7 +850,7 @@ impl CaptureEngine {
         //
         // libpcap is kept for exactly one thing it still does better: compiling
         // a BPF expression. So a filtered read goes through it, and an
-        // unfiltered one does not — which is what stops reading a capture file
+        // unfiltered one does not â€” which is what stops reading a capture file
         // from requiring Npcap on Windows. `wpcap.dll` is a separate download
         // there, so a machine without it could not open a file it had every
         // means to parse. CI's Windows runner is one such machine.
@@ -857,7 +868,7 @@ impl CaptureEngine {
             }
 
             let output_path = output_path.map(|s| s.to_string());
-            // Link-layer type of the saved capture (Ethernet, 802.11, radiotap…).
+            // Link-layer type of the saved capture (Ethernet, 802.11, radiotapâ€¦).
             let linktype = cap.get_datalink().0;
 
             let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
@@ -886,7 +897,7 @@ impl CaptureEngine {
                                     sf.write(&pkt);
                                 }
                                 // Reading a file: block for ring space instead of
-                                // dropping — losing packets from a pcap would
+                                // dropping â€” losing packets from a pcap would
                                 // silently skew analysis.
                                 if !producer.push_blocking(raw_frame(pkt), &running) {
                                     break;
@@ -975,11 +986,11 @@ impl CaptureEngine {
             pipe.kill();
         }
         // Join every capture thread so all producers have declared their
-        // streams finished…
+        // streams finishedâ€¦
         for handle in self.handles.drain(..) {
             let _ = handle.join();
         }
-        // …then wait for each dissector stage to drain its ring so no packet is
+        // â€¦then wait for each dissector stage to drain its ring so no packet is
         // lost on stop. Pipelines stay around so their final stats remain readable.
         for pipeline in self.pipelines.iter_mut() {
             pipeline.join();
@@ -1037,7 +1048,7 @@ fn capture_loop(
                         pkt.header.len,
                         pkt.data,
                     ) {
-                        eprintln!("Warning: capture file write failed: {e} — file saving disabled");
+                        eprintln!("Warning: capture file write failed: {e} â€” file saving disabled");
                         write_failed = true;
                     }
                 }
@@ -1051,7 +1062,7 @@ fn capture_loop(
                 // drops the frame (counted in stats).
                 producer.push_live(raw_frame(pkt));
                 if hit {
-                    // Autostop limit reached — stops every sibling thread too.
+                    // Autostop limit reached â€” stops every sibling thread too.
                     running.store(false, Ordering::SeqCst);
                     break;
                 }
@@ -1080,7 +1091,7 @@ fn capture_loop(
 
 /// Build the capture-file writer for a live/stream capture. `None` when no
 /// output was requested (a ring-buffer config without an output file is an
-/// error — there would be nothing to rotate).
+/// error â€” there would be nothing to rotate).
 fn build_file_writer(
     opts: &CaptureOptions,
     linktype: i32,
@@ -1096,7 +1107,7 @@ fn build_file_writer(
     };
     if multi_interface {
         eprintln!(
-            "Warning: saving to a file isn't supported when capturing on multiple interfaces — the capture will not be written to disk."
+            "Warning: saving to a file isn't supported when capturing on multiple interfaces â€” the capture will not be written to disk."
         );
         return Ok(None);
     }
@@ -1105,10 +1116,10 @@ fn build_file_writer(
     Ok(Some(writer))
 }
 
-/// Convert a libpcap packet into the pipeline's raw-frame form (§5.2.3 zero-copy).
+/// Convert a libpcap packet into the pipeline's raw-frame form (Â§5.2.3 zero-copy).
 fn raw_frame(pkt: pcap::Packet) -> RawFrame {
     // `tv_sec` is `i32` on Windows and `i64` on Linux and macOS, so this widens
-    // on one platform and is a no-op on the others — where clippy calls it a
+    // on one platform and is a no-op on the others â€” where clippy calls it a
     // useless conversion and CI's `-D warnings` turns that into a failure. `as`
     // would only trade this lint for `unnecessary_cast` on the same platforms.
     #[allow(clippy::useless_conversion)]
@@ -1125,8 +1136,8 @@ fn raw_frame(pkt: pcap::Packet) -> RawFrame {
 
 /// Tokio-friendly wrapper around [`CaptureEngine`] for async consumers (the
 /// planned REST/WebSocket server mode). The blocking pcap read loop and the
-/// dissector stage stay on their dedicated OS threads — the roadmap's
-/// zero-copy async I/O (AF_XDP) is a separate, Linux-only future step — and a
+/// dissector stage stay on their dedicated OS threads â€” the roadmap's
+/// zero-copy async I/O (AF_XDP) is a separate, Linux-only future step â€” and a
 /// bridge thread forwards finished packets into a bounded tokio channel.
 #[cfg(feature = "async")]
 pub struct AsyncCaptureEngine {
@@ -1138,7 +1149,7 @@ impl AsyncCaptureEngine {
     /// Start a live capture; packets arrive on the returned tokio receiver.
     /// `buffer` caps in-flight packets between the pipeline and the async
     /// consumer (lagging consumers apply backpressure to the bridge, never to
-    /// the wire loop — the ring's drop policy handles overload there).
+    /// the wire loop â€” the ring's drop policy handles overload there).
     pub fn start_live(
         interface: &str,
         bpf_filter: Option<&str>,
@@ -1316,6 +1327,7 @@ mod capture_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn autostop_packet_limit_cuts_the_stream() {
         let mut eng = CaptureEngine::new();
         let (tx, rx) = crossbeam_channel::unbounded();
@@ -1335,6 +1347,7 @@ mod capture_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn autostop_byte_limit_cuts_the_stream() {
         let mut eng = CaptureEngine::new();
         let (tx, rx) = crossbeam_channel::unbounded();
@@ -1353,6 +1366,7 @@ mod capture_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn stream_capture_writes_output_file() {
         let dir = std::env::temp_dir().join(format!(
             "netscope-stream-save-{}-{}",
@@ -1425,7 +1439,7 @@ mod capture_tests {
     fn multi_all_bogus_interfaces_errors_and_resets_running() {
         let mut eng = CaptureEngine::new();
         let (tx, _rx) = crossbeam_channel::unbounded();
-        // Names that cannot resolve to real devices — every open fails, so the
+        // Names that cannot resolve to real devices â€” every open fails, so the
         // whole call must error (and leave the engine stopped).
         let res = eng.start_live_multi(
             &["netscope-no-such-if-0", "netscope-no-such-if-1"],
@@ -1507,7 +1521,7 @@ mod filter_tests {
 
     #[test]
     fn host_keyword_protects_hostname() {
-        // "host http" means a host named "http" — do not translate.
+        // "host http" means a host named "http" â€” do not translate.
         assert_eq!(translate_bpf_filter("host http"), "host http");
         // Dotted hostname stays intact.
         assert_eq!(
@@ -1518,7 +1532,7 @@ mod filter_tests {
 
     #[test]
     fn host_keyword_then_protocol_elsewhere() {
-        // "host 1.2.3.4 and http" — only the second "http" is translated.
+        // "host 1.2.3.4 and http" â€” only the second "http" is translated.
         assert_eq!(
             translate_bpf_filter("host 10.0.0.1 and http"),
             "host 10.0.0.1 and tcp port 80"
@@ -1552,8 +1566,8 @@ mod filter_tests {
 
     /// Every backend except pcap must refuse to start.
     ///
-    /// This replaces a test that asserted the opposite — that AF_XDP on
-    /// `eth0` and DPDK on `dpdk0` both start *and deliver packets* — on a CI
+    /// This replaces a test that asserted the opposite â€” that AF_XDP on
+    /// `eth0` and DPDK on `dpdk0` both start *and deliver packets* â€” on a CI
     /// runner that has neither interface. It passed because the engines behind
     /// those two arms did not capture anything: they generated frames and fed
     /// them to the pipeline. The test was, in effect, asserting that the

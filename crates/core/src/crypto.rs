@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Capture encryption — write a capture to disk sealed with a passphrase
 //! (ROADMAP §5.4).
@@ -335,6 +335,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn roundtrip_various_sizes() {
         roundtrip(b"");
         roundtrip(b"a");
@@ -344,6 +345,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn wrong_passphrase_fails() {
         let enc = encrypt_with(b"secret capture", "hunter2", KdfParams::fast(), 64).unwrap();
         let err = decrypt(&enc, "hunter3").unwrap_err().to_string();
@@ -351,6 +353,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn tampered_ciphertext_fails() {
         let mut enc = encrypt_with(&[7u8; 500], "pw", KdfParams::fast(), 64).unwrap();
         let last = enc.len() - 1;
@@ -359,6 +362,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn truncated_stream_fails() {
         // Drop the final chunk: the previous chunk was sealed with last=false,
         // so the reader reaching EOF expects last=true and authentication fails.
@@ -382,6 +386,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn params_are_read_from_header() {
         // Encrypt with distinctive params; decrypt must succeed without being
         // told them (they come from the header).
@@ -395,6 +400,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn password_roundtrip_and_salt_uniqueness() {
         let h1 = hash_password("correct horse battery staple").unwrap();
         let h2 = hash_password("correct horse battery staple").unwrap();
@@ -406,6 +412,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn password_verify_rejects_wrong_and_malformed() {
         let hash = hash_password("s3cret").unwrap();
         assert!(!verify_password("wrong", &hash));

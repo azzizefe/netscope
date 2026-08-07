@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-//! Capture merge & split — netscope's take on Wireshark's `mergecap` and
+//! Capture merge & split â€” netscope's take on Wireshark's `mergecap` and
 //! `editcap`, plus a `capinfos`-style summary.
 //!
 //! * [`merge`] combines several capture files into one, interleaving packets
 //!   in timestamp order (or concatenating them as-is). Inputs may be any
-//!   format [`crate::formats`] reads (pcap, pcapng, snoop, ERF, K12…); the
+//!   format [`crate::formats`] reads (pcap, pcapng, snoop, ERF, K12â€¦); the
 //!   output is pcap or pcapng.
 //! * [`split`] breaks one capture into numbered chunks by packet count, time
 //!   span, or byte size.
@@ -179,7 +179,7 @@ pub fn merge(inputs: &[PathBuf], output: &Path, opts: &MergeOptions) -> Result<M
         .any(|i| i.linktype != interfaces[0].linktype);
     if opts.format == WriteFormat::Pcap && mixed_linktypes {
         anyhow::bail!(
-            "inputs have different link types — a classic pcap can't hold them; write pcapng instead"
+            "inputs have different link types â€” a classic pcap can't hold them; write pcapng instead"
         );
     }
 
@@ -350,7 +350,7 @@ pub struct CaptureFileInfo {
 }
 
 impl CaptureFileInfo {
-    /// Capture span in seconds (last − first timestamp), if known.
+    /// Capture span in seconds (last âˆ’ first timestamp), if known.
     pub fn duration_secs(&self) -> Option<f64> {
         match (self.first, self.last) {
             (Some(a), Some(b)) => Some((b.0 - a.0) as f64 + (b.1 as f64 - a.1 as f64) / 1e9),
@@ -439,6 +439,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn merge_interleaves_by_timestamp() {
         let dir = tmp_dir("merge");
         let a = dir.join("a.pcap");
@@ -466,6 +467,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn merge_concatenate_keeps_input_order() {
         let dir = tmp_dir("concat");
         let a = dir.join("a.pcap");
@@ -489,6 +491,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn merge_to_pcap_rejects_mixed_linktypes() {
         let dir = tmp_dir("mixed");
         let a = dir.join("a.pcap");
@@ -516,6 +519,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn split_by_packet_count() {
         let dir = tmp_dir("split-count");
         let input = dir.join("in.pcap");
@@ -531,7 +535,7 @@ mod tests {
             },
         )
         .unwrap();
-        // 10 packets / 3 → 4 files (3,3,3,1).
+        // 10 packets / 3 â†’ 4 files (3,3,3,1).
         assert_eq!(files.len(), 4);
         let counts: Vec<usize> = files.iter().map(|f| read_all(f).len()).collect();
         assert_eq!(counts, vec![3, 3, 3, 1]);
@@ -545,10 +549,11 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn split_by_time_span() {
         let dir = tmp_dir("split-time");
         let input = dir.join("in.pcap");
-        // Packets at t=0,1,2 then 10,11 — a 5s window yields two chunks.
+        // Packets at t=0,1,2 then 10,11 â€” a 5s window yields two chunks.
         write_pcap(
             &input,
             &[(0, 1, 4), (1, 2, 4), (2, 3, 4), (10, 4, 4), (11, 5, 4)],
@@ -568,6 +573,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn info_reports_counts_and_span() {
         let dir = tmp_dir("info");
         let input = dir.join("in.pcap");
@@ -584,6 +590,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn round_trip_pcapng_preserves_nanoseconds() {
         let dir = tmp_dir("ns");
         // Split a pcapng and confirm ns timestamps survive the writer.

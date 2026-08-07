@@ -240,6 +240,10 @@ impl SocIncidentManager {
         for host in &incident.affected_hosts {
             if let Ok(ip) = host.parse::<std::net::IpAddr>() {
                 if pb.auto_action == "block_ip" || pb.auto_action == "isolate_host" {
+                    // Miri cannot spawn subprocesses (netsh/iptables/pfctl), so
+                    // skip the real OS call under the interpreter.  The firewall
+                    // module has its own unit tests under normal `cargo test`.
+                    #[cfg(not(miri))]
                     let _ = crate::firewall::block(ip);
                     action_log.push_str(&format!("OS Firewall blocked IP {ip}. "));
                 }

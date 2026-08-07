@@ -686,6 +686,7 @@ mod tests {
     use std::time::Duration;
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_api_server_routes() {
         let buffer = ApiPacketBuffer::new();
         let pkt = Packet {
@@ -775,6 +776,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_ai_traffic_endpoints() {
         let buffer = ApiPacketBuffer::new();
         let engine = CaptureEngine::new();
@@ -877,6 +879,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_ai_endpoint_requires_auth() {
         let buffer = ApiPacketBuffer::new();
         let engine = CaptureEngine::new();
@@ -902,6 +905,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_ai_stats_endpoint_requires_auth() {
         let buffer = ApiPacketBuffer::new();
         let engine = CaptureEngine::new();

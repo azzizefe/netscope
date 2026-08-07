@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-//! Declarative protocol plugins — recognise new protocols without touching
-//! Rust or recompiling (ROADMAP §2.3).
+//! Declarative protocol plugins â€” recognise new protocols without touching
+//! Rust or recompiling (ROADMAP Â§2.3).
 //!
 //! A plugin is a small TOML file dropped into `~/.netscope/plugins/`:
 //!
@@ -12,13 +12,13 @@
 //! ports = [6379]               # match when src or dst port is listed
 //! description = "Redis key-value store wire protocol (RESP)."
 //!
-//! [match]                      # optional payload heuristics — all must hold
-//! prefix = "*"                 # payload starts with this text…
-//! # prefix_hex = "2a31"        # …or with these hex bytes (wins over prefix)
+//! [match]                      # optional payload heuristics â€” all must hold
+//! prefix = "*"                 # payload starts with this textâ€¦
+//! # prefix_hex = "2a31"        # â€¦or with these hex bytes (wins over prefix)
 //! # contains = "PING"          # payload contains this text
 //!
 //! [display]
-//! summary = "Redis — {first_line}"   # {name} {len} {src_port} {dst_port} {first_line}
+//! summary = "Redis â€” {first_line}"   # {name} {len} {src_port} {dst_port} {first_line}
 //! ```
 //!
 //! ## Lua summaries (optional)
@@ -40,7 +40,7 @@
 //! bytes, so `payload:byte(i)` and `#payload` work on binary protocols.
 //!
 //! Scripts are deliberately confined. The VM gets only `string`, `table` and
-//! `math` — no `io`, `os`, `package` or `debug` — and the base library's
+//! `math` â€” no `io`, `os`, `package` or `debug` â€” and the base library's
 //! loaders (`dofile`, `loadfile`, `load`) are removed, so a plugin cannot read
 //! files, spawn processes or pull in native code. Execution is capped by an
 //! instruction budget, so a runaway loop is aborted instead of stalling a
@@ -50,7 +50,7 @@
 //! and prefix wouldn't have claimed anyway.
 //!
 //! Plugins run **after** every built-in dissector and **before** the generic
-//! "TCP/UDP — N bytes" fallback, so they can claim unknown traffic but never
+//! "TCP/UDP â€” N bytes" fallback, so they can claim unknown traffic but never
 //! shadow a built-in protocol. Matched packets get
 //! [`Protocol::Plugin`](crate::models::Protocol::Plugin), which flows through
 //! coloring, filtering (`redis` in a display filter matches a plugin named
@@ -94,7 +94,7 @@ pub struct Plugin {
     pub lua: Option<LuaScript>,
 }
 
-/// A plugin's Lua hook. Only the summary is scriptable — matching stays
+/// A plugin's Lua hook. Only the summary is scriptable â€” matching stays
 /// declarative so the hot path never enters Lua for traffic it won't claim.
 #[derive(Debug, Clone, Deserialize)]
 pub struct LuaScript {
@@ -133,7 +133,7 @@ pub struct Display {
 impl Default for Display {
     fn default() -> Self {
         Self {
-            summary: "{name} — {len} bytes".into(),
+            summary: "{name} â€” {len} bytes".into(),
         }
     }
 }
@@ -181,8 +181,8 @@ impl Plugin {
             return false;
         }
         if !self.matcher.contains.is_empty() {
-            // SIMD-accelerated substring search (ROADMAP §4.1) — the naive
-            // windows() scan was O(n·m) on every unclaimed payload.
+            // SIMD-accelerated substring search (ROADMAP Â§4.1) â€” the naive
+            // windows() scan was O(nÂ·m) on every unclaimed payload.
             let needle = self.matcher.contains.as_bytes();
             if memchr::memmem::find(payload, needle).is_none() {
                 return false;
@@ -229,7 +229,7 @@ mod lua_engine {
     const INSTRUCTION_BUDGET: u32 = 200_000;
 
     thread_local! {
-        /// One VM per dissector thread — `mlua::Lua` is not shareable, and the
+        /// One VM per dissector thread â€” `mlua::Lua` is not shareable, and the
         /// pipeline dissects across a rayon pool.
         static VM: RefCell<Option<mlua::Lua>> = const { RefCell::new(None) };
         /// Chunks already compiled on this thread, keyed by script source.
@@ -247,7 +247,7 @@ mod lua_engine {
         )?;
         // The base library comes in regardless of the StdLib selection, and it
         // carries loaders that can reach the filesystem or compile new chunks.
-        // Remove them explicitly — a plugin only needs to format a string.
+        // Remove them explicitly â€” a plugin only needs to format a string.
         let globals = lua.globals();
         for name in ["dofile", "loadfile", "load", "loadstring", "collectgarbage"] {
             globals.set(name, mlua::Value::Nil)?;
@@ -263,7 +263,7 @@ mod lua_engine {
         Ok(lua)
     }
 
-    /// Run a plugin's summary script. Returns `None` on any error — a broken
+    /// Run a plugin's summary script. Returns `None` on any error â€” a broken
     /// script must never break dissection, the caller falls back to the
     /// declarative template.
     pub(super) fn summary(
@@ -471,7 +471,7 @@ mod tests {
         prefix = "*"
 
         [display]
-        summary = "Redis — {first_line}"
+        summary = "Redis â€” {first_line}"
     "#;
 
     #[test]
@@ -532,7 +532,7 @@ mod tests {
         let p = Plugin::parse(REDIS_TOML).unwrap();
         assert_eq!(
             p.summary(50000, 16379, b"*1\r\n$4\r\nPING\r\n"),
-            "Redis — *1"
+            "Redis â€” *1"
         );
     }
 
@@ -567,11 +567,11 @@ mod tests {
                     transport: PluginTransport::Tcp,
                 })
             );
-            assert_eq!(result.summary, "Redis — *1");
+            assert_eq!(result.summary, "Redis â€” *1");
 
             // An HTTP payload on the plugin's port still goes to the plugin
-            // only if no built-in claims it — but HTTP heuristics only run on
-            // port 80/upgrade, so this stays with the plugin's port rule…
+            // only if no built-in claims it â€” but HTTP heuristics only run on
+            // port 80/upgrade, so this stays with the plugin's port ruleâ€¦
             // whereas a WebSocket frame chain (built-in, any port) wins:
             let ws = build_tcp_packet(
                 [10, 0, 0, 1],
@@ -591,6 +591,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn udp_dissector_uses_plugin_after_builtins() {
         use crate::dissectors::ip::dissect_ipv4;
         use crate::dissectors::test_helpers::build_udp_packet;
@@ -630,6 +631,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn empty_registry_is_inert() {
         with_registry(Vec::new(), || {
             assert!(try_dissect(TransportKind::Tcp, None, None, 1, 16379, b"*1\r\n").is_none());
@@ -637,6 +639,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn load_dir_reads_and_reports() {
         let dir = std::env::temp_dir().join("netscope-plugins-test");
         let _ = std::fs::remove_dir_all(&dir);
