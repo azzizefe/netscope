@@ -705,7 +705,10 @@ pub struct OnDemandRemotePcapEngine;
 impl OnDemandRemotePcapEngine {
     /// Initiate live remote PCAP stream over gRPC / SSH pipe to central SOC analyst (§5.2).
     pub fn start_remote_stream(req: OnDemandPcapRequest) -> OnDemandPcapStreamSummary {
-        let stream_id = format!("stream-{:x}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let stream_id = format!(
+            "stream-{:x}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
         OnDemandPcapStreamSummary {
             stream_id,
             target_sensor_id: req.target_sensor_id,

@@ -15,9 +15,15 @@
 //!
 //! 1. **Port plus a content guard** — a port that sits in the ephemeral range
 //!    (DRDA on 50000, MySQL X on 33060) only claims a flow if the payload also
-//!    carries the protocol's framing.
+//!    carries the protocol's framing. The same applies to the ports listed in
+//!    `tcp::UNVERIFIED_VENDOR_PORTS`, which may not claim a payload that is
+//!    plainly HTTP or TLS.
 //! 2. **Exact port match** — this table.
-//! 3. **Port ranges** — BitTorrent 6881-6889, X11 6000-6005, SOME/IP 30490-30510.
+//! 3. **Port ranges** — SOME/IP 30490-30510, in `tcp.rs`. This line used to
+//!    read "BitTorrent 6881-6889, X11 6000-6005, SOME/IP 30490-30510"; neither
+//!    of the first two exists. There is no X11 dissector at all, and BitTorrent
+//!    is recognised in `udp.rs` by its framing, not by a range. A precedence
+//!    list is the one place a reader trusts to say what the dispatch does.
 //! 4. **Structural sniffs** — protocols with no fixed port at all (SPICE, ZMTP,
 //!    DTLS, RTP), recognised by their framing.
 //! 5. **User plugins**, which never shadow a built-in.
@@ -29,21 +35,21 @@ use std::net::IpAddr;
 
 use super::DissectedResult;
 use super::{
-    aerospike, afp, amqp, amt, b_r_automation_pvi, bacnet, beckhoff_twincat_analytics, bfcp, bfd,
-    bgp, bosch_nexeed_edge, bosch_rexroth_open_core, capwap, cassandra, ccp, cip_safety, cmp, coap,
-    dhcp, dhcp_failover, dhcpv6, dicom, dmx, dnp3, doip, e1ap, edge_inference_onnx,
-    edge_tensorflow_lite, enip, epic_online_eos_p2p, f1ap, factorytalk_view_hmi, fanuc_focas2,
-    finger, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp, h225ras, hl7, hnbap, hsrp, iax2,
-    interbus, ipsec, isakmp, iscsi, isns, kerberos, kpasswd, l2tp, lcsap, ldap, ldp, lisp, m2ap,
-    m2pa, m2ua, m3ap, m3ua, matter, mechatrolink, memcached, mitsubishi_melsec_proto, modbus,
-    mongodb, mqtt, mqttsn, mssqlbrowser, mumble, mysql, nbap, nbds, nbns, netflow, ngap, ninep,
-    nintendo_npln_p2p, nsip, ntp, nvme_over_fabrics_tcp, omron_fins_udp_detail, opcua, openflow,
-    p_net, pcp, pfcp, psn_matchmaking_v3, ptp, q931, radius, rdp, redis, rip, ripng,
-    rockwell_factorytalk_edge, rpc, rpkirtr, rtpmidi, rtsp, rua, rwho, s1ap, s7comm_plus_detail,
-    sabp, sbcap, sflow, siemens_industrial_edge, simatic_hmi_smartsrv, sinumerik_nck_channel, sip,
-    snmp, steam_datagram_relay, studio5000_online_comm, stun, sua, syslog, tacacs,
-    tia_portal_online_diag, tls, twincat_router_telemetry, twincat_scope_view, uadp, vxlangpe,
-    wccp, wireguard, wsd, xbox_live_sdv2, xcp, xnap,
+    aerospike, afp, amqp, amt, b_r_automation_pvi, bacnet, bfcp, bfd, bgp, bosch_nexeed_edge,
+    capwap, cassandra, ccp, cip_safety, cmp, coap, dhcp, dhcp_failover, dhcpv6, dicom, dmx, dnp3,
+    doip, e1ap, edge_inference_onnx, edge_tensorflow_lite, enip, epic_online_eos_p2p, f1ap,
+    factorytalk_view_hmi, fanuc_focas2, finger, gelf, geneve, glbp, gopher, gtp, gtpprime, gvcp,
+    h225ras, hl7, hnbap, hsrp, iax2, interbus, ipsec, isakmp, iscsi, isns, kerberos, kpasswd, l2tp,
+    lcsap, ldap, ldp, lisp, m2ap, m2pa, m2ua, m3ap, m3ua, matter, mechatrolink, memcached,
+    milvus_proxy_grpc, mitsubishi_melsec_proto, modbus, mongodb, mqtt, mqttsn, mssqlbrowser,
+    mumble, mysql, nbap, nbds, nbns, netflow, ngap, ninep, nintendo_npln_p2p, nsip, ntp,
+    nvme_over_fabrics_tcp, omron_fins_udp_detail, opcua, openflow, p_net, pcp, pfcp,
+    psn_matchmaking_v3, ptp, q931, radius, rdp, redis, rip, ripng, rpc, rpkirtr, rtpmidi, rtsp,
+    rua, rwho, s1ap, s7comm_plus_detail, sabp, sbcap, secondlife_lludp, sflow,
+    siemens_industrial_edge, simatic_hmi_smartsrv, sinumerik_nck_channel, sip, snmp,
+    steam_datagram_relay, studio5000_online_comm, stun, sua, syslog, tacacs,
+    tia_portal_online_diag, tls, twincat_scope_view, uadp, vxlangpe, wccp, wireguard, wsd,
+    xbox_live_sdv2, xcp, xnap,
 };
 
 /// The signature every port-dispatched dissector shares.
@@ -170,26 +176,23 @@ static TCP_PORTS: &[(u16, PortDissector)] = &[
     (11157, b_r_automation_pvi::dissect_br_automation_pvi),
     (11211, memcached::dissect_memcached),
     (13400, doip::dissect_doip),
+    (19530, milvus_proxy_grpc::dissect_milvus_proxy_grpc),
     (20001, dnp3::dissect_dnp3),
     (24007, rpc::dissect_rpc),
     (27017, mongodb::dissect_mongodb),
-    (
-        41100,
-        bosch_rexroth_open_core::dissect_bosch_rexroth_open_core,
-    ),
     (44818, enip::dissect_enip),
-    (
-        44819,
-        rockwell_factorytalk_edge::dissect_rockwell_factorytalk_edge,
-    ),
-    (
-        48400,
-        beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics,
-    ),
-    (
-        48899,
-        twincat_router_telemetry::dissect_twincat_router_telemetry,
-    ),
+    // 41100, 44819, 48400 and 48899 held `bosch_rexroth_open_core`,
+    // `rockwell_factorytalk_edge`, `beckhoff_twincat_analytics` and
+    // `twincat_router_telemetry`. All four are gone, for the same reason the
+    // three below are: the numbers sit in the Linux ephemeral range
+    // (32768-60999) and are not registered to those vendors, and not one of
+    // the four dissectors validates a byte before claiming the flow — each
+    // reads fixed offsets and formats whatever is there as a session id, an
+    // opcode and a counter. 44819 is one past EtherNet/IP's real 44818, which
+    // is how it looks plausible. Because this table matches source ports too,
+    // an ordinary outbound connection assigned one of these came back labelled
+    // as PLC traffic, with invented field values that read as measurements.
+    // Restoring them needs a signature (spec or capture), not a port.
     // 51000/51001/51002 held `edge_pytorch_mobile`, `nxp_eiq_inference` and
     // `stm_stm32cube_ai`. All three are gone: the ports are invented — three
     // consecutive numbers in the middle of the Linux ephemeral range
@@ -293,6 +296,7 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (9600, omron_fins_udp_detail::dissect_omron_fins_udp_detail),
     (9995, netflow::dissect_netflow),
     (12201, gelf::dissect_gelf),
+    (13000, secondlife_lludp::dissect_secondlife_lludp),
     (13400, doip::dissect_doip),
     (20000, dnp3::dissect_dnp3),
     (27018, epic_online_eos_p2p::dissect_epic_online_eos_p2p),
@@ -301,10 +305,12 @@ static UDP_PORTS: &[(u16, PortDissector)] = &[
     (30211, nintendo_npln_p2p::dissect_nintendo_npln_p2p),
     (44818, enip::dissect_enip),
     (47808, bacnet::dissect_bacnet),
-    (
-        48898,
-        beckhoff_twincat_analytics::dissect_beckhoff_twincat_analytics,
-    ),
+    // 48898 held `beckhoff_twincat_analytics` here. 48898/48899 *are* real
+    // Beckhoff numbers — they are TwinCAT's ADS/AMS ports — but ADS is not
+    // TwinCAT Analytics, and this dissector reads an ADS frame as a channel
+    // id, a mode byte and a sample count, so every ADS exchange on the bus was
+    // relabelled and given numbers that mean nothing. A dissector for ADS
+    // itself would be welcome on this port; this is not one.
     (51820, wireguard::dissect_wireguard),
 ];
 

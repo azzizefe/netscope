@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 // Load the real, shipped frontend source (../frontend/app.js) inside a Node vm
 // sandbox and expose its top-level functions for unit testing — no duplication,
@@ -74,6 +74,7 @@ export function loadApp() {
     // fall back to reporting the base64 — a pass for the wrong reason.
     atob: (s) => Buffer.from(s, 'base64').toString('binary'),
     btoa: (s) => Buffer.from(s, 'binary').toString('base64'),
+    observeDevice: noop,
   };
   ctx.window = ctx;
   ctx.self = ctx;

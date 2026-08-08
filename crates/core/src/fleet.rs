@@ -91,7 +91,9 @@ impl FleetManager {
 
     /// Register or update heartbeat from a remote sensor agent (§1.2).
     pub fn update_sensor_heartbeat(&self, metrics: SensorAgentMetrics) {
-        self.sensors.write().insert(metrics.sensor_id.clone(), metrics);
+        self.sensors
+            .write()
+            .insert(metrics.sensor_id.clone(), metrics);
     }
 
     /// Push new central configuration to all registered fleet sensors (§1.1).
@@ -265,10 +267,12 @@ mod tests {
     fn test_central_config_push() {
         let manager = FleetManager::new();
 
-        let mut config = FleetCentralConfig::default();
-        config.config_version = "v1.1.0-sec".to_string();
-        config.pii_scrubbing_enabled = true;
-        config.capture_bpf_filter = "tcp port 80 or tcp port 443".to_string();
+        let config = FleetCentralConfig {
+            config_version: "v1.1.0-sec".to_string(),
+            pii_scrubbing_enabled: true,
+            capture_bpf_filter: "tcp port 80 or tcp port 443".to_string(),
+            ..Default::default()
+        };
 
         let count = manager.push_central_config(config.clone());
         assert_eq!(count, 0);
@@ -282,7 +286,8 @@ mod tests {
     fn test_mass_deployment_script_generators() {
         let manager = FleetManager::new();
 
-        let msi_script = manager.generate_windows_msi_gpo_script("https://netscope.corp:50051", "secret123");
+        let msi_script =
+            manager.generate_windows_msi_gpo_script("https://netscope.corp:50051", "secret123");
         assert!(msi_script.contains("msiexec /i"));
         assert!(msi_script.contains("/qn"));
         assert!(msi_script.contains("https://netscope.corp:50051"));

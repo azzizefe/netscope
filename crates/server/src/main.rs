@@ -240,16 +240,65 @@ async fn main() -> Result<()> {
             .unwrap_or(false);
 
     // ── gRPC server (separate port) ──
+    //
+    // The gRPC port carries `SensorService`: registration, heartbeats, the
+    // event stream, and `SendCommand` — instructions a sensor executes. It ran
+    // in the clear even when `--tls-cert`/`--tls-key`/`--tls-ca` were given,
+    // while the line below logged "TLS 1.3 enabled (mTLS: true)" about the HTTP
+    // port. An operator reading that had every reason to believe the whole
+    // server was protected, and the port that accepts commands was the one that
+    // was not. It now takes the same identity and the same client CA.
     let grpc_svc = grpc::grpc_service(pool.clone(), cache.clone());
 
+    let mode = tls_mode(tls_cert.as_deref(), tls_key.as_deref(), tls_ca.as_deref())?;
+
+    let grpc_tls = match mode {
+        TlsMode::Plain => None,
+        TlsMode::ServerOnly | TlsMode::Mutual => {
+            let (cert, key) = (
+                tls_cert.as_ref().expect("checked by tls_mode"),
+                tls_key.as_ref().expect("checked by tls_mode"),
+            );
+            let identity = tonic::transport::Identity::from_pem(
+                std::fs::read(cert)
+                    .with_context(|| format!("reading TLS certificate {}", cert.display()))?,
+                std::fs::read(key).with_context(|| format!("reading TLS key {}", key.display()))?,
+            );
+            let mut tls = tonic::transport::ServerTlsConfig::new().identity(identity);
+            if mode == TlsMode::Mutual {
+                // Same CA as the HTTP listener's `WebPkiClientVerifier`, so a
+                // sensor certificate that is accepted on one port is accepted
+                // on the other, and one that is not is refused on both.
+                let ca = tls_ca.as_ref().expect("checked by tls_mode");
+                tls = tls.client_ca_root(tonic::transport::Certificate::from_pem(
+                    std::fs::read(ca)
+                        .with_context(|| format!("reading client CA {}", ca.display()))?,
+                ));
+            }
+            Some(tls)
+        }
+    };
+
     let grpc_handle = if grpc_enabled {
-        tracing::info!("gRPC server starting on {}", grpc_listen_addr);
+        tracing::info!(
+            "gRPC server starting on {} (TLS: {}, mTLS: {})",
+            grpc_listen_addr,
+            mode != TlsMode::Plain,
+            mode == TlsMode::Mutual
+        );
         Some(tokio::spawn(async move {
-            if let Err(e) = GrpcServer::builder()
-                .add_service(grpc_svc)
-                .serve(grpc_listen_addr)
-                .await
-            {
+            let mut builder = GrpcServer::builder();
+            if let Some(tls) = grpc_tls {
+                match builder.tls_config(tls) {
+                    Ok(b) => builder = b,
+                    Err(e) => {
+                        // Refuse rather than serve `SendCommand` unauthenticated.
+                        tracing::error!("gRPC TLS configuration rejected, not serving: {e}");
+                        return;
+                    }
+                }
+            }
+            if let Err(e) = builder.add_service(grpc_svc).serve(grpc_listen_addr).await {
                 tracing::error!("gRPC server error: {}", e);
             }
         }))
@@ -258,9 +307,16 @@ async fn main() -> Result<()> {
     };
 
     // ── HTTP server (with optional TLS) ──
-    let http_handle = if let (Some(cert), Some(key)) = (tls_cert.as_ref(), tls_key.as_ref()) {
-        let tls = tls_ca.is_some();
-        tracing::info!("TLS 1.3 enabled on {} (mTLS: {})", listen_addr, tls);
+    let http_handle = if mode != TlsMode::Plain {
+        let (cert, key) = (
+            tls_cert.as_ref().expect("checked by tls_mode"),
+            tls_key.as_ref().expect("checked by tls_mode"),
+        );
+        tracing::info!(
+            "TLS 1.3 enabled on {} (mTLS: {})",
+            listen_addr,
+            mode == TlsMode::Mutual
+        );
         let listener =
             tls_listener::TlsListener::new(&listen_addr, cert, key, tls_ca.as_deref()).await?;
         tokio::spawn(async move {
@@ -311,6 +367,53 @@ async fn dashboard_handler() -> impl IntoResponse {
     axum::response::Html(include_str!("static/dashboard.html"))
 }
 
+/// What the `--tls-*` flags add up to, decided once for every listener.
+///
+/// Both listeners used to read the three paths independently, and the gRPC one
+/// simply ignored them. Naming the outcome keeps the two ports from disagreeing
+/// about whether the deployment is authenticated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TlsMode {
+    /// No certificate: plaintext on both ports.
+    Plain,
+    /// Server certificate only — clients verify the server, not the reverse.
+    ServerOnly,
+    /// Server certificate plus a client CA: every peer presents a certificate.
+    Mutual,
+}
+
+/// Resolve the `--tls-cert` / `--tls-key` / `--tls-ca` triple.
+///
+/// A certificate without its key (or the reverse) is an error rather than a
+/// quiet fall back to plaintext: the operator asked for TLS, and the ports
+/// involved carry sensor commands. A CA with no server certificate is the same
+/// mistake in the other direction — it reads like mTLS and would have served
+/// plaintext.
+fn tls_mode(
+    cert: Option<&std::path::Path>,
+    key: Option<&std::path::Path>,
+    ca: Option<&std::path::Path>,
+) -> Result<TlsMode> {
+    match (cert, key) {
+        (Some(_), Some(_)) => Ok(if ca.is_some() {
+            TlsMode::Mutual
+        } else {
+            TlsMode::ServerOnly
+        }),
+        (Some(_), None) => {
+            anyhow::bail!("--tls-cert was given without --tls-key; TLS needs both")
+        }
+        (None, Some(_)) => {
+            anyhow::bail!("--tls-key was given without --tls-cert; TLS needs both")
+        }
+        (None, None) if ca.is_some() => anyhow::bail!(
+            "--tls-ca was given without --tls-cert/--tls-key, which would have \
+             served plaintext while looking like mutual TLS"
+        ),
+        (None, None) => Ok(TlsMode::Plain),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,5 +437,55 @@ mod tests {
         let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
         assert!(body_str.contains("Netscope SOC Dashboard"));
         assert!(body_str.contains("dracula"));
+    }
+
+    /// The gRPC port must reach the same verdict as the HTTP port.
+    ///
+    /// It used to reach none: `GrpcServer::builder().add_service(..).serve(..)`
+    /// ignored the `--tls-*` flags entirely, so `SensorService` — registration,
+    /// heartbeats, the event stream and `SendCommand` — was served in the clear
+    /// on a deployment whose log line said "TLS 1.3 enabled (mTLS: true)".
+    #[test]
+    fn tls_mode_is_decided_once_for_both_listeners() {
+        use std::path::Path;
+        let cert = Path::new("server.pem");
+        let key = Path::new("server.key");
+        let ca = Path::new("clients-ca.pem");
+
+        assert_eq!(tls_mode(None, None, None).unwrap(), TlsMode::Plain);
+        assert_eq!(
+            tls_mode(Some(cert), Some(key), None).unwrap(),
+            TlsMode::ServerOnly
+        );
+        assert_eq!(
+            tls_mode(Some(cert), Some(key), Some(ca)).unwrap(),
+            TlsMode::Mutual
+        );
+    }
+
+    /// Every incomplete combination is an error, never a silent downgrade.
+    ///
+    /// A CA on its own is the dangerous one: it is what an operator writes when
+    /// they mean "require client certificates", and the old code answered it
+    /// with plaintext on both ports.
+    #[test]
+    fn an_incomplete_tls_configuration_is_refused() {
+        use std::path::Path;
+        let cert = Path::new("server.pem");
+        let key = Path::new("server.key");
+        let ca = Path::new("clients-ca.pem");
+
+        for (c, k, a, expected) in [
+            (Some(cert), None, None, "--tls-key"),
+            (None, Some(key), None, "--tls-cert"),
+            (None, None, Some(ca), "plaintext"),
+            (Some(cert), None, Some(ca), "--tls-key"),
+        ] {
+            let err = tls_mode(c, k, a).expect_err("an incomplete TLS setup must not start");
+            assert!(
+                err.to_string().contains(expected),
+                "the refusal should name the problem ({expected}), got: {err}"
+            );
+        }
     }
 }

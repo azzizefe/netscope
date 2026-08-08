@@ -22,7 +22,8 @@ concurrency:
 #   1. lint        — cargo clippy (deny warnings) + cargo fmt --check
 #   2. test        — cargo test on Linux / macOS / Windows
 #   3. frontend    — npm test (vitest) for desktop frontend unit tests
-#   4. bench       — continuous benchmarks (parse, filter, memory)
+#   4. bench       — continuous benchmarks (parse, filter, pipeline, memory)
+#   5. fuzz        — 60s of cargo-fuzz over the packet dispatch (Linux only)
 # ─────────────────────────────────────────────────────────────────────────────
 
 jobs:
@@ -37,6 +38,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
 
@@ -56,12 +58,24 @@ jobs:
       # red run is unreadable to exactly the people who would fix it —
       # contributors, and anyone triaging from a fork's PR. The step summary is
       # public, and readable over the API as `check-runs/{id}` → `output`.
-      - name: Clippy (all workspace crates except desktop)
+      # `--all-targets` so tests and benches are linted too, not just the
+      # library. Without it clippy sees only the `--lib`/`--bin` targets, and
+      # test code — which is where this repo's correctness guards live — was
+      # never checked at all. A lint error inside a `#[cfg(test)]` module
+      # passed CI and only appeared on a contributor's machine.
+      - name: Clippy (all workspace crates except desktop and wasm)
         id: clippy
         shell: bash
         run: |
           set -o pipefail
-          cargo clippy --workspace --exclude netscope-desktop -- -D warnings 2>&1 | tee clippy.log
+          cargo clippy --workspace --exclude netscope-desktop --exclude netscope-wasm --all-targets -- -D warnings 2>&1 | tee clippy.log
+
+      - name: Clippy (netscope-wasm)
+        id: clippy-wasm
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy -p netscope-wasm --target wasm32-unknown-unknown -- -D warnings 2>&1 | tee -a clippy.log
 
       - name: Publish clippy failure to the job summary
         if: failure() && steps.clippy.outcome == 'failure'
@@ -109,9 +123,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       # Platform-specific packet capture library setup
-      - name: Install libpcap-dev (Linux)
+      - name: Install libpcap-dev & set CAP_NET_RAW (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+        run: |
+          sudo apt-get update && sudo apt-get install -y libpcap-dev libcap2-bin
+          sudo setcap cap_net_raw,cap_net_admin+eip $(type -p cargo) || true
 
       - name: Install Npcap SDK (Windows)
         if: runner.os == 'Windows'
@@ -180,8 +196,10 @@ jobs:
       # This used to be impossible to fold into the line above: on Windows the
       # desktop test binary died with STATUS_ENTRYPOINT_NOT_FOUND before `main`
       # ran, because it had no application manifest requesting comctl32
-      # version 6. `build.rs` now links the manifest resource into test targets
-      # too, so `cargo test --workspace` works — see the comment there.
+      # version 6. `build.rs` links the manifest resource into test targets too,
+      # scoped to `rustc-link-arg-tests` — which is why the crate's tests live in
+      # `src-tauri/tests/`. Unscoped, it would also double the resource on the
+      # bin and this job would fail to link under MSVC. See the comment there.
       - name: Test desktop
         if: runner.os != 'Linux'
         run: cargo test -p netscope-desktop
@@ -233,7 +251,15 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Cache wasm-bindgen-cli
+        uses: actions/cache@v4
+        id: cache-wasm-bindgen
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: ${{ runner.os }}-wasm-bindgen-cli-0.2.126
+
       - name: Install wasm-bindgen-cli
+        if: steps.cache-wasm-bindgen.outputs.cache-hit != 'true'
         run: cargo install wasm-bindgen-cli --version 0.2.126
 
       # The frontend tests load this module at runtime.
@@ -267,10 +293,63 @@ jobs:
       - name: Install libpcap-dev
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
-      - name: Parse & filter benchmarks (quick mode)
+      # `pipeline_throughput` took over from `pipeline::tests::
+      # bench_pipeline_throughput`, an `#[ignore]`d test that asserted a packet
+      # rate off a single wall-clock reading and so ran for nobody. Criterion
+      # samples it instead of failing when a runner is busy, which is the whole
+      # reason the test could not stay a test.
+      - name: Parse, filter & pipeline benchmarks (quick mode)
         run: |
           cargo bench -p netscope-core --bench parse_throughput -- --quick
           cargo bench -p netscope-core --bench filter_match -- --quick
+          cargo bench -p netscope-core --bench pipeline_throughput -- --quick
 
       - name: Memory footprint (200k packets)
         run: MEM_PACKETS=200000 cargo bench -p netscope-core --bench mem_usage
+
+  # ── 5. Fuzzing (bounded) ───────────────────────────────────────────────────
+  # The dispatch parses bytes an attacker chooses, so it is worth fuzzing. This
+  # job exists as much to stop the target rotting as to find bugs in sixty
+  # seconds: it sat broken for a while — the manifest had no `[workspace]`
+  # table so cargo refused to build the package at all, `netscope-core` pointed
+  # at the workspace root instead of `crates/core`, and the target body was
+  # still `cargo fuzz init`'s `// fuzzed code goes here`. None of that could
+  # fail a build, because nothing built it.
+  #
+  # Linux only: `libfuzzer-sys` compiles a bundled libFuzzer whose Windows
+  # support is MSVC-specific, so it cannot build on a windows-gnu host at all.
+  fuzz:
+    name: Fuzz (60s)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            fuzz
+
+      - name: Install libpcap-dev
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      # A minute finds little on its own, but it proves the target still builds
+      # and still reaches `dissect()`. A crash here is a real one: libFuzzer
+      # writes the input to fuzz/artifacts/, which the step below uploads so it
+      # can be reproduced rather than guessed at.
+      - name: Run parse_packet_fuzz
+        run: cargo fuzz run parse_packet_fuzz -- -max_total_time=60
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts/
+          if-no-files-found: ignore

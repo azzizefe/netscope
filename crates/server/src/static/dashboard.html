@@ -3565,33 +3565,51 @@
                 if (res.ok) {
                     const comp = await res.json();
                     
-                    const slaEl = document.getElementById("kpi-sla-score");
-                    slaEl.innerText = `${comp.iso27001_score.toFixed(1)}%`;
-                    slaEl.style.color = comp.iso27001_score >= 90 ? "#10b981" : (comp.iso27001_score >= 75 ? "#f59e0b" : "#ef4444");
+                    // A score the server did not measure comes back as null.
+                    // It must not be drawn as a percentage or a coloured bar:
+                    // gdpr_score and kvkk_score were hardcoded 92 and 90 on the
+                    // server, and this panel rendered them as green progress
+                    // bars an operator could reasonably read as an assessment.
+                    // Null renders as an em dash, a grey label and an empty bar.
+                    const NOT_MEASURED = "—";
+                    const GREY = "#6b7280";
 
-                    const uptimeEl = document.getElementById("kpi-uptime-score");
-                    uptimeEl.innerText = `${comp.nis2_score.toFixed(1)}%`;
-                    uptimeEl.style.color = comp.nis2_score >= 98 ? "#10b981" : (comp.nis2_score >= 90 ? "#f59e0b" : "#ef4444");
+                    const setKpi = (id, score, good, fair) => {
+                        const el = document.getElementById(id);
+                        if (score === null || score === undefined) {
+                            el.innerText = NOT_MEASURED;
+                            el.style.color = GREY;
+                            el.title = "Not measured";
+                            return;
+                        }
+                        el.innerText = `${score.toFixed(1)}%`;
+                        el.style.color = score >= good ? "#10b981" : (score >= fair ? "#f59e0b" : "#ef4444");
+                        el.title = "";
+                    };
 
-                    const pciEl = document.getElementById("kpi-pci-score");
-                    pciEl.innerText = `${comp.pci_dss_score.toFixed(1)}%`;
-                    pciEl.style.color = comp.pci_dss_score >= 85 ? "#10b981" : (comp.pci_dss_score >= 60 ? "#f59e0b" : "#ef4444");
-                    
-                    document.getElementById("score-gdpr").innerText = `${comp.gdpr_score.toFixed(0)}%`;
-                    document.getElementById("bar-gdpr").style.width = `${comp.gdpr_score}%`;
-                    document.getElementById("desc-gdpr").innerText = comp.gdpr_details;
-                    
-                    document.getElementById("score-kvkk").innerText = `${comp.kvkk_score.toFixed(0)}%`;
-                    document.getElementById("bar-kvkk").style.width = `${comp.kvkk_score}%`;
-                    document.getElementById("desc-kvkk").innerText = comp.kvkk_details;
-                    
-                    document.getElementById("score-iso").innerText = `${comp.iso27001_score.toFixed(0)}%`;
-                    document.getElementById("bar-iso").style.width = `${comp.iso27001_score}%`;
-                    document.getElementById("desc-iso").innerText = comp.iso27001_details;
-                    
-                    document.getElementById("score-pci").innerText = `${comp.pci_dss_score.toFixed(0)}%`;
-                    document.getElementById("bar-pci").style.width = `${comp.pci_dss_score}%`;
-                    document.getElementById("desc-pci").innerText = comp.pci_dss_details;
+                    const setBar = (name, score, details) => {
+                        const scoreEl = document.getElementById(`score-${name}`);
+                        const barEl = document.getElementById(`bar-${name}`);
+                        if (score === null || score === undefined) {
+                            scoreEl.innerText = NOT_MEASURED;
+                            scoreEl.style.color = GREY;
+                            barEl.style.width = "0%";
+                        } else {
+                            scoreEl.innerText = `${score.toFixed(0)}%`;
+                            scoreEl.style.color = "";
+                            barEl.style.width = `${score}%`;
+                        }
+                        document.getElementById(`desc-${name}`).innerText = details;
+                    };
+
+                    setKpi("kpi-sla-score", comp.iso27001_score, 90, 75);
+                    setKpi("kpi-uptime-score", comp.nis2_score, 98, 90);
+                    setKpi("kpi-pci-score", comp.pci_dss_score, 85, 60);
+
+                    setBar("gdpr", comp.gdpr_score, comp.gdpr_details);
+                    setBar("kvkk", comp.kvkk_score, comp.kvkk_details);
+                    setBar("iso", comp.iso27001_score, comp.iso27001_details);
+                    setBar("pci", comp.pci_dss_score, comp.pci_dss_details);
                 }
             } catch (e) {
                 console.error("Failed to load compliance metrics:", e);

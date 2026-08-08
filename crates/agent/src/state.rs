@@ -277,6 +277,15 @@ mod tests {
                 batch_interval_ms: 500,
                 compression: true,
             },
+            // Without this the offline buffer lands in `default_data_dir()`,
+            // which is `/var/lib/netscope-agent` on Linux: `create_dir_all`
+            // there fails with `Permission denied (os error 13)` for anyone not
+            // root, so this test passed on Windows and macOS and failed on
+            // every Linux CI run. The temp dir above is the whole point.
+            offline: crate::config::OfflineConfig {
+                db_path: Some(temp_dir.clone()),
+                ..Default::default()
+            },
             ..Default::default()
         };
 

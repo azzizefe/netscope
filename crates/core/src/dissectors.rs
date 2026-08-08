@@ -52,6 +52,7 @@ pub mod gsm_sms_ud;
 pub mod gsm_um;
 pub mod gsmtap;
 pub mod gsmtap_log;
+pub mod heuristics;
 
 pub mod bssap;
 pub mod bssgp;
@@ -69,42 +70,6 @@ pub mod consul_rpc;
 pub mod dccp;
 pub mod decnet;
 pub mod der;
-pub mod e1ap;
-pub mod evpn;
-pub mod f1ap;
-pub mod iax2;
-pub mod isup;
-pub mod lisp;
-pub mod m3ua;
-pub mod modbus_ascii;
-pub mod mssqlbrowser;
-pub mod nsh;
-pub mod nvgre;
-pub mod pcp;
-pub mod profisafe;
-pub mod q931;
-pub mod redis;
-pub mod redis_cluster;
-pub mod rpc;
-pub mod rtsp;
-pub mod rwho;
-pub mod smb;
-pub mod srv6;
-pub mod devicenet {
-    pub(crate) fn looks_like_devicenet(_id: u32) -> bool {
-        false
-    }
-    pub(crate) fn result(_id: u32, _payload: &[u8]) -> super::DissectedResult {
-        super::DissectedResult {
-            src_addr: None,
-            dst_addr: None,
-            src_port: None,
-            dst_port: None,
-            protocol: crate::models::Protocol::DeviceNet,
-            summary: String::new(),
-        }
-    }
-}
 pub mod dhcp;
 pub mod dhcpv6;
 pub mod dht;
@@ -118,6 +83,7 @@ pub mod drbd;
 pub mod dtls;
 pub mod dtp;
 pub mod dvmrp;
+pub mod e1ap;
 pub mod eap;
 pub mod eapol;
 pub mod ecpri;
@@ -128,6 +94,8 @@ pub mod esmc;
 pub mod ethercat;
 pub mod etherip;
 pub mod ethernet;
+pub mod evpn;
+pub mod f1ap;
 pub mod fcoe;
 pub mod finger;
 pub mod fix;
@@ -152,6 +120,7 @@ pub mod hsrp;
 pub mod http;
 pub mod http2;
 pub mod http_body;
+pub mod iax2;
 pub mod icmp;
 pub mod iec101;
 pub mod iec_asdu;
@@ -168,6 +137,7 @@ pub mod iser;
 pub mod isis;
 pub mod isns;
 pub mod isotp;
+pub mod isup;
 pub mod j1708;
 pub mod j1939;
 pub mod kerberos;
@@ -181,6 +151,22 @@ pub mod ldap;
 pub mod ldp;
 #[cfg(feature = "ot")]
 pub mod lin;
+pub mod lisp;
+pub mod m3ua;
+pub mod modbus_ascii;
+pub mod mssqlbrowser;
+pub mod nsh;
+pub mod nvgre;
+pub mod pcp;
+pub mod profisafe;
+pub mod q931;
+pub mod redis;
+pub mod redis_cluster;
+pub mod rpc;
+pub mod rtsp;
+pub mod rwho;
+pub mod smb;
+pub mod srv6;
 #[cfg(not(feature = "ot"))]
 pub mod lin {
     pub fn dissect_lin(_payload: &[u8]) -> super::DissectedResult {
@@ -430,7 +416,7 @@ pub mod zigbee;
 pub mod zmtp;
 pub mod zrtp;
 
-// ── Edge AI & Industrial Edge Protocols ──
+// â”€â”€ Edge AI & Industrial Edge Protocols â”€â”€
 pub mod beckhoff_twincat_analytics;
 pub mod bosch_nexeed_edge;
 pub mod edge_inference_onnx;
@@ -442,7 +428,7 @@ pub mod schneider_ecostruxure_edge;
 pub mod siemens_industrial_edge;
 pub mod stm_stm32cube_ai;
 
-// ── Proprietary Fieldbus Protocols (§10) ──
+// â”€â”€ Proprietary Fieldbus Protocols (Â§10) â”€â”€
 pub mod as_interface;
 pub mod cip_safety;
 pub mod controlnet;
@@ -454,7 +440,7 @@ pub mod p_net;
 pub mod profidrive;
 pub mod varan_bus;
 
-// ── Siemens Ecosystem (§10.2.1) ──
+// â”€â”€ Siemens Ecosystem (Â§10.2.1) â”€â”€
 pub mod profibus_dp_siemens;
 pub mod profinet_irt_siemens;
 pub mod profinet_rt_siemens;
@@ -468,7 +454,7 @@ pub mod sinamics_drive_profile;
 pub mod sinumerik_nck_channel;
 pub mod tia_portal_online_diag;
 
-// ── Rockwell / Allen-Bradley Ecosystem (§10.2.2) ──
+// â”€â”€ Rockwell / Allen-Bradley Ecosystem (Â§10.2.2) â”€â”€
 pub mod cip_safety_rockwell;
 pub mod control_logix_backplane;
 pub mod df1_full_duplex_ext;
@@ -480,7 +466,7 @@ pub mod powerflex_drive_cip;
 pub mod stratix_switch_telemetry;
 pub mod studio5000_online_comm;
 
-// ── Beckhoff / EtherCAT Ecosystem (§10.2.3) ──
+// â”€â”€ Beckhoff / EtherCAT Ecosystem (Â§10.2.3) â”€â”€
 pub mod beckhoff_xplanar_mover;
 pub mod ethercat_beckhoff_mdp;
 pub mod ethercat_distributed_clocks;
@@ -490,7 +476,7 @@ pub mod twincat_ads_detail;
 pub mod twincat_router_telemetry;
 pub mod twincat_scope_view;
 
-// ── Other Vendor Fieldbuses (§10.2.4) ──
+// â”€â”€ Other Vendor Fieldbuses (Â§10.2.4) â”€â”€
 pub mod abb_robot_web_service;
 pub mod b_r_automation_pvi;
 pub mod bosch_rexroth_open_core;
@@ -508,7 +494,7 @@ use crate::models::Protocol;
 
 /// First line of a text protocol payload (up to CR/LF), lossily decoded and
 /// trimmed. Shared by the line-oriented dissectors (FTP, SMTP, IMAP, POP3).
-/// Uses SIMD-accelerated `memchr` for the line-end scan (ROADMAP Â§4.1).
+/// Uses SIMD-accelerated `memchr` for the line-end scan (ROADMAP Ã‚Â§4.1).
 pub(crate) fn first_text_line(payload: &[u8]) -> String {
     // A NUL ends the line too: several text protocols terminate with one
     // instead of a newline, and treating it as content would leave a stray
@@ -578,7 +564,7 @@ pub(crate) fn truncate(s: &str, max: usize) -> String {
         s.to_string()
     } else {
         let cut: String = s.chars().take(max).collect();
-        format!("{cut}…")
+        format!("{cut}â€¦")
     }
 }
 
@@ -600,7 +586,7 @@ const DLT_IEEE802_11_RADIO: i32 = 127;
 const DLT_LINUX_SLL: i32 = 113; // Linux cooked capture (tcpdump -i any)
 const DLT_LINUX_SLL2: i32 = 276;
 const DLT_BT_HCI_H4: i32 = 187; // Bluetooth HCI UART transport
-const DLT_BT_HCI_H4_WITH_PHDR: i32 = 201; // …with a direction pseudo-header
+const DLT_BT_HCI_H4_WITH_PHDR: i32 = 201; // â€¦with a direction pseudo-header
 const DLT_USB_LINUX: i32 = 189; // usbmon, 48-byte header
 const DLT_USB_LINUX_MMAPPED: i32 = 220; // usbmon, 64-byte header
 const DLT_CAN_SOCKETCAN: i32 = 227; // SocketCAN (can0/vcan0)
@@ -1178,10 +1164,10 @@ fn dispatch_transport(
         Some(17) => udp::dissect_udp(src_ip, dst_ip, &payload),
         Some(1) => icmp::dissect_icmp(src_ip, dst_ip, &payload, false),
         Some(58) => icmp::dissect_icmp(src_ip, dst_ip, &payload, true),
-        // IPsec ESP/AH carry an SPI in the clear (ROADMAP Â§3.7).
+        // IPsec ESP/AH carry an SPI in the clear (ROADMAP Ã‚Â§3.7).
         Some(50) => ipsec::dissect_esp(src_ip, dst_ip, &payload),
         Some(51) => ipsec::dissect_ah(src_ip, dst_ip, &payload),
-        // OSPF interior routing (ROADMAP Â§3.3).
+        // OSPF interior routing (ROADMAP Ã‚Â§3.3).
         Some(89) => ospf::dissect_ospf(src_ip, dst_ip, &payload),
         // IGMP multicast group membership, GRE tunnels and SCTP transport all
         // ride directly on IP (protocols 2, 47 and 132).
@@ -2528,7 +2514,8 @@ mod tests {
             .as_nanos() as u64;
 
         let mut state = seed;
-        for _ in 0..1000 {
+        // Test 10,000 iterations of random garbage & malformed byte streams
+        for _ in 0..10000 {
             state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
             let len = (state % 1500) as usize;
             state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
@@ -2540,13 +2527,49 @@ mod tests {
             let result = dissect(&data);
             // Must never panic, always return a valid DissectedResult
             let _ = result.protocol;
+            let _ = result.summary;
+        }
+    }
+
+    #[test]
+    fn malformed_ip_and_truncated_tcp_headers_never_panic() {
+        let malformed_inputs: Vec<Vec<u8>> = vec![
+            // Truncated Ethernet headers
+            vec![0x00, 0x01, 0x02],
+            vec![0x00; 13],
+            // Truncated IPv4 headers with invalid length/version
+            vec![
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x08, 0x00,
+                0x45, 0x00,
+            ],
+            // Malformed TCP with invalid data offset
+            vec![
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x08, 0x00,
+                0x45, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x40, 0x06, 0x00, 0x00, 0x7f, 0x00,
+                0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x00, 0x50, 0x00, 0x50, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ],
+            // Corrupt DNS & TLS headers
+            vec![0x16, 0x03, 0x03, 0xff, 0xff],
+            vec![
+                0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
+            ],
+        ];
+
+        for input in malformed_inputs {
+            let res = dissect(&input);
+            let _ = res.protocol;
+            let _ = res.summary;
         }
     }
 }
 
-/// Benchmark: measure throughput of dissect() with realistic packets.
+/// Correctness checks over a realistic mixed corpus.
 ///
-/// Run with: `cargo test bench_dissect_throughput -- --nocapture`
+/// This module was named for a throughput benchmark that no longer lives here —
+/// timing belongs in `benches/parse_throughput.rs`, where criterion can sample
+/// it properly. What is left is the deterministic half: 10,000 mixed packets
+/// have to dissect without a single parse failure.
 #[cfg(test)]
 mod bench {
     use super::*;
@@ -2617,49 +2640,21 @@ mod bench {
         );
     }
 
-    /// Throughput measurement — ignored by default.
-    ///
-    /// It asserts on wall-clock rate, so under `cargo test`'s parallel load it
-    /// measures how busy the machine is rather than what the dissector costs,
-    /// and fails intermittently for reasons that have nothing to do with the
-    /// code. Measured standalone on this machine: ~338k pkt/s in debug,
-    /// ~1.77M in release — so the 100k floor below only catches a collapse,
-    /// not a gradual regression.
-    ///
-    /// Run it on its own:
-    ///   cargo test --release bench_dissect_throughput -- --ignored --nocapture
-    #[test]
-    #[ignore = "timing-sensitive: measures machine load when run in parallel"]
-    fn bench_dissect_throughput() {
-        const COUNT: usize = 10_000;
-        let packets = build_mixed_packets(COUNT);
-
-        // Warmup
-        for pkt in &packets[..100] {
-            let _ = dissect(pkt);
-        }
-
-        let start = std::time::Instant::now();
-        let failures = parse_failures(&packets);
-        let elapsed = start.elapsed();
-        let rate = COUNT as f64 / elapsed.as_secs_f64();
-
-        println!(
-            "Dissected {} packets in {:.2}s → {:.0} pkt/s ({} failures)",
-            COUNT,
-            elapsed.as_secs_f64(),
-            rate,
-            failures
-        );
-
-        assert_eq!(failures, 0, "corpus should dissect cleanly");
-        // Ensure we can handle at least 100k pps
-        assert!(
-            rate > 100_000.0,
-            "Performance too low: {:.0} pkt/s (need > 100k)",
-            rate
-        );
-    }
+    // `bench_dissect_throughput` was here: 10,000 mixed packets through
+    // `dissect()`, asserting `rate > 100_000.0` from a wall-clock measurement.
+    // It was `#[ignore]`d because under `cargo test`'s parallel load it
+    // measured how busy the machine was rather than what the dissector costs —
+    // so it ran for nobody, and a floor that only catches a total collapse is
+    // not worth an intermittent red build either way.
+    //
+    // The measurement moved to where the tooling handles this properly:
+    // `benches/parse_throughput.rs` benches exactly this — the full
+    // Ethernet → IP → TCP/UDP → app chain over the same 10,000 mixed packets —
+    // and criterion warms up, samples repeatedly and reports outliers instead
+    // of failing a single timed run. CI runs it on every push.
+    //
+    // The half that was worth keeping is above, un-ignored:
+    // `bench_corpus_dissects_without_failures`.
 }
 #[cfg(test)]
 mod batch16_dispatch_check {
@@ -2723,7 +2718,7 @@ mod batch16_dispatch_check {
         z.extend_from_slice(&[0u8; 24]);
         let r = dissect_udp(ip(), ip(), &udp(40000, 40001, &z));
         assert_eq!(r.protocol, Protocol::Zrtp, "zrtp -> {:?}", r.protocol);
-        // …and does not swallow ordinary RTP.
+        // â€¦and does not swallow ordinary RTP.
         let mut rtp = vec![0x80, 0x00];
         rtp.extend_from_slice(&[0u8; 30]);
         let r = dissect_udp(ip(), ip(), &udp(40000, 40001, &rtp));
@@ -2866,13 +2861,44 @@ pub(crate) mod robustness {
                 }
             }
         }
-        // The range-dispatched protocols, which have no single port to scrape.
-        ports.extend(6881..=6889);
-        ports.extend(6000..=6005);
-        ports.extend(30490..=30510);
+        // Range-dispatched protocols have no single port to scrape, so scrape
+        // the range instead. This used to be three hardcoded ranges — SOME/IP,
+        // plus BitTorrent 6881-6889 and X11 6000-6005, neither of which the
+        // dispatch has ever had. Hardcoding meant a new range would be swept by
+        // nobody until someone noticed, which is the same failure the `on(N)`
+        // scrape above exists to avoid.
+        ports.extend(dispatched_ranges().into_iter().flatten());
         ports.sort_unstable();
         ports.dedup();
         ports
+    }
+
+    /// The `in_range(A..=B)` arms in the transport dispatches.
+    ///
+    /// Guarded by [`dispatched_ranges_are_found`], so a rename or a change of
+    /// shape fails loudly instead of quietly returning nothing — a scraper that
+    /// finds zero ranges would leave those ports unswept and every test still
+    /// green.
+    fn dispatched_ranges() -> Vec<std::ops::RangeInclusive<u16>> {
+        let mut ranges = Vec::new();
+        for src in [
+            include_str!("dissectors/tcp.rs"),
+            include_str!("dissectors/udp.rs"),
+        ] {
+            let mut rest = src;
+            while let Some(i) = rest.find("in_range(") {
+                rest = &rest[i + "in_range(".len()..];
+                let Some(j) = rest.find(')') else { continue };
+                let arg = &rest[..j];
+                let Some((lo, hi)) = arg.split_once("..=") else {
+                    continue;
+                };
+                if let (Ok(lo), Ok(hi)) = (lo.trim().parse::<u16>(), hi.trim().parse::<u16>()) {
+                    ranges.push(lo..=hi);
+                }
+            }
+        }
+        ranges
     }
 
     /// No dissector should re-implement the shared line reader.
@@ -2887,6 +2913,7 @@ pub(crate) mod robustness {
     /// media lines, SIP parses a request line — are listed as exceptions rather
     /// than forced through a helper that does not fit them.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn no_dissector_reimplements_the_shared_line_reader() {
         use std::fs;
         use std::path::Path;
@@ -2990,6 +3017,7 @@ pub(crate) mod robustness {
     /// A NUL ends the line, because several text protocols terminate with one
     /// rather than a newline.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn a_nul_terminates_the_line() {
         assert_eq!(super::first_text_line(b"zINSTREAM\0trailing"), "zINSTREAM");
         assert_eq!(super::first_text_line(b"USER bob\r\nPASS x"), "USER bob");
@@ -2999,6 +3027,7 @@ pub(crate) mod robustness {
     /// characters that would break one are replaced visibly rather than
     /// dropped — so a summary never silently loses content.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn tabs_become_spaces_and_other_controls_stay_visible() {
         assert_eq!(super::sanitise("a\tb"), "a b");
         let cleaned = super::sanitise("a\x07b");
@@ -3015,6 +3044,7 @@ pub(crate) mod robustness {
     /// This appears in the fallback summary of nearly every dissector, so the
     /// slip would have shown up on any short or malformed packet in a capture.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn a_single_byte_is_singular() {
         assert_eq!(super::bytes(0u64), "0 bytes");
         assert_eq!(super::bytes(1u64), "1 byte");
@@ -3025,6 +3055,7 @@ pub(crate) mod robustness {
     /// The helper only helps if the dissectors use it, so check that none has
     /// gone back to formatting a raw count.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn no_dissector_formats_a_bare_byte_count() {
         use std::fs;
         use std::path::Path;
@@ -3070,6 +3101,14 @@ pub(crate) mod robustness {
     /// one of those, so giving them a port would mean claiming an unrelated
     /// flow in order to print a report. They belong to the analysis layer, and
     /// listing them here is what says so.
+    ///
+    /// Every entry must name a module this file declares — see
+    /// [`helper_modules_name_real_modules`]. The list once carried 1330 names
+    /// that matched no module at all: leftovers from protocol tables that were
+    /// pasted in wholesale. They looked harmless because they excused nothing,
+    /// but each one was a landmine — the day a dissector was added under one of
+    /// those names it would have been born exempt from the reachability check,
+    /// silently and with no diff to review.
     const HELPER_MODULES: &[&str] = &[
         // Analysis passes over accumulated TLS/PQC state — no wire form.
         "tls_pqc_wizard_scan",
@@ -3082,883 +3121,30 @@ pub(crate) mod robustness {
         "tls_cert_transparency_v3",
         "tls_ech_pqc_interop",
         "tls_session_resumption_pqc",
-        "nwp",
-        "nxp_802154_sniffer",
-        "oampdu",
-        "obd_ii",
-        "obex",
-        "ocfs2",
-        "ocp1",
-        "oer",
-        "oicq",
-        "oipf",
-        "omapi",
-        "omron_fins",
-        "opa",
-        "opa_fe",
-        "opa_mad",
-        "opa_snc",
-        "openflow_v1",
-        "openflow_v4",
-        "openflow_v5",
-        "openflow_v6",
-        "openthread",
-        "opsi",
-        "optommp",
-        "opus",
-        "oran",
-        "oscore",
-        "osi",
-        "osi_options",
-        "ositp",
-        "osmo_trx",
-        "ossp",
-        "otp",
-        "ouch",
-        "p_mul",
-        "p1",
-        "p22",
-        "p4rpc",
-        "p7",
-        "p772",
-        "pa_hbbackup",
-        "packetbb",
-        "packetlogger",
-        "paltalk",
-        "pana",
-        "pathport",
-        "pcap",
-        "pcap_pktdata",
-        "pcaplog",
-        "pcapng_block",
-        "pcli",
-        "pcomtcp",
-        "pdc",
-        "pdu_transport",
-        "peap",
-        "peekremote",
-        "per",
-        "pflog",
-        "pgsql",
-        "pingpongprotocol",
-        "pktc",
-        "pktgen",
-        "pldm",
-        "ple",
-        "pmproxy",
-        "pnrp",
-        "pop",
-        "ppcap",
-        "ppi",
-        "ppi_antenna",
-        "ppi_geolocation_common",
-        "ppi_gps",
-        "ppi_sensor",
-        "ppi_vector",
-        "procmon",
-        "protobuf",
-        "proxy",
-        "psn",
-        "ptpip",
-        "pulse",
-        "pvfs2",
-        "pw_atm",
-        "pw_cesopsn",
-        "pw_common",
-        "pw_eth",
-        "pw_fr",
-        "pw_hdlc",
-        "pw_oam",
-        "pw_satop",
-        "q2931",
-        "q708",
-        "q932",
-        "q932_ros",
-        "q933",
-        "qcdiag",
-        "qcdiag_log",
-        "qllc",
-        "qnet6",
-        "qsig",
-        "quic",
-        "r09",
-        "radius_packetcable",
-        "raknet",
-        "raw",
-        "rc_v3",
-        "rdm",
-        "rdm_etc",
-        "rdp_cliprdr",
-        "rdp_conctrl",
-        "rdp_dr",
-        "rdp_drdynvc",
-        "rdp_ear",
-        "rdp_ecam",
-        "rdp_egfx",
-        "rdp_multitransport",
-        "rdp_rail",
-        "rdp_snd",
-        "rdpudp",
-        "rdt",
-        "realtek",
-        "redback",
-        "mqtt_sn",
-        "mrcpv2",
-        "mrd",
-        "mrp_mmrp",
-        "mrp_msrp",
-        "mrp_mvrp",
-        "ms_do",
-        "ms_mms",
-        "ms_nns",
-        "msgpack",
-        "msn_messenger",
-        "msnip",
-        "msnlb",
-        "msproxy",
-        "msrcp",
-        "mstp",
-        "mswsp",
-        "mtp3mg",
-        "mudurl",
-        "multipart",
-        "mux27010",
-        "nano",
-        "nasdaq_itch",
-        "nasdaq_soup",
-        "nat_pmp",
-        "navitrol",
-        "nb_rtpmux",
-        "nbipx",
-        "nbt",
-        "ncp_nmas",
-        "ncp_sss",
-        "ncp2222",
-        "ncs",
-        "ncsi",
-        "ndp",
-        "ndps",
-        "negoex",
-        "netanalyzer",
-        "netbios",
-        "netdump",
-        "netgear_ensemble",
-        "netmon",
-        "netperfmeter",
-        "netrom",
-        "netsync",
-        "nettl",
-        "newmail",
-        "nlsp",
-        "nmea0183",
-        "nmf",
-        "noe",
-        "nordic_ble",
-        "ns_ha",
-        "ns_mep",
-        "ns_rpc",
         "nsh",
-        "nsrp",
-        "nstrace",
-        "nt_oui",
-        "nt_tpcp",
-        "ntlmssp",
-        "nts_ke",
-        "null_proto",
-        "nvme",
-        "nvme_mi",
-        "nvme_mi_admin",
-        "nvme_mi_control",
-        "nvme_mi_mi",
-        "nvme_rdma",
-        "nwmtp",
-        "lppe",
-        "lsc",
-        "lsd",
-        "lsdp",
-        "ltp",
-        "lwm",
-        "lwm2mtlv",
-        "lwres",
-        "m2tp",
-        "maap",
-        "maccontrol",
-        "mactelnet",
-        "manolito",
-        "marker",
-        "mausb",
-        "mbim",
-        "mbtcp",
-        "mc_nmf",
-        "mctp",
-        "mctp_control",
-        "mctp_smbus",
-        "mdb",
-        "mdp",
-        "mdshdr",
-        "media",
-        "media_type",
-        "memcache",
-        "mesh",
-        "messageanalyzer",
-        "meta",
-        "metamako",
-        "midi",
-        "midi_sysex_digitech",
-        "mih",
-        "mikey",
-        "mime_encap",
-        "mint",
-        "miop",
-        "mip",
-        "miwi_p2pstar",
-        "mmse",
-        "mndp",
-        "mojito",
-        "moldudp",
-        "moldudp64",
-        "monero",
-        "mongo",
-        "mq",
-        "mq_base",
-        "mq_pcf",
-        "iwarp_mpa",
-        "ixiatrailer",
-        "ixveriwave",
-        "jdwp",
-        "jmirror",
-        "jpeg",
-        "json",
-        "json_3gpp",
-        "juniper",
-        "jxta",
-        "k12",
-        "kadm5",
-        "kdp",
-        "kdsp",
-        "kerberos4",
-        "kingfisher",
-        "kink",
-        "kismet",
-        "knet",
-        "knxip_decrypt",
-        "kpm_v2",
-        "kt",
-        "l1_events",
-        "lanforge",
-        "lapb",
-        "lapbether",
-        "lapd",
-        "lapdm",
-        "laplink",
-        "lapsat",
-        "lat",
-        "lbm",
-        "lbmc",
-        "lbmpdm",
-        "lbmpdmtcp",
-        "lbmr",
-        "lbmsrs",
-        "lbtrm",
-        "lbtru",
-        "lbttcp",
-        "lda_neo_trailer",
-        "ldss",
-        "lg8979",
-        "lge_monitor",
-        "link16",
-        "linx",
-        "lisp_data",
-        "lisp_tcp",
-        "lithionics",
-        "livewire",
-        "lix2",
-        "llc",
-        "llc_v1",
-        "llrp",
-        "lls",
-        "lls_slt",
-        "llt",
-        "lltd",
-        "lmi",
-        "lmp",
-        "lnet",
-        "lnpdqp",
-        "locamation_im",
-        "logcat",
-        "logcat_text",
-        "lon",
-        "loop_proto",
-        "loratap",
-        "lpp",
-        "lppa",
-        "idrp",
-        "igap",
-        "ike",
-        "ilnp",
-        "ilp",
-        "imf",
-        "indigocare_icall",
-        "indigocare_netrix",
-        "infiniband",
-        "infiniband_sdp",
-        "interlink",
-        "ipars",
-        "ipdc",
-        "ipdr",
-        "iperf",
-        "iperf3",
-        "ipfc",
-        "ipnet",
-        "ipoib",
-        "ipos",
-        "ippusb",
-        "ipsec_tcp",
-        "ipsec_udp",
-        "ipsi_ctl",
-        "ipv6",
-        "ipvs_syncd",
-        "ipxwan",
-        "irdma",
-        "isdn",
-        "isdn_sup",
-        "isi",
-        "isis_clv",
-        "isis_hello",
-        "isis_lsp",
-        "isis_snp",
-        "isl",
-        "ismacryp",
-        "ismp",
-        "iso10681",
-        "iso14443",
-        "iso15765",
-        "iso7816",
-        "iso8583",
-        "isobus",
-        "isobus_vt",
-        "itdm",
-        "its",
-        "iua",
-        "iuup",
-        "iwarp_ddp_rdmap",
-        "gmhdr",
-        "gmr1_bcch",
-        "gmr1_common",
-        "gmr1_dtap",
-        "gmr1_rach",
-        "gmr1_rr",
-        "gmrp",
-        "gpef",
-        "gquic",
-        "grebonding",
         "grpc",
-        "gvrp",
-        "gvsp",
-        "hazelcast",
-        "hcrt",
-        "hdcp",
-        "hdcp2",
-        "hdfs",
-        "hdfsdata",
-        "hdmi",
-        "hi2operations",
-        "hicp",
-        "hipercontracer",
-        "hiqnet",
-        "hislip",
-        "homeplug",
-        "homeplug_av_vendor_vertexcom",
-        "homepna",
-        "hp_erm",
-        "hpext",
-        "hpfeeds",
-        "hpsw",
-        "hpteam",
-        "hsfz",
-        "hsr_prp_supervision",
-        "http_urlencoded",
-        "http3",
-        "hyperscsi",
-        "i2c",
-        "iana_oui",
-        "iapp",
-        "icap",
-        "icep",
-        "icmpv6",
-        "icp",
-        "icq",
-        "id3v2",
-        "idmp",
-        "idn",
-        "idp",
-        "dsp",
-        "dsr",
-        "dtcp_ip",
-        "dtpt",
-        "dua",
-        "dxl",
-        "e100",
-        "e164",
         "e1ap",
-        "e212",
-        "ebhscr",
-        "echo",
-        "ecmp",
-        "ecp",
-        "ecp_oui",
-        "edhoc",
-        "eero",
-        "egd",
-        "egnos_ems",
-        "ehdlc",
-        "ehs",
-        "eiss",
-        "elcom",
-        "elmi",
-        "enc",
-        "enrp",
-        "enttec",
-        "eobi",
-        "epl",
-        "epl_profile_parser",
-        "epl_v1",
-        "epmd",
-        "epon",
-        "erf",
-        "erldp",
-        "esio",
-        "esis",
-        "esun",
-        "etag",
-        "etch",
-        "eth",
-        "ethertype",
-        "eti",
-        "etv",
-        "etw",
-        "evrc",
-        "evs",
-        "exablaze",
-        "exec",
-        "exported_pdu",
-        "extreme",
-        "extreme_exeh",
-        "extrememesh",
         "f1ap",
-        "f5ethtrailer",
-        "fbzero",
-        "fc00",
-        "fddi",
-        "fefd",
-        "ff",
-        "fip",
-        "flexnet",
-        "flip",
-        "fmp",
-        "fmp_notify",
-        "fmtp",
-        "force10_oui",
-        "forces",
-        "fortinet_fgcp",
-        "fortinet_sso",
-        "foundry",
-        "fp_hint",
-        "fp_mux",
-        "fpp",
-        "fr",
-        "fractalgeneratorprotocol",
-        "frame",
-        "ftam",
-        "ftdi_ft",
-        "ftdi_mpsse",
-        "fw1",
-        "g723",
-        "gadu_gadu",
-        "gbcs",
-        "gcsna",
-        "gdb",
-        "gdsdb",
-        "gdt",
-        "ged125",
-        "geonw",
-        "gfp",
-        "gias",
-        "gift",
-        "giop",
-        "glow",
-        "gluster_cli",
-        "gluster_pmap",
-        "glusterd",
-        "glusterfs",
-        "glusterfs_hndsk",
-        "cmip",
-        "cmpp",
-        "coap_eap",
-        "cola",
-        "communityid",
-        "componentstatus",
-        "cops",
-        "corosync_totemnet",
-        "corosync_totemsrp",
-        "cose",
-        "cosem",
-        "coseventcomm",
-        "cosine",
-        "cosnaming",
-        "cp2179",
-        "cpfi",
-        "cpha",
-        "cql",
-        "csm_encaps",
-        "csn1",
-        "ctdb",
-        "cups",
-        "cvspserver",
-        "daap",
-        "dap",
-        "darwin",
-        "data",
-        "daytime",
-        "db_lsp",
-        "dbus",
-        "dcc",
-        "dcm",
-        "dcp_etsi",
-        "ddtp",
-        "dec_bpdu",
-        "dec_dnart",
-        "dect",
-        "dect_dlc",
-        "dect_mitel_eth",
-        "dect_mitel_rfp",
-        "dect_nr",
-        "dect_nwk",
         "dhcp_failover",
-        "diameter_3gpp",
-        "diffserv_mpls_common",
-        "dis",
-        "discard",
-        "disp",
-        "distcc",
-        "dji_uav",
-        "dlep",
-        "dlm3",
-        "dlt",
-        "dmp",
-        "dnp",
-        "do_irp",
-        "docsis",
-        "docsis_macmgmt",
-        "docsis_tlv",
-        "docsis_vendor",
-        "dof",
-        "dop",
-        "dpaux",
-        "dpauxmon",
-        "dplay",
-        "dpnet",
-        "dpnss",
-        "dpnss_link",
-        "drb",
-        "dsi",
-        "bpdu",
-        "bpq",
-        "bpsec",
-        "bpsec_cose",
-        "bpsec_defaultsc",
-        "bpv6",
-        "bpv7",
-        "brcm_tag",
-        "brdwlk",
-        "brp",
-        "bt_dht",
-        "bt_tracker",
-        "bt_utp",
-        "bt3ds",
-        "busmirroring",
-        "bvlc",
-        "bzr",
-        "c1222",
-        "c15ch",
-        "c2p",
-        "calcappprotocol",
-        "caneth",
         "canopen",
-        "carp",
-        "cast",
-        "catapult_dct2000",
-        "cattp",
-        "cbor",
-        "ccsds",
-        "cdma2k",
-        "cell_broadcast",
-        "cemi",
-        "cesoeth",
-        "cfdp",
-        "cgmp",
-        "chargen",
-        "charging_ase",
-        "chdlc",
-        "cigi",
-        "cimd",
-        "cimetrics",
-        "cipmotion",
-        "cipsafety",
-        "cisco_erspan",
-        "cisco_fp_mim",
-        "cisco_marker",
-        "cisco_mcp",
-        "cisco_metadata",
-        "cisco_oui",
-        "cisco_sm",
-        "cisco_ttag",
-        "cisco_wids",
-        "citp",
-        "cl3",
-        "cl3dcw",
-        "classicstun",
-        "clearcase",
-        "clip",
-        "clique_rm",
-        "clnp",
-        "activitypub",
-        "aes67",
-        "as2_edi",
         "bindings",
-        "caldav_carddav",
+        "heuristics",
         "cip",
-        "dnscrypt",
-        "enocean",
-        "ethernet_powerlink_v2",
-        "fiveg_n11",
-        "fiveg_n2",
-        "knx_rf",
-        "knx_tp",
-        "lwm2m",
-        "mechatrolink_iii",
         "ngap_common",
         "nfs",
-        "nis_yp",
         "pccc",
         // The PKIX status structure two protocols answer with.
         "pkix",
-        "restconf",
         "sdp",
-        "sercos_iii",
         "sigtran",
-        "spdy",
         "srt",
-        "st2110",
         "tcap",
         "tcp_analysis",
-        "usp",
-        "varan",
         "modbus_ascii",
-        "profibus_dp",
-        "profibus_pa",
-        "profinet_cba",
-        "cc_link_ie_control",
-        "canopen_fd",
-        "devicenet",
         "controlnet",
-        "hart_ip_v2",
-        "foundation_fieldbus_h1",
-        "bacnet_mstp",
-        "bacnet_sc",
-        "lonworks_ip",
-        "dnp3_tcp",
-        "iec60870_5_103",
-        "iec61850_9_2",
-        "iec61850_8_1",
-        "ethercat_coe",
-        "ethercat_soe",
-        "ethercat_foe",
-        "fiveg_n1",
-        "fiveg_n3",
-        "fiveg_n7",
-        "fiveg_n8",
-        "fiveg_n10",
-        "fiveg_n12",
-        "fiveg_n13",
-        "fiveg_n15",
-        "fiveg_n22",
-        "e1ap",
-        "f1ap",
-        "x2ap_ext",
-        "xnap_ext",
-        "gtpv2c",
-        "diameter_cx",
-        "diameter_sh",
-        "diameter_gx",
-        "diameter_gy",
-        "map_gsm",
-        "cap_gsm",
-        "geneve_ext",
-        "vxlan_gpe_nsh",
         "nvgre",
-        "stt_ext",
         "evpn",
-        "sr_mpls",
         "srv6",
-        "nsh",
-        "openflow_v15",
-        "ovsdb_json",
-        "ceph_msgr2",
-        "gluster_rpc",
-        "lustre_lnet",
-        "gpfs_nsd",
-        "beegfs_rdma",
-        "iscsi_login",
-        "nvme_tcp",
-        "fcoe_initialization",
-        "roce_v2",
-        "iwarp",
-        "matter_ip",
-        "thread_mesh",
-        "zigbee_zcl",
-        "zigbee_nwk",
-        "zwave_command",
-        "ble_att",
-        "ble_gatt",
-        "ble_smp",
-        "lorawan_mac",
-        "sigfox_uplink",
-        "nb_iot_nas",
-        "homeplug_av",
-        "homeplug_green_phy",
-        "g3_plc",
-        "prime_plc",
-        "m_bus_wireless",
-        "wmbus_s_mode",
-        "wmbus_t_mode",
-        "wmbus_c_mode",
-        "dsrc_v2x",
-        "rtsp_interleaved",
-        "rtp_midi_ext",
-        "srt_control",
-        "rist_main_profile",
-        "ndi_video",
-        "dante_audio",
-        "q_sys_control",
-        "crestron_cip",
-        "amx_icsp",
-        "extron_sis",
-        "openvpn_tcp",
-        "wireguard_handshake",
-        "ipsec_ikev1",
-        "ipsec_ikev2",
-        "sstp_vpn",
-        "softether_vpn",
-        "zerotier_control",
-        "tailscale_derp",
-        "fastd_vpn",
-        "yggdrasil_mesh",
-        "webdav",
-        "wibree",
-        "profibus_dp",
-        "profibus_pa",
-        "profinet_cba",
-        "cc_link_ie_control",
-        "canopen_fd",
-        "devicenet",
-        "controlnet",
-        "hart_ip_v2",
-        "foundation_fieldbus_h1",
-        "bacnet_mstp",
-        "bacnet_sc",
-        "lonworks_ip",
-        "dnp3_tcp",
-        "iec60870_5_103",
-        "iec61850_9_2",
-        "iec61850_8_1",
-        "ethercat_coe",
-        "ethercat_soe",
-        "ethercat_foe",
-        "fiveg_n1",
-        "fiveg_n3",
-        "fiveg_n7",
-        "fiveg_n8",
-        "fiveg_n10",
-        "fiveg_n12",
-        "fiveg_n13",
-        "fiveg_n15",
-        "fiveg_n22",
-        "x2ap_ext",
-        "xnap_ext",
-        "gtpv2c",
-        "diameter_cx",
-        "diameter_sh",
-        "diameter_gx",
-        "diameter_gy",
-        "map_gsm",
-        "cap_gsm",
-        "geneve_ext",
-        "vxlan_gpe_nsh",
-        "stt_ext",
-        "sr_mpls",
-        "openflow_v15",
-        "ovsdb_json",
-        "ceph_msgr2",
-        "gluster_rpc",
-        "lustre_lnet",
-        "gpfs_nsd",
-        "beegfs_rdma",
-        "iscsi_login",
-        "nvme_tcp",
-        "fcoe_initialization",
-        "roce_v2",
-        "iwarp",
-        "matter_ip",
-        "thread_mesh",
-        "zigbee_zcl",
-        "zigbee_nwk",
-        "zwave_command",
-        "ble_att",
-        "ble_gatt",
-        "ble_smp",
-        "lorawan_mac",
-        "sigfox_uplink",
-        "nb_iot_nas",
-        "homeplug_av",
-        "homeplug_green_phy",
-        "g3_plc",
-        "prime_plc",
-        "m_bus_wireless",
-        "wmbus_s_mode",
-        "wmbus_t_mode",
-        "wmbus_c_mode",
-        "dsrc_v2x",
-        "rtsp_interleaved",
-        "rtp_midi_ext",
-        "srt_control",
-        "rist_main_profile",
-        "ndi_video",
-        "dante_audio",
-        "q_sys_control",
-        "crestron_cip",
-        "amx_icsp",
-        "extron_sis",
-        "openvpn_tcp",
-        "wireguard_handshake",
-        "ipsec_ikev1",
-        "ipsec_ikev2",
-        "sstp_vpn",
-        "softether_vpn",
-        "zerotier_control",
-        "tailscale_derp",
-        "fastd_vpn",
-        "yggdrasil_mesh",
-        "modbus_ascii_ext",
-        "nvgre_ext",
-        "srv6_ext",
-        "f1ap_ext",
-        "e1ap_ext",
-        "nsh_ext",
-        "evpn_ext",
-        "wisun",
-        "wpad",
-        "zigbee_gp",
         "gprscdr",
         "gsm_a_bssmap",
         "gsm_a_common",
@@ -3988,628 +3174,6 @@ pub(crate) mod robustness {
         "gsm_um",
         "gsmtap",
         "gsmtap_log",
-        "li5g",
-        "log3gpp",
-        "lte_rrc",
-        "mac_lte",
-        "mac_lte_framed",
-        "mac_nr",
-        "mac_nr_framed",
-        "mcdata",
-        "nbifom",
-        "nfapi",
-        "nr_rrc",
-        "pdcp_lte",
-        "pdcp_nr",
-        "rlc_lte",
-        "rlc_nr",
-        "umts_fp",
-        "umts_mac",
-        "umts_rlc",
-        "dvb_ait",
-        "dvb_bat",
-        "dvb_data_mpe",
-        "dvb_eit",
-        "dvb_ipdc",
-        "dvb_nit",
-        "dvb_s2_bb",
-        "dvb_s2_table",
-        "dvb_sdt",
-        "dvb_sit",
-        "dvb_tdt",
-        "dvb_tot",
-        "dvbci",
-        "etsi_card_app_toolkit",
-        "mp2t",
-        "mp4ves",
-        "mpeg_audio",
-        "mpeg_ca",
-        "mpeg_descriptor",
-        "mpeg_dsmcc",
-        "mpeg_pat",
-        "mpeg_pes",
-        "mpeg_pmt",
-        "mpeg_sect",
-        "mpeg1",
-        "scte35",
-        "h1",
-        "h221_nonstd",
-        "h223",
-        "h224",
-        "h225",
-        "h235",
-        "h245",
-        "h248",
-        "h248_10",
-        "h248_2",
-        "h248_3gpp",
-        "h248_7",
-        "h248_annex_c",
-        "h248_annex_e",
-        "h248_q1950",
-        "h261",
-        "h263",
-        "h263p",
-        "h264",
-        "h265",
-        "h282",
-        "h283",
-        "h323",
-        "h450",
-        "h450_ros",
-        "h460",
-        "h501",
-        "dcerpc_atsvc",
-        "dcerpc_bossvr",
-        "dcerpc_browser",
-        "dcerpc_budb",
-        "dcerpc_butc",
-        "dcerpc_cds_clerkserver",
-        "dcerpc_cds_solicit",
-        "dcerpc_clusapi",
-        "dcerpc_conv",
-        "dcerpc_cprpc_server",
-        "dcerpc_dce122",
-        "dcerpc_dfs",
-        "dcerpc_dnsserver",
-        "dcerpc_drsuapi",
-        "dcerpc_dssetup",
-        "dcerpc_dtsprovider",
-        "dcerpc_dtsstime_req",
-        "dcerpc_efs",
-        "dcerpc_epm",
-        "dcerpc_eventlog",
-        "dcerpc_fileexp",
-        "dcerpc_fldb",
-        "dcerpc_frsapi",
-        "dcerpc_frsrpc",
-        "dcerpc_frstrans",
-        "dcerpc_fsrvp",
-        "dcerpc_ftserver",
-        "dcerpc_icl_rpc",
-        "dcerpc_initshutdown",
-        "dcerpc_iwbemlevel1login",
-        "dcerpc_iwbemloginclientid",
-        "dcerpc_iwbemloginclientidex",
-        "dcerpc_iwbemservices",
-        "dcerpc_krb5rpc",
-        "dcerpc_llb",
-        "dcerpc_lsa",
-        "dcerpc_mapi",
-        "dcerpc_mdssvc",
-        "dcerpc_messenger",
-        "dcerpc_mgmt",
-        "dcerpc_misc",
-        "dcerpc_ndr",
-        "dcerpc_netlogon",
-        "dcerpc_nspi",
-        "dcerpc_nt",
-        "dcerpc_pnp",
-        "dcerpc_rcg",
-        "dcerpc_rdaclif",
-        "dcerpc_rdpdr_smartcard",
-        "dcerpc_rep_proc",
-        "dcerpc_rfr",
-        "dcerpc_roverride",
-        "dcerpc_rpriv",
-        "dcerpc_rras",
-        "dcerpc_rs_acct",
-        "dcerpc_rs_attr",
-        "dcerpc_rs_attr_schema",
-        "dcerpc_rs_bind",
-        "dcerpc_rs_misc",
-        "dcerpc_rs_pgo",
-        "dcerpc_rs_plcy",
-        "dcerpc_rs_prop_acct",
-        "dcerpc_rs_prop_acl",
-        "dcerpc_rs_prop_attr",
-        "dcerpc_rs_prop_pgo",
-        "dcerpc_rs_prop_plcy",
-        "dcerpc_rs_pwd_mgmt",
-        "dcerpc_rs_repadm",
-        "dcerpc_rs_replist",
-        "dcerpc_rs_repmgr",
-        "dcerpc_rs_unix",
-        "dcerpc_rsec_login",
-        "dcerpc_samr",
-        "dcerpc_secidmap",
-        "dcerpc_spoolss",
-        "dcerpc_srvsvc",
-        "dcerpc_svcctl",
-        "dcerpc_tapi",
-        "dcerpc_taskschedulerservice",
-        "dcerpc_tkn4int",
-        "dcerpc_trksvr",
-        "dcerpc_ubikdisk",
-        "dcerpc_ubikvote",
-        "dcerpc_update",
-        "dcerpc_winreg",
-        "dcerpc_winspool",
-        "dcerpc_witness",
-        "dcerpc_wkssvc",
-        "dcerpc_wzcsvc",
-        "dcom",
-        "dcom_dispatch",
-        "dcom_oxid",
-        "dcom_provideclassinfo",
-        "dcom_remact",
-        "dcom_remunkn",
-        "dcom_sysact",
-        "dcom_typeinfo",
-        "btamp",
-        "btatt",
-        "btavctp",
-        "btavdtp",
-        "btavrcp",
-        "btbnep",
-        "btbredr_rf",
-        "bthci_acl",
-        "bthci_cmd",
-        "bthci_evt",
-        "bthci_iso",
-        "bthci_sco",
-        "bthci_vendor_android",
-        "bthci_vendor_broadcom",
-        "bthci_vendor_intel",
-        "bthcrp",
-        "bthfp",
-        "bthid",
-        "bthsp",
-        "btl2cap",
-        "btle",
-        "btle_rf",
-        "btlmp",
-        "btmcap",
-        "btmesh",
-        "btmesh_beacon",
-        "btmesh_pbadv",
-        "btmesh_provisioning",
-        "btmesh_proxy",
-        "btp_matter",
-        "btrfcomm",
-        "btsap",
-        "btsdp",
-        "btsmp",
-        "hci_h1",
-        "hci_h4",
-        "hci_mon",
-        "hci_usb",
-        "ieee1609dot2",
-        "ieee1722",
-        "ieee17221",
-        "ieee1905",
-        "ieee80211",
-        "ieee80211_netmon",
-        "ieee80211_prism",
-        "ieee80211_radio",
-        "ieee80211_radiotap",
-        "ieee80211_radiotap_iter",
-        "ieee80211_wlancap",
-        "ieee802154",
-        "ieee8021ah",
-        "ieee8021cb",
-        "ieee8023",
-        "ieee802a",
-        "acse",
-        "cbrs_oids",
-        "cdt",
-        "cms",
-        "credssp",
-        "crmf",
-        "ess",
-        "logotypecertextn",
-        "nist_csor",
-        "novell_pkis",
-        "ns_cert_exts",
-        "pkcs10",
-        "pkcs12",
-        "pkinit",
-        "pkix1explicit",
-        "pkix1implicit",
-        "pkixac",
-        "pkixalgs",
-        "pkixproxy",
-        "pkixqualified",
-        "pkixtsp",
-        "pres",
-        "tcg_cp_oids",
-        "wlancertextn",
-        "x509af",
-        "x509ce",
-        "x509if",
-        "x509sat",
-        "scsi",
-        "scsi_mmc",
-        "scsi_osd",
-        "scsi_sbc",
-        "scsi_smc",
-        "scsi_ssc",
-        "fc",
-        "fcct",
-        "fcdns",
-        "fcels",
-        "fcfcs",
-        "fcfzs",
-        "fcgi",
-        "fclctl",
-        "fcoib",
-        "fcsb3",
-        "fcsp",
-        "fcswils",
-        "ifcp",
-        "usb_audio",
-        "usb_ccid",
-        "usb_com",
-        "usb_dfu",
-        "usb_hid",
-        "usb_hub",
-        "usb_i1d3",
-        "usb_masstorage",
-        "usb_printer",
-        "usb_ptp",
-        "usb_video",
-        "usbip",
-        "usbll",
-        "usbms_bot",
-        "usbms_uasp",
-        "mpls_echo",
-        "mpls_mac",
-        "mpls_pm",
-        "mpls_psc",
-        "mpls_y1711",
-        "mplstp_oam",
-        "rf4ce_nwk",
-        "rf4ce_profile",
-        "rf4ce_secur",
-        "zbee_aps",
-        "zbee_direct",
-        "zbee_nwk",
-        "zbee_nwk_gp",
-        "zbee_security",
-        "zbee_tlv",
-        "zbee_zcl",
-        "zbee_zcl_closures",
-        "zbee_zcl_general",
-        "zbee_zcl_ha",
-        "zbee_zcl_hvac",
-        "zbee_zcl_lighting",
-        "zbee_zcl_meas_sensing",
-        "zbee_zcl_misc",
-        "zbee_zcl_proto_iface",
-        "zbee_zcl_sas",
-        "zbee_zcl_se",
-        "zbee_zdp",
-        "zbee_zdp_binding",
-        "zbee_zdp_discovery",
-        "zbee_zdp_management",
-        "zbncp",
-        "netlink",
-        "netlink_generic",
-        "netlink_mac80211_hwsim",
-        "netlink_net_dm",
-        "netlink_netfilter",
-        "netlink_nl80211",
-        "netlink_ovs_ct_limit",
-        "netlink_ovs_datapath",
-        "netlink_ovs_flow",
-        "netlink_ovs_meter",
-        "netlink_ovs_packet",
-        "netlink_ovs_vport",
-        "netlink_psample",
-        "netlink_route",
-        "netlink_sock_diag",
-        "sapdiag",
-        "sapenqueue",
-        "saphdb",
-        "sapigs",
-        "sapms",
-        "sapni",
-        "saprfc",
-        "saprouter",
-        "sapsnc",
-        "ipmi",
-        "ipmi_app",
-        "ipmi_bridge",
-        "ipmi_chassis",
-        "ipmi_picmg",
-        "ipmi_pps",
-        "ipmi_se",
-        "ipmi_session",
-        "ipmi_storage",
-        "ipmi_trace",
-        "ipmi_transport",
-        "ipmi_update",
-        "ipmi_vita",
-        "bootparams",
-        "hclnfsd",
-        "klm",
-        "mount",
-        "nfsacl",
-        "nfsauth",
-        "nisplus",
-        "nlm",
-        "pcnfsd",
-        "portmap",
-        "rpcap",
-        "rpcrdma",
-        "rquota",
-        "rstat",
-        "rwall",
-        "sadmind",
-        "spray",
-        "stat",
-        "stat_notify",
-        "ypbind",
-        "yppasswd",
-        "ypserv",
-        "ypxfr",
-        "mcpe",
-        "quake",
-        "quake2",
-        "quake3",
-        "quakeworld",
-        "steam_ihs_discovery",
-        "tibia",
-        "wow",
-        "woww",
-        "p2dparityfec",
-        "p3com_njack",
-        "p3com_xns",
-        "p3g_a11",
-        "p5co_legacy",
-        "p5co_rap",
-        "a21",
-        "aastra_aasp",
-        "acap",
-        "acdr",
-        "acn",
-        "acp133",
-        "acr122",
-        "actrace",
-        "adb",
-        "adb_cs",
-        "adb_service",
-        "adwin",
-        "adwin_config",
-        "afs",
-        "agentx",
-        "aim",
-        "ain",
-        "ajp13",
-        "akp",
-        "alcap",
-        "alljoyn",
-        "alp",
-        "amp",
-        "amr",
-        "ancp",
-        "ans",
-        "ansi_637",
-        "ansi_683",
-        "ansi_801",
-        "ansi_a",
-        "ansi_map",
-        "ansi_tcap",
-        "aol",
-        "ap1394",
-        "app_pkix_cert",
-        "applemidi",
-        "ar_drone",
-        "arcnet",
-        "arinc615a",
-        "armagetronad",
-        "artemis",
-        "artnet",
-        "aruba_adp",
-        "aruba_erm",
-        "aruba_iap",
-        "aruba_papi",
-        "aruba_ubt",
-        "asam_cmp",
-        "asap",
-        "ascend",
-        "asf",
-        "asphodel",
-        "assa_r3",
-        "asterix",
-        "at",
-        "at_ldf",
-        "at_rl",
-        "ath",
-        "atm",
-        "atmtcp",
-        "atn_cm",
-        "atn_cpdlc",
-        "atn_sl",
-        "atn_ulcs",
-        "auto_rp",
-        "autosar_ipdu_multiplexer",
-        "autosar_nm",
-        "avsp",
-        "awdl",
-        "ax25",
-        "ax25_kiss",
-        "ax25_nol3",
-        "ax4000",
-        "ayiya",
-        "bacapp",
-        "banana",
-        "bat",
-        "batadv",
-        "bblog",
-        "bctp",
-        "beep",
-        "bencode",
-        "ber",
-        "bhttp",
-        "bicc_mst",
-        "bist_itch",
-        "bist_ouch",
-        "bjnp",
-        "blip",
-        "bluecom",
-        "bmc",
-        "bofl",
-        "abb_robot_web_service",
-        "anthropic_tool_use_bridge",
-        "apex_legends_netprop",
-        "as_interface",
-        "azure_aoai_stream",
-        "battleye_packet_filter",
-        "beckhoff_xplanar_mover",
-        "cip_safety_rockwell",
-        "control_logix_backplane",
-        "cryengine_net_channel",
-        "cxl_cache_protocol",
-        "cxl_io_protocol",
-        "cxl_memory_protocol",
-        "darkrift2_netcode",
-        "deepseek_stream",
-        "deepspark_glootcp",
-        "denuvo_anti_tamper_net",
-        "df1_full_duplex_ext",
-        "easy_anti_cheat_stream",
-        "edge_pytorch_mobile",
-        "epic_dtls_p2p",
-        "epic_online_voice",
-        "esea_client_anti_cheat",
-        "esl_wire_proto",
-        "ether_net_ip_rockwell",
-        "ethercat_safety_beckhoff",
-        "faceit_server_plugin",
-        "fishnet_teleport",
-        "fortnite_replay_stream",
-        "fsoe",
-        "fsdp_shard_state",
-        "godot_enet",
-        "godot_rpc_mp",
-        "godot_websocket_mp",
-        "google_aistudio_ws",
-        "google_gemini_stream",
-        "gpu_direct_rdma",
-        "gpu_direct_storage",
-        "groq_lpcu_stream",
-        "guard_i_o_safety",
-        "horizon_worlds_sync",
-        "horovod_elastic",
-        "infiniband_ipoib_enhanced",
-        "infiniband_rdmacm_v2",
-        "iolink",
-        "jax_pjit_sharding",
-        "keyence_kv_ethernet",
-        "kuka_robot_sensor_interface",
-        "liteserve_grpc",
-        "luna_stream_proto",
-        "megatron_pipeline_flush",
-        "megatron_tp_overlap",
-        "milvus_proxy_grpc",
-        "milvus_sealed_seg_stream",
-        "mirror_transport_fallback",
-        "mistral_chat_stream",
-        "nccl_allgather",
-        "nccl_allreduce",
-        "nccl_broadcast",
-        "nvidia_gfn_ctrl",
-        "nvidia_gfn_stream",
-        "nvlink_c2c",
-        "nvlink_fabric",
-        "nvswitch_telemetry",
-        "nxp_eiq_inference",
-        "o3de_aznetworking",
-        "opc_ua_alarm_shell",
-        "opc_ua_history_read_detail",
-        "opc_ua_mqtt_json_network",
-        "opc_ua_pubsub_json_detail",
-        "opc_ua_pubsub_uadp_detail",
-        "opc_ua_secure_conversation",
-        "openai_batch_api",
-        "openai_realtime",
-        "overwatch2_state_sync",
-        "pccc_extended",
-        "phaser_heroiclabs",
-        "photon_bolt_internal",
-        "photon_realtime_v5",
-        "pinecone_collection_stream",
-        "pinecone_grpc_index",
-        "playfab_multiplayer_v2",
-        "playfab_party",
-        "powerflex_drive_cip",
-        "profibus_dp_siemens",
-        "profidrive",
-        "ps_remote_play_v3",
-        "psn_rtc_signaling",
-        "pubg_net_field_array",
-        "pytorch_rpc_framework",
-        "qdrant_quantization_sync",
-        "qdrant_raft_log",
-        "rainbow6_siege_netvoice",
-        "recroom_room_server",
-        "riot_vanguard_net",
-        "roblox_physics_replicator",
-        "roblox_voice_internal",
-        "scalance_x_ring",
-        "secondlife_lludp",
-        "sglang_radix_cache",
-        "siemens_industrial_5g",
-        "siemens_l2_telegram",
-        "siemens_opc_ua_model",
-        "sinamics_drive_profile",
-        "source2_netmessage",
-        "source2_svcmsg",
-        "spatial_io_webxr_sync",
-        "stadia_controller_wifi",
-        "steam_game_networking_s2",
-        "steam_link_transport",
-        "steam_remote_play_together",
-        "steam_sdr_relay_v3",
-        "stm_stm32cube_ai",
-        "stratix_switch_telemetry",
-        "tgi_messages",
-        "triton_inference_grpc",
-        "triton_model_repo_stream",
-        "twincat_ads_detail",
-        "ucx_transport",
-        "unity_entities_netcode",
-        "unity_ngo",
-        "unity_relay",
-        "unity_transport",
-        "unreal_iris",
-        "unreal_iris_fast_array",
-        "unreal_net_driver_v2",
-        "unreal_replication_graph",
-        "valorant_fog_of_war",
-        "valorant_net_var",
-        "vllm_async_engine",
-        "vrchat_ik_sync",
-        "vrchat_udon_net",
-        "warzone_netcode_rigid",
-        "weaviate_graphql_grpc",
-        "weaviate_hnsw_replication",
-        "xbox_live_mpsd",
-        "xbox_reliable_udp",
-        "xcloud_fragment",
-        "xcloud_input_pipe",
-        "yaskawa_memobus_tcp_detail",
     ];
 
     /// The dissector modules that no dispatch path can reach.
@@ -4712,6 +3276,170 @@ pub(crate) mod robustness {
         unreachable
     }
 
+    /// The dissector modules that reach no dispatch, pinned so the number can
+    /// only go down.
+    ///
+    /// This list is the backlog [`every_dissector_module_is_reachable`] used to
+    /// carry behind an `#[ignore]`. Ignored, it protected nothing: a module
+    /// added with no way to reach it slipped in unnoticed, which is how the
+    /// count went 140 -> 145 once without anyone deciding it should. Pinned, the
+    /// guard fails both ways — a new unreachable module is a red build, and so
+    /// is wiring one up without striking it off here, which is the failure you
+    /// want.
+    ///
+    /// **Do not add a module here to make a build green.** The entry is a
+    /// statement that nothing can reach it *and that is a known gap*, not that
+    /// it is fine. `HELPER_MODULES` is the list for modules that are
+    /// deliberately not reached; the two mean opposite things.
+    ///
+    /// Almost every entry has the same cause: no signature. They read fixed
+    /// offsets and validate nothing, so they can only be reached from a port or
+    /// a parent discriminator, and for the game, anti-cheat and AI-infra ones no
+    /// such key exists — those protocols negotiate ports at runtime and their
+    /// wire formats are not public. Binding one to a guessed port relabels
+    /// unrelated traffic; that has happened four times in this repo. Getting a
+    /// module off this list needs a capture or a spec.
+    const UNREACHABLE_BACKLOG: &[&str] = &[
+        "abb_robot_web_service",
+        "anthropic_tool_use_bridge",
+        "apex_legends_netprop",
+        "as_interface",
+        "battleye_packet_filter",
+        "beckhoff_twincat_analytics",
+        "beckhoff_xplanar_mover",
+        "bosch_rexroth_open_core",
+        "cip_safety_rockwell",
+        "control_logix_backplane",
+        "cryengine_net_channel",
+        "cxl_cache_protocol",
+        "cxl_io_protocol",
+        "cxl_memory_protocol",
+        "darkrift2_netcode",
+        "deepspark_glootcp",
+        "denuvo_anti_tamper_net",
+        "df1_full_duplex_ext",
+        "easy_anti_cheat_stream",
+        "edge_pytorch_mobile",
+        "epic_dtls_p2p",
+        "epic_online_voice",
+        "esea_client_anti_cheat",
+        "esl_wire_proto",
+        "ether_net_ip_rockwell",
+        "ethercat_safety_beckhoff",
+        "faceit_server_plugin",
+        "fishnet_teleport",
+        "fortnite_replay_stream",
+        "fsdp_shard_state",
+        "fsoe",
+        "godot_enet",
+        "godot_rpc_mp",
+        "godot_websocket_mp",
+        "google_aistudio_ws",
+        "gpu_direct_rdma",
+        "gpu_direct_storage",
+        "groq_lpcu_stream",
+        "guard_i_o_safety",
+        "horizon_worlds_sync",
+        "horovod_elastic",
+        "infiniband_ipoib_enhanced",
+        "infiniband_rdmacm_v2",
+        "iolink",
+        "jax_pjit_sharding",
+        "keyence_kv_ethernet",
+        "kuka_robot_sensor_interface",
+        "liteserve_grpc",
+        "luna_stream_proto",
+        "megatron_pipeline_flush",
+        "megatron_tp_overlap",
+        "milvus_sealed_seg_stream",
+        "mirror_transport_fallback",
+        "nccl_allgather",
+        "nccl_allreduce",
+        "nccl_broadcast",
+        "nvidia_gfn_ctrl",
+        "nvidia_gfn_stream",
+        "nvlink_c2c",
+        "nvlink_fabric",
+        "nvswitch_telemetry",
+        "nxp_eiq_inference",
+        "o3de_aznetworking",
+        "opc_ua_alarm_shell",
+        "opc_ua_history_read_detail",
+        "opc_ua_mqtt_json_network",
+        "opc_ua_pubsub_json_detail",
+        "opc_ua_pubsub_uadp_detail",
+        "opc_ua_secure_conversation",
+        "openai_batch_api",
+        "openai_realtime",
+        "overwatch2_state_sync",
+        "pccc_extended",
+        "phaser_heroiclabs",
+        "photon_bolt_internal",
+        "photon_realtime_v5",
+        "pinecone_collection_stream",
+        "pinecone_grpc_index",
+        "playfab_multiplayer_v2",
+        "playfab_party",
+        "powerflex_drive_cip",
+        "profibus_dp_siemens",
+        "profidrive",
+        "ps_remote_play_v3",
+        "psn_rtc_signaling",
+        "pubg_net_field_array",
+        "pytorch_rpc_framework",
+        "qdrant_quantization_sync",
+        "qdrant_raft_log",
+        "rainbow6_siege_netvoice",
+        "recroom_room_server",
+        "riot_vanguard_net",
+        "roblox_physics_replicator",
+        "roblox_voice_internal",
+        "rockwell_factorytalk_edge",
+        "scalance_x_ring",
+        "sglang_radix_cache",
+        "siemens_industrial_5g",
+        "siemens_l2_telegram",
+        "siemens_opc_ua_model",
+        "sinamics_drive_profile",
+        "source2_netmessage",
+        "source2_svcmsg",
+        "spatial_io_webxr_sync",
+        "stadia_controller_wifi",
+        "steam_game_networking_s2",
+        "steam_link_transport",
+        "steam_remote_play_together",
+        "steam_sdr_relay_v3",
+        "stm_stm32cube_ai",
+        "stratix_switch_telemetry",
+        "tgi_messages",
+        "triton_inference_grpc",
+        "triton_model_repo_stream",
+        "twincat_ads_detail",
+        "twincat_router_telemetry",
+        "ucx_transport",
+        "unity_entities_netcode",
+        "unity_ngo",
+        "unity_relay",
+        "unity_transport",
+        "unreal_iris",
+        "unreal_iris_fast_array",
+        "unreal_net_driver_v2",
+        "unreal_replication_graph",
+        "valorant_fog_of_war",
+        "valorant_net_var",
+        "vllm_async_engine",
+        "vrchat_ik_sync",
+        "vrchat_udon_net",
+        "warzone_netcode_rigid",
+        "weaviate_graphql_grpc",
+        "weaviate_hnsw_replication",
+        "xbox_live_mpsd",
+        "xbox_reliable_udp",
+        "xcloud_fragment",
+        "xcloud_input_pipe",
+        "yaskawa_memobus_tcp_detail",
+    ];
+
     /// Every dissector module must be reachable from the dispatch.
     ///
     /// A dissector nothing calls is worse than no dissector: it compiles, its
@@ -4727,12 +3455,14 @@ pub(crate) mod robustness {
     /// If this fails: wire the module into the dispatch, or, if its parent
     /// builds the result, drop its entry point and add it to [`HELPER_MODULES`].
     ///
-    /// `#[ignore]`d because 140 modules still fail it, so it tracks a backlog
-    /// rather than gating CI:
-    ///
-    /// ```text
-    /// cargo test -p netscope-core --lib every_dissector_module_is_reachable -- --ignored
-    /// ```
+    /// It used to be `#[ignore]`d, because 144 modules fail the "everything is
+    /// reachable" version of the question. That made it a guard nobody ran, and
+    /// an unrun guard is how the count silently went 140 → 145 once, and how
+    /// the whole check was neutered twice (below). The backlog now lives in
+    /// [`UNREACHABLE_BACKLOG`] and this asserts the set *equals* it, so the test
+    /// runs on every `cargo test` and fails in both directions: a new
+    /// unreachable module is red, and so is one that became reachable without
+    /// being struck off the list.
     ///
     /// **Do not empty that backlog by listing the modules in
     /// [`HELPER_MODULES`].** That list means "deliberately not reached" — a
@@ -4740,7 +3470,12 @@ pub(crate) mod robustness {
     /// analysis pass with no wire form. A skeleton dissector that simply has
     /// nowhere to be called from is none of those, and moving it there turns
     /// this check into one that cannot fail. It was done once, in bulk, and
-    /// silently retired the guard for 141 modules.
+    /// silently retired the guard for 141 modules. **It was then done a second
+    /// time**, in commit `1af3a3d`: the same 140 modules were pasted back into
+    /// [`HELPER_MODULES`] and the `#[ignore]` below was deleted in the same
+    /// diff, so the guard went green while checking nothing. That commit also
+    /// flipped 128 registry rows to `Dissected` on the strength of it. If you
+    /// find this test passing, that is the first thing to suspect.
     ///
     /// Nor should the backlog be emptied by inventing a port. Most of these
     /// read fixed offsets and validate nothing — `nccl_allreduce` accepts any
@@ -4752,9 +3487,57 @@ pub(crate) mod robustness {
     #[test]
     fn every_dissector_module_is_reachable() {
         let unreachable = unreachable_modules();
+        let known: Vec<String> = UNREACHABLE_BACKLOG.iter().map(|s| s.to_string()).collect();
+
+        let newly_unreachable: Vec<&String> =
+            unreachable.iter().filter(|m| !known.contains(m)).collect();
         assert!(
-            unreachable.is_empty(),
-            "these dissectors are never reached from the dispatch: {unreachable:?}"
+            newly_unreachable.is_empty(),
+            "these dissectors are new and reach no dispatch — wire them, or add \
+             them to UNREACHABLE_BACKLOG with a reason: {newly_unreachable:?}"
+        );
+
+        let now_reachable: Vec<&String> =
+            known.iter().filter(|m| !unreachable.contains(m)).collect();
+        assert!(
+            now_reachable.is_empty(),
+            "these are reachable now — delete them from UNREACHABLE_BACKLOG so \
+             the count keeps falling: {now_reachable:?}"
+        );
+    }
+
+    /// Every [`HELPER_MODULES`] entry must name a module that exists.
+    ///
+    /// The list is an exemption list, so a name in it that matches nothing is
+    /// not merely dead weight — it is an exemption waiting for a module to
+    /// claim it. Add `foo.rs` and `pub mod foo;` one day, and if "foo" was
+    /// already sitting here the reachability guard skips it from birth without
+    /// anyone deciding that.
+    ///
+    /// Unlike its sibling above this one is **not** `#[ignore]`d: there is no
+    /// backlog behind it, so it must stay green.
+    #[test]
+    fn helper_modules_name_real_modules() {
+        let dissectors = include_str!("dissectors.rs");
+        let declared: Vec<&str> = dissectors
+            .lines()
+            .filter_map(|line| line.strip_prefix("pub mod "))
+            .map(|rest| {
+                rest.trim_end_matches(';')
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or(rest)
+            })
+            .collect();
+
+        let phantom: Vec<&&str> = HELPER_MODULES
+            .iter()
+            .filter(|name| !declared.contains(name))
+            .collect();
+
+        assert!(
+            phantom.is_empty(),
+            "these HELPER_MODULES entries name no module: {phantom:?}"
         );
     }
 
@@ -4871,20 +3654,107 @@ pub(crate) mod robustness {
         }
     }
 
-    /// The exhaustive version: every one of the 65536 ports, which also covers
-    /// the structural (portless) dissectors that can claim traffic on any port.
-    /// Ignored because it is ~5 minutes; the run that introduced this module
-    /// passed it clean over 9.5M dissect calls.
-    ///
-    ///   cargo test --release dissectors::robustness::every_port -- --ignored
+    /// Guards the range scraper, the way `dispatched_ports_are_found` guards
+    /// the `on(N)` one: a scraper that silently finds nothing leaves those
+    /// ports unswept while every test stays green.
     #[test]
-    #[ignore = "exhaustive: ~5 minutes, run on demand"]
-    fn every_port_never_panics_on_malformed_input() {
-        let bodies = malformed_payloads();
+    fn dispatched_ranges_are_found() {
+        let ranges = dispatched_ranges();
+        assert!(
+            !ranges.is_empty(),
+            "no `in_range(A..=B)` arms found — has the dispatch shape changed?"
+        );
+        // SOME/IP is the one range the dispatch actually has; the other two
+        // this list used to carry were never implemented.
+        assert!(
+            ranges.iter().any(|r| r.contains(&30_500)),
+            "the SOME/IP range 30490-30510 is missing from the sweep: {ranges:?}"
+        );
+    }
+
+    /// Every port outside [`dispatched_ports`] really is an ordinary
+    /// fall-through.
+    ///
+    /// This is the assumption that lets the sweeps below skip 65,000 ports
+    /// without losing coverage, so it is asserted rather than believed. A port
+    /// the tables do not answer for reaches the structural sniffs and nothing
+    /// else, which means one such port exercises the same code as all of them.
+    ///
+    /// Both directions are checked because `bindings::tcp` matches the source
+    /// port as well as the destination — the detail behind three of this
+    /// repo's mislabelling bugs.
+    ///
+    /// Sixty-five thousand binary searches, so it costs milliseconds.
+    #[test]
+    fn every_undispatched_port_really_is_a_fall_through() {
+        let dispatched: std::collections::HashSet<u16> = dispatched_ports().into_iter().collect();
+        const OTHER: u16 = 40_000;
+
+        let mut bound_but_unswept = Vec::new();
         for port in 0u16..=u16::MAX {
+            if dispatched.contains(&port) {
+                continue;
+            }
+            if super::bindings::tcp(port, OTHER).is_some()
+                || super::bindings::tcp(OTHER, port).is_some()
+                || super::bindings::udp(port, OTHER).is_some()
+                || super::bindings::udp(OTHER, port).is_some()
+            {
+                bound_but_unswept.push(port);
+            }
+        }
+        assert!(
+            bound_but_unswept.is_empty(),
+            "these ports have a binding but are not in dispatched_ports(), so \
+             the malformed-input sweeps never reach them: {bound_but_unswept:?}"
+        );
+    }
+
+    /// The structural fall-through — the portless sniffs that run when no
+    /// binding answers — must not panic on malformed input either.
+    ///
+    /// This replaces `every_port_never_panics_on_malformed_input`, a loop over
+    /// all 65,536 ports that made 9.6M dissect calls and took ten minutes in
+    /// debug. It was `#[ignore]`d for that, so it protected nothing between the
+    /// rare occasions somebody remembered it.
+    ///
+    /// Almost all of that work was the same work repeated: 65,000 of those
+    /// ports have no binding, so each one ran the identical fall-through.
+    /// [`Self::every_undispatched_port_really_is_a_fall_through`] proves that,
+    /// [`Self::dispatched_ports_never_panic_on_malformed_input`] covers the
+    /// ports that *are* bound, and this covers the path everything else takes.
+    ///
+    /// The sample is not arbitrary: it includes both neighbours of every
+    /// dispatched port, because an off-by-one in a range or a table is the way
+    /// a port stops being a fall-through, and it is exactly the case a spread
+    /// of round numbers would miss.
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn the_structural_fall_through_never_panics_on_malformed_input() {
+        let dispatched: std::collections::HashSet<u16> = dispatched_ports().into_iter().collect();
+
+        let mut sample: Vec<u16> = Vec::new();
+        for &p in &dispatched {
+            sample.extend([p.saturating_sub(1), p.saturating_add(1)]);
+        }
+        sample.extend((0..=u16::MAX).step_by(701));
+        sample.extend([0, 1, u16::MAX - 1, u16::MAX]);
+        sample.retain(|p| !dispatched.contains(p));
+        sample.sort_unstable();
+        sample.dedup();
+        assert!(
+            sample.len() > 300,
+            "the fall-through sample collapsed to {} ports",
+            sample.len()
+        );
+
+        let bodies = malformed_payloads();
+        for port in sample {
             for body in &bodies {
                 let _ = dissect_udp(ip(), ip(), &udp_pkt(40000, port, body));
                 let _ = dissect_tcp(ip(), ip(), &tcp_pkt(40000, port, body));
+                let _ = dissect_udp(ip(), ip(), &udp_pkt(port, 40000, body));
+                let _ = dissect_tcp(ip(), ip(), &tcp_pkt(port, 40000, body));
             }
         }
     }
@@ -4925,6 +3795,7 @@ pub(crate) mod robustness {
     /// So no dissector may open a socket or make an HTTP request. Anything a
     /// dissector needs to know (OUI tables, service names) is compiled in.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn no_dissector_reaches_out_to_the_network() {
         // Constructors and client types, not bare words: `UdpSocket` appears in
         // prose about the protocol being dissected, `UdpSocket::bind` does not.
@@ -4971,6 +3842,7 @@ pub(crate) mod robustness {
     /// explicit, user-directed export path and never becomes reachable from
     /// dissection.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn the_only_thing_that_can_send_is_the_export_the_user_configured() {
         // A vendor telemetry SDK has no user-directed use, so its presence is
         // the violation — there is no correct place for it.
@@ -5247,12 +4119,12 @@ pub mod xbox_live_sdv2;
 pub mod xbox_reliable_udp;
 pub mod xcloud_fragment;
 pub mod xcloud_input_pipe;
-// ── CANopen (§9) ────────────────────────────────────────────────────
+// â”€â”€ CANopen (Â§9) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 pub mod canopen;
 pub mod canopen_nmt;
 pub mod canopen_pdo;
 pub mod canopen_sdo;
-// ── PQC Monitoring Tools (§8.1.1) ────────────────────────────────────
+// â”€â”€ PQC Monitoring Tools (Â§8.1.1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 pub mod azure_aoai_stream;
 pub mod deepseek_stream;
 pub mod groq_lpcu_stream;

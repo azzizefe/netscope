@@ -4531,7 +4531,15 @@ const HTTP_ERR_REASON = {
 
 // ---- Tiny service→CVE map (from cleartext Server headers) — honest & limited ----
 const CVE_DB = [
-  [/Apache\/2\.4\.(4[0-9]|50)\b/i, 'CVE-2021-41773', 'Apache 2.4.49/2.4.50 path traversal → RCE. Upgrade to ≥2.4.51.'],
+  // The two path-traversal releases, matched exactly. This was
+  // `2\.4\.(4[0-9]|50)`, which is 2.4.40 through 2.4.50 — so 2.4.41, 2.4.46 and
+  // 2.4.48 were all reported as "CVE-2021-41773 path traversal → RCE", a
+  // specific, checkable claim about servers the CVE does not affect. The
+  // description beside it already said "2.4.49/2.4.50", which is what the
+  // pattern should have said. Naming a CVE means naming the versions it applies
+  // to; a wide regex behind a narrow ID sends someone to patch the wrong thing.
+  [/Apache\/2\.4\.49\b/i, 'CVE-2021-41773', 'Apache 2.4.49 path traversal → RCE. Upgrade to ≥2.4.51.'],
+  [/Apache\/2\.4\.50\b/i, 'CVE-2021-42013', 'Apache 2.4.50 path traversal → RCE (incomplete fix for CVE-2021-41773). Upgrade to ≥2.4.51.'],
   [/OpenSSH_[0-6]\./i, 'legacy-openssh', 'Very old OpenSSH — multiple known issues (user enumeration, weak KEX). Upgrade.'],
   [/nginx\/1\.(1?[0-9])\.\b/i, 'old-nginx', 'Old nginx branch — several CVEs since. Upgrade to a current stable.'],
   [/PHP\/(5\.|7\.[0-3])/i, 'php-eol', 'End-of-life PHP (5.x / ≤7.3) — no security patches. Upgrade.'],

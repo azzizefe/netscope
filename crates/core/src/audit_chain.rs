@@ -129,17 +129,32 @@ impl AuditChainManager {
     }
 
     /// Log SOC Analyst PCAP / Payload View (§4.2).
-    pub fn log_analyst_pcap_view(&self, user_id: &str, pcap_name: &str, analyst_ip: &str) -> AuditEntry {
+    pub fn log_analyst_pcap_view(
+        &self,
+        user_id: &str,
+        pcap_name: &str,
+        analyst_ip: &str,
+    ) -> AuditEntry {
         self.log_action(user_id, "ANALYST_INSPECT_PCAP", pcap_name, analyst_ip)
     }
 
     /// Log SOC Analyst IP Firewall Block Action (§4.2).
-    pub fn log_analyst_ip_block(&self, user_id: &str, target_ip: &str, analyst_ip: &str) -> AuditEntry {
+    pub fn log_analyst_ip_block(
+        &self,
+        user_id: &str,
+        target_ip: &str,
+        analyst_ip: &str,
+    ) -> AuditEntry {
         self.log_action(user_id, "ANALYST_BLOCK_IP", target_ip, analyst_ip)
     }
 
     /// Log User Session Login Event (§4.2).
-    pub fn log_analyst_login(&self, user_id: &str, auth_provider: &str, client_ip: &str) -> AuditEntry {
+    pub fn log_analyst_login(
+        &self,
+        user_id: &str,
+        auth_provider: &str,
+        client_ip: &str,
+    ) -> AuditEntry {
         self.log_action(user_id, "USER_LOGIN_SUCCESS", auth_provider, client_ip)
     }
 

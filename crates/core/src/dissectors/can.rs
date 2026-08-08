@@ -112,13 +112,21 @@ pub fn dissect_can(data: &[u8]) -> DissectedResult {
         if !extended && super::obd2::owns_id(id) {
             return super::obd2::result(id, payload);
         }
-        // DeviceNet uses standard (11-bit) identifiers. The identifier range is
-        // the guard — four message groups with distinct ID bands (§2 of the
-        // DeviceNet spec). This check comes after OBD-II because OBD-II's
-        // identifiers (0x7E0-0x7EF, 0x7DF) overlap with DeviceNet group 4.
-        if !extended && super::devicenet::looks_like_devicenet(id) {
-            return super::devicenet::result(id, payload);
-        }
+        // DeviceNet was dispatched here, behind `looks_like_devicenet(id)`,
+        // which was `-> bool { false }`. The branch could never be taken, and
+        // the comment above it described an identifier-band guard that had
+        // never been written — the same shape as the `modbus_ascii` stub found
+        // in July.
+        //
+        // It is removed rather than implemented, because the guard it described
+        // cannot work. DeviceNet's four message groups cover 0x000-0x7EF of the
+        // 11-bit space between them, so "the identifier is in a DeviceNet band"
+        // is true of very nearly every standard-identifier frame on any CAN
+        // bus. That is the objection already written against CANopen a few
+        // lines below, which answers it by also requiring each service's frame
+        // shape to agree. DeviceNet needs the same: a body check, from a
+        // capture or the CIP Vol 3 spec. Until then the registry row is
+        // `Declared`.
         // CANopen assigns the whole 11-bit space below 0x780 to services, so
         // the identifier alone would claim any standard-identifier bus. Each
         // service has to agree with its own frame shape as well — see

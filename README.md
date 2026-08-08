@@ -35,8 +35,8 @@
 | **Setup** | ✅ One binary, sensible defaults, no profile to configure | ⚪ Powerful but heavy — lots of dialogs before you're productive |
 | **Size** | ✅ ~8 MB TUI binary · ~7-10 MB desktop installer | ⚪ ~85 MB installer (Windows) |
 | **Interprets your capture** | ✅ Automatic security & privacy findings, JA3/JA4, per-site X-ray | ❌ Shows everything, interprets nothing |
-| **Acts on traffic** | ✅ Block a host live via a real OS firewall rule — **Windows only** today | ❌ Passive only, by design |
-| **Protocol coverage** | ⚪ **590 protocols** — broad coverage, but decode depth varies: some are fully parsed, others recognised and labelled | ✅ **~3000** — unmatched breadth and decode depth |
+| **Acts on traffic** | ✅ Block a host live via a real OS firewall rule — Windows (`netsh`), Linux (`iptables`), macOS (`pfctl`) | ❌ Passive only, by design |
+| **Protocol coverage** | ⚪ **457 protocols** — broad coverage, but decode depth varies: some are fully parsed, others recognised and labelled | ✅ **~3000** — unmatched breadth and decode depth |
 | **TLS decryption** | ✅ TLS 1.3 + 1.2 AEAD (ECDHE, GCM & ChaCha20) via `SSLKEYLOGFILE` | ✅ Broader — also legacy CBC suites and QUIC |
 | **Deep analysis** | ⚪ Summaries, Follow Stream, protocol tree | ✅ Decode-as, VoIP playback, IO graphs, Lua/C plugins |
 | **Speed** | ✅ 100k+ pkt/s dissect throughput | ⚪ Can slow down on very large captures |
@@ -50,14 +50,14 @@ decryption or forensic depth, Wireshark is still the reference.
 
 ## Features
 
-- **🗂 590 protocols out of the box** — from everyday (DNS, HTTP/2, TLS, QUIC, SMB, RDP)
+- **🗂 457 protocols out of the box** — from everyday (DNS, HTTP/2, TLS, QUIC, SMB, RDP)
   to industrial (Modbus, S7comm, PROFINET, EtherCAT, IEC 61850 GOOSE, DNP3, BACnet,
   OPC UA), automotive (SOME/IP, DoIP, XCP, AVTP, CAN), telecom (PFCP, GTP, SIP, RTP),
   healthcare/finance (DICOM, HL7, FIX) and infrastructure (gRPC, MQTT, AMQP, Redis,
   MongoDB, PostgreSQL, Kerberos, WireGuard, BGP). Protocols on dynamic ports — DTLS,
   FIX, BitTorrent DHT — are recognised by their wire signature, not just a port number.
 
-  > The registry declares a further ~1,900 protocol names that no dissector produces
+  > The registry declares a further 2,071 protocol names that no dissector produces
   > yet. They are marked `Declared` and deliberately kept out of the filter, the Learn
   > tab and the protocol count, so nothing is listed that a capture cannot contain.
   > Wiring one up is a good first contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -1164,6 +1164,18 @@ pub async fn get_daily_soc_report(pool: &PgPool) -> Result<DailySocReport> {
     })
 }
 
+/// Average the scores that were measured, ignoring the ones that were not.
+///
+/// Two wrong answers this avoids. Counting an unmeasured framework as a number
+/// is how `overall_score` used to include the hardcoded 92.0 and 90.0 for GDPR
+/// and KVKK — two fifths of the headline figure came from constants. Counting
+/// it as zero is equally untrue and reads as a failing grade. Nothing measured
+/// at all is `None`, which the dashboard draws as "—" rather than as 0%.
+fn mean_of_measured(scores: &[Option<f64>]) -> Option<f64> {
+    let measured: Vec<f64> = scores.iter().copied().flatten().collect();
+    (!measured.is_empty()).then(|| measured.iter().sum::<f64>() / measured.len() as f64)
+}
+
 pub async fn get_compliance_report(pool: &PgPool) -> Result<ComplianceReport> {
     let total_30d: (i64,) = sqlx::query_as(
         "SELECT COUNT(*)::bigint FROM alerts WHERE created_at > now() - interval '30 days'",
@@ -1171,20 +1183,16 @@ pub async fn get_compliance_report(pool: &PgPool) -> Result<ComplianceReport> {
     .fetch_one(pool)
     .await?;
     let in_sla_30d: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM alerts WHERE created_at > now() - interval '30 days' AND (acknowledged_at IS NOT NULL AND EXTRACT(EPOCH FROM (acknowledged_at - created_at)) < 3600)").fetch_one(pool).await?;
-    let iso27001_score = if total_30d.0 > 0 {
-        (in_sla_30d.0 as f64) / (total_30d.0 as f64) * 100.0
-    } else {
-        94.5
-    };
+    // No alerts in the window is not "94.5% compliant", which is what this
+    // returned. It is nothing to measure, and the report says so.
+    let iso27001_score =
+        (total_30d.0 > 0).then(|| (in_sla_30d.0 as f64) / (total_30d.0 as f64) * 100.0);
 
     let cleartext_count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM events WHERE protocol IN ('http', 'ftp', 'telnet') AND timestamp > now() - interval '30 days'").fetch_one(pool).await?;
     let secure_count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM events WHERE protocol IN ('https', 'tls', 'ssh') AND timestamp > now() - interval '30 days'").fetch_one(pool).await?;
     let total_proto = cleartext_count.0 + secure_count.0;
-    let pci_dss_score = if total_proto > 0 {
-        (secure_count.0 as f64) / (total_proto as f64) * 100.0
-    } else {
-        89.0
-    };
+    let pci_dss_score =
+        (total_proto > 0).then(|| (secure_count.0 as f64) / (total_proto as f64) * 100.0);
 
     let online_count: (i64,) =
         sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors WHERE status = 'online'")
@@ -1193,36 +1201,61 @@ pub async fn get_compliance_report(pool: &PgPool) -> Result<ComplianceReport> {
     let total_sensors_count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM sensors")
         .fetch_one(pool)
         .await?;
-    let nis2_score = if total_sensors_count.0 > 0 {
-        (online_count.0 as f64) / (total_sensors_count.0 as f64) * 100.0
-    } else {
-        100.0
-    };
+    // A fleet with no sensors registered is not 100% online.
+    let nis2_score = (total_sensors_count.0 > 0)
+        .then(|| (online_count.0 as f64) / (total_sensors_count.0 as f64) * 100.0);
 
-    let gdpr_score = 92.0;
-    let kvkk_score = 90.0;
-    let overall_score =
-        (iso27001_score + pci_dss_score + nis2_score + gdpr_score + kvkk_score) / 5.0;
+    // GDPR and KVKK were 92.0 and 90.0 — constants, never derived from
+    // anything, that the dashboard drew as green progress bars. Whether
+    // personal data is processed lawfully is a question about consent,
+    // retention and purpose, none of which is in a packet header. netscope has
+    // no measurement to offer here, and saying nothing is the honest answer.
+    let gdpr_score = None;
+    let kvkk_score = None;
+
+    let overall_score = mean_of_measured(&[
+        iso27001_score,
+        pci_dss_score,
+        nis2_score,
+        gdpr_score,
+        kvkk_score,
+    ]);
+
+    let unmeasured = "Not measured — netscope has no network-visible evidence for this framework.";
 
     Ok(ComplianceReport {
         overall_score,
         gdpr_score,
-        gdpr_details: "PII flows monitored. No sensitive data exfiltration anomalies.".to_string(),
+        gdpr_details: unmeasured.to_string(),
         kvkk_score,
-        kvkk_details: "SLA response requirements achieved. Sensitive asset tags configured."
-            .to_string(),
+        kvkk_details: unmeasured.to_string(),
         iso27001_score,
-        iso27001_details: format!(
-            "Incident Acknowledge SLA: {:.1}% within 1h threshold.",
-            iso27001_score
-        ),
+        // The sample size travels with the number: 100% of three alerts and
+        // 100% of thirty thousand render identically without it.
+        iso27001_details: match iso27001_score {
+            Some(pct) => format!(
+                "Evidence towards A.5.25: {}/{} alerts in the last 30 days were acknowledged within 1h ({pct:.1}%).",
+                in_sla_30d.0, total_30d.0
+            ),
+            None => "No alerts in the last 30 days, so acknowledgement SLA is not measurable."
+                .to_string(),
+        },
         pci_dss_score,
-        pci_dss_details: format!(
-            "Transport security rating: {:.1}% encrypted protocol flows.",
-            pci_dss_score
-        ),
+        pci_dss_details: match pci_dss_score {
+            Some(pct) => format!(
+                "Evidence towards Req 4: {}/{} observed flows used an encrypted protocol ({pct:.1}%). Counts http/ftp/telnet against https/tls/ssh only.",
+                secure_count.0, total_proto
+            ),
+            None => "No http/ftp/telnet or https/tls/ssh flows in the last 30 days, so transport security is not measurable.".to_string(),
+        },
         nis2_score,
-        nis2_details: format!("Sensors fleet operational uptime: {:.1}%.", nis2_score),
+        nis2_details: match nis2_score {
+            Some(pct) => format!(
+                "Evidence towards Art. 21 monitoring: {}/{} sensors online ({pct:.1}%).",
+                online_count.0, total_sensors_count.0
+            ),
+            None => "No sensors are registered, so fleet coverage is not measurable.".to_string(),
+        },
         generated_at: Utc::now(),
     })
 }
@@ -1487,4 +1520,37 @@ pub async fn insert_ticketing_integration(
     .bind(enabled)
     .fetch_one(pool)
     .await?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A framework netscope cannot measure must not move the headline score.
+    ///
+    /// `overall_score` used to be the mean of five numbers, two of which —
+    /// GDPR and KVKK — were the constants 92.0 and 90.0. Two fifths of the
+    /// figure an operator read as their compliance posture came from nowhere,
+    /// and it could never drop below 36.4 no matter how badly the three real
+    /// measurements scored.
+    #[test]
+    fn an_unmeasured_framework_does_not_contribute_to_the_average() {
+        assert_eq!(
+            mean_of_measured(&[Some(50.0), None, Some(100.0), None, None]),
+            Some(75.0),
+            "only the two measured scores should count"
+        );
+        assert_eq!(mean_of_measured(&[Some(42.0)]), Some(42.0));
+    }
+
+    /// Nothing measured is `None`, not zero.
+    ///
+    /// Zero is a score, and a bad one: a fresh deployment with no alerts, no
+    /// flows and no sensors would have shown a red 0% compliance posture, which
+    /// is as false as the 94.5% it used to show instead.
+    #[test]
+    fn measuring_nothing_is_not_a_score_of_zero() {
+        assert_eq!(mean_of_measured(&[None, None, None, None, None]), None);
+        assert_eq!(mean_of_measured(&[]), None);
+    }
 }

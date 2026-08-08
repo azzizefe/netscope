@@ -115,7 +115,10 @@ export function playVoipAudio() {
 
   isPlayingAudio = true;
   $('#voip-play-btn').textContent = '■ Stop Audio';
-  $('#voip-player-status').textContent = 'Status: Playing Simulated Stream...';
+  // Say plainly what this is. The RTP payload is never decoded here — this is
+  // an oscillator whose pitch wanders with the measured jitter. "Playing" next
+  // to a waveform invites the reader to think they are hearing the call.
+  $('#voip-player-status').textContent = 'Status: playing a synthesised tone (not the call audio)';
 
   let time = 0;
   const canvas = $('#voip-waveform');
@@ -190,18 +193,26 @@ export function renderVoipPlayer() {
       const mMos = /MOS ([\d\.]+)/.exec(p.summary || '');
       if (mMos) rtpMOS = mMos[1];
     }
-  } else {
-    const sipPkts = activePackets().filter(p => p.protocol === 'SIP');
-    if (sipPkts.length) {
-      rtpSSRC = '0x00c0ffee';
-      rtpJitter = '1.8 ms';
-      rtpMOS = '4.3';
-    }
   }
+  // There used to be an `else` here: when the capture held SIP signalling but
+  // no RTP, the panel filled in SSRC 0x00c0ffee, jitter 1.8 ms and MOS 4.3.
+  // MOS is a call-quality score, and 4.3 reads as "this call sounded good" —
+  // asserted about a capture containing no media at all. The three values now
+  // stay at "—", which is what the dissector knows.
 
   $('#voip-ssrc-val').textContent = rtpSSRC;
   $('#voip-jitter-val').textContent = rtpJitter;
   $('#voip-mos-val').textContent = rtpMOS;
+
+  const haveRtp = rtpPkts.length > 0;
+  const note = $('#voip-player-note');
+  if (note) {
+    note.textContent = haveRtp
+      ? `${rtpPkts.length} RTP packets — SSRC, jitter and MOS come from the RTP dissector.`
+      : 'No RTP packets in this capture, so there is nothing to measure or play. SIP signalling alone carries no media.';
+  }
+  const playBtnEl = $('#voip-play-btn');
+  if (playBtnEl) playBtnEl.disabled = !haveRtp;
 
   const canvas = $('#voip-waveform');
   const ctx = canvas.getContext('2d');

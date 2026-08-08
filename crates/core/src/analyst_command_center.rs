@@ -10,7 +10,10 @@
 //! - §5.1.4 Saved Filter Templates Presets
 //! - §5.1.5 1-Click Pivot Engine (IP, User, JA4, DNS, SMB Session)
 //! - §5.2.1 - §5.2.4 Built-in Education & Step-by-Step Jr. Analyst Triage Guide
-//! - §5.2.5 Analyst Gamification & Metrics Tracker
+//! - §5.2.5 Analyst Gamification & Metrics Tracker — removed 2026-08-03. Its
+//!   generator returned the same fixed record for every analyst name it was
+//!   given: 142 alerts resolved, 96.5% accuracy, "Threat Hunting Master". A
+//!   performance record about a named person is the last thing to invent.
 //! - SOC Incident Case Management & Timeline Logging
 //! - Automated SOAR Playbook Execution Engine with OS Firewall Remediation Integration
 
@@ -71,16 +74,6 @@ pub struct AlertEducationPackage {
     pub how_would_an_attacker_use_this: String,
     pub how_to_investigate_guide: Vec<String>,
     pub mitre_reference_link: String,
-}
-
-/// Analyst Gamification Metrics (§5.2.5).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AnalystGamificationStats {
-    pub analyst_name: String,
-    pub resolved_alerts_count: u32,
-    pub accuracy_rate_pct: f32,
-    pub avg_resolution_time_mins: f32,
-    pub analyst_rank: String,
 }
 
 /// Timeline entry within a SOC Incident Case.
@@ -174,7 +167,11 @@ impl SocIncidentManager {
         affected_hosts: Vec<String>,
     ) -> SocIncident {
         let now = Utc::now();
-        let id = format!("INC-{}-{:04}", now.format("%Y%m%d"), self.incidents.read().len() + 1);
+        let id = format!(
+            "INC-{}-{:04}",
+            now.format("%Y%m%d"),
+            self.incidents.read().len() + 1
+        );
 
         let initial_event = SocTimelineEvent {
             timestamp: now,
@@ -243,6 +240,10 @@ impl SocIncidentManager {
         for host in &incident.affected_hosts {
             if let Ok(ip) = host.parse::<std::net::IpAddr>() {
                 if pb.auto_action == "block_ip" || pb.auto_action == "isolate_host" {
+                    // Miri cannot spawn subprocesses (netsh/iptables/pfctl), so
+                    // skip the real OS call under the interpreter.  The firewall
+                    // module has its own unit tests under normal `cargo test`.
+                    #[cfg(not(miri))]
                     let _ = crate::firewall::block(ip);
                     action_log.push_str(&format!("OS Firewall blocked IP {ip}. "));
                 }
@@ -471,17 +472,6 @@ impl AnalystCommandCenterEngine {
             mitre_reference_link: "https://attack.mitre.org/techniques/T1021/".to_string(),
         }
     }
-
-    /// §5.2.5 Analyst Gamification Tracker.
-    pub fn get_analyst_gamification(analyst_name: &str) -> AnalystGamificationStats {
-        AnalystGamificationStats {
-            analyst_name: analyst_name.to_string(),
-            resolved_alerts_count: 142,
-            accuracy_rate_pct: 96.5,
-            avg_resolution_time_mins: 4.2,
-            analyst_rank: "SOC Analyst Level 2 — Threat Hunting Master".to_string(),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -506,10 +496,6 @@ mod tests {
         let edu = AnalystCommandCenterEngine::get_alert_education("SMB");
         assert!(edu.lesson_title.contains("SMB"));
         assert_eq!(edu.how_to_investigate_guide.len(), 4);
-
-        let gami = AnalystCommandCenterEngine::get_analyst_gamification("efe.akkaya");
-        assert_eq!(gami.resolved_alerts_count, 142);
-        assert!(gami.accuracy_rate_pct > 90.0);
     }
 
     #[test]
@@ -535,7 +521,9 @@ mod tests {
         assert_eq!(updated.timeline_events.len(), 2);
 
         // 3. Execute SOAR Playbook
-        let res = manager.execute_playbook(&incident.id, "pb_brute_force").unwrap();
+        let res = manager
+            .execute_playbook(&incident.id, "pb_brute_force")
+            .unwrap();
         assert!(!res.is_empty());
 
         let final_incident = manager.get_incident(&incident.id).unwrap();

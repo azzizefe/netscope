@@ -177,7 +177,10 @@ impl RbacEngine {
         // Initialize Default SSO Provider (Azure AD) (§3.1)
         let mut azure_mapping = HashMap::new();
         azure_mapping.insert("SG-Netscope-Tier1".to_string(), "tier1_analyst".to_string());
-        azure_mapping.insert("SG-Netscope-Tier23".to_string(), "tier2_3_responder".to_string());
+        azure_mapping.insert(
+            "SG-Netscope-Tier23".to_string(),
+            "tier2_3_responder".to_string(),
+        );
         azure_mapping.insert("SG-Netscope-Auditors".to_string(), "auditor".to_string());
         azure_mapping.insert("SG-Netscope-Admins".to_string(), "admin".to_string());
 
@@ -188,13 +191,17 @@ impl RbacEngine {
             protocol: SsoProtocol::OpenIdConnectOidc,
             client_id: "netscope-app-client-id".to_string(),
             issuer_url: "https://login.microsoftonline.com/corp-tenant-id/v2.0".to_string(),
-            authorization_endpoint: "https://login.microsoftonline.com/corp-tenant-id/oauth2/v2.0/authorize".to_string(),
-            token_endpoint: "https://login.microsoftonline.com/corp-tenant-id/oauth2/v2.0/token".to_string(),
+            authorization_endpoint:
+                "https://login.microsoftonline.com/corp-tenant-id/oauth2/v2.0/authorize".to_string(),
+            token_endpoint: "https://login.microsoftonline.com/corp-tenant-id/oauth2/v2.0/token"
+                .to_string(),
             userinfo_endpoint: "https://graph.microsoft.com/oidc/userinfo".to_string(),
             enabled: true,
             role_claim_mapping: azure_mapping,
         };
-        store.sso_providers.insert(azure_provider.provider_id.clone(), azure_provider);
+        store
+            .sso_providers
+            .insert(azure_provider.provider_id.clone(), azure_provider);
 
         // Initialize Pre-defined Enterprise Roles (§3.2)
         // 1. Admin — Full system access & config control
@@ -203,7 +210,8 @@ impl RbacEngine {
             "admin".to_string(),
             RoleDefinition {
                 name: "admin".to_string(),
-                description: "System Administrator with unrestricted access across all modules".to_string(),
+                description: "System Administrator with unrestricted access across all modules"
+                    .to_string(),
                 permissions: admin_perms,
                 is_builtin: true,
                 can_view_raw_payload: true,

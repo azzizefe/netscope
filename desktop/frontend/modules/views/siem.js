@@ -52,7 +52,7 @@ export function renderSiemView(container) {
         <button class="siem-subtab" data-siem-subtab="usps">💎 6 Unique Value Props</button>
         <button class="siem-subtab" data-siem-subtab="education">🎓 Built-in Education & Triage</button>
         <button class="siem-subtab" data-siem-subtab="metrics">📈 Quality & Effectiveness Metrics</button>
-        <button class="siem-subtab" data-siem-subtab="exclusive">⚡ 10 Exclusive Features</button>
+        <button class="siem-subtab" data-siem-subtab="exclusive">⚡ Capabilities</button>
       </div>
 
       <!-- Subtab Panels -->
@@ -322,14 +322,26 @@ function renderAutocomplete(container) {
 
 function renderMatrix(container) {
   const rows = [
-    { feature: "Protokol dissector sayısı", netscope: "✅ 590", splunk: "—", elastic: "—", qradar: "—", sentinel: "—", graylog: "—", wazuh: "—" },
+    // 457 is the number of protocols a dissector can actually assign to a
+    // packet, which is what `protocol_count()` returns and what the filter list
+    // and Learn tab are built from. This row said 590 — a figure that was true
+    // before the registry's `status` field was corrected, and that counted rows
+    // no capture could ever contain.
+    { feature: "Protokol dissector sayısı", netscope: "✅ 457", splunk: "—", elastic: "—", qradar: "—", sentinel: "—", graylog: "—", wazuh: "—" },
     { feature: "Application-layer parsing", netscope: "✅ DNS, HTTP/2, SMB, Kerberos, Modbus", splunk: "⚠️ HTTP", elastic: "⚠️ HTTP", qradar: "⚠️ HTTP", sentinel: "⚠️ HTTP", graylog: "❌", wazuh: "❌" },
     { feature: "TLS fingerprint (JA3/JA4)", netscope: "✅ Built-in", splunk: "❌ Plugin", elastic: "❌ Plugin", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
     { feature: "PQC protocol detection", netscope: "✅ 22 algos", splunk: "❌", elastic: "❌", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
     { feature: "ICS/SCADA (Modbus/DNP3)", netscope: "✅ 20+ protocols", splunk: "❌", elastic: "❌", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
     { feature: "LLM / AI traffic analysis", netscope: "✅ OpenAI, Anthropic, tokens & cost", splunk: "❌", elastic: "❌", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
-    { feature: "Otomatik MITRE ATT&CK", netscope: "✅ Every event", splunk: "⚠️ Rule required", elastic: "⚠️ Manual", qradar: "⚠️ Manual", sentinel: "⚠️ Partial", graylog: "❌", wazuh: "⚠️ Partial" },
-    { feature: "Narrative attack chain", netscope: "✅ Auto-generated", splunk: "❌", elastic: "❌", qradar: "❌", sentinel: "❌", graylog: "❌", wazuh: "❌" },
+    // "Every event" overstated it: MITRE mapping runs on the SIEM export path
+    // (`siem.rs` calls `map_event_mitre_and_killchain`) and alert rules carry a
+    // tactic. A packet that raises no alert and is not exported is not mapped.
+    { feature: "Otomatik MITRE ATT&CK", netscope: "✅ Alerts & SIEM export", splunk: "⚠️ Rule required", elastic: "⚠️ Manual", qradar: "⚠️ Manual", sentinel: "⚠️ Partial", graylog: "❌", wazuh: "⚠️ Partial" },
+    // The "Narrative attack chain — ✅ Auto-generated" row is gone. The only
+    // mention of a narrative anywhere in the desktop app was this row claiming
+    // it: `narrative_correlation.rs` exists in netscope-core but nothing calls
+    // it, from the desktop or anywhere else. A comparison table is the last
+    // place to list a feature the product does not reach.
     // Throughput and install-size rows for the other products were invented
     // numbers ("Splunk 50k event/s", "QRadar 2GB+") that nobody here measured.
     // netscope's own figures stay because they are measurable from this repo:
@@ -481,25 +493,45 @@ function renderMetrics(container) {
   `;
 }
 
+/// The capability list, checked against the code on 2026-08-03.
+///
+/// Five of the ten entries described work netscope does not do. 7.4 claimed
+/// Golden Ticket, Silver Ticket and AS-REP Roasting detection; `kerberos.rs`
+/// maps error codes and parses no tickets. 7.7 claimed an audit of "Modbus
+/// Write Single Coil (Coil 47 Emergency Stop Motor 3)" — a phrase copied
+/// verbatim out of a sample-data module that has since been deleted, describing
+/// a coil on a machine that does not exist. 7.8 promised an alert 14 days
+/// before a certificate expires; nothing tracks certificate expiry. 7.9 claimed
+/// third-party tracker detection "from risky regions"; there is no such
+/// analysis. 7.10 claimed encrypted-traffic analysis by packet timing and size
+/// distribution; those fields lived only in the deleted module.
+///
+/// 7.1 was overstated rather than invented: netscope computes JA3/JA4
+/// fingerprints and separately detects beaconing by timing, but carries no
+/// database of known C2 fingerprints, so it cannot name Cobalt Strike.
+///
+/// `status` is what keeps this list honest. A panel that lists ten features is
+/// a promise; the ones that are not built say so, the way `CaptureBackend`
+/// marks its unimplemented variants.
 function renderExclusiveFeatures(container) {
   const features = [
-    { title: "7.1 JA4 / JA3 C2 Hunt Engine", desc: "Identifies Cobalt Strike and C2 beacon fingerprints directly from TLS ClientHello packets." },
-    { title: "7.2 Post-Quantum Migration Tracker", desc: "Reports which observed TLS servers negotiated post-quantum key exchange, and flags the ones that did not." },
-    { title: "7.3 LLM Cost Leakage & Shadow AI", desc: "Identifies traffic to LLM APIs and estimates prompt/response token volume, to surface unsanctioned AI tool use." },
-    { title: "7.4 Kerberos Attack Timeline", desc: "Parses TGT/ST tickets to detect Golden Ticket, Silver Ticket, and AS-REP Roasting attacks." },
-    { title: "7.5 SMB File Access Audit", desc: "Reads the SMB file paths and account names seen on the wire, so share access can be audited without an endpoint agent." },
-    { title: "7.6 DNS Exfiltration Detection", desc: "Detects DNS tunneling via query length (>120B), frequency, and entropy analysis." },
-    { title: "7.7 Industrial Sabotage Inspection", desc: "Audits Modbus Write Single Coil (Coil 47 Emergency Stop Motor 3) for unauthorized PLC control." },
-    { title: "7.8 TLS Certificate Expiry Predictor", desc: "Proactively alerts 14 days before critical TLS certificates expire." },
-    { title: "7.9 Supply Chain & Tracker Risk", desc: "Detects 3rd party trackers from risky regions integrated into internal web apps." },
-    { title: "7.10 Encrypted Traffic Analysis (ETA)", desc: "Detects malware in TLS traffic without decryption using packet timing and size distribution." },
+    { status: "built", title: "7.1 JA4 / JA3 Fingerprinting", desc: "Computes JA3 and JA4 fingerprints from TLS ClientHello packets, and separately flags regular beacon spacing between a pair of hosts. It has no database of known C2 fingerprints, so it cannot tell you which malware family a fingerprint belongs to." },
+    { status: "built", title: "7.2 Post-Quantum Migration Tracker", desc: "Reports which observed TLS servers negotiated post-quantum key exchange, and flags the ones that did not." },
+    { status: "built", title: "7.3 LLM Traffic & Shadow AI", desc: "Identifies traffic to LLM APIs and counts prompt/response tokens where the protocol exposes them, to surface unsanctioned AI tool use." },
+    { status: "planned", title: "7.4 Kerberos Attack Timeline", desc: "Not implemented. netscope decodes Kerberos messages and explains its error codes — including the AD sub-code that separates a wrong password from a locked account — but does not parse tickets or detect Golden Ticket, Silver Ticket or AS-REP Roasting." },
+    { status: "built", title: "7.5 SMB File Access Audit", desc: "Reads the SMB file paths and account names seen on the wire, so share access can be audited without an endpoint agent." },
+    { status: "built", title: "7.6 DNS Exfiltration Detection", desc: "Raises a DNS tunneling alert from query length and frequency." },
+    { status: "planned", title: "7.7 Industrial Sabotage Inspection", desc: "Not implemented. The Modbus dissector decodes function codes, including Write Single Coil, but nothing audits coil writes against a policy or flags them as unauthorised." },
+    { status: "planned", title: "7.8 TLS Certificate Expiry Predictor", desc: "Not implemented. Certificate fields are decoded from the handshake, but no expiry is tracked and no alert is scheduled." },
+    { status: "planned", title: "7.9 Supply Chain & Tracker Risk", desc: "Not implemented. There is no third-party tracker inventory and no per-region risk assessment." },
+    { status: "planned", title: "7.10 Encrypted Traffic Analysis (ETA)", desc: "Not implemented. Detecting malware inside TLS from packet timing and size distribution needs a model netscope does not have." },
   ];
 
   const grid = container.querySelector('#siem-exclusive-grid');
   if (grid) {
     grid.innerHTML = features.map(f => `
-      <div class="exclusive-card">
-        <h4>${esc(f.title)}</h4>
+      <div class="exclusive-card${f.status === 'planned' ? ' exclusive-card-planned' : ''}">
+        <h4>${esc(f.title)} ${f.status === 'planned' ? '<span class="exclusive-badge">planned</span>' : ''}</h4>
         <p>${esc(f.desc)}</p>
       </div>
     `).join('');

@@ -20,7 +20,7 @@ pub fn routes(_state: Arc<ApiState>) -> Router {
     Router::new()
         .route("/matrix", get(get_capability_matrix))
         .route("/usps", get(get_usps))
-        .route("/benchmarks", get(get_benchmarks))
+        // `/benchmarks` removed 2026-08-03 with the literal table behind it.
         .route("/connectors", get(get_connectors))
         .route("/stix", get(export_stix))
         .route("/sigma", get(export_sigma))
@@ -30,9 +30,16 @@ pub fn routes(_state: Arc<ApiState>) -> Router {
         .route("/explain", get(get_explain))
         .route("/pivot", get(get_pivot))
         .route("/education", get(get_education))
-        .route("/gamification", get(get_gamification))
-        .route("/metrics", get(get_quality_metrics))
-        .route("/exclusive", get(get_exclusive_features))
+    // `/gamification`, `/metrics` and `/exclusive` were removed on 2026-08-03.
+    // None of the three read anything: they returned fixed structs. `/metrics`
+    // served a SOC KPI dashboard (3.2% false positives, MTTA 2m25s, 18.5 alerts
+    // triaged per hour) that no deployment had produced; `/gamification`
+    // returned the same 142 resolved alerts and "Threat Hunting Master" rank for
+    // whatever analyst name it was given; `/exclusive` served *findings* —
+    // a Cobalt Strike C2 match naming 10.0.1.47 and 10.0.1.89, a DNS tunnelling
+    // alert, an ICS sabotage alert, and a named employee's data leakage — none
+    // of which came from a packet. The routes that remain here return static
+    // reference data, which is what they are supposed to be.
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,7 +49,6 @@ pub struct QueryParams {
     pub val: Option<String>,
     pub pivot_type: Option<String>,
     pub proto: Option<String>,
-    pub analyst: Option<String>,
 }
 
 async fn get_presets() -> Json<serde_json::Value> {
@@ -85,15 +91,6 @@ async fn get_education(Query(qp): Query<QueryParams>) -> Json<serde_json::Value>
     Json(serde_json::to_value(&edu).unwrap_or_default())
 }
 
-async fn get_gamification(Query(qp): Query<QueryParams>) -> Json<serde_json::Value> {
-    let analyst = qp.analyst.as_deref().unwrap_or("efe.akkaya");
-    let gami =
-        netscope_core::analyst_command_center::AnalystCommandCenterEngine::get_analyst_gamification(
-            analyst,
-        );
-    Json(serde_json::to_value(&gami).unwrap_or_default())
-}
-
 async fn get_capability_matrix() -> Json<serde_json::Value> {
     let matrix = SiemComparisonEngine::get_matrix();
     Json(serde_json::json!({ "matrix": matrix }))
@@ -102,11 +99,6 @@ async fn get_capability_matrix() -> Json<serde_json::Value> {
 async fn get_usps() -> Json<serde_json::Value> {
     let usps = SiemComparisonEngine::get_usps();
     Json(serde_json::json!({ "usps": usps }))
-}
-
-async fn get_benchmarks() -> Json<serde_json::Value> {
-    let benchmarks = SiemComparisonEngine::get_benchmarks();
-    Json(serde_json::json!({ "benchmarks": benchmarks }))
 }
 
 async fn get_connectors() -> Json<serde_json::Value> {
@@ -131,16 +123,4 @@ async fn export_sigma() -> Json<serde_json::Value> {
 async fn export_asyncapi() -> Json<serde_json::Value> {
     let asyncapi = SiemConnectorManager::export_asyncapi_spec();
     Json(asyncapi)
-}
-
-async fn get_quality_metrics() -> Json<serde_json::Value> {
-    let metrics =
-        netscope_core::siem_quality_metrics::SiemQualityMetricsEngine::get_quality_metrics();
-    Json(serde_json::to_value(&metrics).unwrap_or_default())
-}
-
-async fn get_exclusive_features() -> Json<serde_json::Value> {
-    let report =
-        netscope_core::netscope_exclusive_features::NetscopeExclusiveEngine::get_exclusive_report();
-    Json(serde_json::to_value(&report).unwrap_or_default())
 }

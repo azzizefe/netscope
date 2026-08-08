@@ -24,7 +24,11 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 parking_lot = "0.12"
-maxminddb = "0.24"
+# 0.24 carries RUSTSEC-2025-0132 (`Reader::open_mmap` marked safe when it is
+# not). netscope only ever calls `open_readfile`, so the unsound function was
+# never reached — but the desktop crate was already on 0.27, so the workspace
+# was carrying two copies of this library and one of them was flagged.
+maxminddb = "0.27"
 serde_yaml = "0.9"
 toml = "0.8"
 memchr = "2"
@@ -113,6 +117,13 @@ harness = false
 
 [[bench]]
 name = "mem_usage"
+harness = false
+
+# Took over from `pipeline::tests::bench_pipeline_throughput`, an `#[ignore]`d
+# test that asserted a packet rate off one wall-clock reading and therefore ran
+# for nobody. Criterion samples it instead of failing on a busy machine.
+[[bench]]
+name = "pipeline_throughput"
 harness = false
 
 [lints]

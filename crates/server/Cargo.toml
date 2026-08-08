@@ -14,7 +14,7 @@ categories.workspace = true
 
 [dependencies]
 # Workspace crates
-netscope-core = { path = "../core" }
+netscope-core = { path = "../core", version = "0.2.0" }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
@@ -28,13 +28,12 @@ http = "1"
 # gRPC. `prost` and `tonic-prost` have no mention in this crate's sources on
 # purpose — `grpc/proto.rs` is one `tonic::include_proto!`, and the code that
 # expands there is what refers to them.
-tonic = { version = "0.14", features = ["transport", "channel", "server", "tls-webpki-roots"] }
+tonic = { version = "0.14", features = ["transport", "channel", "server", "tls-ring", "tls-webpki-roots"] }
 tonic-prost = "0.14"
 prost = "0.14"
 
 # TLS
 rustls = "0.23"
-rustls-pemfile = "2"
 tokio-rustls = "0.26"
 
 # Database

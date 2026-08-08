@@ -1,8 +1,8 @@
-use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
+use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
@@ -42,10 +42,21 @@ pub fn build_tls_acceptor(
     Ok(TlsAcceptor::from(Arc::new(config)))
 }
 
+// These two read PEM through `rustls::pki_types` rather than `rustls-pemfile`.
+//
+// `rustls-pemfile` carries RUSTSEC-2025-0134 (unmaintained): its job moved into
+// `rustls-pki-types`, which rustls already pulls in, so the crate was a second
+// copy of code we were depending on anyway. Not a vulnerability — an
+// unmaintained crate is one that will not receive the next fix — but this one
+// parses key material on the TLS path, which is a poor place to hold a
+// dependency nobody is maintaining.
+//
+// `PrivateKeyDer::from_pem_file` also replaces the hand-rolled loop below it,
+// which matched PKCS#1, PKCS#8 and SEC1 by hand and skipped anything else.
+
 fn load_certs(path: &Path) -> Result<Vec<CertificateDer<'static>>> {
-    let data = fs::read(path)
-        .with_context(|| format!("Failed to read certificate file: {}", path.display()))?;
-    let certs = rustls_pemfile::certs(&mut data.as_slice())
+    let certs = CertificateDer::pem_file_iter(path)
+        .with_context(|| format!("Failed to read certificate file: {}", path.display()))?
         .collect::<Result<Vec<_>, _>>()
         .context("Failed to parse certificate PEM")?;
     if certs.is_empty() {
@@ -55,16 +66,6 @@ fn load_certs(path: &Path) -> Result<Vec<CertificateDer<'static>>> {
 }
 
 fn load_private_key(path: &Path) -> Result<PrivateKeyDer<'static>> {
-    let data = fs::read(path)
-        .with_context(|| format!("Failed to read private key file: {}", path.display()))?;
-    let mut reader = data.as_slice();
-    loop {
-        match rustls_pemfile::read_one(&mut reader).context("Failed to parse private key PEM")? {
-            Some(rustls_pemfile::Item::Pkcs1Key(key)) => return Ok(key.into()),
-            Some(rustls_pemfile::Item::Pkcs8Key(key)) => return Ok(key.into()),
-            Some(rustls_pemfile::Item::Sec1Key(key)) => return Ok(key.into()),
-            Some(_) => continue,
-            None => anyhow::bail!("No private key found in {}", path.display()),
-        }
-    }
+    PrivateKeyDer::from_pem_file(path)
+        .with_context(|| format!("No usable private key found in {}", path.display()))
 }

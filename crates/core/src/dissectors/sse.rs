@@ -51,6 +51,42 @@ fn looks_anthropic(data: &str) -> bool {
     })
 }
 
+/// Whether the event is Google Gemini-shaped.
+fn looks_gemini(data: &str) -> bool {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(data) else {
+        return false;
+    };
+    v.get("candidates").is_some_and(|c| c.is_array())
+}
+
+/// Whether the event is Azure OpenAI-shaped.
+fn looks_azure(data: &str) -> bool {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(data) else {
+        return false;
+    };
+    v.get("prompt_filter_results").is_some() || v.get("system_fingerprint").is_some()
+}
+
+/// Whether the event specifies DeepSeek model.
+fn looks_deepseek(data: &str) -> bool {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(data) else {
+        return false;
+    };
+    v.get("model")
+        .and_then(|m| m.as_str())
+        .is_some_and(|m| m.contains("deepseek"))
+}
+
+/// Whether the event specifies Mistral / Codestral model.
+fn looks_mistral(data: &str) -> bool {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(data) else {
+        return false;
+    };
+    v.get("model")
+        .and_then(|m| m.as_str())
+        .is_some_and(|m| m.contains("mistral") || m.contains("codestral"))
+}
+
 /// Whether the event is OpenAI-shaped: a chunk carrying a `choices` array.
 ///
 /// This is also the shape Azure OpenAI, Mistral, Groq and DeepSeek emit, so a
@@ -73,7 +109,7 @@ pub(crate) fn provider_is_known(body: &[u8]) -> bool {
     let Ok(text) = std::str::from_utf8(&body[..body.len().min(4096)]) else {
         return false;
     };
-    first_data_line(text).is_some_and(|d| looks_anthropic(d) || looks_openai(d))
+    first_data_line(text).is_some_and(|d| looks_anthropic(d) || looks_gemini(d) || looks_openai(d))
 }
 
 /// Dissect an event-stream body, choosing the decoder by the JSON shape.
@@ -88,6 +124,20 @@ pub(crate) fn dissect_sse(
     let data = first_data_line(text).unwrap_or("");
     if looks_anthropic(data) {
         super::anthropic_messages_stream::dissect_anthropic_messages_stream(
+            src_ip, dst_ip, src_port, dst_port, body,
+        )
+    } else if looks_gemini(data) {
+        super::google_gemini_stream::dissect_google_gemini_stream(
+            src_ip, dst_ip, src_port, dst_port, body,
+        )
+    } else if looks_azure(data) {
+        super::azure_aoai_stream::dissect_azure_aoai_stream(
+            src_ip, dst_ip, src_port, dst_port, body,
+        )
+    } else if looks_deepseek(data) {
+        super::deepseek_stream::dissect_deepseek_stream(src_ip, dst_ip, src_port, dst_port, body)
+    } else if looks_mistral(data) {
+        super::mistral_chat_stream::dissect_mistral_chat_stream(
             src_ip, dst_ip, src_port, dst_port, body,
         )
     } else {

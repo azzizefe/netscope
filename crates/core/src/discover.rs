@@ -67,11 +67,14 @@ pub fn interface_ipv4(name: &str) -> Option<(Ipv4Addr, Ipv4Addr)> {
     if name.is_empty() || name == "__all__" {
         devices.iter().find_map(pick)
     } else {
-        devices
-            .iter()
-            .find(|d| d.name == name)
-            .and_then(pick)
-            .or_else(|| devices.iter().find_map(pick))
+        // A named interface resolves to that interface or to nothing. This
+        // used to fall back to `devices.iter().find_map(pick)` — the first
+        // adapter with a routable address — so asking to scan an interface
+        // that does not exist, or one with no IPv4, returned a sweep of a
+        // *different* subnet under the requested interface's name. The caller
+        // has no way to tell those apart, so the neighbours it shows belong to
+        // a network the operator never asked about.
+        devices.iter().find(|d| d.name == name).and_then(pick)
     }
 }
 
@@ -251,5 +254,24 @@ Interface: 192.168.1.61 --- 0xb
             Some("a4:83:e7:11:22:33".to_string())
         );
         assert_eq!(parse_mac("not-a-mac"), None);
+    }
+
+    /// A name that matches no adapter must not be answered with another one.
+    ///
+    /// This is the honest half of a scan: the neighbours reported for
+    /// interface X have to come from interface X's subnet. The lookup used to
+    /// fall back to the first adapter with a routable IPv4, so a typo, a
+    /// renamed adapter, or an interface that is simply down all produced a
+    /// full, plausible-looking neighbour list for an unrelated network.
+    ///
+    /// Works without any particular adapter present: the machine may have one
+    /// interface or none, but it does not have this one.
+    #[test]
+    fn an_unknown_interface_name_resolves_to_nothing() {
+        assert_eq!(interface_ipv4("nonexistent_iface_xyz_999"), None);
+        assert_eq!(
+            arp_scan_interface("nonexistent_iface_xyz_999"),
+            Err("No interface with a routable IPv4 address was found to scan.".to_string())
+        );
     }
 }

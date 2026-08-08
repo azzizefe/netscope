@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Declarative protocol plugins — recognise new protocols without touching
-//! Rust or recompiling (ROADMAP §2.3).
+//! Rust or recompiling (ROADMAP Â§2.3).
 //!
 //! A plugin is a small TOML file dropped into `~/.netscope/plugins/`:
 //!
@@ -13,8 +13,8 @@
 //! description = "Redis key-value store wire protocol (RESP)."
 //!
 //! [match]                      # optional payload heuristics — all must hold
-//! prefix = "*"                 # payload starts with this text…
-//! # prefix_hex = "2a31"        # …or with these hex bytes (wins over prefix)
+//! prefix = "*"                 # payload starts with this textâ€¦
+//! # prefix_hex = "2a31"        # â€¦or with these hex bytes (wins over prefix)
 //! # contains = "PING"          # payload contains this text
 //!
 //! [display]
@@ -181,7 +181,7 @@ impl Plugin {
             return false;
         }
         if !self.matcher.contains.is_empty() {
-            // SIMD-accelerated substring search (ROADMAP §4.1) — the naive
+            // SIMD-accelerated substring search (ROADMAP Â§4.1) — the naive
             // windows() scan was O(n·m) on every unclaimed payload.
             let needle = self.matcher.contains.as_bytes();
             if memchr::memmem::find(payload, needle).is_none() {
@@ -571,7 +571,7 @@ mod tests {
 
             // An HTTP payload on the plugin's port still goes to the plugin
             // only if no built-in claims it — but HTTP heuristics only run on
-            // port 80/upgrade, so this stays with the plugin's port rule…
+            // port 80/upgrade, so this stays with the plugin's port ruleâ€¦
             // whereas a WebSocket frame chain (built-in, any port) wins:
             let ws = build_tcp_packet(
                 [10, 0, 0, 1],
@@ -591,6 +591,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn udp_dissector_uses_plugin_after_builtins() {
         use crate::dissectors::ip::dissect_ipv4;
         use crate::dissectors::test_helpers::build_udp_packet;
@@ -630,6 +631,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn empty_registry_is_inert() {
         with_registry(Vec::new(), || {
             assert!(try_dissect(TransportKind::Tcp, None, None, 1, 16379, b"*1\r\n").is_none());
@@ -637,6 +639,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn load_dir_reads_and_reports() {
         let dir = std::env::temp_dir().join("netscope-plugins-test");
         let _ = std::fs::remove_dir_all(&dir);

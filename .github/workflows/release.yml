@@ -24,12 +24,11 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: netscope-tui
-            # Intel Macs got nothing at all until 2026-07-30 — the matrix had
-            # Apple Silicon only, so "macOS supported" meant half of macOS. The
-            # runner is arm64 and Xcode links both arches, so this is a normal
-            # cross-build, not an experimental one.
           - os: macos-latest
             target: x86_64-apple-darwin
+            binary: netscope-tui
+          - os: macos-latest
+            target: universal-apple-darwin
             binary: netscope-tui
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -62,7 +61,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.target == 'universal-apple-darwin' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
       - uses: Swatinem/rust-cache@v2
 
       - name: Install libpcap (Linux)
@@ -84,7 +83,21 @@ jobs:
           if (-not (Test-Path $libDir)) { $libDir = "$env:TEMP\npcap-sdk\Lib\x64" }
           echo "LIBPCAP_LIBDIR=$libDir" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - run: cargo build -p netscope-tui --release --target ${{ matrix.target }}
+      - name: Build TUI binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "universal-apple-darwin" ]; then
+            rustup target add aarch64-apple-darwin x86_64-apple-darwin
+            cargo build -p netscope-tui --release --target aarch64-apple-darwin
+            cargo build -p netscope-tui --release --target x86_64-apple-darwin
+            mkdir -p target/universal-apple-darwin/release
+            lipo -create \
+              -output target/universal-apple-darwin/release/${{ matrix.binary }} \
+              target/aarch64-apple-darwin/release/${{ matrix.binary }} \
+              target/x86_64-apple-darwin/release/${{ matrix.binary }}
+          else
+            cargo build -p netscope-tui --release --target ${{ matrix.target }}
+          fi
 
       # Authenticode-sign the TUI binary (ROADMAP §8.3). Opt-in on the same two
       # secrets as the desktop job; unset -> step skipped -> unsigned binary and
@@ -330,6 +343,27 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+      - name: Notarize and staple macOS DMG bundle
+        if: runner.os == 'macOS' && env.APPLE_CERTIFICATE != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          dmg=$(find target/release/bundle/dmg target/universal-apple-darwin/release/bundle/dmg -name "*.dmg" 2>/dev/null | head -n 1)
+          if [ -n "$dmg" ]; then
+            echo "Submitting $dmg for notarization via xcrun notarytool..."
+            xcrun notarytool submit "$dmg" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait
+            echo "Stapling ticket to $dmg..."
+            xcrun stapler staple "$dmg" || true
+          fi
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
       - name: Warn that the macOS bundle is unsigned
         if: runner.os == 'macOS' && env.APPLE_CERTIFICATE == ''
         run: |
@@ -346,6 +380,7 @@ jobs:
           name: netscope-desktop-${{ matrix.name }}
           path: |
             target/release/bundle/**
+            target/universal-apple-darwin/release/bundle/**
           if-no-files-found: error
 
       - name: Find bundle fallback
@@ -355,9 +390,73 @@ jobs:
           Write-Host "Searching for bundle artifacts..."
           Get-ChildItem -Path "${{ github.workspace }}" -Recurse -Include "*.deb","*.AppImage","*.dmg","*.exe","*.msi" -ErrorAction SilentlyContinue | Select-Object FullName, Length
 
+  agent:
+    name: Agent (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary: netscope-agent
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            binary: netscope-agent
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary: netscope-agent
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary: netscope-agent
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: netscope-agent.exe
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install libpcap (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpcap-dev minisign
+
+      - name: Build Agent binary
+        shell: bash
+        env:
+          NETSCOPE_AGENT_UPDATE_PUBKEY: ${{ secrets.NETSCOPE_AGENT_UPDATE_PUBKEY }}
+        run: cargo build -p netscope-agent --release --target ${{ matrix.target }}
+
+      - name: Sign Agent binary (Ed25519 / Minisign)
+        shell: bash
+        env:
+          NETSCOPE_AGENT_SECRET_KEY: ${{ secrets.NETSCOPE_AGENT_SECRET_KEY }}
+        run: |
+          BIN_PATH="target/${{ matrix.target }}/release/${{ matrix.binary }}"
+          if [ -n "$NETSCOPE_AGENT_SECRET_KEY" ]; then
+            echo "$NETSCOPE_AGENT_SECRET_KEY" > netscope-agent.key
+            minisign -S -s netscope-agent.key -m "$BIN_PATH" -x "$BIN_PATH.sig"
+            rm -f netscope-agent.key
+          else
+            echo "::warning::NETSCOPE_AGENT_SECRET_KEY secret not set — skipping signature step."
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: netscope-agent-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/${{ matrix.binary }}
+            target/${{ matrix.target }}/release/${{ matrix.binary }}*.sig
+          if-no-files-found: ignore
+
   release:
     name: Create Release
-    needs: [tui, desktop]
+    needs: [tui, desktop, agent]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -376,11 +475,13 @@ jobs:
             netscope-aarch64-unknown-linux-gnu/netscope-tui
             netscope-aarch64-apple-darwin/netscope-tui
             netscope-x86_64-apple-darwin/netscope-tui
+            netscope-universal-apple-darwin/netscope-tui
             netscope-x86_64-pc-windows-msvc/netscope-tui.exe
             netscope-aarch64-pc-windows-msvc/netscope-tui.exe
             netscope-desktop-Linux/**
             netscope-desktop-macOS/**
             netscope-desktop-Windows/**
+            netscope-agent-*/**
           # Static preamble; with generate_release_notes the auto changelog is
           # appended below this body.
           body: |

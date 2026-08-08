@@ -157,7 +157,7 @@ impl NotificationEngine {
             .as_ref()
             .ok_or("No Slack webhook URL configured")?;
         let payload = serde_json::json!({
-            "text": format!("🚨 *Netscope Alert:* {}", alert_msg),
+            "text": format!("ğŸš¨ *Netscope Alert:* {}", alert_msg),
             "attachments": [
                 {
                     "title": "Alert Details & Metadata",
@@ -175,7 +175,7 @@ impl NotificationEngine {
         Ok(())
     }
 
-    /// 2.4.5 Telegram Bot API (§4.1.1)
+    /// 2.4.5 Telegram Bot API (Â§4.1.1)
     pub fn send_telegram(&self, alert_msg: &str) -> Result<(), String> {
         let token = self
             .config
@@ -195,7 +195,7 @@ impl NotificationEngine {
             .ok_or("No Telegram chat ID configured")?;
         let payload = serde_json::json!({
             "chat_id": chat_id,
-            "text": format!("🚨 *Netscope Alert* 🚨\n\n{}", alert_msg),
+            "text": format!("ğŸš¨ *Netscope Alert* ğŸš¨\n\n{}", alert_msg),
             "parse_mode": "Markdown"
         });
 
@@ -207,7 +207,7 @@ impl NotificationEngine {
         Ok(())
     }
 
-    /// Discord Webhook Notification (§4.1.2)
+    /// Discord Webhook Notification (Â§4.1.2)
     pub fn send_discord(&self, alert_msg: &str, details_json: &str) -> Result<(), String> {
         let url = self
             .config
@@ -215,7 +215,7 @@ impl NotificationEngine {
             .as_ref()
             .ok_or("No Discord webhook URL configured")?;
         let payload = serde_json::json!({
-            "content": format!("🚨 **Netscope Security Alert** 🚨\n{}", alert_msg),
+            "content": format!("ğŸš¨ **Netscope Security Alert** ğŸš¨\n{}", alert_msg),
             "embeds": [
                 {
                     "title": "Threat Metadata & Event Details",
@@ -233,7 +233,7 @@ impl NotificationEngine {
         Ok(())
     }
 
-    /// Custom JSON Webhook Notification (§4.1.3)
+    /// Custom JSON Webhook Notification (Â§4.1.3)
     pub fn send_custom_webhook(
         &self,
         alert_msg: &str,
@@ -283,7 +283,7 @@ impl NotificationEngine {
         if self.config.email_smtp_host.is_some() {
             results.push((
                 "email",
-                self.send_email(&format!("🚨 Netscope Alert: {}", alert_msg), alert_msg),
+                self.send_email(&format!("ğŸš¨ Netscope Alert: {}", alert_msg), alert_msg),
             ));
         }
         if self.config.syslog_host.is_some() {
@@ -430,7 +430,7 @@ impl NotificationEngine {
         #[cfg(target_os = "windows")]
         {
             let desc = format!("Netscope Alert Event: {}", alert_msg);
-            let status = Command::new("eventcreate")
+            let output = Command::new("eventcreate")
                 .args([
                     "/ID",
                     "100",
@@ -443,11 +443,11 @@ impl NotificationEngine {
                     "/D",
                     &desc,
                 ])
-                .status()
+                .output()
                 .map_err(|e| format!("Could not run eventcreate: {e}"))?;
 
-            if !status.success() {
-                return Err(match status.code() {
+            if !output.status.success() {
+                return Err(match output.status.code() {
                     Some(c) => format!(
                         "eventcreate exited with {c} — writing the Application log needs netscope to run elevated"
                     ),
@@ -526,6 +526,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_email_rate_limiting() {
         let config = NotificationConfig {
             email_smtp_host: Some("127.0.0.1".to_string()),
@@ -555,6 +556,7 @@ mod tests {
     /// channel as healthy. This stands up a server that answers the greeting
     /// and then rejects, which the old code could not distinguish from success.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn an_smtp_rejection_is_not_reported_as_sent() {
         use std::io::{BufRead, BufReader, Write as _};
         use std::net::TcpListener;
@@ -614,6 +616,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_syslog_and_windows_log() {
         let config = NotificationConfig {
             email_smtp_host: None,

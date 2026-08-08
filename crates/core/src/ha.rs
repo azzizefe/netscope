@@ -95,12 +95,15 @@ impl ActiveActiveCluster {
     }
 
     pub fn route_sensor_traffic(&self, sensor_id: &str) -> Option<IpAddr> {
-        let mut healthy_nodes: Vec<&ClusterNodeInfo> = self.nodes.values().filter(|n| n.is_healthy).collect();
+        let mut healthy_nodes: Vec<&ClusterNodeInfo> =
+            self.nodes.values().filter(|n| n.is_healthy).collect();
         if healthy_nodes.is_empty() {
             return None;
         }
         healthy_nodes.sort_by(|a, b| a.node_id.cmp(&b.node_id));
-        let hash = sensor_id.bytes().fold(0u64, |acc, b| acc.wrapping_add(b as u64));
+        let hash = sensor_id
+            .bytes()
+            .fold(0u64, |acc, b| acc.wrapping_add(b as u64));
         let idx = (hash as usize) % healthy_nodes.len();
         Some(healthy_nodes[idx].ip_address)
     }

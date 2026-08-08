@@ -1,6 +1,6 @@
 # netscope — Otomatik Testle Doğrulanamayan Yollar
 
-> **Son güncelleme:** 28 Temmuz 2026
+> **Son güncelleme:** 3 Ağustos 2026
 
 Bu doküman bir **kapsam raporu değil.** Kapsam sayısı CI'ın işi: `cargo test`
 her push'ta koşuyor ve sayıyı orada görürsün. Burada yazan şey, **birim testinin
@@ -8,8 +8,8 @@ prensip olarak doğrulayamayacağı** yollar — gerçek donanım, gerçek ayrı
 seviyesi ya da gerçek bir uzak makine gerektirenler. Bunlar bir sürüm öncesi
 elle doğrulanmalıdır.
 
-**Bugünkü test sayısı:** 2136 core + 36 TUI + 17 agent + 15 server + 3 desktop
-Rust testi, 88 frontend (vitest) testi.
+**Bugünkü test sayısı:** 2330 core + 44 TUI + 18 agent + 25 server + 24 desktop
++ 1 wasm Rust testi (workspace toplamı 2.462 geçiyor, 4'ü `#[ignore]`).
 
 ---
 
@@ -28,7 +28,9 @@ doğrulanmalı.
 | **Bluetooth HCI** (`bluetooth.rs`) | H4 komut/olay/ACL/LE, phdr yön | **Gerçek `bluetoothN` yakalaması** |
 | **CAN** (`can.rs`) | Std/ext/RTR/ERR/FD çerçeve özeti | **Gerçek SocketCAN (`can0`) yakalaması** |
 | **Durdurma koşulları** (`capture.rs`) | Paket/bayt limiti (stream ile), yapılandırma reddi | Süre limiti gerçek zamanlı canlı yakalamada |
+| **Arayüz sayımı** (`list_interfaces`) | Dönen her satırın biçimi: boş olmayan ad, bilinen `kind`, tekrarsız isim | **Gerçek bir adaptörün listelenmesi** — sürücüsüz makinede liste boş döner, bu meşru bir sonuç |
 | **Desktop komutları** | — | `start_remote_capture`, USBPcap seçimi, `capture-stopped` olayı (UI render + payload eşleme) |
+| **`AppHandle` alan komutlar** | Çıkardıkları saf mantık (ör. `encode_capture`, `wants_pcapng`) | `start_capture`, `open_pcap`, `open_pcap_encrypted`, `open_new_window`, `open_detached_window`, `relaunch_elevated` — **pencere açıyor, olay yayınlıyor ya da süreci yükseltilmiş yetkiyle yeniden başlatıyorlar.** Bunlara birim testi yazmak için Tauri runtime'ı ayağa kaldırmak gerekir; sarmalayıcıyı çağırıp "geçti" demek kapsam sayısını artırır, güvence vermez. |
 
 `usbpcap_cmd_path` / `usbpcap_interfaces` yalnızca Windows'ta ve USBPcap kurulu
 olduğunda anlamlı sonuç döndürür; kurulu değilse boş liste — bu fallback test
@@ -51,12 +53,20 @@ edilebilir, gerçek yakalama değil.
 
 ## 3. Agent'ın kendi kendini güncellemesi
 
-`upgrade.rs` içindeki **ret yolları** testli: anahtar gömülü değilse, imza
-yoksa, anahtar ya da imza bozuksa reddediyor. **Doğrulamanın başarılı olduğu
-yol test edilemiyor** — bir anahtar çiftinin gizli yarısını gerektirir.
+**Bu boşluk 2026-08-03'te kapandı.** `upgrade.rs` içindeki ret yollarının yanı
+sıra **doğrulamanın başarılı olduğu yol da testli**: test kendi anahtar çiftini
+üretiyor (`minisign` dev-dependency), yükü imzalıyor ve
+`verify_signature_with`'in kabul ettiğini doğruluyor. İkinci bir test, aynı
+imzanın **başka baytlar için geçmediğini** sabitliyor.
 
-Sürüm hattı gerçek bir imzalama anahtarı üretince, imzalı bir yapıyı fixture
-olarak eklemek ve pozitif yolu da teste bağlamak gerekiyor. Ayrıntılar için
+Bu neden önemliydi: önceki hâlde her test bir *reddi* iddia ediyordu, yani
+`verify_signature_with` koşulsuz `Err` dönse suite yine yeşil olurdu. Her şeyi
+reddeden bir doğrulayıcı, doğrulayıcı değildir — güvenli görünen bozuk bir
+güncelleme yoludur.
+
+**Elle doğrulanacak tek şey kaldı:** gerçek sürüm anahtarıyla imzalanmış bir
+binary'nin uçtan uca kurulması (indirme → checksum → imza → takas → yeniden
+başlatma). Anahtarın gizli yarısı bu depoda değil ve olmamalı. Ayrıntı için
 `SECURITY.md`'deki "Fleet deployment" bölümü.
 
 ---

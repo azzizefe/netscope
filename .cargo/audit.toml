@@ -1,0 +1,25 @@
+# cargo-audit configuration.
+#
+# `cargo audit` and `cargo deny check advisories` answer the same question from
+# the same database, but they do not share a config file — so an advisory
+# assessed once has to be recorded in both places or one of the two tools stays
+# red for a reason nobody can find.
+#
+# `deny.toml` is where the reasoning lives. This file holds the id and a pointer,
+# rather than a second copy of the argument that would drift from the first.
+
+[advisories]
+ignore = [
+    # `rsa` 0.9.x, Marvin Attack (timing sidechannel in PKCS#1 v1.5 decryption).
+    # No fixed version exists. netscope reaches it only in
+    # `dissectors::tls::decrypt_rsa_pre_master`, unwrapping a captured
+    # handshake with the operator's own key — there is no decryption oracle to
+    # time. Full assessment in `deny.toml`, under `[advisories] ignore`.
+    "RUSTSEC-2023-0071",
+]
+
+# Unmaintained and unsound advisories are warnings by default here, which is
+# the right level: they name a risk to track, not a hole to close. `deny.toml`
+# lists each one it has assessed, so `cargo deny` is the stricter of the two and
+# the one CI should gate on.
+informational_warnings = ["unmaintained", "unsound", "notice"]

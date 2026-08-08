@@ -205,19 +205,19 @@ pub struct SiemEvent {
     pub threat_intel_matched: Option<bool>,
     pub mac_vendor: Option<String>,
     pub resolved_dns_name: Option<String>,
-    // Behavioral Baseline & Anomaly (§1.1.4)
+    // Behavioral Baseline & Anomaly (Â§1.1.4)
     pub anomaly_score: Option<f64>,
     pub anomaly_explanation: Option<String>,
     pub anomaly_reasons: Option<Vec<String>>,
-    // Katman 5 — MITRE ATT&CK & Kill Chain (§1.1.5)
+    // Katman 5 — MITRE ATT&CK & Kill Chain (Â§1.1.5)
     pub mitre_techniques: Option<Vec<crate::mitre_killchain::MitreTechniqueMapping>>,
     pub kill_chain_phases: Option<Vec<crate::mitre_killchain::KillChainPhaseMapping>>,
     pub kill_chain_chain_summary: Option<String>,
     pub detection_coverage_summary: Option<String>,
-    // Katman 6 — İş Etkisi (Business Impact) (§1.1.6)
+    // Katman 6 — Ä°ÅŸ Etkisi (Business Impact) (Â§1.1.6)
     pub business_impact: Option<crate::business_impact::BusinessImpactEvaluation>,
     pub business_impact_summary: Option<String>,
-    // Katman 7 — "Bunu Neden Önemsemeliyim?" Açıklaması (§1.1.7)
+    // Katman 7 — "Bunu Neden Ã–nemsemeliyim?" AÃ§Ä±klamasÄ± (Â§1.1.7)
     pub why_this_matters_paragraph: Option<String>,
     pub recommended_actions: Option<Vec<crate::why_this_matters::ActionRecommendation>>,
     pub katman7_full_summary: Option<String>,
@@ -228,7 +228,7 @@ impl SiemEvent {
         Self::from_packet_with_sensor(pkt, "default_sensor")
     }
 
-    /// Construct SiemEvent evaluating against a specific sensor's 7-day rolling baseline (§1.1.4).
+    /// Construct SiemEvent evaluating against a specific sensor's 7-day rolling baseline (Â§1.1.4).
     pub fn from_packet_with_sensor(pkt: &Packet, sensor_id: &str) -> Self {
         use crate::expert::{classify, ExpertSeverity};
         let severity = classify(pkt);
@@ -291,23 +291,20 @@ impl SiemEvent {
         if let Some(ref reader) = global_geoip_reader() {
             let lookup_ip = pkt.dst_addr.or(pkt.src_addr);
             if let Some(ip) = lookup_ip {
-                if let Ok(city) = reader.lookup::<maxminddb::geoip2::City>(ip) {
-                    geoip_country = city
-                        .country
-                        .and_then(|c| c.names)
-                        .and_then(|n| n.get("en").map(|s| s.to_string()));
-                    geoip_city = city
-                        .city
-                        .and_then(|c| c.names)
-                        .and_then(|n| n.get("en").map(|s| s.to_string()));
-                }
-                if let Ok(asn_info) = reader.lookup::<maxminddb::geoip2::Asn>(ip) {
-                    asn = asn_info
-                        .autonomous_system_number
-                        .map(|a| format!("AS{}", a));
-                    isp = asn_info
-                        .autonomous_system_organization
-                        .map(|s| s.to_string());
+                // maxminddb 0.27: `lookup` returns a record to decode, rather
+                // than decoding in the call, and `names` is a struct with a
+                // field per language instead of a map keyed by "en".
+                if let Ok(record) = reader.lookup(ip) {
+                    if let Ok(Some(city)) = record.decode::<maxminddb::geoip2::City>() {
+                        geoip_country = city.country.names.english.map(str::to_string);
+                        geoip_city = city.city.names.english.map(str::to_string);
+                    }
+                    if let Ok(Some(asn_info)) = record.decode::<maxminddb::geoip2::Asn>() {
+                        asn = asn_info
+                            .autonomous_system_number
+                            .map(|a| format!("AS{}", a));
+                        isp = asn_info.autonomous_system_organization.map(str::to_string);
+                    }
                 }
             }
         }
@@ -320,7 +317,7 @@ impl SiemEvent {
                 || pkt.summary.contains("malicious"),
         );
 
-        // Behavioral baseline evaluation (§1.1.4)
+        // Behavioral baseline evaluation (Â§1.1.4)
         let day_of_week = pkt.timestamp.weekday().num_days_from_monday();
         let hour = pkt.timestamp.hour();
         let eval = crate::baseline::global_baseline_manager()
@@ -345,7 +342,7 @@ impl SiemEvent {
             )
         };
 
-        // MITRE ATT&CK & Cyber Kill Chain evaluation (§1.1.5)
+        // MITRE ATT&CK & Cyber Kill Chain evaluation (Â§1.1.5)
         let mitre_eval = crate::mitre_killchain::map_event_mitre_and_killchain(
             &pkt.protocol.to_string(),
             &pkt.summary,
@@ -363,13 +360,13 @@ impl SiemEvent {
             .first()
             .map(|p| p.phase_name.clone());
 
-        // Katman 6 — İş Etkisi (Business Impact) (§1.1.6)
+        // Katman 6 — Ä°ÅŸ Etkisi (Business Impact) (Â§1.1.6)
         let impact_eval = crate::business_impact::global_asset_registry()
             .lock()
             .unwrap()
             .evaluate_impact(pkt.dst_addr.or(pkt.src_addr), resolved_dns_name.as_deref());
 
-        // Katman 7 — "Bunu Neden Önemsemeliyim?" Açıklaması (§1.1.7)
+        // Katman 7 — "Bunu Neden Ã–nemsemeliyim?" AÃ§Ä±klamasÄ± (Â§1.1.7)
         let template_ctx = crate::why_this_matters::TemplateContext {
             src_ip: pkt
                 .src_addr
@@ -549,7 +546,7 @@ impl SiemEvent {
         serde_json::to_string(&gelf).unwrap_or_default()
     }
 
-    /// Format event as OCSF 1.3.0 (Open Cybersecurity Schema Framework) JSON (§1.2.2)
+    /// Format event as OCSF 1.3.0 (Open Cybersecurity Schema Framework) JSON (Â§1.2.2)
     pub fn to_ocsf(&self, is_alert: bool) -> serde_json::Value {
         let src_str = self.src.as_deref().unwrap_or("10.0.1.47");
         let dst_str = self.dst.as_deref().unwrap_or("10.0.5.18");
@@ -1128,6 +1125,7 @@ mod tests {
     /// that could never run. The struct advertised integrations that did not
     /// exist. This pins that what remains is reachable.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn every_sink_is_reachable_from_a_constructor() {
         let e = SiemExporter::new(
             Some("http://es.example:9200".into()),
@@ -1155,6 +1153,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_network_sinks_tcp_and_udp() {
         // Start TCP mock server
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -1229,6 +1228,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_raw_pcap_export() {
         let temp_dir = std::env::temp_dir();
         let path = temp_dir.join("test_export_2.pcapng");

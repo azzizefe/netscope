@@ -5,7 +5,7 @@
 //!
 //! * [`merge`] combines several capture files into one, interleaving packets
 //!   in timestamp order (or concatenating them as-is). Inputs may be any
-//!   format [`crate::formats`] reads (pcap, pcapng, snoop, ERF, K12…); the
+//!   format [`crate::formats`] reads (pcap, pcapng, snoop, ERF, K12â€¦); the
 //!   output is pcap or pcapng.
 //! * [`split`] breaks one capture into numbered chunks by packet count, time
 //!   span, or byte size.
@@ -350,7 +350,7 @@ pub struct CaptureFileInfo {
 }
 
 impl CaptureFileInfo {
-    /// Capture span in seconds (last − first timestamp), if known.
+    /// Capture span in seconds (last âˆ’ first timestamp), if known.
     pub fn duration_secs(&self) -> Option<f64> {
         match (self.first, self.last) {
             (Some(a), Some(b)) => Some((b.0 - a.0) as f64 + (b.1 as f64 - a.1 as f64) / 1e9),
@@ -439,6 +439,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn merge_interleaves_by_timestamp() {
         let dir = tmp_dir("merge");
         let a = dir.join("a.pcap");
@@ -466,6 +467,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn merge_concatenate_keeps_input_order() {
         let dir = tmp_dir("concat");
         let a = dir.join("a.pcap");
@@ -489,6 +491,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn merge_to_pcap_rejects_mixed_linktypes() {
         let dir = tmp_dir("mixed");
         let a = dir.join("a.pcap");
@@ -516,6 +519,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn split_by_packet_count() {
         let dir = tmp_dir("split-count");
         let input = dir.join("in.pcap");
@@ -545,6 +549,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn split_by_time_span() {
         let dir = tmp_dir("split-time");
         let input = dir.join("in.pcap");
@@ -568,6 +573,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn info_reports_counts_and_span() {
         let dir = tmp_dir("info");
         let input = dir.join("in.pcap");
@@ -584,6 +590,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn round_trip_pcapng_preserves_nanoseconds() {
         let dir = tmp_dir("ns");
         // Split a pcapng and confirm ns timestamps survive the writer.

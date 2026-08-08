@@ -3,9 +3,9 @@
 
 //! SIEM Formats, Log Forwarders (Syslog RFC 5424, CEF, LEEF), SOAR APIs, and OS Event Log Engine (§2.1, §2.2, §2.3).
 
-use std::collections::HashMap;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Supported Connector Type (§4.2).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -154,7 +154,10 @@ impl SoarApiController {
             success,
             target_ip: req.target_ip.clone(),
             status_message: if success {
-                format!("Target IP {} successfully blocked by OS Firewall.", req.target_ip)
+                format!(
+                    "Target IP {} successfully blocked by OS Firewall.",
+                    req.target_ip
+                )
             } else {
                 format!("Failed to block target IP {}.", req.target_ip)
             },
@@ -168,7 +171,7 @@ impl SoarApiController {
 pub struct WindowsEventRecord {
     pub event_source: String, // "NetscopeNDR"
     pub event_id: u32,        // 1001: Threat, 1002: Anomaly, 1003: SOAR Action
-    pub level: String,       // "Information", "Warning", "Error", "Critical"
+    pub level: String,        // "Information", "Warning", "Error", "Critical"
     pub message: String,
     pub timestamp: String,
 }
@@ -366,7 +369,14 @@ mod tests {
 
     #[test]
     fn test_log_forwarder_formats() {
-        let syslog = LogForwarderEngine::format_syslog_rfc5424(1, 3, "sensor-01", "netscope-ndr", "ALERT", "Suspicious traffic");
+        let syslog = LogForwarderEngine::format_syslog_rfc5424(
+            1,
+            3,
+            "sensor-01",
+            "netscope-ndr",
+            "ALERT",
+            "Suspicious traffic",
+        );
         assert!(syslog.contains("<11>1"));
         assert!(syslog.contains("sensor-01"));
 
@@ -379,7 +389,9 @@ mod tests {
             8,
             &[("src", "10.0.1.47"), ("dst", "198.51.100.1")],
         );
-        assert!(cef.starts_with("CEF:0|Netscope|NDR|2.0|1001|C2 Beaconing|8|src=10.0.1.47 dst=198.51.100.1"));
+        assert!(cef.starts_with(
+            "CEF:0|Netscope|NDR|2.0|1001|C2 Beaconing|8|src=10.0.1.47 dst=198.51.100.1"
+        ));
 
         let leef = LogForwarderEngine::format_leef(
             "Netscope",
@@ -408,11 +420,16 @@ mod tests {
 
     #[test]
     fn test_system_log_integrations() {
-        let win = SystemLogIntegration::format_windows_event(1001, "Error", "C2 Beaconing detected");
+        let win =
+            SystemLogIntegration::format_windows_event(1001, "Error", "C2 Beaconing detected");
         assert_eq!(win.event_source, "NetscopeNDR");
         assert_eq!(win.event_id, 1001);
 
-        let journald = SystemLogIntegration::format_linux_journald(3, "C2 Beaconing detected", &[("src_ip", "10.0.1.47")]);
+        let journald = SystemLogIntegration::format_linux_journald(
+            3,
+            "C2 Beaconing detected",
+            &[("src_ip", "10.0.1.47")],
+        );
         assert_eq!(journald.get("SYSLOG_IDENTIFIER").unwrap(), "netscope-ndr");
         assert_eq!(journald.get("SRC_IP").unwrap(), "10.0.1.47");
     }

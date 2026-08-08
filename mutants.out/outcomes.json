@@ -1,0 +1,35 @@
+{
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Failure",
+      "log_path": "log/baseline.log",
+      "diff_path": null,
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 23.4915229,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\efe\\.rustup\\toolchains\\stable-x86_64-pc-windows-gnu\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=netscope-core@0.2.0"
+          ]
+        }
+      ]
+    }
+  ],
+  "total_mutants": 0,
+  "missed": 0,
+  "caught": 0,
+  "timeout": 0,
+  "unviable": 0,
+  "success": 0,
+  "start_time": "2026-08-07T13:38:53.2286058Z",
+  "end_time": null,
+  "cargo_mutants_version": "27.1.0"
+}

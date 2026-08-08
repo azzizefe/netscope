@@ -506,6 +506,7 @@ mod tests {
     /// with a reason, because a false positive nobody can explain is worse in
     /// a SOC than a rule that plainly did not load.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn rules_that_cannot_be_honoured_exactly_are_refused() {
         // Baseline: a rule using only supported options loads.
         let ok =
@@ -553,6 +554,7 @@ mod tests {
     /// no way to tell that netscope had made the indicators up and that no
     /// vendor had ever seen them.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn a_fresh_install_ships_no_indicators_and_invents_none() {
         let dir = std::env::temp_dir().join("netscope-threat-fresh");
         let _ = std::fs::remove_dir_all(&dir);
@@ -588,6 +590,7 @@ mod tests {
 
     /// An indicator match must be attributed to the operator's own list.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn indicator_matches_do_not_claim_a_vendor() {
         let dir = std::env::temp_dir().join("netscope-threat-attrib");
         let _ = std::fs::remove_dir_all(&dir);

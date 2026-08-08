@@ -224,6 +224,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn plain_writer_uses_exact_path_and_valid_header() {
         let dir = temp_dir("plain");
         let path = dir.join("out.pcap");
@@ -241,6 +242,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn rotates_on_filesize_and_prunes_oldest() {
         let dir = temp_dir("size");
         let path = dir.join("ring.pcap");
@@ -257,7 +259,7 @@ mod tests {
         let kept = w.files_written();
         w.finish().unwrap();
 
-        // 20 × 216 bytes ≈ 4.3 kB of records → several rotations; only the
+        // 20 Ã— 216 bytes â‰ˆ 4.3 kB of records → several rotations; only the
         // last two files survive.
         assert_eq!(kept.len(), 2, "ring must keep exactly `files` members");
         let on_disk = pcap_files(&dir);
@@ -280,6 +282,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn oversized_single_packet_still_lands_in_a_file() {
         let dir = temp_dir("big");
         let opts = RingBufferOptions {
@@ -298,6 +301,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn files_limit_alone_is_rejected() {
         let opts = RingBufferOptions {
             filesize_kb: None,
@@ -308,5 +312,36 @@ mod tests {
             .err()
             .unwrap();
         assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_ring_writer_resilience_under_disk_pressure() {
+        let dir = temp_dir("pressure");
+        let path = dir.join("pressure.pcap");
+        let opts = RingBufferOptions {
+            filesize_kb: Some(1),
+            duration_secs: None,
+            files: Some(3),
+        };
+        let mut w = RingWriter::create(&path, 1, opts).unwrap();
+
+        for i in 0..30 {
+            // Simulate disk pressure where an external process or cleanup script
+            // deletes a created file while the ring buffer is rotating
+            if i == 15 {
+                if let Some(first_file) = w.created.front() {
+                    let _ = std::fs::remove_file(first_file);
+                }
+            }
+            w.write(1_700_000_000 + i, 0, 300, &[0u8; 300]).unwrap();
+        }
+
+        let kept = w.files_written();
+        w.finish().unwrap();
+
+        // Must not crash or panic when a file is missing during pruning
+        assert!(kept.len() <= 3);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

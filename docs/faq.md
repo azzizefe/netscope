@@ -164,7 +164,11 @@ main reason the TUI exists.
 
 ### How many packets can it handle?
 
-The dissector benchmarks at >100k packets/sec (`cargo test bench_dissect_throughput -- --nocapture`).
+Measure it on your own hardware rather than trusting a number written here:
+`cargo bench -p netscope-core --bench parse_throughput` for the dissector chain,
+`--bench pipeline_throughput` for the whole ring-plus-rayon path. Criterion
+reports a confidence interval for your machine. A single figure quoted in a FAQ
+only ever describes whichever machine wrote it.
 The TUI keeps the most recent 10,000 packets in memory and drops the oldest
 beyond that — stats and flow counters keep counting everything.
 

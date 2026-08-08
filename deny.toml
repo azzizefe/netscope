@@ -1,0 +1,172 @@
+# cargo-deny configuration.
+#
+# Without this file `cargo deny check` reports 684 `error[rejected]` license
+# failures, which reads as a catastrophe and is really one missing policy: the
+# default configuration allows nothing, so every dependency in the tree is
+# rejected for having a licence nobody declared acceptable. The list below is
+# not aspirational — it was built by enumerating what is actually in this
+# workspace's graph (`cargo metadata`), so a licence appearing here means a
+# crate we already ship under it.
+#
+#   cargo deny check              # everything
+#   cargo deny check licenses     # just this section
+#
+# Run it after adding a dependency. A rejection is the question "are we willing
+# to ship under these terms?" reaching a human, which is the whole point.
+
+[graph]
+# Check the platforms netscope is released for. Without this, cargo-deny walks
+# every target's dependencies — including the GTK/Linux half of Tauri while
+# auditing on Windows, and the Windows half while auditing on Linux — and
+# reports findings against crates that particular build never compiles.
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "aarch64-unknown-linux-gnu" },
+    { triple = "x86_64-pc-windows-msvc" },
+    { triple = "x86_64-apple-darwin" },
+    { triple = "aarch64-apple-darwin" },
+]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+ignore = [
+    { id = "RUSTSEC-2023-0071", reason = """
+Marvin Attack in `rsa` 0.9.x: a timing sidechannel in PKCS#1 v1.5 decryption.
+No fixed version exists — the advisory has stayed open since 2023-11 because the
+fix needs constant-time work the crate has not landed.
+
+netscope reaches this code in exactly one place: `dissectors::tls::
+decrypt_rsa_pre_master`, which unwraps the pre-master secret of a captured TLS
+handshake that used RSA key exchange. The private key comes from the operator's
+own `TLS_RSA_PRIVATE_KEY` file.
+
+The attack needs a decryption oracle — the ability to submit many chosen
+ciphertexts and measure how long each takes. There is none here. netscope is not
+a service; it decrypts a capture the analyst already holds, in the analyst's own
+process, with a key the analyst already has. An attacker who could drive this
+loop would need the private key first, at which point the sidechannel is moot,
+and nothing reports timings back to them either way.
+
+Revisit if RSA decryption is ever exposed to input from an untrusted party in a
+setting that returns timing, or if `rsa` ships a fix — then this entry goes.
+""" },
+
+    # --- Unmaintained, all transitive. None is a vulnerability. -------------
+    #
+    # "Unmaintained" means the crate will not receive the *next* fix, which is a
+    # risk to track rather than a hole to patch. Every entry below arrives
+    # through a dependency netscope does not pick, so the only lever is the
+    # parent moving on. They are listed individually, not silenced with a
+    # blanket rule, so that a genuinely new unmaintained crate still fails.
+    #
+    # The one that was netscope's own choice, `rustls-pemfile`
+    # (RUSTSEC-2025-0134), is not here: it was dropped instead. Its job had
+    # moved into `rustls-pki-types`, which rustls already brings in — see
+    # `crates/server/src/tls.rs`.
+
+    # GTK3 bindings, via Tauri → wry → webkit2gtk. Linux desktop builds only;
+    # the Windows and macOS binaries never compile them. Tauri v2 still targets
+    # GTK3 on Linux, so this clears when Tauri moves to GTK4, not before.
+    { id = "RUSTSEC-2024-0411", reason = "gdkwayland-sys: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0412", reason = "gdk: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0413", reason = "atk: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0414", reason = "gdkx11-sys: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0415", reason = "gtk: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0416", reason = "atk-sys: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0417", reason = "gdkx11: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0418", reason = "gdk-sys: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0419", reason = "gtk3-macros: GTK3 bindings, via Tauri/wry on Linux" },
+    { id = "RUSTSEC-2024-0420", reason = "gtk-sys: GTK3 bindings, via Tauri/wry on Linux" },
+
+    # Unicode character-property tables, via Tauri → tauri-utils → urlpattern.
+    # Data crates: they encode the Unicode tables and do not execute anything.
+    { id = "RUSTSEC-2025-0075", reason = "unic-char-range: Unicode tables, via Tauri/urlpattern" },
+    { id = "RUSTSEC-2025-0080", reason = "unic-common: Unicode tables, via Tauri/urlpattern" },
+    { id = "RUSTSEC-2025-0081", reason = "unic-char-property: Unicode tables, via Tauri/urlpattern" },
+    { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: Unicode tables, via Tauri/urlpattern" },
+    { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident: Unicode tables, via Tauri/urlpattern" },
+
+    # Proc-macro helpers. Both run at compile time only and are not linked into
+    # any shipped binary.
+    { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time only, transitive" },
+    { id = "RUSTSEC-2024-0436", reason = "paste: build-time only, transitive" },
+]
+
+[licenses]
+version = 2
+# Every licence below is present in the current graph. Permissive throughout,
+# with one deliberate exception noted underneath.
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "BSL-1.0",
+    "0BSD",
+    "Unlicense",
+    "CC0-1.0",
+    "Unicode-3.0",
+    "CDLA-Permissive-2.0",
+    # Weak, file-level copyleft: modifications to MPL-licensed *files* must be
+    # published, but linking them into a larger work carries no obligation on
+    # that work. It arrives through Tauri's CSS stack (cssparser, selectors,
+    # dtoa-short) and through `option-ext` under `dirs`. netscope does not patch
+    # any of them, so nothing here is triggered — but that is the condition, and
+    # it is worth knowing before someone vendors and edits one.
+    "MPL-2.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+# Reports without blocking, because most duplicates here are not netscope's to
+# resolve — but the list is only useful if the ones that *are* stand out.
+#
+# Measured rather than assumed: of 44 duplicated crates, exactly four were named
+# by a netscope manifest at all — `toml`, `rand`, `getrandom` and
+# `tokio-tungstenite`. The other 40 appear only inside dependency trees we do
+# not choose. Of those four, three could not be collapsed either:
+#
+#   toml       — netscope's 0.8 also satisfies `system-deps`, a build dependency
+#                of the GTK3 `-sys` crates under Tauri. Moving to 1.x leaves the
+#                old copy in place for them and changes `FromStr for Value` to
+#                parse a single value rather than a document, which broke the
+#                agent's remote-config merge. Tried, reverted.
+#   rand       — 0.8 is held by `rsa` (via num-bigint-dig) and `sqlx-postgres`.
+#   getrandom  — 0.2 is held by `rand_core` 0.6, from that same rand 0.8.
+#
+# `tokio-tungstenite` was the one that moved: the agent asked for 0.24 while
+# axum brought 0.29 into the server, so bumping the agent collapsed both it and
+# `tungstenite`. 44 → 42.
+#
+# This check earns its keep either way: it is what surfaced two copies of
+# `maxminddb` in this workspace, one of them carrying RUSTSEC-2025-0132.
+multiple-versions = "warn"
+# Trees netscope does not pick the versions inside. Skipping them is what keeps
+# a duplicate we *did* introduce from being lost among forty we cannot act on.
+# Remove an entry to see that tree's duplicates again.
+skip-tree = [
+    # Brings the whole Windows API family (windows-sys/-targets/-core/-result/
+    # -strings at four or five versions each), GTK3 on Linux, png, unic-*, and
+    # the toml/winnow chain through system-deps.
+    { crate = "tauri", depth = 20 },
+    { crate = "tauri-build", depth = 20 },
+    # rand 0.8 and, through rand_core 0.6, getrandom 0.2.
+    { crate = "rsa", depth = 10 },
+    { crate = "sqlx", depth = 10 },
+]
+# A dependency with no version bound takes whatever crates.io publishes next,
+# which is a supply-chain decision made by nobody.
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+# Everything comes from crates.io. A git dependency would bypass the yank and
+# advisory machinery above, so adding one has to be a deliberate edit here.
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

@@ -11,8 +11,6 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result};
 use crossbeam_channel::Sender;
 
-use crate::dpdk::{DpdkConfig, DpdkEngine};
-use crate::ebpf_xdp::{XdpConfig, XdpEngine};
 use crate::models::Packet;
 use crate::pipeline::{Pipeline, Producer, RawFrame, StatsSnapshot};
 use crate::remote::{spawn_pipe_source, PcapStreamReader, PipeSource, RemoteSpec};
@@ -122,7 +120,61 @@ pub fn translate_bpf_filter(raw: &str) -> String {
     result
 }
 
+/// Whether the packet-capture library this process needs is actually loadable.
+///
+/// On Windows that library is `wpcap.dll`, which ships with Npcap — a separate
+/// download. The MSVC build delay-loads it (see `.cargo/config.toml`), so a
+/// machine without Npcap starts netscope fine and only trips on the first call
+/// into pcap. That call must not be made blind: a delay-load failure raises a
+/// structured exception (`0xC06D007E`) that no `Result` can catch, and the
+/// process dies with a hex code. So every entry point into the library asks
+/// this first, and gets to return an error naming the download instead.
+///
+/// Elsewhere libpcap is an ordinary shared library resolved at load time: if it
+/// were missing the process would not have started, so by the time this runs
+/// the answer is yes.
+#[cfg(windows)]
+pub fn packet_library_available() -> bool {
+    // Miri cannot call FFI functions like LoadLibraryA.  Returning false
+    // makes every live-capture path bail out via `require_packet_library`
+    // with an Err, which the tests handle naturally.
+    #[cfg(miri)]
+    {
+        return false;
+    }
+
+    #[cfg(not(miri))]
+    {
+        extern "system" {
+            fn LoadLibraryA(name: *const core::ffi::c_char) -> *mut core::ffi::c_void;
+        }
+        // SAFETY: the argument is a NUL-terminated literal. The handle is
+        // deliberately not freed — the library stays loaded for the process, which
+        // is what the delay-load helper will want moments later.
+        unsafe { !LoadLibraryA(c"wpcap.dll".as_ptr()).is_null() }
+    }
+}
+
+#[cfg(not(windows))]
+pub fn packet_library_available() -> bool {
+    true
+}
+
+/// The guard every pcap entry point runs first. See
+/// [`packet_library_available`] for why calling in blind is not an option.
+fn require_packet_library() -> Result<()> {
+    if packet_library_available() {
+        return Ok(());
+    }
+    anyhow::bail!(
+        "Npcap is not installed, so this build cannot capture or read pcap files.\n  \
+         Install it from https://npcap.com and start netscope again.\n  \
+         (Reading a capture file goes through the same library as live capture.)"
+    )
+}
+
 pub fn list_interfaces() -> Result<Vec<pcap::Device>> {
+    require_packet_library()?;
     pcap::Device::list().context("Failed to list network interfaces.\n  On Windows: Install Npcap from https://npcap.com\n  On Linux/macOS: Run with sudo or set CAP_NET_RAW capability")
 }
 
@@ -182,7 +234,7 @@ pub enum InterfaceKind {
 }
 
 impl InterfaceKind {
-    /// Stable lowercase tag for serialization ("ethernet", "usb", …).
+    /// Stable lowercase tag for serialization ("ethernet", "usb", â€¦).
     pub fn as_str(&self) -> &'static str {
         match self {
             InterfaceKind::Regular => "ethernet",
@@ -246,6 +298,7 @@ fn open_live_capture(
     bpf_filter: Option<&str>,
     monitor: bool,
 ) -> Result<(pcap::Capture<pcap::Active>, i32)> {
+    require_packet_library()?;
     let inactive = pcap::Capture::from_device(interface)
         .map_err(|e| {
             if cfg!(target_os = "windows") {
@@ -368,11 +421,11 @@ impl StopTracker {
 /// The underlying technology to use for live capturing.
 ///
 /// Only [`CaptureBackend::Pcap`] is implemented. The kernel-bypass variants are
-/// declared because the roadmap plans them (§5.2.1–§5.2.2), and selecting one is
+/// declared because the roadmap plans them (Â§5.2.1â€“Â§5.2.2), and selecting one is
 /// a hard error — see [`CaptureEngine::start_live_multi`].
 ///
 /// They used to be accepted: each had a loop that printed
-/// `"AF_XDP: Initializing eBPF redirect program…"` (or the PF_RING / DPDK /
+/// `"AF_XDP: Initializing eBPF redirect programâ€¦"` (or the PF_RING / DPDK /
 /// AF_PACKET equivalent) and then ran the ordinary libpcap loop. The capture
 /// worked, so nothing looked broken, while the operator had been told their
 /// traffic was going through a zero-copy path that does not exist — and any
@@ -384,11 +437,11 @@ pub enum CaptureBackend {
     Pcap,
     /// **Not implemented.** AF_PACKET socket with TPACKET_V3 ring buffer (Linux).
     AfPacket,
-    /// High-performance zero-copy AF_XDP socket (eBPF/XDP on Linux).
+    /// **Not implemented.** Zero-copy AF_XDP socket (eBPF/XDP on Linux).
     AfXdp,
     /// **Not implemented.** PF_RING ring-buffer capture (Linux).
     PfRing,
-    /// High-performance DPDK Poll Mode Driver (PMD) kernel-bypass.
+    /// **Not implemented.** DPDK Poll Mode Driver (PMD) kernel-bypass.
     Dpdk,
 }
 
@@ -419,12 +472,8 @@ pub struct CaptureOptions {
     pub stop: StopConditions,
     /// Ring-buffer rotation for `output_path` (Wireshark `-b`).
     pub ring: Option<RingBufferOptions>,
-    /// Capture backend selection (`Pcap`, `AfXdp`, `Dpdk`).
+    /// Capture backend selection. `Pcap` is the only one implemented.
     pub backend: CaptureBackend,
-    /// Custom configuration for eBPF / XDP capture backend.
-    pub xdp_config: Option<XdpConfig>,
-    /// Custom configuration for DPDK PMD capture backend.
-    pub dpdk_config: Option<DpdkConfig>,
 }
 // Removed alongside the fake backends: `fanout_group_id`, `timestamp_precision`,
 // `cpu_affinity` and `adaptive_sampling`. Nothing in the workspace ever read
@@ -432,7 +481,7 @@ pub struct CaptureOptions {
 // configured nothing while reading like a tuning knob. They come back with the
 // code that honours them, not before.
 
-/// Capture engine built on the parallel pipeline (ROADMAP §2.1): each capture
+/// Capture engine built on the parallel pipeline (ROADMAP Â§2.1): each capture
 /// thread feeds raw frames into a lock-free ring, a rayon-backed dissector
 /// stage parses them across cores, and finished [`Packet`]s arrive on the
 /// `Sender` given to `start_live`/`start_live_multi`/`start_offline`. Capturing
@@ -449,7 +498,7 @@ pub struct CaptureEngine {
     running: Arc<AtomicBool>,
     handles: Vec<thread::JoinHandle<()>>,
     pipelines: Vec<Pipeline>,
-    /// External capture processes (ssh, USBPcapCMD…) killed on stop so a
+    /// External capture processes (ssh, USBPcapCMDâ€¦) killed on stop so a
     /// reader blocked on the pipe wakes up.
     pipes: Vec<PipeSource>,
 }
@@ -532,50 +581,22 @@ impl CaptureEngine {
         // alternative — capturing anyway on the pcap path — is what this code
         // used to do, and it is worse than failing: the capture succeeds, so
         // the operator has no reason to doubt the backend they asked for.
-        if opts.backend != CaptureBackend::Pcap
-            && opts.backend != CaptureBackend::AfXdp
-            && opts.backend != CaptureBackend::Dpdk
-        {
+        //
+        // AF_XDP and DPDK were later added to this condition as *permitted*,
+        // routed to engines that generated packets instead of capturing them
+        // and pushed them into the live pipeline with `hw_timestamp = true`.
+        // That is the same deception one step further: not real traffic under
+        // the wrong label, but invented traffic under the right one. Both
+        // engines are gone. Anything but pcap fails here, and it fails loudly.
+        if opts.backend != CaptureBackend::Pcap {
             anyhow::bail!(
-                "Capture backend {} is not implemented — supported backends are pcap, AF_XDP (eBPF/XDP), and DPDK.",
+                "Capture backend {} is not implemented — the only supported backend is pcap.",
                 opts.backend.label()
             );
         }
 
         let running = self.running.clone();
         running.store(true, Ordering::SeqCst);
-
-        match opts.backend {
-            CaptureBackend::AfXdp => {
-                let iface = interfaces.first().copied().unwrap_or("eth0");
-                let mut cfg = opts.xdp_config.clone().unwrap_or_default();
-                cfg.interface = iface.to_string();
-                if cfg.bpf_filter.is_none() {
-                    cfg.bpf_filter = opts.bpf_filter.clone();
-                }
-                let engine = XdpEngine::new(cfg);
-                let pipeline = Pipeline::start(1, packet_tx, running.clone());
-                let producer = pipeline.producer();
-                let handle = engine.start(producer, running)?;
-                self.handles.push(handle);
-                self.pipelines.push(pipeline);
-                return Ok(());
-            }
-            CaptureBackend::Dpdk => {
-                let iface = interfaces.first().copied().unwrap_or("dpdk0");
-                let mut cfg = opts.dpdk_config.clone().unwrap_or_default();
-                cfg.interface_name = iface.to_string();
-                let engine = DpdkEngine::new(cfg);
-                let pipeline = Pipeline::start(1, packet_tx, running.clone());
-                let producer = pipeline.producer();
-                let handle = engine.start(producer, running)?;
-                self.handles.push(handle);
-                self.pipelines.push(pipeline);
-                return Ok(());
-            }
-            CaptureBackend::Pcap => {}
-            _ => unreachable!(),
-        }
 
         // Open every interface up front. Keep the ones that open; collect the
         // rest as warnings so one dead adapter doesn't sink the whole capture.
@@ -817,11 +838,26 @@ impl CaptureEngine {
         let running = self.running.clone();
         running.store(true, Ordering::SeqCst);
 
-        // Detect format (ROADMAP §2.2 / §2.5 support for other formats)
+        // Detect format (ROADMAP Â§2.2 / Â§2.5 support for other formats)
         let format = crate::formats::detect(filepath).ok();
-        let is_native = format.is_some_and(|f| f.is_native_pcap());
+
+        // Two readers can open a pcap: libpcap below, and the workspace's own
+        // `RecordReader` further down — which is what every other format
+        // already uses, and which reads pcap and pcapng through the same pure
+        // Rust parser. Measured over `fixtures/*.pcap`, the two agree on packet
+        // count, byte total, linktype and timestamps for every file, so this is
+        // a choice rather than a compromise.
+        //
+        // libpcap is kept for exactly one thing it still does better: compiling
+        // a BPF expression. So a filtered read goes through it, and an
+        // unfiltered one does not — which is what stops reading a capture file
+        // from requiring Npcap on Windows. `wpcap.dll` is a separate download
+        // there, so a machine without it could not open a file it had every
+        // means to parse. CI's Windows runner is one such machine.
+        let is_native = format.is_some_and(|f| f.is_native_pcap()) && bpf_filter.is_some();
 
         if is_native {
+            require_packet_library()?;
             let mut cap = pcap::Capture::from_file(filepath)
                 .map_err(|e| anyhow::anyhow!("Failed to open pcap file '{filepath}': {e}"))?;
 
@@ -832,7 +868,7 @@ impl CaptureEngine {
             }
 
             let output_path = output_path.map(|s| s.to_string());
-            // Link-layer type of the saved capture (Ethernet, 802.11, radiotap…).
+            // Link-layer type of the saved capture (Ethernet, 802.11, radiotapâ€¦).
             let linktype = cap.get_datalink().0;
 
             let pipeline = Pipeline::start(linktype, packet_tx, running.clone());
@@ -950,11 +986,11 @@ impl CaptureEngine {
             pipe.kill();
         }
         // Join every capture thread so all producers have declared their
-        // streams finished…
+        // streams finishedâ€¦
         for handle in self.handles.drain(..) {
             let _ = handle.join();
         }
-        // …then wait for each dissector stage to drain its ring so no packet is
+        // â€¦then wait for each dissector stage to drain its ring so no packet is
         // lost on stop. Pipelines stay around so their final stats remain readable.
         for pipeline in self.pipelines.iter_mut() {
             pipeline.join();
@@ -1080,8 +1116,13 @@ fn build_file_writer(
     Ok(Some(writer))
 }
 
-/// Convert a libpcap packet into the pipeline's raw-frame form (§5.2.3 zero-copy).
+/// Convert a libpcap packet into the pipeline's raw-frame form (Â§5.2.3 zero-copy).
 fn raw_frame(pkt: pcap::Packet) -> RawFrame {
+    // `tv_sec` is `i32` on Windows and `i64` on Linux and macOS, so this widens
+    // on one platform and is a no-op on the others — where clippy calls it a
+    // useless conversion and CI's `-D warnings` turns that into a failure. `as`
+    // would only trade this lint for `unnecessary_cast` on the same platforms.
+    #[allow(clippy::useless_conversion)]
     let ts_sec = i64::from(pkt.header.ts.tv_sec);
     RawFrame::new(
         ts_sec,
@@ -1286,6 +1327,7 @@ mod capture_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn autostop_packet_limit_cuts_the_stream() {
         let mut eng = CaptureEngine::new();
         let (tx, rx) = crossbeam_channel::unbounded();
@@ -1305,6 +1347,7 @@ mod capture_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn autostop_byte_limit_cuts_the_stream() {
         let mut eng = CaptureEngine::new();
         let (tx, rx) = crossbeam_channel::unbounded();
@@ -1323,6 +1366,7 @@ mod capture_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn stream_capture_writes_output_file() {
         let dir = std::env::temp_dir().join(format!(
             "netscope-stream-save-{}-{}",
@@ -1520,34 +1564,47 @@ mod filter_tests {
         );
     }
 
+    /// Every backend except pcap must refuse to start.
+    ///
+    /// This replaces a test that asserted the opposite — that AF_XDP on
+    /// `eth0` and DPDK on `dpdk0` both start *and deliver packets* — on a CI
+    /// runner that has neither interface. It passed because the engines behind
+    /// those two arms did not capture anything: they generated frames and fed
+    /// them to the pipeline. The test was, in effect, asserting that the
+    /// fabrication worked.
+    ///
+    /// Written as a sweep over the enum so that adding a backend variant
+    /// without an implementation cannot quietly skip the check.
     #[test]
-    fn test_start_with_xdp_and_dpdk_backends() {
+    fn every_backend_but_pcap_refuses_to_start() {
         use super::*;
         use crossbeam_channel::unbounded;
-        use std::thread;
-        use std::time::Duration;
 
-        let (tx, rx) = unbounded();
-        let mut engine = CaptureEngine::new();
+        for backend in [
+            CaptureBackend::AfPacket,
+            CaptureBackend::AfXdp,
+            CaptureBackend::PfRing,
+            CaptureBackend::Dpdk,
+        ] {
+            let (tx, rx) = unbounded();
+            let mut engine = CaptureEngine::new();
+            let opts = CaptureOptions {
+                backend,
+                ..Default::default()
+            };
 
-        let xdp_opts = CaptureOptions {
-            backend: CaptureBackend::AfXdp,
-            ..Default::default()
-        };
-        assert!(engine.start_with(&["eth0"], &xdp_opts, tx.clone()).is_ok());
-        thread::sleep(Duration::from_millis(30));
-        engine.stop();
-        assert!(rx.try_recv().is_ok());
-
-        let (tx2, rx2) = unbounded();
-        let mut engine2 = CaptureEngine::new();
-        let dpdk_opts = CaptureOptions {
-            backend: CaptureBackend::Dpdk,
-            ..Default::default()
-        };
-        assert!(engine2.start_with(&["dpdk0"], &dpdk_opts, tx2).is_ok());
-        thread::sleep(Duration::from_millis(30));
-        engine2.stop();
-        assert!(rx2.try_recv().is_ok());
+            let err = engine
+                .start_with(&["eth0"], &opts, tx)
+                .expect_err("an unimplemented backend must not start a capture");
+            let message = err.to_string();
+            assert!(
+                message.contains(backend.label()) && message.contains("not implemented"),
+                "{backend:?} must be refused by name, got: {message}"
+            );
+            assert!(
+                rx.try_recv().is_err(),
+                "{backend:?} produced a packet without capturing anything"
+            );
+        }
     }
 }

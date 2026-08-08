@@ -59,7 +59,7 @@ pub enum Support {
 /// This must agree with the display-filter lexer's identifier charset in
 /// `filter.rs`, or the registry promises a predicate the parser rejects. It
 /// listed `+` and omitted `:`, which the lexer does the other way round: five
-/// names (`TACACS+`, `SPHINCS+`, `S7Comm+ Detail`…) counted as typeable while
+/// names (`TACACS+`, `SPHINCS+`, `S7Comm+ Detail`â€¦) counted as typeable while
 /// `Filter::parse("tacacs+")` failed. Those protocols were still filterable
 /// through an alias, so nothing broke visibly — the alias requirement simply
 /// stopped being enforced for them.
@@ -3284,7 +3284,7 @@ protocols! {
         color:     0x4A9EF5,
         transport: Other,
         rank:      2,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["infiniband"],
         blurb:     "InfiniBand Architecture Link Protocol",
     }
@@ -6922,7 +6922,7 @@ protocols! {
     Ayiya { doc: "AYIYA protocol.", display: "AYIYA", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["ayiya"], blurb: "Anything in Anything IPv6 Tunneling Protocol.", }
     Bacapp { doc: "BACAPP protocol.", display: "BACAPP", color: 0x9CA3AF, transport: Udp, rank: 2, status: Declared, aliases: ["bacapp"], blurb: "BACnet Application Layer Protocol.", }
     Banana { doc: "BANANA protocol.", display: "BANANA", color: 0x9CA3AF, transport: Tcp, rank: 2, status: Declared, aliases: ["banana"], blurb: "Twisted Banana serialization protocol.", }
-    Bat { doc: "BAT protocol.", display: "BAT", color: 0x9CA3AF, transport: Other, rank: 2, status: Dissected, aliases: ["bat_proto"], blurb: "B.A.T.M.A.N. mesh protocol header.", }
+    Bat { doc: "BAT protocol.", display: "BAT", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bat_proto"], blurb: "B.A.T.M.A.N. mesh protocol header.", }
     Batadv { doc: "BATADV protocol.", display: "BATADV-Link", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["batadv_link"], blurb: "B.A.T.M.A.N. Advanced link layer protocol.", }
     Bblog { doc: "BBLOG protocol.", display: "BBLOG", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bblog"], blurb: "BlackBerry Log framing.", }
     Bctp { doc: "BCTP protocol.", display: "BCTP", color: 0x9CA3AF, transport: Other, rank: 2, status: Declared, aliases: ["bctp"], blurb: "BCTP Telecommunications Protocol.", }
@@ -9501,7 +9501,7 @@ protocols! {
         blurb:     "A frame duplicated onto two separate networks (PRP)  —  and which of the two this copy crossed.",
     }
     PnDcp {
-        doc:       "PROFINET DCP discovery and configuration (IEC 61158-6-10 Â§4.3).",
+        doc:       "PROFINET DCP discovery and configuration (IEC 61158-6-10 Ã‚Â§4.3).",
         display:   "PROFINET DCP",
         color:     0xC48A3F,
         transport: Other,
@@ -9636,7 +9636,13 @@ protocols! {
         color:     0xD4643A,
         transport: Other,
         rank:      3,
-        status:    Dissected,
+        // Was `Dissected` on the strength of a stub in `dissectors.rs` whose
+        // guard was `-> bool { false }`. The branch in `can.rs` could never be
+        // taken, so no packet has ever been labelled DeviceNet, but the stub
+        // body contained `Protocol::DeviceNet` and that was enough to satisfy
+        // the corpus check. See `can.rs` for why an identifier-band guard
+        // cannot be written for this protocol.
+        status:    Declared,
         aliases:   ["devicenet"],
         blurb:     "An industrial controller message (DeviceNet)  —  the CAN identifier names both the message group and the node address.",
     }
@@ -12661,7 +12667,7 @@ protocols! {
         rank:      3,
         status:    Declared,
         aliases:   ["utp", "microtransport"],
-        blurb:     "A BitTorrent transfer (ÂµTP)  —  file sharing over a transport designed to get out of the way of other traffic.",
+        blurb:     "A BitTorrent transfer (Ã‚ÂµTP)  —  file sharing over a transport designed to get out of the way of other traffic.",
     }
     Nflog {
         doc:       "Linux netfilter log stream (DLT_NFLOG).",
@@ -12919,7 +12925,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["profibus_dp"],
         blurb:     "A ProfibusDp protocol frame.",
     }
@@ -17795,7 +17801,7 @@ protocols! {
         color:     0x00BFFF,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["unreal_iris", "ue5_iris"],
         blurb:     "Unreal Engine 5 Iris replication system \u{2014} object state replication and prioritization.",
     }
@@ -17805,7 +17811,7 @@ protocols! {
         color:     0x00A8E8,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["unreal_iris_fast_array"],
         blurb:     "Unreal Engine Iris fast array serializer \u{2014} delta-compressed array replication.",
     }
@@ -17815,7 +17821,7 @@ protocols! {
         color:     0x0090D0,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["unreal_replication_graph", "repgraph"],
         blurb:     "Unreal Engine ReplicationGraph \u{2014} spatial cell-based actor replication routing.",
     }
@@ -17825,7 +17831,7 @@ protocols! {
         color:     0x0078B8,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["unreal_net_driver_v2"],
         blurb:     "Unreal Engine 5 extended net driver \u{2014} custom channel and packet sequencing.",
     }
@@ -17835,7 +17841,7 @@ protocols! {
         color:     0xFF6A00,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["unity_transport"],
         blurb:     "Unity Transport Package (UTP 2.x) \u{2014} reliable/unreliable UDP transport layer.",
     }
@@ -17845,7 +17851,7 @@ protocols! {
         color:     0xE55E00,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["unity_ngo"],
         blurb:     "Unity Netcode for GameObjects \u{2014} network variables, RPCs, and object spawning.",
     }
@@ -17855,7 +17861,7 @@ protocols! {
         color:     0xCC5200,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["unity_entities_netcode", "dots_netcode"],
         blurb:     "Unity Netcode for Entities (DOTS) \u{2014} component-based entity replication over UDP.",
     }
@@ -17865,7 +17871,7 @@ protocols! {
         color:     0xFF4444,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["unity_relay"],
         blurb:     "Unity Relay service \u{2014} NAT traversal and signalling for peer-to-peer connectivity.",
     }
@@ -17875,7 +17881,7 @@ protocols! {
         color:     0x22C55E,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["godot_enet"],
         blurb:     "Godot Engine ENet multiplayer peer \u{2014} ENet-based reliable UDP transport.",
     }
@@ -17885,7 +17891,7 @@ protocols! {
         color:     0x1DA853,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["godot_websocket_mp"],
         blurb:     "Godot Engine WebSocket multiplayer peer \u{2014} WebSocket-based peer-to-peer transport.",
     }
@@ -17895,7 +17901,7 @@ protocols! {
         color:     0x14B8A6,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["godot_rpc_mp"],
         blurb:     "Godot Engine high-level multiplayer RPC \u{2014} remote procedure call serialization.",
     }
@@ -17905,7 +17911,7 @@ protocols! {
         color:     0x8B5CF6,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["o3de_aznetworking", "aznetworking"],
         blurb:     "Open 3D Engine AzNetworking \u{2014} packet header, compression, and encryption.",
     }
@@ -17915,7 +17921,7 @@ protocols! {
         color:     0xEAB308,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["cryengine_net_channel"],
         blurb:     "CRYENGINE NetChannel \u{2014} channel-based streaming and RPC transport.",
     }
@@ -17925,7 +17931,7 @@ protocols! {
         color:     0xF97316,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["source2_netmessage"],
         blurb:     "Source 2 engine NetMessage \u{2014} serialized network message framing.",
     }
@@ -17935,7 +17941,7 @@ protocols! {
         color:     0xE8630F,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["source2_svcmsg"],
         blurb:     "Source 2 SVC_Messages \u{2014} server-to-client system messages (SVC_ServerInfo, SVC_PacketEntities, etc.).",
     }
@@ -21435,7 +21441,7 @@ protocols! {
         color:     0x2A4759,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["steam_sdr_relay_v3", "sdr_v3"],
         blurb:     "Steam SDR Relay v3 \u{2014} Valve\u{2019}s TURN-like relay routing for Steam Datagram Relay.",
     }
@@ -21445,7 +21451,7 @@ protocols! {
         color:     0x66C0F4,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["steam_game_networking_s2", "steamnet_s2"],
         blurb:     "Steam GameNetworkingSockets v2 \u{2014} Valve\u{2019}s encrypted UDP transport with connection management.",
     }
@@ -21465,7 +21471,7 @@ protocols! {
         color:     0x555555,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["epic_online_voice", "eos_voice"],
         blurb:     "EOS Voice \u{2014} Epic Online Services voice chat protocol.",
     }
@@ -21475,7 +21481,7 @@ protocols! {
         color:     0x7F7F7F,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["epic_dtls_p2p", "epic_dtls"],
         blurb:     "Epic DTLS P2P \u{2014} Epic\u{2019}s custom DTLS-based peer-to-peer transport.",
     }
@@ -21495,7 +21501,7 @@ protocols! {
         color:     0x2F8E2F,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["xbox_live_mpsd", "xbox_mpsd"],
         blurb:     "Xbox Live MPSD \u{2014} Multiplayer Session Directory for Xbox Live sessions.",
     }
@@ -21505,7 +21511,7 @@ protocols! {
         color:     0x50B450,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["xbox_reliable_udp", "xbox_ru"],
         blurb:     "Xbox Reliable UDP \u{2014} Microsoft\u{2019}s reliable UDP transport for Xbox game traffic.",
     }
@@ -21525,7 +21531,7 @@ protocols! {
         color:     0x0070D1,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["psn_rtc_signaling", "psn_rtc"],
         blurb:     "PSN RTC Signaling \u{2014} PlayStation Network Real-Time Communication signaling (offer/answer/ICE).",
     }
@@ -21545,7 +21551,7 @@ protocols! {
         color:     0x9C27B0,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["fortnite_replay", "fn_replay"],
         blurb:     "Fortnite replay stream wire format \u{2014} recorded game state playback chunks over the network.",
     }
@@ -21565,7 +21571,7 @@ protocols! {
         color:     0xE67E22,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["pubg_net_field", "pubg_fast_array"],
         blurb:     "PUBG net field fast-array delta compression \u{2014} PUBG\u{2019}s custom delta-compressed array replication over Unreal Engine.",
     }
@@ -21575,7 +21581,7 @@ protocols! {
         color:     0xD4A017,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["warzone_rigid", "cod_rigid_body"],
         blurb:     "Call of Duty Warzone rigid body net sync \u{2014} physics object state synchronisation for vehicles and debris.",
     }
@@ -21585,7 +21591,7 @@ protocols! {
         color:     0xFD4556,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["valorant_fow", "vct_fow"],
         blurb:     "Valorant Fog of War \u{2014} Riot\u{2019}s anti-cheat visibility system that controls what each player can see.",
     }
@@ -21595,7 +21601,7 @@ protocols! {
         color:     0xBD3944,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["valorant_netvar", "vct_netvar"],
         blurb:     "Valorant network variable replication \u{2014} replicated game state variables in Riot\u{2019}s custom netcode.",
     }
@@ -21605,7 +21611,7 @@ protocols! {
         color:     0xC62828,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["apex_netprop", "apex_legends_netprop"],
         blurb:     "Apex Legends Source-based netprop extension \u{2014} modified Source engine networked property system.",
     }
@@ -21615,7 +21621,7 @@ protocols! {
         color:     0xFF8C00,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["ow2_state_sync", "overwatch2_sync"],
         blurb:     "Overwatch 2 state synchronization \u{2014} Blizzard\u{2019}s entity and world state synchronisation for high-tickrate gameplay.",
     }
@@ -21635,7 +21641,7 @@ protocols! {
         color:     0x38B2CE,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["r6s_netvoice", "rainbow6_voice"],
         blurb:     "Rainbow Six Siege in-game voice + netcode hybrid \u{2014} voice chat multiplexed with game netcode over UDP.",
     }
@@ -21645,7 +21651,7 @@ protocols! {
         color:     0x76B900,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["gfn_stream", "nvidia_gfn_stream"],
         blurb:     "NVIDIA GeForce NOW streaming protocol \u{2014} low-latency video and audio transport for cloud gaming.",
     }
@@ -21655,7 +21661,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["gfn_ctrl", "nvidia_gfn_ctrl"],
         blurb:     "NVIDIA GFN control channel \u{2014} keyboard, mouse, gamepad input upstream and haptic feedback downstream.",
     }
@@ -21665,7 +21671,7 @@ protocols! {
         color:     0x107C10,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["xcloud_fragment", "xcloud_frag"],
         blurb:     "Xbox Cloud Gaming fragment protocol \u{2014} fragmented video/audio transport over QUIC-like datagrams.",
     }
@@ -21675,7 +21681,7 @@ protocols! {
         color:     0x0E6B0E,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["xcloud_input", "xcloud_pipe"],
         blurb:     "xCloud low-latency input pipeline \u{2014} controller input multiplexed with game telemetry on a dedicated reliable channel.",
     }
@@ -21685,7 +21691,7 @@ protocols! {
         color:     0x4285F4,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["stadia_ctrl_wifi", "stadia_wifi"],
         blurb:     "Google Stadia WiFi controller protocol \u{2014} direct controller-to-datacenter input over WiFi with custom transport.",
     }
@@ -21695,7 +21701,7 @@ protocols! {
         color:     0xFF9900,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["luna_stream", "amazon_luna"],
         blurb:     "Amazon Luna streaming transport \u{2014} video/audio frame delivery with adaptive bitrate chunks.",
     }
@@ -21705,7 +21711,7 @@ protocols! {
         color:     0x003791,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["ps_remote_play_v3", "ps_remote_play"],
         blurb:     "PlayStation Remote Play v3 \u{2014} console-to-client video/audio streaming and input feedback for PS4/PS5.",
     }
@@ -21715,7 +21721,7 @@ protocols! {
         color:     0x171A21,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["steam_rpt", "remote_play_together"],
         blurb:     "Steam Remote Play Together relay \u{2014} peer-to-peer game streaming relay with multiplexed controller inputs.",
     }
@@ -21725,7 +21731,7 @@ protocols! {
         color:     0x2A475E,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["steam_link", "steam_link_transport"],
         blurb:     "Steam Link transport protocol \u{2014} in-home game streaming audio/video capture and rendering pipeline.",
     }
@@ -21745,7 +21751,7 @@ protocols! {
         color:     0xCC6677,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["udon_net", "vrchat_udon"],
         blurb:     "VRChat Udon networking layer \u{2014} event-driven synchronisation for user-created world logic and inter-object messages.",
     }
@@ -21755,7 +21761,7 @@ protocols! {
         color:     0xBB5566,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["vrchat_ik", "vrchat_fullbody"],
         blurb:     "VRChat IK sync protocol \u{2014} low-latency full-body tracking data including hip, feet, and elbow transforms.",
     }
@@ -21765,7 +21771,7 @@ protocols! {
         color:     0xE2231A,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["roblox_physics", "rbx_physics"],
         blurb:     "Roblox physics custom replication \u{2014} authoritative physics state deltas for rigid bodies, collisions, and constraints.",
     }
@@ -21775,7 +21781,7 @@ protocols! {
         color:     0xC41E1A,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["roblox_voice", "rbx_voice"],
         blurb:     "Roblox spatial voice internal transport \u{2014} Opus-encoded audio with 3D positional metadata and talker-state signalling.",
     }
@@ -21785,7 +21791,7 @@ protocols! {
         color:     0x7766AA,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["recroom_room", "rec_room_server"],
         blurb:     "Rec Room room-server protocol \u{2014} authoritative room-state replication, player position, and custom game logic events.",
     }
@@ -21795,7 +21801,7 @@ protocols! {
         color:     0x0066FF,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["horizon_worlds", "meta_horizon"],
         blurb:     "Meta Horizon Worlds entity sync \u{2014} real-time transform, animation, and scene-object state replication.",
     }
@@ -21805,7 +21811,7 @@ protocols! {
         color:     0x22CC88,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["spatial_io_webxr", "spatial_webxr"],
         blurb:     "Spatial.io WebXR object sync \u{2014} synchronised 3D object transforms, avatar poses, and spatial audio metadata.",
     }
@@ -21825,7 +21831,7 @@ protocols! {
         color:     0x0055CC,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["playfab_party", "pf_party"],
         blurb:     "Microsoft PlayFab Party voice/chat transport \u{2014} Opus-encoded voice chat with peer-to-peer relay and lobby management.",
     }
@@ -21835,7 +21841,7 @@ protocols! {
         color:     0x0044AA,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["playfab_multiplayer_v2", "pf_multiplayer_v2"],
         blurb:     "PlayFab multiplayer server allocation v2 \u{2014} dedicated server lifecycle management over datagram control channel.",
     }
@@ -21845,7 +21851,7 @@ protocols! {
         color:     0x00CC88,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["phaser_heroiclabs", "nakama_binary", "heroiclabs"],
         blurb:     "HeroicLabs Nakama binary protocol \u{2014} game server backend socket messages for real-time multiplayer, chat, and leaderboards.",
     }
@@ -21855,7 +21861,7 @@ protocols! {
         color:     0x663399,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["darkrift2", "dr2_netcode"],
         blurb:     "DarkRift 2 networking binary protocol \u{2014} reliable UDP-over-TCP plugin architecture for Unity multiplayer.",
     }
@@ -21865,7 +21871,7 @@ protocols! {
         color:     0x0088FF,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["photon_realtime_v5", "photon_v5"],
         blurb:     "Photon Realtime protocol v5 \u{2014} binary datagram protocol for matchmaking, room management, and reliable/ unreliable event channels.",
     }
@@ -21875,7 +21881,7 @@ protocols! {
         color:     0x00AA44,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["photon_bolt", "bolt_internal"],
         blurb:     "Photon Bolt internal determinism sync \u{2014} lockstep state synchronisation with input replay and deterministic physics.",
     }
@@ -21885,7 +21891,7 @@ protocols! {
         color:     0x3388BB,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["fishnet_teleport", "fish_networking"],
         blurb:     "Fish-Networking teleport serialization \u{2014} Unity transport-layer binary protocol for reliable sequenced messages and object replication.",
     }
@@ -21895,7 +21901,7 @@ protocols! {
         color:     0x55AACC,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["mirror_fallback", "mirror_transport"],
         blurb:     "Mirror Networking fallback transport \u{2014} TCP-based reliable transport layer for Unity multiplayer when UDP/Steam is unavailable.",
     }
@@ -21905,7 +21911,7 @@ protocols! {
         color:     0xFF6600,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["faceit_ac", "faceit_plugin"],
         blurb:     "FACEIT server plugin anti-cheat RPC \u{2014} server-side agent communication for match integrity verification and player validation.",
     }
@@ -21915,7 +21921,7 @@ protocols! {
         color:     0x00A878,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["esea_ac", "esea_client"],
         blurb:     "ESEA client anti-cheat packet protocol \u{2014} ring-3 agent telemetry, process enumeration, and screen capture challenge-response.",
     }
@@ -21925,7 +21931,7 @@ protocols! {
         color:     0xCC3333,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["esl_wire", "esl_ac"],
         blurb:     "ESL Wire anti-cheat server verification \u{2014} trusted server attestation and match integrity heartbeat over TLS-encapsulated channel.",
     }
@@ -21935,7 +21941,7 @@ protocols! {
         color:     0xD13639,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["vanguard_net", "riot_vanguard"],
         blurb:     "Riot Vanguard kernel-to-userspace net intercept \u{2014} encrypted telemetry channel between kernel driver and user-space service for process introspection.",
     }
@@ -21945,7 +21951,7 @@ protocols! {
         color:     0x444444,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["battleye_pf", "be_packet_filter"],
         blurb:     "BattlEye packet filter signalling \u{2014} challenge-response heartbeat and game-state integrity checks via NDIS filter driver.",
     }
@@ -21955,7 +21961,7 @@ protocols! {
         color:     0x1DB100,
         transport: Udp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["easy_anticheat_stream", "eac_stream"],
         blurb:     "Easy Anti-Cheat stream verification \u{2014} continuous integrity stream with heartbeat, memory-scan commands, and behavioural analysis telemetry.",
     }
@@ -21965,7 +21971,7 @@ protocols! {
         color:     0x990000,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["denuvo_net", "denuvo_anti_tamper"],
         blurb:     "Denuvo Anti-Tamper online check-in protocol \u{2014} periodic activation validation, integrity token exchange, and entitlement verification.",
     }
@@ -22485,7 +22491,7 @@ protocols! {
         color:     0x1F6A6A,
         transport: Tcp,
         rank:      5,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["opcua_sec_conv_det", "ua_sec_conv_detail"],
         blurb:     "OPC UA SecureConversation Detail \u{2014} in-depth secure channel analysis with token lifecycle tracking (initial/active/renewed), sequence-number ordering, security header type identification (Asymmetric/Symmetric), and channel state machine monitoring for OPC UA security auditing.",
     }
@@ -22495,7 +22501,7 @@ protocols! {
         color:     0x1E7A6A,
         transport: Udp,
         rank:      5,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["opcua_uadp_det", "uadp_detail"],
         blurb:     "OPC UA PubSub UADP Detail \u{2014} deep OPC UA UADP network message parser with extended flags decoding (PublisherId, WriterGroupId, WriterId, DataSetWriterId), payload header analysis, dataset message type classification, and DataSetMessage header field identification for UADP telemetry.",
     }
@@ -22505,7 +22511,7 @@ protocols! {
         color:     0x3A7A5A,
         transport: Tcp,
         rank:      5,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["opcua_json_det", "ua_pubsub_json"],
         blurb:     "OPC UA PubSub JSON Detail \u{2014} detailed OPC UA JSON NetworkMessage parser for DataSetMessage, KeyValueDataSet, MetaData, KeepAlive, and Event message types with PublisherId, DataSetWriterId, WriterGroupId, and SequenceNumber field extraction from JSON-encoded telemetry.",
     }
@@ -22535,7 +22541,7 @@ protocols! {
         color:     0xCC4400,
         transport: Tcp,
         rank:      5,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["opcua_alarm_shell", "ua_alarm_detail"],
         blurb:     "OPC UA Alarm Shell \u{2014} deep OPC UA Alarms & Conditions event parser with alarm type classification (ExclusiveLimit, InclusiveLimit, Trip, RateOfChange, Discrete), state tracking (Active/Inactive/Acknowledged/Confirmed/Suppressed/Shelved), severity scoring (0-1000), and condition variable extraction for industrial safety monitoring.",
     }
@@ -22545,7 +22551,7 @@ protocols! {
         color:     0x5A4A6A,
         transport: Tcp,
         rank:      5,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["opcua_history", "ua_history_read"],
         blurb:     "OPC UA History Read Detail \u{2014} OPC UA Historical Access dissector for ReadRaw, ReadProcessed, and ReadAtTime operations with aggregate function identification (Interpolative, Average, Minimum, Maximum, StdDev), time range extraction, and continuation point tracking for historian data retrieval analysis.",
     }
@@ -22565,7 +22571,7 @@ protocols! {
         color:     0x3A6A7A,
         transport: Tcp,
         rank:      5,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["opcua_mqtt_json", "ua_mqtt_json_net"],
         blurb:     "OPC UA MQTT JSON Network \u{2014} OPC UA PubSub MQTT JSON NetworkMessage parser for DataSetMessage, MetaData, KeepAlive, Event, WriterGroup/DataSetWriter/ReaderGroup configuration, and Status messages with MQTT topic inference, payload format classification (KeyValuePair/RawData/DataSetArray), and field extraction for cloud-edge telemetry.",
     }
@@ -23279,7 +23285,7 @@ protocols! {
         aliases:   ["nebula_pq", "nebula_handshake_pq"],
         blurb:     "Nebula PQ Handshake \u{2014} Slack Nebula overlay network with post-quantum handshake extension using KEM-based key exchange for quantum-resistant mesh VPN tunnels.",
     }
-    // ── PQC Monitoring Tools (§8.1.1) ──────────────────────────────────
+    // â”€â”€ PQC Monitoring Tools (Â§8.1.1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     TlsPqcHandshakeExt {
         doc:       "TLS 1.3 PQC handshake extension (hybrid KEM parsing).",
         display:   "TLS PQC Handshake Ext",
@@ -23480,7 +23486,7 @@ protocols! {
         aliases:   ["pqc_hsm", "hsm_bridge"],
         blurb:     "PQC HSM Bridge — PQC-capable HSM-to-application bridge protocol for post-quantum key generation, signing, and key encapsulation operations offloaded to hardware security modules with ML-KEM, ML-DSA, and SLH-DSA support.",
     }
-    // ── CANopen (§9) ─────────────────────────────────────────────────
+    // â”€â”€ CANopen (Â§9) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     CanopenNmt {
         doc:       "CANopen Network Management (NMT) protocol.",
         display:   "CANopen NMT",
@@ -24267,7 +24273,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["nvlink"],
         blurb:     "NVIDIA NVLink multi-node fabric protocol \u{2014} high-bandwidth GPU interconnect with packetised transaction-layer messages for peer-to-peer memory access and synchronisation across NVSwitch topologies.",
     }
@@ -24277,7 +24283,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["nvswitch_tele"],
         blurb:     "NVIDIA NVSwitch internal telemetry \u{2014} in-band fabric health, temperature, power, and error-counter reporting from NVSwitch ASICs to the management plane.",
     }
@@ -24287,7 +24293,7 @@ protocols! {
         color:     0x8CD400,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["c2c"],
         blurb:     "NVLink-C2C chip-to-chip interconnect protocol \u{2014} NVIDIA\u{2019}s die-to-die and chip-to-chip PHY-link layer used for coherent CPU-GPU and GPU-GPU attachment over short-reach electrical channels.",
     }
@@ -24297,7 +24303,7 @@ protocols! {
         color:     0x00549F,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["ib_rdmacm_v2", "rdmacm_v2"],
         blurb:     "InfiniBand RDMA Connection Manager v2 \u{2014} connection-establishment and address-resolution protocol for RC/UC/UD QPs over InfiniBand fabric, replacing the legacy CM v1 signalling.",
     }
@@ -24307,7 +24313,7 @@ protocols! {
         color:     0x0077C8,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["ipoib_enhanced", "ipoib_enh"],
         blurb:     "IPoIB enhanced datagram mode \u{2014} improved IP-over-InfiniBand encapsulation with larger MTU, checksum offload, and scatter-gather support for high-performance Ethernet-over-IB bridging.",
     }
@@ -24327,7 +24333,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["gdr_rdma", "gpudirect_rdma"],
         blurb:     "NVIDIA GPUDirect RDMA peer-to-peer protocol \u{2014} direct GPU-to-GPU and GPU-to-NIC data-path bypassing host memory, using registered memory regions and RDMA read/write primitives.",
     }
@@ -24337,7 +24343,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["gds_dma", "gpudirect_storage"],
         blurb:     "NVIDIA GPUDirect Storage DMA protocol \u{2014} direct GPU-to-NVMe data-path with DMA scatter-gather lists, chunked transfers, and completion notifications for accelerated storage access.",
     }
@@ -24347,7 +24353,7 @@ protocols! {
         color:     0xFF6B35,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["cxl_io"],
         blurb:     "CXL.io protocol \u{2014} PCIe 5.0/6.0-based I/O semantics for CXL-attached devices, carrying configuration-space accesses, MMIO transactions, and DMA operations over the Compute Express Link fabric.",
     }
@@ -24357,7 +24363,7 @@ protocols! {
         color:     0xE63946,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["cxl_cache"],
         blurb:     "CXL.cache coherent caching protocol \u{2014} device-initiated cache coherence transactions including snoops, evictions, and writeback for coherently shared memory between host processors and CXL-attached accelerators.",
     }
@@ -24367,7 +24373,7 @@ protocols! {
         color:     0x457B9D,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["cxl_mem"],
         blurb:     "CXL.mem memory access protocol \u{2014} host-initiated and device-initiated memory load/store requests, with support for pooled memory expansion and tiered memory semantics over CXL fabric.",
     }
@@ -24377,7 +24383,7 @@ protocols! {
         color:     0x6A4C93,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["ucx_tl", "ucx_transport"],
         blurb:     "OpenUCX transport layer \u{2014} unified communication framework with support for RDMA (UCX-IB), TCP (UCX-TCP), shared memory (UCX-SM), and NVLink transports for HPC and AI workloads.",
     }
@@ -24387,7 +24393,7 @@ protocols! {
         color:     0x76B900,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["nccl_allreduce"],
         blurb:     "NVIDIA NCCL allreduce ring protocol \u{2014} GPU collective communication using ring-based allreduce with chunked data transfer, segmented ring construction, and pipelined reduce-scatter / all-gather phases.",
     }
@@ -24397,7 +24403,7 @@ protocols! {
         color:     0x5E9B00,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["nccl_allgather"],
         blurb:     "NCCL allgather algorithm \u{2014} GPU collective allgather communication supporting ring, tree, and NVLink direct topologies with multi-chunk scatter-gather and fused reduce operations.",
     }
@@ -24407,7 +24413,7 @@ protocols! {
         color:     0x8CD400,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["nccl_broadcast"],
         blurb:     "NCCL broadcast tree protocol \u{2014} GPU broadcast communication using spanning-tree topologies with pipelined chunk transfer, root-to-leaf propagation, and NVLink-aware tree construction.",
     }
@@ -24417,7 +24423,7 @@ protocols! {
         color:     0xEE4C2C,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["fsdp_shard", "pytorch_fsdp"],
         blurb:     "PyTorch Fully Sharded Data Parallel (FSDP) shard state sync protocol \u{2014} sharded parameter exchange with stateful unshard/reshard collectives and gradient synchronisation across data-parallel workers.",
     }
@@ -24427,7 +24433,7 @@ protocols! {
         color:     0x0066CC,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["deepspeed_gloo", "gloo_tcp"],
         blurb:     "DeepSpeed Gloo-TCP custom allreduce backend \u{2014} GPU collective allreduce using Gloo\u{2019}s TCP transport with chunked reduction, hierarchical aggregation, and mixed-precision support for ZeRO optimisation stages.",
     }
@@ -24437,7 +24443,7 @@ protocols! {
         color:     0x9B59B6,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["horovod_elastic"],
         blurb:     "Horovod elastic training worker discovery \u{2014} dynamic worker registration, hostlist synchronisation, and rank assignment for elastic scaling of distributed Horovod training jobs.",
     }
@@ -24447,7 +24453,7 @@ protocols! {
         color:     0xE67E22,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["megatron_tp", "tp_overlap"],
         blurb:     "Megatron-LM tensor parallelism overlap IPC \u{2014} intra-layer tensor-parallel communication with compute-communication overlap, fused allreduce/fp32-allreduce for transformer blocks.",
     }
@@ -24457,7 +24463,7 @@ protocols! {
         color:     0xD35400,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["megatron_pp", "pipeline_flush"],
         blurb:     "Megatron-LM pipeline flush scheduling protocol \u{2014} inter-microbatch pipeline flush messages for scheduling one-forward-one-backward passes with explicit flush tokens and barrier synchronisation.",
     }
@@ -24467,7 +24473,7 @@ protocols! {
         color:     0xEE4C2C,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["pytorch_rpc", "torch_rpc"],
         blurb:     "PyTorch distributed RPC framework \u{2014} remote procedure call protocol with request-reply semantics, reference-counted distributed autograd, and profiler events for multi-machine model-parallel training.",
     }
@@ -24477,7 +24483,7 @@ protocols! {
         color:     0x1A76D2,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["jax_pjit", "gspmd_sharding"],
         blurb:     "JAX pjit GSPMD sharding communication \u{2014} sharding-annotation-driven collective communication for partitioned computations with all-gather, reduce-scatter, and dynamic-slice for automated parallelisation.",
     }
@@ -24487,7 +24493,7 @@ protocols! {
         color:     0x35A560,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["pinecone_index", "pc_index_grpc"],
         blurb:     "Pinecone gRPC index upsert/query protocol \u{2014} Protobuf-based vector index operations including Upsert, Query, Fetch, Update, and Delete with namespace-scoped vector and scalar metadata filtering.",
     }
@@ -24497,7 +24503,7 @@ protocols! {
         color:     0x2D8C50,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["pinecone_collection", "pc_col_stream"],
         blurb:     "Pinecone collection internal consistency stream \u{2014} shard-level streaming for collection creation and hydration, with segment alignment, record acknowledgment, and back-pressure signalling across index replicas.",
     }
@@ -24507,7 +24513,7 @@ protocols! {
         color:     0x4D6BFE,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["weaviate_gql_grpc", "weaviate_grpc"],
         blurb:     "Weaviate GraphQL-over-gRPC internal \u{2014} gRPC-based GraphQL query execution with batched vector search, hybrid (BM25 + vector) retrieval, and object-level aggregations across shards.",
     }
@@ -24517,7 +24523,7 @@ protocols! {
         color:     0x3D5AFE,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["weaviate_hnsw", "hnsw_repl_log"],
         blurb:     "Weaviate HNSW index replication log \u{2014} incremental HNSW graph mutation log for multi-node replication, carrying insert/delete operations with layer assignment and per-entry vector data.",
     }
@@ -24527,7 +24533,7 @@ protocols! {
         color:     0xEB5454,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["qdrant_raft", "raft_log"],
         blurb:     "Qdrant Raft consensus log replication \u{2014} Raft-based log entry replication for distributed collection state, with term-index addressing, snapshot install, and leader-election messaging.",
     }
@@ -24537,7 +24543,7 @@ protocols! {
         color:     0xD43A3A,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["qdrant_quant", "quant_sync"],
         blurb:     "Qdrant binary/splat quantization segment sync \u{2014} quantised vector segment synchronisation with binary, scalar, and product-quantisation codebooks, delta-encoded subvectors, and chunked transfer.",
     }
@@ -24557,7 +24563,7 @@ protocols! {
         color:     0x008BBB,
         transport: Tcp,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["milvus_sealed", "sealed_seg_stream"],
         blurb:     "Milvus sealed segment streaming protocol — chunked streaming of sealed segment data from data nodes to query nodes, including vector fields, scalar fields, and deletion bitmaps.",
     }
@@ -24587,7 +24593,7 @@ protocols! {
         color:     0xEE4C2C,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["edge_pytorch", "pytorch_mobile"],
         blurb:     "PyTorch Mobile/Lite interpreter IPC protocol — on-device ML inference using PyTorch's optimized mobile runtime, with model serialization, tensor transport, and delegate dispatching.",
     }
@@ -24597,7 +24603,7 @@ protocols! {
         color:     0x00A9E0,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["nxp_eiq", "eiq_inference"],
         blurb:     "NXP eIQ edge intelligence inference protocol — NXP's ML inference stack for i.MX RT and LPC MCUs, with delegate dispatch to NPU, DSP, and CPU backends.",
     }
@@ -24607,7 +24613,7 @@ protocols! {
         color:     0x03234B,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["stm32cube_ai", "stm_ai"],
         blurb:     "STMicroelectronics STM32Cube.AI runtime protocol — AI model inference on STM32 MCUs using X-CUBE-AI, with neural network activation, memory pooling, and peripheral integration.",
     }
@@ -24637,7 +24643,7 @@ protocols! {
         color:     0x00B4E6,
         transport: Udp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["beckhoff_twincat", "twincat_analytics"],
         blurb:     "Beckhoff TwinCAT Analytics data streaming protocol — real-time data acquisition and analysis for Beckhoff TwinCAT systems, with cyclic data streaming, event-triggered logging, and cloud connectivity.",
     }
@@ -24647,7 +24653,7 @@ protocols! {
         color:     0x007B3D,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["rockwell_factorytalk", "factorytalk_edge"],
         blurb:     "Rockwell FactoryTalk Edge Gateway protocol — edge-to-cloud data transport for Rockwell Automation's FactoryTalk ecosystem, with tag-based data publishing, alarm/event forwarding, and secure tunneling.",
     }
@@ -24661,14 +24667,14 @@ protocols! {
         aliases:   ["schneider_ecostruxure", "ecostruxure_edge"],
         blurb:     "Schneider EcoStruxure edge-to-cloud bridge protocol — secure data exchange between EcoStruxure Automation Expert edge devices and cloud analytics platforms, with asset model synchronization and time-series ingestion.",
     }
-    // ── Proprietary Fieldbus Protocols (§10) ──────────────────────────
+    // â”€â”€ Proprietary Fieldbus Protocols (Â§10) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     IoLink {
         doc:       "IO-Link (IEC 61131-9) smart sensor/actuator protocol.",
         display:   "IO-Link",
         color:     0x005A9E,
         transport: Other,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["iolink", "iec_61131_9"],
         blurb:     "IO-Link (IEC 61131-9) — point-to-point communication protocol for smart sensors and actuators with cyclic process data exchange, acyclic on-request data (ISDU), and event-driven diagnostics.",
     }
@@ -24678,7 +24684,7 @@ protocols! {
         color:     0xFF6600,
         transport: Other,
         rank:      3,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["as_interface", "asi"],
         blurb:     "AS-Interface (Actuator-Sensor Interface) — two-wire fieldbus for binary sensors and actuators with cyclic I/O data exchange, master-slave polling, and safety monitor extensions.",
     }
@@ -24739,7 +24745,7 @@ protocols! {
         color:     0xFF4500,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["fsoe", "fail_safe_ethercat", "safety_over_ethercat"],
         blurb:     "FSoE (Fail Safe over EtherCAT) — functional safety protocol embedded within EtherCAT datagrams for SIL 3 safety communication with connection monitoring, CRC integrity, and watchdog-based fail-safe state transitions.",
     }
@@ -24749,11 +24755,11 @@ protocols! {
         color:     0x00695C,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["profidrive", "drive_profile", "pi_drive"],
         blurb:     "PROFIdrive — application profile for drive technology over PROFIBUS and PROFINET with standardized parameter access, cyclic setpoint/actual value exchange, and isochronous axis control.",
     }
-    // ── Siemens Ecosystem (§10.2.1) ────────────────────────────────────
+    // â”€â”€ Siemens Ecosystem (Â§10.2.1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ProfinetRtSiemens {
         doc:       "Siemens PROFINET RT (Real-Time) extended frame.",
         display:   "PROFINET RT (Siemens)",
@@ -24780,7 +24786,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["profibus_dp_siemens", "pb_dp_siemens"],
         blurb:     "Siemens PROFIBUS DP V2/V3 extensions — acyclic DP-V2 services for parametrization, alarm handling, and isochronous slave-to-slave communication with Siemens-specific FDL status, extended diagnostic data, and redundancy management.",
     }
@@ -24800,7 +24806,7 @@ protocols! {
         color:     0x0E7490,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["sinamics_drive_profile", "sinamics_profile"],
         blurb:     "Siemens SINAMICS drive profile — Siemens-specific PROFIdrive extensions including encoder emulation with virtual encoder mapping, safety limited speed (SLS) telegrams, dynamic drive control word extensions, and parameter access over the DPV1 acyclic channel.",
     }
@@ -24830,7 +24836,7 @@ protocols! {
         color:     0xE11D48,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["scalance_x_ring", "scalance_hrp"],
         blurb:     "Siemens SCALANCE X HRP (High-Speed Redundancy Protocol) — industrial Ethernet ring redundancy with sub-50ms failover, ring port status monitoring, topology change notification, and configuration synchronization for SCALANCE X managed switches.",
     }
@@ -24840,7 +24846,7 @@ protocols! {
         color:     0x065F46,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["siemens_l2_telegram", "pn_dcp_l2"],
         blurb:     "Siemens Layer-2 discovery telegram — PROFINET DCP (Discovery and Configuration Protocol) for NameOfStation assignment, IP parameter configuration, device identification, and factory reset operations at the Ethernet data link layer.",
     }
@@ -24860,7 +24866,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["siemens_opc_ua_model", "s7_opcua_companion"],
         blurb:     "Siemens OPC UA Companion Model — Siemens-specific NodeId namespace mapping, device-specific variable type definitions, method call structures, and companion specification extensions for SIMATIC S7-1500 PLCs in the OPC UA information model.",
     }
@@ -24870,18 +24876,18 @@ protocols! {
         color:     0x7C3AED,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["siemens_industrial_5g", "ind_5g_siemens"],
         blurb:     "Siemens Industrial 5G — private 5G network management protocol for industrial campuses with Siemens-specific UPF (User Plane Function) configuration, NEF (Network Exposure Function) extensions for deterministic latency, and 5G TSN integration for time-critical control.",
     }
-    // ── Rockwell / Allen-Bradley Ecosystem (§10.2.2) ──────────────────
+    // â”€â”€ Rockwell / Allen-Bradley Ecosystem (Â§10.2.2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     EtherNetIpRockwell {
         doc:       "Rockwell EtherNet/IP CIP extended services.",
         display:   "EtherNet/IP (Rockwell)",
         color:     0xE11D48,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["ether_net_ip_rockwell", "rockwell_enip"],
         blurb:     "Rockwell EtherNet/IP CIP extended services — Rockwell-specific Class 1 implicit messaging extensions for high-performance I/O, including multiple producer-consumer relationships, connection priority modulation, and extended forward-open service parameters beyond the ODVA specification.",
     }
@@ -24891,7 +24897,7 @@ protocols! {
         color:     0xDC2626,
         transport: Udp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["cip_safety_rockwell", "rockwell_cip_safety"],
         blurb:     "Rockwell CIP Safety — GuardLogix-specific safety signature verification, safety timestamp synchronization, and SIL 3 safety connection management with dual-channel comparison and discrepancy time monitoring for fail-safe operation.",
     }
@@ -24901,7 +24907,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["pccc_extended", "ab_pccc", "plc5_commands"],
         blurb:     "Allen-Bradley PCCC (Programmable Controller Communications Commands) — extended command set for PLC-5, SLC-500, and MicroLogix controllers including protected file read/write, file copy/fill, diagnostic counters, and online program changes beyond the basic PCCC command set.",
     }
@@ -24911,7 +24917,7 @@ protocols! {
         color:     0x0891B2,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["df1_full_duplex_ext", "ab_df1_ext"],
         blurb:     "Allen-Bradley DF1 Full-Duplex — extended CRC/BCC error-checking modes with packet sequence numbering, extended status byte reporting, and multi-packet transfers for large block reads/writes on DH-485 and RS-232 serial links.",
     }
@@ -24941,7 +24947,7 @@ protocols! {
         color:     0x0D9488,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["stratix_switch_telemetry", "stratix_telemetry"],
         blurb:     "Rockwell Stratix Switch — CIP-based industrial Ethernet switch telemetry for port mirroring configuration, QoS policy deployment, ring health monitoring, and CIP-to-SNMP bridge integration on Stratix 5400/5700 managed switches powered by Cisco IOS.",
     }
@@ -24951,7 +24957,7 @@ protocols! {
         color:     0x0E7490,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["powerflex_drive_cip", "pf_drive_cip", "ab_powerflex"],
         blurb:     "Rockwell PowerFlex Drive — CIP energy object (Class 0x4E) for drive energy consumption monitoring, torque profiling, motor thermal capacity tracking, and Rockwell-specific drive configuration parameters for PowerFlex 525/527/755 series variable-frequency drives.",
     }
@@ -24961,7 +24967,7 @@ protocols! {
         color:     0x065F46,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["control_logix_backplane", "clx_backplane", "1756_backplane"],
         blurb:     "ControlLogix 1756 backplane — chassis-level bus protocol for multi-controller communication across the ControlLogix backplane, covering owner/observer controller relationships, redundant controller synchronization, and module-level health monitoring across standard/redundant chassis configurations.",
     }
@@ -24971,11 +24977,11 @@ protocols! {
         color:     0xDC2626,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["guard_i_o_safety", "guard_io_safety", "ab_guard_safety"],
         blurb:     "Rockwell Guard I/O — safety module telemetry with per-channel individual diagnostics, discrepancy time monitoring for dual-channel inputs, safe-state output assertion, and SIL 3 certified communication integrity verification for distributed safety I/O modules on EtherNet/IP.",
     }
-    // ── Beckhoff / EtherCAT Ecosystem (§10.2.3) ────────────────────────
+    // â”€â”€ Beckhoff / EtherCAT Ecosystem (Â§10.2.3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     EthercatBeckhoffMdp {
         doc:       "Beckhoff EtherCAT MDP (Modular Device Profile).",
         display:   "EtherCAT MDP (Beckhoff)",
@@ -24992,7 +24998,7 @@ protocols! {
         color:     0xEA580C,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["ethercat_safety_beckhoff", "twinsafe", "beckhoff_fsoe"],
         blurb:     "Beckhoff TwinSAFE — Fail Safe over EtherCAT (FSoE) safety protocol with Beckhoff safe logic editor connection validation, safety function block parameterization, and TwinSAFE group communication for distributed safe I/O and drive safety via the EL6900/EL6910 safety logic terminals.",
     }
@@ -25002,7 +25008,7 @@ protocols! {
         color:     0x1D4ED8,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["twincat_ads_detail", "ads_detail", "ams_netid"],
         blurb:     "Beckhoff TwinCAT ADS (Automation Device Specification) — detailed decode of the ADS command structure including AMS NetID routing between TwinCAT runtimes, sum commands for batch register access, device notification subscriptions, and symbolic access via the AMS router.",
     }
@@ -25012,7 +25018,7 @@ protocols! {
         color:     0x2563EB,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["twincat_router_telemetry", "ads_router_telemetry"],
         blurb:     "TwinCAT ADS Router telemetry — real-time task jitter measurement, cycle time exceedance notifications, CPU load monitoring per TwinCAT runtime, and communication load statistics for the AMS router diagnostic data stream used by the TwinCAT System Manager.",
     }
@@ -25052,11 +25058,11 @@ protocols! {
         color:     0x6366F1,
         transport: Other,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["beckhoff_xplanar_mover", "xplanar", "xplanar_mover"],
         blurb:     "Beckhoff XPlanar — protocol for free-moving planar transport system with maglev mover position tracking, 6-DOF tilt sensing, collision domain management, trajectory planning commands, and wireless coil commutation data exchange for the XPlanar planar motor system.",
     }
-    // ── Other Vendor Fieldbuses (§10.2.4) ─────────────────────────────
+    // â”€â”€ Other Vendor Fieldbuses (Â§10.2.4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MitsubishiMelsecProto {
         doc:       "Mitsubishi MELSEC MC protocol (binary & ASCII).",
         display:   "MELSEC MC Protocol",
@@ -25095,7 +25101,7 @@ protocols! {
         color:     0x16A34A,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["keyence_kv_ethernet", "kv_ethernet", "keyence_kv"],
         blurb:     "Keyence KV-8000 and KV Nano series Ethernet protocol — PLC communication with ladder program upload/download, device memory read/write, remote run/stop control, and Keyence vision system trigger and inspection result relay over TCP/IP.",
     }
@@ -25115,7 +25121,7 @@ protocols! {
         color:     0xE11D48,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["abb_robot_web_service", "abb_rw", "abb_robot_ws"],
         blurb:     "ABB Robot Web Services (RW 7.x) — RESTful bridge for RAPID-to-controller communication enabling motion data streaming, program upload/download, I/O signal monitoring, and real-time robot state subscription through the ABB controller's built-in web server.",
     }
@@ -25125,7 +25131,7 @@ protocols! {
         color:     0x2563EB,
         transport: Udp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["kuka_robot_sensor_interface", "kuka_rsi", "robot_sensor_iface"],
         blurb:     "KUKA Robot Sensor Interface (RSI) — real-time XML frame stream for sensor-guided robot motion with KUKA-specific sensor correction vectors, force/torque feedback integration, and position override commands transmitted cyclically over UDP at up to 1 kHz for closed-loop sensor-based robot control.",
     }
@@ -25145,7 +25151,7 @@ protocols! {
         color:     0x0E7490,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["yaskawa_memobus_tcp_detail", "memobus_tcp", "yaskawa_memobus"],
         blurb:     "Yaskawa MEMOBUS/TCP — extended register access protocol for Yaskawa drive and motion controllers with Sigma-7 EtherCAT to MEMOBUS gateway bridging, inverter parameter access beyond standard Modbus addressing, and multi-drive register block reads over TCP port 502.",
     }
@@ -25155,7 +25161,7 @@ protocols! {
         color:     0x9333EA,
         transport: Tcp,
         rank:      4,
-        status:    Dissected,
+        status:    Declared,
         aliases:   ["bosch_rexroth_open_core", "rexroth_open_core", "b_r_open_core"],
         blurb:     "Bosch Rexroth Open Core Interface — cross-platform communication protocol for IndraMotion MLC/XLC controllers enabling app-to-app bridging between IEC 61131-3 PLC programs, high-level language applications (C++, Java, C#), and IIoT cloud connectivity through the Open Core Engineering interface.",
     }
@@ -25388,7 +25394,7 @@ mod tests {
 
     /// Every protocol must be reachable by *some* typeable filter word. This is
     /// the check that was missing before the registry: 27 protocols (redis,
-    /// kafka, bgp, smb, modbus…) had working match logic but were absent from
+    /// kafka, bgp, smb, modbusâ€¦) had working match logic but were absent from
     /// the hand-maintained keyword list, so `redis` failed to parse and
     /// silently degraded to a substring search.
     #[test]
@@ -25480,6 +25486,7 @@ mod tests {
     /// exists to catch. Test modules are excluded deliberately: a variant only
     /// a test can produce is exactly what is being looked for.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn declared_status_matches_the_dispatch() {
         use std::fs;
         use std::path::Path;

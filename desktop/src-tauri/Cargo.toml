@@ -3,6 +3,10 @@ name = "netscope-desktop"
 version = "0.2.0"
 edition = "2021"
 publish = false
+# Reported unlicensed by `cargo deny check licenses`. This is the desktop
+# application itself — the artifact users install — so of the three crates that
+# were missing this, it is the one that mattered most.
+license.workspace = true
 
 [lib]
 name = "netscope_desktop_lib"
@@ -20,4 +24,4 @@ maxminddb = "0.27"
 # Same 0.4 as netscope-core: the escalation engine's API is in `chrono` types,
 # so driving it from here means speaking them.
 chrono = "0.4"
-netscope-core = { path = "../../crates/core" }
+netscope-core = { path = "../../crates/core", version = "0.2.0" }

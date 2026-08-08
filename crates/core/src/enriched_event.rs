@@ -65,16 +65,30 @@ pub struct ThreatIntelEnrichment {
     pub target_ip: HashMap<String, String>,
 }
 
-/// 7-Day Baseline Statistics (§1.2.1).
+/// How this event compares with what is normal for the pair — when that is
+/// known, which is currently never.
+///
+/// Every field here except `current_data_volume_mb` used to be a constant
+/// dressed as a measurement: a 7-day average of 0.2, a 7-day volume of 0.05 MB,
+/// `protocol_normal_for_host: true` unconditionally, and a `volume_vs_baseline`
+/// of "196×" for any packet over 100 KB. The two ratio strings were then
+/// computed *against those constants*, so even the arithmetic was real work on
+/// invented inputs.
+///
+/// They are `Option` now and all of them are `None`. netscope does have a real
+/// baseline engine in [`crate::baseline`]; nothing here is wired to it yet, and
+/// until it is, "not known" is the only true answer. `None` renders as absent
+/// rather than as a suspiciously round number.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BaselineEnrichment {
-    pub actor_to_target_7day_avg: f64,
-    pub current_vs_baseline: String,
-    pub time_of_day_normal: bool,
-    pub protocol_normal_for_host: bool,
-    pub data_volume_7day_avg_mb: f64,
+    pub actor_to_target_7day_avg: Option<f64>,
+    pub current_vs_baseline: Option<String>,
+    pub time_of_day_normal: Option<bool>,
+    pub protocol_normal_for_host: Option<bool>,
+    pub data_volume_7day_avg_mb: Option<f64>,
+    /// Measured from the packet, so this one is real.
     pub current_data_volume_mb: f64,
-    pub volume_vs_baseline: String,
+    pub volume_vs_baseline: Option<String>,
 }
 
 /// MITRE ATT&CK Item (§1.2.1).
@@ -263,22 +277,16 @@ impl EnrichedEvent {
 
         // Baseline Enrichment
         let anomaly_val = siem_evt.anomaly_score.unwrap_or(0.0);
+        // Nothing here observes history, so nothing here can compare against
+        // it. See the type's own doc for what these used to contain.
         let baseline_enrichment = BaselineEnrichment {
-            actor_to_target_7day_avg: 0.2,
-            current_vs_baseline: if anomaly_val > 0.0 {
-                format!("{:.0}×", (anomaly_val / 2.0).max(1.0))
-            } else {
-                "1×".to_string()
-            },
-            time_of_day_normal: anomaly_val < 30.0,
-            protocol_normal_for_host: true,
-            data_volume_7day_avg_mb: 0.05,
+            actor_to_target_7day_avg: None,
+            current_vs_baseline: None,
+            time_of_day_normal: None,
+            protocol_normal_for_host: None,
+            data_volume_7day_avg_mb: None,
             current_data_volume_mb: (pkt.length as f64 / 1024.0 / 1024.0).max(0.01),
-            volume_vs_baseline: if pkt.length > 100_000 {
-                "196×".to_string()
-            } else {
-                "1×".to_string()
-            },
+            volume_vs_baseline: None,
         };
 
         // MITRE ATT&CK Enrichment
@@ -319,7 +327,7 @@ impl EnrichedEvent {
         // Human Readable Block (§1.2.3 Guarantee: ALWAYS non-empty)
         let one_line =
             format!(
-            "Workstation {} ({}) accessed {} ({}) over {} {}, {} — data volume: {}, timestamp: {}",
+            "Workstation {} ({}) accessed {} ({}) over {} {}, {} — data volume: {:.2} MB, timestamp: {}",
             actor.hostname,
             actor.user.as_deref().unwrap_or("unknown"),
             target.hostname,
@@ -327,7 +335,10 @@ impl EnrichedEvent {
             if is_encrypted { "encrypted" } else { "plaintext" },
             protocol_enrichment.application,
             if anomaly_val > 0.0 { "ANOMALOUS ACTIVITY" } else { "normal flow" },
-            baseline_enrichment.volume_vs_baseline,
+            // The measured size, not a ratio against a baseline that does not
+            // exist. This slot used to read "196×", which is a claim about
+            // history rather than about this packet.
+            baseline_enrichment.current_data_volume_mb,
             siem_evt.timestamp
         );
 

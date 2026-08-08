@@ -1,0 +1,44 @@
+[package]
+name = "netscope-core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# Deliberately its own workspace root rather than a member of the one above.
+#
+# Without this table, cargo refuses to build anything here:
+#
+#   error: current package believes it's in a workspace when it's not
+#
+# Adding `fuzz` to the root `workspace.members` is the other way out, and it is
+# the wrong one: this package needs a nightly toolchain and a sanitiser
+# runtime, so folding it in would drag both into every ordinary `cargo build`
+# and `cargo test --workspace`. `cargo fuzz init` emits this empty table for
+# exactly that reason; it was missing here.
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+# This said `path = ".."`, which is the workspace root — a virtual manifest
+# with no `[package]` in it. The dependency could never have resolved even once
+# the workspace error above was out of the way.
+[dependencies.netscope-core]
+path = "../crates/core"
+
+[[bin]]
+name = "parse_packet_fuzz"
+path = "fuzz_targets/parse_packet_fuzz.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "dissect_protocols_fuzz"
+path = "fuzz_targets/dissect_protocols_fuzz.rs"
+test = false
+doc = false
+bench = false

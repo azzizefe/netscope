@@ -454,7 +454,9 @@ impl DpiEngine {
                 severity: "medium".to_string(),
                 category: "credentials".to_string(),
                 title: "Unencrypted Credential / Token In Payload".to_string(),
-                description: "Cleartext credentials or API tokens detected in unencrypted packet payload.".to_string(),
+                description:
+                    "Cleartext credentials or API tokens detected in unencrypted packet payload."
+                        .to_string(),
             });
         }
 
@@ -539,7 +541,9 @@ mod tests {
             protocol: Protocol::Http,
             length: 120,
             summary: "GET /query?id=1 OR 1=1 HTTP/1.1".to_string(),
-            data: Bytes::from_static(b"GET /query?id=1 UNION SELECT * FROM users HTTP/1.1\r\nHost: example.com\r\n\r\n"),
+            data: Bytes::from_static(
+                b"GET /query?id=1 UNION SELECT * FROM users HTTP/1.1\r\nHost: example.com\r\n\r\n",
+            ),
             llm: None,
         };
         let res = DpiEngine::inspect(&packet);

@@ -315,8 +315,15 @@ README'de QUIC "590 protokol" listesinde yer alıyor, ancak QUIC decryption ve H
 ### 18. Automated Security Scanning
 
 - **`cargo audit`** CI'da yok — bilinen CVE'li bağımlılıklar kontrol edilmiyor
-- **Fuzzing** yok — AFL/libFuzzer ile dissector'ları fuzz'lamak, memory safety açıkları bulur
-- Untrusted input parsing yapan her dissector, fuzzing hedefi olmalı
+- ~~**Fuzzing** yok~~ — **2026-08-04'te kuruldu.** `fuzz/parse_packet_fuzz`,
+  `dissectors::dissect()`'i libFuzzer ile sürüyor ve CI'da her push'ta 60 saniye
+  koşuyor. Dikkat: `fuzz/` dizini bir süredir duruyordu ama **hiçbir şey
+  fuzz'lamıyordu** — hedefin gövdesi `cargo fuzz init` şablonunun
+  `// fuzzed code goes here` satırıydı ve manifest iki yerden bozuktu
+  (`[workspace]` tablosu yok, `netscope-core` yolu workspace köküne bakıyor),
+  yani paket zaten derlenmiyordu. Ayrıntı: [fuzz/README.md](../fuzz/README.md)
+- Untrusted input parsing yapan her dissector, fuzzing hedefi olmalı — şu an tek
+  hedef var ve o da `dissect()` üzerinden hepsine ulaşıyor
 
 ### 19. Telemetry ve Usage Analytics (Opsiyonel, Opt-in)
 

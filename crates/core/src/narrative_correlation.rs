@@ -41,11 +41,20 @@ pub struct AttackNarrative {
     pub title: String,
     pub actor_id: String,
     pub target_id: String,
-    pub risk_score: u8,
+    /// `risk_score: u8` was here, a literal 92 on every narrative this engine
+    /// ever produced, immediately above `confidence_pct`, which *is* computed
+    /// from how many of the four pattern stages were observed. Two scores side
+    /// by side, one real and one invented, is worse than one score: the reader
+    /// cannot tell which is which. Removed rather than guessed at — risk is not
+    /// confidence, and nothing here measures risk.
     pub confidence_pct: u8,
     pub is_confirmed: bool, // true if 100% matched ("kesin"), false if partially completed ("muhtemel")
     pub completion_status_text: String,
-    pub total_duration_str: String,
+    /// `total_duration_str: String` was here and was likewise fixed —
+    /// "3 dakika 39 saniye", for an attack of any length.
+    /// [`NarrativeStep::timestamp_str`] is a preformatted string rather than a
+    /// timestamp, so there is nothing to subtract; the steps carry their own
+    /// times and a reader can see the span.
     pub timeline_steps: Vec<NarrativeStep>,
     pub decision_text: String,
     pub formatted_box_narrative: String,
@@ -331,11 +340,9 @@ impl NarrativeCorrelationEngine {
             title: "Potential Data Exfiltration / Insider Access".to_string(),
             actor_id: actor.to_string(),
             target_id: target.to_string(),
-            risk_score: 92,
             confidence_pct,
             is_confirmed,
             completion_status_text,
-            total_duration_str: "3 dakika 39 saniye".to_string(),
             timeline_steps: steps,
             decision_text,
             formatted_box_narrative,
@@ -481,7 +488,8 @@ mod tests {
             .contains("Attack Narrative"));
         assert!(narrative.formatted_box_narrative.contains("HR-DESK-023"));
         assert!(narrative.formatted_box_narrative.contains("FIN-DB-01"));
-        assert_eq!(narrative.risk_score, 92);
+        // `assert_eq!(narrative.risk_score, 92)` was here, pinning the literal
+        // in place rather than checking anything about the narrative.
         assert!(narrative.confidence_pct > 0);
 
         // §2.2 Visual Narrative Diagram Assertions

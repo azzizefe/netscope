@@ -59,10 +59,7 @@ impl SensorWatchdog {
     /// Create a new Sensor Watchdog with specified resource limits.
     pub fn new(limits: ResourceLimits) -> Self {
         Self {
-            sampler: AdaptiveSampler::new(
-                limits.max_cpu_percent,
-                limits.max_ring_fill_percent,
-            ),
+            sampler: AdaptiveSampler::new(limits.max_cpu_percent, limits.max_ring_fill_percent),
             limits,
             buffered_frames_in_ram: 0,
         }

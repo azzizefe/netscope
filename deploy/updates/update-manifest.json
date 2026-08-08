@@ -1,0 +1,28 @@
+{
+  "channels": {
+    "stable": {
+      "latest_version": "0.2.0",
+      "download_url": "https://updates.netscope.io/releases/0.2.0/netscope-agent-0.2.0-x64.msi",
+      "checksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "release_notes": "https://netscope.io/changelog#0.2.0",
+      "min_version_required": "0.1.0",
+      "rollout_percentage": 100
+    },
+    "beta": {
+      "latest_version": "0.2.1-beta.1",
+      "download_url": "https://updates.netscope.io/releases/0.2.1-beta.1/netscope-agent-0.2.1-beta.1-x64.msi",
+      "checksum_sha256": "ca978112ca1bbdcafac231b39a23dac405910482855b3624020376f340260461",
+      "release_notes": "https://netscope.io/changelog#0.2.1-beta.1",
+      "min_version_required": "0.2.0",
+      "rollout_percentage": 5
+    },
+    "canary": {
+      "latest_version": "0.2.1-canary.3",
+      "download_url": "https://updates.netscope.io/releases/0.2.1-canary.3/netscope-agent-0.2.1-canary.3-x64.msi",
+      "checksum_sha256": "11a5270097096b7974950e3fa0ae4563a6697b0a701e1a539b56f3f019f71c42",
+      "release_notes": "https://netscope.io/changelog#canary",
+      "min_version_required": "0.2.0",
+      "rollout_percentage": 1
+    }
+  }
+}

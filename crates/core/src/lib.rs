@@ -24,11 +24,6 @@ pub mod alerting;
 pub mod api_server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod dpdk;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ebpf_xdp;
-pub mod compliance_reports;
 pub mod config;
 pub mod crypto;
 #[cfg(not(target_arch = "wasm32"))]
@@ -37,7 +32,9 @@ pub mod deployment;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod discover;
 pub mod dissectors;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod dpi;
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editcap;
 pub mod education;
@@ -72,7 +69,6 @@ pub mod models;
 pub mod multi_tenancy;
 pub mod names;
 pub mod narrative_correlation;
-pub mod netscope_exclusive_features;
 pub mod network_identity;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod notifications;
@@ -98,9 +94,15 @@ pub mod registry;
 pub mod remote;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rotate;
-pub mod scalability;
 pub mod scada_dpi;
+pub mod scalability;
 pub mod security;
+// Holds a `pipeline::AdaptiveSampler`, and `pipeline` is gated below, so an
+// ungated declaration here breaks `cargo build -p netscope-wasm --target
+// wasm32-unknown-unknown` — CI's whole frontend job — with an
+// `unresolved import crate::pipeline` that names the wrong file. See the same
+// note on `Notifications::to_engine_config`.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod sensor_watchdog;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod session_manager;
@@ -108,12 +110,9 @@ pub mod session_manager;
 pub mod siem;
 pub mod siem_comparison;
 pub mod siem_connectors;
-pub mod siem_quality_metrics;
 pub mod stats;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stream;
-pub mod test_data;
-pub mod test_strategy;
 pub mod threat;
 pub mod threat_intel;
 pub mod tls_keylog;

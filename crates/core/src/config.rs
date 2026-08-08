@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 //! Layered configuration — a single, discoverable home for netscope's
-//! user settings, shared by the TUI and desktop (ROADMAP §2.4).
+//! user settings, shared by the TUI and desktop (ROADMAP Â§2.4).
 //!
 //! Everything lives under one directory:
 //!
 //! ```text
 //! ~/.netscope/
-//! ├── config.toml          # this file — global settings + paths below
-//! ├── profiles/            # named overlays merged on top of config.toml
-//! │   ├── http-analysis.toml
-//! │   └── security.toml
-//! ├── coloring-rules.toml  # user coloring rules (see crate::coloring)
-//! ├── plugins/             # declarative protocol plugins (see crate::plugins)
-//! │   └── redis.toml
-//! └── geoip.mmdb           # offline GeoIP database
+//! â”œâ”€â”€ config.toml          # this file — global settings + paths below
+//! â”œâ”€â”€ profiles/            # named overlays merged on top of config.toml
+//! â”‚   â”œâ”€â”€ http-analysis.toml
+//! â”‚   â””â”€â”€ security.toml
+//! â”œâ”€â”€ coloring-rules.toml  # user coloring rules (see crate::coloring)
+//! â”œâ”€â”€ plugins/             # declarative protocol plugins (see crate::plugins)
+//! â”‚   â””â”€â”€ redis.toml
+//! â””â”€â”€ geoip.mmdb           # offline GeoIP database
 //! ```
 //!
 //! The location is `$NETSCOPE_CONFIG_DIR` when set (handy for tests and
@@ -605,6 +605,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn no_oncall_listed_means_no_rotation() {
         let cfg = Escalation::default();
         assert!(cfg.shift_rotations().is_empty());
@@ -613,6 +614,7 @@ mod tests {
     /// A blank integration key must read as absent — the engine branches on
     /// `Some(key)` to decide whether it can page PagerDuty at all.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn blank_integration_key_becomes_none() {
         let mut p = person("ayse");
         p.integration_key = "   ".into();
@@ -646,6 +648,7 @@ mod tests {
     /// The whole `[escalation]` block has to survive a real TOML round-trip,
     /// since that is the only way anyone configures it.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn escalation_parses_from_toml() {
         let dir = temp_dir("escalation");
         std::fs::write(
@@ -656,7 +659,7 @@ enabled = true
 step_minutes = [5, 10, 20]
 
 [[escalation.oncall]]
-name = "Ayşe"
+name = "AyÅŸe"
 email = "ayse@example.com"
 integration_key = "R0UT1NG"
 
@@ -670,13 +673,14 @@ email = "mehmet@example.com"
         let cfg = Config::load_from(&dir);
         assert!(cfg.escalation.enabled);
         assert_eq!(cfg.escalation.oncall.len(), 2);
-        assert_eq!(cfg.escalation.oncall[0].name, "Ayşe");
+        assert_eq!(cfg.escalation.oncall[0].name, "AyÅŸe");
         assert_eq!(cfg.escalation.step_minutes, vec![5, 10, 20]);
         assert_eq!(cfg.escalation.shift_rotations().len(), 53);
     }
 
     /// Escalation stays off unless asked for — it pages people.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn escalation_is_off_by_default() {
         let dir = temp_dir("escalation-default");
         let cfg = Config::load_from(&dir);
@@ -685,6 +689,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn defaults_when_no_file() {
         let dir = std::env::temp_dir().join("netscope-cfg-none");
         let cfg = Config::load_from(&dir);
@@ -721,6 +726,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn absolute_paths_are_kept() {
         let mut cfg = Config {
             dir: PathBuf::from("/cfg"),
@@ -737,6 +743,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn env_override_is_honored() {
         // Set the override, resolve, then restore to avoid cross-test leakage.
         let prev = std::env::var_os(CONFIG_DIR_ENV);
@@ -749,6 +756,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn profile_overrides_only_what_it_sets() {
         let dir = temp_dir("profile-merge");
         std::fs::write(
@@ -772,6 +780,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn profile_key_in_config_is_applied_on_load() {
         let dir = temp_dir("profile-key");
         std::fs::write(dir.join("config.toml"), "[general]\nprofile = \"quiet\"\n").unwrap();
@@ -788,6 +797,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn missing_profile_falls_back_to_base() {
         let dir = temp_dir("profile-missing");
         std::fs::write(dir.join("config.toml"), "[geoip]\ndatabase = \"x.mmdb\"\n").unwrap();
@@ -797,6 +807,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn coloring_rules_toml_form() {
         let rules = parse_coloring_rules(
             "[[rule]]\ncolor = \"ef4444\"\nfilter = 'tcp.flags.rst == 1'\n\n\
@@ -808,6 +819,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn coloring_rules_legacy_line_form() {
         let rules = parse_coloring_rules(
             "# comment\n\
@@ -822,6 +834,7 @@ email = "mehmet@example.com"
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn profiles_are_listed_sorted() {
         let dir = temp_dir("profile-list");
         std::fs::create_dir_all(dir.join("profiles")).unwrap();
