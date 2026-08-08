@@ -1,13 +1,13 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-//! Layered configuration â€” a single, discoverable home for netscope's
+//! Layered configuration — a single, discoverable home for netscope's
 //! user settings, shared by the TUI and desktop (ROADMAP Â§2.4).
 //!
 //! Everything lives under one directory:
 //!
 //! ```text
 //! ~/.netscope/
-//! â”œâ”€â”€ config.toml          # this file â€” global settings + paths below
+//! â”œâ”€â”€ config.toml          # this file — global settings + paths below
 //! â”œâ”€â”€ profiles/            # named overlays merged on top of config.toml
 //! â”‚   â”œâ”€â”€ http-analysis.toml
 //! â”‚   â””â”€â”€ security.toml
@@ -47,7 +47,7 @@
 //! falls through, so a profile only has to state its differences:
 //!
 //! ```toml
-//! # profiles/security.toml â€” only overrides what it cares about
+//! # profiles/security.toml — only overrides what it cares about
 //! [general]
 //! resolve_hostnames = false
 //! ```
@@ -58,7 +58,7 @@
 
 // Only `shift_rotations` uses this, and that is `cfg(not(target_arch =
 // "wasm32"))` because the escalation module it returns types from is not built
-// for wasm32 â€” so on that target the import is unused and warns. The host
+// for wasm32 — so on that target the import is unused and warns. The host
 // clippy job never sees it (it lints the host target only); the wasm32 build
 // does.
 #[cfg(not(target_arch = "wasm32"))]
@@ -165,7 +165,7 @@ impl Default for Plugins {
 /// Where alerts are delivered, on top of showing up in the UI.
 ///
 /// Every field is optional and empty by default, and a channel counts as
-/// configured only when the fields it actually needs are filled in â€” see
+/// configured only when the fields it actually needs are filled in — see
 /// [`crate::notifications::NotificationConfig`], which this converts into.
 /// Nothing is enabled implicitly: an unconfigured channel is simply never
 /// contacted, which is why the SOC view can report each one's real state
@@ -182,8 +182,8 @@ pub struct Notifications {
     /// `"starttls"` (default), `"implicit"` or `"none"`.
     ///
     /// Explicit rather than inferred from the port: a silent downgrade to
-    /// plaintext is how credentials end up on the wire. `"none"` is allowed â€”
-    /// a local relay on port 25 is a real deployment â€” but it has to be asked
+    /// plaintext is how credentials end up on the wire. `"none"` is allowed —
+    /// a local relay on port 25 is a real deployment — but it has to be asked
     /// for by name.
     pub email_tls: String,
 
@@ -202,7 +202,7 @@ impl Notifications {
     /// Gated like the module it returns: `notifications` is
     /// `#[cfg(not(target_arch = "wasm32"))]` in `lib.rs` (it sends mail and
     /// opens sockets), so referring to it unconditionally broke the wasm32
-    /// build of this crate â€” and with it the display-filter engine the desktop
+    /// build of this crate — and with it the display-filter engine the desktop
     /// frontend loads.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn to_engine_config(&self) -> crate::notifications::NotificationConfig {
@@ -264,7 +264,7 @@ impl Escalation {
     ///
     /// [`crate::escalation::EscalationEngine::get_on_call_for_time`] looks up
     /// the exact ISO week, so a literal config would need all 53 weeks spelled
-    /// out or most of the year would have nobody on call â€” and the engine
+    /// out or most of the year would have nobody on call — and the engine
     /// reports that as "Primary: None" rather than as an error. Rotating a
     /// short list across every week is what makes two names enough.
     ///
@@ -319,7 +319,7 @@ pub struct Config {
     pub plugins: Plugins,
     pub notifications: Notifications,
     pub escalation: Escalation,
-    /// Directory this config was loaded from â€” the anchor for relative paths.
+    /// Directory this config was loaded from — the anchor for relative paths.
     /// Skipped during deserialization; filled in by [`Config::load`].
     #[serde(skip)]
     dir: PathBuf,
@@ -331,7 +331,7 @@ pub struct Config {
 impl Config {
     /// Load configuration from the default directory, applying built-in
     /// defaults for anything unset and merging the active profile (from
-    /// `$NETSCOPE_PROFILE` or `general.profile`) on top. Never fails â€” a
+    /// `$NETSCOPE_PROFILE` or `general.profile`) on top. Never fails — a
     /// missing or unparsable `config.toml` just yields defaults anchored at
     /// the config dir.
     pub fn load() -> Self {
@@ -452,7 +452,7 @@ impl Config {
     }
 
     /// Absolute path to the plugins directory (regardless of whether plugins
-    /// are enabled â€” check [`Plugins::enabled`] separately).
+    /// are enabled — check [`Plugins::enabled`] separately).
     pub fn plugins_dir(&self) -> PathBuf {
         self.resolve(&self.plugins.dir)
     }
@@ -460,7 +460,7 @@ impl Config {
 
 /// One user coloring rule from `coloring-rules.toml`: a hex colour (with or
 /// without `#`) and a display-filter expression. Compiling the filter and the
-/// colour is the UI's job â€” this type is just the stored form.
+/// colour is the UI's job — this type is just the stored form.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ColoringRule {
     pub color: String,
@@ -483,7 +483,7 @@ struct ColoringRulesFile {
 ///
 /// or the legacy one-rule-per-line format (`RRGGBB <display filter>`, `#`
 /// comments). Unparseable lines are passed through with whatever colour word
-/// they carry â€” the consumer validates colours and filters, so comments and
+/// they carry — the consumer validates colours and filters, so comments and
 /// typos are dropped there, not here.
 pub fn parse_coloring_rules(text: &str) -> Vec<ColoringRule> {
     if let Ok(file) = toml::from_str::<ColoringRulesFile>(text) {
@@ -503,7 +503,7 @@ pub fn parse_coloring_rules(text: &str) -> Vec<ColoringRule> {
 }
 
 /// Read and parse a TOML file, returning `None` on any failure (missing file,
-/// bad UTF-8, syntax error) â€” configuration loading must never abort startup.
+/// bad UTF-8, syntax error) — configuration loading must never abort startup.
 fn read_toml_value(path: &Path) -> Option<toml::Value> {
     let text = std::fs::read_to_string(path).ok()?;
     text.parse::<toml::Value>().ok()
@@ -611,7 +611,7 @@ mod tests {
         assert!(cfg.shift_rotations().is_empty());
     }
 
-    /// A blank integration key must read as absent â€” the engine branches on
+    /// A blank integration key must read as absent — the engine branches on
     /// `Some(key)` to decide whether it can page PagerDuty at all.
     #[test]
     #[cfg_attr(miri, ignore)]
@@ -678,7 +678,7 @@ email = "mehmet@example.com"
         assert_eq!(cfg.escalation.shift_rotations().len(), 53);
     }
 
-    /// Escalation stays off unless asked for â€” it pages people.
+    /// Escalation stays off unless asked for — it pages people.
     #[test]
     #[cfg_attr(miri, ignore)]
     fn escalation_is_off_by_default() {

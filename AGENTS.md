@@ -9,8 +9,8 @@ cargo build
 # Build specific crates
 cargo build -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
 
-# Run all tests (use -p to target specific crates)
-cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
+# Run all tests (use -- --quiet to suppress per-test passed lines)
+cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent -- --quiet
 cargo test -p netscope-desktop        # Windows/macOS only
 
 # Lint (deny warnings)
@@ -21,8 +21,8 @@ cargo fmt --check
 cargo fmt                              # auto-format
 
 # Benchmarks
-cargo bench -p netscope-core --bench parse_throughput -- --quick
-cargo bench -p netscope-core --bench filter_match -- --quick
+cargo bench -p netscope-core --bench parse_throughput
+cargo bench -p netscope-core --bench filter_match
 
 # WASM (for frontend tests)
 cargo build -p netscope-wasm --release --target wasm32-unknown-unknown

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use crate::models::Packet;
 use crate::names::NameCache;
@@ -209,15 +209,15 @@ pub struct SiemEvent {
     pub anomaly_score: Option<f64>,
     pub anomaly_explanation: Option<String>,
     pub anomaly_reasons: Option<Vec<String>>,
-    // Katman 5 â€” MITRE ATT&CK & Kill Chain (Â§1.1.5)
+    // Katman 5 — MITRE ATT&CK & Kill Chain (Â§1.1.5)
     pub mitre_techniques: Option<Vec<crate::mitre_killchain::MitreTechniqueMapping>>,
     pub kill_chain_phases: Option<Vec<crate::mitre_killchain::KillChainPhaseMapping>>,
     pub kill_chain_chain_summary: Option<String>,
     pub detection_coverage_summary: Option<String>,
-    // Katman 6 â€” Ä°ÅŸ Etkisi (Business Impact) (Â§1.1.6)
+    // Katman 6 — Ä°ÅŸ Etkisi (Business Impact) (Â§1.1.6)
     pub business_impact: Option<crate::business_impact::BusinessImpactEvaluation>,
     pub business_impact_summary: Option<String>,
-    // Katman 7 â€” "Bunu Neden Ã–nemsemeliyim?" AÃ§Ä±klamasÄ± (Â§1.1.7)
+    // Katman 7 — "Bunu Neden Ã–nemsemeliyim?" AÃ§Ä±klamasÄ± (Â§1.1.7)
     pub why_this_matters_paragraph: Option<String>,
     pub recommended_actions: Option<Vec<crate::why_this_matters::ActionRecommendation>>,
     pub katman7_full_summary: Option<String>,
@@ -360,13 +360,13 @@ impl SiemEvent {
             .first()
             .map(|p| p.phase_name.clone());
 
-        // Katman 6 â€” Ä°ÅŸ Etkisi (Business Impact) (Â§1.1.6)
+        // Katman 6 — Ä°ÅŸ Etkisi (Business Impact) (Â§1.1.6)
         let impact_eval = crate::business_impact::global_asset_registry()
             .lock()
             .unwrap()
             .evaluate_impact(pkt.dst_addr.or(pkt.src_addr), resolved_dns_name.as_deref());
 
-        // Katman 7 â€” "Bunu Neden Ã–nemsemeliyim?" AÃ§Ä±klamasÄ± (Â§1.1.7)
+        // Katman 7 — "Bunu Neden Ã–nemsemeliyim?" AÃ§Ä±klamasÄ± (Â§1.1.7)
         let template_ctx = crate::why_this_matters::TemplateContext {
             src_ip: pkt
                 .src_addr
@@ -812,8 +812,8 @@ impl SiemExporter {
 
     // Builders for the sinks that can actually be reached.
     //
-    // These fields used to sit alongside eleven more â€” Sentinel, AWS Security
-    // Lake, Chronicle, Kafka, Loki and a Wazuh socket â€” that `new` hardcoded to
+    // These fields used to sit alongside eleven more — Sentinel, AWS Security
+    // Lake, Chronicle, Kafka, Loki and a Wazuh socket — that `new` hardcoded to
     // `None` with no way to set them. They read as configuration and were not:
     // the only route was assigning a public field directly, which nothing did,
     // so `flush_batch` carried five unreachable sinks. Worse, the S3 one PUT
@@ -1119,8 +1119,8 @@ mod tests {
     /// Every sink the exporter carries must be settable from outside.
     ///
     /// `SiemExporter` used to declare eighteen sink fields and configure three.
-    /// The other fifteen â€” Sentinel, AWS Security Lake, Chronicle, Kafka, Loki,
-    /// a Wazuh socket, and the four TCP/UDP forwarders â€” were hardcoded to
+    /// The other fifteen — Sentinel, AWS Security Lake, Chronicle, Kafka, Loki,
+    /// a Wazuh socket, and the four TCP/UDP forwarders — were hardcoded to
     /// `None` in `new` with no setter, so `flush_batch` carried five branches
     /// that could never run. The struct advertised integrations that did not
     /// exist. This pins that what remains is reachable.

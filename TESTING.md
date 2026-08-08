@@ -3,14 +3,14 @@
 ## Test Komutları
 
 ```bash
-# Tüm Rust testleri (core hariç her şey)
-cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent
+# Tüm Rust testleri (ekrana binlerce passed satırı dökülmeden sessiz çalıştırmak için `-- --quiet`)
+cargo test -p netscope-core -p netscope-tui -p netscope-server -p netscope-agent -- --quiet
 
-# Sadece core
-cargo test -p netscope-core
+# Sadece core (tüm 2300+ testi detay basmadan sessiz çalıştırmak için `-- --quiet`)
+cargo test -p netscope-core -- --quiet
 
-# Sadece tek bir test
-cargo test -p netscope-core --lib filter::tests::test_filter_tcp_port
+# Sadece tek bir test (örnek: capture filtresi testi)
+cargo test -p netscope-core --lib capture::filter_tests::simple_http
 
 # Ignored test yok — 2026-08-03'ten beri sıfır.
 # Dördü de kaldırıldı, çünkü ignore edilen bir test kimse için çalışmaz ve bu
@@ -20,7 +20,7 @@ cargo test -p netscope-core --lib filter::tests::test_filter_tcp_port
 #   * 65.536 portluk sweep, eşdeğerliği kanıtlanmış bir örneklemle değiştirildi.
 
 # Benchmark
-cargo bench -p netscope-core --bench parse_throughput -- --quick
+cargo bench -p netscope-core --bench parse_throughput
 
 # Kod kapsaması. Düz `cargo llvm-cov` Windows'ta çalışmaz (aşağıdaki nota bak),
 # script doğru toolchain'i kendisi seçiyor:

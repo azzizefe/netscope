@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use crate::models::{Packet, Protocol};
 use std::collections::HashSet;
@@ -56,8 +56,8 @@ impl SuricataRule {
         // 1. Check protocol.
         //
         // The fallthrough here used to be `_ => {}`, so a rule written for a
-        // protocol this matcher cannot evaluate â€” `alert http`, `alert tls`,
-        // `alert dns` â€” skipped the protocol test entirely and went on to match
+        // protocol this matcher cannot evaluate — `alert http`, `alert tls`,
+        // `alert dns` — skipped the protocol test entirely and went on to match
         // on content alone, against every packet on the wire. `parse_rule` now
         // refuses those rules outright; this arm stays as a closed door rather
         // than an open one.
@@ -245,7 +245,7 @@ pub fn parse_rule(line: &str) -> Result<SuricataRule, String> {
                 }
             }
         } else {
-            // A bare flag with no `:` â€” `nocase`, `http_uri`, `http_header`,
+            // A bare flag with no `:` — `nocase`, `http_uri`, `http_header`,
             // `startswith`. These change what the content match applies to, so
             // skipping them silently is the same over-matching bug as dropping
             // a keyed option: `http_uri` confines the match to the URI, and
@@ -293,7 +293,7 @@ pub struct ThreatEngine {
     pub malicious_domains: HashSet<String>,
     pub suricata_rules: Vec<SuricataRule>,
     /// Rules that were refused, with the reason and the file:line they came
-    /// from. A refused rule is not loaded, so it cannot fire â€” surfacing this
+    /// from. A refused rule is not loaded, so it cannot fire — surfacing this
     /// is the difference between "no detections" and "your ruleset never
     /// loaded".
     pub rule_errors: Vec<String>,
@@ -320,7 +320,7 @@ impl ThreatEngine {
         //
         // These used to be seeded with three invented IP addresses under the
         // header "# AbuseIPDB malicious IP list", and three invented domains
-        // under "# URLhaus / PhishTank threat domains" â€” indicators netscope
+        // under "# URLhaus / PhishTank threat domains" — indicators netscope
         // made up, written to disk attributed to threat-intel vendors that had
         // never seen them, and then reported as "AbuseIPDB:" matches. An empty
         // list is the truth until the operator supplies one.
@@ -396,7 +396,7 @@ impl ThreatEngine {
 
         if !read_any_rule {
             // Two toy rules used to be written and loaded here, matching the
-            // literal strings "get_c2_payload" and "phishing-bank" â€” signatures
+            // literal strings "get_c2_payload" and "phishing-bank" — signatures
             // that fire on nothing real, while making the rule count look
             // non-zero. An empty starter file is honest.
             let default_rules_path = rules_dir.join("local.rules");
@@ -427,7 +427,7 @@ impl ThreatEngine {
 
         // Indicator matches name the local list they came from. They used to be
         // reported as "AbuseIPDB:" and "URLhaus:" hits, which told the analyst a
-        // named vendor had flagged the address â€” netscope contacts no vendor and
+        // named vendor had flagged the address — netscope contacts no vendor and
         // knows only what is in the operator's own file.
         if let Some(ref src) = pkt.src_addr {
             let src_str = src.to_string();

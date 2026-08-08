@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 use serde::{Deserialize, Serialize};
 use std::net::UdpSocket;
@@ -36,7 +36,7 @@ pub struct NotificationEngine {
 ///
 /// Reads the environment rather than taking a dependency: `COMPUTERNAME` on
 /// Windows, `HOSTNAME` elsewhere. A shell does not always export `HOSTNAME`, so
-/// the NILVALUE fallback is a real path, not a formality â€” and it is still
+/// the NILVALUE fallback is a real path, not a formality — and it is still
 /// better than naming a machine wrongly.
 fn local_hostname() -> String {
     std::env::var("COMPUTERNAME")
@@ -60,7 +60,7 @@ impl NotificationEngine {
     /// This used to be a socket and a sequence of `let _ = write_all(..)`: it
     /// never read a reply, never looked at a status code, and returned `Ok(())`
     /// whenever the TCP connect succeeded. A refused recipient, a 550, an auth
-    /// challenge, or a server that hung up were all reported as a sent mail â€”
+    /// challenge, or a server that hung up were all reported as a sent mail —
     /// and the SOC view showed the channel as working. `lettre` speaks the
     /// actual protocol, so a rejection comes back as a rejection.
     pub fn send_email(&self, subject: &str, body: &str) -> Result<(), String> {
@@ -98,7 +98,7 @@ impl NotificationEngine {
             "implicit" => {
                 SmtpTransport::relay(host).map_err(|e| format!("TLS setup failed: {e}"))?
             }
-            // Explicitly asked for, never inferred â€” see `email_tls`.
+            // Explicitly asked for, never inferred — see `email_tls`.
             "none" => SmtpTransport::builder_dangerous(host),
             other => {
                 return Err(format!(
@@ -353,7 +353,7 @@ impl NotificationEngine {
     ///
     /// Every channel in [`crate::escalation::EscalationStep::notify_channel`]'s
     /// documented set is handled here. An unrecognised name is an error, not a
-    /// no-op â€” the bug this replaces was a `_ => {}` that swallowed `"Slack"`
+    /// no-op — the bug this replaces was a `_ => {}` that swallowed `"Slack"`
     /// and `"Email"`, so the first two rungs of the default chain paged nobody
     /// and reported nothing.
     pub fn send_escalation(
@@ -404,7 +404,7 @@ impl NotificationEngine {
                           // RFC 5424 HOSTNAME. This was the literal "localhost", which made every
                           // event on the SIEM side claim to come from a machine called localhost.
                           // "-" is the spec's NILVALUE and is the honest answer when the name is
-                          // genuinely unknown â€” unlike a wrong name, it asserts nothing.
+                          // genuinely unknown — unlike a wrong name, it asserts nothing.
         let syslog_msg = format!(
             "<{}>1 {} {} netscope - - - {}",
             prival,
@@ -423,14 +423,14 @@ impl NotificationEngine {
     ///
     /// Reports what actually happened. `eventcreate` needs an elevated process
     /// to write the Application log, and this used to print a warning and
-    /// return `Ok(())` anyway â€” so a caller testing the channel was told it
+    /// return `Ok(())` anyway — so a caller testing the channel was told it
     /// worked while nothing had been written. The SOC view surfaces this result
     /// to the user, which only means anything if a failure comes back as one.
     pub fn write_windows_event_log(&self, alert_msg: &str) -> Result<(), String> {
         #[cfg(target_os = "windows")]
         {
             let desc = format!("Netscope Alert Event: {}", alert_msg);
-            let status = Command::new("eventcreate")
+            let output = Command::new("eventcreate")
                 .args([
                     "/ID",
                     "100",
@@ -443,13 +443,13 @@ impl NotificationEngine {
                     "/D",
                     &desc,
                 ])
-                .status()
+                .output()
                 .map_err(|e| format!("Could not run eventcreate: {e}"))?;
 
-            if !status.success() {
-                return Err(match status.code() {
+            if !output.status.success() {
+                return Err(match output.status.code() {
                     Some(c) => format!(
-                        "eventcreate exited with {c} â€” writing the Application log needs netscope to run elevated"
+                        "eventcreate exited with {c} — writing the Application log needs netscope to run elevated"
                     ),
                     None => "eventcreate was terminated by a signal".to_string(),
                 });
@@ -552,7 +552,7 @@ mod tests {
     /// `send_email` used to write EHLO/MAIL FROM/RCPT TO/DATA with
     /// `let _ = write_all(..)` and never read a byte back, so it returned
     /// `Ok(())` whenever the TCP connect succeeded. A 550, a refused recipient,
-    /// an auth demand â€” all reported as sent, and the SOC view showed the
+    /// an auth demand — all reported as sent, and the SOC view showed the
     /// channel as healthy. This stands up a server that answers the greeting
     /// and then rejects, which the old code could not distinguish from success.
     #[test]
@@ -642,7 +642,7 @@ mod tests {
         // The event log is the one channel whose outcome depends on privilege
         // and platform, so this pins the contract rather than the result: it
         // either writes, or explains why it could not. What it must never do is
-        // the old behaviour â€” report success after printing a warning and
+        // the old behaviour — report success after printing a warning and
         // writing nothing.
         match engine.write_windows_event_log("Port scan alert") {
             // Success is only reachable on Windows, and only when elevated.

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
 pub mod aarp;
 pub mod aeron;
@@ -52,6 +52,7 @@ pub mod gsm_sms_ud;
 pub mod gsm_um;
 pub mod gsmtap;
 pub mod gsmtap_log;
+pub mod heuristics;
 
 pub mod bssap;
 pub mod bssgp;
@@ -196,7 +197,7 @@ pub mod milter;
 pub mod mip6;
 pub mod mka;
 pub mod modbus;
-// `modbus_ascii` is declared unconditionally further up â€” unlike `modbus_rtu`
+// `modbus_ascii` is declared unconditionally further up — unlike `modbus_rtu`
 // it is not behind the `ot` feature. The `not(ot)` stub that used to sit here
 // carried both `cfg(feature = "ot")` and `cfg(not(feature = "ot"))`, which are
 // ANDed, so it compiled under no configuration at all.
@@ -506,7 +507,7 @@ pub(crate) fn first_text_line(payload: &[u8]) -> String {
 ///
 /// Every summary built from a payload ends up on a terminal, and an escape
 /// sequence in a server banner or an FTP reply would be interpreted rather than
-/// shown â€” able to recolour the display, move the cursor, or hide the lines
+/// shown — able to recolour the display, move the cursor, or hide the lines
 /// after it. A capture is untrusted input and may have been written by whoever
 /// is being investigated, so those characters are replaced with a visible
 /// marker rather than passed through.
@@ -543,7 +544,7 @@ pub(crate) fn head_str(s: &str, max: usize) -> &str {
 /// "1 bytes".
 ///
 /// Small wording slips like that are exactly what makes a tool feel unfinished,
-/// and this appears in the fallback summary of nearly every dissector â€” so it
+/// and this appears in the fallback summary of nearly every dissector — so it
 /// is worth one shared helper rather than a plural check repeated 175 times.
 /// Takes a `u64` rather than a `usize` because some protocols declare a length
 /// larger than the bytes actually captured, and that declared value is what a
@@ -630,13 +631,13 @@ pub(crate) const DLT_PKTAP: i32 = 258;
 /// each take their own link-layer path.
 ///
 /// The fallback treats an unknown type as Ethernet, which is right far more
-/// often than not â€” but only because the types that are definitely *not*
+/// often than not — but only because the types that are definitely *not*
 /// Ethernet are listed above it.
 pub fn dissect_linktype(data: &[u8], linktype: i32) -> DissectedResult {
     let mut result = dissect_linktype_inner(data, linktype);
     // Sanitise once, here, rather than trusting each of three hundred
     // dissectors to remember. Many build a summary from text that came off the
-    // wire â€” a hostname, a URL, a SQL statement, a server banner â€” and that
+    // wire — a hostname, a URL, a SQL statement, a server banner — and that
     // text is written by whoever sent the packet. An escape sequence reaching a
     // terminal would be acted on rather than shown.
     //
@@ -733,13 +734,13 @@ pub fn dissect(data: &[u8]) -> DissectedResult {
 
     let mut result = dispatch_l3(eth.ethertype.0, &eth.payload, 0);
     // PRP appends its redundancy control trailer to an otherwise ordinary
-    // frame, leaving the EtherType as the inner protocol's â€” so it cannot be
+    // frame, leaving the EtherType as the inner protocol's — so it cannot be
     // dispatched on and is looked for from the end instead. Like HSR's tag,
     // it is context rather than the answer, so the inner protocol is kept and
     // the trailer prefixed.
     if let Some(rct) = prp::redundancy_trailer(&eth.payload) {
         result.summary = format!(
-            "PRP LAN {}, seq {} Â· {}",
+            "PRP LAN {}, seq {} · {}",
             rct.lan, rct.sequence, result.summary
         );
     }
@@ -797,7 +798,7 @@ const ETHERTYPE_MAX_LENGTH: u16 = 0x05DC; // 1500
 /// Link types and EtherTypes with no dispatch arm yet.
 ///
 /// Each number is a real assignment, and the assignment is the thing worth
-/// keeping â€” it is exactly what a future arm keys on, and re-deriving it means
+/// keeping — it is exactly what a future arm keys on, and re-deriving it means
 /// going back to the tcpdump and IEEE registries. They lost their arms when the
 /// dissectors behind them were removed, not because the numbers changed.
 ///
@@ -868,7 +869,7 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
             // capture never shows where the packet is actually headed.
             if let Some(srh) = srv6::find(payload) {
                 r.protocol = Protocol::Srv6;
-                r.summary = format!("{} Â· {}", srh.note(), r.summary);
+                r.summary = format!("{} · {}", srh.note(), r.summary);
             }
             r
         }
@@ -900,7 +901,7 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         ETHERTYPE_FCOE => fcoe::dissect_fcoe(payload),
         // CC-Link IE runs the field network Mitsubishi lines are built on, and
         // the leading byte says whether a frame is cyclic I/O or a transient
-        // message â€” the difference between the live control loop and someone
+        // message — the difference between the live control loop and someone
         // reading a register out of band.
         ETHERTYPE_CCLINK_IE => mitsubishi_cc_link_ie_field::dissect_mitsubishi_cc_link_ie_field(
             None, None, 0, 0, payload,
@@ -910,7 +911,7 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
         // diagnostics traffic sharing the same wire.
         ETHERTYPE_VARAN => varan_bus::dissect_varan_bus(None, None, 0, 0, payload),
         // ERPS ring protection borrows CFM's EtherType rather than taking one
-        // of its own, and is told apart by the opcode â€” a ring switching to its
+        // of its own, and is told apart by the opcode — a ring switching to its
         // backup path is a different event from a connectivity check.
         ETHERTYPE_CFM if payload.get(1) == Some(&cfm::OPCODE_RAPS) => erps::dissect_erps(payload),
         ETHERTYPE_CFM => cfm::dissect_cfm(payload),
@@ -979,7 +980,7 @@ pub(crate) fn dispatch_l3(ethertype: u16, payload: &[u8], vlan_depth: u8) -> Dis
             let vlan_id = u16::from_be_bytes([payload[0], payload[1]]) & 0x0FFF;
             let inner_ethertype = u16::from_be_bytes([payload[2], payload[3]]);
             let mut inner = dispatch_l3(inner_ethertype, &payload[4..], vlan_depth + 1);
-            inner.summary = format!("VLAN {vlan_id} Â· {}", inner.summary);
+            inner.summary = format!("VLAN {vlan_id} · {}", inner.summary);
             inner
         }
         other => DissectedResult {
@@ -1031,11 +1032,11 @@ fn dissect_mpls(payload: &[u8], vlan_depth: u8) -> DissectedResult {
     };
     // BIER has no EtherType and rides here, under the label stack, identified
     // by the same nibble that would otherwise say IPv4 or IPv6. It is checked
-    // first because a BIER packet is not an IP packet at all â€” reading it as
+    // first because a BIER packet is not an IP packet at all — reading it as
     // one would report the bit string as an IP header.
     if bier::looks_like_bier(inner) {
         let mut r = bier::dissect_bier(inner);
-        r.summary = format!("{label_note} Â· {}", r.summary);
+        r.summary = format!("{label_note} · {}", r.summary);
         return r;
     }
 
@@ -1050,7 +1051,7 @@ fn dissect_mpls(payload: &[u8], vlan_depth: u8) -> DissectedResult {
         Some(et) => {
             let mut r = dispatch_l3(et, inner, vlan_depth);
             r.protocol = Protocol::Mpls;
-            r.summary = format!("{label_note} Â· {}", r.summary);
+            r.summary = format!("{label_note} · {}", r.summary);
             r
         }
         None => DissectedResult {
@@ -1059,7 +1060,7 @@ fn dissect_mpls(payload: &[u8], vlan_depth: u8) -> DissectedResult {
             src_port: None,
             dst_port: None,
             protocol: Protocol::Mpls,
-            summary: format!("{label_note} Â· {} bytes payload", inner.len()),
+            summary: format!("{label_note} · {} bytes payload", inner.len()),
         },
     }
 }
@@ -1103,14 +1104,14 @@ fn dissect_pbb(payload: &[u8], vlan_depth: u8) -> DissectedResult {
         };
     };
     let mut inner = dispatch_l3(ethertype, &payload[CUSTOMER_FRAME + 2..], vlan_depth);
-    inner.summary = format!("PBB service {service} Â· {}", inner.summary);
+    inner.summary = format!("PBB service {service} · {}", inner.summary);
     inner
 }
 
 /// Unwrap a plain IP-in-IP tunnel and dissect the packet inside.
 ///
-/// The inner packet keeps its own protocol and addresses â€” those are the ones a
-/// reader cares about â€” with a note saying which tunnel carried it, the same
+/// The inner packet keeps its own protocol and addresses — those are the ones a
+/// reader cares about — with a note saying which tunnel carried it, the same
 /// way MPLS and VLAN are reported.
 fn dissect_ip_tunnel(inner_ethertype: u16, tunnel: &str, payload: &[u8]) -> DissectedResult {
     if payload.is_empty() {
@@ -1124,7 +1125,7 @@ fn dissect_ip_tunnel(inner_ethertype: u16, tunnel: &str, payload: &[u8]) -> Diss
         };
     }
     let mut inner = dispatch_l3(inner_ethertype, payload, 0);
-    inner.summary = format!("{tunnel} Â· {}", inner.summary);
+    inner.summary = format!("{tunnel} · {}", inner.summary);
     inner
 }
 
@@ -1201,7 +1202,7 @@ fn dispatch_transport(
             let mut r = dissect_mpls(&payload, 0);
             r.src_addr = src_ip;
             r.dst_addr = dst_ip;
-            r.summary = format!("MPLS-in-IP Â· {}", r.summary);
+            r.summary = format!("MPLS-in-IP · {}", r.summary);
             r
         }
         // Interior routing (EIGRP 88, PIM 103) and gateway redundancy (VRRP 112).
@@ -1422,7 +1423,7 @@ mod tests {
         assert_eq!(result.summary, "HTTP GET / (HTTP/1.1)");
     }
 
-    /// The full 5G stack: Ethernet â†’ IPv4 â†’ SCTP â†’ DATA chunk â†’ PPID 60 â†’ NGAP.
+    /// The full 5G stack: Ethernet → IPv4 → SCTP → DATA chunk → PPID 60 → NGAP.
     /// Each layer is exercised by its own tests, but only this proves they are
     /// actually wired to each other.
     #[test]
@@ -1455,8 +1456,8 @@ mod tests {
     }
 
     /// The deepest stack netscope decodes, end to end:
-    /// Ethernet â†’ IPv4 â†’ SCTP â†’ DATA chunk (PPID 3) â†’ M3UA â†’ Protocol Data
-    /// (service indicator 3) â†’ SCCP â†’ TCAP â†’ the MAP operation code.
+    /// Ethernet → IPv4 → SCTP → DATA chunk (PPID 3) → M3UA → Protocol Data
+    /// (service indicator 3) → SCCP → TCAP → the MAP operation code.
     ///
     /// Seven layers, each parsed by a different module. Every one has its own
     /// tests; only this proves they are actually connected to each other.
@@ -1469,7 +1470,7 @@ mod tests {
 
         // A switch asking the subscriber database where to deliver a text.
         let tcap = tcap_invoke(0x62, 46); // sendRoutingInfoForSM
-        let sccp = udt(8, 6, &tcap); // MSC â†’ HLR
+        let sccp = udt(8, 6, &tcap); // MSC → HLR
         let mut pd = Vec::new();
         pd.extend_from_slice(&1001u32.to_be_bytes()); // originating point code
         pd.extend_from_slice(&2002u32.to_be_bytes()); // destination point code
@@ -1493,11 +1494,11 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Tcap);
         assert_eq!(
             r.summary,
-            "TCAP Begin Invoke â€” sendRoutingInfoForSM â€” MSC â†’ HLR [1001 â†’ 2002]"
+            "TCAP Begin Invoke — sendRoutingInfoForSM — MSC → HLR [1001 → 2002]"
         );
     }
 
-    /// GTPv2-C reaches its dissector by UDP port, not by SCTP PPID â€” a
+    /// GTPv2-C reaches its dissector by UDP port, not by SCTP PPID — a
     /// different path through the dispatch than the rest of this batch.
     #[test]
     fn end_to_end_gtpv2_over_udp_via_dissect() {
@@ -1509,20 +1510,20 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Gtpv2);
         assert_eq!(
             r.summary,
-            "GTPv2-C Create Session Request â€” TEID 0xdeadbeef, seq 42"
+            "GTPv2-C Create Session Request — TEID 0xdeadbeef, seq 42"
         );
     }
 
     /// EtherNet/IP is only an envelope; the CIP request inside is what says
     /// whether a controller was polled or halted. This walks the whole path:
-    /// Ethernet â†’ IPv4 â†’ TCP 44818 â†’ encapsulation header â†’ Common Packet
-    /// Format items â†’ CIP.
+    /// Ethernet → IPv4 → TCP 44818 → encapsulation header → Common Packet
+    /// Format items → CIP.
     #[test]
     fn end_to_end_cip_inside_ethernet_ip_via_dissect() {
         super::tcp::clear_tcp_reassembler();
         let cip = crate::dissectors::cip::test_helpers::request(0x07, 0xAC); // Stop
 
-        // Encapsulation body: interface handle, timeout, then two CPF items â€”
+        // Encapsulation body: interface handle, timeout, then two CPF items —
         // an empty address item and the unconnected data item holding CIP.
         let mut body = Vec::new();
         body.extend_from_slice(&0u32.to_le_bytes()); // interface handle
@@ -1558,12 +1559,12 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Cip);
         assert_eq!(
             r.summary,
-            "CIP Stop â€” Logix Controller â€” session 0x12345678"
+            "CIP Stop — Logix Controller — session 0x12345678"
         );
     }
 
-    /// The deepest industrial path: Ethernet â†’ IPv4 â†’ TCP 44818 â†’
-    /// EtherNet/IP encapsulation â†’ Common Packet Format â†’ CIP Execute PCCC â†’
+    /// The deepest industrial path: Ethernet → IPv4 → TCP 44818 →
+    /// EtherNet/IP encapsulation → Common Packet Format → CIP Execute PCCC →
     /// PCCC. Four protocols nested inside each other, and the innermost one is
     /// what says a controller is being written to.
     #[test]
@@ -1609,7 +1610,7 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Pccc);
         assert_eq!(
             r.summary,
-            "PCCC Protected Typed Logical Write (3 address fields) â€” session 0xaabbccdd"
+            "PCCC Protected Typed Logical Write (3 address fields) — session 0xaabbccdd"
         );
     }
 
@@ -1631,7 +1632,7 @@ mod tests {
 
         let r = dissect(&pkt);
         assert_eq!(r.protocol, Protocol::Isis);
-        assert_eq!(r.summary, "IS-IS L1 LAN Hello â€” 1900.0100.0100");
+        assert_eq!(r.summary, "IS-IS L1 LAN Hello — 1900.0100.0100");
     }
 
     /// PGM rides directly on IP as protocol 113, with no transport underneath.
@@ -1660,7 +1661,7 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Pgm);
         assert_eq!(
             r.summary,
-            "PGM NAK (negative acknowledgement) â€” source aa:bb:cc:dd:ee:ff"
+            "PGM NAK (negative acknowledgement) — source aa:bb:cc:dd:ee:ff"
         );
     }
 
@@ -1687,13 +1688,13 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Rpl);
         assert_eq!(
             r.summary,
-            "RPL DIO (advertise routing information) â€” instance 1, version 2, rank 256"
+            "RPL DIO (advertise routing information) — instance 1, version 2, rank 256"
         );
     }
 
     /// A loopback capture has no Ethernet header, and reading one as though it
     /// did consumes the first fourteen bytes of the IP packet. This checks the
-    /// link type is honoured â€” and that the Ethernet path really would have got
+    /// link type is honoured — and that the Ethernet path really would have got
     /// it wrong, so the test would notice if the routing were removed.
     #[test]
     fn loopback_capture_is_not_read_as_ethernet() {
@@ -1715,7 +1716,7 @@ mod tests {
 
         let r = dissect_linktype(&frame, 0); // DLT_NULL
         assert_eq!(r.protocol, Protocol::Dns);
-        assert_eq!(r.summary, "DNS Query â€” example.com");
+        assert_eq!(r.summary, "DNS Query — example.com");
 
         // The same bytes down the Ethernet path produce something else
         // entirely, which is what used to happen to every loopback capture.
@@ -1741,11 +1742,11 @@ mod tests {
 
         let r = dissect_linktype(&ip, 101); // DLT_RAW
         assert_eq!(r.protocol, Protocol::Dns);
-        assert_eq!(r.summary, "DNS Query â€” example.com");
+        assert_eq!(r.summary, "DNS Query — example.com");
     }
 
-    /// The whole path for an MLD report: Ethernet â†’ IPv6 â†’ hop-by-hop
-    /// router-alert â†’ ICMPv6 â†’ MLDv2. Every IPv6 network carries these, and
+    /// The whole path for an MLD report: Ethernet → IPv6 → hop-by-hop
+    /// router-alert → ICMPv6 → MLDv2. Every IPv6 network carries these, and
     /// before the extension chain was walked they showed up as "IP protocol 0".
     #[test]
     fn end_to_end_mld_behind_a_hop_by_hop_header_via_dissect() {
@@ -1806,7 +1807,7 @@ mod tests {
         let r = dissect(&pkt);
         // The inner protocol and addresses are what matter; the tunnel is a note.
         assert_eq!(r.protocol, Protocol::Dns);
-        assert_eq!(r.summary, "6in4 Â· DNS Query â€” example.com");
+        assert_eq!(r.summary, "6in4 · DNS Query — example.com");
         assert_eq!(r.dst_port, Some(53));
     }
 
@@ -1842,7 +1843,7 @@ mod tests {
         pkt
     }
 
-    /// A GRE tunnel carrying IP â€” the shape of most site-to-site VPNs. The
+    /// A GRE tunnel carrying IP — the shape of most site-to-site VPNs. The
     /// optional key and sequence fields move the payload, so the header length
     /// has to be computed from the flags rather than assumed.
     #[test]
@@ -1854,7 +1855,7 @@ mod tests {
 
         let r = dissect(&ipv4_frame(47, &gre));
         assert_eq!(r.protocol, Protocol::Dns);
-        assert_eq!(r.summary, "GRE Â· DNS Query â€” example.com");
+        assert_eq!(r.summary, "GRE · DNS Query — example.com");
     }
 
     /// AH signs but does not encrypt, so the packet it protects is fully
@@ -1862,7 +1863,7 @@ mod tests {
     #[test]
     fn end_to_end_ah_protected_packet_is_readable() {
         let inner = inner_ipv4_dns();
-        // next header 4 (IPv4-in-IPv4), length 4 â†’ (4 + 2) * 4 = 24 bytes.
+        // next header 4 (IPv4-in-IPv4), length 4 → (4 + 2) * 4 = 24 bytes.
         let mut ah = vec![4u8, 4, 0, 0];
         ah.extend_from_slice(&0x1234_5678u32.to_be_bytes()); // SPI
         ah.extend_from_slice(&1u32.to_be_bytes()); // sequence
@@ -1873,7 +1874,7 @@ mod tests {
         assert_eq!(r.protocol, Protocol::Dns);
         assert_eq!(
             r.summary,
-            "AH (SPI 0x12345678) Â· IPv4-in-IPv4 Â· DNS Query â€” example.com"
+            "AH (SPI 0x12345678) · IPv4-in-IPv4 · DNS Query — example.com"
         );
     }
 
@@ -1892,7 +1893,7 @@ mod tests {
         let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 2152, 2152, &gtp);
         let r = dissect(&pkt);
         assert_eq!(r.protocol, Protocol::Dns);
-        assert_eq!(r.summary, "GTP-U Â· DNS Query â€” example.com");
+        assert_eq!(r.summary, "GTP-U · DNS Query — example.com");
     }
 
     /// A carrier wraps a customer's whole frame in its own header so that
@@ -1914,12 +1915,12 @@ mod tests {
 
         let r = dissect(&pkt);
         assert_eq!(r.protocol, Protocol::Dns);
-        assert_eq!(r.summary, "PBB service 65536 Â· DNS Query â€” example.com");
+        assert_eq!(r.summary, "PBB service 65536 · DNS Query — example.com");
     }
 
     /// Geneve is the overlay most modern data centres and cloud networks run
     /// on. Its options are variable-length, so the payload does not start at a
-    /// fixed offset â€” a test with options present catches that.
+    /// fixed offset — a test with options present catches that.
     #[test]
     fn end_to_end_geneve_overlay_is_unwrapped() {
         let mut geneve = vec![0x01, 0x00]; // version 0, one 4-byte option
@@ -1931,7 +1932,7 @@ mod tests {
         let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 6081, &geneve);
         let r = dissect(&pkt);
         assert_eq!(r.protocol, Protocol::Dns);
-        assert_eq!(r.summary, "Geneve VNI 100 Â· DNS Query â€” example.com");
+        assert_eq!(r.summary, "Geneve VNI 100 · DNS Query — example.com");
     }
 
     /// VXLAN-GPE names what it carries rather than assuming Ethernet, so an
@@ -1946,7 +1947,7 @@ mod tests {
         let pkt = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 40000, 4790, &gpe);
         let r = dissect(&pkt);
         assert_eq!(r.protocol, Protocol::Dns);
-        assert_eq!(r.summary, "VXLAN-GPE VNI 200 Â· DNS Query â€” example.com");
+        assert_eq!(r.summary, "VXLAN-GPE VNI 200 · DNS Query — example.com");
     }
 
     #[test]
@@ -1955,7 +1956,7 @@ mod tests {
         let data = build_udp_packet([10, 0, 0, 1], [10, 0, 0, 2], 54321, 53, &dns_payload);
         let result = dissect(&data);
         assert_eq!(result.protocol, Protocol::Dns);
-        assert_eq!(result.summary, "DNS Query â€” example.com");
+        assert_eq!(result.summary, "DNS Query — example.com");
     }
 
     #[test]
@@ -2042,7 +2043,7 @@ mod tests {
     }
 
     /// Two industrial fieldbuses that each own an EtherType. Both used to fall
-    /// through to "unknown ethertype" â€” the dissectors existed and nothing
+    /// through to "unknown ethertype" — the dissectors existed and nothing
     /// reached them.
     #[test]
     fn end_to_end_industrial_ethertypes_via_dissect() {
@@ -2060,7 +2061,7 @@ mod tests {
     }
 
     /// An EtherCAT mailbox carrying a firmware transfer, through the real
-    /// dispatch â€” a device having its firmware replaced used to read as an
+    /// dispatch — a device having its firmware replaced used to read as an
     /// ordinary EtherCAT frame.
     #[test]
     fn end_to_end_ethercat_firmware_transfer_via_dissect() {
@@ -2084,7 +2085,7 @@ mod tests {
         let frame = build_eth_frame(0x88CC, &tlvs);
         let r = dissect(&frame);
         assert_eq!(r.protocol, Protocol::Lldp);
-        assert!(r.summary.starts_with("LLDP â€” sw-cor port Gi0/1"));
+        assert!(r.summary.starts_with("LLDP — sw-cor port Gi0/1"));
     }
 
     #[test]
@@ -2098,7 +2099,7 @@ mod tests {
         let frame = build_eth_frame(0x8847, &mpls);
         let r = dissect(&frame);
         assert_eq!(r.protocol, Protocol::Mpls);
-        assert!(r.summary.starts_with("MPLS label 16 (TTL 64) Â· "));
+        assert!(r.summary.starts_with("MPLS label 16 (TTL 64) · "));
         assert!(r.summary.contains("example.com"));
     }
 
@@ -2172,7 +2173,7 @@ mod tests {
         buf.extend_from_slice(&ospf);
         let r = dissect(&buf);
         assert_eq!(r.protocol, Protocol::Ospf);
-        assert!(r.summary.starts_with("OSPFv2 Hello â€” router 10.0.0.1"));
+        assert!(r.summary.starts_with("OSPFv2 Hello — router 10.0.0.1"));
     }
 
     #[test]
@@ -2300,12 +2301,12 @@ mod tests {
         dccp.extend_from_slice(&[0u8; 3]);
         let r = dissect(&build_ipv4_proto(33, &dccp));
         assert_eq!(r.protocol, Protocol::Dccp);
-        assert!(r.summary.contains("5001 â†’ 5002"), "{}", r.summary);
+        assert!(r.summary.contains("5001 → 5002"), "{}", r.summary);
     }
 
     #[test]
     fn end_to_end_dtls_via_dissect() {
-        // DTLS 1.2 Handshake record on an arbitrary UDP port â€” recognised
+        // DTLS 1.2 Handshake record on an arbitrary UDP port — recognised
         // structurally, not by port.
         let mut dtls = vec![22, 0xFE, 0xFD, 0x00, 0x00];
         dtls.extend_from_slice(&[0u8; 8]);
@@ -2317,7 +2318,7 @@ mod tests {
 
     #[test]
     fn end_to_end_profinet_via_dissect() {
-        // EtherType 0x8892, FrameID 0x8000 â€” RT Class 1 cyclic data.
+        // EtherType 0x8892, FrameID 0x8000 — RT Class 1 cyclic data.
         let r = dissect(&build_eth_frame(0x8892, &[0x80, 0x00, 0x00, 0x00]));
         assert_eq!(r.protocol, Protocol::Profinet);
         assert!(r.summary.contains("RT Class 1"), "{}", r.summary);
@@ -2325,7 +2326,7 @@ mod tests {
 
     #[test]
     fn end_to_end_profinet_dcp_via_dissect() {
-        // EtherType 0x8892, FrameID 0xFEFC â€” DCP, which relabels itself.
+        // EtherType 0x8892, FrameID 0xFEFC — DCP, which relabels itself.
         let mut frame = vec![0xFE, 0xFC, 0x05, 0x00];
         frame.extend_from_slice(&[0u8; 8]);
         let r = dissect(&build_eth_frame(0x8892, &frame));
@@ -2347,7 +2348,7 @@ mod tests {
         let r = dissect(&build_eth_frame(0x0806, &arp));
         assert_eq!(r.protocol, Protocol::Arp);
         assert!(
-            r.summary.starts_with("PRP LAN A, seq 42 Â·"),
+            r.summary.starts_with("PRP LAN A, seq 42 ·"),
             "{}",
             r.summary
         );
@@ -2565,7 +2566,7 @@ mod tests {
 
 /// Correctness checks over a realistic mixed corpus.
 ///
-/// This module was named for a throughput benchmark that no longer lives here â€”
+/// This module was named for a throughput benchmark that no longer lives here —
 /// timing belongs in `benches/parse_throughput.rs`, where criterion can sample
 /// it properly. What is left is the deterministic half: 10,000 mixed packets
 /// have to dissect without a single parse failure.
@@ -2642,13 +2643,13 @@ mod bench {
     // `bench_dissect_throughput` was here: 10,000 mixed packets through
     // `dissect()`, asserting `rate > 100_000.0` from a wall-clock measurement.
     // It was `#[ignore]`d because under `cargo test`'s parallel load it
-    // measured how busy the machine was rather than what the dissector costs â€”
+    // measured how busy the machine was rather than what the dissector costs —
     // so it ran for nobody, and a floor that only catches a total collapse is
     // not worth an intermittent red build either way.
     //
     // The measurement moved to where the tooling handles this properly:
-    // `benches/parse_throughput.rs` benches exactly this â€” the full
-    // Ethernet â†’ IP â†’ TCP/UDP â†’ app chain over the same 10,000 mixed packets â€”
+    // `benches/parse_throughput.rs` benches exactly this — the full
+    // Ethernet → IP → TCP/UDP → app chain over the same 10,000 mixed packets —
     // and criterion warms up, samples repeatedly and reports outliers instead
     // of failing a single timed run. CI runs it on every push.
     //
@@ -2727,8 +2728,8 @@ mod batch16_dispatch_check {
 
 /// Guards a defect class found in iax2.rs and then in four more dissectors:
 /// a match arm whose "unknown" fallback is a word the surrounding format
-/// string already prints, producing summaries like "IAX2 full frame â€” full
-/// frame", "collectd â€” part part" or "SPICE link â€” channel channel".
+/// string already prints, producing summaries like "IAX2 full frame — full
+/// frame", "collectd — part part" or "SPICE link — channel channel".
 ///
 /// The unit tests of each dissector all passed while this was live, because
 /// they only ever exercised the *recognised* values. These cases deliberately
@@ -2752,7 +2753,7 @@ mod unknown_value_summaries {
                 .summary,
             ),
             (
-                "IAX2 full frame â€” unknown type 0",
+                "IAX2 full frame — unknown type 0",
                 iax2::dissect_iax2(None, None, 4569, 4569, &{
                     let mut p = vec![0x80, 0x01];
                     p.extend_from_slice(&[0u8; 9]);
@@ -2861,7 +2862,7 @@ pub(crate) mod robustness {
             }
         }
         // Range-dispatched protocols have no single port to scrape, so scrape
-        // the range instead. This used to be three hardcoded ranges â€” SOME/IP,
+        // the range instead. This used to be three hardcoded ranges — SOME/IP,
         // plus BitTorrent 6881-6889 and X11 6000-6005, neither of which the
         // dispatch has ever had. Hardcoding meant a new range would be swept by
         // nobody until someone noticed, which is the same failure the `on(N)`
@@ -2875,7 +2876,7 @@ pub(crate) mod robustness {
     /// The `in_range(A..=B)` arms in the transport dispatches.
     ///
     /// Guarded by [`dispatched_ranges_are_found`], so a rename or a change of
-    /// shape fails loudly instead of quietly returning nothing â€” a scraper that
+    /// shape fails loudly instead of quietly returning nothing — a scraper that
     /// finds zero ranges would leave those ports unswept and every test still
     /// green.
     fn dispatched_ranges() -> Vec<std::ops::RangeInclusive<u16>> {
@@ -2908,8 +2909,8 @@ pub(crate) mod robustness {
     /// still worth flagging: it will drift, and the next one may differ in a
     /// way the guard does not cover.
     ///
-    /// Protocols whose text handling genuinely differs â€” SDP reads several
-    /// media lines, SIP parses a request line â€” are listed as exceptions rather
+    /// Protocols whose text handling genuinely differs — SDP reads several
+    /// media lines, SIP parses a request line — are listed as exceptions rather
     /// than forced through a helper that does not fit them.
     #[test]
     #[cfg_attr(miri, ignore)]
@@ -2962,7 +2963,7 @@ pub(crate) mod robustness {
     /// three hundred of them, several parse text with their own helpers, and a
     /// new one should not have to know this is a concern.
     ///
-    /// The payload is a Redis error reply carrying an ANSI sequence â€” Redis
+    /// The payload is a Redis error reply carrying an ANSI sequence — Redis
     /// echoes the server's error text into its summary through a local helper
     /// that does no sanitising of its own, so this really does depend on the
     /// guard at the exit.
@@ -2997,7 +2998,7 @@ pub(crate) mod robustness {
     /// Text off the wire must not carry control characters into a summary.
     ///
     /// Summaries are printed to a terminal, so an escape sequence in a server
-    /// banner would be acted on rather than shown â€” able to recolour the
+    /// banner would be acted on rather than shown — able to recolour the
     /// display, move the cursor, or hide the lines after it. A capture is
     /// untrusted input and may have been written by whoever is under
     /// investigation.
@@ -3024,7 +3025,7 @@ pub(crate) mod robustness {
 
     /// A tab keeps its spacing role without breaking a column layout, and the
     /// characters that would break one are replaced visibly rather than
-    /// dropped â€” so a summary never silently loses content.
+    /// dropped — so a summary never silently loses content.
     #[test]
     #[cfg_attr(miri, ignore)]
     fn tabs_become_spaces_and_other_controls_stay_visible() {
@@ -3095,21 +3096,21 @@ pub(crate) mod robustness {
     ///
     /// A few are something else: analysis passes that happen to wear a
     /// dissector's signature. They ignore the payload entirely and report over
-    /// accumulated state instead â€” `tls_downgrade_detector` drains the
+    /// accumulated state instead — `tls_downgrade_detector` drains the
     /// handshake store and compares sessions against each other. No packet *is*
     /// one of those, so giving them a port would mean claiming an unrelated
     /// flow in order to print a report. They belong to the analysis layer, and
     /// listing them here is what says so.
     ///
-    /// Every entry must name a module this file declares â€” see
+    /// Every entry must name a module this file declares — see
     /// [`helper_modules_name_real_modules`]. The list once carried 1330 names
     /// that matched no module at all: leftovers from protocol tables that were
     /// pasted in wholesale. They looked harmless because they excused nothing,
-    /// but each one was a landmine â€” the day a dissector was added under one of
+    /// but each one was a landmine — the day a dissector was added under one of
     /// those names it would have been born exempt from the reachability check,
     /// silently and with no diff to review.
     const HELPER_MODULES: &[&str] = &[
-        // Analysis passes over accumulated TLS/PQC state â€” no wire form.
+        // Analysis passes over accumulated TLS/PQC state — no wire form.
         "tls_pqc_wizard_scan",
         "tls_key_share_prediction",
         "tls_downgrade_detector",
@@ -3127,6 +3128,7 @@ pub(crate) mod robustness {
         "dhcp_failover",
         "canopen",
         "bindings",
+        "heuristics",
         "cip",
         "ngap_common",
         "nfs",
@@ -3281,7 +3283,7 @@ pub(crate) mod robustness {
     /// carry behind an `#[ignore]`. Ignored, it protected nothing: a module
     /// added with no way to reach it slipped in unnoticed, which is how the
     /// count went 140 -> 145 once without anyone deciding it should. Pinned, the
-    /// guard fails both ways â€” a new unreachable module is a red build, and so
+    /// guard fails both ways — a new unreachable module is a red build, and so
     /// is wiring one up without striking it off here, which is the failure you
     /// want.
     ///
@@ -3293,7 +3295,7 @@ pub(crate) mod robustness {
     /// Almost every entry has the same cause: no signature. They read fixed
     /// offsets and validate nothing, so they can only be reached from a port or
     /// a parent discriminator, and for the game, anti-cheat and AI-infra ones no
-    /// such key exists â€” those protocols negotiate ports at runtime and their
+    /// such key exists — those protocols negotiate ports at runtime and their
     /// wire formats are not public. Binding one to a guessed port relabels
     /// unrelated traffic; that has happened four times in this repo. Getting a
     /// module off this list needs a capture or a spec.
@@ -3445,9 +3447,9 @@ pub(crate) mod robustness {
     /// runs. Because the entry points are `pub`, the dead-code lint cannot see
     /// this, so the check has to be made deliberately.
     ///
-    /// Two protocols were found this way â€” Megaco and Diameter had dissectors
+    /// Two protocols were found this way — Megaco and Diameter had dissectors
     /// but no SCTP payload identifier pointing at them, so they could never be
-    /// reached â€” along with four nested dissectors carrying a second entry
+    /// reached — along with four nested dissectors carrying a second entry
     /// point their parents never called.
     ///
     /// If this fails: wire the module into the dispatch, or, if its parent
@@ -3455,7 +3457,7 @@ pub(crate) mod robustness {
     ///
     /// It used to be `#[ignore]`d, because 144 modules fail the "everything is
     /// reachable" version of the question. That made it a guard nobody ran, and
-    /// an unrun guard is how the count silently went 140 â†’ 145 once, and how
+    /// an unrun guard is how the count silently went 140 → 145 once, and how
     /// the whole check was neutered twice (below). The backlog now lives in
     /// [`UNREACHABLE_BACKLOG`] and this asserts the set *equals* it, so the test
     /// runs on every `cargo test` and fails in both directions: a new
@@ -3463,7 +3465,7 @@ pub(crate) mod robustness {
     /// being struck off the list.
     ///
     /// **Do not empty that backlog by listing the modules in
-    /// [`HELPER_MODULES`].** That list means "deliberately not reached" â€” a
+    /// [`HELPER_MODULES`].** That list means "deliberately not reached" — a
     /// shared parser, a nested dissector whose parent builds the result, or an
     /// analysis pass with no wire form. A skeleton dissector that simply has
     /// nowhere to be called from is none of those, and moving it there turns
@@ -3476,8 +3478,8 @@ pub(crate) mod robustness {
     /// find this test passing, that is the first thing to suspect.
     ///
     /// Nor should the backlog be emptied by inventing a port. Most of these
-    /// read fixed offsets and validate nothing â€” `nccl_allreduce` accepts any
-    /// 32-byte payload â€” so a binding would relabel unrelated traffic rather
+    /// read fixed offsets and validate nothing — `nccl_allreduce` accepts any
+    /// 32-byte payload — so a binding would relabel unrelated traffic rather
     /// than find the protocol. That has already happened three times here; see
     /// the ephemeral-range rule at the top of `bindings.rs`. Wiring one needs a
     /// registered port or a real signature, which in turn needs a capture or a
@@ -3491,7 +3493,7 @@ pub(crate) mod robustness {
             unreachable.iter().filter(|m| !known.contains(m)).collect();
         assert!(
             newly_unreachable.is_empty(),
-            "these dissectors are new and reach no dispatch â€” wire them, or add \
+            "these dissectors are new and reach no dispatch — wire them, or add \
              them to UNREACHABLE_BACKLOG with a reason: {newly_unreachable:?}"
         );
 
@@ -3499,7 +3501,7 @@ pub(crate) mod robustness {
             known.iter().filter(|m| !unreachable.contains(m)).collect();
         assert!(
             now_reachable.is_empty(),
-            "these are reachable now â€” delete them from UNREACHABLE_BACKLOG so \
+            "these are reachable now — delete them from UNREACHABLE_BACKLOG so \
              the count keeps falling: {now_reachable:?}"
         );
     }
@@ -3507,7 +3509,7 @@ pub(crate) mod robustness {
     /// Every [`HELPER_MODULES`] entry must name a module that exists.
     ///
     /// The list is an exemption list, so a name in it that matches nothing is
-    /// not merely dead weight â€” it is an exemption waiting for a module to
+    /// not merely dead weight — it is an exemption waiting for a module to
     /// claim it. Add `foo.rs` and `pub mod foo;` one day, and if "foo" was
     /// already sitting here the reachability guard skips it from birth without
     /// anyone deciding that.
@@ -3546,7 +3548,7 @@ pub(crate) mod robustness {
         let ports = dispatched_ports();
         assert!(
             ports.len() > 150,
-            "only found {} dispatched ports â€” has the dispatch shape changed?",
+            "only found {} dispatched ports — has the dispatch shape changed?",
             ports.len()
         );
         // Spot-check both sources: 443 comes from the table, 102 (S7comm/MMS)
@@ -3558,7 +3560,7 @@ pub(crate) mod robustness {
     /// The binding tables are only useful if each port actually reaches the
     /// dissector it names. Dispatching a packet through the real TCP/UDP entry
     /// point must produce the same protocol as calling the bound function
-    /// directly â€” otherwise a mis-typed row would silently mislabel traffic.
+    /// directly — otherwise a mis-typed row would silently mislabel traffic.
     #[test]
     fn every_table_port_reaches_its_own_dissector() {
         // A payload with enough structure that dissectors emit their protocol
@@ -3602,8 +3604,8 @@ pub(crate) mod robustness {
     /// The nested dissectors need their own sweep.
     ///
     /// The port sweep above reaches whatever the dispatch tables point at, but
-    /// a dissector nested inside another â€” SCCP inside M3UA, TCAP inside that,
-    /// PCCC inside CIP â€” is only reached when its parent successfully parses a
+    /// a dissector nested inside another — SCCP inside M3UA, TCAP inside that,
+    /// PCCC inside CIP — is only reached when its parent successfully parses a
     /// header first. Malformed bytes usually fail earlier and never get there,
     /// so those layers were untested against the input most likely to break
     /// them: a header just valid enough to be handed on, wrapping rubbish.
@@ -3612,7 +3614,7 @@ pub(crate) mod robustness {
         let bodies = malformed_payloads();
 
         for body in &bodies {
-            // SS7/SIGTRAN â€” M3UA dissector module unavailable.
+            // SS7/SIGTRAN — M3UA dissector module unavailable.
 
             // SCCP direct, so the subsystem dispatch is exercised with rubbish
             // where RANAP, RNSAP or BSSAP would be.
@@ -3642,7 +3644,7 @@ pub(crate) mod robustness {
             enip.extend_from_slice(&cpf);
             let _ = super::enip::dissect_enip(ip(), ip(), 50000, 44818, &enip);
 
-            // RPC â€” dissector module unavailable.
+            // RPC — dissector module unavailable.
 
             // The 3GPP application protocols, reached by SCTP payload id.
             for ppid in [3u32, 18, 60, 61, 62] {
@@ -3660,7 +3662,7 @@ pub(crate) mod robustness {
         let ranges = dispatched_ranges();
         assert!(
             !ranges.is_empty(),
-            "no `in_range(A..=B)` arms found â€” has the dispatch shape changed?"
+            "no `in_range(A..=B)` arms found — has the dispatch shape changed?"
         );
         // SOME/IP is the one range the dispatch actually has; the other two
         // this list used to carry were never implemented.
@@ -3679,7 +3681,7 @@ pub(crate) mod robustness {
     /// else, which means one such port exercises the same code as all of them.
     ///
     /// Both directions are checked because `bindings::tcp` matches the source
-    /// port as well as the destination â€” the detail behind three of this
+    /// port as well as the destination — the detail behind three of this
     /// repo's mislabelling bugs.
     ///
     /// Sixty-five thousand binary searches, so it costs milliseconds.
@@ -3708,8 +3710,8 @@ pub(crate) mod robustness {
         );
     }
 
-    /// The structural fall-through â€” the portless sniffs that run when no
-    /// binding answers â€” must not panic on malformed input either.
+    /// The structural fall-through — the portless sniffs that run when no
+    /// binding answers — must not panic on malformed input either.
     ///
     /// This replaces `every_port_never_panics_on_malformed_input`, a loop over
     /// all 65,536 ports that made 9.6M dissect calls and took ten minutes in
@@ -3787,7 +3789,7 @@ pub(crate) mod robustness {
     }
 
     /// netscope runs on the user's own machine with no server behind it, and a
-    /// packet analyser must not transmit onto the network it is inspecting â€”
+    /// packet analyser must not transmit onto the network it is inspecting —
     /// on a forensic copy that is a correctness property, not a preference.
     ///
     /// So no dissector may open a socket or make an HTTP request. Anything a
@@ -3817,7 +3819,7 @@ pub(crate) mod robustness {
         }
         assert!(
             offenders.is_empty(),
-            "dissectors must not touch the network â€” netscope analyses a capture, \
+            "dissectors must not touch the network — netscope analyses a capture, \
              it does not talk to the network it is inspecting: {offenders:?}"
         );
     }
@@ -3826,15 +3828,15 @@ pub(crate) mod robustness {
     /// decidable: the dependency list.
     ///
     /// Scanning the sources for words like "telemetry" was tried first and is
-    /// the wrong instrument â€” APRS genuinely carries telemetry beacons, and
+    /// the wrong instrument — APRS genuinely carries telemetry beacons, and
     /// LDAP's `searchResEntry` contains the letters of "sentry". Those are the
     /// protocols' own vocabulary, not calls.
     ///
     /// What can be decided is where the ability to send lives.
     ///
-    /// No vendor telemetry SDK may be in the tree at all. An HTTP client may â€”
+    /// No vendor telemetry SDK may be in the tree at all. An HTTP client may —
     /// `siem.rs` uses one to forward events to an Elasticsearch or Splunk
-    /// endpoint â€” but that is a different thing from phoning home: the user
+    /// endpoint — but that is a different thing from phoning home: the user
     /// supplies the URL, and with no URL configured nothing is sent anywhere.
     /// This test holds that line: the client stays confined to that one
     /// explicit, user-directed export path and never becomes reachable from
@@ -3843,7 +3845,7 @@ pub(crate) mod robustness {
     #[cfg_attr(miri, ignore)]
     fn the_only_thing_that_can_send_is_the_export_the_user_configured() {
         // A vendor telemetry SDK has no user-directed use, so its presence is
-        // the violation â€” there is no correct place for it.
+        // the violation — there is no correct place for it.
         const NEVER: &[&str] = &[
             "sentry",
             "opentelemetry",
@@ -3875,7 +3877,7 @@ pub(crate) mod robustness {
                 .unwrap_or("");
             assert!(
                 !NEVER.contains(&name),
-                "`{name}` is a telemetry SDK and has no user-directed use â€” \
+                "`{name}` is a telemetry SDK and has no user-directed use — \
                  netscope reports nothing about its users anywhere"
             );
             if CLIENTS.contains(&name) {
@@ -3915,7 +3917,7 @@ pub(crate) mod robustness {
         }
         assert!(
             stray.is_empty(),
-            "an HTTP client escaped `{EXPORT_MODULE}` â€” sending is only ever \
+            "an HTTP client escaped `{EXPORT_MODULE}` — sending is only ever \
              allowed on an endpoint the user configured: {stray:?}"
         );
     }
@@ -3927,7 +3929,7 @@ pub(crate) mod robustness {
     /// not be: TCP is a stream, so the reassembler deliberately carries state
     /// between segments, and re-feeding one segment mid-stream legitimately
     /// reads differently from seeing it fresh. Written the naive way this test
-    /// fails for exactly that reason â€” the second pass sees every segment as
+    /// fails for exactly that reason — the second pass sees every segment as
     /// already consumed and reports bare ACKs.
     ///
     /// The property that actually matters is therefore that the state is
@@ -3957,7 +3959,7 @@ pub(crate) mod robustness {
 
         let run = || -> Vec<(String, String)> {
             // What opening a fresh capture does. Every reassembler has to be
-            // listed here â€” one that is not resettable is the bug this test
+            // listed here — one that is not resettable is the bug this test
             // exists to catch.
             super::tcp::clear_tcp_reassembler();
             super::isotp::clear_isotp_reassembler();
@@ -3977,7 +3979,7 @@ pub(crate) mod robustness {
         let second = run();
         assert_eq!(
             first, second,
-            "reading the same capture twice gave different answers â€” some state \
+            "reading the same capture twice gave different answers — some state \
              survives the reset"
         );
         // And the reset has to be doing something: without it the second pass

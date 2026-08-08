@@ -35,3 +35,10 @@ path = "fuzz_targets/parse_packet_fuzz.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "dissect_protocols_fuzz"
+path = "fuzz_targets/dissect_protocols_fuzz.rs"
+test = false
+doc = false
+bench = false

@@ -1,6 +1,6 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-//! Ring-buffer capture files â€” Wireshark's `-b` option for netscope.
+//! Ring-buffer capture files — Wireshark's `-b` option for netscope.
 //!
 //! [`RingWriter`] writes classic pcap files and switches to a new file when
 //! the current one exceeds a size or age limit, optionally deleting the
@@ -8,8 +8,8 @@
 //! rotation limits it degrades to a plain single-file pcap writer, so the
 //! capture engine uses it for every live save.
 //!
-//! Rotated files are named Wireshark-style â€” `base_00001_20260713142530.pcap`
-//! â€” so a set sorts chronologically in any file browser; a non-rotating
+//! Rotated files are named Wireshark-style — `base_00001_20260713142530.pcap`
+//! — so a set sorts chronologically in any file browser; a non-rotating
 //! writer keeps the exact path it was given.
 
 use std::collections::VecDeque;
@@ -48,7 +48,7 @@ pub struct RingWriter {
     file: BufWriter<File>,
     /// Bytes written to the current file (header + records).
     written: u64,
-    /// Records in the current file â€” a file always accepts at least one
+    /// Records in the current file — a file always accepts at least one
     /// packet, so an over-limit single packet can't rotate forever.
     records: u64,
     opened_at: Instant,
@@ -169,7 +169,7 @@ impl RingWriter {
         Ok(())
     }
 
-    /// `base.pcap` + serial 3 â†’ `base_00003_20260713142530.pcap`.
+    /// `base.pcap` + serial 3 → `base_00003_20260713142530.pcap`.
     fn numbered_path(base: &Path, serial: u32) -> PathBuf {
         let stem = base
             .file_stem()
@@ -246,7 +246,7 @@ mod tests {
     fn rotates_on_filesize_and_prunes_oldest() {
         let dir = temp_dir("size");
         let path = dir.join("ring.pcap");
-        // 1 kB per file â†’ header (24) + a few 200-byte records each.
+        // 1 kB per file → header (24) + a few 200-byte records each.
         let opts = RingBufferOptions {
             filesize_kb: Some(1),
             duration_secs: None,
@@ -259,7 +259,7 @@ mod tests {
         let kept = w.files_written();
         w.finish().unwrap();
 
-        // 20 Ã— 216 bytes â‰ˆ 4.3 kB of records â†’ several rotations; only the
+        // 20 Ã— 216 bytes â‰ˆ 4.3 kB of records → several rotations; only the
         // last two files survive.
         assert_eq!(kept.len(), 2, "ring must keep exactly `files` members");
         let on_disk = pcap_files(&dir);

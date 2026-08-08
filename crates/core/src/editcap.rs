@@ -1,6 +1,6 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 netscope contributors
-//! Capture merge & split â€” netscope's take on Wireshark's `mergecap` and
+//! Capture merge & split — netscope's take on Wireshark's `mergecap` and
 //! `editcap`, plus a `capinfos`-style summary.
 //!
 //! * [`merge`] combines several capture files into one, interleaving packets
@@ -179,7 +179,7 @@ pub fn merge(inputs: &[PathBuf], output: &Path, opts: &MergeOptions) -> Result<M
         .any(|i| i.linktype != interfaces[0].linktype);
     if opts.format == WriteFormat::Pcap && mixed_linktypes {
         anyhow::bail!(
-            "inputs have different link types â€” a classic pcap can't hold them; write pcapng instead"
+            "inputs have different link types — a classic pcap can't hold them; write pcapng instead"
         );
     }
 
@@ -535,7 +535,7 @@ mod tests {
             },
         )
         .unwrap();
-        // 10 packets / 3 â†’ 4 files (3,3,3,1).
+        // 10 packets / 3 → 4 files (3,3,3,1).
         assert_eq!(files.len(), 4);
         let counts: Vec<usize> = files.iter().map(|f| read_all(f).len()).collect();
         assert_eq!(counts, vec![3, 3, 3, 1]);
@@ -553,7 +553,7 @@ mod tests {
     fn split_by_time_span() {
         let dir = tmp_dir("split-time");
         let input = dir.join("in.pcap");
-        // Packets at t=0,1,2 then 10,11 â€” a 5s window yields two chunks.
+        // Packets at t=0,1,2 then 10,11 — a 5s window yields two chunks.
         write_pcap(
             &input,
             &[(0, 1, 4), (1, 2, 4), (2, 3, 4), (10, 4, 4), (11, 5, 4)],

@@ -45,7 +45,7 @@ fn handle_windows_service(action: &str) -> anyhow::Result<()> {
     match action {
         "install" => {
             let binary_path = std::env::current_exe()?;
-            let status = std::process::Command::new("sc")
+            let output = std::process::Command::new("sc")
                 .args([
                     "create",
                     service_name,
@@ -58,38 +58,38 @@ fn handle_windows_service(action: &str) -> anyhow::Result<()> {
                     "description=",
                     "Netscope remote capture sensor agent",
                 ])
-                .status()?;
-            if status.success() {
+                .output()?;
+            if output.status.success() {
                 println!("Service '{}' installed", service_name);
             } else {
                 anyhow::bail!("Failed to install service (try running as Administrator)");
             }
         }
         "uninstall" => {
-            let status = std::process::Command::new("sc")
+            let output = std::process::Command::new("sc")
                 .args(["delete", service_name])
-                .status()?;
-            if status.success() {
+                .output()?;
+            if output.status.success() {
                 println!("Service '{}' removed", service_name);
             } else {
                 anyhow::bail!("Failed to remove service (try running as Administrator)");
             }
         }
         "start" => {
-            let status = std::process::Command::new("net")
+            let output = std::process::Command::new("net")
                 .args(["start", service_name])
-                .status()?;
-            if status.success() {
+                .output()?;
+            if output.status.success() {
                 println!("Service '{}' started", service_name);
             } else {
                 anyhow::bail!("Failed to start service (try running as Administrator)");
             }
         }
         "stop" => {
-            let status = std::process::Command::new("net")
+            let output = std::process::Command::new("net")
                 .args(["stop", service_name])
-                .status()?;
-            if status.success() {
+                .output()?;
+            if output.status.success() {
                 println!("Service '{}' stopped", service_name);
             } else {
                 anyhow::bail!("Failed to stop service (try running as Administrator)");
